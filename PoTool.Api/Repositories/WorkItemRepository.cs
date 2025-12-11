@@ -48,24 +48,37 @@ public class WorkItemRepository : IWorkItemRepository
 
     public async Task ReplaceAllAsync(IEnumerable<WorkItemDto> workItems, CancellationToken cancellationToken = default)
     {
-        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        // Check if we're using InMemory database (for testing)
+        var isInMemory = _context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory";
         
-        try
+        if (isInMemory)
         {
-            // Remove all existing work items
-            await _context.WorkItems.ExecuteDeleteAsync(cancellationToken);
-
-            // Add new work items
+            // InMemory doesn't support transactions or ExecuteDelete
+            var existingItems = await _context.WorkItems.ToListAsync(cancellationToken);
+            _context.WorkItems.RemoveRange(existingItems);
+            
             var entities = workItems.Select(MapToEntity);
             await _context.WorkItems.AddRangeAsync(entities, cancellationToken);
-            
             await _context.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
         }
-        catch
+        else
         {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
+            // Use transaction for real databases
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            
+            try
+            {
+                await _context.WorkItems.ExecuteDeleteAsync(cancellationToken);
+                var entities = workItems.Select(MapToEntity);
+                await _context.WorkItems.AddRangeAsync(entities, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
         }
     }
 

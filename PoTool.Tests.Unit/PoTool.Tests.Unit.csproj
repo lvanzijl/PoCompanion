@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.1" />
     <PackageReference Include="MSTest" Version="4.0.1" />
   </ItemGroup>
 
@@ -17,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PoTool.Core\PoTool.Core.csproj" />
+    <ProjectReference Include="..\PoTool.Api\PoTool.Api.csproj" />
   </ItemGroup>
 
 </Project>
