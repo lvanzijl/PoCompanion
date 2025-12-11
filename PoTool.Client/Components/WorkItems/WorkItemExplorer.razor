@@ -1,0 +1,247 @@
+@page "/workitems"
+@using Microsoft.AspNetCore.SignalR.Client
+@using PoTool.Core.WorkItems
+@using PoTool.Client.Services
+@inject WorkItemService WorkItemService
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
+
+<PageTitle>Work Item Explorer</PageTitle>
+
+<div class="workitem-explorer">
+    <div class="header">
+        <h1>Work Item Explorer</h1>
+        <button class="btn-sync" @onclick="RequestSync" disabled="@_isSyncing">
+            @if (_isSyncing)
+            {
+                <span>Syncing...</span>
+            }
+            else
+            {
+                <span>Pull & Cache Work Items</span>
+            }
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_syncMessage))
+    {
+        <div class="sync-status @_syncStatusClass">
+            @_syncMessage
+        </div>
+    }
+
+    <div class="search-filter">
+        <input type="text" 
+               placeholder="Filter by title..." 
+               @bind="_filterText" 
+               @bind:event="oninput"
+               @onkeyup="OnFilterChanged" />
+    </div>
+
+    <div class="content">
+        <div class="tree-view">
+            @if (_isLoading)
+            {
+                <p>Loading work items...</p>
+            }
+            else if (!_workItems.Any())
+            {
+                <p>No work items found. Click "Pull & Cache Work Items" to retrieve data.</p>
+            }
+            else
+            {
+                @* Placeholder for hierarchical tree - to be implemented in future PR *@
+                <ul class="workitem-list">
+                    @foreach (var item in _filteredWorkItems)
+                    {
+                        <li class="workitem-item" @onclick="() => SelectWorkItem(item)">
+                            <span class="workitem-type">[@item.Type]</span>
+                            <span class="workitem-title">@HighlightMatch(item.Title)</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        @if (_selectedWorkItem != null)
+        {
+            <div class="detail-panel">
+                <h2>@_selectedWorkItem.Title</h2>
+                <div class="detail-field">
+                    <label>TFS ID:</label>
+                    <span>@_selectedWorkItem.TfsId</span>
+                </div>
+                <div class="detail-field">
+                    <label>Type:</label>
+                    <span>@_selectedWorkItem.Type</span>
+                </div>
+                <div class="detail-field">
+                    <label>State:</label>
+                    <span>@_selectedWorkItem.State</span>
+                </div>
+                <div class="detail-field">
+                    <label>Area Path:</label>
+                    <span>@_selectedWorkItem.AreaPath</span>
+                </div>
+                <div class="detail-field">
+                    <label>Iteration Path:</label>
+                    <span>@_selectedWorkItem.IterationPath</span>
+                </div>
+                <div class="detail-field">
+                    <label>Retrieved At:</label>
+                    <span>@_selectedWorkItem.RetrievedAt.ToString("g")</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private HubConnection? _hubConnection;
+    private List<WorkItemDto> _workItems = new();
+    private List<WorkItemDto> _filteredWorkItems = new();
+    private WorkItemDto? _selectedWorkItem;
+    private string _filterText = string.Empty;
+    private bool _isLoading = true;
+    private bool _isSyncing = false;
+    private string _syncMessage = string.Empty;
+    private string _syncStatusClass = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InitializeSignalR();
+        await LoadWorkItems();
+    }
+
+    private async Task InitializeSignalR()
+    {
+        var hubUrl = NavigationManager.BaseUri.TrimEnd('/').Replace(":5001", ":5000") + "/hubs/workitems";
+        
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(hubUrl)
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<object>("SyncStatus", HandleSyncStatus);
+
+        try
+        {
+            await _hubConnection.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error connecting to SignalR hub: {ex.Message}");
+        }
+    }
+
+    private void HandleSyncStatus(object status)
+    {
+        var statusDict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(
+            System.Text.Json.JsonSerializer.Serialize(status));
+
+        if (statusDict != null)
+        {
+            var statusValue = statusDict.GetValueOrDefault("Status", "Unknown");
+            _syncMessage = statusDict.GetValueOrDefault("Message", "");
+            
+            _syncStatusClass = statusValue switch
+            {
+                "InProgress" => "status-progress",
+                "Completed" => "status-success",
+                "Failed" => "status-error",
+                _ => ""
+            };
+
+            _isSyncing = statusValue == "InProgress";
+
+            if (statusValue == "Completed")
+            {
+                _ = LoadWorkItems();
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadWorkItems()
+    {
+        _isLoading = true;
+        try
+        {
+            _workItems = (await WorkItemService.GetAllAsync()).ToList();
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading work items: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task RequestSync()
+    {
+        if (_hubConnection?.State == HubConnectionState.Connected)
+        {
+            _isSyncing = true;
+            _syncMessage = "Requesting sync...";
+            _syncStatusClass = "status-progress";
+            
+            try
+            {
+                await _hubConnection.SendAsync("RequestSync", "DefaultAreaPath");
+            }
+            catch (Exception ex)
+            {
+                _syncMessage = $"Error requesting sync: {ex.Message}";
+                _syncStatusClass = "status-error";
+                _isSyncing = false;
+            }
+        }
+        else
+        {
+            _syncMessage = "Not connected to server";
+            _syncStatusClass = "status-error";
+        }
+    }
+
+    private void OnFilterChanged()
+    {
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(_filterText))
+        {
+            _filteredWorkItems = _workItems;
+        }
+        else
+        {
+            _filteredWorkItems = _workItems
+                .Where(w => w.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private void SelectWorkItem(WorkItemDto workItem)
+    {
+        _selectedWorkItem = workItem;
+    }
+
+    private string HighlightMatch(string text)
+    {
+        // Placeholder for highlighting - to be enhanced in future PR
+        return text;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection != null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+}
