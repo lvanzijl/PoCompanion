@@ -1,0 +1,50 @@
+@using Core.WorkItems
+
+<div class="work-item-detail">
+    <div class="detail-header">
+        <h4>@WorkItem.Title</h4>
+        <span class="badge">@WorkItem.Type</span>
+    </div>
+
+    <div class="detail-body">
+        <div class="detail-field">
+            <label>TFS ID:</label>
+            <span>@WorkItem.TfsId</span>
+        </div>
+
+        <div class="detail-field">
+            <label>State:</label>
+            <span class="state-badge">@WorkItem.State</span>
+        </div>
+
+        <div class="detail-field">
+            <label>Area Path:</label>
+            <span>@WorkItem.AreaPath</span>
+        </div>
+
+        <div class="detail-field">
+            <label>Iteration Path:</label>
+            <span>@WorkItem.IterationPath</span>
+        </div>
+
+        <div class="detail-field">
+            <label>Retrieved At:</label>
+            <span>@WorkItem.RetrievedAt.ToLocalTime().ToString("g")</span>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(WorkItem.JsonPayload))
+        {
+            <div class="detail-field full-width">
+                <label>JSON Payload:</label>
+                <div class="json-container">
+                    <pre>@WorkItem.JsonPayload</pre>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public WorkItemDto WorkItem { get; set; } = default!;
+}

@@ -1,0 +1,118 @@
+@page "/workitems"
+@using Core.WorkItems
+@using Client.Services
+@inject WorkItemClient WorkItemClient
+@inject ILogger<WorkItemExplorer> Logger
+
+<PageTitle>Work Item Explorer</PageTitle>
+
+<div class="work-item-explorer">
+    <div class="header">
+        <h3>Work Item Explorer</h3>
+        <div class="actions">
+            <button class="btn btn-primary" @onclick="LoadWorkItemsAsync" disabled="@_isLoading">
+                @if (_isLoading)
+                {
+                    <span>Loading...</span>
+                }
+                else
+                {
+                    <span>🔄 Pull & Cache</span>
+                }
+            </button>
+        </div>
+    </div>
+
+    @if (_lastUpdate.HasValue)
+    {
+        <div class="info">
+            <small>Last updated: @_lastUpdate.Value.ToLocalTime().ToString("g")</small>
+        </div>
+    }
+
+    <div class="search-box">
+        <input type="text" 
+               class="form-control" 
+               placeholder="Search work items..." 
+               @bind="_searchText" 
+               @bind:event="oninput"
+               @bind:after="FilterWorkItems" />
+    </div>
+
+    <div class="content-area">
+        <div class="tree-panel">
+            <WorkItemTree WorkItems="@_filteredWorkItems" 
+                         SearchText="@_searchText"
+                         OnItemSelected="HandleItemSelected" />
+        </div>
+
+        <div class="detail-panel">
+            @if (_selectedWorkItem is not null)
+            {
+                <WorkItemDetail WorkItem="@_selectedWorkItem" />
+            }
+            else
+            {
+                <div class="empty-state">
+                    <p>Select a work item to view details</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyCollection<WorkItemDto> _workItems = Array.Empty<WorkItemDto>();
+    private IReadOnlyCollection<WorkItemDto> _filteredWorkItems = Array.Empty<WorkItemDto>();
+    private WorkItemDto? _selectedWorkItem;
+    private string _searchText = string.Empty;
+    private DateTimeOffset? _lastUpdate;
+    private bool _isLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadWorkItemsAsync();
+    }
+
+    private async Task LoadWorkItemsAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            Logger.LogInformation("Loading work items");
+            _workItems = await WorkItemClient.GetAllAsync();
+            _filteredWorkItems = _workItems;
+            _lastUpdate = await WorkItemClient.GetLastUpdateAsync();
+            Logger.LogInformation("Loaded {Count} work items", _workItems.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading work items");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void FilterWorkItems()
+    {
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            _filteredWorkItems = _workItems;
+        }
+        else
+        {
+            var searchLower = _searchText.ToLowerInvariant();
+            _filteredWorkItems = _workItems
+                .Where(w => w.Title.Contains(searchLower, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private void HandleItemSelected(WorkItemDto workItem)
+    {
+        _selectedWorkItem = workItem;
+        Logger.LogInformation("Selected work item: {TfsId} - {Title}", workItem.TfsId, workItem.Title);
+    }
+}

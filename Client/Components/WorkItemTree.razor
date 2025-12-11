@@ -1,0 +1,110 @@
+@using Core.WorkItems
+
+<div class="work-item-tree">
+    @if (WorkItems.Any())
+    {
+        <ul class="tree-list">
+            @foreach (var epic in GetEpics())
+            {
+                <li class="tree-item epic">
+                    <div class="tree-node" @onclick="() => OnItemSelected.InvokeAsync(epic)">
+                        <span class="type-badge epic-badge">Epic</span>
+                        <span class="title">@HighlightText(epic.Title)</span>
+                        <span class="id">[@epic.TfsId]</span>
+                    </div>
+
+                    @{
+                        var features = GetFeatures(epic);
+                        if (features.Any())
+                        {
+                            <ul class="tree-list nested">
+                                @foreach (var feature in features)
+                                {
+                                    <li class="tree-item feature">
+                                        <div class="tree-node" @onclick="() => OnItemSelected.InvokeAsync(feature)">
+                                            <span class="type-badge feature-badge">Feature</span>
+                                            <span class="title">@HighlightText(feature.Title)</span>
+                                            <span class="id">[@feature.TfsId]</span>
+                                        </div>
+
+                                        @{
+                                            var pbis = GetPBIs(feature);
+                                            if (pbis.Any())
+                                            {
+                                                <ul class="tree-list nested">
+                                                    @foreach (var pbi in pbis)
+                                                    {
+                                                        <li class="tree-item pbi">
+                                                            <div class="tree-node" @onclick="() => OnItemSelected.InvokeAsync(pbi)">
+                                                                <span class="type-badge pbi-badge">PBI</span>
+                                                                <span class="title">@HighlightText(pbi.Title)</span>
+                                                                <span class="id">[@pbi.TfsId]</span>
+                                                            </div>
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            }
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    }
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="empty-state">
+            <p>No work items found. Click "Pull & Cache" to load data.</p>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyCollection<WorkItemDto> WorkItems { get; set; } = Array.Empty<WorkItemDto>();
+
+    [Parameter]
+    public string SearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<WorkItemDto> OnItemSelected { get; set; }
+
+    private IEnumerable<WorkItemDto> GetEpics()
+    {
+        return WorkItems.Where(w => w.Type.Equals("Epic", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private IEnumerable<WorkItemDto> GetFeatures(WorkItemDto epic)
+    {
+        // Simplified: In a real implementation, this would use parent-child relationships
+        // For now, just return items that are features (stub implementation)
+        return WorkItems.Where(w => w.Type.Equals("Feature", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private IEnumerable<WorkItemDto> GetPBIs(WorkItemDto feature)
+    {
+        // Simplified: In a real implementation, this would use parent-child relationships
+        // For now, just return items that are PBIs (stub implementation)
+        return WorkItems.Where(w => 
+            w.Type.Equals("Product Backlog Item", StringComparison.OrdinalIgnoreCase) ||
+            w.Type.Equals("PBI", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private MarkupString HighlightText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            return (MarkupString)text;
+        }
+
+        var highlightedText = text.Replace(
+            SearchText,
+            $"<mark>{SearchText}</mark>",
+            StringComparison.OrdinalIgnoreCase);
+
+        return (MarkupString)highlightedText;
+    }
+}
