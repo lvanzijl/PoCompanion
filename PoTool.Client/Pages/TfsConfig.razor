@@ -1,0 +1,98 @@
+@page "/tfs-config"
+@using Microsoft.AspNetCore.Components.Forms
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<h3>TFS / Azure DevOps Configuration</h3>
+
+<div class="config-form">
+    <EditForm Model="_model" OnValidSubmit="SaveConfig">
+        <InputText @bind-Value="_model.Url" placeholder="TFS URL (e.g. https://dev.azure.com/yourorg)" />
+        <br />
+        <InputText @bind-Value="_model.Project" placeholder="Project name" />
+        <br />
+        <InputText @bind-Value="_model.Pat" placeholder="Personal Access Token (PAT)" />
+        <br />
+        <button type="submit">Save</button>
+        <button type="button" @onclick="TestConnection">Test Connection</button>
+    </EditForm>
+
+    @if (!string.IsNullOrEmpty(_statusMessage))
+    {
+        <div class="status">@_statusMessage</div>
+    }
+</div>
+
+@code {
+    private TfsModel _model = new();
+    private string _statusMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExisting();
+    }
+
+    private async Task LoadExisting()
+    {
+        try
+        {
+            var resp = await Http.GetAsync("api/tfsconfig");
+            if (resp.IsSuccessStatusCode)
+            {
+                var obj = await resp.Content.ReadFromJsonAsync<TfsModel>();
+                if (obj != null)
+                {
+                    _model.Url = obj.Url;
+                    _model.Project = obj.Project;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = "Could not load existing configuration" + ex.Message;
+        }
+    }
+
+    private async Task SaveConfig()
+    {
+        _statusMessage = "Saving...";
+        var resp = await Http.PostAsJsonAsync("api/tfsconfig", _model);
+        if (resp.IsSuccessStatusCode)
+        {
+            _statusMessage = "Saved";
+        }
+        else
+        {
+            _statusMessage = "Save failed";
+        }
+    }
+
+    private async Task TestConnection()
+    {
+        _statusMessage = "Testing...";
+        var resp = await Http.GetAsync("api/tfsconfig");
+        if (!resp.IsSuccessStatusCode)
+        {
+            _statusMessage = "Configuration not saved yet";
+            return;
+        }
+
+        // Call validate endpoint (not implemented client-side) via admin route
+        var validateResp = await Http.GetAsync("api/tfsvalidate");
+        if (validateResp.IsSuccessStatusCode)
+        {
+            _statusMessage = "Connection OK";
+        }
+        else
+        {
+            _statusMessage = "Connection failed";
+        }
+    }
+
+    private class TfsModel
+    {
+        public string Url { get; set; } = string.Empty;
+        public string Project { get; set; } = string.Empty;
+        public string Pat { get; set; } = string.Empty;
+    }
+}

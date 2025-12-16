@@ -18,6 +18,11 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<WorkItemEntity> WorkItems => Set<WorkItemEntity>();
 
+    /// <summary>
+    /// Persisted TFS configuration (encrypted PAT stored in ProtectedPat).
+    /// </summary>
+    public DbSet<TfsConfigEntity> TfsConfigs => Set<TfsConfigEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -30,6 +35,14 @@ public class PoToolDbContext : DbContext
             entity.HasIndex(e => e.Type);
             
             entity.HasIndex(e => e.Title);
+        });
+
+        modelBuilder.Entity<TfsConfigEntity>(entity =>
+        {
+            entity.HasIndex(e => e.Url);
+            entity.Property(e => e.ProtectedPat).IsRequired();
+            entity.Property(e => e.Url).HasMaxLength(1024).IsRequired();
+            entity.Property(e => e.Project).HasMaxLength(256);
         });
     }
 }
