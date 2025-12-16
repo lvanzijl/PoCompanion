@@ -1,0 +1,152 @@
+@using System.Net.Http.Json
+@inject HttpClient Http
+@implements IDisposable
+
+@if (Visible)
+{
+    <div class="settings-modal-backdrop" @onclick="Close"></div>
+    <div class="settings-modal">
+        <div class="settings-header">
+            <h3>Settings</h3>
+            <button class="close-btn" @onclick="Close">?</button>
+        </div>
+
+        <EditForm Model="_model" OnValidSubmit="SaveConfig">
+            <div class="form-group">
+                <label>TFS / Azure DevOps URL</label>
+                <InputText class="form-control" @bind-Value="_model.Url" placeholder="https://dev.azure.com/yourorg" />
+            </div>
+            <div class="form-group">
+                <label>Project</label>
+                <InputText class="form-control" @bind-Value="_model.Project" placeholder="Project name" />
+            </div>
+            <div class="form-group">
+                <label>Personal Access Token (PAT)</label>
+                <InputText class="form-control" type="password" @bind-Value="_model.Pat" placeholder="••••••••" />
+                <div class="form-text text-muted">We store your PAT securely on the server. It's used only for API calls.</div>
+            </div>
+
+            <div class="settings-actions">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-secondary" @onclick="TestConnection">Test Connection</button>
+                <button type="button" class="btn btn-link" @onclick="Close">Close</button>
+            </div>
+        </EditForm>
+
+        @if (!string.IsNullOrEmpty(_statusMessage))
+        {
+            <div class="status @(_statusClass)">@_statusMessage</div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool Visible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    private TfsModel _model = new();
+    private string _statusMessage = string.Empty;
+    private string _statusClass = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Visible)
+        {
+            await LoadExisting();
+        }
+    }
+
+    private async Task LoadExisting()
+    {
+        _statusMessage = string.Empty;
+        try
+        {
+            var resp = await Http.GetAsync("api/tfsconfig");
+            if (resp.IsSuccessStatusCode)
+            {
+                var obj = await resp.Content.ReadFromJsonAsync<TfsModel>();
+                if (obj != null)
+                {
+                    _model.Url = obj.Url;
+                    _model.Project = obj.Project;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = "Could not load existing configuration: " + ex.Message;
+            _statusClass = "status-error";
+        }
+    }
+
+    private async Task SaveConfig()
+    {
+        _statusMessage = "Saving...";
+        _statusClass = "status-info";
+        try
+        {
+            var resp = await Http.PostAsJsonAsync("api/tfsconfig", _model);
+            if (resp.IsSuccessStatusCode)
+            {
+                _statusMessage = "Saved successfully";
+                _statusClass = "status-success";
+            }
+            else
+            {
+                _statusMessage = "Save failed";
+                _statusClass = "status-error";
+            }
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = "Save failed: " + ex.Message;
+            _statusClass = "status-error";
+        }
+    }
+
+    private async Task TestConnection()
+    {
+        _statusMessage = "Testing...";
+        _statusClass = "status-info";
+        try
+        {
+            var validateResp = await Http.GetAsync("api/tfsvalidate");
+            if (validateResp.IsSuccessStatusCode)
+            {
+                _statusMessage = "Connection OK";
+                _statusClass = "status-success";
+            }
+            else
+            {
+                _statusMessage = "Connection failed";
+                _statusClass = "status-error";
+            }
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = "Test failed: " + ex.Message;
+            _statusClass = "status-error";
+        }
+    }
+
+    private async Task Close()
+    {
+        Visible = false;
+        await VisibleChanged.InvokeAsync(Visible);
+    }
+
+    public void Dispose()
+    {
+        // no-op for now
+    }
+
+    private class TfsModel
+    {
+        public string Url { get; set; } = string.Empty;
+        public string Project { get; set; } = string.Empty;
+        public string Pat { get; set; } = string.Empty;
+    }
+}
