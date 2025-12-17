@@ -63,8 +63,15 @@ builder.Services.AddCors(options =>
     {
         if (builder.Environment.IsDevelopment())
         {
-            // during development allow any origin to simplify local testing
-            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+            // In development, restrict to known local origins and enable credentials for SignalR
+            policy.WithOrigins(
+                    "https://localhost:5001",
+                    "http://localhost:5000",
+                    "http://localhost:5291"  // Allow API self-reference for Swagger UI
+                )
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
         }
         else
         {
