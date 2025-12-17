@@ -421,7 +421,7 @@ After completing the feature, use memory tools to store:
 ### 10.2 Update Documentation
 If your feature changes public APIs or user-facing behavior:
 - Update README.md
-- Update relevant documentation in `/docs`
+- Update relevant documentation in `docs/`
 - Add examples if helpful
 
 ---
