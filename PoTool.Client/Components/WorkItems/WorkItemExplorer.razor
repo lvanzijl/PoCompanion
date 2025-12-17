@@ -2,6 +2,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Services
 @using PoTool.Client.Models
+@using PoTool.Client.Configuration
 @using PoTool.Client.Components.WorkItems.SubComponents
 @inject WorkItemService WorkItemService
 @inject IWorkItemSyncHubService SyncHubService
@@ -36,7 +37,6 @@
 </div>
 
 @code {
-    private const string ExpandedStateKey = "workitem-tree-expanded";
 
     private List<WorkItemDto> _workItems = new();
     private List<WorkItemDto> _filteredWorkItems = new();
@@ -133,8 +133,8 @@
 
             try
             {
-                await SyncHubService.RequestSyncAsync("DefaultAreaPath");
-                await Task.Delay(300);
+                await SyncHubService.RequestSyncAsync(AppSettings.DefaultAreaPath);
+                await Task.Delay(AppSettings.SyncDelayMilliseconds);
                 await LoadWorkItems();
             }
             catch (Exception ex)
@@ -222,7 +222,7 @@
     {
         try
         {
-            var json = await JS.InvokeAsync<string>("localStorage.getItem", ExpandedStateKey);
+            var json = await JS.InvokeAsync<string>("localStorage.getItem", AppSettings.TreeExpandedStateKey);
             if (!string.IsNullOrEmpty(json))
             {
                 var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, bool>>(json);
@@ -250,7 +250,7 @@
         try
         {
             var json = System.Text.Json.JsonSerializer.Serialize(_expandedState);
-            await JS.InvokeVoidAsync("localStorage.setItem", ExpandedStateKey, json);
+            await JS.InvokeVoidAsync("localStorage.setItem", AppSettings.TreeExpandedStateKey, json);
         }
         catch
         {
