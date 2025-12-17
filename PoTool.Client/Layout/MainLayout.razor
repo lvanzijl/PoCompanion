@@ -1,6 +1,11 @@
 ﻿@using PoTool.Client.Components.Settings
 @inherits LayoutComponentBase
 
+<MudThemeProvider Theme="_darkTheme" IsDarkMode="true" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -8,11 +13,11 @@
 
     <main>
         <div class="top-row px-4 d-flex justify-content-end align-items-center">
-            <button class="btn btn-link p-0 settings-top-right" @onclick="OpenSettings" title="Settings" aria-label="Open settings">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M12 8.4a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2zM19.4 12a7.4 7.4 0 0 0-.1-1l2.1-1.6a.5.5 0 0 0 .1-.7l-2-3.4a.5.5 0 0 0-.7-.2l-2.5 1a7.5 7.5 0 0 0-1.7-.9l-.4-2.6A.5.5 0 0 0 13.8 1h-3.6a.5.5 0 0 0-.5.4l-.4 2.6a7.5 7.5 0 0 0-1.7.9l-2.5-1a.5.5 0 0 0-.7.2l-2 3.4a.5.5 0 0 0 .1.7L4.7 11a7.4 7.4 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.7l2 3.4a.5.5 0 0 0 .7.2l2.5-1c.5.3 1 .6 1.7.9l.4 2.6c.1.3.4.4.5.4h3.6c.2 0 .4-.1.5-.4l.4-2.6c.6-.3 1.2-.6 1.7-.9l2.5 1a.5.5 0 0 0 .7-.2l2-3.4a.5.5 0 0 0-.1-.7L19.4 13a7.4 7.4 0 0 0 .1-1z"/>
-                </svg>
-            </button>
+            <MudIconButton Icon="@Icons.Material.Filled.Settings" 
+                          Color="Color.Inherit" 
+                          OnClick="OpenSettings" 
+                          title="Settings" 
+                          aria-label="Open settings" />
         </div>
 
         <article class="content px-4">
@@ -30,4 +35,37 @@
     {
         _settingsVisible = true;
     }
+
+    private readonly MudTheme _darkTheme = new()
+    {
+        PaletteLight = new PaletteLight(),
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#7c4dff",
+            Secondary = "#00bcd4",
+            AppbarBackground = "#1e1e1e",
+            Background = "#121212",
+            BackgroundGray = "#1e1e1e",
+            Surface = "#1e1e1e",
+            DrawerBackground = "#1e1e1e",
+            DrawerText = "rgba(255,255,255, 0.87)",
+            DrawerIcon = "rgba(255,255,255, 0.87)",
+            TextPrimary = "rgba(255,255,255, 0.87)",
+            TextSecondary = "rgba(255,255,255, 0.60)",
+            ActionDefault = "#adadad",
+            ActionDisabled = "rgba(255,255,255, 0.26)",
+            ActionDisabledBackground = "rgba(255,255,255, 0.12)",
+            Divider = "rgba(255,255,255, 0.12)",
+            DividerLight = "rgba(255,255,255, 0.06)",
+            TableLines = "rgba(255,255,255, 0.12)",
+            LinesDefault = "rgba(255,255,255, 0.12)",
+            LinesInputs = "rgba(255,255,255, 0.42)",
+            TextDisabled = "rgba(255,255,255, 0.38)",
+            Info = "#2196f3",
+            Success = "#4caf50",
+            Warning = "#ff9800",
+            Error = "#f44336",
+            Dark = "#121212"
+        }
+    };
 }

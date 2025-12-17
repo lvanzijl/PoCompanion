@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using MudBlazor.Services;
 using PoTool.Client;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
@@ -21,5 +22,8 @@ builder.Services.AddScoped<IWorkItemsClient>(sp =>
 
 // Register services
 builder.Services.AddScoped<WorkItemService>();
+
+// Add MudBlazor services
+builder.Services.AddMudServices();
 
 await builder.Build().RunAsync();
