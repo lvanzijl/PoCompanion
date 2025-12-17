@@ -106,10 +106,11 @@
     private async Task SaveSettings()
     {
         _errorMessage = string.Empty;
-        _isSaving = true;
-
+        
         try
         {
+            _isSaving = true;
+            
             // Parse goal IDs
             var goalIds = ParseGoalIds(_goalIdsText);
             if (goalIds.Count == 0)

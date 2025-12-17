@@ -58,8 +58,8 @@
     private List<WorkItemDto> _workItems = new();
     private List<WorkItemDto> _filteredWorkItems = new();
     private WorkItemDto? _selectedWorkItem;
-    private List<WorkItemDto> _selectedWorkItems = new();
-    private HashSet<int> _selectedIds = new();
+    private readonly List<WorkItemDto> _selectedWorkItems = new();
+    private readonly HashSet<int> _selectedIds = new();
     private string _filterText = string.Empty;
     private bool _isLoading = true;
     private bool _isSyncing = false;
@@ -72,7 +72,7 @@
 
     // Tree structure
     private List<TreeNode> _treeRoots = new();
-    private List<TreeNode> _flatNodeList = new(); // Flat list for keyboard navigation
+    private readonly List<TreeNode> _flatNodeList = new(); // Flat list for keyboard navigation
 
     // Preserve expanded state across reloads and filters
     private readonly Dictionary<int, bool> _expandedState = new();
@@ -131,16 +131,10 @@
             var settings = await SettingsService.GetOrCreateDefaultSettingsAsync();
             StateService.SetMode(settings.DataMode);
 
-            if (settings.ConfiguredGoalIds.Count > 0)
-            {
-                // Load hierarchy for configured Goals
-                _workItems = (await WorkItemService.GetGoalHierarchyAsync(settings.ConfiguredGoalIds)).ToList();
-            }
-            else
-            {
-                // Fallback to loading all items if no Goals configured
-                _workItems = (await WorkItemService.GetAllAsync()).ToList();
-            }
+            // Load hierarchy for configured Goals or all items if no Goals configured
+            _workItems = settings.ConfiguredGoalIds.Count > 0
+                ? (await WorkItemService.GetGoalHierarchyAsync(settings.ConfiguredGoalIds)).ToList()
+                : (await WorkItemService.GetAllAsync()).ToList();
 
             ApplyFilter();
             await SaveExpandedStateAsync();
@@ -224,11 +218,11 @@
     {
         _filteredWorkItems = TreeBuilderService.FilterWithAncestors(_workItems, _filterText);
         _treeRoots = TreeBuilderService.BuildTree(_filteredWorkItems, _expandedState);
-        BuildFlatNodeList();
+        RebuildFlatNodeListFromTree();
         StateHasChanged();
     }
 
-    private void BuildFlatNodeList()
+    private void RebuildFlatNodeListFromTree()
     {
         _flatNodeList.Clear();
         foreach (var root in _treeRoots)
@@ -265,26 +259,25 @@
             var workItem = System.Text.Json.JsonSerializer.Deserialize<WorkItemDto>(node.JsonPayload);
             if (workItem != null)
             {
-                // Toggle selection: if already selected, add/remove from multi-selection
+                // Toggle selection: if already selected, remove from multi-selection
                 if (_selectedIds.Contains(node.Id))
                 {
                     _selectedIds.Remove(node.Id);
                     _selectedWorkItems.RemoveAll(w => w.TfsId == node.Id);
+                    
+                    // Update single selection to first remaining item or null
+                    _selectedWorkItem = _selectedWorkItems.FirstOrDefault();
                 }
                 else
                 {
                     _selectedIds.Add(node.Id);
-                    _selectedWorkItems.Add(workItem);
-                }
-
-                // Update single selection to last clicked item
-                _selectedWorkItem = workItem;
-                
-                // If only one item selected, use single-item view
-                if (_selectedIds.Count == 1)
-                {
-                    _selectedWorkItems.Clear();
-                    _selectedWorkItems.Add(workItem);
+                    if (!_selectedWorkItems.Any(w => w.TfsId == node.Id))
+                    {
+                        _selectedWorkItems.Add(workItem);
+                    }
+                    
+                    // Update single selection to last clicked item
+                    _selectedWorkItem = workItem;
                 }
             }
         }

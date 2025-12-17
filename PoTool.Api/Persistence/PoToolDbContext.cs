@@ -52,8 +52,7 @@ public class PoToolDbContext : DbContext
 
         modelBuilder.Entity<SettingsEntity>(entity =>
         {
-            // Ensure only one settings record exists
-            entity.HasIndex(e => e.Id).IsUnique();
+            // Settings entity configuration (Id is primary key by convention)
         });
     }
 }

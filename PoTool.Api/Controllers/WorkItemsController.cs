@@ -107,12 +107,22 @@ public class WorkItemsController : ControllerBase
                 return BadRequest("At least one goal ID must be provided");
             }
 
+            // Validate that all IDs are positive
+            if (ids.Any(id => id <= 0))
+            {
+                return BadRequest("All goal IDs must be positive integers");
+            }
+
             var workItems = await _mediator.Send(new GetGoalHierarchyQuery(ids), cancellationToken);
             return Ok(workItems);
         }
         catch (FormatException)
         {
             return BadRequest("Invalid goal ID format");
+        }
+        catch (OverflowException)
+        {
+            return BadRequest("Goal ID value is too large");
         }
         catch (Exception ex)
         {

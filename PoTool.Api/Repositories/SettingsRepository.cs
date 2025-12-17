@@ -67,12 +67,18 @@ public class SettingsRepository : ISettingsRepository
 
     private static SettingsDto MapToDto(SettingsEntity entity)
     {
-        var goalIds = string.IsNullOrWhiteSpace(entity.ConfiguredGoalIds)
-            ? new List<int>()
-            : entity.ConfiguredGoalIds
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(int.Parse)
-                .ToList();
+        var goalIds = new List<int>();
+        
+        if (!string.IsNullOrWhiteSpace(entity.ConfiguredGoalIds))
+        {
+            foreach (var part in entity.ConfiguredGoalIds.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (int.TryParse(part.Trim(), out var id) && id > 0)
+                {
+                    goalIds.Add(id);
+                }
+            }
+        }
 
         return new SettingsDto(
             entity.Id,
