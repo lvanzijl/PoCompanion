@@ -1,25 +1,137 @@
-right now there is a workitem view which contains the items from a tfs backlog.
+# Feature: Hierarchical Work Item Tree (Goals → Tasks)
 
-In this new version I want to have the full chain from goal, objective, epic, feature, pbi and task.
-I want to be able to add 'goals' in the settings and from then on all its children, recursively, are loaded when the workitem view is loaded.
+## Goal
+Extend the existing Work Item View so it can display and navigate the full hierarchical chain of work items:
 
-At first we don't connect to a real TFS so we use mocked data with the fields that are already in the current version
-Every item in the tree has an icon to identify what kind of workitem it is, this icon is before the title.
-For now this icon is just a small colored square:
-- goal: green
-- objective: light green
-- epic: orange
-- feature: purple
-- pbi: blue
-- task yellow
+**Goal → Objective → Epic → Feature → PBI → Task**
 
-at the end of every line there is a possibility of adding status icons, we will be creating different validations to validate the workitems and every fault category has an icon.
-when an item is clicked the detailed view shows the current details of the selected workitem and below it, in a seperate section the validation errors and warnings are shown with icon and detailed text.
+This view provides a structured, read-only overview of all work items derived from one or more configured goals.
 
-This feature needs a proper treeview for the workitem chain, the treeview collapse state should be persisted so that if new data is loaded it will, as much as possible, keep those items collapsed that where collapsed.
-the treeview component should fit perfectly in the current theme, should be intuitive and familiar for the user and have keyboard navigation from the start. ARIA and other accessibility isn't needed yet, only if used for automated testing.
+---
 
-The items are loaded only when clicked on the pull and cache data button, all data is cached and as long as the data is treated as read only and not reloaded from the server.
-when the pull and cache data is pressed the tool should know if its in a mode where real data from the configured TFS server should be pulled or the test data is used.
+## Functional Description
 
-The treeview needs columns, in the near future we will show more than just the title and status and this should be lined out nicely in columns.
+### 1. Data Scope, Modes, and Persistence
+
+- The application supports configuring one or more **Goals** in the **Settings screen**.
+- The **Settings screen** also contains a setting to select the active **data mode**:
+  - **Mock mode**
+  - **TFS mode**
+- The selected mode is persisted and determines the active data source at runtime.
+
+- When the **Pull & Cache Data** action is triggered:
+  - All configured Goals are loaded.
+  - All child work items are loaded **recursively** down to Task level.
+- Data is loaded **only** when this action is explicitly triggered.
+- Loaded data is cached locally and treated as **read-only** until reloaded.
+
+#### Data Modes
+
+- **Mock mode**
+  - Uses static test data.
+  - Mock data contains the same fields as the current implementation.
+- **TFS mode**
+  - Pulls real data from the configured TFS server.
+
+#### Mode Isolation
+
+- Persisted UI state **must be isolated per data mode**.
+- At minimum, the following state is stored **separately for Mock and TFS mode**:
+  - Tree expand/collapse state
+  - Current selection (including multi-selection)
+- Switching modes:
+  - Does not reuse cached data from another mode.
+  - Does not reuse persisted UI state from another mode.
+  - Always operates on the data and state belonging to the currently selected mode.
+
+---
+
+### 2. Tree View Structure
+
+- Work items are displayed in a **tree view** representing the parent–child hierarchy.
+- Each node represents a single work item.
+- The tree view:
+  - Supports expand/collapse per node.
+  - Persists collapse/expand state across reloads where possible (best-effort based on stable work item identity within the same mode).
+  - Supports **multi-selection** (keyboard and mouse).
+  - Is keyboard-navigable from the start.
+  - Fits seamlessly within the existing application theme and visual language.
+- Accessibility (ARIA) is not required at this stage, except where needed for automated testing.
+
+---
+
+### 3. Columns, Status, and Layout
+
+- The tree view is **column-based**, not a single text column.
+- Each work item has an explicit **status**.
+- At minimum, the tree view contains the following columns:
+  - **Type icon column**
+  - **Title column**
+  - **Status column**
+  - **Validation / status icon column**
+- Column layout must be extensible to support additional fields in future iterations.
+- Columns are visually aligned across all hierarchy levels.
+
+#### Status Handling
+
+- In **Mock mode**, each work item uses one of the following statuses:
+  - `New`
+  - `In Progress`
+  - `Done`
+- Status is shown in the **Status column**.
+- In a future iteration:
+  - Status values will differ per work item type.
+  - Status values will be sourced directly from TFS.
+  - The tree view must not assume a fixed or global status set.
+
+---
+
+### 4. Work Item Type Indicators
+
+Each work item displays a small colored square icon **before the title**, indicating its type:
+
+| Work Item Type | Color        |
+|---------------|--------------|
+| Goal          | Green        |
+| Objective     | Light green  |
+| Epic          | Orange       |
+| Feature       | Purple       |
+| PBI           | Blue         |
+| Task          | Yellow       |
+
+---
+
+### 5. Validation Status Indicators
+
+- At the **end of each row**, validation status icons may be displayed.
+- Each icon represents a specific validation fault category.
+- Multiple icons per item are allowed.
+
+---
+
+### 6. Detail View Integration (Single & Multi-Select)
+
+- Clicking a work item selects it and updates the **detail view**.
+- Multiple work items can be selected simultaneously.
+
+#### Detail View Behavior
+
+- When **a single item** is selected:
+  - The detail view shows all available fields for that work item.
+- When **multiple items** are selected:
+  - The detail view only shows fields whose values are **identical across all selected items**.
+  - Fields with differing values are:
+    - Shown in a disabled state.
+    - Accompanied by a clear explanatory message indicating that the field cannot be shown or edited due to multi-selection.
+- Below the field section, a separate area lists validation warnings and errors:
+  - Each entry includes an icon and descriptive text.
+- The entire detail view remains read-only in this feature.
+
+---
+
+## Non-Functional Constraints
+
+- No write-back to TFS.
+- No automatic refresh or background updates.
+- All data remains static until explicitly reloaded.
+- Tree view and detail view must be structured for future expansion (additional fields, validations, statuses, and item types).
