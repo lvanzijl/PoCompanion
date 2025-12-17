@@ -16,23 +16,8 @@ public class WorkItemExplorerTests
     [TestMethod]
     public async Task ExpandedState_Persistence_LocalStorage_SavedAndLoaded()
     {
-        // This unit test checks the logic of saving/loading expanded state to localStorage via JS interop.
-        var jsMock = new Mock<IJSRuntime>();
-
-        var saved = string.Empty;
-        jsMock.Setup(js => js.InvokeAsync<string>(It.Is<string>(s => s == "localStorage.getItem"), It.IsAny<object[]>() ))
-              .ReturnsAsync((string?)null);
-
-        jsMock.Setup(js => js.InvokeVoidAsync(It.Is<string>(s => s == "localStorage.setItem"), It.IsAny<object[]>() ))
-              .Callback<string, object[]>((identifier, args) => {
-                  if (args != null && args.Length >= 2 && args[0] is string key && args[1] is string value)
-                  {
-                      saved = value;
-                  }
-              })
-              .Returns(new ValueTask());
-
-        // Create an instance of the dev repository and get items
+        // This unit test checks the logic of serialization/deserialization of expanded state
+        // Note: Full JSInterop testing is better done with bUnit tests
         var repo = new DevWorkItemRepository();
         var items = (await repo.GetAllAsync()).ToList();
 
@@ -40,19 +25,17 @@ public class WorkItemExplorerTests
         var expanded = new Dictionary<int, bool> { { items.First().TfsId, true } };
         var json = System.Text.Json.JsonSerializer.Serialize(expanded);
 
-        // Call Save via mock - directly call the JS mock to simulate component behavior
-        await jsMock.Object.InvokeVoidAsync("localStorage.setItem", new object[] { "workitem-tree-expanded", json });
+        // Verify JSON is not empty
+        Assert.IsFalse(string.IsNullOrEmpty(json));
 
-        // Ensure saved contains JSON
-        Assert.IsFalse(string.IsNullOrEmpty(saved));
+        // Simulate deserialization (what would be loaded from localStorage)
+        var loaded = System.Text.Json.JsonSerializer.Deserialize<Dictionary<int, bool>>(json);
 
-        // Setup get to return the saved value
-        jsMock.Setup(js => js.InvokeAsync<string>(It.Is<string>(s => s == "localStorage.getItem"), It.IsAny<object[]>() ))
-              .ReturnsAsync(saved);
-
-        // Simulate Load
-        var loaded = await jsMock.Object.InvokeAsync<string>("localStorage.getItem", new object[] { "workitem-tree-expanded" });
-        Assert.AreEqual(saved, loaded);
+        // Verify the loaded state matches
+        Assert.IsNotNull(loaded);
+        Assert.AreEqual(1, loaded.Count);
+        Assert.IsTrue(loaded.ContainsKey(items.First().TfsId));
+        Assert.IsTrue(loaded[items.First().TfsId]);
     }
 
     [TestMethod]

@@ -1,162 +1,90 @@
 ﻿@page "/"
-@using System.Net.Http.Json
-@using PoTool.Core.WorkItems
-@inject HttpClient Http
 @inject NavigationManager Navigation
 
-<PageTitle>Home</PageTitle>
+<PageTitle>PO Companion</PageTitle>
 
-<h1>Diagnostics</h1>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">
+        Welcome to PO Companion
+    </MudText>
+    <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mb-8" Color="Color.Secondary">
+        Your Azure DevOps work item management companion
+    </MudText>
 
-<div class="diagnostics">
-    <div>
-        <label>API Base:</label>
-        <span>@_apiBase</span>
-    </div>
-    <div>
-        <label>Health:</label>
-        <span>@_healthStatus</span>
-    </div>
-    <div>
-        <label>Work items cached:</label>
-        <span>@_workItemCount</span>
-    </div>
-    <div>
-        <label>Hub negotiate:</label>
-        <span>@_hubNegotiateStatus</span>
-    </div>
-    <div>
-        <label>Last error:</label>
-        <pre>@_lastError</pre>
-    </div>
-    <div>
-        <button @onclick="Refresh">Refresh diagnostics</button>
-    </div>
-</div>
+    <MudGrid Spacing="4" Justify="Justify.Center">
+        <MudItem xs="12" sm="6" md="4">
+            <MudCard Elevation="2" Class="pa-4" Style="height: 100%">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.List" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h6">Work Items</MudText>
+                        </MudStack>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText>View and manage your work items in a hierarchical tree structure with real-time sync.</MudText>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/workitems">Go to Work Items</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
 
-<hr />
+        <MudItem xs="12" sm="6" md="4">
+            <MudCard Elevation="2" Class="pa-4" Style="height: 100%">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Secondary" Size="Size.Large" />
+                            <MudText Typo="Typo.h6">Configuration</MudText>
+                        </MudStack>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText>Configure your Azure DevOps connection settings and Personal Access Token.</MudText>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Text" Color="Color.Secondary" Href="/tfsconfig">Go to Config</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
 
-<h2>Welcome</h2>
-<p>This page shows runtime diagnostics for the API and SignalR hub to help local development.</p>
+        <MudItem xs="12" sm="6" md="4">
+            <MudCard Elevation="2" Class="pa-4" Style="height: 100%">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Sync" Color="Color.Info" Size="Size.Large" />
+                            <MudText Typo="Typo.h6">Real-time Sync</MudText>
+                        </MudStack>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText>Automatically synchronize work items with Azure DevOps via SignalR.</MudText>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Text" Color="Color.Info" Disabled="true">Coming Soon</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
 
-@code {
-    private string _apiBase = string.Empty;
-    private string _healthStatus = "Unknown";
-    private int _workItemCount = 0;
-    private string _hubNegotiateStatus = "Unknown";
-    private string _lastError = string.Empty;
-
-    protected override async Task OnInitializedAsync()
-    {
-        _apiBase = Http.BaseAddress?.ToString().TrimEnd('/') ?? Navigation.BaseUri.TrimEnd('/');
-        await CheckDiagnosticsAsync();
-    }
-
-    private async Task Refresh()
-    {
-        _lastError = string.Empty;
-        await CheckDiagnosticsAsync();
-    }
-
-    private async Task CheckDiagnosticsAsync()
-    {
-        // Health
-        try
-        {
-            var resp = await Http.GetAsync(_apiBase + "/health");
-            if (resp.IsSuccessStatusCode)
-            {
-                _healthStatus = "Healthy";
-            }
-            else
-            {
-                _healthStatus = $"Unhealthy ({(int)resp.StatusCode})";
-                var body = await SafeReadStringAsync(resp);
-                if (!string.IsNullOrEmpty(body)) _lastError += (string.IsNullOrEmpty(_lastError) ? "" : "\n") + $"/health response body: {body}";
-            }
-        }
-        catch (Exception ex)
-        {
-            _healthStatus = "Error";
-            _lastError = ex.Message;
-        }
-
-        // Work items count - handle empty or non-JSON responses
-        try
-        {
-            var resp = await Http.GetAsync(_apiBase + "/api/workitems");
-            if (!resp.IsSuccessStatusCode)
-            {
-                _workItemCount = 0;
-                var body = await SafeReadStringAsync(resp);
-                _lastError += (string.IsNullOrEmpty(_lastError) ? "" : "\n") + $"GET /api/workitems returned {(int)resp.StatusCode}. Body: {Truncate(body, 1000)}";
-            }
-            else
-            {
-                var content = await SafeReadStringAsync(resp);
-                if (string.IsNullOrWhiteSpace(content))
-                {
-                    _workItemCount = 0; // empty payload
-                }
-                else
-                {
-                    try
-                    {
-                        var items = System.Text.Json.JsonSerializer.Deserialize<List<WorkItemDto>>(content, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                        _workItemCount = items?.Count ?? 0;
-                    }
-                    catch (Exception ex)
-                    {
-                        _workItemCount = 0;
-                        _lastError += (string.IsNullOrEmpty(_lastError) ? "" : "\n") + $"Invalid JSON from /api/workitems: {ex.Message}\n{Truncate(content, 2000)}";
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _workItemCount = 0;
-            _lastError += (string.IsNullOrEmpty(_lastError) ? "" : "\n") + ex.Message;
-        }
-
-        // Hub negotiate - use POST as negotiate expects a POST
-        try
-        {
-            var negotiateUrl = _apiBase + "/hubs/workitems/negotiate?negotiateVersion=1";
-            var r = await Http.PostAsync(negotiateUrl, null);
-            if (!r.IsSuccessStatusCode)
-            {
-                var body = await SafeReadStringAsync(r);
-                _hubNegotiateStatus = $"Failed ({(int)r.StatusCode})";
-                _lastError += (string.IsNullOrEmpty(_lastError) ? "" : "\n") + $"Negotiate failed body: {Truncate(body, 2000)}";
-            }
-            else
-            {
-                _hubNegotiateStatus = "OK";
-            }
-        }
-        catch (Exception ex)
-        {
-            _hubNegotiateStatus = "Error";
-            _lastError += (string.IsNullOrEmpty(_lastError) ? "" : "\n") + ex.Message;
-        }
-    }
-
-    private static string Truncate(string? s, int max)
-    {
-        if (string.IsNullOrEmpty(s)) return string.Empty;
-        return s.Length <= max ? s : s.Substring(0, max) + "...";
-    }
-
-    private static async Task<string> SafeReadStringAsync(HttpResponseMessage resp)
-    {
-        try
-        {
-            return await resp.Content.ReadAsStringAsync();
-        }
-        catch
-        {
-            return string.Empty;
-        }
-    }
-}
+    <MudPaper Elevation="0" Class="pa-6 mt-8">
+        <MudText Typo="Typo.h5" GutterBottom="true">Getting Started</MudText>
+        <MudStack Spacing="2" Class="mt-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                <MudText>Configure your Azure DevOps connection in the Configuration page</MudText>
+            </MudStack>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                <MudText>View and explore your work items in the Work Items page</MudText>
+            </MudStack>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                <MudText>Use filters to find specific work items quickly</MudText>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+</MudContainer>

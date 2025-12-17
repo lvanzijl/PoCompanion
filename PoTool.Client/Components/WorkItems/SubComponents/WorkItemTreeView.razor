@@ -1,0 +1,44 @@
+@using PoTool.Client.Models
+
+@* Tree view container component *@
+
+<div class="tree-view">
+    @if (IsLoading)
+    {
+        <p>Loading work items...</p>
+    }
+    else if (!TreeRoots.Any())
+    {
+        <p>No work items found. Click "Pull & Cache Work Items" to retrieve data.</p>
+    }
+    else
+    {
+        <ul class="workitem-tree-root">
+            @foreach (var node in TreeRoots)
+            {
+                <WorkItemTreeNode Node="@node"
+                                 Level="0"
+                                 SelectedId="@SelectedId"
+                                 OnNodeToggled="@OnNodeToggled"
+                                 OnNodeSelected="@OnNodeSelected" />
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public List<TreeNode> TreeRoots { get; set; } = new();
+
+    [Parameter]
+    public int? SelectedId { get; set; }
+
+    [Parameter]
+    public EventCallback<TreeNode> OnNodeToggled { get; set; }
+
+    [Parameter]
+    public EventCallback<TreeNode> OnNodeSelected { get; set; }
+}

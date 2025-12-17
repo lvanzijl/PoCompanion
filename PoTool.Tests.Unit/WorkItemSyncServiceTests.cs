@@ -20,9 +20,10 @@ public sealed class WorkItemSyncServiceTests
         var services = new ServiceCollection();
         services.AddLogging();
 
-        // In-memory DB
+        // In-memory DB with unique name per test run - use single instance across scopes
+        var dbName = "testdb_sync_" + Guid.NewGuid().ToString();
         services.AddDbContext<PoToolDbContext>(options =>
-            options.UseInMemoryDatabase("testdb"));
+            options.UseInMemoryDatabase(dbName));
 
         // Mock ITfsClient
         var tfsMock = new Mock<ITfsClient>();
@@ -34,13 +35,15 @@ public sealed class WorkItemSyncServiceTests
 
         services.AddSingleton(tfsMock.Object);
 
-        // Use real repository
-        services.AddScoped<PoTool.Api.Repositories.WorkItemRepository>();
+        // Register IWorkItemRepository as Scoped - WorkItemSyncService creates scopes internally
+        services.AddScoped<IWorkItemRepository, PoTool.Api.Repositories.WorkItemRepository>();
 
-        // HubContext mock
+        // HubContext mock - setup to allow SendAsync calls
         var hubMock = new Mock<IHubContext<WorkItemHub>>();
         var clientsMock = new Mock<IHubClients>();
         var clientProxy = new Mock<IClientProxy>();
+        clientProxy.Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object?[]>(), It.IsAny<CancellationToken>()))
+                   .Returns(Task.CompletedTask);
         clientsMock.Setup(c => c.All).Returns(clientProxy.Object);
         hubMock.SetupGet(h => h.Clients).Returns(clientsMock.Object);
         services.AddSingleton(hubMock.Object);
@@ -55,8 +58,12 @@ public sealed class WorkItemSyncServiceTests
         // Execute the trigger
         await syncService.TriggerSyncAsync("Area");
 
-        // Verify repository now has items
-        var repo = provider.GetRequiredService<PoTool.Api.Repositories.WorkItemRepository>();
+        // Verify TFS client was called
+        tfsMock.Verify(t => t.GetWorkItemsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        // Verify repository now has items - use a new scope since sync service uses scopes
+        using var scope = provider.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IWorkItemRepository>();
         var items = await repo.GetAllAsync();
         Assert.AreEqual(1, items.Count());
     }

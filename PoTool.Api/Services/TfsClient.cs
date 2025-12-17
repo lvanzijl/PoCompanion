@@ -72,6 +72,7 @@ public class TfsClient : ITfsClient
             Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($":{pat}")));
 
         // Build WIQL query to find work items under area path
+        // Note: System.Parent is not directly queryable in WIQL, but we can retrieve it via fields
         var wiql = new
         {
             query = $"Select [System.Id], [System.WorkItemType], [System.Title], [System.State] From WorkItems Where [System.AreaPath] = '{areaPath.Replace("'", "''")}'"
@@ -96,8 +97,9 @@ public class TfsClient : ITfsClient
                 return Enumerable.Empty<WorkItemDto>();
 
             // Batch get work items
+            // Use $expand=All to get all fields including System.Parent
             var idsQuery = string.Join(',', ids);
-            var itemsUrl = entity.Url.TrimEnd('/') + $"/_apis/wit/workitems?ids={idsQuery}&$expand=all&api-version=7.0";
+            var itemsUrl = entity.Url.TrimEnd('/') + $"/_apis/wit/workitems?ids={idsQuery}&$expand=All&api-version=7.0";
             var itemsResponse = await _httpClient.GetAsync(itemsUrl, cancellationToken);
             itemsResponse.EnsureSuccessStatusCode();
 
@@ -115,12 +117,29 @@ public class TfsClient : ITfsClient
                 var state = fields.TryGetProperty("System.State", out var s) ? s.GetString() ?? "" : "";
                 var area = fields.TryGetProperty("System.AreaPath", out var a) ? a.GetString() ?? "" : "";
                 var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
+                
+                // Extract parent work item ID if present
+                // System.Parent is returned as a URL string like "https://dev.azure.com/org/_apis/wit/workItems/12345"
+                int? parentId = null;
+                if (fields.TryGetProperty("System.Parent", out var parent) && parent.ValueKind == JsonValueKind.String)
+                {
+                    var parentUrl = parent.GetString();
+                    if (!string.IsNullOrEmpty(parentUrl))
+                    {
+                        // Extract ID from URL (last segment)
+                        var segments = parentUrl.Split('/');
+                        if (segments.Length > 0 && int.TryParse(segments[^1], out var parsedId))
+                        {
+                            parentId = parsedId;
+                        }
+                    }
+                }
 
                 results.Add(new WorkItemDto(
                     TfsId: id,
                     Type: type,
                     Title: title,
-                    ParentTfsId: null,
+                    ParentTfsId: parentId,
                     AreaPath: area,
                     IterationPath: iteration,
                     State: state,

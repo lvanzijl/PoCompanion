@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Hubs;
 using PoTool.Api.Persistence;
@@ -10,6 +11,20 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+
+// Add OpenAPI/Swagger support with NSwag
+builder.Services.AddOpenApiDocument(config =>
+{
+    config.Title = "PoTool API";
+    config.Version = "v1";
+    config.Description = "API for PO Companion work item management";
+});
+
+// Add Mediator (source-generated)
+builder.Services.AddMediator(options =>
+{
+    options.ServiceLifetime = ServiceLifetime.Scoped;
+});
 
 // Configure database: prefer SqlServer if connection string present, otherwise SQLite
 var sqlServerConn = builder.Configuration.GetConnectionString("SqlServerConnection");
@@ -55,8 +70,15 @@ builder.Services.AddCors(options =>
     {
         if (builder.Environment.IsDevelopment())
         {
-            // during development allow any origin to simplify local testing
-            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+            // In development, restrict to known local origins and enable credentials for SignalR
+            policy.WithOrigins(
+                    "https://localhost:5001",
+                    "http://localhost:5000",
+                    "http://localhost:5291"  // Allow API self-reference for Swagger UI
+                )
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
         }
         else
         {
@@ -92,6 +114,18 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    
+    // Enable Swagger UI for development at /swagger
+    app.UseOpenApi();
+    app.UseSwaggerUi();
+    
+    // Enable WebAssembly debugging in development
+    app.UseWebAssemblyDebugging();
+}
+else
+{
+    // In production, use exception handler
+    app.UseExceptionHandler("/Error");
 }
 
 // Only enable HTTPS redirection when an HTTPS URL is configured.
@@ -104,6 +138,10 @@ if (hasHttpsEndpoint)
     app.UseHttpsRedirection();
 }
 
+// Serve Blazor WebAssembly static files
+app.UseBlazorFrameworkFiles();
+app.UseStaticFiles();
+
 // Add routing so middleware such as CORS apply to endpoints including SignalR
 app.UseRouting();
 
@@ -111,6 +149,9 @@ app.UseCors("AllowBlazorClient");
 
 app.MapControllers();
 app.MapHub<WorkItemHub>("/hubs/workitems");
+
+// Fallback to serve index.html for Blazor client-side routing
+app.MapFallbackToFile("index.html");
 
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow }));
@@ -135,9 +176,9 @@ app.MapGet("/api/tfsvalidate", async (ITfsClient client) =>
     return ok ? Results.Ok() : Results.StatusCode(500);
 });
 
-app.MapPost("/api/workitems/sync", async (WorkItemSyncService svc, CancellationToken ct) =>
+app.MapPost("/api/workitems/sync", async (IMediator mediator, CancellationToken ct) =>
 {
-    await svc.TriggerSyncAsync("DefaultAreaPath", ct);
+    await mediator.Send(new PoTool.Core.WorkItems.Commands.SyncWorkItemsCommand("DefaultAreaPath"), ct);
     return Results.Ok();
 });
 

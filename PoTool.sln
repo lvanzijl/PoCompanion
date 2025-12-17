@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Core", "PoTool.Core\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Api", "PoTool.Api\PoTool.Api.csproj", "{1EB54EA3-7961-4C93-B695-EFE9BAB2EA67}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Tests.Blazor", "PoTool.Tests.Blazor\PoTool.Tests.Blazor.csproj", "{FB626A23-D550-4BF8-9903-B1DAB61EEB06}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,18 @@ Global
 		{1EB54EA3-7961-4C93-B695-EFE9BAB2EA67}.Release|x64.Build.0 = Release|Any CPU
 		{1EB54EA3-7961-4C93-B695-EFE9BAB2EA67}.Release|x86.ActiveCfg = Release|Any CPU
 		{1EB54EA3-7961-4C93-B695-EFE9BAB2EA67}.Release|x86.Build.0 = Release|Any CPU
+		{FB626A23-D550-4BF8-9903-B1DAB61EEB06}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB626A23-D550-4BF8-9903-B1DAB61EEB06}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB626A23-D550-4BF8-9903-B1DAB61EEB06}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FB626A23-D550-4BF8-9903-B1DAB61EEB06}.Debug|x64.Build.0 = Debug|Any CPU
+		{FB626A23-D550-4BF8-9903-B1DAB61EEB06}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FB626A23-D550-4BF8-9903-B1DAB61EEB06}.Debug|x86.Build.0 = Debug|Any CPU
+		{FB626A23-D550-4BF8-9903-B1DAB61EEB06}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB626A23-D550-4BF8-9903-B1DAB61EEB06}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB626A23-D550-4BF8-9903-B1DAB61EEB06}.Release|x64.ActiveCfg = Release|Any CPU
+		{FB626A23-D550-4BF8-9903-B1DAB61EEB06}.Release|x64.Build.0 = Release|Any CPU
+		{FB626A23-D550-4BF8-9903-B1DAB61EEB06}.Release|x86.ActiveCfg = Release|Any CPU
+		{FB626A23-D550-4BF8-9903-B1DAB61EEB06}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

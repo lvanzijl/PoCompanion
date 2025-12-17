@@ -1,24 +1,26 @@
+using Mediator;
 using Microsoft.AspNetCore.Mvc;
-using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
+using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Api.Controllers;
 
 /// <summary>
 /// API controller for work item operations.
+/// Uses Mediator pattern for clean separation of concerns.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class WorkItemsController : ControllerBase
 {
-    private readonly IWorkItemRepository _repository;
+    private readonly IMediator _mediator;
     private readonly ILogger<WorkItemsController> _logger;
 
     public WorkItemsController(
-        IWorkItemRepository repository,
+        IMediator mediator,
         ILogger<WorkItemsController> logger)
     {
-        _repository = repository;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -30,7 +32,7 @@ public class WorkItemsController : ControllerBase
     {
         try
         {
-            var workItems = await _repository.GetAllAsync(cancellationToken);
+            var workItems = await _mediator.Send(new GetAllWorkItemsQuery(), cancellationToken);
             return Ok(workItems);
         }
         catch (Exception ex)
@@ -50,7 +52,7 @@ public class WorkItemsController : ControllerBase
     {
         try
         {
-            var workItems = await _repository.GetFilteredAsync(filter, cancellationToken);
+            var workItems = await _mediator.Send(new GetFilteredWorkItemsQuery(filter), cancellationToken);
             return Ok(workItems);
         }
         catch (Exception ex)
@@ -70,7 +72,7 @@ public class WorkItemsController : ControllerBase
     {
         try
         {
-            var workItem = await _repository.GetByTfsIdAsync(tfsId, cancellationToken);
+            var workItem = await _mediator.Send(new GetWorkItemByIdQuery(tfsId), cancellationToken);
             
             if (workItem == null)
             {

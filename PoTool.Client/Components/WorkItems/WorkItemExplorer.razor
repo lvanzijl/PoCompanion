@@ -1,8 +1,12 @@
 @page "/workitems"
-@using Microsoft.AspNetCore.SignalR.Client
-@using PoTool.Core.WorkItems
+@using PoTool.Client.ApiClient
 @using PoTool.Client.Services
+@using PoTool.Client.Models
+@using PoTool.Client.Configuration
+@using PoTool.Client.Components.WorkItems.SubComponents
 @inject WorkItemService WorkItemService
+@inject IWorkItemSyncHubService SyncHubService
+@inject ITreeBuilderService TreeBuilderService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 @inject HttpClient Http
@@ -11,101 +15,29 @@
 <PageTitle>Work Item Explorer</PageTitle>
 
 <div class="workitem-explorer">
-    <div class="header">
-        <h1>Work Item Explorer</h1>
-        <div class="header-actions">
-            <button class="btn-sync" @onclick="RequestSync" disabled="@_isSyncing">
-                @if (_isSyncing)
-                {
-                    <span>Syncing...</span>
-                }
-                else
-                {
-                    <span>Pull & Cache Work Items</span>
-                }
-            </button>
-            <button class="btn-clear" @onclick="ClearExpandedClicked">Clear tree state</button>
-        </div>
-    </div>
-
-    @if (!string.IsNullOrEmpty(_syncMessage))
-    {
-        <div class="sync-status @_syncStatusClass">
-            @_syncMessage
-        </div>
-    }
-
-    <div class="endpoint-info">
-        <small>API base: @_apiBase</small><br />
-        <small>Hub URL: @_hubUrl</small>
-    </div>
-
-    <div class="search-filter">
-        <input type="text" 
-               placeholder="Filter by title..." 
-               @bind="_filterText" 
-               @bind:event="oninput"
-               @onkeyup="OnFilterChanged" />
-    </div>
+    <WorkItemToolbar ApiBase="@_apiBase"
+                     HubUrl="@_hubUrl"
+                     IsSyncing="@_isSyncing"
+                     SyncMessage="@_syncMessage"
+                     SyncStatusClass="@_syncStatusClass"
+                     FilterText="@_filterText"
+                     OnSyncRequested="@RequestSync"
+                     OnClearState="@ClearExpandedState"
+                     OnFilterChanged="@HandleFilterChanged" />
 
     <div class="content">
-        <div class="tree-view">
-            @if (_isLoading)
-            {
-                <p>Loading work items...</p>
-            }
-            else if (!_workItems.Any())
-            {
-                <p>No work items found. Click "Pull & Cache Work Items" to retrieve data.</p>
-            }
-            else
-            {
-                <ul class="workitem-tree-root">
-                    @foreach (var node in _treeRoots)
-                    {
-                        @RenderNode(node, 0)
-                    }
-                </ul>
-            }
-        </div>
+        <WorkItemTreeView IsLoading="@_isLoading"
+                          TreeRoots="@_treeRoots"
+                          SelectedId="@_selectedWorkItem?.TfsId"
+                          OnNodeToggled="@HandleNodeToggled"
+                          OnNodeSelected="@HandleNodeSelected" />
 
-        @if (_selectedWorkItem != null)
-        {
-            <div class="detail-panel">
-                <h2>@_selectedWorkItem.Title</h2>
-                <div class="detail-field">
-                    <label>TFS ID:</label>
-                    <span>@_selectedWorkItem.TfsId</span>
-                </div>
-                <div class="detail-field">
-                    <label>Type:</label>
-                    <span>@_selectedWorkItem.Type</span>
-                </div>
-                <div class="detail-field">
-                    <label>State:</label>
-                    <span>@_selectedWorkItem.State</span>
-                </div>
-                <div class="detail-field">
-                    <label>Area Path:</label>
-                    <span>@_selectedWorkItem.AreaPath</span>
-                </div>
-                <div class="detail-field">
-                    <label>Iteration Path:</label>
-                    <span>@_selectedWorkItem.IterationPath</span>
-                </div>
-                <div class="detail-field">
-                    <label>Retrieved At:</label>
-                    <span>@_selectedWorkItem.RetrievedAt.ToString("g")</span>
-                </div>
-            </div>
-        }
+        <WorkItemDetailPanel SelectedWorkItem="@_selectedWorkItem" />
     </div>
 </div>
 
 @code {
-    private const string ExpandedStateKey = "workitem-tree-expanded";
 
-    private HubConnection? _hubConnection;
     private List<WorkItemDto> _workItems = new();
     private List<WorkItemDto> _filteredWorkItems = new();
     private WorkItemDto? _selectedWorkItem;
@@ -127,65 +59,47 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await InitializeSignalR();
+        await InitializeSignalRAsync();
         await LoadExpandedStateAsync();
         await LoadWorkItems();
     }
 
-    private async Task InitializeSignalR()
+    private async Task InitializeSignalRAsync()
     {
-        // Build hub URL from the configured API base address (HttpClient.BaseAddress)
         _apiBase = Http.BaseAddress?.ToString().TrimEnd('/') ?? NavigationManager.BaseUri.TrimEnd('/');
         _hubUrl = _apiBase + "/hubs/workitems";
 
-        Console.WriteLine($"[WorkItemExplorer] API base: {_apiBase}");
-        Console.WriteLine($"[WorkItemExplorer] Hub URL: {_hubUrl}");
-
-        _hubConnection = new HubConnectionBuilder()
-            .WithUrl(_hubUrl)
-            .WithAutomaticReconnect()
-            .Build();
-
-        _hubConnection.On<object>("SyncStatus", HandleSyncStatus);
+        SyncHubService.OnSyncStatusChanged += HandleSyncStatus;
 
         try
         {
-            await _hubConnection.StartAsync();
-            Console.WriteLine("[WorkItemExplorer] SignalR connected");
+            await SyncHubService.StartAsync(_hubUrl);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error connecting to SignalR hub: {ex.Message}");
+            Console.WriteLine($"[WorkItemExplorer] Error connecting to SignalR hub: {ex.Message}");
         }
     }
 
-    private void HandleSyncStatus(object status)
+    private void HandleSyncStatus(string status, string message)
     {
-        var statusDict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(
-            System.Text.Json.JsonSerializer.Serialize(status));
-
-        if (statusDict != null)
+        _syncMessage = message;
+        _syncStatusClass = status switch
         {
-            var statusValue = statusDict.GetValueOrDefault("Status", "Unknown");
-            _syncMessage = statusDict.GetValueOrDefault("Message", "");
-            
-            _syncStatusClass = statusValue switch
-            {
-                "InProgress" => "status-progress",
-                "Completed" => "status-success",
-                "Failed" => "status-error",
-                _ => ""
-            };
+            "InProgress" => "status-progress",
+            "Completed" => "status-success",
+            "Failed" => "status-error",
+            _ => ""
+        };
 
-            _isSyncing = statusValue == "InProgress";
+        _isSyncing = status == "InProgress";
 
-            if (statusValue == "Completed")
-            {
-                _ = LoadWorkItems();
-            }
-
-            StateHasChanged();
+        if (status == "Completed")
+        {
+            _ = LoadWorkItems();
         }
+
+        StateHasChanged();
     }
 
     private async Task LoadWorkItems()
@@ -193,14 +107,13 @@
         _isLoading = true;
         try
         {
-            Console.WriteLine($"[WorkItemExplorer] Fetching /api/workitems from {_apiBase}");
             _workItems = (await WorkItemService.GetAllAsync()).ToList();
             ApplyFilter();
             await SaveExpandedStateAsync();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading work items: {ex.Message}");
+            Console.WriteLine($"[WorkItemExplorer] Error loading work items: {ex.Message}");
         }
         finally
         {
@@ -212,7 +125,7 @@
     {
         _syncMessage = string.Empty;
 
-        if (_hubConnection != null && _hubConnection.State == HubConnectionState.Connected)
+        if (SyncHubService.IsConnected)
         {
             _isSyncing = true;
             _syncMessage = "Requesting sync via SignalR...";
@@ -220,20 +133,19 @@
 
             try
             {
-                await _hubConnection.SendAsync("RequestSync", "DefaultAreaPath");
+                await SyncHubService.RequestSyncAsync(AppSettings.DefaultAreaPath);
+                await Task.Delay(AppSettings.SyncDelayMilliseconds);
+                await LoadWorkItems();
             }
             catch (Exception ex)
             {
                 _syncMessage = $"Error requesting sync via SignalR: {ex.Message}";
                 _syncStatusClass = "status-error";
-                _isSyncing = false;
-                return;
             }
-
-            // wait briefly for server to process then reload
-            await Task.Delay(300);
-            await LoadWorkItems();
-            _isSyncing = false;
+            finally
+            {
+                _isSyncing = false;
+            }
             return;
         }
 
@@ -247,7 +159,6 @@
             var resp = await Http.PostAsync(_apiBase + "/api/workitems/sync", null);
             if (resp.IsSuccessStatusCode)
             {
-                // reload items
                 await LoadWorkItems();
                 _syncMessage = "Sync completed (HTTP)";
                 _syncStatusClass = "status-success";
@@ -269,241 +180,49 @@
         }
     }
 
-    private void OnFilterChanged()
+    private void HandleFilterChanged(string filterText)
     {
+        _filterText = filterText;
         ApplyFilter();
     }
 
     private void ApplyFilter()
     {
-        if (string.IsNullOrWhiteSpace(_filterText))
-        {
-            _filteredWorkItems = _workItems;
-        }
-        else
-        {
-            // find matching items
-            var matches = _workItems
-                .Where(w => w.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            // include ancestors for each match
-            var toInclude = new Dictionary<int, WorkItemDto>();
-            foreach (var m in matches)
-            {
-                if (!toInclude.ContainsKey(m.TfsId)) toInclude[m.TfsId] = m;
-                var current = m;
-                while (current.ParentTfsId.HasValue)
-                {
-                    var pid = current.ParentTfsId.Value;
-                    var parent = _workItems.FirstOrDefault(w => w.TfsId == pid);
-                    if (parent != null)
-                    {
-                        if (!toInclude.ContainsKey(parent.TfsId)) toInclude[parent.TfsId] = parent;
-                        current = parent;
-                    }
-                    else
-                    {
-                        // parent missing -> create placeholder later in tree builder; stop walking
-                        break;
-                    }
-                }
-            }
-
-            _filteredWorkItems = toInclude.Values.ToList();
-        }
-
-        BuildTreeFromFlatList(_filteredWorkItems);
-    }
-
-    private void SelectWorkItem(WorkItemDto workItem)
-    {
-        _selectedWorkItem = workItem;
-    }
-
-    private string HighlightMatch(string text)
-    {
-        // Placeholder for highlighting - to be enhanced in future PR
-        return text;
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_hubConnection != null)
-        {
-            await _hubConnection.DisposeAsync();
-        }
-    }
-
-    // --- Tree building and rendering logic (use ParentTfsId) ---
-    private void BuildTreeFromFlatList(IEnumerable<WorkItemDto> items)
-    {
-        // Preserve expanded state values for nodes that will remain
-        var prevExpanded = new Dictionary<int, bool>(_expandedState);
-
-        _treeRoots.Clear();
-
-        // Create node instances keyed by TfsId
-        var nodeMap = new Dictionary<int, TreeNode>();
-        foreach (var dto in items)
-        {
-            var id = dto.TfsId;
-            if (!nodeMap.TryGetValue(id, out var node))
-            {
-                node = new TreeNode(dto.Title, id) { Dto = dto };
-                nodeMap[id] = node;
-            }
-            else
-            {
-                node.Dto = dto;
-                node.Title = dto.Title;
-            }
-        }
-
-        // Attach children to parents based on ParentTfsId, create placeholders for missing parents
-        foreach (var dto in items)
-        {
-            var node = nodeMap[dto.TfsId];
-            var parentId = dto.ParentTfsId;
-            if (parentId.HasValue)
-            {
-                if (!nodeMap.TryGetValue(parentId.Value, out var parentNode))
-                {
-                    // create placeholder parent node for missing parent
-                    parentNode = new TreeNode($"(missing) Parent #{parentId.Value}", parentId.Value)
-                    {
-                        Dto = null,
-                        IsPlaceholder = true
-                    };
-                    nodeMap[parentId.Value] = parentNode;
-                }
-
-                parentNode.Children.Add(node);
-            }
-            else
-            {
-                _treeRoots.Add(node);
-            }
-        }
-
-        // Restore expanded state where possible
-        foreach (var kv in prevExpanded)
-        {
-            if (nodeMap.TryGetValue(kv.Key, out var node))
-            {
-                node.IsExpanded = kv.Value;
-                _expandedState[kv.Key] = kv.Value;
-            }
-        }
-
-        // Ensure nodes have the expanded state entry and sort children
-        foreach (var n in nodeMap.Values)
-        {
-            if (!_expandedState.ContainsKey(n.Id))
-            {
-                // default collapsed
-                _expandedState[n.Id] = n.IsExpanded;
-            }
-            n.Children = n.Children.OrderBy(c => c.Title).ToList();
-        }
-
-        _treeRoots = _treeRoots.OrderBy(r => r.Title).ToList();
-
+        _filteredWorkItems = TreeBuilderService.FilterWithAncestors(_workItems, _filterText);
+        _treeRoots = TreeBuilderService.BuildTree(_filteredWorkItems, _expandedState);
         StateHasChanged();
     }
 
-    private RenderFragment RenderNode(TreeNode node, int level) => builder =>
-    {
-        var seq = 0;
-        builder.OpenElement(seq++, "li");
-        builder.AddAttribute(seq++, "class", node.IsPlaceholder ? "tree-node placeholder-node" : "tree-node");
-
-        // node row
-        builder.OpenElement(seq++, "div");
-        builder.AddAttribute(seq++, "class", "node-row");
-        builder.AddAttribute(seq++, "style", $"padding-left:{level * 1.25}rem");
-
-        if (node.Children.Any())
-        {
-            builder.OpenElement(seq++, "button");
-            builder.AddAttribute(seq++, "type", "button");
-            builder.AddAttribute(seq++, "class", node.IsExpanded ? "caret-button expanded" : "caret-button");
-            builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, (Func<Task>)(() => ToggleNode(node))));
-            builder.OpenElement(seq++, "span");
-            builder.AddAttribute(seq++, "class", "chev");
-            builder.AddContent(seq++, "?");
-            builder.CloseElement();
-            builder.CloseElement();
-        }
-        else
-        {
-            builder.OpenElement(seq++, "span");
-            builder.AddAttribute(seq++, "class", "leaf-placeholder");
-            builder.AddContent(seq++, "");
-            builder.CloseElement();
-        }
-
-        // Badge
-        builder.OpenElement(seq++, "span");
-        var typeClass = node.IsPlaceholder ? "workitem-type placeholder-type" : $"workitem-type { (node.Dto?.Type ?? string.Empty) }";
-        builder.AddAttribute(seq++, "class", typeClass);
-        builder.AddContent(seq++, node.IsPlaceholder ? "(missing)" : node.Dto?.Type ?? string.Empty);
-        builder.CloseElement();
-
-        // Title
-        builder.OpenElement(seq++, "div");
-        builder.AddAttribute(seq++, "class", "title-block");
-        builder.OpenElement(seq++, "span");
-        var titleClass = node.IsPlaceholder ? "workitem-title placeholder-title" : "workitem-title";
-        if (node.Dto != null && _selectedWorkItem != null && _selectedWorkItem.TfsId == node.Id)
-        {
-            titleClass += " selected";
-        }
-        builder.AddAttribute(seq++, "class", titleClass);
-        if (node.Dto != null)
-        {
-            builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, (Action)(() => SelectWorkItem(node.Dto))));
-            builder.AddContent(seq++, node.Title);
-        }
-        else
-        {
-            builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, (Func<Task>)(() => ToggleNode(node))));
-            builder.AddContent(seq++, node.Title);
-        }
-        builder.CloseElement();
-        builder.CloseElement();
-
-        builder.CloseElement(); // div.node-row
-
-        // children
-        if (node.IsExpanded && node.Children.Any())
-        {
-            builder.OpenElement(seq++, "ul");
-            builder.AddAttribute(seq++, "class", "child-list");
-            foreach (var child in node.Children)
-            {
-                builder.AddContent(seq++, RenderNode(child, level + 1));
-            }
-            builder.CloseElement();
-        }
-
-        builder.CloseElement(); // li
-    };
-
-    private async Task ToggleNode(TreeNode node)
+    private async Task HandleNodeToggled(TreeNode node)
     {
         node.IsExpanded = !node.IsExpanded;
-        // persist expand state for both real nodes and placeholders
         _expandedState[node.Id] = node.IsExpanded;
         await SaveExpandedStateAsync();
         StateHasChanged();
     }
 
+    private void HandleNodeSelected(TreeNode node)
+    {
+        // Deserialize the work item from JSON payload
+        if (!string.IsNullOrEmpty(node.JsonPayload))
+        {
+            _selectedWorkItem = System.Text.Json.JsonSerializer.Deserialize<WorkItemDto>(node.JsonPayload);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        SyncHubService.OnSyncStatusChanged -= HandleSyncStatus;
+        await SyncHubService.DisposeAsync();
+    }
+
+
+
     private async Task LoadExpandedStateAsync()
     {
         try
         {
-            var json = await JS.InvokeAsync<string>("localStorage.getItem", ExpandedStateKey);
+            var json = await JS.InvokeAsync<string>("localStorage.getItem", AppSettings.TreeExpandedStateKey);
             if (!string.IsNullOrEmpty(json))
             {
                 var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, bool>>(json);
@@ -531,7 +250,7 @@
         try
         {
             var json = System.Text.Json.JsonSerializer.Serialize(_expandedState);
-            await JS.InvokeVoidAsync("localStorage.setItem", ExpandedStateKey, json);
+            await JS.InvokeVoidAsync("localStorage.setItem", AppSettings.TreeExpandedStateKey, json);
         }
         catch
         {
@@ -539,26 +258,10 @@
         }
     }
 
-    private async Task ClearExpandedClicked()
+    private async Task ClearExpandedState()
     {
         _expandedState.Clear();
         await SaveExpandedStateAsync();
-        BuildTreeFromFlatList(_filteredWorkItems);
-    }
-
-    private class TreeNode
-    {
-        public string Title { get; set; }
-        public int Id { get; }
-        public WorkItemDto? Dto { get; set; }
-        public List<TreeNode> Children { get; set; } = new();
-        public bool IsExpanded { get; set; } = false;
-        public bool IsPlaceholder { get; set; } = false;
-
-        public TreeNode(string title, int id)
-        {
-            Title = title;
-            Id = id;
-        }
+        ApplyFilter();
     }
 }
