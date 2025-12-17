@@ -1,0 +1,25 @@
+right now there is a workitem view which contains the items from a tfs backlog.
+
+In this new version I want to have the full chain from goal, objective, epic, feature, pbi and task.
+I want to be able to add 'goals' in the settings and from then on all its children, recursively, are loaded when the workitem view is loaded.
+
+At first we don't connect to a real TFS so we use mocked data with the fields that are already in the current version
+Every item in the tree has an icon to identify what kind of workitem it is, this icon is before the title.
+For now this icon is just a small colored square:
+- goal: green
+- objective: light green
+- epic: orange
+- feature: purple
+- pbi: blue
+- task yellow
+
+at the end of every line there is a possibility of adding status icons, we will be creating different validations to validate the workitems and every fault category has an icon.
+when an item is clicked the detailed view shows the current details of the selected workitem and below it, in a seperate section the validation errors and warnings are shown with icon and detailed text.
+
+This feature needs a proper treeview for the workitem chain, the treeview collapse state should be persisted so that if new data is loaded it will, as much as possible, keep those items collapsed that where collapsed.
+the treeview component should fit perfectly in the current theme, should be intuitive and familiar for the user and have keyboard navigation from the start. ARIA and other accessibility isn't needed yet, only if used for automated testing.
+
+The items are loaded only when clicked on the pull and cache data button, all data is cached and as long as the data is treated as read only and not reloaded from the server.
+when the pull and cache data is pressed the tool should know if its in a mode where real data from the configured TFS server should be pulled or the test data is used.
+
+The treeview needs columns, in the near future we will show more than just the title and status and this should be lined out nicely in columns.
