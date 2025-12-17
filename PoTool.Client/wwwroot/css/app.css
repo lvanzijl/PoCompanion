@@ -229,4 +229,76 @@ code {
 
 .settings-top-right { color: #333; }
 .settings-top-right svg { opacity: 0.85; }
+
+/* Error Boundary Styles */
+.error-boundary-container {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-background);
+    z-index: 9999;
+    padding: var(--spacing-lg);
+}
+
+.error-boundary-content {
+    max-width: 600px;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-error);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-lg);
+}
+
+.error-boundary-content h1 {
+    color: var(--color-error);
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-md);
+}
+
+.error-message {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.error-details {
+    margin-top: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.error-details summary {
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.error-details pre {
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-md);
+    overflow-x: auto;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    max-height: 300px;
+}
+
+.btn-retry {
+    background-color: var(--color-primary);
+    color: var(--color-text-primary);
+    border: none;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: var(--font-size-md);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.btn-retry:hover {
+    background-color: var(--color-primary);
+    opacity: 0.9;
+}
 .settings-top-right:hover svg { opacity: 1; transform: rotate(10deg); }
