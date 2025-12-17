@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using PoTool.Client.ApiClient;
 
 namespace PoTool.Client.Services;
@@ -9,14 +10,17 @@ namespace PoTool.Client.Services;
 public class WorkItemService
 {
     private readonly IWorkItemsClient _client;
+    private readonly HttpClient _httpClient;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkItemService"/> class.
     /// </summary>
     /// <param name="client">The work items API client.</param>
-    public WorkItemService(IWorkItemsClient client)
+    /// <param name="httpClient">The HTTP client for direct API calls.</param>
+    public WorkItemService(IWorkItemsClient client, HttpClient httpClient)
     {
         _client = client;
+        _httpClient = httpClient;
     }
 
     /// <summary>
@@ -41,5 +45,15 @@ public class WorkItemService
     public async Task<WorkItemDto?> GetByTfsIdAsync(int tfsId)
     {
         return await _client.GetByTfsIdAsync(tfsId);
+    }
+
+    /// <summary>
+    /// Gets work items for specific Goal IDs (full hierarchy).
+    /// </summary>
+    public async Task<IEnumerable<WorkItemDto>> GetGoalHierarchyAsync(List<int> goalIds)
+    {
+        var goalIdsParam = string.Join(",", goalIds);
+        var response = await _httpClient.GetFromJsonAsync<List<WorkItemDto>>($"/api/workitems/goals?goalIds={goalIdsParam}");
+        return response ?? new List<WorkItemDto>();
     }
 }

@@ -113,7 +113,21 @@
         _isLoading = true;
         try
         {
-            _workItems = (await WorkItemService.GetAllAsync()).ToList();
+            // Get current settings to determine which Goals to load
+            var settings = await SettingsService.GetOrCreateDefaultSettingsAsync();
+            StateService.SetMode(settings.DataMode);
+
+            if (settings.ConfiguredGoalIds.Count > 0)
+            {
+                // Load hierarchy for configured Goals
+                _workItems = (await WorkItemService.GetGoalHierarchyAsync(settings.ConfiguredGoalIds)).ToList();
+            }
+            else
+            {
+                // Fallback to loading all items if no Goals configured
+                _workItems = (await WorkItemService.GetAllAsync()).ToList();
+            }
+
             ApplyFilter();
             await SaveExpandedStateAsync();
         }

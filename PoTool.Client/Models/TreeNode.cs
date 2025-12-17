@@ -49,4 +49,19 @@ public class TreeNode
     /// The full work item data as JSON.
     /// </summary>
     public string? JsonPayload { get; set; }
+
+    /// <summary>
+    /// Whether this node is selected.
+    /// </summary>
+    public bool IsSelected { get; set; }
+
+    /// <summary>
+    /// The color associated with this work item type.
+    /// </summary>
+    public string TypeColor => WorkItemTypeInfo.GetColor(Type);
+
+    /// <summary>
+    /// List of validation issues for this work item.
+    /// </summary>
+    public List<string> ValidationIssues { get; set; } = new();
 }
