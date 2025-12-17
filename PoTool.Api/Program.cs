@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Hubs;
 using PoTool.Api.Persistence;
@@ -17,6 +18,12 @@ builder.Services.AddOpenApiDocument(config =>
     config.Title = "PoTool API";
     config.Version = "v1";
     config.Description = "API for PO Companion work item management";
+});
+
+// Add Mediator (source-generated)
+builder.Services.AddMediator(options =>
+{
+    options.ServiceLifetime = ServiceLifetime.Scoped;
 });
 
 // Configure database: prefer SqlServer if connection string present, otherwise SQLite
@@ -154,9 +161,9 @@ app.MapGet("/api/tfsvalidate", async (ITfsClient client) =>
     return ok ? Results.Ok() : Results.StatusCode(500);
 });
 
-app.MapPost("/api/workitems/sync", async (WorkItemSyncService svc, CancellationToken ct) =>
+app.MapPost("/api/workitems/sync", async (IMediator mediator, CancellationToken ct) =>
 {
-    await svc.TriggerSyncAsync("DefaultAreaPath", ct);
+    await mediator.Send(new PoTool.Core.WorkItems.Commands.SyncWorkItemsCommand("DefaultAreaPath"), ct);
     return Results.Ok();
 });
 
