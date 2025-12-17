@@ -60,6 +60,10 @@
     [Parameter]
     public EventCallback<TreeNode> OnNodeSelected { get; set; }
 
+    /// <summary>
+    /// Determines if this node is a placeholder for a missing parent work item.
+    /// Nodes without JsonPayload represent parent items that don't exist in the current dataset.
+    /// </summary>
     private bool IsPlaceholder => string.IsNullOrEmpty(Node.JsonPayload);
 
     private string GetNodeClass()

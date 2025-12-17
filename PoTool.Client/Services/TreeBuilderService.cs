@@ -95,10 +95,12 @@ public class TreeBuilderService : ITreeBuilderService
             return items;
         }
 
+        // Create lookup dictionary for O(1) parent lookups
+        var itemLookup = items.ToDictionary(w => w.TfsId);
+
         // Find matching items
         var matches = items
-            .Where(w => w.Title.Contains(filterText, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+            .Where(w => w.Title.Contains(filterText, StringComparison.OrdinalIgnoreCase));
 
         // Include ancestors for each match
         var toInclude = new Dictionary<int, WorkItemDto>();
@@ -113,8 +115,7 @@ public class TreeBuilderService : ITreeBuilderService
             while (current.ParentTfsId.HasValue)
             {
                 var parentId = current.ParentTfsId.Value;
-                var parent = items.FirstOrDefault(w => w.TfsId == parentId);
-                if (parent != null)
+                if (itemLookup.TryGetValue(parentId, out var parent))
                 {
                     if (!toInclude.ContainsKey(parent.TfsId))
                     {
