@@ -44,6 +44,17 @@ public class TreeBuilderService : ITreeBuilderService
             {
                 node.IsExpanded = isExpanded;
             }
+
+            // Add mock validation issues for demo purposes
+            // In real implementation, these would come from TFS or validation logic
+            if (dto.State == "New")
+            {
+                node.ValidationIssues.Add("Not yet started");
+            }
+            if (dto.Type == "Task" && dto.State == "In Progress")
+            {
+                node.ValidationIssues.Add("Missing time estimate");
+            }
         }
 
         // Attach children to parents based on ParentTfsId, create placeholders for missing parents

@@ -40,7 +40,7 @@
         <span class="legend-item"><span class="type-indicator" style="background-color: #FFEB3B"></span> Task</span>
     </div>
 
-    <div class="content">
+    <div class="content" @onkeydown="HandleKeyDown" tabindex="0">
         <WorkItemTreeView IsLoading="@_isLoading"
                           TreeRoots="@_treeRoots"
                           SelectedId="@_selectedWorkItem?.TfsId"
@@ -72,6 +72,7 @@
 
     // Tree structure
     private List<TreeNode> _treeRoots = new();
+    private List<TreeNode> _flatNodeList = new(); // Flat list for keyboard navigation
 
     // Preserve expanded state across reloads and filters
     private readonly Dictionary<int, bool> _expandedState = new();
@@ -223,7 +224,29 @@
     {
         _filteredWorkItems = TreeBuilderService.FilterWithAncestors(_workItems, _filterText);
         _treeRoots = TreeBuilderService.BuildTree(_filteredWorkItems, _expandedState);
+        BuildFlatNodeList();
         StateHasChanged();
+    }
+
+    private void BuildFlatNodeList()
+    {
+        _flatNodeList.Clear();
+        foreach (var root in _treeRoots)
+        {
+            AddNodeToFlatList(root);
+        }
+    }
+
+    private void AddNodeToFlatList(TreeNode node)
+    {
+        _flatNodeList.Add(node);
+        if (node.IsExpanded)
+        {
+            foreach (var child in node.Children)
+            {
+                AddNodeToFlatList(child);
+            }
+        }
     }
 
     private async Task HandleNodeToggled(TreeNode node)
@@ -265,6 +288,76 @@
                 }
             }
         }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (_flatNodeList.Count == 0) return;
+
+        var currentIndex = -1;
+        if (_selectedWorkItem != null)
+        {
+            currentIndex = _flatNodeList.FindIndex(n => n.Id == _selectedWorkItem.TfsId);
+        }
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                if (currentIndex < _flatNodeList.Count - 1)
+                {
+                    var nextNode = _flatNodeList[currentIndex + 1];
+                    HandleNodeSelected(nextNode);
+                }
+                break;
+
+            case "ArrowUp":
+                if (currentIndex > 0)
+                {
+                    var prevNode = _flatNodeList[currentIndex - 1];
+                    HandleNodeSelected(prevNode);
+                }
+                else if (currentIndex == -1 && _flatNodeList.Count > 0)
+                {
+                    HandleNodeSelected(_flatNodeList[0]);
+                }
+                break;
+
+            case "ArrowRight":
+                if (currentIndex >= 0)
+                {
+                    var node = _flatNodeList[currentIndex];
+                    if (node.Children.Any() && !node.IsExpanded)
+                    {
+                        await HandleNodeToggled(node);
+                    }
+                }
+                break;
+
+            case "ArrowLeft":
+                if (currentIndex >= 0)
+                {
+                    var node = _flatNodeList[currentIndex];
+                    if (node.Children.Any() && node.IsExpanded)
+                    {
+                        await HandleNodeToggled(node);
+                    }
+                }
+                break;
+
+            case "Enter":
+            case " ":
+                if (currentIndex >= 0)
+                {
+                    var node = _flatNodeList[currentIndex];
+                    if (node.Children.Any())
+                    {
+                        await HandleNodeToggled(node);
+                    }
+                }
+                break;
+        }
+
+        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()
