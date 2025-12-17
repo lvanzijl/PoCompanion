@@ -115,9 +115,17 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     
-    // Enable Swagger UI for development
+    // Enable Swagger UI for development at /swagger
     app.UseOpenApi();
     app.UseSwaggerUi();
+    
+    // Enable WebAssembly debugging in development
+    app.UseWebAssemblyDebugging();
+}
+else
+{
+    // In production, use exception handler
+    app.UseExceptionHandler("/Error");
 }
 
 // Only enable HTTPS redirection when an HTTPS URL is configured.
@@ -130,6 +138,10 @@ if (hasHttpsEndpoint)
     app.UseHttpsRedirection();
 }
 
+// Serve Blazor WebAssembly static files
+app.UseBlazorFrameworkFiles();
+app.UseStaticFiles();
+
 // Add routing so middleware such as CORS apply to endpoints including SignalR
 app.UseRouting();
 
@@ -137,6 +149,9 @@ app.UseCors("AllowBlazorClient");
 
 app.MapControllers();
 app.MapHub<WorkItemHub>("/hubs/workitems");
+
+// Fallback to serve index.html for Blazor client-side routing
+app.MapFallbackToFile("index.html");
 
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow }));
