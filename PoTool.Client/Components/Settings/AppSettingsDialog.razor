@@ -1,0 +1,171 @@
+@using MudBlazor
+@using PoTool.Client.Services
+@using PoTool.Client.Models
+@inject SettingsService SettingsService
+@inject ModeIsolatedStateService StateService
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Application Settings</MudText>
+
+        @if (_isLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else
+        {
+            <MudForm @ref="_form">
+                <MudSelect T="DataMode" 
+                           @bind-Value="_dataMode" 
+                           Label="Data Mode" 
+                           Variant="Variant.Outlined"
+                           Class="mb-4">
+                    <MudSelectItem Value="DataMode.Mock">Mock (Test Data)</MudSelectItem>
+                    <MudSelectItem Value="DataMode.Tfs">TFS (Live Data)</MudSelectItem>
+                </MudSelect>
+
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Configured Goals</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                    Enter TFS IDs of Goals to track (comma-separated)
+                </MudText>
+
+                <MudTextField T="string" 
+                              @bind-Value="_goalIdsText" 
+                              Label="Goal IDs" 
+                              Variant="Variant.Outlined"
+                              Placeholder="e.g., 1000, 2000"
+                              HelperText="Separate multiple Goal IDs with commas"
+                              Class="mb-4" />
+
+                @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
+                }
+
+                <MudText Typo="Typo.caption" Color="Color.Info" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                    Switching modes will clear the current data and UI state.
+                </MudText>
+            </MudForm>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Color="Color.Default">Cancel</MudButton>
+        <MudButton OnClick="SaveSettings" Color="Color.Primary" Variant="Variant.Filled" Disabled="_isLoading || _isSaving">
+            @if (_isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            }
+            else
+            {
+                <text>Save</text>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback OnSettingsSaved { get; set; }
+
+    private MudForm _form = null!;
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private DataMode _dataMode = DataMode.Mock;
+    private string _goalIdsText = string.Empty;
+    private string _errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettings();
+    }
+
+    private async Task LoadSettings()
+    {
+        _isLoading = true;
+        try
+        {
+            var settings = await SettingsService.GetOrCreateDefaultSettingsAsync();
+            _dataMode = settings.DataMode;
+            _goalIdsText = string.Join(", ", settings.ConfiguredGoalIds);
+            StateService.SetMode(_dataMode);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load settings: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SaveSettings()
+    {
+        _errorMessage = string.Empty;
+        _isSaving = true;
+
+        try
+        {
+            // Parse goal IDs
+            var goalIds = ParseGoalIds(_goalIdsText);
+            if (goalIds.Count == 0)
+            {
+                _errorMessage = "Please enter at least one Goal ID";
+                return;
+            }
+
+            // Save settings
+            var savedSettings = await SettingsService.UpdateSettingsAsync(_dataMode, goalIds);
+
+            // Update state service mode
+            StateService.SetMode(_dataMode);
+
+            // Clear mode-isolated state
+            await StateService.ClearStateAsync();
+
+            // Notify parent
+            await OnSettingsSaved.InvokeAsync();
+
+            // Close dialog
+            MudDialog.Close(DialogResult.Ok(savedSettings));
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to save settings: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private List<int> ParseGoalIds(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return new List<int>();
+        }
+
+        var ids = new List<int>();
+        var parts = input.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        
+        foreach (var part in parts)
+        {
+            if (int.TryParse(part.Trim(), out var id) && id > 0)
+            {
+                ids.Add(id);
+            }
+        }
+
+        return ids;
+    }
+}

@@ -4,12 +4,17 @@
 @using PoTool.Client.Models
 @using PoTool.Client.Configuration
 @using PoTool.Client.Components.WorkItems.SubComponents
+@using PoTool.Client.Components.Settings
+@using PoTool.Client.Models
 @inject WorkItemService WorkItemService
 @inject IWorkItemSyncHubService SyncHubService
 @inject ITreeBuilderService TreeBuilderService
+@inject SettingsService SettingsService
+@inject ModeIsolatedStateService StateService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 @inject HttpClient Http
+@inject IDialogService DialogService
 @implements IAsyncDisposable
 
 <PageTitle>Work Item Explorer</PageTitle>
@@ -23,7 +28,8 @@
                      FilterText="@_filterText"
                      OnSyncRequested="@RequestSync"
                      OnClearState="@ClearExpandedState"
-                     OnFilterChanged="@HandleFilterChanged" />
+                     OnFilterChanged="@HandleFilterChanged"
+                     OnSettingsRequested="@OpenSettings" />
 
     <div class="content">
         <WorkItemTreeView IsLoading="@_isLoading"
@@ -220,42 +226,17 @@
 
     private async Task LoadExpandedStateAsync()
     {
-        try
+        _expandedState.Clear();
+        var loadedState = await StateService.LoadExpandedStateAsync();
+        foreach (var kv in loadedState)
         {
-            var json = await JS.InvokeAsync<string>("localStorage.getItem", AppSettings.TreeExpandedStateKey);
-            if (!string.IsNullOrEmpty(json))
-            {
-                var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, bool>>(json);
-                if (dict != null)
-                {
-                    _expandedState.Clear();
-                    foreach (var kv in dict)
-                    {
-                        if (int.TryParse(kv.Key, out var id))
-                        {
-                            _expandedState[id] = kv.Value;
-                        }
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // ignore JS interop errors
+            _expandedState[kv.Key] = kv.Value;
         }
     }
 
     private async Task SaveExpandedStateAsync()
     {
-        try
-        {
-            var json = System.Text.Json.JsonSerializer.Serialize(_expandedState);
-            await JS.InvokeVoidAsync("localStorage.setItem", AppSettings.TreeExpandedStateKey, json);
-        }
-        catch
-        {
-            // ignore JS interop errors
-        }
+        await StateService.SaveExpandedStateAsync(_expandedState);
     }
 
     private async Task ClearExpandedState()
@@ -263,5 +244,28 @@
         _expandedState.Clear();
         await SaveExpandedStateAsync();
         ApplyFilter();
+    }
+
+    private async Task OpenSettings()
+    {
+        var parameters = new DialogParameters
+        {
+            { "OnSettingsSaved", EventCallback.Factory.Create(this, HandleSettingsSaved) }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<AppSettingsDialog>("Settings", parameters, options);
+    }
+
+    private async Task HandleSettingsSaved()
+    {
+        // Reload work items after settings change
+        await LoadWorkItems();
     }
 }
