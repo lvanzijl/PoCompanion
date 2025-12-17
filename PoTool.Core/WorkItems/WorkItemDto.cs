@@ -7,6 +7,7 @@ public sealed record WorkItemDto(
     int TfsId,
     string Type,
     string Title,
+    int? ParentTfsId,
     string AreaPath,
     string IterationPath,
     string State,

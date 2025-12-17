@@ -29,10 +29,13 @@ public class WorkItemRepository : IWorkItemRepository
 
     public async Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter, CancellationToken cancellationToken = default)
     {
-        var entities = await _context.WorkItems
-            .AsNoTracking()
-            .Where(w => w.Title.Contains(filter))
-            .ToListAsync(cancellationToken);
+        var q = _context.WorkItems.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            q = q.Where(w => w.Title.Contains(filter));
+        }
+
+        var entities = await q.ToListAsync(cancellationToken);
 
         return entities.Select(MapToDto);
     }
@@ -88,6 +91,7 @@ public class WorkItemRepository : IWorkItemRepository
             TfsId: entity.TfsId,
             Type: entity.Type,
             Title: entity.Title,
+            ParentTfsId: entity.ParentTfsId,
             AreaPath: entity.AreaPath,
             IterationPath: entity.IterationPath,
             State: entity.State,
@@ -101,6 +105,7 @@ public class WorkItemRepository : IWorkItemRepository
         return new WorkItemEntity
         {
             TfsId = dto.TfsId,
+            ParentTfsId = dto.ParentTfsId,
             Type = dto.Type,
             Title = dto.Title,
             AreaPath = dto.AreaPath,

@@ -120,6 +120,7 @@ public class TfsClient : ITfsClient
                     TfsId: id,
                     Type: type,
                     Title: title,
+                    ParentTfsId: null,
                     AreaPath: area,
                     IterationPath: iteration,
                     State: state,

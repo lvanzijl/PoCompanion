@@ -29,7 +29,7 @@ public sealed class WorkItemSyncServiceTests
         tfsMock.Setup(t => t.GetWorkItemsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                .ReturnsAsync(new[]
                {
-                   new WorkItemDto(1, "Epic", "Test", "Area", "Iter", "Active", "{}", DateTimeOffset.UtcNow)
+                   new WorkItemDto(1, "Epic", "Test", null, "Area", "Iter", "Active", "{}", DateTimeOffset.UtcNow)
                } as IEnumerable<WorkItemDto>);
 
         services.AddSingleton(tfsMock.Object);

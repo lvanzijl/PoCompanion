@@ -4,6 +4,8 @@
 @using PoTool.Client.Services
 @inject WorkItemService WorkItemService
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject HttpClient Http
 @implements IAsyncDisposable
 
 <PageTitle>Work Item Explorer</PageTitle>
@@ -11,16 +13,19 @@
 <div class="workitem-explorer">
     <div class="header">
         <h1>Work Item Explorer</h1>
-        <button class="btn-sync" @onclick="RequestSync" disabled="@_isSyncing">
-            @if (_isSyncing)
-            {
-                <span>Syncing...</span>
-            }
-            else
-            {
-                <span>Pull & Cache Work Items</span>
-            }
-        </button>
+        <div class="header-actions">
+            <button class="btn-sync" @onclick="RequestSync" disabled="@_isSyncing">
+                @if (_isSyncing)
+                {
+                    <span>Syncing...</span>
+                }
+                else
+                {
+                    <span>Pull & Cache Work Items</span>
+                }
+            </button>
+            <button class="btn-clear" @onclick="ClearExpandedClicked">Clear tree state</button>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(_syncMessage))
@@ -29,6 +34,11 @@
             @_syncMessage
         </div>
     }
+
+    <div class="endpoint-info">
+        <small>API base: @_apiBase</small><br />
+        <small>Hub URL: @_hubUrl</small>
+    </div>
 
     <div class="search-filter">
         <input type="text" 
@@ -50,14 +60,10 @@
             }
             else
             {
-                @* Placeholder for hierarchical tree - to be implemented in future PR *@
-                <ul class="workitem-list">
-                    @foreach (var item in _filteredWorkItems)
+                <ul class="workitem-tree-root">
+                    @foreach (var node in _treeRoots)
                     {
-                        <li class="workitem-item" @onclick="() => SelectWorkItem(item)">
-                            <span class="workitem-type">[@item.Type]</span>
-                            <span class="workitem-title">@HighlightMatch(item.Title)</span>
-                        </li>
+                        @RenderNode(node, 0)
                     }
                 </ul>
             }
@@ -97,6 +103,8 @@
 </div>
 
 @code {
+    private const string ExpandedStateKey = "workitem-tree-expanded";
+
     private HubConnection? _hubConnection;
     private List<WorkItemDto> _workItems = new();
     private List<WorkItemDto> _filteredWorkItems = new();
@@ -107,18 +115,34 @@
     private string _syncMessage = string.Empty;
     private string _syncStatusClass = string.Empty;
 
+    // Resolved endpoints for debugging
+    private string _apiBase = string.Empty;
+    private string _hubUrl = string.Empty;
+
+    // Tree structure
+    private List<TreeNode> _treeRoots = new();
+
+    // Preserve expanded state across reloads and filters
+    private readonly Dictionary<int, bool> _expandedState = new();
+
     protected override async Task OnInitializedAsync()
     {
         await InitializeSignalR();
+        await LoadExpandedStateAsync();
         await LoadWorkItems();
     }
 
     private async Task InitializeSignalR()
     {
-        var hubUrl = NavigationManager.BaseUri.TrimEnd('/').Replace(":5001", ":5000") + "/hubs/workitems";
-        
+        // Build hub URL from the configured API base address (HttpClient.BaseAddress)
+        _apiBase = Http.BaseAddress?.ToString().TrimEnd('/') ?? NavigationManager.BaseUri.TrimEnd('/');
+        _hubUrl = _apiBase + "/hubs/workitems";
+
+        Console.WriteLine($"[WorkItemExplorer] API base: {_apiBase}");
+        Console.WriteLine($"[WorkItemExplorer] Hub URL: {_hubUrl}");
+
         _hubConnection = new HubConnectionBuilder()
-            .WithUrl(hubUrl)
+            .WithUrl(_hubUrl)
             .WithAutomaticReconnect()
             .Build();
 
@@ -127,6 +151,7 @@
         try
         {
             await _hubConnection.StartAsync();
+            Console.WriteLine("[WorkItemExplorer] SignalR connected");
         }
         catch (Exception ex)
         {
@@ -168,8 +193,10 @@
         _isLoading = true;
         try
         {
+            Console.WriteLine($"[WorkItemExplorer] Fetching /api/workitems from {_apiBase}");
             _workItems = (await WorkItemService.GetAllAsync()).ToList();
             ApplyFilter();
+            await SaveExpandedStateAsync();
         }
         catch (Exception ex)
         {
@@ -183,27 +210,62 @@
 
     private async Task RequestSync()
     {
-        if (_hubConnection?.State == HubConnectionState.Connected)
+        _syncMessage = string.Empty;
+
+        if (_hubConnection != null && _hubConnection.State == HubConnectionState.Connected)
         {
             _isSyncing = true;
-            _syncMessage = "Requesting sync...";
+            _syncMessage = "Requesting sync via SignalR...";
             _syncStatusClass = "status-progress";
-            
+
             try
             {
                 await _hubConnection.SendAsync("RequestSync", "DefaultAreaPath");
             }
             catch (Exception ex)
             {
-                _syncMessage = $"Error requesting sync: {ex.Message}";
+                _syncMessage = $"Error requesting sync via SignalR: {ex.Message}";
                 _syncStatusClass = "status-error";
                 _isSyncing = false;
+                return;
+            }
+
+            // wait briefly for server to process then reload
+            await Task.Delay(300);
+            await LoadWorkItems();
+            _isSyncing = false;
+            return;
+        }
+
+        // Fallback: call API endpoint to trigger sync
+        try
+        {
+            _isSyncing = true;
+            _syncMessage = "Requesting sync via HTTP...";
+            _syncStatusClass = "status-progress";
+
+            var resp = await Http.PostAsync(_apiBase + "/api/workitems/sync", null);
+            if (resp.IsSuccessStatusCode)
+            {
+                // reload items
+                await LoadWorkItems();
+                _syncMessage = "Sync completed (HTTP)";
+                _syncStatusClass = "status-success";
+            }
+            else
+            {
+                _syncMessage = $"Sync request failed (HTTP): {resp.StatusCode}";
+                _syncStatusClass = "status-error";
             }
         }
-        else
+        catch (Exception ex)
         {
-            _syncMessage = "Not connected to server";
+            _syncMessage = $"Error requesting sync (HTTP): {ex.Message}";
             _syncStatusClass = "status-error";
+        }
+        finally
+        {
+            _isSyncing = false;
         }
     }
 
@@ -220,10 +282,38 @@
         }
         else
         {
-            _filteredWorkItems = _workItems
+            // find matching items
+            var matches = _workItems
                 .Where(w => w.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase))
                 .ToList();
+
+            // include ancestors for each match
+            var toInclude = new Dictionary<int, WorkItemDto>();
+            foreach (var m in matches)
+            {
+                if (!toInclude.ContainsKey(m.TfsId)) toInclude[m.TfsId] = m;
+                var current = m;
+                while (current.ParentTfsId.HasValue)
+                {
+                    var pid = current.ParentTfsId.Value;
+                    var parent = _workItems.FirstOrDefault(w => w.TfsId == pid);
+                    if (parent != null)
+                    {
+                        if (!toInclude.ContainsKey(parent.TfsId)) toInclude[parent.TfsId] = parent;
+                        current = parent;
+                    }
+                    else
+                    {
+                        // parent missing -> create placeholder later in tree builder; stop walking
+                        break;
+                    }
+                }
+            }
+
+            _filteredWorkItems = toInclude.Values.ToList();
         }
+
+        BuildTreeFromFlatList(_filteredWorkItems);
     }
 
     private void SelectWorkItem(WorkItemDto workItem)
@@ -242,6 +332,233 @@
         if (_hubConnection != null)
         {
             await _hubConnection.DisposeAsync();
+        }
+    }
+
+    // --- Tree building and rendering logic (use ParentTfsId) ---
+    private void BuildTreeFromFlatList(IEnumerable<WorkItemDto> items)
+    {
+        // Preserve expanded state values for nodes that will remain
+        var prevExpanded = new Dictionary<int, bool>(_expandedState);
+
+        _treeRoots.Clear();
+
+        // Create node instances keyed by TfsId
+        var nodeMap = new Dictionary<int, TreeNode>();
+        foreach (var dto in items)
+        {
+            var id = dto.TfsId;
+            if (!nodeMap.TryGetValue(id, out var node))
+            {
+                node = new TreeNode(dto.Title, id) { Dto = dto };
+                nodeMap[id] = node;
+            }
+            else
+            {
+                node.Dto = dto;
+                node.Title = dto.Title;
+            }
+        }
+
+        // Attach children to parents based on ParentTfsId, create placeholders for missing parents
+        foreach (var dto in items)
+        {
+            var node = nodeMap[dto.TfsId];
+            var parentId = dto.ParentTfsId;
+            if (parentId.HasValue)
+            {
+                if (!nodeMap.TryGetValue(parentId.Value, out var parentNode))
+                {
+                    // create placeholder parent node for missing parent
+                    parentNode = new TreeNode($"(missing) Parent #{parentId.Value}", parentId.Value)
+                    {
+                        Dto = null,
+                        IsPlaceholder = true
+                    };
+                    nodeMap[parentId.Value] = parentNode;
+                }
+
+                parentNode.Children.Add(node);
+            }
+            else
+            {
+                _treeRoots.Add(node);
+            }
+        }
+
+        // Restore expanded state where possible
+        foreach (var kv in prevExpanded)
+        {
+            if (nodeMap.TryGetValue(kv.Key, out var node))
+            {
+                node.IsExpanded = kv.Value;
+                _expandedState[kv.Key] = kv.Value;
+            }
+        }
+
+        // Ensure nodes have the expanded state entry and sort children
+        foreach (var n in nodeMap.Values)
+        {
+            if (!_expandedState.ContainsKey(n.Id))
+            {
+                // default collapsed
+                _expandedState[n.Id] = n.IsExpanded;
+            }
+            n.Children = n.Children.OrderBy(c => c.Title).ToList();
+        }
+
+        _treeRoots = _treeRoots.OrderBy(r => r.Title).ToList();
+
+        StateHasChanged();
+    }
+
+    private RenderFragment RenderNode(TreeNode node, int level) => builder =>
+    {
+        var seq = 0;
+        builder.OpenElement(seq++, "li");
+        builder.AddAttribute(seq++, "class", node.IsPlaceholder ? "tree-node placeholder-node" : "tree-node");
+
+        // node row
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "node-row");
+        builder.AddAttribute(seq++, "style", $"padding-left:{level * 1.25}rem");
+
+        if (node.Children.Any())
+        {
+            builder.OpenElement(seq++, "button");
+            builder.AddAttribute(seq++, "type", "button");
+            builder.AddAttribute(seq++, "class", node.IsExpanded ? "caret-button expanded" : "caret-button");
+            builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, (Func<Task>)(() => ToggleNode(node))));
+            builder.OpenElement(seq++, "span");
+            builder.AddAttribute(seq++, "class", "chev");
+            builder.AddContent(seq++, "?");
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        else
+        {
+            builder.OpenElement(seq++, "span");
+            builder.AddAttribute(seq++, "class", "leaf-placeholder");
+            builder.AddContent(seq++, "");
+            builder.CloseElement();
+        }
+
+        // Badge
+        builder.OpenElement(seq++, "span");
+        var typeClass = node.IsPlaceholder ? "workitem-type placeholder-type" : $"workitem-type { (node.Dto?.Type ?? string.Empty) }";
+        builder.AddAttribute(seq++, "class", typeClass);
+        builder.AddContent(seq++, node.IsPlaceholder ? "(missing)" : node.Dto?.Type ?? string.Empty);
+        builder.CloseElement();
+
+        // Title
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "title-block");
+        builder.OpenElement(seq++, "span");
+        var titleClass = node.IsPlaceholder ? "workitem-title placeholder-title" : "workitem-title";
+        if (node.Dto != null && _selectedWorkItem != null && _selectedWorkItem.TfsId == node.Id)
+        {
+            titleClass += " selected";
+        }
+        builder.AddAttribute(seq++, "class", titleClass);
+        if (node.Dto != null)
+        {
+            builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, (Action)(() => SelectWorkItem(node.Dto))));
+            builder.AddContent(seq++, node.Title);
+        }
+        else
+        {
+            builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, (Func<Task>)(() => ToggleNode(node))));
+            builder.AddContent(seq++, node.Title);
+        }
+        builder.CloseElement();
+        builder.CloseElement();
+
+        builder.CloseElement(); // div.node-row
+
+        // children
+        if (node.IsExpanded && node.Children.Any())
+        {
+            builder.OpenElement(seq++, "ul");
+            builder.AddAttribute(seq++, "class", "child-list");
+            foreach (var child in node.Children)
+            {
+                builder.AddContent(seq++, RenderNode(child, level + 1));
+            }
+            builder.CloseElement();
+        }
+
+        builder.CloseElement(); // li
+    };
+
+    private async Task ToggleNode(TreeNode node)
+    {
+        node.IsExpanded = !node.IsExpanded;
+        // persist expand state for both real nodes and placeholders
+        _expandedState[node.Id] = node.IsExpanded;
+        await SaveExpandedStateAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadExpandedStateAsync()
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string>("localStorage.getItem", ExpandedStateKey);
+            if (!string.IsNullOrEmpty(json))
+            {
+                var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, bool>>(json);
+                if (dict != null)
+                {
+                    _expandedState.Clear();
+                    foreach (var kv in dict)
+                    {
+                        if (int.TryParse(kv.Key, out var id))
+                        {
+                            _expandedState[id] = kv.Value;
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // ignore JS interop errors
+        }
+    }
+
+    private async Task SaveExpandedStateAsync()
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(_expandedState);
+            await JS.InvokeVoidAsync("localStorage.setItem", ExpandedStateKey, json);
+        }
+        catch
+        {
+            // ignore JS interop errors
+        }
+    }
+
+    private async Task ClearExpandedClicked()
+    {
+        _expandedState.Clear();
+        await SaveExpandedStateAsync();
+        BuildTreeFromFlatList(_filteredWorkItems);
+    }
+
+    private class TreeNode
+    {
+        public string Title { get; set; }
+        public int Id { get; }
+        public WorkItemDto? Dto { get; set; }
+        public List<TreeNode> Children { get; set; } = new();
+        public bool IsExpanded { get; set; } = false;
+        public bool IsPlaceholder { get; set; } = false;
+
+        public TreeNode(string title, int id)
+        {
+            Title = title;
+            Id = id;
         }
     }
 }

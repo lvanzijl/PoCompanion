@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.SignalR;
 using PoTool.Api.Hubs;
 using PoTool.Core.Contracts;
+using PoTool.Core.WorkItems;
+using PoTool.Api.Repositories;
 
 namespace PoTool.Api.Services;
 
@@ -48,24 +50,34 @@ public class WorkItemSyncService : BackgroundService
         var tfsClient = scope.ServiceProvider.GetService<ITfsClient>();
         var repository = scope.ServiceProvider.GetRequiredService<IWorkItemRepository>();
 
-        if (tfsClient == null)
-        {
-            _logger.LogWarning("ITfsClient not registered, cannot perform sync");
-            await _hubContext.Clients.All.SendAsync(
-                "SyncStatus",
-                new { Status = "Failed", Message = "TFS client not configured" },
-                cancellationToken);
-            return;
-        }
-
         try
         {
             await _hubContext.Clients.All.SendAsync(
                 "SyncStatus",
-                new { Status = "InProgress", Message = "Retrieving work items from TFS..." },
+                new { Status = "InProgress", Message = "Retrieving work items..." },
                 cancellationToken);
 
-            var workItems = await tfsClient.GetWorkItemsAsync(areaPath, cancellationToken);
+            IEnumerable<WorkItemDto> workItems;
+
+            if (tfsClient != null)
+            {
+                workItems = await tfsClient.GetWorkItemsAsync(areaPath, cancellationToken);
+            }
+            else
+            {
+                // No ITfsClient available (development scenario). If repository is DevWorkItemRepository regenerate dummy data.
+                _logger.LogInformation("No ITfsClient registered; using repository contents or regenerating dev data as fallback for sync");
+
+                if (repository is DevWorkItemRepository devRepo)
+                {
+                    workItems = devRepo.GenerateDummyWorkItems();
+                }
+                else
+                {
+                    workItems = await repository.GetAllAsync(cancellationToken);
+                }
+            }
+
             await repository.ReplaceAllAsync(workItems, cancellationToken);
 
             await _hubContext.Clients.All.SendAsync(
@@ -78,7 +90,7 @@ public class WorkItemSyncService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during sync for area path: {AreaPath}", areaPath);
-            
+
             await _hubContext.Clients.All.SendAsync(
                 "SyncStatus",
                 new { Status = "Failed", Message = $"Sync failed: {ex.Message}" },

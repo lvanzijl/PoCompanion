@@ -26,7 +26,15 @@ else
 }
 
 // Register repositories
-builder.Services.AddScoped<IWorkItemRepository, WorkItemRepository>();
+if (builder.Environment.IsDevelopment())
+{
+    // Use in-memory dev repository to allow frontend development without TFS or DB
+    builder.Services.AddSingleton<IWorkItemRepository, DevWorkItemRepository>();
+}
+else
+{
+    builder.Services.AddScoped<IWorkItemRepository, WorkItemRepository>();
+}
 
 // Register TFS configuration and client
 builder.Services.AddDataProtection();
@@ -45,10 +53,18 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorClient", policy =>
     {
-        policy.WithOrigins("https://localhost:5001", "http://localhost:5000")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        if (builder.Environment.IsDevelopment())
+        {
+            // during development allow any origin to simplify local testing
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        }
+        else
+        {
+            policy.WithOrigins("https://localhost:5001", "http://localhost:5000")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
     });
 });
 
@@ -88,6 +104,9 @@ if (hasHttpsEndpoint)
     app.UseHttpsRedirection();
 }
 
+// Add routing so middleware such as CORS apply to endpoints including SignalR
+app.UseRouting();
+
 app.UseCors("AllowBlazorClient");
 
 app.MapControllers();
@@ -114,6 +133,12 @@ app.MapGet("/api/tfsvalidate", async (ITfsClient client) =>
 {
     var ok = await client.ValidateConnectionAsync();
     return ok ? Results.Ok() : Results.StatusCode(500);
+});
+
+app.MapPost("/api/workitems/sync", async (WorkItemSyncService svc, CancellationToken ct) =>
+{
+    await svc.TriggerSyncAsync("DefaultAreaPath", ct);
+    return Results.Ok();
 });
 
 app.Run();

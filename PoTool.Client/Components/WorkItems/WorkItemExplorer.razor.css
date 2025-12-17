@@ -146,3 +146,138 @@
 .detail-field span {
     color: #333;
 }
+
+.workitem-tree-root {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-family: var(--bs-font-sans-serif);
+}
+
+.tree-node {
+    margin-bottom: 0.25rem;
+}
+
+.node-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.node-row:hover {
+    background: rgba(0,0,0,0.03);
+}
+
+.caret-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #555;
+    cursor: pointer;
+    transition: transform .12s ease;
+    font-size: 0.85rem;
+}
+
+.caret-button:focus {
+    outline: 2px solid rgba(13,110,253,0.25);
+    border-radius: 3px;
+}
+
+.caret-button .chev {
+    display: inline-block;
+    transform-origin: center;
+    transition: transform .12s ease;
+}
+
+.caret-button.expanded .chev {
+    transform: rotate(90deg);
+}
+
+.leaf-placeholder {
+    display: inline-block;
+    width: 1.25rem;
+}
+
+.child-list {
+    list-style: none;
+    padding: 0 0 0 0.5rem;
+    margin: 0;
+    border-left: 1px dashed #e9ecef;
+    margin-left: 0.5rem;
+}
+
+.workitem-type {
+    display:inline-block;
+    min-width: 4.5rem;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    padding: 0.12rem 0.4rem;
+    border-radius: 3px;
+    color: #fff;
+    background:#6c757d;
+    margin-right: 0.5rem;
+}
+
+.workitem-type.Goal {
+    background: #2e7d32;
+}
+
+.workitem-type.Objective {
+    background: #007bff;
+}
+
+.workitem-type.Epic {
+    background: #6f42c1;
+}
+
+.workitem-type.Feature {
+    background: #20c997;
+}
+
+.workitem-type.PBI {
+    background: #fd7e14;
+}
+
+.workitem-type.Task {
+    background: #17a2b8;
+}
+
+.workitem-title {
+    cursor: pointer;
+    display: inline-block;
+    padding: 0.08rem 0.2rem;
+    border-radius: 3px;
+}
+
+.workitem-title.selected {
+    background: rgba(13,110,253,0.12);
+    color: #0d6efd;
+}
+
+.placeholder-node .workitem-type {
+    background: #c62828;
+}
+
+.placeholder-title {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.detail-panel {
+    margin-left: 1rem;
+}
+
+/* small responsive tweaks */
+@media (max-width: 600px) {
+    .workitem-type {
+        min-width: 3.2rem;
+        font-size: 0.65rem;
+    }
+}

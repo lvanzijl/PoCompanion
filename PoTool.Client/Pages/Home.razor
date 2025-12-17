@@ -1,7 +1,162 @@
 ﻿@page "/"
+@using System.Net.Http.Json
+@using PoTool.Core.WorkItems
+@inject HttpClient Http
+@inject NavigationManager Navigation
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Diagnostics</h1>
 
-Welcome to your new app.
+<div class="diagnostics">
+    <div>
+        <label>API Base:</label>
+        <span>@_apiBase</span>
+    </div>
+    <div>
+        <label>Health:</label>
+        <span>@_healthStatus</span>
+    </div>
+    <div>
+        <label>Work items cached:</label>
+        <span>@_workItemCount</span>
+    </div>
+    <div>
+        <label>Hub negotiate:</label>
+        <span>@_hubNegotiateStatus</span>
+    </div>
+    <div>
+        <label>Last error:</label>
+        <pre>@_lastError</pre>
+    </div>
+    <div>
+        <button @onclick="Refresh">Refresh diagnostics</button>
+    </div>
+</div>
+
+<hr />
+
+<h2>Welcome</h2>
+<p>This page shows runtime diagnostics for the API and SignalR hub to help local development.</p>
+
+@code {
+    private string _apiBase = string.Empty;
+    private string _healthStatus = "Unknown";
+    private int _workItemCount = 0;
+    private string _hubNegotiateStatus = "Unknown";
+    private string _lastError = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _apiBase = Http.BaseAddress?.ToString().TrimEnd('/') ?? Navigation.BaseUri.TrimEnd('/');
+        await CheckDiagnosticsAsync();
+    }
+
+    private async Task Refresh()
+    {
+        _lastError = string.Empty;
+        await CheckDiagnosticsAsync();
+    }
+
+    private async Task CheckDiagnosticsAsync()
+    {
+        // Health
+        try
+        {
+            var resp = await Http.GetAsync(_apiBase + "/health");
+            if (resp.IsSuccessStatusCode)
+            {
+                _healthStatus = "Healthy";
+            }
+            else
+            {
+                _healthStatus = $"Unhealthy ({(int)resp.StatusCode})";
+                var body = await SafeReadStringAsync(resp);
+                if (!string.IsNullOrEmpty(body)) _lastError += (string.IsNullOrEmpty(_lastError) ? "" : "\n") + $"/health response body: {body}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _healthStatus = "Error";
+            _lastError = ex.Message;
+        }
+
+        // Work items count - handle empty or non-JSON responses
+        try
+        {
+            var resp = await Http.GetAsync(_apiBase + "/api/workitems");
+            if (!resp.IsSuccessStatusCode)
+            {
+                _workItemCount = 0;
+                var body = await SafeReadStringAsync(resp);
+                _lastError += (string.IsNullOrEmpty(_lastError) ? "" : "\n") + $"GET /api/workitems returned {(int)resp.StatusCode}. Body: {Truncate(body, 1000)}";
+            }
+            else
+            {
+                var content = await SafeReadStringAsync(resp);
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    _workItemCount = 0; // empty payload
+                }
+                else
+                {
+                    try
+                    {
+                        var items = System.Text.Json.JsonSerializer.Deserialize<List<WorkItemDto>>(content, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        _workItemCount = items?.Count ?? 0;
+                    }
+                    catch (Exception ex)
+                    {
+                        _workItemCount = 0;
+                        _lastError += (string.IsNullOrEmpty(_lastError) ? "" : "\n") + $"Invalid JSON from /api/workitems: {ex.Message}\n{Truncate(content, 2000)}";
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _workItemCount = 0;
+            _lastError += (string.IsNullOrEmpty(_lastError) ? "" : "\n") + ex.Message;
+        }
+
+        // Hub negotiate - use POST as negotiate expects a POST
+        try
+        {
+            var negotiateUrl = _apiBase + "/hubs/workitems/negotiate?negotiateVersion=1";
+            var r = await Http.PostAsync(negotiateUrl, null);
+            if (!r.IsSuccessStatusCode)
+            {
+                var body = await SafeReadStringAsync(r);
+                _hubNegotiateStatus = $"Failed ({(int)r.StatusCode})";
+                _lastError += (string.IsNullOrEmpty(_lastError) ? "" : "\n") + $"Negotiate failed body: {Truncate(body, 2000)}";
+            }
+            else
+            {
+                _hubNegotiateStatus = "OK";
+            }
+        }
+        catch (Exception ex)
+        {
+            _hubNegotiateStatus = "Error";
+            _lastError += (string.IsNullOrEmpty(_lastError) ? "" : "\n") + ex.Message;
+        }
+    }
+
+    private static string Truncate(string? s, int max)
+    {
+        if (string.IsNullOrEmpty(s)) return string.Empty;
+        return s.Length <= max ? s : s.Substring(0, max) + "...";
+    }
+
+    private static async Task<string> SafeReadStringAsync(HttpResponseMessage resp)
+    {
+        try
+        {
+            return await resp.Content.ReadAsStringAsync();
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+}

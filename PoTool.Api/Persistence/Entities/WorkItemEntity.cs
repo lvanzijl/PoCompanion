@@ -20,6 +20,11 @@ public class WorkItemEntity
     public int TfsId { get; set; }
 
     /// <summary>
+    /// Parent TFS work item ID (nullable) for hierarchy.
+    /// </summary>
+    public int? ParentTfsId { get; set; }
+
+    /// <summary>
     /// Work item type (Epic, Feature, PBI, etc.).
     /// </summary>
     [Required]

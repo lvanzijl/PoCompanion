@@ -8,7 +8,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Configure HttpClient to point to the API
-var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ?? "http://localhost:5000";
+var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ?? "http://localhost:5291";
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
 
 // Register services
