@@ -1,0 +1,116 @@
+@using PoTool.Client.Models
+@using PoTool.Client.ApiClient
+
+@* Recursive tree node component *@
+
+<li class="@GetNodeClass()">
+    <div class="node-row" style="padding-left:@(Level * 1.25)rem">
+        @if (Node.Children.Any())
+        {
+            <button type="button" 
+                    class="@GetCaretClass()" 
+                    @onclick="ToggleExpanded">
+                <span class="chev">?</span>
+            </button>
+        }
+        else
+        {
+            <span class="leaf-placeholder"></span>
+        }
+
+        <span class="@GetTypeClass()">
+            @GetTypeText()
+        </span>
+
+        <div class="title-block">
+            <span class="@GetTitleClass()" @onclick="HandleTitleClick">
+                @Node.Title
+            </span>
+        </div>
+    </div>
+
+    @if (Node.IsExpanded && Node.Children.Any())
+    {
+        <ul class="child-list">
+            @foreach (var child in Node.Children)
+            {
+                <WorkItemTreeNode Node="@child"
+                                 Level="@(Level + 1)"
+                                 SelectedId="@SelectedId"
+                                 OnNodeToggled="@OnNodeToggled"
+                                 OnNodeSelected="@OnNodeSelected" />
+            }
+        </ul>
+    }
+</li>
+
+@code {
+    [Parameter, EditorRequired]
+    public TreeNode Node { get; set; } = default!;
+
+    [Parameter]
+    public int Level { get; set; }
+
+    [Parameter]
+    public int? SelectedId { get; set; }
+
+    [Parameter]
+    public EventCallback<TreeNode> OnNodeToggled { get; set; }
+
+    [Parameter]
+    public EventCallback<TreeNode> OnNodeSelected { get; set; }
+
+    private bool IsPlaceholder => string.IsNullOrEmpty(Node.JsonPayload);
+
+    private string GetNodeClass()
+    {
+        return IsPlaceholder ? "tree-node placeholder-node" : "tree-node";
+    }
+
+    private string GetCaretClass()
+    {
+        return Node.IsExpanded ? "caret-button expanded" : "caret-button";
+    }
+
+    private string GetTypeClass()
+    {
+        if (IsPlaceholder)
+        {
+            return "workitem-type placeholder-type";
+        }
+        return $"workitem-type {Node.Type}";
+    }
+
+    private string GetTypeText()
+    {
+        return IsPlaceholder ? "(missing)" : Node.Type;
+    }
+
+    private string GetTitleClass()
+    {
+        var className = IsPlaceholder ? "workitem-title placeholder-title" : "workitem-title";
+        if (SelectedId.HasValue && SelectedId.Value == Node.Id)
+        {
+            className += " selected";
+        }
+        return className;
+    }
+
+    private async Task ToggleExpanded()
+    {
+        await OnNodeToggled.InvokeAsync(Node);
+    }
+
+    private async Task HandleTitleClick()
+    {
+        if (!IsPlaceholder)
+        {
+            await OnNodeSelected.InvokeAsync(Node);
+        }
+        else
+        {
+            // For placeholder nodes, toggle expansion
+            await ToggleExpanded();
+        }
+    }
+}

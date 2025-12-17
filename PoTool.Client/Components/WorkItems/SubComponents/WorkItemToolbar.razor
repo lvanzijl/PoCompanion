@@ -1,0 +1,84 @@
+@* Toolbar for work item explorer actions *@
+
+<div class="workitem-toolbar">
+    <div class="header">
+        <h1>Work Item Explorer</h1>
+        <div class="header-actions">
+            <button class="btn-sync" @onclick="OnSyncClicked" disabled="@IsSyncing">
+                @if (IsSyncing)
+                {
+                    <span>Syncing...</span>
+                }
+                else
+                {
+                    <span>Pull & Cache Work Items</span>
+                }
+            </button>
+            <button class="btn-clear" @onclick="OnClearStateClicked">Clear tree state</button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(SyncMessage))
+    {
+        <div class="sync-status @SyncStatusClass">
+            @SyncMessage
+        </div>
+    }
+
+    <div class="endpoint-info">
+        <small>API base: @ApiBase</small><br />
+        <small>Hub URL: @HubUrl</small>
+    </div>
+
+    <div class="search-filter">
+        <input type="text" 
+               placeholder="Filter by title..." 
+               @bind="FilterText" 
+               @bind:event="oninput"
+               @onkeyup="OnFilterKeyUp" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string ApiBase { get; set; } = string.Empty;
+
+    [Parameter]
+    public string HubUrl { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool IsSyncing { get; set; }
+
+    [Parameter]
+    public string SyncMessage { get; set; } = string.Empty;
+
+    [Parameter]
+    public string SyncStatusClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string FilterText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback OnSyncRequested { get; set; }
+
+    [Parameter]
+    public EventCallback OnClearState { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnFilterChanged { get; set; }
+
+    private async Task OnSyncClicked()
+    {
+        await OnSyncRequested.InvokeAsync();
+    }
+
+    private async Task OnClearStateClicked()
+    {
+        await OnClearState.InvokeAsync();
+    }
+
+    private async Task OnFilterKeyUp()
+    {
+        await OnFilterChanged.InvokeAsync(FilterText);
+    }
+}
