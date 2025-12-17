@@ -167,25 +167,6 @@ public class MockDataProvider
     public List<WorkItemDto> GetMockHierarchyForGoals(List<int> goalIds)
     {
         var allItems = GetMockHierarchy();
-        var result = new List<WorkItemDto>();
-        var itemsToInclude = new HashSet<int>();
-
-        // Find all descendants of the specified goals
-        foreach (var goalId in goalIds)
-        {
-            AddItemAndDescendants(goalId, allItems, itemsToInclude);
-        }
-
-        return allItems.Where(i => itemsToInclude.Contains(i.TfsId)).ToList();
-    }
-
-    private void AddItemAndDescendants(int itemId, List<WorkItemDto> allItems, HashSet<int> result)
-    {
-        result.Add(itemId);
-        var children = allItems.Where(i => i.ParentTfsId == itemId);
-        foreach (var child in children)
-        {
-            AddItemAndDescendants(child.TfsId, allItems, result);
-        }
+        return WorkItemHierarchyHelper.FilterDescendants(goalIds, allItems);
     }
 }

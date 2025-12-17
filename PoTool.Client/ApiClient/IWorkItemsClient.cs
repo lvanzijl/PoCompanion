@@ -28,4 +28,12 @@ public interface IWorkItemsClient
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Work item or null</returns>
     Task<WorkItemDto?> GetByTfsIdAsync(int tfsId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets work items for specific Goal IDs (full hierarchy).
+    /// </summary>
+    /// <param name="goalIds">List of Goal IDs</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Work items including goals and all descendants</returns>
+    Task<IEnumerable<WorkItemDto>> GetGoalHierarchyAsync(IEnumerable<int> goalIds, CancellationToken cancellationToken = default);
 }

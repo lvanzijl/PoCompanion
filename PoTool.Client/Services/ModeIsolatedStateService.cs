@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using PoTool.Client.Models;
 using System.Text.Json;
@@ -10,11 +11,13 @@ namespace PoTool.Client.Services;
 public class ModeIsolatedStateService
 {
     private readonly IJSRuntime _jsRuntime;
+    private readonly ILogger<ModeIsolatedStateService> _logger;
     private DataMode _currentMode = DataMode.Mock;
 
-    public ModeIsolatedStateService(IJSRuntime jsRuntime)
+    public ModeIsolatedStateService(IJSRuntime jsRuntime, ILogger<ModeIsolatedStateService> logger)
     {
         _jsRuntime = jsRuntime;
+        _logger = logger;
     }
 
     /// <summary>
@@ -41,9 +44,10 @@ public class ModeIsolatedStateService
             var json = JsonSerializer.Serialize(expandedState);
             await _jsRuntime.InvokeVoidAsync("localStorage.setItem", key, json);
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore JS interop errors
+            // Log but don't throw - JS interop errors should not break the application
+            _logger.LogWarning(ex, "Failed to save expanded state for mode {Mode}", _currentMode);
         }
     }
 
@@ -74,9 +78,10 @@ public class ModeIsolatedStateService
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore JS interop errors
+            // Log but don't throw - JS interop errors should not break the application
+            _logger.LogWarning(ex, "Failed to load expanded state for mode {Mode}", _currentMode);
         }
 
         return new Dictionary<int, bool>();
@@ -93,9 +98,10 @@ public class ModeIsolatedStateService
             var json = JsonSerializer.Serialize(selectedIds);
             await _jsRuntime.InvokeVoidAsync("localStorage.setItem", key, json);
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore JS interop errors
+            // Log but don't throw - JS interop errors should not break the application
+            _logger.LogWarning(ex, "Failed to save selected items for mode {Mode}", _currentMode);
         }
     }
 
@@ -118,9 +124,10 @@ public class ModeIsolatedStateService
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore JS interop errors
+            // Log but don't throw - JS interop errors should not break the application
+            _logger.LogWarning(ex, "Failed to load selected items for mode {Mode}", _currentMode);
         }
 
         return new List<int>();
@@ -136,9 +143,10 @@ public class ModeIsolatedStateService
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", GetExpandedStateKey());
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", GetSelectedItemsKey());
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore JS interop errors
+            // Log but don't throw - JS interop errors should not break the application
+            _logger.LogWarning(ex, "Failed to clear state for mode {Mode}", _currentMode);
         }
     }
 

@@ -39,33 +39,6 @@ public class GetGoalHierarchyQueryHandler : IQueryHandler<GetGoalHierarchyQuery,
         // For TFS mode, query from repository
         // Get all work items that are descendants of the specified goals
         var allItems = await _workItemRepository.GetAllAsync(cancellationToken);
-        return FilterDescendants(query.GoalIds, allItems);
-    }
-
-    private List<WorkItemDto> FilterDescendants(List<int> goalIds, IEnumerable<WorkItemDto> allItems)
-    {
-        var result = new List<WorkItemDto>();
-        var itemsToInclude = new HashSet<int>();
-        var itemsList = allItems.ToList();
-
-        foreach (var goalId in goalIds)
-        {
-            AddItemAndDescendants(goalId, itemsList, itemsToInclude);
-        }
-
-        return itemsList.Where(i => itemsToInclude.Contains(i.TfsId)).ToList();
-    }
-
-    private void AddItemAndDescendants(int itemId, List<WorkItemDto> allItems, HashSet<int> result)
-    {
-        var item = allItems.FirstOrDefault(i => i.TfsId == itemId);
-        if (item == null) return;
-
-        result.Add(itemId);
-        var children = allItems.Where(i => i.ParentTfsId == itemId);
-        foreach (var child in children)
-        {
-            AddItemAndDescendants(child.TfsId, allItems, result);
-        }
+        return WorkItemHierarchyHelper.FilterDescendants(query.GoalIds, allItems);
     }
 }
