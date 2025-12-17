@@ -10,6 +10,10 @@ public class WorkItemService
 {
     private readonly IWorkItemsClient _client;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkItemService"/> class.
+    /// </summary>
+    /// <param name="client">The work items API client.</param>
     public WorkItemService(IWorkItemsClient client)
     {
         _client = client;

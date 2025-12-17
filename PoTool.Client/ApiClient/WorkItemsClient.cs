@@ -10,6 +10,10 @@ public class WorkItemsClient : IWorkItemsClient
 {
     private readonly HttpClient _httpClient;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkItemsClient"/> class.
+    /// </summary>
+    /// <param name="httpClient">The HTTP client for API communication.</param>
     public WorkItemsClient(HttpClient httpClient)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
