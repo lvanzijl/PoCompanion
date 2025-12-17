@@ -72,7 +72,7 @@ Run these commands to understand the project:
 
 ```bash
 # Navigate to repository root
-cd /home/runner/work/PoCompanion/PoCompanion
+cd <repository-root>
 
 # Build the solution
 dotnet build
@@ -263,7 +263,7 @@ If your changes affect existing behavior:
 
 ### 6.1 Build the Solution
 ```bash
-cd /home/runner/work/PoCompanion/PoCompanion
+# From repository root
 dotnet build
 ```
 Fix any build errors before proceeding.
