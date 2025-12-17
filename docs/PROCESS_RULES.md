@@ -164,3 +164,11 @@ A change is done only when:
 - all rules have been re-checked
 - feedback noise has been minimized
 - no architectural drift is introduced
+
+## 12. Pull Request discipline (mandatory)
+
+- Every change MUST be submitted via a Pull Request.
+- Every Pull Request MUST follow the repository PR template.
+- A Pull Request that does not fully follow the template MUST be blocked.
+- Reviewers MUST verify that all checklist items are explicitly addressed.
+- Missing or unchecked items are considered review blockers.
