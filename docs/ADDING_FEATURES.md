@@ -10,10 +10,10 @@ All contributors—human or AI—MUST follow these steps.
 Before starting ANY feature work, you MUST:
 
 1. **Read and understand ALL governing documents:**
-   - `/docs/UX_PRINCIPLES.md` — UI/UX rules for Blazor WebAssembly
-   - `/docs/ARCHITECTURE_RULES.md` — Layer boundaries and architectural constraints
-   - `/docs/PROCESS_RULES.md` — Development workflow and review standards
-   - `/docs/COPILOT_ARCHITECTURE_CONTRACT.md` — Quick reference for AI agents
+   - `docs/UX_PRINCIPLES.md` — UI/UX rules for Blazor WebAssembly
+   - `docs/ARCHITECTURE_RULES.md` — Layer boundaries and architectural constraints
+   - `docs/PROCESS_RULES.md` — Development workflow and review standards
+   - `docs/COPILOT_ARCHITECTURE_CONTRACT.md` — Quick reference for AI agents
 
 2. **Understand the repository structure:**
    ```
@@ -177,7 +177,8 @@ Use the `report_progress` tool to share your plan as a checklist:
 - MAY reference Core
 - MUST be the only layer that accesses TFS (via `ITfsClient`)
 - MUST expose all functionality via Web API and SignalR
-- MUST use source-generated Mediator (not MediatR) if using mediator pattern
+- MUST use source-generated Mediator library (not MediatR) if using mediator pattern
+  - See ARCHITECTURE_RULES.md section 11 for approved Mediator library details
 - Handlers and implementations live here
 
 **Frontend Layer Rules:**
@@ -196,7 +197,7 @@ Use the `report_progress` tool to share your plan as a checklist:
 - Make cross-cutting changes without discussion
 - Change behavior outside your stated goal
 - Mix multiple features in one PR
-- Use MediatR (use source-generated Mediator instead)
+- Use MediatR (use source-generated Mediator library instead—see ARCHITECTURE_RULES.md)
 - Access TFS from frontend
 - Add JavaScript UI widgets
 
@@ -380,7 +381,7 @@ Use `report_progress` one last time with:
 - PR description: Complete checklist showing all work completed
 
 ### 9.3 Verify PR Template Compliance
-Your PR MUST address all items in `/docs/pr_template.md`:
+Your PR MUST address all items in `docs/pr_template.md`:
 
 **Mandatory Checklist Items:**
 - [ ] Single, clear purpose stated
@@ -515,11 +516,11 @@ Use this checklist for every feature:
 
 ## Resources
 
-- **Architecture:** `/docs/ARCHITECTURE_RULES.md`
-- **UX/UI:** `/docs/UX_PRINCIPLES.md`
-- **Process:** `/docs/PROCESS_RULES.md`
-- **PR Template:** `/docs/pr_template.md`
-- **Copilot Contract:** `/docs/COPILOT_ARCHITECTURE_CONTRACT.md`
+- **Architecture:** `docs/ARCHITECTURE_RULES.md`
+- **UX/UI:** `docs/UX_PRINCIPLES.md`
+- **Process:** `docs/PROCESS_RULES.md`
+- **PR Template:** `docs/pr_template.md`
+- **Copilot Contract:** `docs/COPILOT_ARCHITECTURE_CONTRACT.md`
 
 ---
 
