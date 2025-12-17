@@ -1,98 +1,211 @@
-@page "/tfs-config"
-@using Microsoft.AspNetCore.Components.Forms
+@page "/tfsconfig"
 @inject HttpClient Http
-@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
 
-<h3>TFS / Azure DevOps Configuration</h3>
+<PageTitle>TFS Configuration</PageTitle>
 
-<div class="config-form">
-    <EditForm Model="_model" OnValidSubmit="SaveConfig">
-        <InputText @bind-Value="_model.Url" placeholder="TFS URL (e.g. https://dev.azure.com/yourorg)" />
-        <br />
-        <InputText @bind-Value="_model.Project" placeholder="Project name" />
-        <br />
-        <InputText @bind-Value="_model.Pat" placeholder="Personal Access Token (PAT)" />
-        <br />
-        <button type="submit">Save</button>
-        <button type="button" @onclick="TestConnection">Test Connection</button>
-    </EditForm>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudPaper Elevation="2" Class="pa-4">
+        <MudText Typo="Typo.h4" Class="mb-4">TFS Configuration</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            Configure your Azure DevOps / TFS connection settings. Your Personal Access Token (PAT) will be encrypted and stored securely.
+        </MudText>
 
-    @if (!string.IsNullOrEmpty(_statusMessage))
-    {
-        <div class="status">@_statusMessage</div>
-    }
-</div>
+        <MudForm @ref="_form" @bind-IsValid="_formValid">
+            <MudTextField @bind-Value="_url" 
+                         Label="Organization URL" 
+                         Placeholder="https://dev.azure.com/yourorg"
+                         Required="true"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Normal"
+                         HelperText="The URL of your Azure DevOps organization" />
+
+            <MudTextField @bind-Value="_project" 
+                         Label="Project Name" 
+                         Placeholder="MyProject"
+                         Required="true"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Normal"
+                         HelperText="The name of your project" />
+
+            <MudTextField @bind-Value="_pat" 
+                         Label="Personal Access Token (PAT)" 
+                         Placeholder="Your PAT"
+                         Required="true"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Normal"
+                         InputType="InputType.Password"
+                         HelperText="Your PAT will be encrypted at rest" />
+
+            <MudStack Row="true" Class="mt-4">
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          OnClick="SaveConfig"
+                          Disabled="@(!_formValid || _isSaving)"
+                          StartIcon="@Icons.Material.Filled.Save">
+                    @if (_isSaving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Saving...</span>
+                    }
+                    else
+                    {
+                        <span>Save Configuration</span>
+                    }
+                </MudButton>
+
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Secondary" 
+                          OnClick="TestConnection"
+                          Disabled="@(!_formValid || _isTesting)"
+                          StartIcon="@Icons.Material.Filled.Check">
+                    @if (_isTesting)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Testing...</span>
+                    }
+                    else
+                    {
+                        <span>Test Connection</span>
+                    }
+                </MudButton>
+            </MudStack>
+        </MudForm>
+
+        @if (!string.IsNullOrEmpty(_currentUrl))
+        {
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.h6" Class="mb-2">Current Configuration</MudText>
+            <MudText Typo="Typo.body2">
+                <strong>URL:</strong> @_currentUrl<br />
+                <strong>Project:</strong> @_currentProject
+            </MudText>
+        }
+    </MudPaper>
+</MudContainer>
 
 @code {
-    private TfsModel _model = new();
-    private string _statusMessage = string.Empty;
+    private MudForm _form = null!;
+    private bool _formValid;
+    private bool _isSaving;
+    private bool _isTesting;
+
+    private string _url = string.Empty;
+    private string _project = string.Empty;
+    private string _pat = string.Empty;
+
+    private string _currentUrl = string.Empty;
+    private string _currentProject = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadExisting();
+        await LoadCurrentConfig();
     }
 
-    private async Task LoadExisting()
+    private async Task LoadCurrentConfig()
     {
         try
         {
-            var resp = await Http.GetAsync("api/tfsconfig");
-            if (resp.IsSuccessStatusCode)
+            var apiBase = Http.BaseAddress?.ToString().TrimEnd('/') ?? string.Empty;
+            var response = await Http.GetAsync($"{apiBase}/api/tfsconfig");
+            
+            if (response.IsSuccessStatusCode)
             {
-                var obj = await resp.Content.ReadFromJsonAsync<TfsModel>();
-                if (obj != null)
+                var config = await response.Content.ReadFromJsonAsync<TfsConfigResponse>();
+                if (config != null)
                 {
-                    _model.Url = obj.Url;
-                    _model.Project = obj.Project;
+                    _currentUrl = config.Url ?? string.Empty;
+                    _currentProject = config.Project ?? string.Empty;
+                    _url = _currentUrl;
+                    _project = _currentProject;
                 }
             }
         }
         catch (Exception ex)
         {
-            _statusMessage = "Could not load existing configuration" + ex.Message;
+            Snackbar.Add($"Error loading configuration: {ex.Message}", Severity.Error);
         }
     }
 
     private async Task SaveConfig()
     {
-        _statusMessage = "Saving...";
-        var resp = await Http.PostAsJsonAsync("api/tfsconfig", _model);
-        if (resp.IsSuccessStatusCode)
+        if (!_formValid) return;
+
+        _isSaving = true;
+        try
         {
-            _statusMessage = "Saved";
+            var apiBase = Http.BaseAddress?.ToString().TrimEnd('/') ?? string.Empty;
+            var payload = new { Url = _url, Project = _project, Pat = _pat };
+            var response = await Http.PostAsJsonAsync($"{apiBase}/api/tfsconfig", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Configuration saved successfully", Severity.Success);
+                _currentUrl = _url;
+                _currentProject = _project;
+                _pat = string.Empty; // Clear PAT after saving
+            }
+            else
+            {
+                Snackbar.Add($"Error saving configuration: {response.StatusCode}", Severity.Error);
+            }
         }
-        else
+        catch (Exception ex)
         {
-            _statusMessage = "Save failed";
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
         }
     }
 
     private async Task TestConnection()
     {
-        _statusMessage = "Testing...";
-        var resp = await Http.GetAsync("api/tfsconfig");
-        if (!resp.IsSuccessStatusCode)
-        {
-            _statusMessage = "Configuration not saved yet";
-            return;
-        }
+        if (!_formValid) return;
 
-        // Call validate endpoint (not implemented client-side) via admin route
-        var validateResp = await Http.GetAsync("api/tfsvalidate");
-        if (validateResp.IsSuccessStatusCode)
+        _isTesting = true;
+        try
         {
-            _statusMessage = "Connection OK";
+            // First save the config
+            var apiBase = Http.BaseAddress?.ToString().TrimEnd('/') ?? string.Empty;
+            var payload = new { Url = _url, Project = _project, Pat = _pat };
+            var saveResponse = await Http.PostAsJsonAsync($"{apiBase}/api/tfsconfig", payload);
+
+            if (!saveResponse.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Error saving configuration before testing", Severity.Error);
+                return;
+            }
+
+            // Then test the connection
+            var testResponse = await Http.GetAsync($"{apiBase}/api/tfsvalidate");
+
+            if (testResponse.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Connection test successful!", Severity.Success);
+                _currentUrl = _url;
+                _currentProject = _project;
+                _pat = string.Empty; // Clear PAT after successful test
+            }
+            else
+            {
+                Snackbar.Add("Connection test failed. Please check your credentials.", Severity.Warning);
+            }
         }
-        else
+        catch (Exception ex)
         {
-            _statusMessage = "Connection failed";
+            Snackbar.Add($"Error testing connection: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isTesting = false;
         }
     }
 
-    private class TfsModel
+    private class TfsConfigResponse
     {
-        public string Url { get; set; } = string.Empty;
-        public string Project { get; set; } = string.Empty;
-        public string Pat { get; set; } = string.Empty;
+        public string? Url { get; set; }
+        public string? Project { get; set; }
     }
 }
