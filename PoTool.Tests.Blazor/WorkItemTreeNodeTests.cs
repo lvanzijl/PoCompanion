@@ -1,3 +1,5 @@
+using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using PoTool.Client.Components.WorkItems.SubComponents;
 using PoTool.Client.Models;
@@ -27,7 +29,8 @@ public class WorkItemTreeNodeTests : BunitTestContext
         // Act
         var cut = RenderComponent<WorkItemTreeNode>(parameters => parameters
             .Add(p => p.Node, node)
-            .Add(p => p.IsSelected, false));
+            .Add(p => p.SelectedId, (int?)null)
+            .Add(p => p.Level, 0));
 
         // Assert
         Assert.IsTrue(cut.Markup.Contains("Test Epic"));
@@ -55,10 +58,11 @@ public class WorkItemTreeNodeTests : BunitTestContext
         // Act
         var cut = RenderComponent<WorkItemTreeNode>(parameters => parameters
             .Add(p => p.Node, node)
-            .Add(p => p.IsSelected, false));
+            .Add(p => p.SelectedId, (int?)null)
+            .Add(p => p.Level, 0));
 
         // Assert
-        var expandButton = cut.Find("button.expand-button");
+        var expandButton = cut.Find("button.caret-button");
         Assert.IsNotNull(expandButton);
     }
 
@@ -83,11 +87,12 @@ public class WorkItemTreeNodeTests : BunitTestContext
 
         var cut = RenderComponent<WorkItemTreeNode>(parameters => parameters
             .Add(p => p.Node, node)
-            .Add(p => p.IsSelected, false)
-            .Add(p => p.OnToggleExpand, () => { expandToggled = true; }));
+            .Add(p => p.SelectedId, (int?)null)
+            .Add(p => p.Level, 0)
+            .Add(p => p.OnNodeToggled, EventCallback.Factory.Create<TreeNode>(this, (n) => { expandToggled = true; })));
 
         // Act
-        var expandButton = cut.Find("button.expand-button");
+        var expandButton = cut.Find("button.caret-button");
         expandButton.Click();
 
         // Assert
@@ -112,16 +117,17 @@ public class WorkItemTreeNodeTests : BunitTestContext
 
         var cut = RenderComponent<WorkItemTreeNode>(parameters => parameters
             .Add(p => p.Node, node)
-            .Add(p => p.IsSelected, false)
-            .Add(p => p.OnNodeSelected, (n) => 
+            .Add(p => p.SelectedId, (int?)null)
+            .Add(p => p.Level, 0)
+            .Add(p => p.OnNodeSelected, EventCallback.Factory.Create<TreeNode>(this, (n) => 
             { 
                 selectionChanged = true;
                 selectedNode = n;
-            }));
+            })));
 
         // Act
-        var nodeDiv = cut.Find("div.tree-node-content");
-        nodeDiv.Click();
+        var titleSpan = cut.Find("span.workitem-title");
+        titleSpan.Click();
 
         // Assert
         Assert.IsTrue(selectionChanged, "Selection callback should have been invoked");
@@ -145,7 +151,8 @@ public class WorkItemTreeNodeTests : BunitTestContext
         // Act
         var cut = RenderComponent<WorkItemTreeNode>(parameters => parameters
             .Add(p => p.Node, node)
-            .Add(p => p.IsSelected, true));
+            .Add(p => p.SelectedId, 1)
+            .Add(p => p.Level, 0));
 
         // Assert
         Assert.IsTrue(cut.Markup.Contains("selected"), "Selected node should have 'selected' CSS class");
@@ -154,7 +161,7 @@ public class WorkItemTreeNodeTests : BunitTestContext
     [TestMethod]
     public void WorkItemTreeNode_PlaceholderNode_RendersCorrectly()
     {
-        // Arrange
+        // Arrange - placeholder nodes have no JsonPayload
         var node = new TreeNode
         {
             Id = 999,
@@ -162,14 +169,15 @@ public class WorkItemTreeNodeTests : BunitTestContext
             Title = "Missing Parent",
             State = "",
             Level = 0,
-            IsPlaceholder = true,
+            JsonPayload = null,  // This makes it a placeholder
             Children = new List<TreeNode>()
         };
 
         // Act
         var cut = RenderComponent<WorkItemTreeNode>(parameters => parameters
             .Add(p => p.Node, node)
-            .Add(p => p.IsSelected, false));
+            .Add(p => p.SelectedId, (int?)null)
+            .Add(p => p.Level, 0));
 
         // Assert
         Assert.IsTrue(cut.Markup.Contains("placeholder"), "Placeholder node should have 'placeholder' indicator");
@@ -203,7 +211,8 @@ public class WorkItemTreeNodeTests : BunitTestContext
         // Act
         var cut = RenderComponent<WorkItemTreeNode>(parameters => parameters
             .Add(p => p.Node, parentNode)
-            .Add(p => p.IsSelected, false));
+            .Add(p => p.SelectedId, (int?)null)
+            .Add(p => p.Level, 0));
 
         // Assert
         Assert.IsTrue(cut.Markup.Contains("Child Feature"), "Expanded node should render children");

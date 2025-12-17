@@ -1,6 +1,7 @@
+using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using PoTool.Client.Components.WorkItems.SubComponents;
-using PoTool.Client.Models;
+using PoTool.Client.ApiClient;
 
 namespace PoTool.Tests.Blazor;
 
@@ -11,34 +12,36 @@ namespace PoTool.Tests.Blazor;
 public class WorkItemDetailPanelTests : BunitTestContext
 {
     [TestMethod]
-    public void WorkItemDetailPanel_ShowsMessage_WhenNoSelection()
+    public void WorkItemDetailPanel_ShowsNothing_WhenNoSelection()
     {
         // Arrange & Act
         var cut = RenderComponent<WorkItemDetailPanel>(parameters => parameters
-            .Add(p => p.SelectedNode, null));
+            .Add(p => p.SelectedWorkItem, null));
 
         // Assert
-        Assert.IsTrue(cut.Markup.Contains("Select a work item"));
+        // Component renders nothing when no item is selected
+        Assert.IsTrue(string.IsNullOrWhiteSpace(cut.Markup) || !cut.Markup.Contains("detail-panel"));
     }
 
     [TestMethod]
-    public void WorkItemDetailPanel_DisplaysNodeDetails_WhenSelected()
+    public void WorkItemDetailPanel_DisplaysWorkItemDetails_WhenSelected()
     {
         // Arrange
-        var node = new TreeNode
-        {
-            Id = 123,
-            Type = "User Story",
-            Title = "Implement feature X",
-            State = "Active",
-            Level = 2,
-            ParentId = 100,
-            Children = new List<TreeNode>()
-        };
+        var workItem = new WorkItemDto(
+            TfsId: 123,
+            Type: "User Story",
+            Title: "Implement feature X",
+            ParentTfsId: 100,
+            AreaPath: "Project\\Team",
+            IterationPath: "Sprint 1",
+            State: "Active",
+            JsonPayload: "{}",
+            RetrievedAt: DateTimeOffset.Now
+        );
 
         // Act
         var cut = RenderComponent<WorkItemDetailPanel>(parameters => parameters
-            .Add(p => p.SelectedNode, node));
+            .Add(p => p.SelectedWorkItem, workItem));
 
         // Assert
         Assert.IsTrue(cut.Markup.Contains("123"), "Should display work item ID");
@@ -51,20 +54,21 @@ public class WorkItemDetailPanelTests : BunitTestContext
     public void WorkItemDetailPanel_ShowsParentId_WhenPresent()
     {
         // Arrange
-        var node = new TreeNode
-        {
-            Id = 123,
-            Type = "Task",
-            Title = "Test task",
-            State = "New",
-            Level = 3,
-            ParentId = 100,
-            Children = new List<TreeNode>()
-        };
+        var workItem = new WorkItemDto(
+            TfsId: 123,
+            Type: "Task",
+            Title: "Test task",
+            ParentTfsId: 100,
+            AreaPath: "Project\\Team",
+            IterationPath: "Sprint 1",
+            State: "New",
+            JsonPayload: "{}",
+            RetrievedAt: DateTimeOffset.Now
+        );
 
         // Act
         var cut = RenderComponent<WorkItemDetailPanel>(parameters => parameters
-            .Add(p => p.SelectedNode, node));
+            .Add(p => p.SelectedWorkItem, workItem));
 
         // Assert
         Assert.IsTrue(cut.Markup.Contains("100"), "Should display parent ID");
@@ -75,25 +79,26 @@ public class WorkItemDetailPanelTests : BunitTestContext
     public void WorkItemDetailPanel_HidesParentId_WhenNull()
     {
         // Arrange
-        var node = new TreeNode
-        {
-            Id = 1,
-            Type = "Epic",
-            Title = "Top level epic",
-            State = "Active",
-            Level = 0,
-            ParentId = null,
-            Children = new List<TreeNode>()
-        };
+        var workItem = new WorkItemDto(
+            TfsId: 1,
+            Type: "Epic",
+            Title: "Top level epic",
+            ParentTfsId: null,
+            AreaPath: "Project",
+            IterationPath: "Release 1",
+            State: "Active",
+            JsonPayload: "{}",
+            RetrievedAt: DateTimeOffset.Now
+        );
 
         // Act
         var cut = RenderComponent<WorkItemDetailPanel>(parameters => parameters
-            .Add(p => p.SelectedNode, node));
+            .Add(p => p.SelectedWorkItem, workItem));
 
         // Assert
         // Should show node details but not parent section
         Assert.IsTrue(cut.Markup.Contains("Top level epic"));
-        Assert.IsFalse(cut.Markup.Contains("Parent:") || cut.Markup.Contains("parent-info"), 
+        Assert.IsFalse(cut.Markup.Contains("Parent ID"), 
             "Should not show parent section for top-level items");
     }
 }

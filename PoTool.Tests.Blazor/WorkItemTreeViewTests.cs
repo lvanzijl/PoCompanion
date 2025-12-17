@@ -1,3 +1,4 @@
+using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using PoTool.Client.Components.WorkItems.SubComponents;
 using PoTool.Client.Models;
@@ -16,7 +17,7 @@ public class WorkItemTreeViewTests : BunitTestContext
         // Arrange & Act
         var cut = RenderComponent<WorkItemTreeView>(parameters => parameters
             .Add(p => p.IsLoading, true)
-            .Add(p => p.RootNodes, new List<TreeNode>()));
+            .Add(p => p.TreeRoots, new List<TreeNode>()));
 
         // Assert
         Assert.IsTrue(cut.Markup.Contains("Loading"), "Should show loading message");
@@ -28,7 +29,7 @@ public class WorkItemTreeViewTests : BunitTestContext
         // Arrange & Act
         var cut = RenderComponent<WorkItemTreeView>(parameters => parameters
             .Add(p => p.IsLoading, false)
-            .Add(p => p.RootNodes, new List<TreeNode>()));
+            .Add(p => p.TreeRoots, new List<TreeNode>()));
 
         // Assert
         Assert.IsTrue(cut.Markup.Contains("No work items") || cut.Markup.Contains("empty"), 
@@ -64,7 +65,7 @@ public class WorkItemTreeViewTests : BunitTestContext
         // Act
         var cut = RenderComponent<WorkItemTreeView>(parameters => parameters
             .Add(p => p.IsLoading, false)
-            .Add(p => p.RootNodes, nodes));
+            .Add(p => p.TreeRoots, nodes));
 
         // Assert
         Assert.IsTrue(cut.Markup.Contains("Epic 1"), "Should render first root node");
@@ -98,8 +99,8 @@ public class WorkItemTreeViewTests : BunitTestContext
         // Act
         var cut = RenderComponent<WorkItemTreeView>(parameters => parameters
             .Add(p => p.IsLoading, false)
-            .Add(p => p.RootNodes, nodes)
-            .Add(p => p.SelectedNodeId, 1));
+            .Add(p => p.TreeRoots, nodes)
+            .Add(p => p.SelectedId, 1));
 
         // Assert
         // The selected node should have the 'selected' class
