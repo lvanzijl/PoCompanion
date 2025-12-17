@@ -11,6 +11,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+// Add OpenAPI/Swagger support with NSwag
+builder.Services.AddOpenApiDocument(config =>
+{
+    config.Title = "PoTool API";
+    config.Version = "v1";
+    config.Description = "API for PO Companion work item management";
+});
+
 // Configure database: prefer SqlServer if connection string present, otherwise SQLite
 var sqlServerConn = builder.Configuration.GetConnectionString("SqlServerConnection");
 if (!string.IsNullOrWhiteSpace(sqlServerConn))
@@ -92,6 +100,10 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    
+    // Enable Swagger UI for development
+    app.UseOpenApi();
+    app.UseSwaggerUi();
 }
 
 // Only enable HTTPS redirection when an HTTPS URL is configured.

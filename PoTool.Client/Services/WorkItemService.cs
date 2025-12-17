@@ -1,18 +1,18 @@
-using System.Net.Http.Json;
-using PoTool.Core.WorkItems;
+using PoTool.Client.ApiClient;
 
 namespace PoTool.Client.Services;
 
 /// <summary>
 /// Service for interacting with the Work Items API.
+/// Wraps the generated API client.
 /// </summary>
 public class WorkItemService
 {
-    private readonly HttpClient _httpClient;
+    private readonly IWorkItemsClient _client;
 
-    public WorkItemService(HttpClient httpClient)
+    public WorkItemService(IWorkItemsClient client)
     {
-        _httpClient = httpClient;
+        _client = client;
     }
 
     /// <summary>
@@ -20,8 +20,7 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetAllAsync()
     {
-        var result = await _httpClient.GetFromJsonAsync<IEnumerable<WorkItemDto>>("api/workitems");
-        return result ?? Enumerable.Empty<WorkItemDto>();
+        return await _client.GetAllAsync();
     }
 
     /// <summary>
@@ -29,8 +28,7 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter)
     {
-        var result = await _httpClient.GetFromJsonAsync<IEnumerable<WorkItemDto>>($"api/workitems/filter/{Uri.EscapeDataString(filter)}");
-        return result ?? Enumerable.Empty<WorkItemDto>();
+        return await _client.GetFilteredAsync(filter);
     }
 
     /// <summary>
@@ -38,6 +36,6 @@ public class WorkItemService
     /// </summary>
     public async Task<WorkItemDto?> GetByTfsIdAsync(int tfsId)
     {
-        return await _httpClient.GetFromJsonAsync<WorkItemDto>($"api/workitems/{tfsId}");
+        return await _client.GetByTfsIdAsync(tfsId);
     }
 }
