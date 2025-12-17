@@ -50,6 +50,10 @@ else
 {
     builder.Services.AddScoped<IWorkItemRepository, WorkItemRepository>();
 }
+builder.Services.AddScoped<ISettingsRepository, SettingsRepository>();
+
+// Register mock data provider
+builder.Services.AddSingleton<MockDataProvider>();
 
 // Register TFS configuration and client
 builder.Services.AddDataProtection();
