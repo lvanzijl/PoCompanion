@@ -22,6 +22,8 @@ builder.Services.AddScoped<IWorkItemsClient>(sp =>
 
 // Register services
 builder.Services.AddScoped<WorkItemService>();
+builder.Services.AddScoped<IWorkItemSyncHubService, WorkItemSyncHubService>();
+builder.Services.AddScoped<ITreeBuilderService, TreeBuilderService>();
 
 // Add MudBlazor services
 builder.Services.AddMudServices();
