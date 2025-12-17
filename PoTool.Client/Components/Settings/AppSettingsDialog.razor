@@ -159,7 +159,7 @@
         var ids = new List<int>();
         var parts = input.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
         
-        foreach (var part in parts)
+        foreach (var part in parts.Where(p => !string.IsNullOrWhiteSpace(p)))
         {
             if (int.TryParse(part.Trim(), out var id) && id > 0)
             {

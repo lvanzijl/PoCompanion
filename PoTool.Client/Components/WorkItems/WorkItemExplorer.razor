@@ -5,7 +5,6 @@
 @using PoTool.Client.Configuration
 @using PoTool.Client.Components.WorkItems.SubComponents
 @using PoTool.Client.Components.Settings
-@using PoTool.Client.Models
 @inject WorkItemService WorkItemService
 @inject IWorkItemSyncHubService SyncHubService
 @inject ITreeBuilderService TreeBuilderService
@@ -32,15 +31,16 @@
                      OnSettingsRequested="@OpenSettings" />
 
     <div class="type-legend">
-        <span class="legend-item"><span class="type-indicator" style="background-color: #4CAF50"></span> Goal</span>
-        <span class="legend-item"><span class="type-indicator" style="background-color: #8BC34A"></span> Objective</span>
-        <span class="legend-item"><span class="type-indicator" style="background-color: #FF9800"></span> Epic</span>
-        <span class="legend-item"><span class="type-indicator" style="background-color: #9C27B0"></span> Feature</span>
-        <span class="legend-item"><span class="type-indicator" style="background-color: #2196F3"></span> PBI</span>
-        <span class="legend-item"><span class="type-indicator" style="background-color: #FFEB3B"></span> Task</span>
+        @foreach (var type in WorkItemTypeHelper.AllTypes)
+        {
+            <span class="legend-item">
+                <span class="type-indicator" style="background-color: @WorkItemTypeHelper.GetColor(type)"></span>
+                @type
+            </span>
+        }
     </div>
 
-    <div class="content" @onkeydown="HandleKeyDown" tabindex="0">
+    <div class="content" @onkeydown="HandleKeyDown" @onkeydown:preventDefault="true" tabindex="0" role="tree" aria-label="Work item hierarchy tree">
         <WorkItemTreeView IsLoading="@_isLoading"
                           TreeRoots="@_treeRoots"
                           SelectedId="@_selectedWorkItem?.TfsId"

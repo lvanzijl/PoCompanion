@@ -58,7 +58,7 @@ public class TreeNode
     /// <summary>
     /// The color associated with this work item type.
     /// </summary>
-    public string TypeColor => WorkItemTypeInfo.GetColor(Type);
+    public string TypeColor => WorkItemTypeHelper.GetColor(Type);
 
     /// <summary>
     /// List of validation issues for this work item.

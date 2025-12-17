@@ -67,7 +67,7 @@ public class ModeIsolatedStateService
                 if (dict != null)
                 {
                     var result = new Dictionary<int, bool>();
-                    foreach (var kv in dict)
+                    foreach (var kv in dict.Where(kv => int.TryParse(kv.Key, out _)))
                     {
                         if (int.TryParse(kv.Key, out var id))
                         {

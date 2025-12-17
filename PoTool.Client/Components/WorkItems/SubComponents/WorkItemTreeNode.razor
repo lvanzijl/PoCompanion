@@ -37,7 +37,7 @@
             <span class="validation-icons">
                 @foreach (var issue in Node.ValidationIssues)
                 {
-                    <span class="validation-icon" title="@issue">⚠</span>
+                    <span class="validation-icon" title="@issue" role="img" aria-label="Warning: @issue">⚠</span>
                 }
             </span>
         }

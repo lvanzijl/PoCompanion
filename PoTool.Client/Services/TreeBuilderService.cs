@@ -46,7 +46,13 @@ public class TreeBuilderService : ITreeBuilderService
             }
 
             // Add mock validation issues for demo purposes
-            // In real implementation, these would come from TFS or validation logic
+            // TODO: Replace with real TFS validation rules when TFS mode is fully implemented.
+            // Real validation should be performed in the API layer and returned as part of WorkItemDto.
+            // Consider creating a ValidationService that implements business rules for:
+            // - Required fields validation
+            // - Work item state transitions
+            // - Dependency checks
+            // - Custom field validation based on work item type
             if (dto.State == "New")
             {
                 node.ValidationIssues.Add("Not yet started");

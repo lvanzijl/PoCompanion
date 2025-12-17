@@ -114,20 +114,23 @@ else if (SelectedWorkItem != null)
     {
         if (SelectedWorkItems == null || !SelectedWorkItems.Any()) return null;
         var firstType = SelectedWorkItems[0].Type;
-        return SelectedWorkItems.All(w => w.Type == firstType) ? firstType : null;
+        if (firstType == null) return null;
+        return SelectedWorkItems.All(w => w.Type != null && w.Type == firstType) ? firstType : null;
     }
 
     private string? GetCommonState()
     {
         if (SelectedWorkItems == null || !SelectedWorkItems.Any()) return null;
         var firstState = SelectedWorkItems[0].State;
-        return SelectedWorkItems.All(w => w.State == firstState) ? firstState : null;
+        if (firstState == null) return null;
+        return SelectedWorkItems.All(w => w.State != null && w.State == firstState) ? firstState : null;
     }
 
     private string? GetCommonAreaPath()
     {
         if (SelectedWorkItems == null || !SelectedWorkItems.Any()) return null;
         var firstAreaPath = SelectedWorkItems[0].AreaPath;
-        return SelectedWorkItems.All(w => w.AreaPath == firstAreaPath) ? firstAreaPath : null;
+        if (firstAreaPath == null) return null;
+        return SelectedWorkItems.All(w => w.AreaPath != null && w.AreaPath == firstAreaPath) ? firstAreaPath : null;
     }
 }
