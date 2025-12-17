@@ -1,9 +1,71 @@
 @using PoTool.Client.ApiClient
 @using System.Text.Json
 
-@* Detail panel for displaying selected work item *@
+@* Detail panel for displaying selected work item(s) *@
 
-@if (SelectedWorkItem != null)
+@if (SelectedWorkItems != null && SelectedWorkItems.Count > 1)
+{
+    <div class="detail-panel">
+        <h2>Multiple Items Selected (@SelectedWorkItems.Count)</h2>
+        
+        @* Show common fields *@
+        @if (GetCommonType() != null)
+        {
+            <div class="detail-field">
+                <label>Type:</label>
+                <span>@GetCommonType()</span>
+            </div>
+        }
+        else
+        {
+            <div class="detail-field disabled">
+                <label>Type:</label>
+                <span class="multi-select-info">(Multiple types selected)</span>
+            </div>
+        }
+
+        @if (GetCommonState() != null)
+        {
+            <div class="detail-field">
+                <label>State:</label>
+                <span>@GetCommonState()</span>
+            </div>
+        }
+        else
+        {
+            <div class="detail-field disabled">
+                <label>State:</label>
+                <span class="multi-select-info">(Multiple states selected)</span>
+            </div>
+        }
+
+        @if (GetCommonAreaPath() != null)
+        {
+            <div class="detail-field">
+                <label>Area Path:</label>
+                <span>@GetCommonAreaPath()</span>
+            </div>
+        }
+        else
+        {
+            <div class="detail-field disabled">
+                <label>Area Path:</label>
+                <span class="multi-select-info">(Multiple area paths selected)</span>
+            </div>
+        }
+
+        <div class="detail-section">
+            <h3>Selected Items:</h3>
+            <ul class="selected-items-list">
+                @foreach (var item in SelectedWorkItems)
+                {
+                    <li>[@item.TfsId] @item.Title</li>
+                }
+            </ul>
+        </div>
+    </div>
+}
+else if (SelectedWorkItem != null)
 {
     <div class="detail-panel">
         <h2>@SelectedWorkItem.Title</h2>
@@ -44,4 +106,28 @@
 @code {
     [Parameter]
     public WorkItemDto? SelectedWorkItem { get; set; }
+
+    [Parameter]
+    public List<WorkItemDto>? SelectedWorkItems { get; set; }
+
+    private string? GetCommonType()
+    {
+        if (SelectedWorkItems == null || !SelectedWorkItems.Any()) return null;
+        var firstType = SelectedWorkItems[0].Type;
+        return SelectedWorkItems.All(w => w.Type == firstType) ? firstType : null;
+    }
+
+    private string? GetCommonState()
+    {
+        if (SelectedWorkItems == null || !SelectedWorkItems.Any()) return null;
+        var firstState = SelectedWorkItems[0].State;
+        return SelectedWorkItems.All(w => w.State == firstState) ? firstState : null;
+    }
+
+    private string? GetCommonAreaPath()
+    {
+        if (SelectedWorkItems == null || !SelectedWorkItems.Any()) return null;
+        var firstAreaPath = SelectedWorkItems[0].AreaPath;
+        return SelectedWorkItems.All(w => w.AreaPath == firstAreaPath) ? firstAreaPath : null;
+    }
 }

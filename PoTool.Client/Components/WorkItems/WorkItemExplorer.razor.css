@@ -164,6 +164,7 @@
     gap: 0.5rem;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
+    min-height: 32px;
 }
 
 .node-row:hover {
@@ -213,6 +214,64 @@
     margin-right: 0.5rem;
     border: 1px solid rgba(0, 0, 0, 0.1);
     flex-shrink: 0;
+}
+
+.status-column {
+    display: inline-block;
+    min-width: 80px;
+    padding: 0.12rem 0.4rem;
+    font-size: 0.7rem;
+    margin-left: auto;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.validation-icons {
+    display: inline-flex;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+}
+
+.validation-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #FFA726;
+    cursor: help;
+}
+
+.detail-field.disabled {
+    opacity: 0.6;
+}
+
+.multi-select-info {
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.detail-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.detail-section h3 {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.selected-items-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.selected-items-list li {
+    padding: 0.25rem 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .type-legend {
@@ -281,6 +340,7 @@
     display: inline-block;
     padding: 0.08rem 0.2rem;
     border-radius: 3px;
+    flex: 1;
 }
 
 .workitem-title.selected {

@@ -25,10 +25,22 @@
         </span>
 
         <div class="title-block">
-            <span class="@GetTitleClass()" @onclick="HandleTitleClick">
+            <span class="@GetTitleClass()" @onclick="HandleTitleClick" @onclick:stopPropagation="true">
                 @Node.Title
             </span>
         </div>
+        
+        <span class="status-column">@Node.State</span>
+        
+        @if (Node.ValidationIssues.Any())
+        {
+            <span class="validation-icons">
+                @foreach (var issue in Node.ValidationIssues)
+                {
+                    <span class="validation-icon" title="@issue">⚠</span>
+                }
+            </span>
+        }
     </div>
 
     @if (Node.IsExpanded && Node.Children.Any())
@@ -39,6 +51,7 @@
                 <WorkItemTreeNode Node="@child"
                                  Level="@(Level + 1)"
                                  SelectedId="@SelectedId"
+                                 SelectedIds="@SelectedIds"
                                  OnNodeToggled="@OnNodeToggled"
                                  OnNodeSelected="@OnNodeSelected" />
             }
@@ -55,6 +68,9 @@
 
     [Parameter]
     public int? SelectedId { get; set; }
+
+    [Parameter]
+    public HashSet<int>? SelectedIds { get; set; }
 
     [Parameter]
     public EventCallback<TreeNode> OnNodeToggled { get; set; }
@@ -95,7 +111,8 @@
     private string GetTitleClass()
     {
         var className = IsPlaceholder ? "workitem-title placeholder-title" : "workitem-title";
-        if (SelectedId.HasValue && SelectedId.Value == Node.Id)
+        if ((SelectedId.HasValue && SelectedId.Value == Node.Id) || 
+            (SelectedIds != null && SelectedIds.Contains(Node.Id)))
         {
             className += " selected";
         }

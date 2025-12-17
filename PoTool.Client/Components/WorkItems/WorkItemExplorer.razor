@@ -44,10 +44,12 @@
         <WorkItemTreeView IsLoading="@_isLoading"
                           TreeRoots="@_treeRoots"
                           SelectedId="@_selectedWorkItem?.TfsId"
+                          SelectedIds="@_selectedIds"
                           OnNodeToggled="@HandleNodeToggled"
                           OnNodeSelected="@HandleNodeSelected" />
 
-        <WorkItemDetailPanel SelectedWorkItem="@_selectedWorkItem" />
+        <WorkItemDetailPanel SelectedWorkItem="@_selectedWorkItem" 
+                            SelectedWorkItems="@_selectedWorkItems" />
     </div>
 </div>
 
@@ -56,6 +58,8 @@
     private List<WorkItemDto> _workItems = new();
     private List<WorkItemDto> _filteredWorkItems = new();
     private WorkItemDto? _selectedWorkItem;
+    private List<WorkItemDto> _selectedWorkItems = new();
+    private HashSet<int> _selectedIds = new();
     private string _filterText = string.Empty;
     private bool _isLoading = true;
     private bool _isSyncing = false;
@@ -235,7 +239,31 @@
         // Deserialize the work item from JSON payload
         if (!string.IsNullOrEmpty(node.JsonPayload))
         {
-            _selectedWorkItem = System.Text.Json.JsonSerializer.Deserialize<WorkItemDto>(node.JsonPayload);
+            var workItem = System.Text.Json.JsonSerializer.Deserialize<WorkItemDto>(node.JsonPayload);
+            if (workItem != null)
+            {
+                // Toggle selection: if already selected, add/remove from multi-selection
+                if (_selectedIds.Contains(node.Id))
+                {
+                    _selectedIds.Remove(node.Id);
+                    _selectedWorkItems.RemoveAll(w => w.TfsId == node.Id);
+                }
+                else
+                {
+                    _selectedIds.Add(node.Id);
+                    _selectedWorkItems.Add(workItem);
+                }
+
+                // Update single selection to last clicked item
+                _selectedWorkItem = workItem;
+                
+                // If only one item selected, use single-item view
+                if (_selectedIds.Count == 1)
+                {
+                    _selectedWorkItems.Clear();
+                    _selectedWorkItems.Add(workItem);
+                }
+            }
         }
     }
 
