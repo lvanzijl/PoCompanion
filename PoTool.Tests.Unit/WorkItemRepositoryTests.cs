@@ -11,7 +11,7 @@ public sealed class WorkItemRepositoryTests
     private PoToolDbContext CreateInMemoryContext()
     {
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(databaseName: $"{Guid.NewGuid()}")
             .Options;
 
         return new PoToolDbContext(options);

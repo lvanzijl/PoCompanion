@@ -70,7 +70,7 @@ public class WorkItemExplorerTests
         var toInclude = new Dictionary<int, WorkItemDto>();
         foreach (var m in matches)
         {
-            if (!toInclude.ContainsKey(m.TfsId)) toInclude[m.TfsId] = m;
+            toInclude.TryAdd(m.TfsId, m);
             var current = m;
             while (current.ParentTfsId.HasValue)
             {
@@ -78,7 +78,7 @@ public class WorkItemExplorerTests
                 var parent = items.FirstOrDefault(w => w.TfsId == pid);
                 if (parent != null)
                 {
-                    if (!toInclude.ContainsKey(parent.TfsId)) toInclude[parent.TfsId] = parent;
+                    toInclude.TryAdd(parent.TfsId, parent);
                     current = parent;
                 }
                 else
