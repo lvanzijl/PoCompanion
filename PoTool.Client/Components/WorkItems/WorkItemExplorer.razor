@@ -31,6 +31,15 @@
                      OnFilterChanged="@HandleFilterChanged"
                      OnSettingsRequested="@OpenSettings" />
 
+    <div class="type-legend">
+        <span class="legend-item"><span class="type-indicator" style="background-color: #4CAF50"></span> Goal</span>
+        <span class="legend-item"><span class="type-indicator" style="background-color: #8BC34A"></span> Objective</span>
+        <span class="legend-item"><span class="type-indicator" style="background-color: #FF9800"></span> Epic</span>
+        <span class="legend-item"><span class="type-indicator" style="background-color: #9C27B0"></span> Feature</span>
+        <span class="legend-item"><span class="type-indicator" style="background-color: #2196F3"></span> PBI</span>
+        <span class="legend-item"><span class="type-indicator" style="background-color: #FFEB3B"></span> Task</span>
+    </div>
+
     <div class="content">
         <WorkItemTreeView IsLoading="@_isLoading"
                           TreeRoots="@_treeRoots"
