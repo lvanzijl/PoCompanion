@@ -8,10 +8,10 @@ using PoTool.Api.Persistence;
 
 #nullable disable
 
-namespace PoTool.Api.PoTool.Api.Migrations
+namespace PoTool.Api.Migrations
 {
     [DbContext(typeof(PoToolDbContext))]
-    [Migration("20251216150045_InitialCreate")]
+    [Migration("20251218201220_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -19,6 +19,28 @@ namespace PoTool.Api.PoTool.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.1");
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.SettingsEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ConfiguredGoalIds")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DataMode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Settings");
+                });
 
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.TfsConfigEntity", b =>
                 {
@@ -72,6 +94,9 @@ namespace PoTool.Api.PoTool.Api.Migrations
                     b.Property<string>("JsonPayload")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("ParentTfsId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTimeOffset>("RetrievedAt")
                         .HasColumnType("TEXT");
