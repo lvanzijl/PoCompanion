@@ -115,50 +115,59 @@ using (var scope = app.Services.CreateScope())
             if (!appliedMigrations.Any() && pendingMigrations.Any())
             {
                 // This is likely a database created with EnsureCreated before migrations existed
-                // Check if TfsConfigs table exists (indicator of legacy database)
+                // Note: This code uses SQLite-specific queries for table existence checks
                 var connection = db.Database.GetDbConnection();
-                await connection.OpenAsync();
-                
-                using var checkCmd = connection.CreateCommand();
-                checkCmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='TfsConfigs'";
-                var tfsConfigsCount = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
-                
-                if (tfsConfigsCount > 0)
+                try
                 {
-                    logger.LogInformation("Detected legacy database without migration history. Handling upgrade...");
+                    await connection.OpenAsync();
                     
-                    // Check if Settings table exists
-                    using var settingsCheckCmd = connection.CreateCommand();
-                    settingsCheckCmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Settings'";
-                    var settingsCount = Convert.ToInt32(await settingsCheckCmd.ExecuteScalarAsync());
+                    using var checkCmd = connection.CreateCommand();
+                    checkCmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='TfsConfigs'";
+                    var tfsConfigsCount = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
                     
-                    // If Settings table is missing, create it manually
-                    if (settingsCount == 0)
+                    if (tfsConfigsCount > 0)
                     {
-                        logger.LogInformation("Settings table missing in legacy database. Creating it...");
+                        logger.LogInformation("Detected legacy database without migration history. Handling upgrade...");
+                        
+                        // Check if Settings table exists
+                        using var settingsCheckCmd = connection.CreateCommand();
+                        settingsCheckCmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Settings'";
+                        var settingsCount = Convert.ToInt32(await settingsCheckCmd.ExecuteScalarAsync());
+                        
+                        // If Settings table is missing, create it manually to match the migration schema
+                        if (settingsCount == 0)
+                        {
+                            logger.LogInformation("Settings table missing in legacy database. Creating it...");
+                            // Schema matches InitialCreate migration for Settings table
+                            await db.Database.ExecuteSqlRawAsync(@"
+                                CREATE TABLE Settings (
+                                    Id INTEGER NOT NULL CONSTRAINT PK_Settings PRIMARY KEY AUTOINCREMENT,
+                                    DataMode INTEGER NOT NULL,
+                                    ConfiguredGoalIds TEXT NOT NULL,
+                                    LastModified TEXT NOT NULL
+                                )");
+                        }
+                        
+                        // Mark the initial migration as applied to prevent re-running it
+                        const string initialMigrationId = "20251218201220_InitialCreate";
+                        const string efCoreVersion = "10.0.1";
+                        
                         await db.Database.ExecuteSqlRawAsync(@"
-                            CREATE TABLE Settings (
-                                Id INTEGER NOT NULL CONSTRAINT PK_Settings PRIMARY KEY AUTOINCREMENT,
-                                DataMode INTEGER NOT NULL,
-                                ConfiguredGoalIds TEXT NOT NULL,
-                                LastModified TEXT NOT NULL
+                            CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (
+                                MigrationId TEXT NOT NULL CONSTRAINT PK___EFMigrationsHistory PRIMARY KEY,
+                                ProductVersion TEXT NOT NULL
                             )");
+                        
+                        await db.Database.ExecuteSqlRawAsync(
+                            $"INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ('{initialMigrationId}', '{efCoreVersion}')");
+                        
+                        logger.LogInformation("Legacy database upgraded successfully.");
                     }
-                    
-                    // Mark the initial migration as applied to prevent re-running it
-                    await db.Database.ExecuteSqlRawAsync(@"
-                        CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (
-                            MigrationId TEXT NOT NULL CONSTRAINT PK___EFMigrationsHistory PRIMARY KEY,
-                            ProductVersion TEXT NOT NULL
-                        )");
-                    
-                    await db.Database.ExecuteSqlRawAsync(
-                        "INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ('20251218201220_InitialCreate', '10.0.1')");
-                    
-                    logger.LogInformation("Legacy database upgraded successfully.");
                 }
-                
-                await connection.CloseAsync();
+                finally
+                {
+                    await connection.CloseAsync();
+                }
             }
         }
         
