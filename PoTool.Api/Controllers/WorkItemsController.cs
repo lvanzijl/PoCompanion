@@ -87,4 +87,47 @@ public class WorkItemsController : ControllerBase
             return StatusCode(500, "Error retrieving work item");
         }
     }
+
+    /// <summary>
+    /// Gets work items for specific Goal IDs (full hierarchy from Goals down to Tasks).
+    /// </summary>
+    [HttpGet("goals")]
+    public async Task<ActionResult<IEnumerable<WorkItemDto>>> GetGoalHierarchy(
+        [FromQuery] string goalIds,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var ids = goalIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(int.Parse)
+                .ToList();
+
+            if (ids.Count == 0)
+            {
+                return BadRequest("At least one goal ID must be provided");
+            }
+
+            // Validate that all IDs are positive
+            if (ids.Any(id => id <= 0))
+            {
+                return BadRequest("All goal IDs must be positive integers");
+            }
+
+            var workItems = await _mediator.Send(new GetGoalHierarchyQuery(ids), cancellationToken);
+            return Ok(workItems);
+        }
+        catch (FormatException)
+        {
+            return BadRequest("Invalid goal ID format");
+        }
+        catch (OverflowException)
+        {
+            return BadRequest("Goal ID value is too large");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving goal hierarchy for goal IDs: {GoalIds}", goalIds);
+            return StatusCode(500, "Error retrieving goal hierarchy");
+        }
+    }
 }

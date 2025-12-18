@@ -23,6 +23,11 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<TfsConfigEntity> TfsConfigs => Set<TfsConfigEntity>();
 
+    /// <summary>
+    /// Application settings.
+    /// </summary>
+    public DbSet<SettingsEntity> Settings => Set<SettingsEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -43,6 +48,11 @@ public class PoToolDbContext : DbContext
             entity.Property(e => e.ProtectedPat).IsRequired();
             entity.Property(e => e.Url).HasMaxLength(1024).IsRequired();
             entity.Property(e => e.Project).HasMaxLength(256);
+        });
+
+        modelBuilder.Entity<SettingsEntity>(entity =>
+        {
+            // Settings entity configuration (Id is primary key by convention)
         });
     }
 }

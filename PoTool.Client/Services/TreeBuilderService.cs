@@ -44,6 +44,23 @@ public class TreeBuilderService : ITreeBuilderService
             {
                 node.IsExpanded = isExpanded;
             }
+
+            // Add mock validation issues for demo purposes
+            // TODO: Replace with real TFS validation rules when TFS mode is fully implemented.
+            // Real validation should be performed in the API layer and returned as part of WorkItemDto.
+            // Consider creating a ValidationService that implements business rules for:
+            // - Required fields validation
+            // - Work item state transitions
+            // - Dependency checks
+            // - Custom field validation based on work item type
+            if (dto.State == "New")
+            {
+                node.ValidationIssues.Add("Not yet started");
+            }
+            if (dto.Type == "Task" && dto.State == "In Progress")
+            {
+                node.ValidationIssues.Add("Missing time estimate");
+            }
         }
 
         // Attach children to parents based on ParentTfsId, create placeholders for missing parents

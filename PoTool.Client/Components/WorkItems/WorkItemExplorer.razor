@@ -4,12 +4,16 @@
 @using PoTool.Client.Models
 @using PoTool.Client.Configuration
 @using PoTool.Client.Components.WorkItems.SubComponents
+@using PoTool.Client.Components.Settings
 @inject WorkItemService WorkItemService
 @inject IWorkItemSyncHubService SyncHubService
 @inject ITreeBuilderService TreeBuilderService
+@inject SettingsService SettingsService
+@inject ModeIsolatedStateService StateService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 @inject HttpClient Http
+@inject IDialogService DialogService
 @implements IAsyncDisposable
 
 <PageTitle>Work Item Explorer</PageTitle>
@@ -23,16 +27,29 @@
                      FilterText="@_filterText"
                      OnSyncRequested="@RequestSync"
                      OnClearState="@ClearExpandedState"
-                     OnFilterChanged="@HandleFilterChanged" />
+                     OnFilterChanged="@HandleFilterChanged"
+                     OnSettingsRequested="@OpenSettings" />
 
-    <div class="content">
+    <div class="type-legend">
+        @foreach (var type in WorkItemTypeHelper.AllTypes)
+        {
+            <span class="legend-item">
+                <span class="type-indicator" style="background-color: @WorkItemTypeHelper.GetColor(type)"></span>
+                @type
+            </span>
+        }
+    </div>
+
+    <div class="content" @onkeydown="HandleKeyDown" @onkeydown:preventDefault="true" tabindex="0" role="tree" aria-label="Work item hierarchy tree">
         <WorkItemTreeView IsLoading="@_isLoading"
                           TreeRoots="@_treeRoots"
                           SelectedId="@_selectedWorkItem?.TfsId"
+                          SelectedIds="@_selectedIds"
                           OnNodeToggled="@HandleNodeToggled"
                           OnNodeSelected="@HandleNodeSelected" />
 
-        <WorkItemDetailPanel SelectedWorkItem="@_selectedWorkItem" />
+        <WorkItemDetailPanel SelectedWorkItem="@_selectedWorkItem" 
+                            SelectedWorkItems="@_selectedWorkItems" />
     </div>
 </div>
 
@@ -41,6 +58,8 @@
     private List<WorkItemDto> _workItems = new();
     private List<WorkItemDto> _filteredWorkItems = new();
     private WorkItemDto? _selectedWorkItem;
+    private readonly List<WorkItemDto> _selectedWorkItems = new();
+    private readonly HashSet<int> _selectedIds = new();
     private string _filterText = string.Empty;
     private bool _isLoading = true;
     private bool _isSyncing = false;
@@ -53,6 +72,7 @@
 
     // Tree structure
     private List<TreeNode> _treeRoots = new();
+    private readonly List<TreeNode> _flatNodeList = new(); // Flat list for keyboard navigation
 
     // Preserve expanded state across reloads and filters
     private readonly Dictionary<int, bool> _expandedState = new();
@@ -107,7 +127,15 @@
         _isLoading = true;
         try
         {
-            _workItems = (await WorkItemService.GetAllAsync()).ToList();
+            // Get current settings to determine which Goals to load
+            var settings = await SettingsService.GetOrCreateDefaultSettingsAsync();
+            StateService.SetMode(settings.DataMode);
+
+            // Load hierarchy for configured Goals or all items if no Goals configured
+            _workItems = settings.ConfiguredGoalIds.Count > 0
+                ? (await WorkItemService.GetGoalHierarchyAsync(settings.ConfiguredGoalIds)).ToList()
+                : (await WorkItemService.GetAllAsync()).ToList();
+
             ApplyFilter();
             await SaveExpandedStateAsync();
         }
@@ -190,7 +218,29 @@
     {
         _filteredWorkItems = TreeBuilderService.FilterWithAncestors(_workItems, _filterText);
         _treeRoots = TreeBuilderService.BuildTree(_filteredWorkItems, _expandedState);
+        RebuildFlatNodeListFromTree();
         StateHasChanged();
+    }
+
+    private void RebuildFlatNodeListFromTree()
+    {
+        _flatNodeList.Clear();
+        foreach (var root in _treeRoots)
+        {
+            AddNodeToFlatList(root);
+        }
+    }
+
+    private void AddNodeToFlatList(TreeNode node)
+    {
+        _flatNodeList.Add(node);
+        if (node.IsExpanded)
+        {
+            foreach (var child in node.Children)
+            {
+                AddNodeToFlatList(child);
+            }
+        }
     }
 
     private async Task HandleNodeToggled(TreeNode node)
@@ -206,8 +256,101 @@
         // Deserialize the work item from JSON payload
         if (!string.IsNullOrEmpty(node.JsonPayload))
         {
-            _selectedWorkItem = System.Text.Json.JsonSerializer.Deserialize<WorkItemDto>(node.JsonPayload);
+            var workItem = System.Text.Json.JsonSerializer.Deserialize<WorkItemDto>(node.JsonPayload);
+            if (workItem != null)
+            {
+                // Toggle selection: if already selected, remove from multi-selection
+                if (_selectedIds.Contains(node.Id))
+                {
+                    _selectedIds.Remove(node.Id);
+                    _selectedWorkItems.RemoveAll(w => w.TfsId == node.Id);
+                    
+                    // Update single selection to first remaining item or null
+                    _selectedWorkItem = _selectedWorkItems.FirstOrDefault();
+                }
+                else
+                {
+                    _selectedIds.Add(node.Id);
+                    if (!_selectedWorkItems.Any(w => w.TfsId == node.Id))
+                    {
+                        _selectedWorkItems.Add(workItem);
+                    }
+                    
+                    // Update single selection to last clicked item
+                    _selectedWorkItem = workItem;
+                }
+            }
         }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (_flatNodeList.Count == 0) return;
+
+        var currentIndex = -1;
+        if (_selectedWorkItem != null)
+        {
+            currentIndex = _flatNodeList.FindIndex(n => n.Id == _selectedWorkItem.TfsId);
+        }
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                if (currentIndex < _flatNodeList.Count - 1)
+                {
+                    var nextNode = _flatNodeList[currentIndex + 1];
+                    HandleNodeSelected(nextNode);
+                }
+                break;
+
+            case "ArrowUp":
+                if (currentIndex > 0)
+                {
+                    var prevNode = _flatNodeList[currentIndex - 1];
+                    HandleNodeSelected(prevNode);
+                }
+                else if (currentIndex == -1 && _flatNodeList.Count > 0)
+                {
+                    HandleNodeSelected(_flatNodeList[0]);
+                }
+                break;
+
+            case "ArrowRight":
+                if (currentIndex >= 0)
+                {
+                    var node = _flatNodeList[currentIndex];
+                    if (node.Children.Any() && !node.IsExpanded)
+                    {
+                        await HandleNodeToggled(node);
+                    }
+                }
+                break;
+
+            case "ArrowLeft":
+                if (currentIndex >= 0)
+                {
+                    var node = _flatNodeList[currentIndex];
+                    if (node.Children.Any() && node.IsExpanded)
+                    {
+                        await HandleNodeToggled(node);
+                    }
+                }
+                break;
+
+            case "Enter":
+            case " ":
+                if (currentIndex >= 0)
+                {
+                    var node = _flatNodeList[currentIndex];
+                    if (node.Children.Any())
+                    {
+                        await HandleNodeToggled(node);
+                    }
+                }
+                break;
+        }
+
+        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()
@@ -220,42 +363,17 @@
 
     private async Task LoadExpandedStateAsync()
     {
-        try
+        _expandedState.Clear();
+        var loadedState = await StateService.LoadExpandedStateAsync();
+        foreach (var kv in loadedState)
         {
-            var json = await JS.InvokeAsync<string>("localStorage.getItem", AppSettings.TreeExpandedStateKey);
-            if (!string.IsNullOrEmpty(json))
-            {
-                var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, bool>>(json);
-                if (dict != null)
-                {
-                    _expandedState.Clear();
-                    foreach (var kv in dict)
-                    {
-                        if (int.TryParse(kv.Key, out var id))
-                        {
-                            _expandedState[id] = kv.Value;
-                        }
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // ignore JS interop errors
+            _expandedState[kv.Key] = kv.Value;
         }
     }
 
     private async Task SaveExpandedStateAsync()
     {
-        try
-        {
-            var json = System.Text.Json.JsonSerializer.Serialize(_expandedState);
-            await JS.InvokeVoidAsync("localStorage.setItem", AppSettings.TreeExpandedStateKey, json);
-        }
-        catch
-        {
-            // ignore JS interop errors
-        }
+        await StateService.SaveExpandedStateAsync(_expandedState);
     }
 
     private async Task ClearExpandedState()
@@ -263,5 +381,28 @@
         _expandedState.Clear();
         await SaveExpandedStateAsync();
         ApplyFilter();
+    }
+
+    private async Task OpenSettings()
+    {
+        var parameters = new DialogParameters
+        {
+            { "OnSettingsSaved", EventCallback.Factory.Create(this, HandleSettingsSaved) }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<AppSettingsDialog>("Settings", parameters, options);
+    }
+
+    private async Task HandleSettingsSaved()
+    {
+        // Reload work items after settings change
+        await LoadWorkItems();
     }
 }

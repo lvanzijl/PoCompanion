@@ -4,6 +4,9 @@
     <div class="header">
         <h1>Work Item Explorer</h1>
         <div class="header-actions">
+            <button class="btn-settings" @onclick="OnSettingsClicked">
+                <span>⚙️ Settings</span>
+            </button>
             <button class="btn-sync" @onclick="OnSyncClicked" disabled="@IsSyncing">
                 @if (IsSyncing)
                 {
@@ -67,9 +70,17 @@
     [Parameter]
     public EventCallback<string> OnFilterChanged { get; set; }
 
+    [Parameter]
+    public EventCallback OnSettingsRequested { get; set; }
+
     private async Task OnSyncClicked()
     {
         await OnSyncRequested.InvokeAsync();
+    }
+
+    private async Task OnSettingsClicked()
+    {
+        await OnSettingsRequested.InvokeAsync();
     }
 
     private async Task OnClearStateClicked()

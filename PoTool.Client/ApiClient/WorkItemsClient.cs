@@ -54,4 +54,18 @@ public class WorkItemsClient : IWorkItemsClient
         
         return await response.Content.ReadFromJsonAsync<WorkItemDto>(cancellationToken: cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<WorkItemDto>> GetGoalHierarchyAsync(IEnumerable<int> goalIds, CancellationToken cancellationToken = default)
+    {
+        if (goalIds == null || !goalIds.Any())
+            throw new ArgumentException("At least one goal ID must be provided", nameof(goalIds));
+
+        var goalIdsParam = string.Join(",", goalIds);
+        var response = await _httpClient.GetAsync($"api/workitems/goals?goalIds={goalIdsParam}", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        
+        var result = await response.Content.ReadFromJsonAsync<IEnumerable<WorkItemDto>>(cancellationToken: cancellationToken);
+        return result ?? Enumerable.Empty<WorkItemDto>();
+    }
 }

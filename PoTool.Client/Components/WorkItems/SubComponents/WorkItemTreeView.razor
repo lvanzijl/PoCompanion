@@ -19,6 +19,7 @@
                 <WorkItemTreeNode Node="@node"
                                  Level="0"
                                  SelectedId="@SelectedId"
+                                 SelectedIds="@SelectedIds"
                                  OnNodeToggled="@OnNodeToggled"
                                  OnNodeSelected="@OnNodeSelected" />
             }
@@ -35,6 +36,9 @@
 
     [Parameter]
     public int? SelectedId { get; set; }
+
+    [Parameter]
+    public HashSet<int>? SelectedIds { get; set; }
 
     [Parameter]
     public EventCallback<TreeNode> OnNodeToggled { get; set; }

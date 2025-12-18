@@ -42,4 +42,12 @@ public class WorkItemService
     {
         return await _client.GetByTfsIdAsync(tfsId);
     }
+
+    /// <summary>
+    /// Gets work items for specific Goal IDs (full hierarchy).
+    /// </summary>
+    public async Task<IEnumerable<WorkItemDto>> GetGoalHierarchyAsync(List<int> goalIds)
+    {
+        return await _client.GetGoalHierarchyAsync(goalIds);
+    }
 }
