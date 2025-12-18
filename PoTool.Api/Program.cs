@@ -96,19 +96,78 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Ensure database is created/migrated. If migrations are not present, fall back to EnsureCreated.
+// Ensure database is created/migrated
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+    
     try
     {
-        // Try apply migrations if any
+        // Check if database exists and if it has migration history
+        var canConnect = await db.Database.CanConnectAsync();
+        if (canConnect)
+        {
+            var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
+            var appliedMigrations = await db.Database.GetAppliedMigrationsAsync();
+            
+            // Check if this is a legacy database (has tables but no migration history)
+            if (!appliedMigrations.Any() && pendingMigrations.Any())
+            {
+                // This is likely a database created with EnsureCreated before migrations existed
+                // Check if TfsConfigs table exists (indicator of legacy database)
+                var connection = db.Database.GetDbConnection();
+                await connection.OpenAsync();
+                
+                using var checkCmd = connection.CreateCommand();
+                checkCmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='TfsConfigs'";
+                var tfsConfigsCount = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
+                
+                if (tfsConfigsCount > 0)
+                {
+                    logger.LogInformation("Detected legacy database without migration history. Handling upgrade...");
+                    
+                    // Check if Settings table exists
+                    using var settingsCheckCmd = connection.CreateCommand();
+                    settingsCheckCmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Settings'";
+                    var settingsCount = Convert.ToInt32(await settingsCheckCmd.ExecuteScalarAsync());
+                    
+                    // If Settings table is missing, create it manually
+                    if (settingsCount == 0)
+                    {
+                        logger.LogInformation("Settings table missing in legacy database. Creating it...");
+                        await db.Database.ExecuteSqlRawAsync(@"
+                            CREATE TABLE Settings (
+                                Id INTEGER NOT NULL CONSTRAINT PK_Settings PRIMARY KEY AUTOINCREMENT,
+                                DataMode INTEGER NOT NULL,
+                                ConfiguredGoalIds TEXT NOT NULL,
+                                LastModified TEXT NOT NULL
+                            )");
+                    }
+                    
+                    // Mark the initial migration as applied to prevent re-running it
+                    await db.Database.ExecuteSqlRawAsync(@"
+                        CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (
+                            MigrationId TEXT NOT NULL CONSTRAINT PK___EFMigrationsHistory PRIMARY KEY,
+                            ProductVersion TEXT NOT NULL
+                        )");
+                    
+                    await db.Database.ExecuteSqlRawAsync(
+                        "INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ('20251218201220_InitialCreate', '10.0.1')");
+                    
+                    logger.LogInformation("Legacy database upgraded successfully.");
+                }
+                
+                await connection.CloseAsync();
+            }
+        }
+        
+        // Apply any remaining/new migrations
         await db.Database.MigrateAsync();
     }
     catch (Exception ex)
     {
-        // If migrations are not available or migration application fails, fallback to EnsureCreated
-        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+        // If migrations fail for other reasons, fallback to EnsureCreated for new databases
         logger.LogWarning(ex, "EF migrations could not be applied; falling back to EnsureCreated. Create migrations locally using 'dotnet ef migrations add <Name> --project PoTool.Api --startup-project PoTool.Api'");
         await db.Database.EnsureCreatedAsync();
     }
