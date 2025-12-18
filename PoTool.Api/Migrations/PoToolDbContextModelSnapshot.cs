@@ -17,6 +17,28 @@ namespace PoTool.Api.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.1");
 
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.SettingsEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ConfiguredGoalIds")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DataMode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Settings");
+                });
+
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.TfsConfigEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -69,6 +91,9 @@ namespace PoTool.Api.Migrations
                     b.Property<string>("JsonPayload")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("ParentTfsId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTimeOffset>("RetrievedAt")
                         .HasColumnType("TEXT");
