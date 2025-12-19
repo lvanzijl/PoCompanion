@@ -106,10 +106,6 @@ public static class ApiApplicationBuilderExtensions
             // Enable Swagger UI for development at /swagger
             app.UseOpenApi();
             app.UseSwaggerUi();
-
-            // Enable WebAssembly debugging in development (if WASM is being served)
-            // NOTE: This will be removed in Phase 5 when we remove Blazor WASM hosting
-            app.UseWebAssemblyDebugging();
         }
         else
         {
@@ -127,11 +123,6 @@ public static class ApiApplicationBuilderExtensions
             app.UseHttpsRedirection();
         }
 
-        // Serve Blazor WebAssembly static files
-        // NOTE: This will be removed in Phase 5 when we remove Blazor WASM hosting
-        app.UseBlazorFrameworkFiles();
-        app.UseStaticFiles();
-
         // Add routing so middleware such as CORS apply to endpoints including SignalR
         app.UseRouting();
 
@@ -139,10 +130,6 @@ public static class ApiApplicationBuilderExtensions
 
         app.MapControllers();
         app.MapHub<WorkItemHub>("/hubs/workitems");
-
-        // Fallback to serve index.html for Blazor client-side routing
-        // NOTE: This will be removed in Phase 5 when we remove Blazor WASM hosting
-        app.MapFallbackToFile("index.html");
 
         // Health check endpoint
         app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow }));
