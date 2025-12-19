@@ -9,25 +9,23 @@ namespace PoTool.Tests.Integration.StepDefinitions;
 [Binding]
 public class HealthSteps
 {
-    private readonly IntegrationTestWebApplicationFactory _factory;
-    private readonly HttpClient _client;
-    private HttpResponseMessage? _response;
+    private readonly SharedTestState _context;
+    
     private HealthResponse? _healthResponse;
 
-    public HealthSteps()
+    public HealthSteps(SharedTestState context)
     {
-        _factory = new IntegrationTestWebApplicationFactory();
-        _client = _factory.CreateClient();
+        _context = context;
     }
 
     [When(@"I request the health endpoint")]
     public async Task WhenIRequestTheHealthEndpoint()
     {
-        _response = await _client.GetAsync("/health");
+        _context.Response = await _context.Client.GetAsync("/health");
         
-        if (_response.StatusCode == HttpStatusCode.OK)
+        if (_context.Response.StatusCode == HttpStatusCode.OK)
         {
-            _healthResponse = await _response.Content.ReadFromJsonAsync<HealthResponse>();
+            _healthResponse = await _context.Response.Content.ReadFromJsonAsync<HealthResponse>();
         }
     }
 

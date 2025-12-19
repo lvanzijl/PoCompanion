@@ -9,23 +9,20 @@ namespace PoTool.Tests.Integration.StepDefinitions;
 [Binding]
 public class TfsConfigurationSteps
 {
-    private readonly IntegrationTestWebApplicationFactory _factory;
-    private readonly HttpClient _client;
-    private HttpResponseMessage? _response;
+    private readonly SharedTestState _context;
     private TfsConfigDto? _savedConfig;
     private TfsConfigDto? _returnedConfig;
 
-    public TfsConfigurationSteps()
+    public TfsConfigurationSteps(SharedTestState context)
     {
-        _factory = new IntegrationTestWebApplicationFactory();
-        _client = _factory.CreateClient();
+        _context = context;
     }
 
     [Given(@"the application is running")]
     public void GivenTheApplicationIsRunning()
     {
         // Application is already running via the factory
-        Assert.IsNotNull(_client);
+        Assert.IsNotNull(_context.Client);
     }
 
     [Given(@"I have valid TFS credentials")]
@@ -49,8 +46,8 @@ public class TfsConfigurationSteps
             Pat = "test-pat-token"
         };
 
-        _response = await _client.PostAsJsonAsync("/api/tfsconfig", _savedConfig);
-        _response.EnsureSuccessStatusCode();
+        _context.Response = await _context.Client.PostAsJsonAsync("/api/tfsconfig", _savedConfig);
+        _context.Response.EnsureSuccessStatusCode();
     }
 
     [Given(@"I have saved valid TFS configuration")]
@@ -63,48 +60,48 @@ public class TfsConfigurationSteps
             Pat = "test-pat-token"
         };
 
-        _response = await _client.PostAsJsonAsync("/api/tfsconfig", _savedConfig);
-        _response.EnsureSuccessStatusCode();
+        _context.Response = await _context.Client.PostAsJsonAsync("/api/tfsconfig", _savedConfig);
+        _context.Response.EnsureSuccessStatusCode();
     }
 
     [When(@"I request the TFS configuration")]
     public async Task WhenIRequestTheTfsConfiguration()
     {
-        _response = await _client.GetAsync("/api/tfsconfig");
+        _context.Response = await _context.Client.GetAsync("/api/tfsconfig");
         
-        if (_response.StatusCode == HttpStatusCode.OK)
+        if (_context.Response.StatusCode == HttpStatusCode.OK)
         {
-            _returnedConfig = await _response.Content.ReadFromJsonAsync<TfsConfigDto>();
+            _returnedConfig = await _context.Response.Content.ReadFromJsonAsync<TfsConfigDto>();
         }
     }
 
     [When(@"I save the TFS configuration")]
     public async Task WhenISaveTheTfsConfiguration()
     {
-        _response = await _client.PostAsJsonAsync("/api/tfsconfig", _savedConfig);
+        _context.Response = await _context.Client.PostAsJsonAsync("/api/tfsconfig", _savedConfig);
     }
 
     [When(@"I validate the TFS connection")]
     public async Task WhenIValidateTheTfsConnection()
     {
-        _response = await _client.GetAsync("/api/tfsvalidate");
+        _context.Response = await _context.Client.GetAsync("/api/tfsvalidate");
     }
 
     [Then(@"the response should be (.*)")]
     public void ThenTheResponseShouldBe(string expectedStatus)
     {
-        Assert.IsNotNull(_response);
+        Assert.IsNotNull(_context.Response);
         
         var expected = Enum.Parse<HttpStatusCode>(expectedStatus);
-        Assert.AreEqual(expected, _response.StatusCode, 
-            $"Expected {expected} but got {_response.StatusCode}");
+        Assert.AreEqual(expected, _context.Response.StatusCode, 
+            $"Expected {expected} but got {_context.Response.StatusCode}");
     }
 
     [Then(@"the configuration should be saved successfully")]
     public void ThenTheConfigurationShouldBeSavedSuccessfully()
     {
-        Assert.IsNotNull(_response);
-        Assert.IsTrue(_response.IsSuccessStatusCode);
+        Assert.IsNotNull(_context.Response);
+        Assert.IsTrue(_context.Response.IsSuccessStatusCode);
     }
 
     [Then(@"the returned configuration should match")]
@@ -118,8 +115,8 @@ public class TfsConfigurationSteps
     [Then(@"the validation should succeed")]
     public void ThenTheValidationShouldSucceed()
     {
-        Assert.IsNotNull(_response);
-        Assert.IsTrue(_response.IsSuccessStatusCode);
+        Assert.IsNotNull(_context.Response);
+        Assert.IsTrue(_context.Response.IsSuccessStatusCode);
     }
 
     private class TfsConfigDto

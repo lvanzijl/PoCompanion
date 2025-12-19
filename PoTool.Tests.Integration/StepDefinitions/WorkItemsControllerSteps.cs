@@ -12,22 +12,19 @@ namespace PoTool.Tests.Integration.StepDefinitions;
 [Binding]
 public class WorkItemsControllerSteps
 {
-    private readonly IntegrationTestWebApplicationFactory _factory;
-    private readonly HttpClient _client;
-    private HttpResponseMessage? _response;
+    private readonly SharedTestState _context;
     private List<WorkItemDto>? _workItems;
     private WorkItemDto? _workItem;
 
-    public WorkItemsControllerSteps()
+    public WorkItemsControllerSteps(SharedTestState context)
     {
-        _factory = new IntegrationTestWebApplicationFactory();
-        _client = _factory.CreateClient();
+        _context = context;
     }
 
     [Given(@"work items exist in the database")]
     public async Task GivenWorkItemsExistInTheDatabase(Table table)
     {
-        using var scope = _factory.Services.CreateScope();
+        using var scope = _context.Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
 
         foreach (var row in table.Rows)
@@ -64,44 +61,44 @@ public class WorkItemsControllerSteps
     [When(@"I request all work items from ""(.*)""")]
     public async Task WhenIRequestAllWorkItemsFrom(string endpoint)
     {
-        _response = await _client.GetAsync(endpoint);
+        _context.Response = await _context.Client.GetAsync(endpoint);
         
-        if (_response.StatusCode == HttpStatusCode.OK)
+        if (_context.Response.StatusCode == HttpStatusCode.OK)
         {
-            _workItems = await _response.Content.ReadFromJsonAsync<List<WorkItemDto>>();
+            _workItems = await _context.Response.Content.ReadFromJsonAsync<List<WorkItemDto>>();
         }
     }
 
     [When(@"I request work item (\d+) from controller")]
     public async Task WhenIRequestWorkItemFromController(int tfsId)
     {
-        _response = await _client.GetAsync($"/api/workitems/{tfsId}");
+        _context.Response = await _context.Client.GetAsync($"/api/workitems/{tfsId}");
         
-        if (_response.StatusCode == HttpStatusCode.OK)
+        if (_context.Response.StatusCode == HttpStatusCode.OK)
         {
-            _workItem = await _response.Content.ReadFromJsonAsync<WorkItemDto>();
+            _workItem = await _context.Response.Content.ReadFromJsonAsync<WorkItemDto>();
         }
     }
 
     [When(@"I request filtered work items with filter ""(.*)""")]
     public async Task WhenIRequestFilteredWorkItems(string filter)
     {
-        _response = await _client.GetAsync($"/api/workitems/filter/{filter}");
+        _context.Response = await _context.Client.GetAsync($"/api/workitems/filter/{filter}");
         
-        if (_response.StatusCode == HttpStatusCode.OK)
+        if (_context.Response.StatusCode == HttpStatusCode.OK)
         {
-            _workItems = await _response.Content.ReadFromJsonAsync<List<WorkItemDto>>();
+            _workItems = await _context.Response.Content.ReadFromJsonAsync<List<WorkItemDto>>();
         }
     }
 
     [When(@"I request goal hierarchy for IDs ""(.*)""")]
     public async Task WhenIRequestGoalHierarchyForIds(string goalIds)
     {
-        _response = await _client.GetAsync($"/api/workitems/goals?goalIds={goalIds}");
+        _context.Response = await _context.Client.GetAsync($"/api/workitems/goals?goalIds={goalIds}");
         
-        if (_response.StatusCode == HttpStatusCode.OK)
+        if (_context.Response.StatusCode == HttpStatusCode.OK)
         {
-            _workItems = await _response.Content.ReadFromJsonAsync<List<WorkItemDto>>();
+            _workItems = await _context.Response.Content.ReadFromJsonAsync<List<WorkItemDto>>();
         }
     }
 

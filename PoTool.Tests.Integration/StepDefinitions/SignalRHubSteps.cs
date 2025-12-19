@@ -7,24 +7,24 @@ namespace PoTool.Tests.Integration.StepDefinitions;
 [Binding]
 public class SignalRHubSteps : IDisposable
 {
-    private readonly IntegrationTestWebApplicationFactory _factory;
+    private readonly SharedTestState _context;
     private HubConnection? _hubConnection;
     private readonly List<string> _receivedMessages = new();
 
-    public SignalRHubSteps()
+    public SignalRHubSteps(SharedTestState context)
     {
-        _factory = new IntegrationTestWebApplicationFactory();
+        _context = context;
     }
 
     [When(@"I connect to the WorkItem hub")]
     [Given(@"I am connected to the WorkItem hub")]
     public async Task WhenIConnectToTheWorkItemHub()
     {
-        var baseUrl = _factory.Server.BaseAddress.ToString().TrimEnd('/');
+        var baseUrl = _context.Factory.Server.BaseAddress.ToString().TrimEnd('/');
         _hubConnection = new HubConnectionBuilder()
             .WithUrl($"{baseUrl}/hubs/workitems", options =>
             {
-                options.HttpMessageHandlerFactory = _ => _factory.Server.CreateHandler();
+                options.HttpMessageHandlerFactory = _ => _context.Factory.Server.CreateHandler();
             })
             .Build();
 
@@ -87,6 +87,6 @@ public class SignalRHubSteps : IDisposable
     public void Dispose()
     {
         _hubConnection?.DisposeAsync().AsTask().Wait();
-        _factory?.Dispose();
+        _context.Factory?.Dispose();
     }
 }
