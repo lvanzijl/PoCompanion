@@ -11,12 +11,14 @@ public class TfsConfigurationSteps
 {
     private readonly IntegrationTestWebApplicationFactory _factory;
     private readonly HttpClient _client;
+    private readonly ScenarioContext _scenarioContext;
     private HttpResponseMessage? _response;
     private TfsConfigDto? _savedConfig;
     private TfsConfigDto? _returnedConfig;
 
-    public TfsConfigurationSteps()
+    public TfsConfigurationSteps(ScenarioContext scenarioContext)
     {
+        _scenarioContext = scenarioContext;
         _factory = new IntegrationTestWebApplicationFactory();
         _client = _factory.CreateClient();
     }
@@ -71,6 +73,7 @@ public class TfsConfigurationSteps
     public async Task WhenIRequestTheTfsConfiguration()
     {
         _response = await _client.GetAsync("/api/tfsconfig");
+        _scenarioContext["Response"] = _response;
         
         if (_response.StatusCode == HttpStatusCode.OK)
         {
@@ -82,22 +85,14 @@ public class TfsConfigurationSteps
     public async Task WhenISaveTheTfsConfiguration()
     {
         _response = await _client.PostAsJsonAsync("/api/tfsconfig", _savedConfig);
+        _scenarioContext["Response"] = _response;
     }
 
     [When(@"I validate the TFS connection")]
     public async Task WhenIValidateTheTfsConnection()
     {
         _response = await _client.GetAsync("/api/tfsvalidate");
-    }
-
-    [Then(@"the response should be (.*)")]
-    public void ThenTheResponseShouldBe(string expectedStatus)
-    {
-        Assert.IsNotNull(_response);
-        
-        var expected = Enum.Parse<HttpStatusCode>(expectedStatus);
-        Assert.AreEqual(expected, _response.StatusCode, 
-            $"Expected {expected} but got {_response.StatusCode}");
+        _scenarioContext["Response"] = _response;
     }
 
     [Then(@"the configuration should be saved successfully")]

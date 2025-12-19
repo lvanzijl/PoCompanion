@@ -14,12 +14,14 @@ public class WorkItemsControllerSteps
 {
     private readonly IntegrationTestWebApplicationFactory _factory;
     private readonly HttpClient _client;
+    private readonly ScenarioContext _scenarioContext;
     private HttpResponseMessage? _response;
     private List<WorkItemDto>? _workItems;
     private WorkItemDto? _workItem;
 
-    public WorkItemsControllerSteps()
+    public WorkItemsControllerSteps(ScenarioContext scenarioContext)
     {
+        _scenarioContext = scenarioContext;
         _factory = new IntegrationTestWebApplicationFactory();
         _client = _factory.CreateClient();
     }
@@ -65,6 +67,7 @@ public class WorkItemsControllerSteps
     public async Task WhenIRequestAllWorkItemsFrom(string endpoint)
     {
         _response = await _client.GetAsync(endpoint);
+        _scenarioContext["Response"] = _response;
         
         if (_response.StatusCode == HttpStatusCode.OK)
         {
@@ -76,6 +79,7 @@ public class WorkItemsControllerSteps
     public async Task WhenIRequestWorkItemFromController(int tfsId)
     {
         _response = await _client.GetAsync($"/api/workitems/{tfsId}");
+        _scenarioContext["Response"] = _response;
         
         if (_response.StatusCode == HttpStatusCode.OK)
         {
@@ -87,6 +91,7 @@ public class WorkItemsControllerSteps
     public async Task WhenIRequestFilteredWorkItems(string filter)
     {
         _response = await _client.GetAsync($"/api/workitems/filter/{filter}");
+        _scenarioContext["Response"] = _response;
         
         if (_response.StatusCode == HttpStatusCode.OK)
         {
@@ -98,6 +103,7 @@ public class WorkItemsControllerSteps
     public async Task WhenIRequestGoalHierarchyForIds(string goalIds)
     {
         _response = await _client.GetAsync($"/api/workitems/goals?goalIds={goalIds}");
+        _scenarioContext["Response"] = _response;
         
         if (_response.StatusCode == HttpStatusCode.OK)
         {

@@ -29,7 +29,7 @@ Scenario: Get saved settings
 Scenario: Update settings with multiple goal IDs
     Given I have settings to update
         | Field              | Value      |
-        | DataMode           | Live       |
+        | DataMode           | Tfs        |
         | ConfiguredGoalIds  | 1,2,3,4,5  |
     When I update the application settings
     Then the response should be OK

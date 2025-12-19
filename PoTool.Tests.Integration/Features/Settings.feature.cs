@@ -247,7 +247,7 @@ await this.FeatureBackgroundAsync();
                             "Value"});
                 table2.AddRow(new string[] {
                             "DataMode",
-                            "Live"});
+                            "Tfs"});
                 table2.AddRow(new string[] {
                             "ConfiguredGoalIds",
                             "1,2,3,4,5"});

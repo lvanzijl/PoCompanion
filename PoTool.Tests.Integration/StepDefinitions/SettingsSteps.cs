@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using PoTool.Core.Settings;
 using PoTool.Tests.Integration.Support;
 using Reqnroll;
 
@@ -10,12 +11,14 @@ public class SettingsSteps
 {
     private readonly IntegrationTestWebApplicationFactory _factory;
     private readonly HttpClient _client;
+    private readonly ScenarioContext _scenarioContext;
     private HttpResponseMessage? _response;
     private SettingsDto? _settings;
     private SettingsDto? _returnedSettings;
 
-    public SettingsSteps()
+    public SettingsSteps(ScenarioContext scenarioContext)
     {
+        _scenarioContext = scenarioContext;
         _factory = new IntegrationTestWebApplicationFactory();
         _client = _factory.CreateClient();
     }
@@ -23,17 +26,20 @@ public class SettingsSteps
     [Given(@"I have settings to update")]
     public void GivenIHaveSettingsToUpdate(Table table)
     {
-        var dataMode = table.Rows[0]["Value"];
+        var dataModeStr = table.Rows[0]["Value"];
         var goalIdsStr = table.Rows[1]["Value"];
         var goalIds = goalIdsStr.Split(',', StringSplitOptions.RemoveEmptyEntries)
             .Select(int.Parse)
             .ToList();
 
-        _settings = new SettingsDto
-        {
-            DataMode = dataMode,
-            ConfiguredGoalIds = goalIds
-        };
+        var dataMode = Enum.Parse<DataMode>(dataModeStr);
+
+        _settings = new SettingsDto(
+            Id: 0,
+            DataMode: dataMode,
+            ConfiguredGoalIds: goalIds,
+            LastModified: DateTimeOffset.UtcNow
+        );
     }
 
     [Given(@"I have updated the settings with DataMode ""(.*)"" and GoalIds ""(.*)""")]
@@ -43,13 +49,23 @@ public class SettingsSteps
             .Select(int.Parse)
             .ToList();
 
-        _settings = new SettingsDto
+        var dataModeEnum = Enum.Parse<DataMode>(dataMode);
+
+        _settings = new SettingsDto(
+            Id: 0,
+            DataMode: dataModeEnum,
+            ConfiguredGoalIds: goalIdList,
+            LastModified: DateTimeOffset.UtcNow
+        );
+
+        // Create the request model that the API expects
+        var request = new
         {
-            DataMode = dataMode,
+            DataMode = (int)dataModeEnum,  // Send as int for enum
             ConfiguredGoalIds = goalIdList
         };
 
-        _response = await _client.PutAsJsonAsync("/api/settings", _settings);
+        _response = await _client.PutAsJsonAsync("/api/settings", request);
         _response.EnsureSuccessStatusCode();
     }
 
@@ -57,6 +73,7 @@ public class SettingsSteps
     public async Task WhenIRequestTheApplicationSettings()
     {
         _response = await _client.GetAsync("/api/settings");
+        _scenarioContext["Response"] = _response;
         
         if (_response.StatusCode == HttpStatusCode.OK)
         {
@@ -67,7 +84,15 @@ public class SettingsSteps
     [When(@"I update the application settings")]
     public async Task WhenIUpdateTheApplicationSettings()
     {
-        _response = await _client.PutAsJsonAsync("/api/settings", _settings);
+        // Create the request model that the API expects
+        var request = new
+        {
+            DataMode = (int)_settings!.DataMode,  // Send as int for enum
+            ConfiguredGoalIds = _settings.ConfiguredGoalIds
+        };
+        
+        _response = await _client.PutAsJsonAsync("/api/settings", request);
+        _scenarioContext["Response"] = _response;
     }
 
     [Then(@"the settings should be updated successfully")]
@@ -81,7 +106,8 @@ public class SettingsSteps
     public void ThenTheReturnedSettingsShouldHaveDataMode(string expectedDataMode)
     {
         Assert.IsNotNull(_returnedSettings);
-        Assert.AreEqual(expectedDataMode, _returnedSettings.DataMode);
+        var expectedEnum = Enum.Parse<DataMode>(expectedDataMode);
+        Assert.AreEqual(expectedEnum, _returnedSettings.DataMode);
     }
 
     [Then(@"the returned settings should have (\d+) goal IDs")]
@@ -89,11 +115,5 @@ public class SettingsSteps
     {
         Assert.IsNotNull(_returnedSettings);
         Assert.AreEqual(expectedCount, _returnedSettings.ConfiguredGoalIds.Count);
-    }
-
-    private class SettingsDto
-    {
-        public string DataMode { get; set; } = string.Empty;
-        public List<int> ConfiguredGoalIds { get; set; } = new();
     }
 }
