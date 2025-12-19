@@ -145,7 +145,7 @@ public class TfsClient : ITfsClient
                     State: state,
                     JsonPayload: item.GetRawText(),
                     RetrievedAt: DateTimeOffset.UtcNow,
-                    Effort: null  // TODO: Extract from TFS fields when available
+                    Effort: null  // Effort will be extracted from TFS fields in future when available in TFS work item type definition
                 ));
             }
 
