@@ -43,3 +43,21 @@ Scenario: Get goal hierarchy with invalid format
 Scenario: Get goal hierarchy with negative ID
     When I request goal hierarchy for IDs "-1"
     Then the response should be BadRequest
+
+Scenario: Get work items with validation results
+    Given work items exist in the database with parent-child relationships
+        | TfsId | Title            | Type      | State       | ParentTfsId |
+        | 2000  | Parent Goal      | Goal      | New         |             |
+        | 2001  | Child in Progress| Objective | In Progress | 2000        |
+    When I request all work items with validation from "/api/workitems/validated"
+    Then the response should be OK
+    And work item 2001 should have validation errors about parent not in progress
+
+Scenario: Get valid work items hierarchy with validation
+    Given work items exist in the database with parent-child relationships
+        | TfsId | Title            | Type      | State       | ParentTfsId |
+        | 3000  | Parent Goal      | Goal      | In Progress |             |
+        | 3001  | Child in Progress| Objective | In Progress | 3000        |
+    When I request all work items with validation from "/api/workitems/validated"
+    Then the response should be OK
+    And work item 3001 should have no validation issues

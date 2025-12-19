@@ -18,6 +18,7 @@ public class WorkItemsControllerSteps
     private HttpResponseMessage? _response;
     private List<WorkItemDto>? _workItems;
     private WorkItemDto? _workItem;
+    private List<WorkItemWithValidationDto>? _workItemsWithValidation;
 
     public WorkItemsControllerSteps(ScenarioContext scenarioContext)
     {
@@ -39,6 +40,49 @@ public class WorkItemsControllerSteps
                 Type: row["Type"],
                 Title: row["Title"],
                 ParentTfsId: null,
+                AreaPath: "\\TestArea",
+                IterationPath: "\\TestIteration",
+                State: row["State"],
+                JsonPayload: "{}",
+                RetrievedAt: DateTimeOffset.UtcNow
+            );
+
+            dbContext.WorkItems.Add(new WorkItemEntity
+            {
+                TfsId = workItem.TfsId,
+                Type = workItem.Type,
+                Title = workItem.Title,
+                ParentTfsId = workItem.ParentTfsId,
+                AreaPath = workItem.AreaPath,
+                IterationPath = workItem.IterationPath,
+                State = workItem.State,
+                JsonPayload = workItem.JsonPayload,
+                RetrievedAt = workItem.RetrievedAt
+            });
+        }
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    [Given(@"work items exist in the database with parent-child relationships")]
+    public async Task GivenWorkItemsExistWithParentChildRelationships(Table table)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+        foreach (var row in table.Rows)
+        {
+            int? parentTfsId = null;
+            if (row.ContainsKey("ParentTfsId") && !string.IsNullOrWhiteSpace(row["ParentTfsId"]))
+            {
+                parentTfsId = int.Parse(row["ParentTfsId"]);
+            }
+
+            var workItem = new WorkItemDto(
+                TfsId: int.Parse(row["TfsId"]),
+                Type: row["Type"],
+                Title: row["Title"],
+                ParentTfsId: parentTfsId,
                 AreaPath: "\\TestArea",
                 IterationPath: "\\TestIteration",
                 State: row["State"],
@@ -146,5 +190,38 @@ public class WorkItemsControllerSteps
         Assert.IsNotNull(_workItems);
         Assert.IsTrue(_workItems.Any(w => w.TfsId == goalId), 
             $"Expected goal {goalId} in hierarchy");
+    }
+
+    [When(@"I request all work items with validation from ""(.*)""")]
+    public async Task WhenIRequestAllWorkItemsWithValidationFrom(string endpoint)
+    {
+        _response = await _client.GetAsync(endpoint);
+        _scenarioContext["Response"] = _response;
+        
+        if (_response.StatusCode == HttpStatusCode.OK)
+        {
+            _workItemsWithValidation = await _response.Content.ReadFromJsonAsync<List<WorkItemWithValidationDto>>();
+        }
+    }
+
+    [Then(@"work item (\d+) should have validation errors about parent not in progress")]
+    public void ThenWorkItemShouldHaveValidationErrorsAboutParentNotInProgress(int tfsId)
+    {
+        Assert.IsNotNull(_workItemsWithValidation);
+        var workItem = _workItemsWithValidation.FirstOrDefault(w => w.TfsId == tfsId);
+        Assert.IsNotNull(workItem, $"Work item {tfsId} not found");
+        Assert.IsTrue(workItem.ValidationIssues.Count > 0, "Expected validation issues");
+        Assert.IsTrue(workItem.ValidationIssues.Any(i => 
+            i.Severity == "Error" && i.Message.Contains("Parent")), 
+            "Expected error about parent not in progress");
+    }
+
+    [Then(@"work item (\d+) should have no validation issues")]
+    public void ThenWorkItemShouldHaveNoValidationIssues(int tfsId)
+    {
+        Assert.IsNotNull(_workItemsWithValidation);
+        var workItem = _workItemsWithValidation.FirstOrDefault(w => w.TfsId == tfsId);
+        Assert.IsNotNull(workItem, $"Work item {tfsId} not found");
+        Assert.AreEqual(0, workItem.ValidationIssues.Count, "Expected no validation issues");
     }
 }

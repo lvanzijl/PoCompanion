@@ -43,6 +43,24 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets all cached work items with validation results.
+    /// </summary>
+    [HttpGet("validated")]
+    public async Task<ActionResult<IEnumerable<WorkItemWithValidationDto>>> GetAllWithValidation(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var workItems = await _mediator.Send(new GetAllWorkItemsWithValidationQuery(), cancellationToken);
+            return Ok(workItems);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving work items with validation");
+            return StatusCode(500, "Error retrieving work items with validation");
+        }
+    }
+
+    /// <summary>
     /// Gets work items matching a filter.
     /// </summary>
     [HttpGet("filter/{filter}")]
