@@ -10,9 +10,11 @@ This solution follows a three-layer architecture as defined in `docs/ARCHITECTUR
 
 - **PoTool.Core** - Domain models, DTOs, and interfaces (infrastructure-free)
 - **PoTool.Api** - ASP.NET Core Web API with EF Core persistence and SignalR
-- **PoTool.Client** - Blazor WebAssembly frontend
-- **PoTool.App** - Shell application (console app placeholder, MAUI planned)
+- **PoTool.Client** - Blazor Hybrid frontend (Razor class library)
+- **PoTool.Maui** - MAUI Hybrid shell application (Windows/macOS/Android/iOS)
 - **PoTool.Tests.Unit** - MSTest unit tests
+- **PoTool.Tests.Integration** - Reqnroll integration tests
+- **PoTool.Tests.Blazor** - bUnit Blazor component tests
 
 ### Key Components
 
@@ -36,30 +38,35 @@ This solution follows a three-layer architecture as defined in `docs/ARCHITECTUR
 
 ### Prerequisites
 - .NET 10 SDK
+- .NET MAUI workload (for building MAUI app): `dotnet workload install maui`
 
 ### Build
 ```bash
 dotnet build
 ```
 
-### Run API
+### Run Application
+```bash
+cd PoTool.Maui
+dotnet run
+```
+
+The application starts as a native desktop app with:
+- Embedded API at `http://localhost:5291`
+- Blazor UI in native WebView
+- OpenAPI documentation at `http://localhost:5291/swagger` (development only)
+- Health endpoint at `http://localhost:5291/health`
+
+### Run API Standalone (for testing)
 ```bash
 cd PoTool.Api
 dotnet run
 ```
 
-The API will be available at `http://localhost:5000` with:
-- OpenAPI documentation at `/openapi/v1.json`
+The API will be available at `http://localhost:5291` with:
+- OpenAPI documentation at `/swagger`
 - Health endpoint at `/health`
 - SignalR hub at `/hubs/workitems`
-
-### Run Client
-```bash
-cd PoTool.Client
-dotnet run
-```
-
-The Blazor client will be available at `https://localhost:5001`.
 
 ## Database
 

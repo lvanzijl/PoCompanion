@@ -23,14 +23,16 @@ The application consists of four strictly separated layers:
    - Persistence and integrations
 
 3. **Frontend**
-   - Blazor WebAssembly
+   - Blazor Hybrid (not WebAssembly)
+   - Razor class library
    - UI logic and presentation
    - Communicates only with Api
 
 4. **Shell**
-   - MAUI desktop application
-   - Hosts frontend
-   - Manages backend lifecycle
+   - MAUI Hybrid desktop application
+   - Hosts Blazor frontend in BlazorWebView
+   - Manages backend lifecycle via ApiHostService
+   - Single executable deployment
 
 Layer boundaries are absolute.
 
@@ -70,7 +72,7 @@ Api MUST NOT:
 
 ### 2.3 Frontend
 Frontend:
-- MUST be Blazor WebAssembly
+- MUST be Blazor Hybrid (Razor class library)
 - MUST communicate exclusively via:
   - HTTP Web API
   - SignalR
@@ -327,3 +329,56 @@ Handlers and pipelines live in Api.
 8. Only approved dependencies are allowed
 9. Microsoft DI is mandatory
 10. Only the source-generated Mediator is allowed
+
+---
+
+## 15. MAUI Hybrid Architecture
+
+### 15.1 Hosting Model
+- The application is a **MAUI Hybrid** app
+- ASP.NET Core API runs **in-process** within the MAUI app via `ApiHostService`
+- Blazor UI runs in a `BlazorWebView` (Blazor Hybrid, not WebAssembly)
+- Communication is via HTTP and SignalR over localhost (default: http://localhost:5291)
+- Single executable deployment containing all components
+
+### 15.2 API Lifecycle
+- API is started by `ApiHostService` during MAUI app initialization
+- API listens on `http://localhost:5291` (configurable)
+- API is stopped gracefully on app shutdown
+- Health checks ensure API availability before UI loads
+- `ApiInitializer` performs readiness polling with retry logic
+
+### 15.3 Future Scalability
+- API configuration MUST remain environment-agnostic
+- API MUST be able to run standalone without code changes (via PoTool.Api project)
+- Client MUST NOT assume in-process hosting
+- Communication MUST always be via HTTP/SignalR (no direct method calls)
+- To scale to client-server model: change HttpClient BaseAddress only
+
+### 15.4 Deployment
+- Single executable contains:
+  - MAUI shell
+  - API layer (embedded)
+  - Blazor components (embedded)
+  - All dependencies
+- No separate backend deployment needed for single-user scenarios
+- Database is local SQLite by default (located in app data directory)
+
+### 15.5 Platform Support
+- **Windows** (primary target) - net10.0-windows10.0.19041.0
+- **macOS** (via Mac Catalyst) - net10.0-maccatalyst
+- **Android** (optional) - net10.0-android
+- **iOS** (optional) - net10.0-ios
+
+### 15.6 Development Workflow
+- Run `PoTool.Maui` project to start complete application
+- API automatically starts on app launch
+- Blazor debugging available in development mode
+- API can still be run standalone via `PoTool.Api` for testing
+
+### 15.7 Architecture Compliance
+- All existing architecture rules (sections 1-14) remain in force
+- Layer boundaries are maintained (Core, Api, Frontend, Shell)
+- Communication between layers is strictly via HTTP/SignalR
+- No direct method calls between Frontend and Api
+- This model supports both in-process and out-of-process hosting

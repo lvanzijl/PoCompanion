@@ -5,8 +5,6 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Client", "PoTool.Client\PoTool.Client.csproj", "{D32D32DD-70D7-4B21-ADA3-857CD887BC7E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.App", "PoTool.App\PoTool.App.csproj", "{4C796E2F-2F99-432C-9D07-88100EA062DE}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Tests.Unit", "PoTool.Tests.Unit\PoTool.Tests.Unit.csproj", "{B022C782-8904-439C-8BCA-93EFD5C4FD81}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Core", "PoTool.Core\PoTool.Core.csproj", "{629D5AD6-5CFD-45B7-B5FD-2F8B3F922044}"
@@ -16,6 +14,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Tests.Blazor", "PoTool.Tests.Blazor\PoTool.Tests.Blazor.csproj", "{FB626A23-D550-4BF8-9903-B1DAB61EEB06}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Tests.Integration", "PoTool.Tests.Integration\PoTool.Tests.Integration.csproj", "{31D45ED3-28A9-44E0-BCEC-6C92F41CBB92}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Maui", "PoTool.Maui\PoTool.Maui.csproj", "{04A58957-B63B-475C-B8CA-B853E4C748B1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,18 +39,6 @@ Global
 		{D32D32DD-70D7-4B21-ADA3-857CD887BC7E}.Release|x64.Build.0 = Release|Any CPU
 		{D32D32DD-70D7-4B21-ADA3-857CD887BC7E}.Release|x86.ActiveCfg = Release|Any CPU
 		{D32D32DD-70D7-4B21-ADA3-857CD887BC7E}.Release|x86.Build.0 = Release|Any CPU
-		{4C796E2F-2F99-432C-9D07-88100EA062DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4C796E2F-2F99-432C-9D07-88100EA062DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4C796E2F-2F99-432C-9D07-88100EA062DE}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{4C796E2F-2F99-432C-9D07-88100EA062DE}.Debug|x64.Build.0 = Debug|Any CPU
-		{4C796E2F-2F99-432C-9D07-88100EA062DE}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{4C796E2F-2F99-432C-9D07-88100EA062DE}.Debug|x86.Build.0 = Debug|Any CPU
-		{4C796E2F-2F99-432C-9D07-88100EA062DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4C796E2F-2F99-432C-9D07-88100EA062DE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4C796E2F-2F99-432C-9D07-88100EA062DE}.Release|x64.ActiveCfg = Release|Any CPU
-		{4C796E2F-2F99-432C-9D07-88100EA062DE}.Release|x64.Build.0 = Release|Any CPU
-		{4C796E2F-2F99-432C-9D07-88100EA062DE}.Release|x86.ActiveCfg = Release|Any CPU
-		{4C796E2F-2F99-432C-9D07-88100EA062DE}.Release|x86.Build.0 = Release|Any CPU
 		{B022C782-8904-439C-8BCA-93EFD5C4FD81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B022C782-8904-439C-8BCA-93EFD5C4FD81}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B022C782-8904-439C-8BCA-93EFD5C4FD81}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -111,6 +99,18 @@ Global
 		{31D45ED3-28A9-44E0-BCEC-6C92F41CBB92}.Release|x64.Build.0 = Release|Any CPU
 		{31D45ED3-28A9-44E0-BCEC-6C92F41CBB92}.Release|x86.ActiveCfg = Release|Any CPU
 		{31D45ED3-28A9-44E0-BCEC-6C92F41CBB92}.Release|x86.Build.0 = Release|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Debug|x64.Build.0 = Debug|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Debug|x86.Build.0 = Debug|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Release|x64.ActiveCfg = Release|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Release|x64.Build.0 = Release|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Release|x86.ActiveCfg = Release|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

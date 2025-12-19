@@ -1,0 +1,125 @@
+using Mediator;
+using Microsoft.EntityFrameworkCore;
+using PoTool.Api.Persistence;
+using PoTool.Api.Repositories;
+using PoTool.Api.Services;
+using PoTool.Core.Contracts;
+
+namespace PoTool.Api.Configuration;
+
+/// <summary>
+/// Extension methods for configuring API services in the dependency injection container.
+/// </summary>
+public static class ApiServiceCollectionExtensions
+{
+    /// <summary>
+    /// Adds all PoTool API services to the service collection.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">The configuration.</param>
+    /// <param name="isDevelopment">Whether the application is running in development mode.</param>
+    /// <param name="configureDatabase">Optional action to configure the database. If not provided, uses default SQLite/SqlServer configuration.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddPoToolApiServices(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        bool isDevelopment,
+        Action<IServiceCollection, IConfiguration>? configureDatabase = null)
+    {
+        // Add controllers and OpenAPI
+        services.AddControllers();
+        services.AddOpenApi();
+
+        // Add OpenAPI/Swagger support with NSwag
+        services.AddOpenApiDocument(config =>
+        {
+            config.Title = "PoTool API";
+            config.Version = "v1";
+            config.Description = "API for PO Companion work item management";
+        });
+
+        // Add Mediator (source-generated)
+        services.AddMediator(options =>
+        {
+            options.ServiceLifetime = ServiceLifetime.Scoped;
+        });
+
+        // Configure database - allow override for testing
+        if (configureDatabase != null)
+        {
+            configureDatabase(services, configuration);
+        }
+        else
+        {
+            // Default database configuration: prefer SqlServer if connection string present, otherwise SQLite
+            var sqlServerConn = configuration.GetConnectionString("SqlServerConnection");
+            if (!string.IsNullOrWhiteSpace(sqlServerConn))
+            {
+                services.AddDbContext<PoToolDbContext>(options =>
+                    options.UseSqlServer(sqlServerConn));
+            }
+            else
+            {
+                services.AddDbContext<PoToolDbContext>(options =>
+                    options.UseSqlite(configuration.GetConnectionString("DefaultConnection")
+                        ?? "Data Source=potool.db"));
+            }
+        }
+
+        // Register repositories
+        if (isDevelopment)
+        {
+            // Use in-memory dev repository to allow frontend development without TFS or DB
+            services.AddSingleton<IWorkItemRepository, DevWorkItemRepository>();
+        }
+        else
+        {
+            services.AddScoped<IWorkItemRepository, WorkItemRepository>();
+        }
+        services.AddScoped<ISettingsRepository, SettingsRepository>();
+
+        // Register mock data provider
+        services.AddSingleton<MockDataProvider>();
+
+        // Register TFS configuration and client
+        services.AddDataProtection();
+        services.AddScoped<TfsConfigurationService>();
+        services.AddHttpClient<ITfsClient, TfsClient>();
+
+        // Register background services
+        services.AddSingleton<WorkItemSyncService>();
+        services.AddHostedService(provider => provider.GetRequiredService<WorkItemSyncService>());
+
+        // Add SignalR
+        services.AddSignalR();
+
+        // Add CORS for Blazor client
+        services.AddCors(options =>
+        {
+            options.AddPolicy("AllowBlazorClient", policy =>
+            {
+                if (isDevelopment)
+                {
+                    // In development, restrict to known local origins and enable credentials for SignalR
+                    policy.WithOrigins(
+                            "https://localhost:5001",
+                            "http://localhost:5000",
+                            "http://localhost:5291"  // Allow API self-reference for Swagger UI
+                        )
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                }
+                else
+                {
+                    policy.WithOrigins("https://localhost:5001", "http://localhost:5000")
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                }
+            });
+        });
+
+        return services;
+    }
+}
