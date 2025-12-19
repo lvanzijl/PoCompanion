@@ -32,13 +32,10 @@
         
         <span class="status-column">@Node.State</span>
         
-        @if (Node.ValidationIssues.Any())
+        @if (Node.HasValidationIssues)
         {
-            <span class="validation-icons">
-                @foreach (var issue in Node.ValidationIssues)
-                {
-                    <span class="validation-icon" title="@issue" role="img" aria-label="Warning: @issue">⚠</span>
-                }
+            <span class="validation-icon" title="@GetValidationTooltip()" role="img" aria-label="@GetValidationAriaLabel()">
+                @Node.ValidationIcon
             </span>
         }
     </div>
@@ -135,5 +132,16 @@
             // For placeholder nodes, toggle expansion
             await ToggleExpanded();
         }
+    }
+
+    private string GetValidationTooltip()
+    {
+        return string.Join("\n", Node.ValidationIssues);
+    }
+
+    private string GetValidationAriaLabel()
+    {
+        var issueCount = Node.ValidationIssues.Count;
+        return $"{Node.HighestSeverity}: {issueCount} validation issue{(issueCount != 1 ? "s" : "")}";
     }
 }

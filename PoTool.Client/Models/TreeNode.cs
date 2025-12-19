@@ -64,4 +64,24 @@ public class TreeNode
     /// List of validation issues for this work item.
     /// </summary>
     public List<string> ValidationIssues { get; set; } = new();
+
+    /// <summary>
+    /// Highest severity level of validation issues (Error > Warning).
+    /// </summary>
+    public string? HighestSeverity { get; set; }
+
+    /// <summary>
+    /// Gets the validation icon to display (single icon showing highest severity).
+    /// </summary>
+    public string ValidationIcon => HighestSeverity switch
+    {
+        "Error" => "❌",
+        "Warning" => "⚠️",
+        _ => string.Empty
+    };
+
+    /// <summary>
+    /// Gets whether this node has any validation issues.
+    /// </summary>
+    public bool HasValidationIssues => ValidationIssues.Any();
 }

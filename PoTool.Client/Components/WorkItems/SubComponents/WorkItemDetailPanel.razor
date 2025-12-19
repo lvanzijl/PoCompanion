@@ -100,6 +100,52 @@ else if (SelectedWorkItem != null)
             <label>Retrieved At:</label>
             <span>@SelectedWorkItem.RetrievedAt.ToString("g")</span>
         </div>
+        @if (SelectedWorkItem.Effort.HasValue)
+        {
+            <div class="detail-field">
+                <label>Effort:</label>
+                <span>@SelectedWorkItem.Effort.Value hours</span>
+            </div>
+        }
+        else
+        {
+            <div class="detail-field">
+                <label>Effort:</label>
+                <span class="no-value">(not set)</span>
+            </div>
+        }
+
+        @* Display validation issues section *@
+        @if (ValidationIssues != null && ValidationIssues.Any())
+        {
+            <div class="detail-section validation-section">
+                <h3>Validation Issues</h3>
+                @if (Errors.Any())
+                {
+                    <div class="validation-group errors">
+                        <h4>❌ Errors</h4>
+                        <ul class="validation-list">
+                            @foreach (var error in Errors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+                @if (Warnings.Any())
+                {
+                    <div class="validation-group warnings">
+                        <h4>⚠️ Warnings</h4>
+                        <ul class="validation-list">
+                            @foreach (var warning in Warnings)
+                            {
+                                <li>@warning</li>
+                            }
+                        </ul>
+                    </div>
+                }
+            </div>
+        }
     </div>
 }
 
@@ -109,6 +155,19 @@ else if (SelectedWorkItem != null)
 
     [Parameter]
     public List<WorkItemDto>? SelectedWorkItems { get; set; }
+
+    [Parameter]
+    public List<string>? ValidationIssues { get; set; }
+
+    private List<string> Errors => ValidationIssues?
+        .Where(issue => issue.StartsWith("Error:", StringComparison.OrdinalIgnoreCase))
+        .Select(issue => issue.Substring(issue.IndexOf(':') + 1).Trim())
+        .ToList() ?? new List<string>();
+
+    private List<string> Warnings => ValidationIssues?
+        .Where(issue => issue.StartsWith("Warning:", StringComparison.OrdinalIgnoreCase))
+        .Select(issue => issue.Substring(issue.IndexOf(':') + 1).Trim())
+        .ToList() ?? new List<string>();
 
     private string? GetCommonType()
     {

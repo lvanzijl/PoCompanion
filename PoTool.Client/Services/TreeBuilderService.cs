@@ -180,6 +180,16 @@ public class TreeBuilderService : ITreeBuilderService
             node.ValidationIssues = dto.ValidationIssues
                 .Select(vi => $"{vi.Severity}: {vi.Message}")
                 .ToList();
+
+            // Set highest severity (Error > Warning)
+            if (dto.ValidationIssues.Any(vi => vi.Severity == "Error"))
+            {
+                node.HighestSeverity = "Error";
+            }
+            else if (dto.ValidationIssues.Any(vi => vi.Severity == "Warning"))
+            {
+                node.HighestSeverity = "Warning";
+            }
         }
 
         // Attach children to parents based on ParentTfsId, create placeholders for missing parents
