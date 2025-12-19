@@ -128,17 +128,27 @@ using (var scope = app.Services.CreateScope())
                     {
                         // Legacy database detected - provide clear error message
                         var dbPath = connection.DataSource;
+                        
+                        // Get the full absolute path for the database file
+                        var fullDbPath = Path.GetFullPath(dbPath);
+                        
+                        // Detect OS and provide appropriate delete command
+                        var isWindows = OperatingSystem.IsWindows();
+                        var deleteCommand = isWindows 
+                            ? $"del \"{fullDbPath}\"" 
+                            : $"rm \"{fullDbPath}\"";
+                        var osLabel = isWindows ? "Windows" : "Linux/Mac";
+                        
                         logger.LogCritical("LEGACY DATABASE DETECTED: Cannot start application with incompatible database schema.");
-                        logger.LogCritical("Database location: {DatabasePath}", dbPath);
+                        logger.LogCritical("Database location: {DatabasePath}", fullDbPath);
                         logger.LogCritical("To fix this issue, delete the database file and restart the application:");
-                        logger.LogCritical("  On Windows: del \"{DatabasePath}\"", dbPath);
-                        logger.LogCritical("  On Linux/Mac: rm \"{DatabasePath}\"", dbPath);
+                        logger.LogCritical("  Command ({OS}): {DeleteCommand}", osLabel, deleteCommand);
                         
                         throw new InvalidOperationException(
-                            $"Legacy database detected at '{dbPath}'. " +
+                            $"Legacy database detected at '{fullDbPath}'. " +
                             $"The database schema is incompatible with the current version. " +
-                            $"Please delete the database file and restart the application. " +
-                            $"A new database with the correct schema will be created automatically.");
+                            $"Please delete the database file using: {deleteCommand}. " +
+                            $"A new database with the correct schema will be created automatically on restart.");
                     }
                 }
                 finally
