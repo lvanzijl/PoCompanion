@@ -74,6 +74,8 @@ public class WorkItemToolbarTests : BunitTestContext
         // Act
         var filterInput = cut.Find("input[type='text']");
         await filterInput.InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "test filter" });
+        // Trigger keyup event which actually invokes the callback
+        await filterInput.KeyUpAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs());
 
         // Assert
         Assert.IsTrue(filterChanged, "Filter callback should have been invoked");
