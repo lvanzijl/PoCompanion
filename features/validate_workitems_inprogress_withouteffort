@@ -1,0 +1,7 @@
+for this feature we need the effort field, for now every work item in the chain will have this field and in a later stage we will verify with the real tfs data if this is the case.
+
+after we have the effort field and its visible in the detail lage of a selected work item.
+
+the validation that needs to be added is that an item that is in progress but has no effort filled in is in error. use the same validation visualisation as the other work item validation features, add a filter button for this feature. 
+
+the validation state on the treeview item itself (on the right side) should be an overal status: 'this item has errros', in the detail view you'll actually show the actual errors and warnings. when there is a warning but no errors the icon will be that of the warning, if there are also errors a error icon is shown
