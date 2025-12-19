@@ -11,11 +11,13 @@ public class HealthSteps
 {
     private readonly IntegrationTestWebApplicationFactory _factory;
     private readonly HttpClient _client;
+    private readonly ScenarioContext _scenarioContext;
     private HttpResponseMessage? _response;
     private HealthResponse? _healthResponse;
 
-    public HealthSteps()
+    public HealthSteps(ScenarioContext scenarioContext)
     {
+        _scenarioContext = scenarioContext;
         _factory = new IntegrationTestWebApplicationFactory();
         _client = _factory.CreateClient();
     }
@@ -24,6 +26,7 @@ public class HealthSteps
     public async Task WhenIRequestTheHealthEndpoint()
     {
         _response = await _client.GetAsync("/health");
+        _scenarioContext["Response"] = _response;
         
         if (_response.StatusCode == HttpStatusCode.OK)
         {

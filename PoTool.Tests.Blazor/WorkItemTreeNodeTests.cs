@@ -112,6 +112,7 @@ public class WorkItemTreeNodeTests : BunitTestContext
             Title = "Test",
             State = "Active",
             Level = 0,
+            JsonPayload = "{}", // Add JsonPayload so node is not treated as placeholder
             Children = new List<TreeNode>()
         };
 
