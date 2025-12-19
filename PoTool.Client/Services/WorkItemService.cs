@@ -50,4 +50,12 @@ public class WorkItemService
     {
         return await _client.GetGoalHierarchyAsync(goalIds);
     }
+
+    /// <summary>
+    /// Gets all cached work items with validation results.
+    /// </summary>
+    public async Task<IEnumerable<WorkItemWithValidationDto>> GetAllWithValidationAsync()
+    {
+        return await _client.GetAllWithValidationAsync();
+    }
 }

@@ -358,6 +358,116 @@ await this.FeatureBackgroundAsync();
             }
             await this.ScenarioCleanupAsync();
         }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get work items with validation results")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetWorkItemsWithValidationResults()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get work items with validation results", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 47
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+                global::Reqnroll.Table table8 = new global::Reqnroll.Table(new string[] {
+                            "TfsId",
+                            "Title",
+                            "Type",
+                            "State",
+                            "ParentTfsId"});
+                table8.AddRow(new string[] {
+                            "2000",
+                            "Parent Goal",
+                            "Goal",
+                            "New",
+                            ""});
+                table8.AddRow(new string[] {
+                            "2001",
+                            "Child in Progress",
+                            "Objective",
+                            "In Progress",
+                            "2000"});
+#line 48
+    await testRunner.GivenAsync("work items exist in the database with parent-child relationships", ((string)(null)), table8, "Given ");
+#line hidden
+#line 52
+    await testRunner.WhenAsync("I request all work items with validation from \"/api/workitems/validated\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 53
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 54
+    await testRunner.AndAsync("work item 2001 should have validation errors about parent not in progress", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get valid work items hierarchy with validation")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetValidWorkItemsHierarchyWithValidation()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get valid work items hierarchy with validation", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 56
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+                global::Reqnroll.Table table9 = new global::Reqnroll.Table(new string[] {
+                            "TfsId",
+                            "Title",
+                            "Type",
+                            "State",
+                            "ParentTfsId"});
+                table9.AddRow(new string[] {
+                            "3000",
+                            "Parent Goal",
+                            "Goal",
+                            "In Progress",
+                            ""});
+                table9.AddRow(new string[] {
+                            "3001",
+                            "Child in Progress",
+                            "Objective",
+                            "In Progress",
+                            "3000"});
+#line 57
+    await testRunner.GivenAsync("work items exist in the database with parent-child relationships", ((string)(null)), table9, "Given ");
+#line hidden
+#line 61
+    await testRunner.WhenAsync("I request all work items with validation from \"/api/workitems/validated\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 62
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 63
+    await testRunner.AndAsync("work item 3001 should have no validation issues", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
     }
 }
 #pragma warning restore

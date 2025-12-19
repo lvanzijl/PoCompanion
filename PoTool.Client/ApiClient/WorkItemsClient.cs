@@ -68,4 +68,14 @@ public class WorkItemsClient : IWorkItemsClient
         var result = await response.Content.ReadFromJsonAsync<IEnumerable<WorkItemDto>>(cancellationToken: cancellationToken);
         return result ?? Enumerable.Empty<WorkItemDto>();
     }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<WorkItemWithValidationDto>> GetAllWithValidationAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.GetAsync("api/workitems/validated", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        
+        var result = await response.Content.ReadFromJsonAsync<IEnumerable<WorkItemWithValidationDto>>(cancellationToken: cancellationToken);
+        return result ?? Enumerable.Empty<WorkItemWithValidationDto>();
+    }
 }

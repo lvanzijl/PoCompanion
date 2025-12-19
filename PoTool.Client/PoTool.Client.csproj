@@ -20,4 +20,8 @@
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\PoTool.Core\PoTool.Core.csproj" />
+  </ItemGroup>
+
 </Project>

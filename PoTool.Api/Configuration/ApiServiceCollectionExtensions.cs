@@ -4,6 +4,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.WorkItems.Validators;
 
 namespace PoTool.Api.Configuration;
 
@@ -80,6 +81,9 @@ public static class ApiServiceCollectionExtensions
 
         // Register mock data provider
         services.AddSingleton<MockDataProvider>();
+
+        // Register validators
+        services.AddScoped<IWorkItemValidator, WorkItemParentProgressValidator>();
 
         // Register TFS configuration and client
         services.AddDataProtection();

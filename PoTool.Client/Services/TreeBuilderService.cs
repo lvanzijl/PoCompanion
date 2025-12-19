@@ -1,5 +1,6 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
+using CoreWorkItems = PoTool.Core.WorkItems;
 
 namespace PoTool.Client.Services;
 
@@ -43,23 +44,6 @@ public class TreeBuilderService : ITreeBuilderService
             if (expandedState.TryGetValue(id, out var isExpanded))
             {
                 node.IsExpanded = isExpanded;
-            }
-
-            // Add mock validation issues for demo purposes
-            // TODO: Replace with real TFS validation rules when TFS mode is fully implemented.
-            // Real validation should be performed in the API layer and returned as part of WorkItemDto.
-            // Consider creating a ValidationService that implements business rules for:
-            // - Required fields validation
-            // - Work item state transitions
-            // - Dependency checks
-            // - Custom field validation based on work item type
-            if (dto.State == "New")
-            {
-                node.ValidationIssues.Add("Not yet started");
-            }
-            if (dto.Type == "Task" && dto.State == "In Progress")
-            {
-                node.ValidationIssues.Add("Missing time estimate");
             }
         }
 
@@ -149,5 +133,93 @@ public class TreeBuilderService : ITreeBuilderService
         }
 
         return toInclude.Values.ToList();
+    }
+
+    /// <inheritdoc/>
+    public List<TreeNode> BuildTreeWithValidation(IEnumerable<WorkItemWithValidationDto> items, Dictionary<int, bool> expandedState)
+    {
+        var roots = new List<TreeNode>();
+        var nodeMap = new Dictionary<int, TreeNode>();
+
+        // Create node instances keyed by TfsId
+        foreach (var dto in items)
+        {
+            var id = dto.TfsId;
+            if (!nodeMap.TryGetValue(id, out var node))
+            {
+                node = new TreeNode
+                {
+                    Id = id,
+                    Title = dto.Title,
+                    Type = dto.Type,
+                    State = dto.State,
+                    ParentId = dto.ParentTfsId,
+                    JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto(
+                        dto.TfsId, dto.Type, dto.Title, dto.ParentTfsId,
+                        dto.AreaPath, dto.IterationPath, dto.State, dto.JsonPayload, dto.RetrievedAt))
+                };
+                nodeMap[id] = node;
+            }
+            else
+            {
+                node.Title = dto.Title;
+                node.Type = dto.Type;
+                node.State = dto.State;
+                node.JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto(
+                    dto.TfsId, dto.Type, dto.Title, dto.ParentTfsId,
+                    dto.AreaPath, dto.IterationPath, dto.State, dto.JsonPayload, dto.RetrievedAt));
+            }
+
+            // Restore expanded state if available
+            if (expandedState.TryGetValue(id, out var isExpanded))
+            {
+                node.IsExpanded = isExpanded;
+            }
+
+            // Populate validation issues from API
+            node.ValidationIssues = dto.ValidationIssues
+                .Select(vi => $"{vi.Severity}: {vi.Message}")
+                .ToList();
+        }
+
+        // Attach children to parents based on ParentTfsId, create placeholders for missing parents
+        foreach (var dto in items)
+        {
+            var node = nodeMap[dto.TfsId];
+            var parentId = dto.ParentTfsId;
+
+            if (parentId.HasValue)
+            {
+                if (!nodeMap.TryGetValue(parentId.Value, out var parentNode))
+                {
+                    // Create placeholder parent node for missing parent
+                    parentNode = new TreeNode
+                    {
+                        Id = parentId.Value,
+                        Title = $"(missing) Parent #{parentId.Value}",
+                        Type = "(missing)",
+                        State = "",
+                        ParentId = null
+                    };
+                    nodeMap[parentId.Value] = parentNode;
+                }
+
+                parentNode.Children.Add(node);
+            }
+            else
+            {
+                roots.Add(node);
+            }
+        }
+
+        // Sort children and roots
+        foreach (var node in nodeMap.Values)
+        {
+            node.Children = node.Children.OrderBy(c => c.Title).ToList();
+        }
+
+        roots = roots.OrderBy(r => r.Title).ToList();
+
+        return roots;
     }
 }

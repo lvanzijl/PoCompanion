@@ -1,0 +1,17 @@
+namespace PoTool.Core.WorkItems;
+
+/// <summary>
+/// Work item DTO with validation issues attached.
+/// </summary>
+public sealed record WorkItemWithValidationDto(
+    int TfsId,
+    string Type,
+    string Title,
+    int? ParentTfsId,
+    string AreaPath,
+    string IterationPath,
+    string State,
+    string JsonPayload,
+    DateTimeOffset RetrievedAt,
+    List<ValidationIssue> ValidationIssues
+);
