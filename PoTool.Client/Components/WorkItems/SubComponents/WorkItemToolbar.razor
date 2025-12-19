@@ -36,9 +36,8 @@
     <div class="search-filter">
         <input type="text" 
                placeholder="Filter by title..." 
-               @bind="FilterText" 
-               @bind:event="oninput"
-               @onkeyup="OnFilterKeyUp" />
+               value="@FilterText" 
+               @oninput="OnFilterInput" />
     </div>
 </div>
 
@@ -88,8 +87,9 @@
         await OnClearState.InvokeAsync();
     }
 
-    private async Task OnFilterKeyUp()
+    private async Task OnFilterInput(ChangeEventArgs e)
     {
+        FilterText = e.Value?.ToString() ?? string.Empty;
         await OnFilterChanged.InvokeAsync(FilterText);
     }
 }

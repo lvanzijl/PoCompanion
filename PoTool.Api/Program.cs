@@ -27,17 +27,21 @@ builder.Services.AddMediator(options =>
 });
 
 // Configure database: prefer SqlServer if connection string present, otherwise SQLite
-var sqlServerConn = builder.Configuration.GetConnectionString("SqlServerConnection");
-if (!string.IsNullOrWhiteSpace(sqlServerConn))
+// Skip database registration in Testing environment - integration tests will configure their own
+if (builder.Environment.EnvironmentName != "Testing")
 {
-    builder.Services.AddDbContext<PoToolDbContext>(options =>
-        options.UseSqlServer(sqlServerConn));
-}
-else
-{
-    builder.Services.AddDbContext<PoToolDbContext>(options =>
-        options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
-            ?? "Data Source=potool.db"));
+    var sqlServerConn = builder.Configuration.GetConnectionString("SqlServerConnection");
+    if (!string.IsNullOrWhiteSpace(sqlServerConn))
+    {
+        builder.Services.AddDbContext<PoToolDbContext>(options =>
+            options.UseSqlServer(sqlServerConn));
+    }
+    else
+    {
+        builder.Services.AddDbContext<PoToolDbContext>(options =>
+            options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
+                ?? "Data Source=potool.db"));
+    }
 }
 
 // Register repositories
@@ -102,75 +106,84 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
     
-    try
+    // Skip migration logic for in-memory databases (testing)
+    var isInMemory = db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory";
+    if (isInMemory)
     {
-        // Check for legacy database before attempting migrations
-        var canConnect = await db.Database.CanConnectAsync();
-        if (canConnect)
+        await db.Database.EnsureCreatedAsync();
+    }
+    else
+    {
+        try
         {
-            var appliedMigrations = await db.Database.GetAppliedMigrationsAsync();
-            var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
-            
-            // Detect legacy database: has tables but no migration history
-            if (!appliedMigrations.Any() && pendingMigrations.Any())
+            // Check for legacy database before attempting migrations
+            var canConnect = await db.Database.CanConnectAsync();
+            if (canConnect)
             {
-                var connection = db.Database.GetDbConnection();
-                try
+                var appliedMigrations = await db.Database.GetAppliedMigrationsAsync();
+                var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
+                
+                // Detect legacy database: has tables but no migration history
+                if (!appliedMigrations.Any() && pendingMigrations.Any())
                 {
-                    await connection.OpenAsync();
-                    
-                    // Check if TfsConfigs or WorkItems tables exist (legacy database indicators)
-                    using var checkCmd = connection.CreateCommand();
-                    checkCmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('TfsConfigs', 'WorkItems')";
-                    var legacyTableCount = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
-                    
-                    if (legacyTableCount > 0)
+                    var connection = db.Database.GetDbConnection();
+                    try
                     {
-                        // Legacy database detected - provide clear error message
-                        var dbPath = connection.DataSource;
+                        await connection.OpenAsync();
                         
-                        // Get the full absolute path for the database file
-                        var fullDbPath = Path.GetFullPath(dbPath);
+                        // Check if TfsConfigs or WorkItems tables exist (legacy database indicators)
+                        using var checkCmd = connection.CreateCommand();
+                        checkCmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('TfsConfigs', 'WorkItems')";
+                        var legacyTableCount = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
                         
-                        // Detect OS and provide appropriate delete command
-                        var isWindows = OperatingSystem.IsWindows();
-                        var deleteCommand = isWindows 
-                            ? $"del \"{fullDbPath}\"" 
-                            : $"rm \"{fullDbPath}\"";
-                        var osLabel = isWindows ? "Windows" : "Linux/Mac";
-                        
-                        logger.LogCritical("LEGACY DATABASE DETECTED: Cannot start application with incompatible database schema.");
-                        logger.LogCritical("Database location: {DatabasePath}", fullDbPath);
-                        logger.LogCritical("To fix this issue, delete the database file and restart the application:");
-                        logger.LogCritical("  Command ({OS}): {DeleteCommand}", osLabel, deleteCommand);
-                        
-                        throw new InvalidOperationException(
-                            $"Legacy database detected at '{fullDbPath}'. " +
-                            $"The database schema is incompatible with the current version. " +
-                            $"Please delete the database file using: {deleteCommand}. " +
-                            $"A new database with the correct schema will be created automatically on restart.");
+                        if (legacyTableCount > 0)
+                        {
+                            // Legacy database detected - provide clear error message
+                            var dbPath = connection.DataSource;
+                            
+                            // Get the full absolute path for the database file
+                            var fullDbPath = Path.GetFullPath(dbPath);
+                            
+                            // Detect OS and provide appropriate delete command
+                            var isWindows = OperatingSystem.IsWindows();
+                            var deleteCommand = isWindows 
+                                ? $"del \"{fullDbPath}\"" 
+                                : $"rm \"{fullDbPath}\"";
+                            var osLabel = isWindows ? "Windows" : "Linux/Mac";
+                            
+                            logger.LogCritical("LEGACY DATABASE DETECTED: Cannot start application with incompatible database schema.");
+                            logger.LogCritical("Database location: {DatabasePath}", fullDbPath);
+                            logger.LogCritical("To fix this issue, delete the database file and restart the application:");
+                            logger.LogCritical("  Command ({OS}): {DeleteCommand}", osLabel, deleteCommand);
+                            
+                            throw new InvalidOperationException(
+                                $"Legacy database detected at '{fullDbPath}'. " +
+                                $"The database schema is incompatible with the current version. " +
+                                $"Please delete the database file using: {deleteCommand}. " +
+                                $"A new database with the correct schema will be created automatically on restart.");
+                        }
+                    }
+                    finally
+                    {
+                        await connection.CloseAsync();
                     }
                 }
-                finally
-                {
-                    await connection.CloseAsync();
-                }
             }
+            
+            // Try apply migrations
+            await db.Database.MigrateAsync();
         }
-        
-        // Try apply migrations
-        await db.Database.MigrateAsync();
-    }
-    catch (InvalidOperationException)
-    {
-        // Re-throw legacy database exceptions
-        throw;
-    }
-    catch (Exception ex)
-    {
-        // If migrations fail for other reasons, fallback to EnsureCreated
-        logger.LogWarning(ex, "EF migrations could not be applied; falling back to EnsureCreated. Create migrations locally using 'dotnet ef migrations add <Name> --project PoTool.Api --startup-project PoTool.Api'");
-        await db.Database.EnsureCreatedAsync();
+        catch (InvalidOperationException)
+        {
+            // Re-throw legacy database exceptions
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // If migrations fail for other reasons, fallback to EnsureCreated
+            logger.LogWarning(ex, "EF migrations could not be applied; falling back to EnsureCreated. Create migrations locally using 'dotnet ef migrations add <Name> --project PoTool.Api --startup-project PoTool.Api'");
+            await db.Database.EnsureCreatedAsync();
+        }
     }
 }
 

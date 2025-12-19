@@ -16,12 +16,12 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Progra
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Set environment to Testing BEFORE services are configured
+        // This prevents Program.cs from registering SQLite/SqlServer
+        builder.UseEnvironment("Testing");
+        
         builder.ConfigureServices(services =>
         {
-            // Remove the real database context
-            services.RemoveAll<DbContextOptions<PoToolDbContext>>();
-            services.RemoveAll<PoToolDbContext>();
-
             // Add in-memory database for testing
             services.AddDbContext<PoToolDbContext>(options =>
             {
@@ -31,14 +31,6 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Progra
             // Replace ITfsClient with mock implementation
             services.RemoveAll<ITfsClient>();
             services.AddScoped<ITfsClient, MockTfsClient>();
-
-            // Build service provider to ensure database is created
-            var serviceProvider = services.BuildServiceProvider();
-            using var scope = serviceProvider.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
-            dbContext.Database.EnsureCreated();
         });
-
-        builder.UseEnvironment("Testing");
     }
 }

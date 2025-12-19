@@ -112,7 +112,8 @@ public class WorkItemTreeNodeTests : BunitTestContext
             Title = "Test",
             State = "Active",
             Level = 0,
-            Children = new List<TreeNode>()
+            Children = new List<TreeNode>(),
+            JsonPayload = "{}"  // Set JsonPayload so node is not a placeholder
         };
 
         var cut = RenderComponent<WorkItemTreeNode>(parameters => parameters
