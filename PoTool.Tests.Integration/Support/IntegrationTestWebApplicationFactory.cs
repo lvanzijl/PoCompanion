@@ -15,6 +15,8 @@ namespace PoTool.Tests.Integration.Support;
 /// </summary>
 public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Program>
 {
+    private static int _databaseCounter = 0;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Use Testing environment to trigger special configuration in Program.cs
@@ -23,9 +25,11 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Progra
         builder.ConfigureServices(services =>
         {
             // Add in-memory database for testing with a unique name per test
+            // Using incrementing counter for better performance and debuggability
+            var dbName = $"IntegrationTestDb_{Interlocked.Increment(ref _databaseCounter)}";
             services.AddDbContext<PoToolDbContext>(options =>
             {
-                options.UseInMemoryDatabase($"IntegrationTestDb_{Guid.NewGuid()}");
+                options.UseInMemoryDatabase(dbName);
             });
 
             // Replace ITfsClient with mock implementation

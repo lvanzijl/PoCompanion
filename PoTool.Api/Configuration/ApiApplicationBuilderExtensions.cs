@@ -12,6 +12,9 @@ namespace PoTool.Api.Configuration;
 /// </summary>
 public static class ApiApplicationBuilderExtensions
 {
+    // Provider name constant for InMemory database
+    private const string InMemoryProviderName = "Microsoft.EntityFrameworkCore.InMemory";
+
     /// <summary>
     /// Configures the PoTool API middleware pipeline.
     /// </summary>
@@ -29,8 +32,7 @@ public static class ApiApplicationBuilderExtensions
             try
             {
                 // Check if we're using InMemory database (for testing)
-                // InMemory database provider name is "Microsoft.EntityFrameworkCore.InMemory"
-                var isInMemory = db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory";
+                var isInMemory = db.Database.ProviderName == InMemoryProviderName;
                 
                 if (isInMemory)
                 {

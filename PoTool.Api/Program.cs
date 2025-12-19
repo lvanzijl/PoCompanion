@@ -8,13 +8,11 @@ var isTesting = builder.Environment.IsEnvironment("Testing");
 // Add all PoTool API services with optional test database configuration
 if (isTesting)
 {
-    // In testing, don't configure the database here - let the test framework handle it
-    builder.Services.AddPoToolApiServices(builder.Configuration, builder.Environment.IsDevelopment(), 
-        configureDatabase: (services, config) => 
-        {
-            // Database configuration will be provided by test framework
-            // Do nothing here to allow test to configure it
-        });
+    // In testing, skip database configuration - let the test framework handle it
+    builder.Services.AddPoToolApiServices(
+        builder.Configuration, 
+        builder.Environment.IsDevelopment(), 
+        configureDatabase: SkipDatabaseConfiguration);
 }
 else
 {
@@ -30,5 +28,12 @@ app.ConfigurePoToolApi(app.Environment.IsDevelopment());
 app.Run();
 
 // Partial class for testing
-public partial class Program { }
+public partial class Program 
+{
+    // No-op database configuration for testing - database is configured by test framework
+    private static void SkipDatabaseConfiguration(IServiceCollection services, IConfiguration config)
+    {
+        // Intentionally empty - test framework configures the database
+    }
+}
 
