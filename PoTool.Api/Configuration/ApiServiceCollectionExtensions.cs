@@ -18,11 +18,13 @@ public static class ApiServiceCollectionExtensions
     /// <param name="services">The service collection.</param>
     /// <param name="configuration">The configuration.</param>
     /// <param name="isDevelopment">Whether the application is running in development mode.</param>
+    /// <param name="configureDatabase">Optional action to configure the database. If not provided, uses default SQLite/SqlServer configuration.</param>
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddPoToolApiServices(
         this IServiceCollection services,
         IConfiguration configuration,
-        bool isDevelopment)
+        bool isDevelopment,
+        Action<IServiceCollection, IConfiguration>? configureDatabase = null)
     {
         // Add controllers and OpenAPI
         services.AddControllers();
@@ -42,18 +44,26 @@ public static class ApiServiceCollectionExtensions
             options.ServiceLifetime = ServiceLifetime.Scoped;
         });
 
-        // Configure database: prefer SqlServer if connection string present, otherwise SQLite
-        var sqlServerConn = configuration.GetConnectionString("SqlServerConnection");
-        if (!string.IsNullOrWhiteSpace(sqlServerConn))
+        // Configure database - allow override for testing
+        if (configureDatabase != null)
         {
-            services.AddDbContext<PoToolDbContext>(options =>
-                options.UseSqlServer(sqlServerConn));
+            configureDatabase(services, configuration);
         }
         else
         {
-            services.AddDbContext<PoToolDbContext>(options =>
-                options.UseSqlite(configuration.GetConnectionString("DefaultConnection")
-                    ?? "Data Source=potool.db"));
+            // Default database configuration: prefer SqlServer if connection string present, otherwise SQLite
+            var sqlServerConn = configuration.GetConnectionString("SqlServerConnection");
+            if (!string.IsNullOrWhiteSpace(sqlServerConn))
+            {
+                services.AddDbContext<PoToolDbContext>(options =>
+                    options.UseSqlServer(sqlServerConn));
+            }
+            else
+            {
+                services.AddDbContext<PoToolDbContext>(options =>
+                    options.UseSqlite(configuration.GetConnectionString("DefaultConnection")
+                        ?? "Data Source=potool.db"));
+            }
         }
 
         // Register repositories
