@@ -215,11 +215,62 @@ The solution MUST contain at least:
 
 ## 10. Testing rules
 
+### 10.1 Unit tests
+
 - MSTest is mandatory
 - Business logic MUST be tested in Core
 - Controllers and UI contain no logic to unit-test
 - Tests MUST NOT connect to real TFS
 - TFS behavior is simulated via file-based mocks
+
+### 10.2 Integration tests
+
+Integration tests MUST verify end-to-end API behavior with Reqnroll (BDD framework).
+
+#### 10.2.1 Framework and tooling
+- Integration tests MUST use **Reqnroll** for BDD-style test definitions
+- Tests MUST be defined in `.feature` files using Gherkin syntax
+- Step definitions MUST be implemented in C# using Reqnroll bindings
+- MSTest MUST be used as the test runner
+
+#### 10.2.2 Test entry points
+Integration tests MUST cover:
+- All Web API endpoints exposed by the Api layer
+- All SignalR events and hub methods
+- All request/response flows between frontend and backend
+
+#### 10.2.3 Test execution model
+- Tests MUST start the full ASP.NET Core Web API application
+- Tests MUST use a real database instance (in-memory or temporary)
+- Tests MUST exercise HTTP endpoints as external clients would
+- Tests MUST connect to SignalR hubs as real clients would
+- No mocking of Api, Core, or database layers is allowed
+
+#### 10.2.4 TFS mocking (only exception)
+- TFS integration is the ONLY component that MAY be mocked
+- TFS mocks MUST use file-based test data
+- TFS mocks MUST simulate realistic responses and error conditions
+- TFS mocks MUST NOT alter business logic behavior
+
+#### 10.2.5 Coverage requirements
+- **100% coverage** of all Web API endpoints is MANDATORY
+- **100% coverage** of all SignalR hub methods is MANDATORY
+- Each endpoint MUST be tested for:
+  - Successful execution (happy path)
+  - Error conditions and validation failures
+  - Authorization and authentication requirements (when applicable)
+
+#### 10.2.6 Test organization
+- Integration tests MUST be in a separate test project
+- Feature files MUST be organized by feature area or domain
+- Step definitions MUST be reusable across multiple scenarios
+- Test data MUST be isolated per test scenario
+
+#### 10.2.7 Test independence
+- Each integration test scenario MUST be independent
+- Tests MUST clean up their own test data
+- Tests MUST NOT depend on execution order
+- Database state MUST be reset between test scenarios
 
 ---
 
