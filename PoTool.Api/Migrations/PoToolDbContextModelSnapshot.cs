@@ -83,6 +83,9 @@ namespace PoTool.Api.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("Effort")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("IterationPath")
                         .IsRequired()
                         .HasMaxLength(500)
