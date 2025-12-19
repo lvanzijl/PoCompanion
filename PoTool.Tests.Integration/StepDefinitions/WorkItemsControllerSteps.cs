@@ -44,7 +44,8 @@ public class WorkItemsControllerSteps
                 IterationPath: "\\TestIteration",
                 State: row["State"],
                 JsonPayload: "{}",
-                RetrievedAt: DateTimeOffset.UtcNow
+                RetrievedAt: DateTimeOffset.UtcNow,
+                    Effort: null
             );
 
             dbContext.WorkItems.Add(new WorkItemEntity
@@ -87,7 +88,8 @@ public class WorkItemsControllerSteps
                 IterationPath: "\\TestIteration",
                 State: row["State"],
                 JsonPayload: "{}",
-                RetrievedAt: DateTimeOffset.UtcNow
+                RetrievedAt: DateTimeOffset.UtcNow,
+                    Effort: null
             );
 
             dbContext.WorkItems.Add(new WorkItemEntity

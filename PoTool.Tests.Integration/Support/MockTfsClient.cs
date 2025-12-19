@@ -25,7 +25,8 @@ public class MockTfsClient : ITfsClient
                 IterationPath: "\\TestIteration",
                 State: "Active",
                 JsonPayload: "{}",
-                RetrievedAt: DateTimeOffset.UtcNow
+                RetrievedAt: DateTimeOffset.UtcNow,
+                Effort: null
             ),
             new WorkItemDto(
                 TfsId: 1001,
@@ -36,7 +37,8 @@ public class MockTfsClient : ITfsClient
                 IterationPath: "\\TestIteration",
                 State: "Active",
                 JsonPayload: "{}",
-                RetrievedAt: DateTimeOffset.UtcNow
+                RetrievedAt: DateTimeOffset.UtcNow,
+                Effort: null
             ),
             new WorkItemDto(
                 TfsId: 1002,
@@ -47,7 +49,8 @@ public class MockTfsClient : ITfsClient
                 IterationPath: "\\TestIteration",
                 State: "New",
                 JsonPayload: "{}",
-                RetrievedAt: DateTimeOffset.UtcNow
+                RetrievedAt: DateTimeOffset.UtcNow,
+                Effort: null
             )
         };
     }

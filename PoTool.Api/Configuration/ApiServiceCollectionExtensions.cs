@@ -83,7 +83,17 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<MockDataProvider>();
 
         // Register validators
-        services.AddScoped<IWorkItemValidator, WorkItemParentProgressValidator>();
+        services.AddScoped<WorkItemParentProgressValidator>();
+        services.AddScoped<WorkItemInProgressWithoutEffortValidator>();
+        services.AddScoped<IWorkItemValidator>(provider =>
+        {
+            var validators = new List<IWorkItemValidator>
+            {
+                provider.GetRequiredService<WorkItemParentProgressValidator>(),
+                provider.GetRequiredService<WorkItemInProgressWithoutEffortValidator>()
+            };
+            return new CompositeWorkItemValidator(validators);
+        });
 
         // Register TFS configuration and client
         services.AddDataProtection();

@@ -28,7 +28,8 @@ public sealed class WorkItemDtoTests
             IterationPath: iterationPath,
             State: state,
             JsonPayload: jsonPayload,
-            RetrievedAt: retrievedAt
+            RetrievedAt: retrievedAt,
+                    Effort: null
         );
 
         // Assert
@@ -55,7 +56,8 @@ public sealed class WorkItemDtoTests
             IterationPath: "Sprint 1",
             State: "Active",
             JsonPayload: "{}",
-            RetrievedAt: DateTimeOffset.UtcNow
+            RetrievedAt: DateTimeOffset.UtcNow,
+                    Effort: null
         );
 
         var dto2 = dto1 with { Title = "Modified Epic" };
@@ -80,7 +82,8 @@ public sealed class WorkItemDtoTests
             IterationPath: "Sprint 1",
             State: "Active",
             JsonPayload: "{}",
-            RetrievedAt: now
+            RetrievedAt: now,
+                    Effort: null
         );
 
         var dto2 = new WorkItemDto(
@@ -92,7 +95,8 @@ public sealed class WorkItemDtoTests
             IterationPath: "Sprint 1",
             State: "Active",
             JsonPayload: "{}",
-            RetrievedAt: now
+            RetrievedAt: now,
+                    Effort: null
         );
 
         // Act & Assert

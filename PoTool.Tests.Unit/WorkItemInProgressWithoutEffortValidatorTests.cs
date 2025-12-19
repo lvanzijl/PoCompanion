@@ -1,0 +1,130 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PoTool.Core.WorkItems;
+using PoTool.Core.WorkItems.Validators;
+
+namespace PoTool.Tests.Unit;
+
+[TestClass]
+public class WorkItemInProgressWithoutEffortValidatorTests
+{
+    private WorkItemInProgressWithoutEffortValidator _validator = null!;
+
+    [TestInitialize]
+    public void Setup()
+    {
+        _validator = new WorkItemInProgressWithoutEffortValidator();
+    }
+
+    [TestMethod]
+    public void ValidateWorkItems_InProgressWithEffort_NoIssues()
+    {
+        // Arrange: Item in progress with effort
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "In Progress", 8)
+        };
+
+        // Act
+        var result = _validator.ValidateWorkItems(items);
+
+        // Assert
+        Assert.AreEqual(0, result.Count, "No validation issues expected when effort is provided");
+    }
+
+    [TestMethod]
+    public void ValidateWorkItems_InProgressWithoutEffort_HasError()
+    {
+        // Arrange: Item in progress without effort
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "In Progress", null)
+        };
+
+        // Act
+        var result = _validator.ValidateWorkItems(items);
+
+        // Assert
+        Assert.AreEqual(1, result.Count, "Should have one item with issues");
+        Assert.IsTrue(result.ContainsKey(1), "Item should have validation issues");
+        
+        var issues = result[1];
+        Assert.AreEqual(1, issues.Count, "Should have one error");
+        Assert.AreEqual("Error", issues[0].Severity);
+        Assert.IsTrue(issues[0].Message.Contains("effort"), "Message should mention effort");
+    }
+
+    [TestMethod]
+    public void ValidateWorkItems_InProgressWithZeroEffort_HasError()
+    {
+        // Arrange: Item in progress with zero effort
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "In Progress", 0)
+        };
+
+        // Act
+        var result = _validator.ValidateWorkItems(items);
+
+        // Assert
+        Assert.AreEqual(1, result.Count, "Should have one item with issues");
+        Assert.IsTrue(result.ContainsKey(1), "Item should have validation issues");
+    }
+
+    [TestMethod]
+    public void ValidateWorkItems_NotInProgressWithoutEffort_NoIssues()
+    {
+        // Arrange: Item not in progress, no effort
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "New", null),
+            CreateWorkItem(2, "Feature", "Done", null)
+        };
+
+        // Act
+        var result = _validator.ValidateWorkItems(items);
+
+        // Assert
+        Assert.AreEqual(0, result.Count, "No validation issues for items not in progress");
+    }
+
+    [TestMethod]
+    public void ValidateWorkItems_MultipleItems_CorrectlyIdentifiesIssues()
+    {
+        // Arrange: Mix of valid and invalid items
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "In Progress", 8),
+            CreateWorkItem(2, "Feature", "In Progress", null),
+            CreateWorkItem(3, "Feature", "New", null),
+            CreateWorkItem(4, "Feature", "In Progress", 0),
+            CreateWorkItem(5, "Feature", "In Progress", 24)
+        };
+
+        // Act
+        var result = _validator.ValidateWorkItems(items);
+
+        // Assert
+        Assert.AreEqual(2, result.Count, "Should have two items with issues");
+        Assert.IsTrue(result.ContainsKey(2), "Item 2 should have issues");
+        Assert.IsTrue(result.ContainsKey(4), "Item 4 should have issues");
+        Assert.IsFalse(result.ContainsKey(1), "Item 1 should not have issues");
+        Assert.IsFalse(result.ContainsKey(3), "Item 3 should not have issues");
+        Assert.IsFalse(result.ContainsKey(5), "Item 5 should not have issues");
+    }
+
+    private static WorkItemDto CreateWorkItem(int id, string type, string state, int? effort)
+    {
+        return new WorkItemDto(
+            TfsId: id,
+            Type: type,
+            Title: $"Test {type} {id}",
+            ParentTfsId: null,
+            AreaPath: "Test",
+            IterationPath: "Test",
+            State: state,
+            JsonPayload: "{}",
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: effort
+        );
+    }
+}

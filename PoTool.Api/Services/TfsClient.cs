@@ -144,7 +144,8 @@ public class TfsClient : ITfsClient
                     IterationPath: iteration,
                     State: state,
                     JsonPayload: item.GetRawText(),
-                    RetrievedAt: DateTimeOffset.UtcNow
+                    RetrievedAt: DateTimeOffset.UtcNow,
+                    Effort: null  // TODO: Extract from TFS fields when available
                 ));
             }
 

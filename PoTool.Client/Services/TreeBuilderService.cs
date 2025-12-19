@@ -156,7 +156,7 @@ public class TreeBuilderService : ITreeBuilderService
                     ParentId = dto.ParentTfsId,
                     JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto(
                         dto.TfsId, dto.Type, dto.Title, dto.ParentTfsId,
-                        dto.AreaPath, dto.IterationPath, dto.State, dto.JsonPayload, dto.RetrievedAt))
+                        dto.AreaPath, dto.IterationPath, dto.State, dto.JsonPayload, dto.RetrievedAt, dto.Effort))
                 };
                 nodeMap[id] = node;
             }
@@ -167,7 +167,7 @@ public class TreeBuilderService : ITreeBuilderService
                 node.State = dto.State;
                 node.JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto(
                     dto.TfsId, dto.Type, dto.Title, dto.ParentTfsId,
-                    dto.AreaPath, dto.IterationPath, dto.State, dto.JsonPayload, dto.RetrievedAt));
+                    dto.AreaPath, dto.IterationPath, dto.State, dto.JsonPayload, dto.RetrievedAt, dto.Effort));
             }
 
             // Restore expanded state if available
