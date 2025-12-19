@@ -67,16 +67,21 @@ dotnet test PoTool.Tests.Integration --logger "console;verbosity=detailed"
 - [x] GET /api/tfsconfig
 - [x] POST /api/tfsconfig
 - [x] GET /api/tfsvalidate
-- [ ] GET /api/workitems
-- [ ] GET /api/workitems/{id}
-- [ ] POST /api/workitems/sync
-- [ ] GET /api/settings
-- [ ] PUT /api/settings
-- [ ] GET /health
+- [x] POST /api/workitems/sync
+- [x] GET /api/workitems
+- [x] GET /api/workitems/{id}
+- [x] GET /api/workitems/filter/{filter}
+- [x] GET /api/workitems/goals
+- [x] GET /api/settings
+- [x] PUT /api/settings
+- [x] GET /health
 
 ### SignalR Hubs
-- [ ] WorkItemHub.SyncStatus
-- [ ] WorkItemHub.RequestSync
+- [x] WorkItemHub.Connect
+- [x] WorkItemHub.Disconnect
+- [x] WorkItemHub.RequestSync
+
+**Coverage: 100% ✅**
 
 ## Adding New Tests
 

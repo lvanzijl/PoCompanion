@@ -20,7 +20,7 @@ namespace PoTool.Tests.Integration.Features
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Reqnroll", "2.0.0.0")]
     [System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     [Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute()]
-    public partial class TFSConfigurationManagementFeature
+    public partial class SettingsManagementFeature
     {
         
         private global::Reqnroll.ITestRunner testRunner;
@@ -29,10 +29,10 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "TFS Configuration Management", ("    As a user\n    I want to configure my TFS connection settings\n    So that I ca" +
-                "n connect to Azure DevOps / TFS"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Settings Management", ("    As a user\n    I want to manage application settings\n    So that I can configu" +
+                "re my preferences"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
-#line 1 "TfsConfiguration.feature"
+#line 1 "Settings.feature"
 #line hidden
         
         public virtual Microsoft.VisualStudio.TestTools.UnitTesting.TestContext TestContext
@@ -105,13 +105,13 @@ namespace PoTool.Tests.Integration.Features
         }
         
         [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get TFS configuration when none exists")]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "TFS Configuration Management")]
-        public async System.Threading.Tasks.Task GetTFSConfigurationWhenNoneExists()
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get settings when none exist")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Settings Management")]
+        public async System.Threading.Tasks.Task GetSettingsWhenNoneExist()
         {
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get TFS configuration when none exists", null, tagsOfScenario, argumentsOfScenario, featureTags);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get settings when none exist", null, tagsOfScenario, argumentsOfScenario, featureTags);
 #line 9
 this.ScenarioInitialize(scenarioInfo);
 #line hidden
@@ -126,23 +126,23 @@ this.ScenarioInitialize(scenarioInfo);
 await this.FeatureBackgroundAsync();
 #line hidden
 #line 10
-    await testRunner.WhenAsync("I request the TFS configuration", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I request the application settings", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 11
-    await testRunner.ThenAsync("the response should be NoContent", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.ThenAsync("the response should be NotFound", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
         [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Save TFS configuration")]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "TFS Configuration Management")]
-        public async System.Threading.Tasks.Task SaveTFSConfiguration()
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Update settings")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Settings Management")]
+        public async System.Threading.Tasks.Task UpdateSettings()
         {
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Save TFS configuration", null, tagsOfScenario, argumentsOfScenario, featureTags);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Update settings", null, tagsOfScenario, argumentsOfScenario, featureTags);
 #line 13
 this.ScenarioInitialize(scenarioInfo);
 #line hidden
@@ -156,98 +156,40 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table3 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table1 = new global::Reqnroll.Table(new string[] {
                             "Field",
                             "Value"});
-                table3.AddRow(new string[] {
-                            "Url",
-                            "https://dev.azure.com/testorg"});
-                table3.AddRow(new string[] {
-                            "Project",
-                            "TestProject"});
-                table3.AddRow(new string[] {
-                            "Pat",
-                            "test-pat-token-12345"});
+                table1.AddRow(new string[] {
+                            "DataMode",
+                            "Mock"});
+                table1.AddRow(new string[] {
+                            "ConfiguredGoalIds",
+                            "1000"});
 #line 14
-    await testRunner.GivenAsync("I have valid TFS credentials", ((string)(null)), table3, "Given ");
+    await testRunner.GivenAsync("I have settings to update", ((string)(null)), table1, "Given ");
+#line hidden
+#line 18
+    await testRunner.WhenAsync("I update the application settings", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 19
-    await testRunner.WhenAsync("I save the TFS configuration", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
-#line hidden
-#line 20
-    await testRunner.ThenAsync("the configuration should be saved successfully", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
-#line hidden
-#line 21
-    await testRunner.AndAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-            }
-            await this.ScenarioCleanupAsync();
-        }
-        
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get saved TFS configuration")]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "TFS Configuration Management")]
-        public async System.Threading.Tasks.Task GetSavedTFSConfiguration()
-        {
-            string[] tagsOfScenario = ((string[])(null));
-            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get saved TFS configuration", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 23
-this.ScenarioInitialize(scenarioInfo);
-#line hidden
-            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
-            {
-                testRunner.SkipScenario();
-            }
-            else
-            {
-                await this.ScenarioStartAsync();
-#line 6
-await this.FeatureBackgroundAsync();
-#line hidden
-                global::Reqnroll.Table table4 = new global::Reqnroll.Table(new string[] {
-                            "Field",
-                            "Value"});
-                table4.AddRow(new string[] {
-                            "Url",
-                            "https://dev.azure.com/testorg"});
-                table4.AddRow(new string[] {
-                            "Project",
-                            "TestProject"});
-#line 24
-    await testRunner.GivenAsync("I have saved TFS configuration", ((string)(null)), table4, "Given ");
-#line hidden
-#line 28
-    await testRunner.WhenAsync("I request the TFS configuration", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
-#line hidden
-#line 29
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-                global::Reqnroll.Table table5 = new global::Reqnroll.Table(new string[] {
-                            "Field",
-                            "Value"});
-                table5.AddRow(new string[] {
-                            "Url",
-                            "https://dev.azure.com/testorg"});
-                table5.AddRow(new string[] {
-                            "Project",
-                            "TestProject"});
-#line 30
-    await testRunner.AndAsync("the returned configuration should match", ((string)(null)), table5, "And ");
+#line 20
+    await testRunner.AndAsync("the settings should be updated successfully", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
         [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Validate TFS connection")]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "TFS Configuration Management")]
-        public async System.Threading.Tasks.Task ValidateTFSConnection()
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get saved settings")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Settings Management")]
+        public async System.Threading.Tasks.Task GetSavedSettings()
         {
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Validate TFS connection", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 35
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get saved settings", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 22
 this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -260,17 +202,63 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-#line 36
-    await testRunner.GivenAsync("I have saved valid TFS configuration", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+#line 23
+    await testRunner.GivenAsync("I have updated the settings with DataMode \"Mock\" and GoalIds \"1000,2000\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 37
-    await testRunner.WhenAsync("I validate the TFS connection", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line 24
+    await testRunner.WhenAsync("I request the application settings", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 38
-    await testRunner.ThenAsync("the validation should succeed", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line 25
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 39
-    await testRunner.AndAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line 26
+    await testRunner.AndAsync("the returned settings should have DataMode \"Mock\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 27
+    await testRunner.AndAsync("the returned settings should have 2 goal IDs", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Update settings with multiple goal IDs")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Settings Management")]
+        public async System.Threading.Tasks.Task UpdateSettingsWithMultipleGoalIDs()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Update settings with multiple goal IDs", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 29
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+                global::Reqnroll.Table table2 = new global::Reqnroll.Table(new string[] {
+                            "Field",
+                            "Value"});
+                table2.AddRow(new string[] {
+                            "DataMode",
+                            "Live"});
+                table2.AddRow(new string[] {
+                            "ConfiguredGoalIds",
+                            "1,2,3,4,5"});
+#line 30
+    await testRunner.GivenAsync("I have settings to update", ((string)(null)), table2, "Given ");
+#line hidden
+#line 34
+    await testRunner.WhenAsync("I update the application settings", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 35
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
