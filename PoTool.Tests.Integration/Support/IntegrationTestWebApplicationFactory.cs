@@ -17,29 +17,21 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Progra
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Use Testing environment to trigger special configuration in Program.cs
+        builder.UseEnvironment("Testing");
+        
         builder.ConfigureServices(services =>
         {
-            // Remove the real database context options that were added by the API
-            var descriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(DbContextOptions<PoToolDbContext>));
-            if (descriptor != null)
-            {
-                services.Remove(descriptor);
-            }
-
-            // Add in-memory database for testing
+            // Add in-memory database for testing with a unique name per test
             services.AddDbContext<PoToolDbContext>(options =>
             {
-                options.UseInMemoryDatabase("IntegrationTestDb");
+                options.UseInMemoryDatabase($"IntegrationTestDb_{Guid.NewGuid()}");
             });
 
             // Replace ITfsClient with mock implementation
             services.RemoveAll<ITfsClient>();
             services.AddScoped<ITfsClient, MockTfsClient>();
         });
-
-        // Initialize the database after the host is built
-        builder.UseEnvironment("Testing");
     }
 
     protected override IHost CreateHost(IHostBuilder builder)
