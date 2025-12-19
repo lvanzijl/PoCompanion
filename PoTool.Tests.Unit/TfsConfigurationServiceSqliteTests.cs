@@ -8,7 +8,8 @@ using PoTool.Api.Services;
 namespace PoTool.Tests.Unit;
 
 /// <summary>
-/// Integration tests for TfsConfigurationService using SQLite to verify DateTimeOffset ordering fix.
+/// Unit tests for TfsConfigurationService using actual SQLite provider to verify DateTimeOffset ordering fix.
+/// Uses SQLite database provider (instead of InMemory) to test the actual database behavior.
 /// </summary>
 [TestClass]
 public class TfsConfigurationServiceSqliteTests

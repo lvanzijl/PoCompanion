@@ -35,6 +35,7 @@ public class TfsConfigurationService
     public async Task<TfsConfig?> GetConfigAsync(CancellationToken cancellationToken = default)
     {
         // Use ToListAsync then LINQ to Objects for DateTimeOffset ordering (SQLite compatibility)
+        // Note: TfsConfig typically contains only one record (updated in place), so loading all is acceptable
         var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
         var entity = entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
         if (entity == null) return null;
@@ -96,6 +97,7 @@ public class TfsConfigurationService
     public async Task<TfsConfigEntity?> GetConfigEntityAsync(CancellationToken cancellationToken = default)
     {
         // Use ToListAsync then LINQ to Objects for DateTimeOffset ordering (SQLite compatibility)
+        // Note: TfsConfig typically contains only one record (updated in place), so loading all is acceptable
         var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
         return entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
     }
