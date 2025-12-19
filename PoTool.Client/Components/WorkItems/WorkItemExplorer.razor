@@ -9,10 +9,10 @@
 @inject IWorkItemSyncHubService SyncHubService
 @inject ITreeBuilderService TreeBuilderService
 @inject SettingsService SettingsService
+@inject TfsConfigService TfsConfigService
 @inject ModeIsolatedStateService StateService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
-@inject HttpClient Http
 @inject IDialogService DialogService
 @implements IAsyncDisposable
 
@@ -86,7 +86,7 @@
 
     private async Task InitializeSignalRAsync()
     {
-        _apiBase = Http.BaseAddress?.ToString().TrimEnd('/') ?? NavigationManager.BaseUri.TrimEnd('/');
+        _apiBase = NavigationManager.BaseUri.TrimEnd('/');
         _hubUrl = _apiBase + "/hubs/workitems";
 
         SyncHubService.OnSyncStatusChanged += HandleSyncStatus;
@@ -184,8 +184,8 @@
             _syncMessage = "Requesting sync via HTTP...";
             _syncStatusClass = "status-progress";
 
-            var resp = await Http.PostAsync(_apiBase + "/api/workitems/sync", null);
-            if (resp.IsSuccessStatusCode)
+            var success = await TfsConfigService.RequestSyncAsync();
+            if (success)
             {
                 await LoadWorkItems();
                 _syncMessage = "Sync completed (HTTP)";
@@ -193,7 +193,7 @@
             }
             else
             {
-                _syncMessage = $"Sync request failed (HTTP): {resp.StatusCode}";
+                _syncMessage = "Sync request failed (HTTP)";
                 _syncStatusClass = "status-error";
             }
         }
