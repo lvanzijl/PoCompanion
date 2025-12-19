@@ -89,9 +89,13 @@ public class SettingsSteps
         Assert.IsNotNull(_returnedSettings);
         Assert.AreEqual(expectedCount, _returnedSettings.ConfiguredGoalIds.Count);
     }
-}
 
-public record UpdateSettingsRequest(
-    DataMode DataMode,
-    List<int> ConfiguredGoalIds
-);
+    /// <summary>
+    /// Internal test model for settings update requests.
+    /// Mirrors the API's UpdateSettingsRequest structure.
+    /// </summary>
+    private record UpdateSettingsRequest(
+        DataMode DataMode,
+        List<int> ConfiguredGoalIds
+    );
+}

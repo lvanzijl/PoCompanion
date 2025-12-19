@@ -87,6 +87,6 @@ public class SignalRHubSteps : IDisposable
     public void Dispose()
     {
         _hubConnection?.DisposeAsync().AsTask().Wait();
-        _context.Factory?.Dispose();
+        // Note: Factory and Client disposal is handled by SharedTestState
     }
 }
