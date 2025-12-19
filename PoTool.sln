@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Tests.Blazor", "PoTo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Tests.Integration", "PoTool.Tests.Integration\PoTool.Tests.Integration.csproj", "{31D45ED3-28A9-44E0-BCEC-6C92F41CBB92}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Maui", "PoTool.Maui\PoTool.Maui.csproj", "{04A58957-B63B-475C-B8CA-B853E4C748B1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -111,6 +113,18 @@ Global
 		{31D45ED3-28A9-44E0-BCEC-6C92F41CBB92}.Release|x64.Build.0 = Release|Any CPU
 		{31D45ED3-28A9-44E0-BCEC-6C92F41CBB92}.Release|x86.ActiveCfg = Release|Any CPU
 		{31D45ED3-28A9-44E0-BCEC-6C92F41CBB92}.Release|x86.Build.0 = Release|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Debug|x64.Build.0 = Debug|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Debug|x86.Build.0 = Debug|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Release|x64.ActiveCfg = Release|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Release|x64.Build.0 = Release|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Release|x86.ActiveCfg = Release|Any CPU
+		{04A58957-B63B-475C-B8CA-B853E4C748B1}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

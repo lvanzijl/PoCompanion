@@ -1,0 +1,48 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using PoTool.Client.Layout
+@using PoTool.Client.Pages
+
+<CascadingValue Value="@_errorBoundary">
+    <ErrorBoundary @ref="_errorBoundary">
+        <ChildContent>
+            <Router AppAssembly="@typeof(PoTool.Client.App).Assembly">
+                <Found Context="routeData">
+                    <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+                    <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+                </Found>
+                <NotFound>
+                    <PageTitle>Not found</PageTitle>
+                    <LayoutView Layout="@typeof(MainLayout)">
+                        <p role="alert">Sorry, there's nothing at this address.</p>
+                    </LayoutView>
+                </NotFound>
+            </Router>
+        </ChildContent>
+        <ErrorContent Context="exception">
+            <div class="error-boundary-container">
+                <div class="error-boundary-content">
+                    <h1>⚠️ An error occurred</h1>
+                    <p class="error-message">@exception.Message</p>
+                    <details class="error-details">
+                        <summary>Technical Details</summary>
+                        <pre>@exception.ToString()</pre>
+                    </details>
+                    <button class="btn-retry" @onclick="@(() => _errorBoundary?.Recover())">
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        </ErrorContent>
+    </ErrorBoundary>
+</CascadingValue>
+
+@code {
+    private ErrorBoundary? _errorBoundary;
+
+    protected override void OnParametersSet()
+    {
+        // Reset error boundary on navigation
+        _errorBoundary?.Recover();
+    }
+}
