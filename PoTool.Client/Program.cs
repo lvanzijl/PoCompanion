@@ -28,6 +28,7 @@ builder.Services.AddScoped<IWorkItemSyncHubService, WorkItemSyncHubService>();
 builder.Services.AddScoped<ITreeBuilderService, TreeBuilderService>();
 builder.Services.AddScoped<ICorrelationIdService, CorrelationIdService>();
 builder.Services.AddScoped<SettingsService>();
+builder.Services.AddScoped<TfsConfigService>();
 builder.Services.AddScoped<ModeIsolatedStateService>();
 
 // Add MudBlazor services

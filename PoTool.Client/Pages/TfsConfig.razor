@@ -1,5 +1,6 @@
 @page "/tfsconfig"
-@inject HttpClient Http
+@using PoTool.Client.Services
+@inject TfsConfigService TfsConfigService
 @inject ISnackbar Snackbar
 
 <PageTitle>TFS Configuration</PageTitle>
@@ -106,19 +107,13 @@
     {
         try
         {
-            var apiBase = Http.BaseAddress?.ToString().TrimEnd('/') ?? string.Empty;
-            var response = await Http.GetAsync($"{apiBase}/api/tfsconfig");
-            
-            if (response.IsSuccessStatusCode)
+            var config = await TfsConfigService.GetConfigAsync();
+            if (config != null)
             {
-                var config = await response.Content.ReadFromJsonAsync<TfsConfigResponse>();
-                if (config != null)
-                {
-                    _currentUrl = config.Url ?? string.Empty;
-                    _currentProject = config.Project ?? string.Empty;
-                    _url = _currentUrl;
-                    _project = _currentProject;
-                }
+                _currentUrl = config.Url ?? string.Empty;
+                _currentProject = config.Project ?? string.Empty;
+                _url = _currentUrl;
+                _project = _currentProject;
             }
         }
         catch (Exception ex)
@@ -134,21 +129,11 @@
         _isSaving = true;
         try
         {
-            var apiBase = Http.BaseAddress?.ToString().TrimEnd('/') ?? string.Empty;
-            var payload = new { Url = _url, Project = _project, Pat = _pat };
-            var response = await Http.PostAsJsonAsync($"{apiBase}/api/tfsconfig", payload);
-
-            if (response.IsSuccessStatusCode)
-            {
-                Snackbar.Add("Configuration saved successfully", Severity.Success);
-                _currentUrl = _url;
-                _currentProject = _project;
-                _pat = string.Empty; // Clear PAT after saving
-            }
-            else
-            {
-                Snackbar.Add($"Error saving configuration: {response.StatusCode}", Severity.Error);
-            }
+            await TfsConfigService.SaveConfigAsync(_url, _project, _pat);
+            Snackbar.Add("Configuration saved successfully", Severity.Success);
+            _currentUrl = _url;
+            _currentProject = _project;
+            _pat = string.Empty; // Clear PAT after saving
         }
         catch (Exception ex)
         {
@@ -168,20 +153,12 @@
         try
         {
             // First save the config
-            var apiBase = Http.BaseAddress?.ToString().TrimEnd('/') ?? string.Empty;
-            var payload = new { Url = _url, Project = _project, Pat = _pat };
-            var saveResponse = await Http.PostAsJsonAsync($"{apiBase}/api/tfsconfig", payload);
-
-            if (!saveResponse.IsSuccessStatusCode)
-            {
-                Snackbar.Add("Error saving configuration before testing", Severity.Error);
-                return;
-            }
+            await TfsConfigService.SaveConfigAsync(_url, _project, _pat);
 
             // Then test the connection
-            var testResponse = await Http.GetAsync($"{apiBase}/api/tfsvalidate");
+            var isValid = await TfsConfigService.ValidateConnectionAsync();
 
-            if (testResponse.IsSuccessStatusCode)
+            if (isValid)
             {
                 Snackbar.Add("Connection test successful!", Severity.Success);
                 _currentUrl = _url;
@@ -201,11 +178,5 @@
         {
             _isTesting = false;
         }
-    }
-
-    private class TfsConfigResponse
-    {
-        public string? Url { get; set; }
-        public string? Project { get; set; }
     }
 }
