@@ -17,6 +17,14 @@ public interface ITreeBuilderService
     List<TreeNode> BuildTree(IEnumerable<WorkItemDto> items, Dictionary<int, bool> expandedState);
 
     /// <summary>
+    /// Builds a tree structure from work items with validation issues.
+    /// </summary>
+    /// <param name="items">The work items with validation results.</param>
+    /// <param name="expandedState">Dictionary of node IDs to their expanded state.</param>
+    /// <returns>List of root tree nodes with validation issues populated.</returns>
+    List<TreeNode> BuildTreeWithValidation(IEnumerable<WorkItemWithValidationDto> items, Dictionary<int, bool> expandedState);
+
+    /// <summary>
     /// Filters work items by title, including all ancestors of matches.
     /// </summary>
     /// <param name="items">All work items.</param>

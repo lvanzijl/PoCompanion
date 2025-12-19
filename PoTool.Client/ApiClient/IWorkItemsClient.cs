@@ -36,4 +36,11 @@ public interface IWorkItemsClient
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Work items including goals and all descendants</returns>
     Task<IEnumerable<WorkItemDto>> GetGoalHierarchyAsync(IEnumerable<int> goalIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all cached work items with validation results.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Collection of work items with validation issues</returns>
+    Task<IEnumerable<WorkItemWithValidationDto>> GetAllWithValidationAsync(CancellationToken cancellationToken = default);
 }
