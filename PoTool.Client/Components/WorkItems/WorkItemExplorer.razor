@@ -5,6 +5,7 @@
 @using PoTool.Client.Configuration
 @using PoTool.Client.Components.WorkItems.SubComponents
 @using PoTool.Client.Components.Settings
+@using PoTool.Client.Components.Common
 @using PoTool.Core.Exceptions
 @inject WorkItemService WorkItemService
 @inject IWorkItemSyncHubService SyncHubService
@@ -16,6 +17,7 @@
 @inject IJSRuntime JS
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject ErrorMessageService ErrorMessageService
 @implements IAsyncDisposable
 
 <PageTitle>Work Item Explorer</PageTitle>
@@ -35,6 +37,10 @@
                      OnFilterChanged="@HandleFilterChanged"
                      OnValidationFiltersChanged="@HandleValidationFiltersChanged"
                      OnSettingsRequested="@OpenSettings" />
+
+    <ErrorDisplay ErrorResponse="@_errorResponse" 
+                  Class="mx-4 mt-2"
+                  OnDismiss="ClearError" />
 
     <div class="type-legend">
         @foreach (var type in WorkItemTypeHelper.AllTypes)
@@ -75,6 +81,9 @@
     private string _syncMessage = string.Empty;
     private string _syncStatusClass = string.Empty;
     private DateTimeOffset? _lastSyncTime;
+
+    // Error display
+    private ErrorResponse? _errorResponse;
 
     // Validation filters
     private readonly List<ValidationFilter> _validationFilters = new()
@@ -628,36 +637,27 @@
         await LoadWorkItems();
     }
 
-    private string FormatTfsError(string prefix, Exception ex)
+    private string FormatTfsError(string context, Exception ex)
     {
-        if (ex is TfsAuthenticationException)
-        {
-            return $"{prefix}: Authentication failed. Please check your PAT.";
-        }
-        else if (ex is TfsAuthorizationException)
-        {
-            return $"{prefix}: Access denied. Please check your permissions.";
-        }
-        else if (ex is TfsRateLimitException)
-        {
-            return $"{prefix}: Rate limit exceeded. Please wait before retrying.";
-        }
-        else if (ex is TfsResourceNotFoundException)
-        {
-            return $"{prefix}: Resource not found. Please check configuration.";
-        }
-        else if (ex is TfsException tfsEx)
-        {
-            var statusMsg = tfsEx.StatusCode.HasValue ? $" (HTTP {tfsEx.StatusCode})" : "";
-            return $"{prefix}: {ex.Message}{statusMsg}";
-        }
-        return $"{prefix}: {ex.Message}";
+        var errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        return errorResponse.UserMessage;
     }
 
     private void ShowTfsErrorSnackbar(Exception ex)
     {
         var severity = ex is TfsRateLimitException ? Severity.Warning : Severity.Error;
-        var message = FormatTfsError("TFS operation failed", ex);
-        Snackbar.Add(message, severity);
+        var errorResponse = ErrorMessageService.GetErrorResponse(ex, "TFS operation failed");
+        Snackbar.Add(errorResponse.UserMessage, severity);
+    }
+
+    private void ShowError(Exception ex, string context)
+    {
+        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
     }
 }

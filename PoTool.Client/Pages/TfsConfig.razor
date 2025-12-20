@@ -1,7 +1,9 @@
 @page "/tfsconfig"
 @using PoTool.Client.Services
+@using PoTool.Client.Components.Common
 @using PoTool.Core.Exceptions
 @inject TfsConfigService TfsConfigService
+@inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 
 <PageTitle>TFS Configuration</PageTitle>
@@ -110,16 +112,9 @@
             </MudStack>
         </MudForm>
 
-        @if (!string.IsNullOrEmpty(_errorMessage))
-        {
-            <MudAlert Severity="@_errorSeverity" Class="mt-4" CloseIconClicked="ClearError" ShowCloseIcon="true">
-                @_errorMessage
-                @if (_errorStatusCode.HasValue)
-                {
-                    <br /><small><strong>HTTP Status Code:</strong> @_errorStatusCode.Value</small>
-                }
-            </MudAlert>
-        }
+        <ErrorDisplay ErrorResponse="@_errorResponse" 
+                      Class="mt-4"
+                      OnDismiss="ClearError" />
 
         @if (!string.IsNullOrEmpty(_currentUrl))
         {
@@ -159,9 +154,7 @@
     private DateTimeOffset? _lastValidated;
 
     // Error display
-    private string _errorMessage = string.Empty;
-    private Severity _errorSeverity = Severity.Error;
-    private int? _errorStatusCode;
+    private ErrorResponse? _errorResponse;
 
     protected override async Task OnInitializedAsync()
     {
@@ -189,7 +182,7 @@
         }
         catch (Exception ex)
         {
-            ShowError($"Error loading configuration: {ex.Message}", ex);
+            ShowError(ex, "Error loading configuration");
         }
     }
 
@@ -210,7 +203,7 @@
         }
         catch (Exception ex)
         {
-            ShowError($"Error saving configuration: {ex.Message}", ex);
+            ShowError(ex, "Error saving configuration");
         }
         finally
         {
@@ -242,12 +235,17 @@
             }
             else
             {
-                ShowError("Connection test failed. Please check your credentials and network connectivity.", null);
+                _errorResponse = new ErrorResponse
+                {
+                    UserMessage = "Connection test failed.",
+                    Suggestion = "Please check your credentials and network connectivity."
+                };
+                StateHasChanged();
             }
         }
         catch (Exception ex)
         {
-            ShowError($"Error testing connection: {ex.Message}", ex);
+            ShowError(ex, "Error testing connection");
         }
         finally
         {
@@ -255,48 +253,14 @@
         }
     }
 
-    private void ShowError(string message, Exception? ex)
+    private void ShowError(Exception ex, string context)
     {
-        _errorMessage = message;
-        _errorSeverity = Severity.Error;
-        _errorStatusCode = null;
-
-        if (ex is TfsAuthenticationException authEx)
-        {
-            _errorMessage = "Authentication failed. Please check your Personal Access Token (PAT) and ensure it has not expired.";
-            _errorStatusCode = authEx.StatusCode;
-        }
-        else if (ex is TfsAuthorizationException authzEx)
-        {
-            _errorMessage = "Authorization failed. You do not have permission to access this TFS resource. Please check your project permissions.";
-            _errorStatusCode = authzEx.StatusCode;
-        }
-        else if (ex is TfsRateLimitException rateLimitEx)
-        {
-            _errorMessage = "TFS rate limit exceeded. Please wait a moment before trying again.";
-            _errorStatusCode = rateLimitEx.StatusCode;
-        }
-        else if (ex is TfsResourceNotFoundException notFoundEx)
-        {
-            _errorMessage = "TFS resource not found. Please verify your URL and project name are correct.";
-            _errorStatusCode = notFoundEx.StatusCode;
-        }
-        else if (ex is TfsException tfsEx)
-        {
-            _errorMessage = $"TFS error: {tfsEx.Message}";
-            _errorStatusCode = tfsEx.StatusCode;
-        }
-        else if (ex is HttpRequestException httpEx)
-        {
-            _errorMessage = $"Network error: {httpEx.Message}. Please check your connection and TFS URL.";
-        }
-
+        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
         StateHasChanged();
     }
 
     private void ClearError()
     {
-        _errorMessage = string.Empty;
-        _errorStatusCode = null;
+        _errorResponse = null;
     }
 }
