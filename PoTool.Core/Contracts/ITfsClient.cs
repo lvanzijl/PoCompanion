@@ -1,4 +1,5 @@
 using PoTool.Core.WorkItems;
+using PoTool.Core.PullRequests;
 
 namespace PoTool.Core.Contracts;
 
@@ -22,4 +23,56 @@ public interface ITfsClient
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if connection is valid, false otherwise.</returns>
     Task<bool> ValidateConnectionAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves pull requests from TFS/Azure DevOps.
+    /// </summary>
+    /// <param name="repositoryName">Optional repository name to filter by.</param>
+    /// <param name="fromDate">Optional start date for filtering pull requests.</param>
+    /// <param name="toDate">Optional end date for filtering pull requests.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of pull request DTOs.</returns>
+    Task<IEnumerable<PullRequestDto>> GetPullRequestsAsync(
+        string? repositoryName = null,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves iterations for a specific pull request.
+    /// </summary>
+    /// <param name="pullRequestId">The pull request ID.</param>
+    /// <param name="repositoryName">The repository name.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of pull request iteration DTOs.</returns>
+    Task<IEnumerable<PullRequestIterationDto>> GetPullRequestIterationsAsync(
+        int pullRequestId,
+        string repositoryName,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves comments for a specific pull request.
+    /// </summary>
+    /// <param name="pullRequestId">The pull request ID.</param>
+    /// <param name="repositoryName">The repository name.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of pull request comment DTOs.</returns>
+    Task<IEnumerable<PullRequestCommentDto>> GetPullRequestCommentsAsync(
+        int pullRequestId,
+        string repositoryName,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves file changes for a specific pull request iteration.
+    /// </summary>
+    /// <param name="pullRequestId">The pull request ID.</param>
+    /// <param name="repositoryName">The repository name.</param>
+    /// <param name="iterationId">The iteration ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of pull request file change DTOs.</returns>
+    Task<IEnumerable<PullRequestFileChangeDto>> GetPullRequestFileChangesAsync(
+        int pullRequestId,
+        string repositoryName,
+        int iterationId,
+        CancellationToken cancellationToken = default);
 }

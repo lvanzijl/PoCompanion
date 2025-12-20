@@ -78,9 +78,11 @@ public static class ApiServiceCollectionExtensions
             services.AddScoped<IWorkItemRepository, WorkItemRepository>();
         }
         services.AddScoped<ISettingsRepository, SettingsRepository>();
+        services.AddScoped<IPullRequestRepository, PullRequestRepository>();
 
-        // Register mock data provider
+        // Register mock data providers
         services.AddSingleton<MockDataProvider>();
+        services.AddSingleton<MockPullRequestDataProvider>();
 
         // Register validators
         services.AddScoped<WorkItemParentProgressValidator>();

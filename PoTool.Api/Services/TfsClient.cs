@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
+using PoTool.Core.PullRequests;
 using PoTool.Api.Persistence.Entities;
 
 namespace PoTool.Api.Services;
@@ -157,5 +158,45 @@ public class TfsClient : ITfsClient
             _logger.LogError(ex, "Error fetching work items for areaPath={AreaPath}", areaPath);
             throw;
         }
+    }
+
+    // Pull Request methods - placeholder implementations
+    // These will be implemented to call Azure DevOps Git API when needed
+    public Task<IEnumerable<PullRequestDto>> GetPullRequestsAsync(
+        string? repositoryName = null,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogWarning("GetPullRequestsAsync not yet implemented - returning empty collection");
+        return Task.FromResult(Enumerable.Empty<PullRequestDto>());
+    }
+
+    public Task<IEnumerable<PullRequestIterationDto>> GetPullRequestIterationsAsync(
+        int pullRequestId,
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogWarning("GetPullRequestIterationsAsync not yet implemented - returning empty collection");
+        return Task.FromResult(Enumerable.Empty<PullRequestIterationDto>());
+    }
+
+    public Task<IEnumerable<PullRequestCommentDto>> GetPullRequestCommentsAsync(
+        int pullRequestId,
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogWarning("GetPullRequestCommentsAsync not yet implemented - returning empty collection");
+        return Task.FromResult(Enumerable.Empty<PullRequestCommentDto>());
+    }
+
+    public Task<IEnumerable<PullRequestFileChangeDto>> GetPullRequestFileChangesAsync(
+        int pullRequestId,
+        string repositoryName,
+        int iterationId,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogWarning("GetPullRequestFileChangesAsync not yet implemented - returning empty collection");
+        return Task.FromResult(Enumerable.Empty<PullRequestFileChangeDto>());
     }
 }

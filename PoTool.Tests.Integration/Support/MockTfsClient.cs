@@ -1,5 +1,6 @@
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
+using PoTool.Core.PullRequests;
 
 namespace PoTool.Tests.Integration.Support;
 
@@ -81,5 +82,40 @@ public class MockTfsClient : ITfsClient
     public void ClearMockWorkItems()
     {
         _mockWorkItems.Clear();
+    }
+
+    // Pull Request methods - return empty collections for integration tests
+    public Task<IEnumerable<PullRequestDto>> GetPullRequestsAsync(
+        string? repositoryName = null,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(Enumerable.Empty<PullRequestDto>());
+    }
+
+    public Task<IEnumerable<PullRequestIterationDto>> GetPullRequestIterationsAsync(
+        int pullRequestId,
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(Enumerable.Empty<PullRequestIterationDto>());
+    }
+
+    public Task<IEnumerable<PullRequestCommentDto>> GetPullRequestCommentsAsync(
+        int pullRequestId,
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(Enumerable.Empty<PullRequestCommentDto>());
+    }
+
+    public Task<IEnumerable<PullRequestFileChangeDto>> GetPullRequestFileChangesAsync(
+        int pullRequestId,
+        string repositoryName,
+        int iterationId,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(Enumerable.Empty<PullRequestFileChangeDto>());
     }
 }

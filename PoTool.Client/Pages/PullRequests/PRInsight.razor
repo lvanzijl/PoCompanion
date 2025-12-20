@@ -1,0 +1,285 @@
+@page "/prinsight"
+@using PoTool.Client.Services
+@using PoTool.Client.Models
+@inject PullRequestService PullRequestService
+@inject ISnackbar Snackbar
+
+<PageTitle>PR Insight Dashboard</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">
+        <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" /> PR Insight Dashboard
+    </MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+        Pull request metrics and analytics for better team insights
+    </MudText>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+    }
+    else
+    {
+        <!-- Top Metrics Cards -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Total PRs</MudText>
+                                <MudText Typo="Typo.h4">@_metrics.Count()</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.CallMerge" Size="Size.Large" Color="Color.Primary" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Avg Time Open</MudText>
+                                <MudText Typo="Typo.h4">@GetAverageTimeOpen()</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Large" Color="Color.Info" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Avg Iterations</MudText>
+                                <MudText Typo="Typo.h4">@GetAverageIterations()</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Loop" Size="Size.Large" Color="Color.Warning" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Avg Files/PR</MudText>
+                                <MudText Typo="Typo.h4">@GetAverageFiles()</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.InsertDriveFile" Size="Size.Large" Color="Color.Success" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Tabs for different views -->
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+            <MudTabPanel Text="Overview" Icon="@Icons.Material.Filled.Dashboard">
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudPaper Elevation="1" Class="pa-4">
+                            <MudText Typo="Typo.h6" GutterBottom="true">PR Status Distribution</MudText>
+                            <MudChart ChartType="ChartType.Donut" 
+                                      Width="300px" 
+                                      Height="300px"
+                                      InputData="@GetStatusData()" 
+                                      InputLabels="@GetStatusLabels()">
+                            </MudChart>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudPaper Elevation="1" Class="pa-4">
+                            <MudText Typo="Typo.h6" GutterBottom="true">Time Open Distribution</MudText>
+                            <MudChart ChartType="ChartType.Bar" 
+                                      Width="100%" 
+                                      Height="300px"
+                                      InputData="@GetTimeOpenData()" 
+                                      InputLabels="@GetTimeOpenLabels()"
+                                      ChartOptions="@_barChartOptions">
+                            </MudChart>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudTabPanel>
+
+            <MudTabPanel Text="By User" Icon="@Icons.Material.Filled.People">
+                <MudPaper Elevation="1" Class="pa-4">
+                    <MudText Typo="Typo.h6" GutterBottom="true">PRs by User</MudText>
+                    <MudChart ChartType="ChartType.Bar" 
+                              Width="100%" 
+                              Height="400px"
+                              InputData="@GetPRsByUserData()" 
+                              InputLabels="@GetUserLabels()"
+                              ChartOptions="@_barChartOptions">
+                    </MudChart>
+                </MudPaper>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Details" Icon="@Icons.Material.Filled.List">
+                <MudDataGrid Items="@_metrics" 
+                             Filterable="true" 
+                             SortMode="SortMode.Multiple"
+                             Dense="true"
+                             Hover="true">
+                    <Columns>
+                        <PropertyColumn Property="x => x.Title" Title="Title" />
+                        <PropertyColumn Property="x => x.CreatedBy" Title="Author" />
+                        <PropertyColumn Property="x => x.Status" Title="Status">
+                            <CellTemplate>
+                                <MudChip Color="@GetStatusColor(context.Item.Status)" Size="Size.Small">
+                                    @context.Item.Status
+                                </MudChip>
+                            </CellTemplate>
+                        </PropertyColumn>
+                        <PropertyColumn Property="x => x.TotalTimeOpen" Title="Time Open" Format="d\d\ hh\h\ mm\m" />
+                        <PropertyColumn Property="x => x.IterationCount" Title="Iterations" />
+                        <PropertyColumn Property="x => x.TotalFileCount" Title="Files" />
+                        <PropertyColumn Property="x => x.CommentCount" Title="Comments" />
+                    </Columns>
+                </MudDataGrid>
+            </MudTabPanel>
+        </MudTabs>
+
+        <!-- Sync Button -->
+        <MudFab Color="Color.Primary" 
+                StartIcon="@Icons.Material.Filled.Sync" 
+                Label="Sync PRs" 
+                Class="mt-4"
+                OnClick="@SyncPullRequests"
+                Disabled="@_isSyncing" />
+    }
+</MudContainer>
+
+@code {
+    private List<PullRequestMetricsDto> _metrics = new();
+    private bool _isLoading = true;
+    private bool _isSyncing = false;
+
+    private ChartOptions _barChartOptions = new()
+    {
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 10
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        try
+        {
+            var metrics = await PullRequestService.GetMetricsAsync();
+            _metrics = metrics.ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading PR metrics: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SyncPullRequests()
+    {
+        _isSyncing = true;
+        try
+        {
+            var count = await PullRequestService.SyncAsync();
+            Snackbar.Add($"Synced {count} pull requests", Severity.Success);
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error syncing PRs: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSyncing = false;
+        }
+    }
+
+    // Metrics calculations
+    private string GetAverageTimeOpen()
+    {
+        if (!_metrics.Any()) return "0d";
+        var avgDays = _metrics.Average(m => m.TotalTimeOpen.TotalDays);
+        return $"{avgDays:F1}d";
+    }
+
+    private string GetAverageIterations()
+    {
+        if (!_metrics.Any()) return "0";
+        var avg = _metrics.Average(m => m.IterationCount);
+        return avg.ToString("F1");
+    }
+
+    private string GetAverageFiles()
+    {
+        if (!_metrics.Any()) return "0";
+        var avg = _metrics.Average(m => m.TotalFileCount);
+        return avg.ToString("F0");
+    }
+
+    // Chart data methods
+    private double[] GetStatusData()
+    {
+        var grouped = _metrics.GroupBy(m => m.Status).Select(g => (double)g.Count()).ToArray();
+        return grouped.Length > 0 ? grouped : new[] { 0.0 };
+    }
+
+    private string[] GetStatusLabels()
+    {
+        var labels = _metrics.GroupBy(m => m.Status).Select(g => g.Key).ToArray();
+        return labels.Length > 0 ? labels : new[] { "No data" };
+    }
+
+    private double[] GetTimeOpenData()
+    {
+        return _metrics.OrderByDescending(m => m.TotalTimeOpen)
+            .Take(10)
+            .Select(m => m.TotalTimeOpen.TotalDays)
+            .ToArray();
+    }
+
+    private string[] GetTimeOpenLabels()
+    {
+        return _metrics.OrderByDescending(m => m.TotalTimeOpen)
+            .Take(10)
+            .Select(m => m.Title.Length > 30 ? m.Title.Substring(0, 27) + "..." : m.Title)
+            .ToArray();
+    }
+
+    private double[] GetPRsByUserData()
+    {
+        return _metrics.GroupBy(m => m.CreatedBy)
+            .Select(g => (double)g.Count())
+            .ToArray();
+    }
+
+    private string[] GetUserLabels()
+    {
+        return _metrics.GroupBy(m => m.CreatedBy)
+            .Select(g => g.Key)
+            .ToArray();
+    }
+
+    private Color GetStatusColor(string status)
+    {
+        return status.ToLower() switch
+        {
+            "completed" => Color.Success,
+            "active" => Color.Info,
+            "abandoned" => Color.Error,
+            _ => Color.Default
+        };
+    }
+}
