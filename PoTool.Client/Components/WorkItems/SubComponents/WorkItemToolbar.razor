@@ -19,7 +19,7 @@
                     <span>Full Sync</span>
                 }
             </button>
-            <button class="btn-sync-incremental" @onclick="OnIncrementalSyncClicked" disabled="@IsSyncing">
+            <button class="btn-sync" @onclick="OnIncrementalSyncClicked" disabled="@IsSyncing">
                 @if (IsSyncing)
                 {
                     <span>Syncing...</span>
