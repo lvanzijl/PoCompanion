@@ -1,0 +1,75 @@
+@* Reusable feature card component for displaying application features *@
+
+<MudItem xs="12" sm="6" md="4">
+    <MudCard Elevation="2" Class="pa-4" Style="height: 100%">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icon" Color="@IconColor" Size="Size.Large" />
+                    <MudText Typo="Typo.h6">@Title</MudText>
+                </MudStack>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudText>@Description</MudText>
+        </MudCardContent>
+        <MudCardActions>
+            <MudButton Variant="Variant.Text" 
+                       Color="@ButtonColor" 
+                       Href="@Href"
+                       Disabled="@IsDisabled">
+                @ButtonText
+            </MudButton>
+        </MudCardActions>
+    </MudCard>
+</MudItem>
+
+@code {
+    /// <summary>
+    /// The icon to display in the card header.
+    /// </summary>
+    [Parameter]
+    public string Icon { get; set; } = Icons.Material.Filled.Info;
+
+    /// <summary>
+    /// The color of the icon.
+    /// </summary>
+    [Parameter]
+    public Color IconColor { get; set; } = Color.Primary;
+
+    /// <summary>
+    /// The title of the feature card.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The description text displayed in the card content.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The text displayed on the action button.
+    /// </summary>
+    [Parameter]
+    public string ButtonText { get; set; } = "Learn More";
+
+    /// <summary>
+    /// The color of the action button.
+    /// </summary>
+    [Parameter]
+    public Color ButtonColor { get; set; } = Color.Primary;
+
+    /// <summary>
+    /// The URL to navigate to when the button is clicked.
+    /// </summary>
+    [Parameter]
+    public string Href { get; set; } = "#";
+
+    /// <summary>
+    /// Whether the button is disabled.
+    /// </summary>
+    [Parameter]
+    public bool IsDisabled { get; set; } = false;
+}
