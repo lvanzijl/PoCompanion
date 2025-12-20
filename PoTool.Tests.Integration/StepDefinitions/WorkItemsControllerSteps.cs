@@ -233,4 +233,33 @@ public class WorkItemsControllerSteps
         Assert.IsNotNull(workItem, $"Work item {tfsId} not found");
         Assert.AreEqual(0, workItem.ValidationIssues.Count, "Expected no validation issues");
     }
+
+    [When(@"I request all goals from ""(.*)""")]
+    public async Task WhenIRequestAllGoalsFrom(string endpoint)
+    {
+        _response = await _client.GetAsync(endpoint);
+        _scenarioContext["Response"] = _response;
+        
+        if (_response.StatusCode == HttpStatusCode.OK)
+        {
+            _workItems = await _response.Content.ReadFromJsonAsync<List<WorkItemDto>>();
+        }
+    }
+
+    [Then(@"I should receive (\d+) work items")]
+    public void ThenIShouldReceiveExactlyWorkItems(int expectedCount)
+    {
+        Assert.IsNotNull(_workItems);
+        Assert.AreEqual(expectedCount, _workItems.Count, 
+            $"Expected exactly {expectedCount} work items, but got {_workItems.Count}");
+    }
+
+    [Then(@"all returned work items should be of type ""(.*)""")]
+    public void ThenAllReturnedWorkItemsShouldBeOfType(string expectedType)
+    {
+        Assert.IsNotNull(_workItems);
+        Assert.IsTrue(_workItems.Count > 0, "Expected at least one work item");
+        Assert.IsTrue(_workItems.All(w => w.Type == expectedType),
+            $"Expected all work items to be of type {expectedType}");
+    }
 }

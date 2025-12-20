@@ -61,3 +61,16 @@ Scenario: Get valid work items hierarchy with validation
     When I request all work items with validation from "/api/workitems/validated"
     Then the response should be OK
     And work item 3001 should have no validation issues
+
+Scenario: Get all goals from controller
+    Given the application is running
+    And work items exist in the database
+        | TfsId | Title          | Type      | State  |
+        | 4000  | Goal One       | Goal      | Active |
+        | 4001  | Goal Two       | Goal      | New    |
+        | 4002  | Test Objective | Objective | Active |
+        | 4003  | Test Epic      | Epic      | New    |
+    When I request all goals from "/api/workitems/goals/all"
+    Then the response should be OK
+    And I should receive at least 2 work items
+    And all returned work items should be of type "Goal"

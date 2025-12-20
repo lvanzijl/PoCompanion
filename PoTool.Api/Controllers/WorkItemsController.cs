@@ -107,6 +107,24 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets all goals (work items of type Goal).
+    /// </summary>
+    [HttpGet("goals/all")]
+    public async Task<ActionResult<IEnumerable<WorkItemDto>>> GetAllGoals(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var goals = await _mediator.Send(new GetAllGoalsQuery(), cancellationToken);
+            return Ok(goals);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving all goals");
+            return StatusCode(500, "Error retrieving all goals");
+        }
+    }
+
+    /// <summary>
     /// Gets work items for specific Goal IDs (full hierarchy from Goals down to Tasks).
     /// </summary>
     [HttpGet("goals")]

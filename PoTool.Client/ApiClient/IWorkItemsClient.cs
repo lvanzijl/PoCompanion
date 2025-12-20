@@ -30,6 +30,13 @@ public interface IWorkItemsClient
     Task<WorkItemDto?> GetByTfsIdAsync(int tfsId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets all goals (work items of type Goal).
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Collection of all goals</returns>
+    Task<IEnumerable<WorkItemDto>> GetAllGoalsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets work items for specific Goal IDs (full hierarchy).
     /// </summary>
     /// <param name="goalIds">List of Goal IDs</param>

@@ -44,6 +44,14 @@ public class WorkItemService
     }
 
     /// <summary>
+    /// Gets all goals (work items of type Goal).
+    /// </summary>
+    public async Task<IEnumerable<WorkItemDto>> GetAllGoalsAsync()
+    {
+        return await _client.GetAllGoalsAsync();
+    }
+
+    /// <summary>
     /// Gets work items for specific Goal IDs (full hierarchy).
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetGoalHierarchyAsync(List<int> goalIds)
