@@ -2,7 +2,9 @@
 @using PoTool.Client.Services
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Models
+@using PoTool.Client.Components.Common
 @inject PullRequestService PullRequestService
+@inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 
 <PageTitle>PR Insight Dashboard</PageTitle>
@@ -36,6 +38,9 @@
     }
     else
     {
+        <ErrorDisplay ErrorResponse="@_errorResponse" 
+                      Class="mb-4"
+                      OnDismiss="ClearError" />
         <!-- Top Metrics Cards -->
         <MudGrid Class="mb-6">
             <MudItem xs="12" sm="6" md="3">
@@ -202,6 +207,7 @@
     private bool _isLoading = true;
     private bool _isSyncing = false;
     private DateRange? _dateRange;
+    private ErrorResponse? _errorResponse;
 
     private ChartOptions _barChartOptions = new()
     {
@@ -219,13 +225,14 @@
         _isLoading = true;
         try
         {
+            ClearError();
             var metrics = await PullRequestService.GetMetricsAsync();
             _allMetrics = metrics.ToList();
             _metrics = _allMetrics;
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading PR metrics: {ex.Message}", Severity.Error);
+            ShowError(ex, "Error loading pull request metrics");
         }
         finally
         {
@@ -270,18 +277,30 @@
         _isSyncing = true;
         try
         {
+            ClearError();
             var count = await PullRequestService.SyncAsync();
-            Snackbar.Add($"Synced {count} pull requests", Severity.Success);
+            Snackbar.Add($"Synced {count} pull requests successfully", Severity.Success);
             await LoadData();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error syncing PRs: {ex.Message}", Severity.Error);
+            ShowError(ex, "Error syncing pull requests");
         }
         finally
         {
             _isSyncing = false;
         }
+    }
+
+    private void ShowError(Exception ex, string context)
+    {
+        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
     }
 
     // Metrics calculations
