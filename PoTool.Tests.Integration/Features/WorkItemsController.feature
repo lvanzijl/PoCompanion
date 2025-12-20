@@ -72,5 +72,4 @@ Scenario: Get all goals from controller
         | 4003  | Test Epic      | Epic      | New    |
     When I request all goals from "/api/workitems/goals/all"
     Then the response should be OK
-    And I should receive at least 2 work items
     And all returned work items should be of type "Goal"

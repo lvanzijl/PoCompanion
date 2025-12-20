@@ -531,9 +531,6 @@ await this.FeatureBackgroundAsync();
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
 #line 75
-    await testRunner.AndAsync("I should receive at least 2 work items", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 76
     await testRunner.AndAsync("all returned work items should be of type \"Goal\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }

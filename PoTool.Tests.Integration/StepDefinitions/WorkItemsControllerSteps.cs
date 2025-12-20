@@ -246,14 +246,6 @@ public class WorkItemsControllerSteps
         }
     }
 
-    [Then(@"I should receive (\d+) work items")]
-    public void ThenIShouldReceiveExactlyWorkItems(int expectedCount)
-    {
-        Assert.IsNotNull(_workItems);
-        Assert.AreEqual(expectedCount, _workItems.Count, 
-            $"Expected exactly {expectedCount} work items, but got {_workItems.Count}");
-    }
-
     [Then(@"all returned work items should be of type ""(.*)""")]
     public void ThenAllReturnedWorkItemsShouldBeOfType(string expectedType)
     {

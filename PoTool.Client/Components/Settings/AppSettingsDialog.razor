@@ -37,7 +37,7 @@
                 }
                 else
                 {
-                    <MudSelect T="ApiClient.WorkItemDto" 
+                    <MudSelect T="WorkItemDto" 
                                Label="Select Goals" 
                                MultiSelection="true"
                                @bind-SelectedValues="_selectedGoals"
@@ -102,8 +102,8 @@
     private bool _loadingGoals = false;
     private DataMode _dataMode = DataMode.Mock;
     private string _errorMessage = string.Empty;
-    private List<ApiClient.WorkItemDto> _availableGoals = new();
-    private IEnumerable<ApiClient.WorkItemDto> _selectedGoals = new List<ApiClient.WorkItemDto>();
+    private List<WorkItemDto> _availableGoals = new();
+    private IEnumerable<WorkItemDto> _selectedGoals = new List<WorkItemDto>();
 
     protected override async Task OnInitializedAsync()
     {
