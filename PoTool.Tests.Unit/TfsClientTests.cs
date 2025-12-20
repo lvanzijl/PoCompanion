@@ -17,6 +17,7 @@ public class TfsClientTests
     private Mock<HttpMessageHandler> _httpMessageHandlerMock = null!;
     private HttpClient _httpClient = null!;
     private TfsConfigurationService _configService = null!;
+    private TfsAuthenticationProvider _authProvider = null!;
     private PoToolDbContext _dbContext = null!;
     private Mock<ILogger<TfsClient>> _loggerMock = null!;
     private TfsClient _client = null!;
@@ -41,9 +42,10 @@ public class TfsClientTests
         var configLogger = new Mock<ILogger<TfsConfigurationService>>();
         _configService = new TfsConfigurationService(_dbContext, dataProtectionProvider, configLogger.Object);
         
+        _authProvider = new TfsAuthenticationProvider();
         _loggerMock = new Mock<ILogger<TfsClient>>();
         
-        _client = new TfsClient(_httpClient, _configService, _loggerMock.Object);
+        _client = new TfsClient(_httpClient, _configService, _authProvider, _loggerMock.Object);
     }
 
     [TestCleanup]

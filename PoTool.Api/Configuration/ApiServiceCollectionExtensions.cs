@@ -100,6 +100,7 @@ public static class ApiServiceCollectionExtensions
         // Register TFS configuration and client
         services.AddDataProtection();
         services.AddScoped<TfsConfigurationService>();
+        services.AddScoped<TfsAuthenticationProvider>();
         services.AddHttpClient<ITfsClient, TfsClient>();
 
         // Register background services

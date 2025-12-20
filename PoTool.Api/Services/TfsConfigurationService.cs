@@ -101,4 +101,12 @@ public class TfsConfigurationService
         var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
         return entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
     }
+
+    public async Task SaveConfigEntityAsync(TfsConfigEntity entity, CancellationToken cancellationToken = default)
+    {
+        entity.UpdatedAt = DateTimeOffset.UtcNow;
+        _db.TfsConfigs.Update(entity);
+        await _db.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation("TFS configuration entity updated");
+    }
 }
