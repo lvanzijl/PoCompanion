@@ -9,7 +9,10 @@
     }
     else if (!TreeRoots.Any())
     {
-        <p>No work items found. Click "Pull & Cache Work Items" to retrieve data.</p>
+        <div class="empty-state pa-4">
+            <p class="mb-2"><strong>No work items found</strong></p>
+            <p>Click "Full Sync" to retrieve work items from Azure DevOps, or check your filter settings.</p>
+        </div>
     }
     else
     {

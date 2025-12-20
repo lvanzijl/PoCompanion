@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using PoTool.Client.Components.Common
 @inject NavigationManager Navigation
 
 <PageTitle>PO Companion</PageTitle>
@@ -12,81 +13,42 @@
     </MudText>
 
     <MudGrid Spacing="4" Justify="Justify.Center">
-        <MudItem xs="12" sm="6" md="4">
-            <MudCard Elevation="2" Class="pa-4" Style="height: 100%">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.List" Color="Color.Primary" Size="Size.Large" />
-                            <MudText Typo="Typo.h6">Work Items</MudText>
-                        </MudStack>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudText>View and manage your work items in a hierarchical tree structure with real-time sync.</MudText>
-                </MudCardContent>
-                <MudCardActions>
-                    <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/workitems">Go to Work Items</MudButton>
-                </MudCardActions>
-            </MudCard>
-        </MudItem>
+        <FeatureCard 
+            Icon="@Icons.Material.Filled.List"
+            IconColor="Color.Primary"
+            Title="Work Items"
+            Description="View and manage your work items in a hierarchical tree structure with real-time sync."
+            ButtonText="Go to Work Items"
+            ButtonColor="Color.Primary"
+            Href="/workitems" />
 
-        <MudItem xs="12" sm="6" md="4">
-            <MudCard Elevation="2" Class="pa-4" Style="height: 100%">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.Insights" Color="Color.Tertiary" Size="Size.Large" />
-                            <MudText Typo="Typo.h6">PR Insight</MudText>
-                        </MudStack>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudText>Analyze pull request metrics, track iteration patterns, and identify bottlenecks with visual dashboards.</MudText>
-                </MudCardContent>
-                <MudCardActions>
-                    <MudButton Variant="Variant.Text" Color="Color.Tertiary" Href="/pr-insights">Go to PR Insights</MudButton>
-                </MudCardActions>
-            </MudCard>
-        </MudItem>
+        <FeatureCard 
+            Icon="@Icons.Material.Filled.Insights"
+            IconColor="Color.Tertiary"
+            Title="PR Insight"
+            Description="Analyze pull request metrics, track iteration patterns, and identify bottlenecks with visual dashboards."
+            ButtonText="Go to PR Insights"
+            ButtonColor="Color.Tertiary"
+            Href="/pr-insights" />
 
-        <MudItem xs="12" sm="6" md="4">
-            <MudCard Elevation="2" Class="pa-4" Style="height: 100%">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Secondary" Size="Size.Large" />
-                            <MudText Typo="Typo.h6">Configuration</MudText>
-                        </MudStack>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudText>Configure your Azure DevOps connection settings and Personal Access Token.</MudText>
-                </MudCardContent>
-                <MudCardActions>
-                    <MudButton Variant="Variant.Text" Color="Color.Secondary" Href="/tfsconfig">Go to Config</MudButton>
-                </MudCardActions>
-            </MudCard>
-        </MudItem>
+        <FeatureCard 
+            Icon="@Icons.Material.Filled.Settings"
+            IconColor="Color.Secondary"
+            Title="Configuration"
+            Description="Configure your Azure DevOps connection settings and Personal Access Token."
+            ButtonText="Go to Config"
+            ButtonColor="Color.Secondary"
+            Href="/tfsconfig" />
 
-        <MudItem xs="12" sm="6" md="4">
-            <MudCard Elevation="2" Class="pa-4" Style="height: 100%">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.Sync" Color="Color.Info" Size="Size.Large" />
-                            <MudText Typo="Typo.h6">Real-time Sync</MudText>
-                        </MudStack>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudText>Automatically synchronize work items with Azure DevOps via SignalR.</MudText>
-                </MudCardContent>
-                <MudCardActions>
-                    <MudButton Variant="Variant.Text" Color="Color.Info" Disabled="true">Coming Soon</MudButton>
-                </MudCardActions>
-            </MudCard>
-        </MudItem>
+        <FeatureCard 
+            Icon="@Icons.Material.Filled.Sync"
+            IconColor="Color.Info"
+            Title="Real-time Sync"
+            Description="Automatically synchronize work items with Azure DevOps via SignalR."
+            ButtonText="Coming Soon"
+            ButtonColor="Color.Info"
+            Href="#"
+            IsDisabled="true" />
     </MudGrid>
 
     <MudPaper Elevation="0" Class="pa-6 mt-8">

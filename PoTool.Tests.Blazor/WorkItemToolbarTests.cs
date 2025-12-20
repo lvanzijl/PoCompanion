@@ -21,8 +21,8 @@ public class WorkItemToolbarTests : BunitTestContext
 
         // Assert
         Assert.IsNotNull(cut);
-        Assert.IsTrue(cut.Markup.Contains("Work Item Explorer"));
-        Assert.IsTrue(cut.Markup.Contains("Pull & Cache"));
+        Assert.Contains("Work Item Explorer", cut.Markup);
+        Assert.Contains("Full Sync", cut.Markup);
     }
 
     [TestMethod]
