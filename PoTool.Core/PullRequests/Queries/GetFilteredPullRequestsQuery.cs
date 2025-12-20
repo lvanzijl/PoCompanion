@@ -1,0 +1,14 @@
+using Mediator;
+
+namespace PoTool.Core.PullRequests.Queries;
+
+/// <summary>
+/// Query to retrieve filtered pull requests based on various criteria.
+/// </summary>
+public sealed record GetFilteredPullRequestsQuery(
+    string? IterationPath = null,
+    string? CreatedBy = null,
+    DateTimeOffset? FromDate = null,
+    DateTimeOffset? ToDate = null,
+    string? Status = null
+) : IQuery<IEnumerable<PullRequestDto>>;
