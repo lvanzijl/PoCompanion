@@ -36,7 +36,8 @@ public class WorkItemDetailPanelTests : BunitTestContext
             IterationPath: "Sprint 1",
             State: "Active",
             JsonPayload: "{}",
-            RetrievedAt: DateTimeOffset.Now
+            RetrievedAt: DateTimeOffset.Now,
+                Effort: null
         );
 
         // Act
@@ -63,7 +64,8 @@ public class WorkItemDetailPanelTests : BunitTestContext
             IterationPath: "Sprint 1",
             State: "New",
             JsonPayload: "{}",
-            RetrievedAt: DateTimeOffset.Now
+            RetrievedAt: DateTimeOffset.Now,
+                Effort: null
         );
 
         // Act
@@ -88,7 +90,8 @@ public class WorkItemDetailPanelTests : BunitTestContext
             IterationPath: "Release 1",
             State: "Active",
             JsonPayload: "{}",
-            RetrievedAt: DateTimeOffset.Now
+            RetrievedAt: DateTimeOffset.Now,
+                Effort: null
         );
 
         // Act

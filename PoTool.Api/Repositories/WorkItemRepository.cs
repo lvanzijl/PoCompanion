@@ -96,7 +96,8 @@ public class WorkItemRepository : IWorkItemRepository
             IterationPath: entity.IterationPath,
             State: entity.State,
             JsonPayload: entity.JsonPayload,
-            RetrievedAt: entity.RetrievedAt
+            RetrievedAt: entity.RetrievedAt,
+            Effort: entity.Effort
         );
     }
 

@@ -12,5 +12,6 @@ public sealed record WorkItemDto(
     string IterationPath,
     string State,
     string JsonPayload,
-    DateTimeOffset RetrievedAt
+    DateTimeOffset RetrievedAt,
+    int? Effort
 );

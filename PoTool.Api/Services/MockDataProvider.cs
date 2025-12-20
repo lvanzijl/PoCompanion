@@ -25,7 +25,8 @@ public class MockDataProvider
             IterationPath: "PoCompanion\\2025",
             State: "In Progress",
             JsonPayload: "{}",
-            RetrievedAt: now
+            RetrievedAt: now,
+            Effort: 24
         ));
 
         // Objective 1.1
@@ -38,7 +39,8 @@ public class MockDataProvider
             IterationPath: "PoCompanion\\2025\\Q1",
             State: "In Progress",
             JsonPayload: "{}",
-            RetrievedAt: now
+            RetrievedAt: now,
+            Effort: 8
         ));
 
         // Epic 1.1.1
@@ -51,7 +53,8 @@ public class MockDataProvider
             IterationPath: "PoCompanion\\2025\\Q1",
             State: "In Progress",
             JsonPayload: "{}",
-            RetrievedAt: now
+            RetrievedAt: now,
+            Effort: 4
         ));
 
         // Feature 1.1.1.1
@@ -64,7 +67,8 @@ public class MockDataProvider
             IterationPath: "PoCompanion\\2025\\Q1\\Sprint 1",
             State: "In Progress",
             JsonPayload: "{}",
-            RetrievedAt: now
+            RetrievedAt: now,
+            Effort: null  // Missing effort to demonstrate validation
         ));
 
         // PBI 1.1.1.1.1
@@ -77,7 +81,8 @@ public class MockDataProvider
             IterationPath: "PoCompanion\\2025\\Q1\\Sprint 1",
             State: "In Progress",
             JsonPayload: "{}",
-            RetrievedAt: now
+            RetrievedAt: now,
+            Effort: 2
         ));
 
         // Task 1.1.1.1.1.1
@@ -90,7 +95,8 @@ public class MockDataProvider
             IterationPath: "PoCompanion\\2025\\Q1\\Sprint 1",
             State: "Done",
             JsonPayload: "{}",
-            RetrievedAt: now
+            RetrievedAt: now,
+            Effort: 4
         ));
 
         // Task 1.1.1.1.1.2
@@ -103,7 +109,8 @@ public class MockDataProvider
             IterationPath: "PoCompanion\\2025\\Q1\\Sprint 1",
             State: "In Progress",
             JsonPayload: "{}",
-            RetrievedAt: now
+            RetrievedAt: now,
+            Effort: 24
         ));
 
         // Feature 1.1.1.2
@@ -116,7 +123,8 @@ public class MockDataProvider
             IterationPath: "PoCompanion\\2025\\Q1\\Sprint 2",
             State: "New",
             JsonPayload: "{}",
-            RetrievedAt: now
+            RetrievedAt: now,
+            Effort: null
         ));
 
         // PBI 1.1.1.2.1
@@ -129,7 +137,8 @@ public class MockDataProvider
             IterationPath: "PoCompanion\\2025\\Q1\\Sprint 2",
             State: "New",
             JsonPayload: "{}",
-            RetrievedAt: now
+            RetrievedAt: now,
+            Effort: null
         ));
 
         // Goal 2
@@ -142,7 +151,8 @@ public class MockDataProvider
             IterationPath: "PoCompanion\\2025",
             State: "New",
             JsonPayload: "{}",
-            RetrievedAt: now
+            RetrievedAt: now,
+            Effort: null
         ));
 
         // Objective 2.1
@@ -155,7 +165,8 @@ public class MockDataProvider
             IterationPath: "PoCompanion\\2025\\Q1",
             State: "New",
             JsonPayload: "{}",
-            RetrievedAt: now
+            RetrievedAt: now,
+            Effort: null
         ));
 
         return items;

@@ -156,7 +156,7 @@ public class TreeBuilderService : ITreeBuilderService
                     ParentId = dto.ParentTfsId,
                     JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto(
                         dto.TfsId, dto.Type, dto.Title, dto.ParentTfsId,
-                        dto.AreaPath, dto.IterationPath, dto.State, dto.JsonPayload, dto.RetrievedAt))
+                        dto.AreaPath, dto.IterationPath, dto.State, dto.JsonPayload, dto.RetrievedAt, dto.Effort))
                 };
                 nodeMap[id] = node;
             }
@@ -167,7 +167,7 @@ public class TreeBuilderService : ITreeBuilderService
                 node.State = dto.State;
                 node.JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto(
                     dto.TfsId, dto.Type, dto.Title, dto.ParentTfsId,
-                    dto.AreaPath, dto.IterationPath, dto.State, dto.JsonPayload, dto.RetrievedAt));
+                    dto.AreaPath, dto.IterationPath, dto.State, dto.JsonPayload, dto.RetrievedAt, dto.Effort));
             }
 
             // Restore expanded state if available
@@ -180,6 +180,16 @@ public class TreeBuilderService : ITreeBuilderService
             node.ValidationIssues = dto.ValidationIssues
                 .Select(vi => $"{vi.Severity}: {vi.Message}")
                 .ToList();
+
+            // Set highest severity (Error > Warning)
+            if (dto.ValidationIssues.Any(vi => vi.Severity == "Error"))
+            {
+                node.HighestSeverity = "Error";
+            }
+            else if (dto.ValidationIssues.Any(vi => vi.Severity == "Warning"))
+            {
+                node.HighestSeverity = "Warning";
+            }
         }
 
         // Attach children to parents based on ParentTfsId, create placeholders for missing parents

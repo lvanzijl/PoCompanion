@@ -46,6 +46,7 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
             wi.State,
             wi.JsonPayload,
             wi.RetrievedAt,
+            wi.Effort,
             validationResults.TryGetValue(wi.TfsId, out var issues) 
                 ? issues 
                 : new List<ValidationIssue>()

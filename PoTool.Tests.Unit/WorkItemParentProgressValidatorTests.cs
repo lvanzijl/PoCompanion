@@ -192,7 +192,8 @@ public class WorkItemParentProgressValidatorTests
             IterationPath: "Test",
             State: state,
             JsonPayload: "{}",
-            RetrievedAt: DateTimeOffset.UtcNow
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: null
         );
     }
 }

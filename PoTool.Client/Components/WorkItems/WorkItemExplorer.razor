@@ -25,11 +25,11 @@
                      SyncMessage="@_syncMessage"
                      SyncStatusClass="@_syncStatusClass"
                      FilterText="@_filterText"
-                     ShowOnlyInvalidItems="@_showOnlyInvalidItems"
+                     ValidationFilters="@_validationFilters"
                      OnSyncRequested="@RequestSync"
                      OnClearState="@ClearExpandedState"
                      OnFilterChanged="@HandleFilterChanged"
-                     OnShowInvalidChanged="@HandleShowInvalidChanged"
+                     OnValidationFiltersChanged="@HandleValidationFiltersChanged"
                      OnSettingsRequested="@OpenSettings" />
 
     <div class="type-legend">
@@ -51,7 +51,8 @@
                           OnNodeSelected="@HandleNodeSelected" />
 
         <WorkItemDetailPanel SelectedWorkItem="@_selectedWorkItem" 
-                            SelectedWorkItems="@_selectedWorkItems" />
+                            SelectedWorkItems="@_selectedWorkItems"
+                            ValidationIssues="@_selectedValidationIssues" />
     </div>
 </div>
 
@@ -63,12 +64,19 @@
     private WorkItemDto? _selectedWorkItem;
     private readonly List<WorkItemDto> _selectedWorkItems = new();
     private readonly HashSet<int> _selectedIds = new();
+    private List<string> _selectedValidationIssues = new();
     private string _filterText = string.Empty;
-    private bool _showOnlyInvalidItems = false;
     private bool _isLoading = true;
     private bool _isSyncing = false;
     private string _syncMessage = string.Empty;
     private string _syncStatusClass = string.Empty;
+
+    // Validation filters
+    private readonly List<ValidationFilter> _validationFilters = new()
+    {
+        new ValidationFilter { Id = "parentProgress", Label = "Parent Progress Issues", IsEnabled = false },
+        new ValidationFilter { Id = "missingEffort", Label = "Missing Effort Issues", IsEnabled = false }
+    };
 
     // Resolved endpoints for debugging
     private string _apiBase = string.Empty;
@@ -227,25 +235,42 @@
         ApplyFilter();
     }
 
-    private void HandleShowInvalidChanged(bool showOnlyInvalid)
+    private void HandleValidationFiltersChanged(List<ValidationFilter> filters)
     {
-        _showOnlyInvalidItems = showOnlyInvalid;
         ApplyFilter();
     }
 
     private void ApplyFilter()
     {
-        // Apply text filter and invalid-only filter together (AND relationship)
+        // Apply text filter and validation filters together
         var filteredItems = _workItemsWithValidation.AsEnumerable();
 
-        // Filter by invalid items if enabled
-        if (_showOnlyInvalidItems)
+        // Filter by validation issues if any filters are enabled (OR logic)
+        var enabledFilters = _validationFilters.Where(f => f.IsEnabled).ToList();
+        if (enabledFilters.Any())
         {
-            var invalidIds = new HashSet<int>(
-                _workItemsWithValidation
-                    .Where(wi => wi.ValidationIssues.Any())
-                    .Select(wi => wi.TfsId)
-            );
+            var invalidIds = new HashSet<int>();
+            
+            foreach (var filter in enabledFilters)
+            {
+                IEnumerable<int> filterInvalidIds = filter.Id switch
+                {
+                    "parentProgress" => _workItemsWithValidation
+                        .Where(wi => wi.ValidationIssues.Any(issue => 
+                            issue.Message.Contains("Parent") || issue.Message.Contains("Ancestor")))
+                        .Select(wi => wi.TfsId),
+                    "missingEffort" => _workItemsWithValidation
+                        .Where(wi => wi.ValidationIssues.Any(issue => 
+                            issue.Message.Contains("effort")))
+                        .Select(wi => wi.TfsId),
+                    _ => Enumerable.Empty<int>()
+                };
+                
+                foreach (var id in filterInvalidIds)
+                {
+                    invalidIds.Add(id);
+                }
+            }
 
             // Include invalid items and their ancestors
             filteredItems = FilterWithAncestorsValidation(filteredItems, invalidIds);
@@ -311,7 +336,7 @@
     {
         return new WorkItemDto(
             item.TfsId, item.Type, item.Title, item.ParentTfsId,
-            item.AreaPath, item.IterationPath, item.State, item.JsonPayload, item.RetrievedAt
+            item.AreaPath, item.IterationPath, item.State, item.JsonPayload, item.RetrievedAt, item.Effort
         );
     }
 
@@ -360,6 +385,7 @@
                     
                     // Update single selection to first remaining item or null
                     _selectedWorkItem = _selectedWorkItems.FirstOrDefault();
+                    _selectedValidationIssues = GetValidationIssuesForNode(_selectedWorkItem?.TfsId);
                 }
                 else
                 {
@@ -371,9 +397,22 @@
                     
                     // Update single selection to last clicked item
                     _selectedWorkItem = workItem;
+                    _selectedValidationIssues = node.ValidationIssues;
                 }
             }
         }
+    }
+
+    private List<string> GetValidationIssuesForNode(int? tfsId)
+    {
+        if (!tfsId.HasValue) return new List<string>();
+        
+        var itemWithValidation = _workItemsWithValidation.FirstOrDefault(wi => wi.TfsId == tfsId.Value);
+        if (itemWithValidation == null) return new List<string>();
+        
+        return itemWithValidation.ValidationIssues
+            .Select(vi => $"{vi.Severity}: {vi.Message}")
+            .ToList();
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)

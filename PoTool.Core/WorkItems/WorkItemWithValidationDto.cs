@@ -13,5 +13,6 @@ public sealed record WorkItemWithValidationDto(
     string State,
     string JsonPayload,
     DateTimeOffset RetrievedAt,
+    int? Effort,
     List<ValidationIssue> ValidationIssues
 );

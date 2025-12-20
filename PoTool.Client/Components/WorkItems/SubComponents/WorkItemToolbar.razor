@@ -1,3 +1,5 @@
+@using PoTool.Client.Models
+
 @* Toolbar for work item explorer actions *@
 
 <div class="workitem-toolbar">
@@ -39,12 +41,24 @@
                @bind="FilterText" 
                @bind:event="oninput"
                @onkeyup="OnFilterKeyUp" />
-        <label class="invalid-filter">
-            <input type="checkbox" 
-                   checked="@ShowOnlyInvalidItems"
-                   @onchange="OnShowInvalidChangedInternal" />
-            <span>Show only invalid items</span>
-        </label>
+        
+        <div class="validation-filters">
+            <label class="filter-label">Validation Filters:</label>
+            
+            @foreach (var filter in ValidationFilters)
+            {
+                <label class="validation-filter-item">
+                    <input type="checkbox" 
+                           checked="@filter.IsEnabled"
+                           @onchange="@(e => OnValidationFilterChanged(filter, (bool)(e.Value ?? false)))" />
+                    <span>@filter.Label</span>
+                </label>
+            }
+            
+            <button class="btn-toggle-filters" @onclick="OnToggleAllFilters">
+                @(AreAllFiltersEnabled ? "Clear All" : "Select All")
+            </button>
+        </div>
     </div>
 </div>
 
@@ -68,7 +82,7 @@
     public string FilterText { get; set; } = string.Empty;
 
     [Parameter]
-    public bool ShowOnlyInvalidItems { get; set; }
+    public List<ValidationFilter> ValidationFilters { get; set; } = new();
 
     [Parameter]
     public EventCallback OnSyncRequested { get; set; }
@@ -80,10 +94,12 @@
     public EventCallback<string> OnFilterChanged { get; set; }
 
     [Parameter]
-    public EventCallback<bool> OnShowInvalidChanged { get; set; }
+    public EventCallback<List<ValidationFilter>> OnValidationFiltersChanged { get; set; }
 
     [Parameter]
     public EventCallback OnSettingsRequested { get; set; }
+
+    private bool AreAllFiltersEnabled => ValidationFilters.All(f => f.IsEnabled);
 
     private async Task OnSyncClicked()
     {
@@ -105,9 +121,19 @@
         await OnFilterChanged.InvokeAsync(FilterText);
     }
 
-    private async Task OnShowInvalidChangedInternal(ChangeEventArgs e)
+    private async Task OnValidationFilterChanged(ValidationFilter filter, bool isEnabled)
     {
-        ShowOnlyInvalidItems = (bool)(e.Value ?? false);
-        await OnShowInvalidChanged.InvokeAsync(ShowOnlyInvalidItems);
+        filter.IsEnabled = isEnabled;
+        await OnValidationFiltersChanged.InvokeAsync(ValidationFilters);
+    }
+
+    private async Task OnToggleAllFilters()
+    {
+        var newState = !AreAllFiltersEnabled;
+        foreach (var filter in ValidationFilters)
+        {
+            filter.IsEnabled = newState;
+        }
+        await OnValidationFiltersChanged.InvokeAsync(ValidationFilters);
     }
 }

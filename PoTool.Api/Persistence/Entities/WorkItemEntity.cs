@@ -70,4 +70,9 @@ public class WorkItemEntity
     /// </summary>
     [Required]
     public DateTimeOffset RetrievedAt { get; set; }
+
+    /// <summary>
+    /// Effort estimate in hours (nullable).
+    /// </summary>
+    public int? Effort { get; set; }
 }

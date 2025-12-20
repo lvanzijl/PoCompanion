@@ -50,7 +50,8 @@ public sealed class WorkItemRepositoryTests
                 IterationPath: "Sprint 1",
                 State: "Active",
                 JsonPayload: "{}",
-                RetrievedAt: DateTimeOffset.UtcNow
+                RetrievedAt: DateTimeOffset.UtcNow,
+                Effort: null
             ),
             new WorkItemDto(
                 TfsId: 2,
@@ -61,7 +62,8 @@ public sealed class WorkItemRepositoryTests
                 IterationPath: "Sprint 1",
                 State: "Active",
                 JsonPayload: "{}",
-                RetrievedAt: DateTimeOffset.UtcNow
+                RetrievedAt: DateTimeOffset.UtcNow,
+                Effort: null
             )
         };
 
@@ -91,7 +93,8 @@ public sealed class WorkItemRepositoryTests
                 IterationPath: "Sprint 1",
                 State: "Active",
                 JsonPayload: "{}",
-                RetrievedAt: DateTimeOffset.UtcNow
+                RetrievedAt: DateTimeOffset.UtcNow,
+                Effort: null
             )
         };
 
@@ -106,7 +109,8 @@ public sealed class WorkItemRepositoryTests
                 IterationPath: "Sprint 2",
                 State: "Active",
                 JsonPayload: "{}",
-                RetrievedAt: DateTimeOffset.UtcNow
+                RetrievedAt: DateTimeOffset.UtcNow,
+                Effort: null
             )
         };
 
@@ -139,7 +143,8 @@ public sealed class WorkItemRepositoryTests
                 IterationPath: "Sprint 1",
                 State: "Active",
                 JsonPayload: "{}",
-                RetrievedAt: DateTimeOffset.UtcNow
+                RetrievedAt: DateTimeOffset.UtcNow,
+                Effort: null
             ),
             new WorkItemDto(
                 TfsId: 2,
@@ -150,7 +155,8 @@ public sealed class WorkItemRepositoryTests
                 IterationPath: "Sprint 1",
                 State: "Active",
                 JsonPayload: "{}",
-                RetrievedAt: DateTimeOffset.UtcNow
+                RetrievedAt: DateTimeOffset.UtcNow,
+                Effort: null
             )
         };
 
@@ -180,7 +186,8 @@ public sealed class WorkItemRepositoryTests
             IterationPath: "Sprint 1",
             State: "Active",
             JsonPayload: "{}",
-            RetrievedAt: DateTimeOffset.UtcNow
+            RetrievedAt: DateTimeOffset.UtcNow,
+                Effort: null
         );
 
         await repository.ReplaceAllAsync(new[] { workItem });

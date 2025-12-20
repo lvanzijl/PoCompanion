@@ -85,7 +85,8 @@ public class DevWorkItemRepository : IWorkItemRepository
                 IterationPath: "Backlog",
                 State: "Active",
                 JsonPayload: MakePayload("Goal"),
-                RetrievedAt: now
+                RetrievedAt: now,
+                Effort: null
             ));
 
             // 2 objectives per goal
@@ -102,7 +103,8 @@ public class DevWorkItemRepository : IWorkItemRepository
                     IterationPath: "Backlog",
                     State: "Active",
                     JsonPayload: MakePayload("Objective"),
-                    RetrievedAt: now
+                    RetrievedAt: now,
+                Effort: null
                 ));
 
                 // 2 epics per objective
@@ -119,7 +121,8 @@ public class DevWorkItemRepository : IWorkItemRepository
                         IterationPath: "Backlog",
                         State: "Active",
                         JsonPayload: MakePayload("Epic"),
-                        RetrievedAt: now
+                        RetrievedAt: now,
+                Effort: null
                     ));
 
                     // 2 features per epic
@@ -136,7 +139,8 @@ public class DevWorkItemRepository : IWorkItemRepository
                             IterationPath: "Backlog",
                             State: "Active",
                             JsonPayload: MakePayload("Feature"),
-                            RetrievedAt: now
+                            RetrievedAt: now,
+                Effort: null
                         ));
 
                         // 2 PBIs per feature
@@ -153,7 +157,8 @@ public class DevWorkItemRepository : IWorkItemRepository
                                 IterationPath: "Sprint 1",
                                 State: "Active",
                                 JsonPayload: MakePayload("PBI"),
-                                RetrievedAt: now
+                                RetrievedAt: now,
+                Effort: null
                             ));
 
                             // 2 tasks per PBI
@@ -170,7 +175,8 @@ public class DevWorkItemRepository : IWorkItemRepository
                                     IterationPath: "Sprint 1",
                                     State: "Active",
                                     JsonPayload: MakePayload("Task"),
-                                    RetrievedAt: now
+                                    RetrievedAt: now,
+                Effort: null
                                 ));
                             }
                         }
@@ -192,7 +198,8 @@ public class DevWorkItemRepository : IWorkItemRepository
             IterationPath: "Backlog",
             State: "Active",
             JsonPayload: MakePayload("Goal"),
-            RetrievedAt: now
+            RetrievedAt: now,
+                Effort: null
         ));
 
         // Orphan objective with missing parent (parent id points to a non-existent goal)
@@ -207,7 +214,8 @@ public class DevWorkItemRepository : IWorkItemRepository
             IterationPath: "Backlog",
             State: "Active",
             JsonPayload: MakePayload("Objective"),
-            RetrievedAt: now
+            RetrievedAt: now,
+                Effort: null
         ));
 
         // Orphan epic with missing parent
@@ -222,7 +230,8 @@ public class DevWorkItemRepository : IWorkItemRepository
             IterationPath: "Backlog",
             State: "Active",
             JsonPayload: MakePayload("Epic"),
-            RetrievedAt: now
+            RetrievedAt: now,
+                Effort: null
         ));
 
         // Orphan feature with missing parent
@@ -237,7 +246,8 @@ public class DevWorkItemRepository : IWorkItemRepository
             IterationPath: "Backlog",
             State: "Active",
             JsonPayload: MakePayload("Feature"),
-            RetrievedAt: now
+            RetrievedAt: now,
+                Effort: null
         ));
 
         // Orphan PBI with missing parent
@@ -252,7 +262,8 @@ public class DevWorkItemRepository : IWorkItemRepository
             IterationPath: "Sprint 1",
             State: "Active",
             JsonPayload: MakePayload("PBI"),
-            RetrievedAt: now
+            RetrievedAt: now,
+                Effort: null
         ));
 
         // Orphan Task with missing parent
@@ -267,7 +278,8 @@ public class DevWorkItemRepository : IWorkItemRepository
             IterationPath: "Sprint 1",
             State: "Active",
             JsonPayload: MakePayload("Task"),
-            RetrievedAt: now
+            RetrievedAt: now,
+                Effort: null
         ));
 
         return list;
