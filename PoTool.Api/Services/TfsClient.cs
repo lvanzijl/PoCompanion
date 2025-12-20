@@ -74,25 +74,42 @@ public class TfsClient : ITfsClient
         }
     }
 
-    public async Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, CancellationToken cancellationToken = default)
+    public Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, CancellationToken cancellationToken = default)
+    {
+        return GetWorkItemsAsync(areaPath, since: null, cancellationToken);
+    }
+
+    public async Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, DateTimeOffset? since, CancellationToken cancellationToken = default)
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
         if (entity == null)
             throw new InvalidOperationException("TFS configuration not set");
 
+        // Apply timeout from configuration (Phase 4)
+        _httpClient.Timeout = TimeSpan.FromSeconds(entity.TimeoutSeconds);
+
         await ConfigureAuthenticationAsync(entity, cancellationToken);
+
+        var startTime = DateTimeOffset.UtcNow; // Phase 4: Performance metrics
 
         return await ExecuteWithRetryAsync(async () =>
         {
-            // Build WIQL query to find work items under area path
+            // Build WIQL query with optional date filter for incremental sync (Phase 3)
+            var dateFilter = since.HasValue 
+                ? $" AND [System.ChangedDate] >= '{since.Value:yyyy-MM-ddTHH:mm:ssZ}'" 
+                : "";
+
             var wiql = new
             {
-                query = $"Select [System.Id], [System.WorkItemType], [System.Title], [System.State] From WorkItems Where [System.AreaPath] = '{EscapeWiql(areaPath)}'"
+                query = $"Select [System.Id], [System.WorkItemType], [System.Title], [System.State] From WorkItems Where [System.AreaPath] = '{EscapeWiql(areaPath)}'{dateFilter}"
             };
 
             var wiqlUrl = $"{entity.Url.TrimEnd('/')}/_apis/wit/wiql?api-version={entity.ApiVersion}";
             using var content = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
 
+            // Phase 4: Enhanced logging
+            _logger.LogDebug("Executing WIQL query: {Query}", wiql.query);
+            
             var wiqlResponse = await _httpClient.PostAsync(wiqlUrl, content, cancellationToken);
             await HandleHttpErrorsAsync(wiqlResponse, cancellationToken);
 
@@ -104,7 +121,12 @@ public class TfsClient : ITfsClient
                         .ToArray();
 
             if (ids.Length == 0)
+            {
+                _logger.LogInformation("No work items found for areaPath={AreaPath}, since={Since}", areaPath, since);
                 return Enumerable.Empty<WorkItemDto>();
+            }
+
+            _logger.LogDebug("Found {Count} work item IDs, fetching details", ids.Length);
 
             // Batch get work items - use $expand=All to get all fields including System.Parent
             var idsQuery = string.Join(',', ids);
@@ -142,6 +164,17 @@ public class TfsClient : ITfsClient
                     }
                 }
 
+                // Phase 3: Extract effort field (common custom fields: Microsoft.VSTS.Scheduling.Effort, Microsoft.VSTS.Scheduling.StoryPoints)
+                int? effort = null;
+                if (fields.TryGetProperty("Microsoft.VSTS.Scheduling.Effort", out var effortField) && effortField.ValueKind == JsonValueKind.Number)
+                {
+                    effort = effortField.GetInt32();
+                }
+                else if (fields.TryGetProperty("Microsoft.VSTS.Scheduling.StoryPoints", out var storyPoints) && storyPoints.ValueKind == JsonValueKind.Number)
+                {
+                    effort = (int)storyPoints.GetDouble(); // Story points might be decimal
+                }
+
                 results.Add(new WorkItemDto(
                     TfsId: id,
                     Type: type,
@@ -152,16 +185,20 @@ public class TfsClient : ITfsClient
                     State: state,
                     JsonPayload: item.GetRawText(),
                     RetrievedAt: DateTimeOffset.UtcNow,
-                    Effort: null
+                    Effort: effort
                 ));
             }
 
-            _logger.LogInformation("Retrieved {Count} work items for areaPath={AreaPath}", results.Count, areaPath);
+            // Phase 4: Performance metrics
+            var elapsed = DateTimeOffset.UtcNow - startTime;
+            _logger.LogInformation("Retrieved {Count} work items for areaPath={AreaPath}, since={Since} in {ElapsedMs}ms", 
+                results.Count, areaPath, since, elapsed.TotalMilliseconds);
+            
             return results;
         }, cancellationToken);
     }
 
-    // Pull Request methods - Phase 2 implementation
+    // Pull Request methods - Phase 2 implementation with Phase 4 enhancements
     public async Task<IEnumerable<PullRequestDto>> GetPullRequestsAsync(
         string? repositoryName = null,
         DateTimeOffset? fromDate = null,
@@ -172,13 +209,20 @@ public class TfsClient : ITfsClient
         if (entity == null)
             throw new InvalidOperationException("TFS configuration not set");
 
+        // Phase 4: Apply timeout from configuration
+        _httpClient.Timeout = TimeSpan.FromSeconds(entity.TimeoutSeconds);
+
         await ConfigureAuthenticationAsync(entity, cancellationToken);
+
+        var startTime = DateTimeOffset.UtcNow; // Phase 4: Performance metrics
 
         return await ExecuteWithRetryAsync(async () =>
         {
             // Get all repositories or specific one
             var repositories = await GetRepositoriesAsync(entity, repositoryName, cancellationToken);
             var allPRs = new List<PullRequestDto>();
+
+            _logger.LogDebug("Querying {RepoCount} repositories for pull requests", repositories.Count);
 
             foreach (var repo in repositories)
             {
@@ -200,6 +244,8 @@ public class TfsClient : ITfsClient
                 }
 
                 var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/git/repositories/{repo.Name}/pullrequests?{string.Join("&", queryParams)}&api-version={entity.ApiVersion}";
+                
+                _logger.LogDebug("Fetching PRs from repository {Repository}", repo.Name);
                 
                 var response = await _httpClient.GetAsync(url, cancellationToken);
                 await HandleHttpErrorsAsync(response, cancellationToken);
@@ -248,7 +294,11 @@ public class TfsClient : ITfsClient
                 }
             }
 
-            _logger.LogInformation("Retrieved {Count} pull requests across {RepoCount} repositories", allPRs.Count, repositories.Count);
+            // Phase 4: Performance metrics
+            var elapsed = DateTimeOffset.UtcNow - startTime;
+            _logger.LogInformation("Retrieved {Count} pull requests across {RepoCount} repositories in {ElapsedMs}ms", 
+                allPRs.Count, repositories.Count, elapsed.TotalMilliseconds);
+            
             return allPRs;
         }, cancellationToken);
     }

@@ -172,8 +172,17 @@ public class MockTfsClient : ITfsClient
 
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, CancellationToken cancellationToken = default)
     {
-        // Return mock work items
-        return Task.FromResult<IEnumerable<WorkItemDto>>(_mockWorkItems);
+        return GetWorkItemsAsync(areaPath, since: null, cancellationToken);
+    }
+
+    public Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, DateTimeOffset? since, CancellationToken cancellationToken = default)
+    {
+        // Filter by date if specified (incremental sync)
+        var filtered = since.HasValue
+            ? _mockWorkItems.Where(wi => wi.RetrievedAt >= since.Value)
+            : _mockWorkItems;
+        
+        return Task.FromResult<IEnumerable<WorkItemDto>>(filtered);
     }
 
     /// <summary>

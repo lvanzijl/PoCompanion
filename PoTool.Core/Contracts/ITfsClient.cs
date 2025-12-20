@@ -18,6 +18,15 @@ public interface ITfsClient
     Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves work items under the specified area path, optionally filtered by last modified date.
+    /// </summary>
+    /// <param name="areaPath">The area path to query.</param>
+    /// <param name="since">Optional date to retrieve only work items modified since this date (incremental sync).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of work item DTOs.</returns>
+    Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, DateTimeOffset? since, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Validates that the TFS connection is working with the configured PAT.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
