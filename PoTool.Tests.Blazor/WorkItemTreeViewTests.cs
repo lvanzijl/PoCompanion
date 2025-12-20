@@ -20,7 +20,7 @@ public class WorkItemTreeViewTests : BunitTestContext
             .Add(p => p.TreeRoots, new List<TreeNode>()));
 
         // Assert
-        Assert.IsTrue(cut.Markup.Contains("Loading"), "Should show loading message");
+        Assert.Contains("Loading", cut.Markup, "Should show loading message");
     }
 
     [TestMethod]
