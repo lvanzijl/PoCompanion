@@ -72,6 +72,342 @@
         }
       }
     },
+    "/api/PullRequests": {
+      "get": {
+        "tags": [
+          "PullRequests"
+        ],
+        "operationId": "PullRequests_GetAll",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PullRequestDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/PullRequests/{id}": {
+      "get": {
+        "tags": [
+          "PullRequests"
+        ],
+        "operationId": "PullRequests_GetById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PullRequestDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/PullRequests/metrics": {
+      "get": {
+        "tags": [
+          "PullRequests"
+        ],
+        "operationId": "PullRequests_GetMetrics",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PullRequestMetricsDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/PullRequests/filter": {
+      "get": {
+        "tags": [
+          "PullRequests"
+        ],
+        "operationId": "PullRequests_GetFiltered",
+        "parameters": [
+          {
+            "name": "iterationPath",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "createdBy",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "nullable": true
+            },
+            "x-position": 3
+          },
+          {
+            "name": "toDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "nullable": true
+            },
+            "x-position": 4
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 5
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PullRequestDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/PullRequests/{id}/iterations": {
+      "get": {
+        "tags": [
+          "PullRequests"
+        ],
+        "operationId": "PullRequests_GetIterations",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PullRequestIterationDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/PullRequests/{id}/comments": {
+      "get": {
+        "tags": [
+          "PullRequests"
+        ],
+        "operationId": "PullRequests_GetComments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PullRequestCommentDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/PullRequests/{id}/filechanges": {
+      "get": {
+        "tags": [
+          "PullRequests"
+        ],
+        "operationId": "PullRequests_GetFileChanges",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PullRequestFileChangeDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/PullRequests/sync": {
+      "post": {
+        "tags": [
+          "PullRequests"
+        ],
+        "operationId": "PullRequests_Sync",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Settings": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "operationId": "Settings_GetSettings",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "operationId": "Settings_UpdateSettings",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSettingsRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/WorkItems": {
       "get": {
         "tags": [
@@ -87,6 +423,29 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/WorkItemDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/WorkItems/validated": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetAllWithValidation",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkItemWithValidationDto"
                   }
                 }
               }
@@ -160,6 +519,62 @@
           }
         }
       }
+    },
+    "/api/WorkItems/goals/all": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetAllGoals",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkItemDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/WorkItems/goals": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetGoalHierarchy",
+        "parameters": [
+          {
+            "name": "goalIds",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkItemDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -179,6 +594,306 @@
           "pat": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "PullRequestDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "repositoryName": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "iterationPath": {
+            "type": "string"
+          },
+          "sourceBranch": {
+            "type": "string"
+          },
+          "targetBranch": {
+            "type": "string"
+          },
+          "retrievedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PullRequestMetricsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pullRequestId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "iterationPath": {
+            "type": "string"
+          },
+          "totalTimeOpen": {
+            "type": "string",
+            "format": "duration"
+          },
+          "effectiveWorkTime": {
+            "type": "string",
+            "format": "duration",
+            "nullable": true
+          },
+          "iterationCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "commentCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unresolvedCommentCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalFileCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalLinesAdded": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalLinesDeleted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageLinesPerFile": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "PullRequestIterationDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pullRequestId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "iterationNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "commitCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "changeCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PullRequestCommentDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pullRequestId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "threadId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "author": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isResolved": {
+            "type": "boolean"
+          },
+          "resolvedDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "resolvedBy": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PullRequestFileChangeDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pullRequestId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "iterationId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "filePath": {
+            "type": "string"
+          },
+          "changeType": {
+            "type": "string"
+          },
+          "linesAdded": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "linesDeleted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "linesModified": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "SettingsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dataMode": {
+            "$ref": "#/components/schemas/DataMode"
+          },
+          "configuredGoalIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "lastModified": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DataMode": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Mock",
+          "Tfs"
+        ],
+        "enum": [
+          0,
+          1
+        ]
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "additionalProperties": {
+          "nullable": true
+        },
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateSettingsRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dataMode": {
+            "$ref": "#/components/schemas/DataMode"
+          },
+          "configuredGoalIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
           }
         }
       },
@@ -216,6 +931,71 @@
           "retrievedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "effort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "WorkItemWithValidationDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tfsId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "parentTfsId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "areaPath": {
+            "type": "string"
+          },
+          "iterationPath": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "jsonPayload": {
+            "type": "string"
+          },
+          "retrievedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "effort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "validationIssues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationIssue"
+            }
+          }
+        }
+      },
+      "ValidationIssue": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "severity": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
           }
         }
       }

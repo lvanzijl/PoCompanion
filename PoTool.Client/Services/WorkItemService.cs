@@ -56,7 +56,8 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetGoalHierarchyAsync(List<int> goalIds)
     {
-        return await _client.GetGoalHierarchyAsync(goalIds);
+        var goalIdsParam = string.Join(",", goalIds);
+        return await _client.GetGoalHierarchyAsync(goalIdsParam);
     }
 
     /// <summary>

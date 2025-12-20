@@ -27,18 +27,19 @@ public class WorkItemDetailPanelTests : BunitTestContext
     public void WorkItemDetailPanel_DisplaysWorkItemDetails_WhenSelected()
     {
         // Arrange
-        var workItem = new WorkItemDto(
-            TfsId: 123,
-            Type: "User Story",
-            Title: "Implement feature X",
-            ParentTfsId: 100,
-            AreaPath: "Project\\Team",
-            IterationPath: "Sprint 1",
-            State: "Active",
-            JsonPayload: "{}",
-            RetrievedAt: DateTimeOffset.Now,
-                Effort: null
-        );
+        var workItem = new WorkItemDto
+        {
+            TfsId = 123,
+            Type = "User Story",
+            Title = "Implement feature X",
+            ParentTfsId = 100,
+            AreaPath = "Project\\Team",
+            IterationPath = "Sprint 1",
+            State = "Active",
+            JsonPayload = "{}",
+            RetrievedAt = DateTimeOffset.Now,
+            Effort = null
+        };
 
         // Act
         var cut = RenderComponent<WorkItemDetailPanel>(parameters => parameters
@@ -55,18 +56,19 @@ public class WorkItemDetailPanelTests : BunitTestContext
     public void WorkItemDetailPanel_ShowsParentId_WhenPresent()
     {
         // Arrange
-        var workItem = new WorkItemDto(
-            TfsId: 123,
-            Type: "Task",
-            Title: "Test task",
-            ParentTfsId: 100,
-            AreaPath: "Project\\Team",
-            IterationPath: "Sprint 1",
-            State: "New",
-            JsonPayload: "{}",
-            RetrievedAt: DateTimeOffset.Now,
-                Effort: null
-        );
+        var workItem = new WorkItemDto
+        {
+            TfsId = 123,
+            Type = "Task",
+            Title = "Test task",
+            ParentTfsId = 100,
+            AreaPath = "Project\\Team",
+            IterationPath = "Sprint 1",
+            State = "New",
+            JsonPayload = "{}",
+            RetrievedAt = DateTimeOffset.Now,
+            Effort = null
+        };
 
         // Act
         var cut = RenderComponent<WorkItemDetailPanel>(parameters => parameters
@@ -81,18 +83,19 @@ public class WorkItemDetailPanelTests : BunitTestContext
     public void WorkItemDetailPanel_HidesParentId_WhenNull()
     {
         // Arrange
-        var workItem = new WorkItemDto(
-            TfsId: 1,
-            Type: "Epic",
-            Title: "Top level epic",
-            ParentTfsId: null,
-            AreaPath: "Project",
-            IterationPath: "Release 1",
-            State: "Active",
-            JsonPayload: "{}",
-            RetrievedAt: DateTimeOffset.Now,
-                Effort: null
-        );
+        var workItem = new WorkItemDto
+        {
+            TfsId = 1,
+            Type = "Epic",
+            Title = "Top level epic",
+            ParentTfsId = null,
+            AreaPath = "Project",
+            IterationPath = "Release 1",
+            State = "Active",
+            JsonPayload = "{}",
+            RetrievedAt = DateTimeOffset.Now,
+            Effort = null
+        };
 
         // Act
         var cut = RenderComponent<WorkItemDetailPanel>(parameters => parameters

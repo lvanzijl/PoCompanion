@@ -50,11 +50,29 @@ public static class MauiProgram
                 .Build();
         });
 
-        // Register API clients
+        // Register NSwag-generated API clients
+        builder.Services.AddScoped<IClient>(sp =>
+        {
+            var httpClient = sp.GetRequiredService<HttpClient>();
+            return new Client(httpClient);
+        });
+        
         builder.Services.AddScoped<IWorkItemsClient>(sp =>
         {
             var httpClient = sp.GetRequiredService<HttpClient>();
             return new WorkItemsClient(httpClient);
+        });
+        
+        builder.Services.AddScoped<ISettingsClient>(sp =>
+        {
+            var httpClient = sp.GetRequiredService<HttpClient>();
+            return new SettingsClient(httpClient);
+        });
+        
+        builder.Services.AddScoped<IPullRequestsClient>(sp =>
+        {
+            var httpClient = sp.GetRequiredService<HttpClient>();
+            return new PullRequestsClient(httpClient);
         });
 
         // Register client services

@@ -24,4 +24,12 @@
     <ProjectReference Include="..\PoTool.Core\PoTool.Core.csproj" />
   </ItemGroup>
 
+  <!-- NSwag client generation -->
+  <Target Name="NSwag" BeforeTargets="CoreCompile" Condition="'$(Configuration)' == 'Debug' OR '$(GenerateApiClient)' == 'true'">
+    <Exec Command="$(NSwagExe_Net90) run nswag.json /variables:InputSwaggerFile=swagger.json" ConsoleToMSBuild="true" ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="NSwagExitCode" />
+    </Exec>
+    <Message Text="NSwag code generation completed" Importance="high" Condition="'$(NSwagExitCode)' == '0'" />
+  </Target>
+
 </Project>

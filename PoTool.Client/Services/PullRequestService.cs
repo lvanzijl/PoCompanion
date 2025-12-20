@@ -1,5 +1,4 @@
-using System.Net.Http.Json;
-using PoTool.Client.Models;
+using PoTool.Client.ApiClient;
 
 namespace PoTool.Client.Services;
 
@@ -8,11 +7,11 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class PullRequestService
 {
-    private readonly HttpClient _httpClient;
+    private readonly IPullRequestsClient _pullRequestsClient;
 
-    public PullRequestService(HttpClient httpClient)
+    public PullRequestService(IPullRequestsClient pullRequestsClient)
     {
-        _httpClient = httpClient;
+        _pullRequestsClient = pullRequestsClient;
     }
 
     /// <summary>
@@ -20,8 +19,7 @@ public class PullRequestService
     /// </summary>
     public async Task<IEnumerable<PullRequestDto>> GetAllAsync()
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<PullRequestDto>>("/api/pullrequests") 
-            ?? Array.Empty<PullRequestDto>();
+        return await _pullRequestsClient.GetAllAsync() ?? Array.Empty<PullRequestDto>();
     }
 
     /// <summary>
@@ -29,7 +27,14 @@ public class PullRequestService
     /// </summary>
     public async Task<PullRequestDto?> GetByIdAsync(int id)
     {
-        return await _httpClient.GetFromJsonAsync<PullRequestDto>($"/api/pullrequests/{id}");
+        try
+        {
+            return await _pullRequestsClient.GetByIdAsync(id);
+        }
+        catch (ApiException ex) when (ex.StatusCode == 404)
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -37,8 +42,7 @@ public class PullRequestService
     /// </summary>
     public async Task<IEnumerable<PullRequestMetricsDto>> GetMetricsAsync()
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<PullRequestMetricsDto>>("/api/pullrequests/metrics") 
-            ?? Array.Empty<PullRequestMetricsDto>();
+        return await _pullRequestsClient.GetMetricsAsync() ?? Array.Empty<PullRequestMetricsDto>();
     }
 
     /// <summary>
@@ -51,20 +55,7 @@ public class PullRequestService
         DateTimeOffset? toDate = null,
         string? status = null)
     {
-        var query = new List<string>();
-        if (!string.IsNullOrWhiteSpace(iterationPath))
-            query.Add($"iterationPath={Uri.EscapeDataString(iterationPath)}");
-        if (!string.IsNullOrWhiteSpace(createdBy))
-            query.Add($"createdBy={Uri.EscapeDataString(createdBy)}");
-        if (fromDate.HasValue)
-            query.Add($"fromDate={Uri.EscapeDataString(fromDate.Value.ToString("O"))}");
-        if (toDate.HasValue)
-            query.Add($"toDate={Uri.EscapeDataString(toDate.Value.ToString("O"))}");
-        if (!string.IsNullOrWhiteSpace(status))
-            query.Add($"status={Uri.EscapeDataString(status)}");
-
-        var queryString = query.Count > 0 ? "?" + string.Join("&", query) : "";
-        return await _httpClient.GetFromJsonAsync<IEnumerable<PullRequestDto>>($"/api/pullrequests/filter{queryString}") 
+        return await _pullRequestsClient.GetFilteredAsync(iterationPath, createdBy, fromDate, toDate, status) 
             ?? Array.Empty<PullRequestDto>();
     }
 
@@ -73,14 +64,6 @@ public class PullRequestService
     /// </summary>
     public async Task<int> SyncAsync()
     {
-        var response = await _httpClient.PostAsync("/api/pullrequests/sync", null);
-        response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<SyncResult>();
-        return result?.SyncedCount ?? 0;
-    }
-
-    private class SyncResult
-    {
-        public int SyncedCount { get; set; }
+        return await _pullRequestsClient.SyncAsync();
     }
 }
