@@ -161,43 +161,297 @@ public class TfsClient : ITfsClient
         }, cancellationToken);
     }
 
-    // Pull Request methods - placeholder implementations for Phase 2
-    public Task<IEnumerable<PullRequestDto>> GetPullRequestsAsync(
+    // Pull Request methods - Phase 2 implementation
+    public async Task<IEnumerable<PullRequestDto>> GetPullRequestsAsync(
         string? repositoryName = null,
         DateTimeOffset? fromDate = null,
         DateTimeOffset? toDate = null,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("GetPullRequestsAsync not yet implemented - returning empty collection");
-        return Task.FromResult(Enumerable.Empty<PullRequestDto>());
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        if (entity == null)
+            throw new InvalidOperationException("TFS configuration not set");
+
+        await ConfigureAuthenticationAsync(entity, cancellationToken);
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            // Get all repositories or specific one
+            var repositories = await GetRepositoriesAsync(entity, repositoryName, cancellationToken);
+            var allPRs = new List<PullRequestDto>();
+
+            foreach (var repo in repositories)
+            {
+                // Build query parameters
+                var queryParams = new List<string>
+                {
+                    "searchCriteria.status=all" // Get all PRs (active, completed, abandoned)
+                };
+
+                if (fromDate.HasValue)
+                {
+                    // Azure DevOps API uses minTime for filtering
+                    queryParams.Add($"searchCriteria.minTime={fromDate.Value:yyyy-MM-ddTHH:mm:ssZ}");
+                }
+
+                if (toDate.HasValue)
+                {
+                    queryParams.Add($"searchCriteria.maxTime={toDate.Value:yyyy-MM-ddTHH:mm:ssZ}");
+                }
+
+                var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/git/repositories/{repo.Name}/pullrequests?{string.Join("&", queryParams)}&api-version={entity.ApiVersion}";
+                
+                var response = await _httpClient.GetAsync(url, cancellationToken);
+                await HandleHttpErrorsAsync(response, cancellationToken);
+
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                if (!doc.RootElement.TryGetProperty("value", out var valueArray))
+                    continue;
+
+                foreach (var pr in valueArray.EnumerateArray())
+                {
+                    var prId = pr.GetProperty("pullRequestId").GetInt32();
+                    var title = pr.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
+                    var status = pr.TryGetProperty("status", out var s) ? s.GetString() ?? "" : "";
+                    var sourceBranch = pr.TryGetProperty("sourceRefName", out var src) ? src.GetString() ?? "" : "";
+                    var targetBranch = pr.TryGetProperty("targetRefName", out var tgt) ? tgt.GetString() ?? "" : "";
+                    
+                    var createdBy = "";
+                    if (pr.TryGetProperty("createdBy", out var creator))
+                    {
+                        createdBy = creator.TryGetProperty("displayName", out var name) ? name.GetString() ?? "" : "";
+                    }
+
+                    var createdDate = pr.TryGetProperty("creationDate", out var cd) ? cd.GetDateTimeOffset() : DateTimeOffset.UtcNow;
+                    var completedDate = pr.TryGetProperty("closedDate", out var cld) && cld.ValueKind != JsonValueKind.Null 
+                        ? (DateTimeOffset?)cld.GetDateTimeOffset() 
+                        : null;
+
+                    // Determine iteration path from work items or use default
+                    var iterationPath = entity.Project; // Default to project name
+
+                    allPRs.Add(new PullRequestDto(
+                        Id: prId,
+                        RepositoryName: repo.Name,
+                        Title: title,
+                        CreatedBy: createdBy,
+                        CreatedDate: createdDate,
+                        CompletedDate: completedDate,
+                        Status: status,
+                        IterationPath: iterationPath,
+                        SourceBranch: sourceBranch,
+                        TargetBranch: targetBranch,
+                        RetrievedAt: DateTimeOffset.UtcNow
+                    ));
+                }
+            }
+
+            _logger.LogInformation("Retrieved {Count} pull requests across {RepoCount} repositories", allPRs.Count, repositories.Count);
+            return allPRs;
+        }, cancellationToken);
     }
 
-    public Task<IEnumerable<PullRequestIterationDto>> GetPullRequestIterationsAsync(
+    public async Task<IEnumerable<PullRequestIterationDto>> GetPullRequestIterationsAsync(
         int pullRequestId,
         string repositoryName,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("GetPullRequestIterationsAsync not yet implemented - returning empty collection");
-        return Task.FromResult(Enumerable.Empty<PullRequestIterationDto>());
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        if (entity == null)
+            throw new InvalidOperationException("TFS configuration not set");
+
+        await ConfigureAuthenticationAsync(entity, cancellationToken);
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/iterations?api-version={entity.ApiVersion}";
+            
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            await HandleHttpErrorsAsync(response, cancellationToken);
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            var iterations = new List<PullRequestIterationDto>();
+
+            if (!doc.RootElement.TryGetProperty("value", out var valueArray))
+                return iterations;
+
+            foreach (var iteration in valueArray.EnumerateArray())
+            {
+                var iterationId = iteration.GetProperty("id").GetInt32();
+                var createdDate = iteration.TryGetProperty("createdDate", out var cd) ? cd.GetDateTimeOffset() : DateTimeOffset.UtcNow;
+                var updatedDate = iteration.TryGetProperty("updatedDate", out var ud) ? ud.GetDateTimeOffset() : createdDate;
+                
+                // Count commits and changes
+                var commitCount = 0;
+                if (iteration.TryGetProperty("commits", out var commits) && commits.ValueKind == JsonValueKind.Array)
+                {
+                    commitCount = commits.GetArrayLength();
+                }
+
+                var changeCount = 0;
+                if (iteration.TryGetProperty("changeList", out var changes) && changes.ValueKind == JsonValueKind.Array)
+                {
+                    changeCount = changes.GetArrayLength();
+                }
+
+                iterations.Add(new PullRequestIterationDto(
+                    PullRequestId: pullRequestId,
+                    IterationNumber: iterationId,
+                    CreatedDate: createdDate,
+                    UpdatedDate: updatedDate,
+                    CommitCount: commitCount,
+                    ChangeCount: changeCount
+                ));
+            }
+
+            _logger.LogInformation("Retrieved {Count} iterations for PR {PullRequestId}", iterations.Count, pullRequestId);
+            return iterations;
+        }, cancellationToken);
     }
 
-    public Task<IEnumerable<PullRequestCommentDto>> GetPullRequestCommentsAsync(
+    public async Task<IEnumerable<PullRequestCommentDto>> GetPullRequestCommentsAsync(
         int pullRequestId,
         string repositoryName,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("GetPullRequestCommentsAsync not yet implemented - returning empty collection");
-        return Task.FromResult(Enumerable.Empty<PullRequestCommentDto>());
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        if (entity == null)
+            throw new InvalidOperationException("TFS configuration not set");
+
+        await ConfigureAuthenticationAsync(entity, cancellationToken);
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/threads?api-version={entity.ApiVersion}";
+            
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            await HandleHttpErrorsAsync(response, cancellationToken);
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            var comments = new List<PullRequestCommentDto>();
+
+            if (!doc.RootElement.TryGetProperty("value", out var valueArray))
+                return comments;
+
+            foreach (var thread in valueArray.EnumerateArray())
+            {
+                var threadId = thread.GetProperty("id").GetInt32();
+                var threadStatus = thread.TryGetProperty("status", out var ts) ? ts.GetString() ?? "" : "";
+                var isResolved = threadStatus.Equals("fixed", StringComparison.OrdinalIgnoreCase) || 
+                                threadStatus.Equals("closed", StringComparison.OrdinalIgnoreCase);
+
+                if (!thread.TryGetProperty("comments", out var threadComments) || threadComments.ValueKind != JsonValueKind.Array)
+                    continue;
+
+                foreach (var comment in threadComments.EnumerateArray())
+                {
+                    var commentId = comment.GetProperty("id").GetInt32();
+                    var content = comment.TryGetProperty("content", out var c) ? c.GetString() ?? "" : "";
+                    var createdDate = comment.TryGetProperty("publishedDate", out var cd) ? cd.GetDateTimeOffset() : DateTimeOffset.UtcNow;
+                    var updatedDate = comment.TryGetProperty("lastUpdatedDate", out var ud) && ud.ValueKind != JsonValueKind.Null
+                        ? (DateTimeOffset?)ud.GetDateTimeOffset()
+                        : null;
+
+                    var author = "";
+                    if (comment.TryGetProperty("author", out var auth))
+                    {
+                        author = auth.TryGetProperty("displayName", out var name) ? name.GetString() ?? "" : "";
+                    }
+
+                    // Check if this comment resolved the thread
+                    string? resolvedBy = null;
+                    DateTimeOffset? resolvedDate = null;
+                    if (isResolved && thread.TryGetProperty("lastUpdatedDate", out var threadUpdated))
+                    {
+                        resolvedDate = threadUpdated.GetDateTimeOffset();
+                        // The author of the last comment in a resolved thread is typically the resolver
+                        resolvedBy = author;
+                    }
+
+                    comments.Add(new PullRequestCommentDto(
+                        Id: commentId,
+                        PullRequestId: pullRequestId,
+                        ThreadId: threadId,
+                        Author: author,
+                        Content: content,
+                        CreatedDate: createdDate,
+                        UpdatedDate: updatedDate,
+                        IsResolved: isResolved,
+                        ResolvedDate: resolvedDate,
+                        ResolvedBy: resolvedBy
+                    ));
+                }
+            }
+
+            _logger.LogInformation("Retrieved {Count} comments for PR {PullRequestId}", comments.Count, pullRequestId);
+            return comments;
+        }, cancellationToken);
     }
 
-    public Task<IEnumerable<PullRequestFileChangeDto>> GetPullRequestFileChangesAsync(
+    public async Task<IEnumerable<PullRequestFileChangeDto>> GetPullRequestFileChangesAsync(
         int pullRequestId,
         string repositoryName,
         int iterationId,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("GetPullRequestFileChangesAsync not yet implemented - returning empty collection");
-        return Task.FromResult(Enumerable.Empty<PullRequestFileChangeDto>());
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        if (entity == null)
+            throw new InvalidOperationException("TFS configuration not set");
+
+        await ConfigureAuthenticationAsync(entity, cancellationToken);
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/iterations/{iterationId}/changes?api-version={entity.ApiVersion}";
+            
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            await HandleHttpErrorsAsync(response, cancellationToken);
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            var fileChanges = new List<PullRequestFileChangeDto>();
+
+            if (!doc.RootElement.TryGetProperty("changeEntries", out var changeEntries))
+                return fileChanges;
+
+            foreach (var change in changeEntries.EnumerateArray())
+            {
+                var filePath = "";
+                if (change.TryGetProperty("item", out var item))
+                {
+                    filePath = item.TryGetProperty("path", out var p) ? p.GetString() ?? "" : "";
+                }
+
+                var changeType = change.TryGetProperty("changeType", out var ct) ? ct.GetString() ?? "" : "";
+
+                // Note: Line-level statistics require additional API call to get diff
+                // For now, we'll set counts to 0 and can enhance later with diff API
+                var linesAdded = 0;
+                var linesDeleted = 0;
+                var linesModified = 0;
+
+                fileChanges.Add(new PullRequestFileChangeDto(
+                    PullRequestId: pullRequestId,
+                    IterationId: iterationId,
+                    FilePath: filePath,
+                    ChangeType: changeType,
+                    LinesAdded: linesAdded,
+                    LinesDeleted: linesDeleted,
+                    LinesModified: linesModified
+                ));
+            }
+
+            _logger.LogInformation("Retrieved {Count} file changes for PR {PullRequestId} iteration {IterationId}", 
+                fileChanges.Count, pullRequestId, iterationId);
+            return fileChanges;
+        }, cancellationToken);
     }
 
     // Private helper methods
@@ -213,6 +467,45 @@ public class TfsClient : ITfsClient
             _authProvider.ConfigurePatAuthentication(_httpClient, pat);
         }
         // NTLM is configured via HttpClientHandler, so no additional configuration needed here
+    }
+
+    private async Task<List<(string Name, string Id)>> GetRepositoriesAsync(
+        TfsConfigEntity entity, 
+        string? repositoryName, 
+        CancellationToken cancellationToken)
+    {
+        // If specific repository requested, return just that one
+        if (!string.IsNullOrEmpty(repositoryName))
+        {
+            return new List<(string Name, string Id)> { (repositoryName, repositoryName) };
+        }
+
+        // Otherwise, get all repositories in the project
+        var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/git/repositories?api-version={entity.ApiVersion}";
+        var response = await _httpClient.GetAsync(url, cancellationToken);
+        await HandleHttpErrorsAsync(response, cancellationToken);
+
+        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+        var repositories = new List<(string Name, string Id)>();
+
+        if (doc.RootElement.TryGetProperty("value", out var valueArray))
+        {
+            foreach (var repo in valueArray.EnumerateArray())
+            {
+                var name = repo.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                var id = repo.TryGetProperty("id", out var i) ? i.GetString() ?? "" : "";
+                
+                if (!string.IsNullOrEmpty(name))
+                {
+                    repositories.Add((name, id));
+                }
+            }
+        }
+
+        _logger.LogInformation("Found {Count} repositories in project {Project}", repositories.Count, entity.Project);
+        return repositories;
     }
 
     private async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken, int maxRetries = MaxRetries)
