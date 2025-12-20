@@ -154,9 +154,19 @@ public class TreeBuilderService : ITreeBuilderService
                     Type = dto.Type,
                     State = dto.State,
                     ParentId = dto.ParentTfsId,
-                    JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto(
-                        dto.TfsId, dto.Type, dto.Title, dto.ParentTfsId,
-                        dto.AreaPath, dto.IterationPath, dto.State, dto.JsonPayload, dto.RetrievedAt, dto.Effort))
+                    JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto
+                    {
+                        TfsId = dto.TfsId,
+                        Type = dto.Type,
+                        Title = dto.Title,
+                        ParentTfsId = dto.ParentTfsId,
+                        AreaPath = dto.AreaPath,
+                        IterationPath = dto.IterationPath,
+                        State = dto.State,
+                        JsonPayload = dto.JsonPayload,
+                        RetrievedAt = dto.RetrievedAt,
+                        Effort = dto.Effort
+                    })
                 };
                 nodeMap[id] = node;
             }
@@ -165,9 +175,19 @@ public class TreeBuilderService : ITreeBuilderService
                 node.Title = dto.Title;
                 node.Type = dto.Type;
                 node.State = dto.State;
-                node.JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto(
-                    dto.TfsId, dto.Type, dto.Title, dto.ParentTfsId,
-                    dto.AreaPath, dto.IterationPath, dto.State, dto.JsonPayload, dto.RetrievedAt, dto.Effort));
+                node.JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto
+                {
+                    TfsId = dto.TfsId,
+                    Type = dto.Type,
+                    Title = dto.Title,
+                    ParentTfsId = dto.ParentTfsId,
+                    AreaPath = dto.AreaPath,
+                    IterationPath = dto.IterationPath,
+                    State = dto.State,
+                    JsonPayload = dto.JsonPayload,
+                    RetrievedAt = dto.RetrievedAt,
+                    Effort = dto.Effort
+                });
             }
 
             // Restore expanded state if available

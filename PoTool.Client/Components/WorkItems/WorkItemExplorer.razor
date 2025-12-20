@@ -163,10 +163,11 @@
             StateService.SetMode(settings.DataMode);
 
             // Load hierarchy with validation
-            _workItemsWithValidation = settings.ConfiguredGoalIds.Count > 0
+            var goalIds = settings.ConfiguredGoalIds.ToList();
+            _workItemsWithValidation = goalIds.Count > 0
                 ? (await WorkItemService.GetAllWithValidationAsync()).Where(wi => 
-                    settings.ConfiguredGoalIds.Contains(wi.TfsId) || 
-                    IsDescendantOfGoals(wi, settings.ConfiguredGoalIds)).ToList()
+                    goalIds.Contains(wi.TfsId) || 
+                    IsDescendantOfGoals(wi, goalIds)).ToList()
                 : (await WorkItemService.GetAllWithValidationAsync()).ToList();
 
             ApplyFilter();
@@ -414,10 +415,19 @@
 
     private WorkItemDto ConvertToWorkItemDto(WorkItemWithValidationDto item)
     {
-        return new WorkItemDto(
-            item.TfsId, item.Type, item.Title, item.ParentTfsId,
-            item.AreaPath, item.IterationPath, item.State, item.JsonPayload, item.RetrievedAt, item.Effort
-        );
+        return new WorkItemDto
+        {
+            TfsId = item.TfsId,
+            Type = item.Type,
+            Title = item.Title,
+            ParentTfsId = item.ParentTfsId,
+            AreaPath = item.AreaPath,
+            IterationPath = item.IterationPath,
+            State = item.State,
+            JsonPayload = item.JsonPayload,
+            RetrievedAt = item.RetrievedAt,
+            Effort = item.Effort
+        };
     }
 
     private void RebuildFlatNodeListFromTree()

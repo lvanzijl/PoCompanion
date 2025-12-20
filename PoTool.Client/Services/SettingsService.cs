@@ -1,5 +1,4 @@
-using System.Net.Http.Json;
-using PoTool.Client.Models;
+using PoTool.Client.ApiClient;
 
 namespace PoTool.Client.Services;
 
@@ -8,11 +7,11 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class SettingsService
 {
-    private readonly HttpClient _httpClient;
+    private readonly ISettingsClient _settingsClient;
 
-    public SettingsService(HttpClient httpClient)
+    public SettingsService(ISettingsClient settingsClient)
     {
-        _httpClient = httpClient;
+        _settingsClient = settingsClient;
     }
 
     /// <summary>
@@ -22,9 +21,9 @@ public class SettingsService
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<SettingsDto>("/api/settings", cancellationToken);
+            return await _settingsClient.GetSettingsAsync(cancellationToken);
         }
-        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        catch (ApiException ex) when (ex.StatusCode == 404)
         {
             return null;
         }
@@ -35,12 +34,13 @@ public class SettingsService
     /// </summary>
     public async Task<SettingsDto> UpdateSettingsAsync(DataMode dataMode, List<int> configuredGoalIds, CancellationToken cancellationToken = default)
     {
-        var request = new { DataMode = dataMode, ConfiguredGoalIds = configuredGoalIds };
-        var response = await _httpClient.PutAsJsonAsync("/api/settings", request, cancellationToken);
-        response.EnsureSuccessStatusCode();
-
-        var result = await response.Content.ReadFromJsonAsync<SettingsDto>(cancellationToken: cancellationToken);
-        return result ?? throw new InvalidOperationException("Failed to deserialize settings response");
+        var request = new UpdateSettingsRequest
+        {
+            DataMode = dataMode,
+            ConfiguredGoalIds = configuredGoalIds
+        };
+        
+        return await _settingsClient.UpdateSettingsAsync(request, cancellationToken);
     }
 
     /// <summary>
