@@ -59,6 +59,7 @@ public static class MauiProgram
 
         // Register client services
         builder.Services.AddScoped<WorkItemService>();
+        builder.Services.AddScoped<PullRequestService>();
         builder.Services.AddScoped<IWorkItemSyncHubService, WorkItemSyncHubService>();
         builder.Services.AddScoped<ITreeBuilderService, TreeBuilderService>();
         builder.Services.AddScoped<ICorrelationIdService, CorrelationIdService>();
