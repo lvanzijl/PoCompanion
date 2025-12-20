@@ -5,6 +5,7 @@
 @using PoTool.Client.Configuration
 @using PoTool.Client.Components.WorkItems.SubComponents
 @using PoTool.Client.Components.Settings
+@using PoTool.Core.Exceptions
 @inject WorkItemService WorkItemService
 @inject IWorkItemSyncHubService SyncHubService
 @inject ITreeBuilderService TreeBuilderService
@@ -14,6 +15,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 @inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
 <PageTitle>Work Item Explorer</PageTitle>
@@ -26,7 +28,9 @@
                      SyncStatusClass="@_syncStatusClass"
                      FilterText="@_filterText"
                      ValidationFilters="@_validationFilters"
+                     LastSyncTime="@_lastSyncTime"
                      OnSyncRequested="@RequestSync"
+                     OnIncrementalSyncRequested="@RequestIncrementalSync"
                      OnClearState="@ClearExpandedState"
                      OnFilterChanged="@HandleFilterChanged"
                      OnValidationFiltersChanged="@HandleValidationFiltersChanged"
@@ -70,6 +74,7 @@
     private bool _isSyncing = false;
     private string _syncMessage = string.Empty;
     private string _syncStatusClass = string.Empty;
+    private DateTimeOffset? _lastSyncTime;
 
     // Validation filters
     private readonly List<ValidationFilter> _validationFilters = new()
@@ -93,7 +98,21 @@
     {
         await InitializeSignalRAsync();
         await LoadExpandedStateAsync();
+        await LoadLastSyncTimeAsync();
         await LoadWorkItems();
+    }
+
+    private async Task LoadLastSyncTimeAsync()
+    {
+        try
+        {
+            var config = await TfsConfigService.GetConfigAsync();
+            _lastSyncTime = config?.LastValidated;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WorkItemExplorer] Error loading last sync time: {ex.Message}");
+        }
     }
 
     private async Task InitializeSignalRAsync()
@@ -177,7 +196,7 @@
         if (SyncHubService.IsConnected)
         {
             _isSyncing = true;
-            _syncMessage = "Requesting sync via SignalR...";
+            _syncMessage = "Requesting full sync via SignalR...";
             _syncStatusClass = "status-progress";
 
             try
@@ -185,11 +204,13 @@
                 await SyncHubService.RequestSyncAsync(AppSettings.DefaultAreaPath);
                 await Task.Delay(AppSettings.SyncDelayMilliseconds);
                 await LoadWorkItems();
+                await LoadLastSyncTimeAsync();
             }
             catch (Exception ex)
             {
-                _syncMessage = $"Error requesting sync via SignalR: {ex.Message}";
+                _syncMessage = FormatTfsError("Error requesting sync via SignalR", ex);
                 _syncStatusClass = "status-error";
+                ShowTfsErrorSnackbar(ex);
             }
             finally
             {
@@ -202,14 +223,15 @@
         try
         {
             _isSyncing = true;
-            _syncMessage = "Requesting sync via HTTP...";
+            _syncMessage = "Requesting full sync via HTTP...";
             _syncStatusClass = "status-progress";
 
             var success = await TfsConfigService.RequestSyncAsync();
             if (success)
             {
                 await LoadWorkItems();
-                _syncMessage = "Sync completed (HTTP)";
+                await LoadLastSyncTimeAsync();
+                _syncMessage = "Full sync completed (HTTP)";
                 _syncStatusClass = "status-success";
             }
             else
@@ -220,8 +242,46 @@
         }
         catch (Exception ex)
         {
-            _syncMessage = $"Error requesting sync (HTTP): {ex.Message}";
+            _syncMessage = FormatTfsError("Error requesting sync", ex);
             _syncStatusClass = "status-error";
+            ShowTfsErrorSnackbar(ex);
+        }
+        finally
+        {
+            _isSyncing = false;
+        }
+    }
+
+    private async Task RequestIncrementalSync()
+    {
+        _syncMessage = string.Empty;
+
+        try
+        {
+            _isSyncing = true;
+            _syncMessage = "Requesting incremental sync...";
+            _syncStatusClass = "status-progress";
+
+            // For incremental sync, we pass the last sync time to the API
+            var success = await TfsConfigService.RequestIncrementalSyncAsync();
+            if (success)
+            {
+                await LoadWorkItems();
+                await LoadLastSyncTimeAsync();
+                _syncMessage = "Incremental sync completed";
+                _syncStatusClass = "status-success";
+            }
+            else
+            {
+                _syncMessage = "Incremental sync request failed";
+                _syncStatusClass = "status-error";
+            }
+        }
+        catch (Exception ex)
+        {
+            _syncMessage = FormatTfsError("Error requesting incremental sync", ex);
+            _syncStatusClass = "status-error";
+            ShowTfsErrorSnackbar(ex);
         }
         finally
         {
@@ -536,5 +596,38 @@
     {
         // Reload work items after settings change
         await LoadWorkItems();
+    }
+
+    private string FormatTfsError(string prefix, Exception ex)
+    {
+        if (ex is TfsAuthenticationException)
+        {
+            return $"{prefix}: Authentication failed. Please check your PAT.";
+        }
+        else if (ex is TfsAuthorizationException)
+        {
+            return $"{prefix}: Access denied. Please check your permissions.";
+        }
+        else if (ex is TfsRateLimitException)
+        {
+            return $"{prefix}: Rate limit exceeded. Please wait before retrying.";
+        }
+        else if (ex is TfsResourceNotFoundException)
+        {
+            return $"{prefix}: Resource not found. Please check configuration.";
+        }
+        else if (ex is TfsException tfsEx)
+        {
+            var statusMsg = tfsEx.StatusCode.HasValue ? $" (HTTP {tfsEx.StatusCode})" : "";
+            return $"{prefix}: {ex.Message}{statusMsg}";
+        }
+        return $"{prefix}: {ex.Message}";
+    }
+
+    private void ShowTfsErrorSnackbar(Exception ex)
+    {
+        var severity = ex is TfsRateLimitException ? Severity.Warning : Severity.Error;
+        var message = FormatTfsError("TFS operation failed", ex);
+        Snackbar.Add(message, severity);
     }
 }

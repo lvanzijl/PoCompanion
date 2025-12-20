@@ -37,6 +37,15 @@
     cursor: not-allowed;
 }
 
+.last-sync-time {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    background-color: var(--color-surface);
+    border-radius: var(--radius-sm);
+}
+
 .sync-status {
     padding: var(--spacing-sm);
     margin-bottom: var(--spacing-md);

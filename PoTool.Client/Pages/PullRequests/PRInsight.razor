@@ -1,4 +1,4 @@
-@page "/prinsight"
+@page "/pr-insights"
 @using PoTool.Client.Services
 @using PoTool.Client.Models
 @inject PullRequestService PullRequestService
@@ -75,6 +75,32 @@
                 </MudCard>
             </MudItem>
         </MudGrid>
+
+        <!-- Date Range Filter -->
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudDateRangePicker @bind-DateRange="_dateRange" 
+                                   Label="Filter by Date Range" 
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   HelperText="Select a date range to filter pull requests" />
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          OnClick="ApplyDateFilter"
+                          StartIcon="@Icons.Material.Filled.FilterAlt">
+                    Apply Filter
+                </MudButton>
+                @if (_dateRange != null && (_dateRange.Start.HasValue || _dateRange.End.HasValue))
+                {
+                    <MudButton Variant="Variant.Outlined" 
+                              Color="Color.Default" 
+                              OnClick="ClearDateFilter"
+                              StartIcon="@Icons.Material.Filled.Clear">
+                        Clear
+                    </MudButton>
+                }
+            </MudStack>
+        </MudPaper>
 
         <!-- Tabs for different views -->
         <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
@@ -156,8 +182,10 @@
 
 @code {
     private List<PullRequestMetricsDto> _metrics = new();
+    private List<PullRequestMetricsDto> _allMetrics = new();
     private bool _isLoading = true;
     private bool _isSyncing = false;
+    private DateRange? _dateRange;
 
     private ChartOptions _barChartOptions = new()
     {
@@ -176,7 +204,8 @@
         try
         {
             var metrics = await PullRequestService.GetMetricsAsync();
-            _metrics = metrics.ToList();
+            _allMetrics = metrics.ToList();
+            _metrics = _allMetrics;
         }
         catch (Exception ex)
         {
@@ -186,6 +215,38 @@
         {
             _isLoading = false;
         }
+    }
+
+    private void ApplyDateFilter()
+    {
+        if (_dateRange == null || (!_dateRange.Start.HasValue && !_dateRange.End.HasValue))
+        {
+            _metrics = _allMetrics;
+            return;
+        }
+
+        _metrics = _allMetrics.Where(m =>
+        {
+            // Assuming metrics have a CreatedDate property - adjust as needed
+            var createdDate = m.CreatedDate;
+            
+            if (_dateRange.Start.HasValue && createdDate < _dateRange.Start.Value)
+                return false;
+            
+            if (_dateRange.End.HasValue && createdDate > _dateRange.End.Value)
+                return false;
+            
+            return true;
+        }).ToList();
+
+        StateHasChanged();
+    }
+
+    private void ClearDateFilter()
+    {
+        _dateRange = null;
+        _metrics = _allMetrics;
+        StateHasChanged();
     }
 
     private async Task SyncPullRequests()

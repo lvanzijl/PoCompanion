@@ -1,5 +1,6 @@
 @page "/tfsconfig"
 @using PoTool.Client.Services
+@using PoTool.Core.Exceptions
 @inject TfsConfigService TfsConfigService
 @inject ISnackbar Snackbar
 
@@ -29,14 +30,50 @@
                          Margin="Margin.Normal"
                          HelperText="The name of your project" />
 
-            <MudTextField @bind-Value="_pat" 
-                         Label="Personal Access Token (PAT)" 
-                         Placeholder="Your PAT"
-                         Required="true"
+            <MudSelect @bind-Value="_authMode" 
+                      Label="Authentication Mode" 
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Normal"
+                      HelperText="Select authentication method">
+                <MudSelectItem Value="@TfsAuthMode.Pat">Personal Access Token (PAT)</MudSelectItem>
+                <MudSelectItem Value="@TfsAuthMode.Ntlm">NTLM/Windows Authentication</MudSelectItem>
+            </MudSelect>
+
+            @if (_authMode == TfsAuthMode.Pat)
+            {
+                <MudTextField @bind-Value="_pat" 
+                             Label="Personal Access Token (PAT)" 
+                             Placeholder="Your PAT"
+                             Required="true"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Normal"
+                             InputType="InputType.Password"
+                             HelperText="Your PAT will be encrypted at rest" />
+            }
+            else
+            {
+                <MudCheckBox @bind-Value="_useDefaultCredentials" 
+                            Label="Use Default Windows Credentials"
+                            Color="Color.Primary"
+                            Class="mb-2">
+                    Use current Windows user credentials for authentication
+                </MudCheckBox>
+            }
+
+            <MudNumericField @bind-Value="_timeoutSeconds" 
+                            Label="Timeout (seconds)" 
+                            Variant="Variant.Outlined"
+                            Margin="Margin.Normal"
+                            Min="5"
+                            Max="300"
+                            HelperText="HTTP request timeout in seconds (5-300)" />
+
+            <MudTextField @bind-Value="_apiVersion" 
+                         Label="API Version" 
                          Variant="Variant.Outlined"
                          Margin="Margin.Normal"
-                         InputType="InputType.Password"
-                         HelperText="Your PAT will be encrypted at rest" />
+                         ReadOnly="true"
+                         HelperText="TFS/Azure DevOps API version (read-only)" />
 
             <MudStack Row="true" Class="mt-4">
                 <MudButton Variant="Variant.Filled" 
@@ -73,13 +110,31 @@
             </MudStack>
         </MudForm>
 
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <MudAlert Severity="@_errorSeverity" Class="mt-4" CloseIconClicked="ClearError" ShowCloseIcon="true">
+                @_errorMessage
+                @if (_errorStatusCode.HasValue)
+                {
+                    <br /><small><strong>HTTP Status Code:</strong> @_errorStatusCode.Value</small>
+                }
+            </MudAlert>
+        }
+
         @if (!string.IsNullOrEmpty(_currentUrl))
         {
             <MudDivider Class="my-4" />
             <MudText Typo="Typo.h6" Class="mb-2">Current Configuration</MudText>
             <MudText Typo="Typo.body2">
                 <strong>URL:</strong> @_currentUrl<br />
-                <strong>Project:</strong> @_currentProject
+                <strong>Project:</strong> @_currentProject<br />
+                <strong>Auth Mode:</strong> @_authMode<br />
+                <strong>Timeout:</strong> @_timeoutSeconds seconds<br />
+                <strong>API Version:</strong> @_apiVersion
+                @if (_lastValidated.HasValue)
+                {
+                    <br /><strong>Last Validated:</strong> @_lastValidated.Value.ToLocalTime().ToString("g")
+                }
             </MudText>
         }
     </MudPaper>
@@ -94,9 +149,19 @@
     private string _url = string.Empty;
     private string _project = string.Empty;
     private string _pat = string.Empty;
+    private TfsAuthMode _authMode = TfsAuthMode.Pat;
+    private bool _useDefaultCredentials = false;
+    private int _timeoutSeconds = 30;
+    private string _apiVersion = "7.0";
 
     private string _currentUrl = string.Empty;
     private string _currentProject = string.Empty;
+    private DateTimeOffset? _lastValidated;
+
+    // Error display
+    private string _errorMessage = string.Empty;
+    private Severity _errorSeverity = Severity.Error;
+    private int? _errorStatusCode;
 
     protected override async Task OnInitializedAsync()
     {
@@ -107,6 +172,7 @@
     {
         try
         {
+            ClearError();
             var config = await TfsConfigService.GetConfigAsync();
             if (config != null)
             {
@@ -114,11 +180,16 @@
                 _currentProject = config.Project ?? string.Empty;
                 _url = _currentUrl;
                 _project = _currentProject;
+                _authMode = config.AuthMode;
+                _useDefaultCredentials = config.UseDefaultCredentials;
+                _timeoutSeconds = config.TimeoutSeconds;
+                _apiVersion = config.ApiVersion;
+                _lastValidated = config.LastValidated;
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading configuration: {ex.Message}", Severity.Error);
+            ShowError($"Error loading configuration: {ex.Message}", ex);
         }
     }
 
@@ -127,17 +198,19 @@
         if (!_formValid) return;
 
         _isSaving = true;
+        ClearError();
         try
         {
-            await TfsConfigService.SaveConfigAsync(_url, _project, _pat);
+            await TfsConfigService.SaveConfigAsync(_url, _project, _pat, _authMode, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
             Snackbar.Add("Configuration saved successfully", Severity.Success);
             _currentUrl = _url;
             _currentProject = _project;
             _pat = string.Empty; // Clear PAT after saving
+            await LoadCurrentConfig(); // Reload to get LastValidated
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            ShowError($"Error saving configuration: {ex.Message}", ex);
         }
         finally
         {
@@ -150,10 +223,11 @@
         if (!_formValid) return;
 
         _isTesting = true;
+        ClearError();
         try
         {
             // First save the config
-            await TfsConfigService.SaveConfigAsync(_url, _project, _pat);
+            await TfsConfigService.SaveConfigAsync(_url, _project, _pat, _authMode, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
 
             // Then test the connection
             var isValid = await TfsConfigService.ValidateConnectionAsync();
@@ -164,19 +238,65 @@
                 _currentUrl = _url;
                 _currentProject = _project;
                 _pat = string.Empty; // Clear PAT after successful test
+                await LoadCurrentConfig(); // Reload to get updated LastValidated
             }
             else
             {
-                Snackbar.Add("Connection test failed. Please check your credentials.", Severity.Warning);
+                ShowError("Connection test failed. Please check your credentials and network connectivity.", null);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error testing connection: {ex.Message}", Severity.Error);
+            ShowError($"Error testing connection: {ex.Message}", ex);
         }
         finally
         {
             _isTesting = false;
         }
+    }
+
+    private void ShowError(string message, Exception? ex)
+    {
+        _errorMessage = message;
+        _errorSeverity = Severity.Error;
+        _errorStatusCode = null;
+
+        if (ex is TfsAuthenticationException authEx)
+        {
+            _errorMessage = "Authentication failed. Please check your Personal Access Token (PAT) and ensure it has not expired.";
+            _errorStatusCode = authEx.StatusCode;
+        }
+        else if (ex is TfsAuthorizationException authzEx)
+        {
+            _errorMessage = "Authorization failed. You do not have permission to access this TFS resource. Please check your project permissions.";
+            _errorStatusCode = authzEx.StatusCode;
+        }
+        else if (ex is TfsRateLimitException rateLimitEx)
+        {
+            _errorMessage = "TFS rate limit exceeded. Please wait a moment before trying again.";
+            _errorStatusCode = rateLimitEx.StatusCode;
+        }
+        else if (ex is TfsResourceNotFoundException notFoundEx)
+        {
+            _errorMessage = "TFS resource not found. Please verify your URL and project name are correct.";
+            _errorStatusCode = notFoundEx.StatusCode;
+        }
+        else if (ex is TfsException tfsEx)
+        {
+            _errorMessage = $"TFS error: {tfsEx.Message}";
+            _errorStatusCode = tfsEx.StatusCode;
+        }
+        else if (ex is HttpRequestException httpEx)
+        {
+            _errorMessage = $"Network error: {httpEx.Message}. Please check your connection and TFS URL.";
+        }
+
+        StateHasChanged();
+    }
+
+    private void ClearError()
+    {
+        _errorMessage = string.Empty;
+        _errorStatusCode = null;
     }
 }
