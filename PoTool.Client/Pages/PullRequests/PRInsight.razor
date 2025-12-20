@@ -18,6 +18,21 @@
     {
         <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
     }
+    else if (!_metrics.Any())
+    {
+        <MudAlert Severity="Severity.Info" Class="my-7">
+            <MudText Typo="Typo.h6" Class="mb-2">No Pull Request Data Available</MudText>
+            <MudText>There are no pull requests to display. Click the "Sync PRs" button below to fetch pull request data from Azure DevOps.</MudText>
+        </MudAlert>
+        
+        <!-- Sync Button for Empty State -->
+        <MudFab Color="Color.Primary" 
+                StartIcon="@Icons.Material.Filled.Sync" 
+                Label="Sync PRs" 
+                Class="mt-4"
+                OnClick="@SyncPullRequests"
+                Disabled="@_isSyncing" />
+    }
     else
     {
         <!-- Top Metrics Cards -->

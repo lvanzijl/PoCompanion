@@ -184,9 +184,27 @@
 
     private bool IsDescendantOfGoals(WorkItemWithValidationDto item, List<int> goalIds)
     {
-        // Simple check - in a real implementation, you'd traverse the hierarchy
-        // For now, this will be resolved by the API later
-        return true;
+        if (goalIds == null || goalIds.Count == 0)
+            return true;
+
+        // Check if this item is itself a goal
+        if (goalIds.Contains(item.TfsId))
+            return true;
+
+        // Traverse up the parent chain to see if any ancestor is a configured goal
+        var current = item;
+        while (current.ParentTfsId.HasValue)
+        {
+            if (goalIds.Contains(current.ParentTfsId.Value))
+                return true;
+
+            // Find parent in the collection
+            current = _workItemsWithValidation.FirstOrDefault(wi => wi.TfsId == current.ParentTfsId.Value);
+            if (current == null)
+                break;
+        }
+
+        return false;
     }
 
     private async Task RequestSync()
