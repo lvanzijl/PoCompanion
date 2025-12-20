@@ -41,13 +41,13 @@
     /// The title of the feature card.
     /// </summary>
     [Parameter, EditorRequired]
-    public string Title { get; set; } = string.Empty;
+    public string Title { get; set; } = null!;
 
     /// <summary>
     /// The description text displayed in the card content.
     /// </summary>
     [Parameter, EditorRequired]
-    public string Description { get; set; } = string.Empty;
+    public string Description { get; set; } = null!;
 
     /// <summary>
     /// The text displayed on the action button.

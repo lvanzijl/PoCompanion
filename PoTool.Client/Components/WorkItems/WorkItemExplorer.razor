@@ -191,6 +191,9 @@
         if (goalIds.Contains(item.TfsId))
             return true;
 
+        // Create lookup dictionary for efficient parent traversal
+        var itemLookup = _workItemsWithValidation.ToDictionary(wi => wi.TfsId);
+
         // Traverse up the parent chain to see if any ancestor is a configured goal
         var current = item;
         while (current.ParentTfsId.HasValue)
@@ -198,9 +201,8 @@
             if (goalIds.Contains(current.ParentTfsId.Value))
                 return true;
 
-            // Find parent in the collection
-            current = _workItemsWithValidation.FirstOrDefault(wi => wi.TfsId == current.ParentTfsId.Value);
-            if (current == null)
+            // Find parent in lookup dictionary
+            if (!itemLookup.TryGetValue(current.ParentTfsId.Value, out current))
                 break;
         }
 
