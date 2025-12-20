@@ -28,6 +28,26 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<SettingsEntity> Settings => Set<SettingsEntity>();
 
+    /// <summary>
+    /// Pull requests cached from TFS/Azure DevOps.
+    /// </summary>
+    public DbSet<PullRequestEntity> PullRequests => Set<PullRequestEntity>();
+
+    /// <summary>
+    /// Pull request iterations.
+    /// </summary>
+    public DbSet<PullRequestIterationEntity> PullRequestIterations => Set<PullRequestIterationEntity>();
+
+    /// <summary>
+    /// Pull request comments.
+    /// </summary>
+    public DbSet<PullRequestCommentEntity> PullRequestComments => Set<PullRequestCommentEntity>();
+
+    /// <summary>
+    /// Pull request file changes.
+    /// </summary>
+    public DbSet<PullRequestFileChangeEntity> PullRequestFileChanges => Set<PullRequestFileChangeEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -53,6 +73,38 @@ public class PoToolDbContext : DbContext
         modelBuilder.Entity<SettingsEntity>(entity =>
         {
             // Settings entity configuration (Id is primary key by convention)
+        });
+
+        modelBuilder.Entity<PullRequestEntity>(entity =>
+        {
+            entity.HasIndex(e => e.Id)
+                .IsUnique();
+            
+            entity.HasIndex(e => e.RepositoryName);
+            
+            entity.HasIndex(e => e.CreatedBy);
+            
+            entity.HasIndex(e => e.IterationPath);
+            
+            entity.HasIndex(e => e.Status);
+        });
+
+        modelBuilder.Entity<PullRequestIterationEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.PullRequestId, e.IterationNumber })
+                .IsUnique();
+        });
+
+        modelBuilder.Entity<PullRequestCommentEntity>(entity =>
+        {
+            entity.HasIndex(e => e.PullRequestId);
+            
+            entity.HasIndex(e => e.ThreadId);
+        });
+
+        modelBuilder.Entity<PullRequestFileChangeEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.PullRequestId, e.IterationId });
         });
     }
 }
