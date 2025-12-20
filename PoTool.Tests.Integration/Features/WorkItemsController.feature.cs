@@ -471,6 +471,71 @@ await this.FeatureBackgroundAsync();
             }
             await this.ScenarioCleanupAsync();
         }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get all goals from controller")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetAllGoalsFromController()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get all goals from controller", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 65
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 66
+    await testRunner.GivenAsync("the application is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+#line hidden
+                global::Reqnroll.Table table10 = new global::Reqnroll.Table(new string[] {
+                            "TfsId",
+                            "Title",
+                            "Type",
+                            "State"});
+                table10.AddRow(new string[] {
+                            "4000",
+                            "Goal One",
+                            "Goal",
+                            "Active"});
+                table10.AddRow(new string[] {
+                            "4001",
+                            "Goal Two",
+                            "Goal",
+                            "New"});
+                table10.AddRow(new string[] {
+                            "4002",
+                            "Test Objective",
+                            "Objective",
+                            "Active"});
+                table10.AddRow(new string[] {
+                            "4003",
+                            "Test Epic",
+                            "Epic",
+                            "New"});
+#line 67
+    await testRunner.AndAsync("work items exist in the database", ((string)(null)), table10, "And ");
+#line hidden
+#line 73
+    await testRunner.WhenAsync("I request all goals from \"/api/workitems/goals/all\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 74
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 75
+    await testRunner.AndAsync("all returned work items should be of type \"Goal\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
     }
 }
 #pragma warning restore

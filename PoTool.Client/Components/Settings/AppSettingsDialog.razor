@@ -1,8 +1,10 @@
 @using MudBlazor
 @using PoTool.Client.Services
 @using PoTool.Client.Models
+@using PoTool.Client.ApiClient
 @inject SettingsService SettingsService
 @inject ModeIsolatedStateService StateService
+@inject WorkItemService WorkItemService
 
 <MudDialog>
     <DialogContent>
@@ -26,16 +28,39 @@
 
                 <MudText Typo="Typo.subtitle1" Class="mb-2">Configured Goals</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
-                    Enter TFS IDs of Goals to track (comma-separated)
+                    Select the goals you want to track
                 </MudText>
 
-                <MudTextField T="string" 
-                              @bind-Value="_goalIdsText" 
-                              Label="Goal IDs" 
-                              Variant="Variant.Outlined"
-                              Placeholder="e.g., 1000, 2000"
-                              HelperText="Separate multiple Goal IDs with commas"
-                              Class="mb-4" />
+                @if (_loadingGoals)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+                }
+                else
+                {
+                    <MudSelect T="WorkItemDto" 
+                               Label="Select Goals" 
+                               MultiSelection="true"
+                               @bind-SelectedValues="_selectedGoals"
+                               Variant="Variant.Outlined"
+                               AnchorOrigin="Origin.BottomCenter"
+                               Class="mb-4"
+                               Dense="false"
+                               MaxHeight="400">
+                        @foreach (var goal in _availableGoals)
+                        {
+                            <MudSelectItem Value="@goal">
+                                @goal.Title (ID: @goal.TfsId)
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    @if (_selectedGoals != null && _selectedGoals.Any())
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Info" Class="mb-2">
+                            @_selectedGoals.Count() goal(s) selected
+                        </MudText>
+                    }
+                }
 
                 @if (!string.IsNullOrWhiteSpace(_errorMessage))
                 {
@@ -74,13 +99,16 @@
     private MudForm _form = null!;
     private bool _isLoading = true;
     private bool _isSaving = false;
+    private bool _loadingGoals = false;
     private DataMode _dataMode = DataMode.Mock;
-    private string _goalIdsText = string.Empty;
     private string _errorMessage = string.Empty;
+    private List<WorkItemDto> _availableGoals = new();
+    private IEnumerable<WorkItemDto> _selectedGoals = new List<WorkItemDto>();
 
     protected override async Task OnInitializedAsync()
     {
         await LoadSettings();
+        await LoadAvailableGoals();
     }
 
     private async Task LoadSettings()
@@ -90,8 +118,15 @@
         {
             var settings = await SettingsService.GetOrCreateDefaultSettingsAsync();
             _dataMode = settings.DataMode;
-            _goalIdsText = string.Join(", ", settings.ConfiguredGoalIds);
             StateService.SetMode(_dataMode);
+            
+            // After loading available goals, pre-select the configured ones
+            if (settings.ConfiguredGoalIds.Any() && _availableGoals.Any())
+            {
+                _selectedGoals = _availableGoals
+                    .Where(g => settings.ConfiguredGoalIds.Contains(g.TfsId))
+                    .ToList();
+            }
         }
         catch (Exception ex)
         {
@@ -103,6 +138,33 @@
         }
     }
 
+    private async Task LoadAvailableGoals()
+    {
+        _loadingGoals = true;
+        try
+        {
+            var goals = await WorkItemService.GetAllGoalsAsync();
+            _availableGoals = goals.OrderBy(g => g.Title).ToList();
+            
+            // Pre-select goals after loading if settings are already loaded
+            if (!_isLoading)
+            {
+                var settings = await SettingsService.GetOrCreateDefaultSettingsAsync();
+                _selectedGoals = _availableGoals
+                    .Where(g => settings.ConfiguredGoalIds.Contains(g.TfsId))
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load available goals: {ex.Message}";
+        }
+        finally
+        {
+            _loadingGoals = false;
+        }
+    }
+
     private async Task SaveSettings()
     {
         _errorMessage = string.Empty;
@@ -111,11 +173,12 @@
         {
             _isSaving = true;
             
-            // Parse goal IDs
-            var goalIds = ParseGoalIds(_goalIdsText);
+            // Get selected goal IDs
+            var goalIds = _selectedGoals.Select(g => g.TfsId).ToList();
+            
             if (goalIds.Count == 0)
             {
-                _errorMessage = "Please enter at least one Goal ID";
+                _errorMessage = "Please select at least one Goal";
                 return;
             }
 
@@ -147,26 +210,5 @@
     private void Cancel()
     {
         MudDialog.Cancel();
-    }
-
-    private List<int> ParseGoalIds(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return new List<int>();
-        }
-
-        var ids = new List<int>();
-        var parts = input.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        
-        foreach (var part in parts.Where(p => !string.IsNullOrWhiteSpace(p)))
-        {
-            if (int.TryParse(part.Trim(), out var id) && id > 0)
-            {
-                ids.Add(id);
-            }
-        }
-
-        return ids;
     }
 }

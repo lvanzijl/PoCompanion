@@ -56,6 +56,16 @@ public class WorkItemsClient : IWorkItemsClient
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<WorkItemDto>> GetAllGoalsAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.GetAsync("api/workitems/goals/all", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        
+        var result = await response.Content.ReadFromJsonAsync<IEnumerable<WorkItemDto>>(cancellationToken: cancellationToken);
+        return result ?? Enumerable.Empty<WorkItemDto>();
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<WorkItemDto>> GetGoalHierarchyAsync(IEnumerable<int> goalIds, CancellationToken cancellationToken = default)
     {
         if (goalIds == null || !goalIds.Any())
