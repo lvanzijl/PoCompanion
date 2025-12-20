@@ -12,7 +12,6 @@ This solution follows a three-layer architecture as defined in `docs/ARCHITECTUR
 - **PoTool.Api** - ASP.NET Core Web API with EF Core persistence and SignalR
 - **PoTool.Client** - Blazor Hybrid frontend (Razor class library)
 - **PoTool.Maui** - MAUI Hybrid shell application (Windows/macOS/Android/iOS)
-- **PoTool.Web** - Blazor Server web host (for testing and documentation)
 - **PoTool.Tests.Unit** - MSTest unit tests
 - **PoTool.Tests.Integration** - Reqnroll integration tests
 - **PoTool.Tests.Blazor** - bUnit Blazor component tests
@@ -47,8 +46,6 @@ dotnet build
 ```
 
 ### Run Application
-
-**Option 1: MAUI (Desktop/Mobile)**
 ```bash
 cd PoTool.Maui
 dotnet run
@@ -59,17 +56,6 @@ The application starts as a native desktop app with:
 - Blazor UI in native WebView
 - OpenAPI documentation at `http://localhost:5291/swagger` (development only)
 - Health endpoint at `http://localhost:5291/health`
-
-**Option 2: Web (Testing/Documentation)**
-```bash
-cd PoTool.Web
-dotnet run
-```
-
-The application starts as a web server at `http://localhost:5291` with:
-- Full API and Blazor UI
-- Sample data for development
-- Perfect for testing without MAUI or generating documentation screenshots
 
 ### Run API Standalone (for testing)
 ```bash
