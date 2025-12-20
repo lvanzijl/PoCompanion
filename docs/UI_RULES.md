@@ -75,3 +75,46 @@ Mixing libraries is discouraged and requires explicit justification.
 - No UI logic in JS/TS
 - No ad-hoc component creation
 - No light mode
+
+## 13. TFS Data Selection
+
+When users need to input TFS data that references an existing TFS entity, MUST NOT require manual entry of raw identifiers.
+
+### 13.1 Searchable selection
+- Work items MUST be selectable via searchable autocomplete or dropdown
+- Search MUST support:
+  - Work item ID (exact match)
+  - Work item title (partial match)
+- MUST display both ID and title in search results
+- MUST show clear visual feedback during search
+
+### 13.2 Structured TFS data
+For TFS structured data fields:
+- **Area Path**: MUST use searchable dropdown or tree picker
+- **Iteration Path**: MUST use searchable dropdown or tree picker  
+- **Work Item State**: MUST use dropdown with valid states for the work item type
+- **Work Item Type**: MUST use dropdown with available types
+- **Assigned To**: MUST use searchable user picker
+
+### 13.3 Other TFS data fields
+For TFS data fields not explicitly defined above:
+- MUST choose the most appropriate UI component based on the data type and user experience requirements
+- MUST follow all existing UI rules (sections 1-12) when selecting components
+- MUST prioritize searchability and discoverability for large datasets
+- MUST use approved component library controls (section 2)
+- SHOULD prefer autocomplete/searchable dropdowns for reference data
+- SHOULD use simple dropdowns only for small, static lists
+- SHOULD use text input only when free-form entry is genuinely required
+
+### 13.4 Implementation
+- MUST use approved component library controls (MudBlazor Autocomplete, Radzen AutoComplete, or Fluent UI ComboBox)
+- MUST implement debounced search to reduce API calls
+- MUST handle empty results gracefully with clear messaging
+- MUST provide keyboard navigation support
+- Search results SHOULD be limited to a reasonable page size (e.g., 50 items)
+
+### 13.5 Rationale
+- Reduces user errors from manual ID entry
+- Improves discoverability of existing work items
+- Enforces referential integrity at the UI level
+- Provides better user experience aligned with modern TFS/Azure DevOps UI patterns
