@@ -16,7 +16,17 @@
                 }
                 else
                 {
-                    <span>Pull & Cache Work Items</span>
+                    <span>Full Sync</span>
+                }
+            </button>
+            <button class="btn-sync-incremental" @onclick="OnIncrementalSyncClicked" disabled="@IsSyncing">
+                @if (IsSyncing)
+                {
+                    <span>Syncing...</span>
+                }
+                else
+                {
+                    <span>Incremental Sync</span>
                 }
             </button>
             <button class="btn-clear" @onclick="OnClearStateClicked">Clear tree state</button>
@@ -27,6 +37,13 @@
     {
         <div class="sync-status @SyncStatusClass">
             @SyncMessage
+        </div>
+    }
+
+    @if (LastSyncTime.HasValue)
+    {
+        <div class="last-sync-time">
+            <small>Last sync: @LastSyncTime.Value.ToLocalTime().ToString("g")</small>
         </div>
     }
 
@@ -85,7 +102,13 @@
     public List<ValidationFilter> ValidationFilters { get; set; } = new();
 
     [Parameter]
+    public DateTimeOffset? LastSyncTime { get; set; }
+
+    [Parameter]
     public EventCallback OnSyncRequested { get; set; }
+
+    [Parameter]
+    public EventCallback OnIncrementalSyncRequested { get; set; }
 
     [Parameter]
     public EventCallback OnClearState { get; set; }
@@ -104,6 +127,11 @@
     private async Task OnSyncClicked()
     {
         await OnSyncRequested.InvokeAsync();
+    }
+
+    private async Task OnIncrementalSyncClicked()
+    {
+        await OnIncrementalSyncRequested.InvokeAsync();
     }
 
     private async Task OnSettingsClicked()

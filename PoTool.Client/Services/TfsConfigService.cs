@@ -39,9 +39,19 @@ public class TfsConfigService
     /// <summary>
     /// Saves the TFS configuration.
     /// </summary>
-    public async Task SaveConfigAsync(string url, string project, string pat, CancellationToken cancellationToken = default)
+    public async Task SaveConfigAsync(string url, string project, string pat, TfsAuthMode authMode = TfsAuthMode.Pat, 
+        bool useDefaultCredentials = false, int timeoutSeconds = 30, string apiVersion = "7.0", CancellationToken cancellationToken = default)
     {
-        var payload = new { Url = url, Project = project, Pat = pat };
+        var payload = new 
+        { 
+            Url = url, 
+            Project = project, 
+            Pat = pat,
+            AuthMode = authMode,
+            UseDefaultCredentials = useDefaultCredentials,
+            TimeoutSeconds = timeoutSeconds,
+            ApiVersion = apiVersion
+        };
         var response = await _httpClient.PostAsJsonAsync("/api/tfsconfig", payload, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
@@ -77,6 +87,22 @@ public class TfsConfigService
             return false;
         }
     }
+
+    /// <summary>
+    /// Requests an incremental work item sync operation (only changed items since last sync).
+    /// </summary>
+    public async Task<bool> RequestIncrementalSyncAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync("/api/workitems/sync?incremental=true", null, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch (HttpRequestException)
+        {
+            return false;
+        }
+    }
 }
 
 /// <summary>
@@ -86,4 +112,25 @@ public class TfsConfigDto
 {
     public string? Url { get; set; }
     public string? Project { get; set; }
+    public TfsAuthMode AuthMode { get; set; } = TfsAuthMode.Pat;
+    public bool UseDefaultCredentials { get; set; }
+    public int TimeoutSeconds { get; set; } = 30;
+    public string ApiVersion { get; set; } = "7.0";
+    public DateTimeOffset? LastValidated { get; set; }
+}
+
+/// <summary>
+/// Authentication mode for TFS/Azure DevOps.
+/// </summary>
+public enum TfsAuthMode
+{
+    /// <summary>
+    /// Personal Access Token authentication.
+    /// </summary>
+    Pat = 0,
+    
+    /// <summary>
+    /// NTLM/Windows authentication (on-premises TFS only).
+    /// </summary>
+    Ntlm = 1
 }

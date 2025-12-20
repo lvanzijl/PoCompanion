@@ -26,7 +26,9 @@
                      SyncStatusClass="@_syncStatusClass"
                      FilterText="@_filterText"
                      ValidationFilters="@_validationFilters"
+                     LastSyncTime="@_lastSyncTime"
                      OnSyncRequested="@RequestSync"
+                     OnIncrementalSyncRequested="@RequestIncrementalSync"
                      OnClearState="@ClearExpandedState"
                      OnFilterChanged="@HandleFilterChanged"
                      OnValidationFiltersChanged="@HandleValidationFiltersChanged"
@@ -70,6 +72,7 @@
     private bool _isSyncing = false;
     private string _syncMessage = string.Empty;
     private string _syncStatusClass = string.Empty;
+    private DateTimeOffset? _lastSyncTime;
 
     // Validation filters
     private readonly List<ValidationFilter> _validationFilters = new()
@@ -93,7 +96,21 @@
     {
         await InitializeSignalRAsync();
         await LoadExpandedStateAsync();
+        await LoadLastSyncTimeAsync();
         await LoadWorkItems();
+    }
+
+    private async Task LoadLastSyncTimeAsync()
+    {
+        try
+        {
+            var config = await TfsConfigService.GetConfigAsync();
+            _lastSyncTime = config?.LastValidated;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WorkItemExplorer] Error loading last sync time: {ex.Message}");
+        }
     }
 
     private async Task InitializeSignalRAsync()
@@ -177,7 +194,7 @@
         if (SyncHubService.IsConnected)
         {
             _isSyncing = true;
-            _syncMessage = "Requesting sync via SignalR...";
+            _syncMessage = "Requesting full sync via SignalR...";
             _syncStatusClass = "status-progress";
 
             try
@@ -185,6 +202,7 @@
                 await SyncHubService.RequestSyncAsync(AppSettings.DefaultAreaPath);
                 await Task.Delay(AppSettings.SyncDelayMilliseconds);
                 await LoadWorkItems();
+                await LoadLastSyncTimeAsync();
             }
             catch (Exception ex)
             {
@@ -202,14 +220,15 @@
         try
         {
             _isSyncing = true;
-            _syncMessage = "Requesting sync via HTTP...";
+            _syncMessage = "Requesting full sync via HTTP...";
             _syncStatusClass = "status-progress";
 
             var success = await TfsConfigService.RequestSyncAsync();
             if (success)
             {
                 await LoadWorkItems();
-                _syncMessage = "Sync completed (HTTP)";
+                await LoadLastSyncTimeAsync();
+                _syncMessage = "Full sync completed (HTTP)";
                 _syncStatusClass = "status-success";
             }
             else
@@ -221,6 +240,42 @@
         catch (Exception ex)
         {
             _syncMessage = $"Error requesting sync (HTTP): {ex.Message}";
+            _syncStatusClass = "status-error";
+        }
+        finally
+        {
+            _isSyncing = false;
+        }
+    }
+
+    private async Task RequestIncrementalSync()
+    {
+        _syncMessage = string.Empty;
+
+        try
+        {
+            _isSyncing = true;
+            _syncMessage = "Requesting incremental sync...";
+            _syncStatusClass = "status-progress";
+
+            // For incremental sync, we pass the last sync time to the API
+            var success = await TfsConfigService.RequestIncrementalSyncAsync();
+            if (success)
+            {
+                await LoadWorkItems();
+                await LoadLastSyncTimeAsync();
+                _syncMessage = "Incremental sync completed";
+                _syncStatusClass = "status-success";
+            }
+            else
+            {
+                _syncMessage = "Incremental sync request failed";
+                _syncStatusClass = "status-error";
+            }
+        }
+        catch (Exception ex)
+        {
+            _syncMessage = $"Error requesting incremental sync: {ex.Message}";
             _syncStatusClass = "status-error";
         }
         finally
