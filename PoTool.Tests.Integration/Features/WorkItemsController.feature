@@ -55,9 +55,9 @@ Scenario: Get work items with validation results
 
 Scenario: Get valid work items hierarchy with validation
     Given work items exist in the database with parent-child relationships
-        | TfsId | Title            | Type      | State       | ParentTfsId |
-        | 3000  | Parent Goal      | Goal      | In Progress |             |
-        | 3001  | Child in Progress| Objective | In Progress | 3000        |
+        | TfsId | Title            | Type      | State       | ParentTfsId | Effort |
+        | 3000  | Parent Goal      | Goal      | In Progress |             | 10     |
+        | 3001  | Child in Progress| Objective | In Progress | 3000        | 8      |
     When I request all work items with validation from "/api/workitems/validated"
     Then the response should be OK
     And work item 3001 should have no validation issues

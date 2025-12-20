@@ -57,7 +57,7 @@ public class TfsConfigurationServiceTests
         Assert.AreEqual(project, savedEntity.Project);
         Assert.IsNotNull(savedEntity.ProtectedPat);
         Assert.AreNotEqual(pat, savedEntity.ProtectedPat, "PAT should be encrypted, not stored in plain text");
-        Assert.IsTrue(savedEntity.ProtectedPat.Length > pat.Length, "Encrypted PAT should be longer than original");
+        Assert.IsGreaterThan(pat.Length, savedEntity.ProtectedPat.Length, "Encrypted PAT should be longer than original");
     }
 
     [TestMethod]

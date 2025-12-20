@@ -128,7 +128,7 @@ public class WorkItemParentProgressValidatorTests
         var result = _validator.ValidateWorkItems(items);
 
         // Assert
-        Assert.AreEqual(0, result.Count, "No validation issues for items not in progress");
+        Assert.IsEmpty(result, "No validation issues for items not in progress");
     }
 
     [TestMethod]
@@ -144,7 +144,7 @@ public class WorkItemParentProgressValidatorTests
         var result = _validator.ValidateWorkItems(items);
 
         // Assert
-        Assert.AreEqual(0, result.Count, "Root item in progress should have no issues");
+        Assert.IsEmpty(result, "Root item in progress should have no issues");
     }
 
     [TestMethod]
@@ -160,7 +160,7 @@ public class WorkItemParentProgressValidatorTests
         var result = _validator.ValidateWorkItems(items);
 
         // Assert
-        Assert.AreEqual(0, result.Count, "Missing parent should not cause validation issues");
+        Assert.IsEmpty(result, "Missing parent should not cause validation issues");
     }
 
     [TestMethod]

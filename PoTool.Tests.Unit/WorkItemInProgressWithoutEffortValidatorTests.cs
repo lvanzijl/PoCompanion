@@ -84,7 +84,7 @@ public class WorkItemInProgressWithoutEffortValidatorTests
         var result = _validator.ValidateWorkItems(items);
 
         // Assert
-        Assert.AreEqual(0, result.Count, "No validation issues for items not in progress");
+        Assert.IsEmpty(result, "No validation issues for items not in progress");
     }
 
     [TestMethod]

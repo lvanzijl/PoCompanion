@@ -440,19 +440,22 @@ await this.FeatureBackgroundAsync();
                             "Title",
                             "Type",
                             "State",
-                            "ParentTfsId"});
+                            "ParentTfsId",
+                            "Effort"});
                 table9.AddRow(new string[] {
                             "3000",
                             "Parent Goal",
                             "Goal",
                             "In Progress",
-                            ""});
+                            "",
+                            "10"});
                 table9.AddRow(new string[] {
                             "3001",
                             "Child in Progress",
                             "Objective",
                             "In Progress",
-                            "3000"});
+                            "3000",
+                            "8"});
 #line 57
     await testRunner.GivenAsync("work items exist in the database with parent-child relationships", ((string)(null)), table9, "Given ");
 #line hidden

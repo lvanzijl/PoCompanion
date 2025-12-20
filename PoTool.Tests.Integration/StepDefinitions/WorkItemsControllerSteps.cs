@@ -79,6 +79,12 @@ public class WorkItemsControllerSteps
                 parentTfsId = int.Parse(row["ParentTfsId"]);
             }
 
+            int? effort = null;
+            if (row.ContainsKey("Effort") && !string.IsNullOrWhiteSpace(row["Effort"]))
+            {
+                effort = int.Parse(row["Effort"]);
+            }
+
             var workItem = new WorkItemDto(
                 TfsId: int.Parse(row["TfsId"]),
                 Type: row["Type"],
@@ -89,7 +95,7 @@ public class WorkItemsControllerSteps
                 State: row["State"],
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
-                    Effort: null
+                    Effort: effort
             );
 
             dbContext.WorkItems.Add(new WorkItemEntity
@@ -102,7 +108,8 @@ public class WorkItemsControllerSteps
                 IterationPath = workItem.IterationPath,
                 State = workItem.State,
                 JsonPayload = workItem.JsonPayload,
-                RetrievedAt = workItem.RetrievedAt
+                RetrievedAt = workItem.RetrievedAt,
+                Effort = workItem.Effort
             });
         }
 
