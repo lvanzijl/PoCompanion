@@ -1,5 +1,6 @@
 @page "/tfsconfig"
 @using PoTool.Client.Services
+@using PoTool.Core.Exceptions
 @inject TfsConfigService TfsConfigService
 @inject ISnackbar Snackbar
 
@@ -109,6 +110,17 @@
             </MudStack>
         </MudForm>
 
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <MudAlert Severity="@_errorSeverity" Class="mt-4" CloseIconClicked="ClearError" ShowCloseIcon="true">
+                @_errorMessage
+                @if (_errorStatusCode.HasValue)
+                {
+                    <br /><small><strong>HTTP Status Code:</strong> @_errorStatusCode.Value</small>
+                }
+            </MudAlert>
+        }
+
         @if (!string.IsNullOrEmpty(_currentUrl))
         {
             <MudDivider Class="my-4" />
@@ -146,6 +158,11 @@
     private string _currentProject = string.Empty;
     private DateTimeOffset? _lastValidated;
 
+    // Error display
+    private string _errorMessage = string.Empty;
+    private Severity _errorSeverity = Severity.Error;
+    private int? _errorStatusCode;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadCurrentConfig();
@@ -155,6 +172,7 @@
     {
         try
         {
+            ClearError();
             var config = await TfsConfigService.GetConfigAsync();
             if (config != null)
             {
@@ -171,7 +189,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading configuration: {ex.Message}", Severity.Error);
+            ShowError($"Error loading configuration: {ex.Message}", ex);
         }
     }
 
@@ -180,6 +198,7 @@
         if (!_formValid) return;
 
         _isSaving = true;
+        ClearError();
         try
         {
             await TfsConfigService.SaveConfigAsync(_url, _project, _pat, _authMode, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
@@ -191,7 +210,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            ShowError($"Error saving configuration: {ex.Message}", ex);
         }
         finally
         {
@@ -204,6 +223,7 @@
         if (!_formValid) return;
 
         _isTesting = true;
+        ClearError();
         try
         {
             // First save the config
@@ -222,16 +242,61 @@
             }
             else
             {
-                Snackbar.Add("Connection test failed. Please check your credentials.", Severity.Warning);
+                ShowError("Connection test failed. Please check your credentials and network connectivity.", null);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error testing connection: {ex.Message}", Severity.Error);
+            ShowError($"Error testing connection: {ex.Message}", ex);
         }
         finally
         {
             _isTesting = false;
         }
+    }
+
+    private void ShowError(string message, Exception? ex)
+    {
+        _errorMessage = message;
+        _errorSeverity = Severity.Error;
+        _errorStatusCode = null;
+
+        if (ex is TfsAuthenticationException authEx)
+        {
+            _errorMessage = "Authentication failed. Please check your Personal Access Token (PAT) and ensure it has not expired.";
+            _errorStatusCode = authEx.StatusCode;
+        }
+        else if (ex is TfsAuthorizationException authzEx)
+        {
+            _errorMessage = "Authorization failed. You do not have permission to access this TFS resource. Please check your project permissions.";
+            _errorStatusCode = authzEx.StatusCode;
+        }
+        else if (ex is TfsRateLimitException rateLimitEx)
+        {
+            _errorMessage = "TFS rate limit exceeded. Please wait a moment before trying again.";
+            _errorStatusCode = rateLimitEx.StatusCode;
+        }
+        else if (ex is TfsResourceNotFoundException notFoundEx)
+        {
+            _errorMessage = "TFS resource not found. Please verify your URL and project name are correct.";
+            _errorStatusCode = notFoundEx.StatusCode;
+        }
+        else if (ex is TfsException tfsEx)
+        {
+            _errorMessage = $"TFS error: {tfsEx.Message}";
+            _errorStatusCode = tfsEx.StatusCode;
+        }
+        else if (ex is HttpRequestException httpEx)
+        {
+            _errorMessage = $"Network error: {httpEx.Message}. Please check your connection and TFS URL.";
+        }
+
+        StateHasChanged();
+    }
+
+    private void ClearError()
+    {
+        _errorMessage = string.Empty;
+        _errorStatusCode = null;
     }
 }

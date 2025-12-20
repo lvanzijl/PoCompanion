@@ -5,6 +5,7 @@
 @using PoTool.Client.Configuration
 @using PoTool.Client.Components.WorkItems.SubComponents
 @using PoTool.Client.Components.Settings
+@using PoTool.Core.Exceptions
 @inject WorkItemService WorkItemService
 @inject IWorkItemSyncHubService SyncHubService
 @inject ITreeBuilderService TreeBuilderService
@@ -14,6 +15,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 @inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
 <PageTitle>Work Item Explorer</PageTitle>
@@ -206,8 +208,9 @@
             }
             catch (Exception ex)
             {
-                _syncMessage = $"Error requesting sync via SignalR: {ex.Message}";
+                _syncMessage = FormatTfsError("Error requesting sync via SignalR", ex);
                 _syncStatusClass = "status-error";
+                ShowTfsErrorSnackbar(ex);
             }
             finally
             {
@@ -239,8 +242,9 @@
         }
         catch (Exception ex)
         {
-            _syncMessage = $"Error requesting sync (HTTP): {ex.Message}";
+            _syncMessage = FormatTfsError("Error requesting sync", ex);
             _syncStatusClass = "status-error";
+            ShowTfsErrorSnackbar(ex);
         }
         finally
         {
@@ -275,8 +279,9 @@
         }
         catch (Exception ex)
         {
-            _syncMessage = $"Error requesting incremental sync: {ex.Message}";
+            _syncMessage = FormatTfsError("Error requesting incremental sync", ex);
             _syncStatusClass = "status-error";
+            ShowTfsErrorSnackbar(ex);
         }
         finally
         {
@@ -591,5 +596,38 @@
     {
         // Reload work items after settings change
         await LoadWorkItems();
+    }
+
+    private string FormatTfsError(string prefix, Exception ex)
+    {
+        if (ex is TfsAuthenticationException)
+        {
+            return $"{prefix}: Authentication failed. Please check your PAT.";
+        }
+        else if (ex is TfsAuthorizationException)
+        {
+            return $"{prefix}: Access denied. Please check your permissions.";
+        }
+        else if (ex is TfsRateLimitException)
+        {
+            return $"{prefix}: Rate limit exceeded. Please wait before retrying.";
+        }
+        else if (ex is TfsResourceNotFoundException)
+        {
+            return $"{prefix}: Resource not found. Please check configuration.";
+        }
+        else if (ex is TfsException tfsEx)
+        {
+            var statusMsg = tfsEx.StatusCode.HasValue ? $" (HTTP {tfsEx.StatusCode})" : "";
+            return $"{prefix}: {ex.Message}{statusMsg}";
+        }
+        return $"{prefix}: {ex.Message}";
+    }
+
+    private void ShowTfsErrorSnackbar(Exception ex)
+    {
+        var severity = ex is TfsRateLimitException ? Severity.Warning : Severity.Error;
+        var message = FormatTfsError("TFS operation failed", ex);
+        Snackbar.Add(message, severity);
     }
 }
