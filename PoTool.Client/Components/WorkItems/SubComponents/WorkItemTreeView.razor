@@ -82,14 +82,60 @@
     
     private record FlatNode(TreeNode Node, int Level);
     
+    // Memoization fields for flat list
+    private List<FlatNode>? _cachedFlatList;
+    private int _cachedTreeRootsHashCode;
+    
     private List<FlatNode> GetFlatNodeList()
     {
+        // Calculate hash based on tree structure
+        var currentHash = CalculateTreeHash();
+        
+        // Return cached list if tree hasn't changed
+        if (_cachedFlatList != null && _cachedTreeRootsHashCode == currentHash)
+        {
+            return _cachedFlatList;
+        }
+        
+        // Rebuild flat list
         var flatList = new List<FlatNode>();
         foreach (var root in TreeRoots)
         {
             AddNodeToFlatList(root, 0, flatList);
         }
+        
+        // Cache the result
+        _cachedFlatList = flatList;
+        _cachedTreeRootsHashCode = currentHash;
+        
         return flatList;
+    }
+    
+    private int CalculateTreeHash()
+    {
+        // Create hash based on tree structure and expansion state
+        var hash = new HashCode();
+        hash.Add(TreeRoots.Count);
+        foreach (var root in TreeRoots)
+        {
+            AddNodeToHash(root, ref hash);
+        }
+        return hash.ToHashCode();
+    }
+    
+    private void AddNodeToHash(TreeNode node, ref HashCode hash)
+    {
+        hash.Add(node.Id);
+        hash.Add(node.IsExpanded);
+        hash.Add(node.Children.Count);
+        
+        if (node.IsExpanded)
+        {
+            foreach (var child in node.Children)
+            {
+                AddNodeToHash(child, ref hash);
+            }
+        }
     }
     
     private void AddNodeToFlatList(TreeNode node, int level, List<FlatNode> flatList)
