@@ -159,7 +159,9 @@ public static class ApiApplicationBuilderExtensions
 
         app.MapPost("/api/tfsconfig", async (TfsConfigurationService svc, TfsConfigRequest req) =>
         {
-            await svc.SaveConfigAsync(req.Url ?? string.Empty, req.Project ?? string.Empty, req.Pat ?? string.Empty);
+            // Note: PAT is no longer stored on server - it's stored client-side
+            // See docs/PAT_STORAGE_BEST_PRACTICES.md
+            await svc.SaveConfigAsync(req.Url ?? string.Empty, req.Project ?? string.Empty);
             return Results.Ok();
         });
 

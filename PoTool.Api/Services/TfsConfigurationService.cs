@@ -10,25 +10,26 @@ public sealed class TfsConfig
 {
     public string Url { get; set; } = string.Empty;
     public string Project { get; set; } = string.Empty;
-    // ProtectedPat is intentionally not returned to callers
+    // NOTE: PAT is not included in server-side config
+    // PAT is stored client-side using MAUI SecureStorage
+    // See docs/PAT_STORAGE_BEST_PRACTICES.md
 }
 
 /// <summary>
-/// Service to persist TFS configuration securely using EF Core and IDataProtection.
+/// Service to persist TFS configuration (non-sensitive data only).
+/// PAT is stored client-side using MAUI SecureStorage, not on the server.
+/// See docs/PAT_STORAGE_BEST_PRACTICES.md for details.
 /// </summary>
 public class TfsConfigurationService
 {
     private readonly PoToolDbContext _db;
-    private readonly IDataProtector _protector;
     private readonly ILogger<TfsConfigurationService> _logger;
 
     public TfsConfigurationService(
         PoToolDbContext db,
-        IDataProtectionProvider provider,
         ILogger<TfsConfigurationService> logger)
     {
         _db = db;
-        _protector = provider.CreateProtector("PoTool.TfsConfigProtector");
         _logger = logger;
     }
 
@@ -47,10 +48,12 @@ public class TfsConfigurationService
         };
     }
 
-    public async Task SaveConfigAsync(string url, string project, string pat, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Saves non-sensitive TFS configuration (URL, Project).
+    /// PAT is NOT stored by this service - it should be stored client-side.
+    /// </summary>
+    public async Task SaveConfigAsync(string url, string project, CancellationToken cancellationToken = default)
     {
-        var protectedPat = _protector.Protect(pat ?? string.Empty);
-
         var existing = await _db.TfsConfigs.FirstOrDefaultAsync(cancellationToken);
         if (existing == null)
         {
@@ -58,7 +61,6 @@ public class TfsConfigurationService
             {
                 Url = url ?? string.Empty,
                 Project = project ?? string.Empty,
-                ProtectedPat = protectedPat,
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -69,29 +71,12 @@ public class TfsConfigurationService
         {
             existing.Url = url ?? string.Empty;
             existing.Project = project ?? string.Empty;
-            existing.ProtectedPat = protectedPat;
             existing.UpdatedAt = DateTimeOffset.UtcNow;
             _db.TfsConfigs.Update(existing);
         }
 
         await _db.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("TFS configuration saved/updated for Url={Url}", url);
-    }
-
-    public string? UnprotectPatEntity(TfsConfigEntity? entity)
-    {
-        if (entity == null || string.IsNullOrEmpty(entity.ProtectedPat))
-            return null;
-
-        try
-        {
-            return _protector.Unprotect(entity.ProtectedPat);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to unprotect PAT");
-            return null;
-        }
     }
 
     public async Task<TfsConfigEntity?> GetConfigEntityAsync(CancellationToken cancellationToken = default)

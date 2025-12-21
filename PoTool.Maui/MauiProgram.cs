@@ -87,6 +87,7 @@ public static class MauiProgram
         builder.Services.AddScoped<ModeIsolatedStateService>();
         builder.Services.AddScoped<ErrorMessageService>();
         builder.Services.AddSingleton<IPreferencesService, MauiPreferencesService>();
+        builder.Services.AddSingleton<ISecureStorageService, MauiSecureStorageService>();
         builder.Services.AddScoped<IOnboardingService, OnboardingService>();
         
         // Register clipboard, export and report services

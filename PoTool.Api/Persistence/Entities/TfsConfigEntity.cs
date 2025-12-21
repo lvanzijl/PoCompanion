@@ -30,8 +30,9 @@ public class TfsConfigEntity
     [MaxLength(256)]
     public string Project { get; set; } = string.Empty;
 
-    [Required]
-    public string ProtectedPat { get; set; } = string.Empty;
+    // NOTE: PAT is no longer stored in database
+    // It is stored client-side using MAUI SecureStorage for security
+    // See docs/PAT_STORAGE_BEST_PRACTICES.md
 
     /// <summary>
     /// Authentication mode (PAT or NTLM).

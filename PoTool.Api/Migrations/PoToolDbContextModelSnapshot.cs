@@ -252,10 +252,6 @@ namespace PoTool.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ProtectedPat")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("TimeoutSeconds")
                         .HasColumnType("INTEGER");
 

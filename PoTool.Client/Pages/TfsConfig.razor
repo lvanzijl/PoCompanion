@@ -12,7 +12,7 @@
     <MudPaper Elevation="2" Class="pa-4">
         <MudText Typo="Typo.h4" Class="mb-4">TFS Configuration</MudText>
         <MudText Typo="Typo.body1" Class="mb-4">
-            Configure your Azure DevOps / TFS connection settings. Your Personal Access Token (PAT) will be encrypted and stored securely.
+            Configure your Azure DevOps / TFS connection settings. Your Personal Access Token (PAT) will be stored securely on your device using platform-native secure storage.
         </MudText>
 
         @if (_isLoading)
@@ -58,7 +58,7 @@
                              Variant="Variant.Outlined"
                              Margin="Margin.Normal"
                              InputType="InputType.Password"
-                             HelperText="Your PAT will be encrypted at rest" />
+                             HelperText="Stored securely on your device (not on server)" />
             }
             else
             {
