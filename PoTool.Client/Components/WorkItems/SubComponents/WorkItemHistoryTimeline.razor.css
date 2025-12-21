@@ -1,0 +1,57 @@
+.history-timeline {
+    padding: var(--mud-spacing-2);
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--mud-spacing-4);
+}
+
+.revision-card {
+    margin-bottom: var(--mud-spacing-2);
+    background-color: var(--mud-palette-background-grey);
+}
+
+.revision-comment {
+    padding: var(--mud-spacing-2);
+    border-left: 3px solid var(--mud-palette-primary);
+    background-color: var(--mud-palette-surface);
+    margin-bottom: var(--mud-spacing-2);
+}
+
+.field-changes {
+    margin-top: var(--mud-spacing-2);
+}
+
+.field-change-item {
+    display: flex;
+    align-items: center;
+    gap: var(--mud-spacing-1);
+    margin-bottom: var(--mud-spacing-1);
+    padding: var(--mud-spacing-1);
+    border-radius: var(--mud-border-radius);
+    background-color: var(--mud-palette-surface);
+}
+
+.field-change-values {
+    display: flex;
+    align-items: center;
+    gap: var(--mud-spacing-1);
+    flex-wrap: wrap;
+}
+
+.old-value {
+    color: var(--mud-palette-error);
+    opacity: 0.7;
+}
+
+.new-value {
+    color: var(--mud-palette-success);
+}
+
+/* Dark theme specific overrides */
+.mud-timeline-item-dot {
+    background-color: var(--mud-palette-primary);
+}

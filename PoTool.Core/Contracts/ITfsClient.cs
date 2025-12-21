@@ -84,4 +84,14 @@ public interface ITfsClient
         string repositoryName,
         int iterationId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves the revision history for a specific work item.
+    /// </summary>
+    /// <param name="workItemId">The work item ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of work item revision DTOs ordered by revision number.</returns>
+    Task<IEnumerable<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(
+        int workItemId,
+        CancellationToken cancellationToken = default);
 }

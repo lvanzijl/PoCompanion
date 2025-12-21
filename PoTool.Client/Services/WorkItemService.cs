@@ -1,4 +1,5 @@
 using PoTool.Client.ApiClient;
+using CoreWorkItems = PoTool.Core.WorkItems;
 
 namespace PoTool.Client.Services;
 
@@ -22,7 +23,7 @@ public class WorkItemService
     /// <summary>
     /// Gets all cached work items.
     /// </summary>
-    public async Task<IEnumerable<WorkItemDto>> GetAllAsync()
+    public async Task<IEnumerable<CoreWorkItems.WorkItemDto>> GetAllAsync()
     {
         return await _client.GetAllAsync();
     }
@@ -30,7 +31,7 @@ public class WorkItemService
     /// <summary>
     /// Gets filtered work items.
     /// </summary>
-    public async Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter)
+    public async Task<IEnumerable<CoreWorkItems.WorkItemDto>> GetFilteredAsync(string filter)
     {
         return await _client.GetFilteredAsync(filter);
     }
@@ -38,7 +39,7 @@ public class WorkItemService
     /// <summary>
     /// Gets a specific work item by TFS ID.
     /// </summary>
-    public async Task<WorkItemDto?> GetByTfsIdAsync(int tfsId)
+    public async Task<CoreWorkItems.WorkItemDto?> GetByTfsIdAsync(int tfsId)
     {
         return await _client.GetByTfsIdAsync(tfsId);
     }
@@ -46,7 +47,7 @@ public class WorkItemService
     /// <summary>
     /// Gets all goals (work items of type Goal).
     /// </summary>
-    public async Task<IEnumerable<WorkItemDto>> GetAllGoalsAsync()
+    public async Task<IEnumerable<CoreWorkItems.WorkItemDto>> GetAllGoalsAsync()
     {
         return await _client.GetAllGoalsAsync();
     }
@@ -54,7 +55,7 @@ public class WorkItemService
     /// <summary>
     /// Gets work items for specific Goal IDs (full hierarchy).
     /// </summary>
-    public async Task<IEnumerable<WorkItemDto>> GetGoalHierarchyAsync(List<int> goalIds)
+    public async Task<IEnumerable<CoreWorkItems.WorkItemDto>> GetGoalHierarchyAsync(List<int> goalIds)
     {
         var goalIdsParam = string.Join(",", goalIds);
         return await _client.GetGoalHierarchyAsync(goalIdsParam);
@@ -63,8 +64,16 @@ public class WorkItemService
     /// <summary>
     /// Gets all cached work items with validation results.
     /// </summary>
-    public async Task<IEnumerable<WorkItemWithValidationDto>> GetAllWithValidationAsync()
+    public async Task<IEnumerable<CoreWorkItems.WorkItemWithValidationDto>> GetAllWithValidationAsync()
     {
         return await _client.GetAllWithValidationAsync();
+    }
+
+    /// <summary>
+    /// Gets the revision history for a specific work item.
+    /// </summary>
+    public async Task<IEnumerable<CoreWorkItems.WorkItemRevisionDto>> GetRevisionsAsync(int workItemId)
+    {
+        return await _client.GetWorkItemRevisionsAsync(workItemId);
     }
 }
