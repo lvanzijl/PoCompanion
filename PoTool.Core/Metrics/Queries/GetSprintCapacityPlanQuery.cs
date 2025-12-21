@@ -1,0 +1,11 @@
+using Mediator;
+
+namespace PoTool.Core.Metrics.Queries;
+
+/// <summary>
+/// Query to get sprint capacity planning analysis for a specific iteration.
+/// </summary>
+public sealed record GetSprintCapacityPlanQuery(
+    string IterationPath,
+    int? DefaultCapacityPerPerson = null
+) : IQuery<SprintCapacityPlanDto?>;

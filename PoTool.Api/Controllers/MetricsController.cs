@@ -202,4 +202,47 @@ public class MetricsController : ControllerBase
             return StatusCode(500, "Error retrieving effort distribution");
         }
     }
+
+    /// <summary>
+    /// Gets sprint capacity planning analysis for a specific iteration.
+    /// </summary>
+    /// <param name="iterationPath">The iteration path of the sprint</param>
+    /// <param name="defaultCapacity">Default capacity per person (optional)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Sprint capacity plan or 404 if no work items found</returns>
+    [HttpGet("capacity-plan")]
+    public async Task<ActionResult<SprintCapacityPlanDto>> GetSprintCapacityPlan(
+        [FromQuery][Required] string iterationPath,
+        [FromQuery] int? defaultCapacity = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(iterationPath))
+            {
+                return BadRequest("Iteration path is required");
+            }
+
+            if (defaultCapacity.HasValue && defaultCapacity.Value < 0)
+            {
+                return BadRequest("DefaultCapacity must be non-negative");
+            }
+
+            var plan = await _mediator.Send(
+                new GetSprintCapacityPlanQuery(iterationPath, defaultCapacity), 
+                cancellationToken);
+
+            if (plan == null)
+            {
+                return NotFound($"No work items found for iteration path: {iterationPath}");
+            }
+
+            return Ok(plan);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving sprint capacity plan for iteration: {IterationPath}", iterationPath);
+            return StatusCode(500, "Error retrieving sprint capacity plan");
+        }
+    }
 }
