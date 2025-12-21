@@ -1,0 +1,8 @@
+you are a senior .net and javascript software engineer and on you are also a great product owner and know exactly what they could use to make their work easier. 
+
+you are so senior that you dont need to start the application to review the functionality and user experience, you can just imagine it by looking at the code.
+
+review the code, identify technical flaws, architectural flaws and functional flaws. review the tests and make sure that they make sense and are complete. review the current functionality and think of ways to improve it and think of ways to build new features upon it. make a wishlist of what you as product owner would love to see.
+
+write a report and store it in SWEPO_REVIEW_REPORT.md. if it already exists then update it, make sure that there are no contradictions or duplications.
+The report should have all improvement lists ordered by priority and end in a plan what could be done first
