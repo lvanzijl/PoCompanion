@@ -1,4 +1,13 @@
 @using PoTool.Client.Models
+@using PoTool.Client.Services
+@using PoTool.Client.ApiClient
+@using PoTool.Core.Contracts
+@inject ExportService ExportService
+@inject ReportService ReportService
+@inject IClipboardService ClipboardService
+@inject TfsConfigService TfsConfigService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
 
 @* Toolbar for work item explorer actions *@
 
@@ -70,6 +79,59 @@
             <div class="selection-info">
                 <span class="selection-count">@SelectedCount item@(SelectedCount == 1 ? "" : "s") selected</span>
                 <button class="btn-clear-selection" @onclick="OnClearSelection">Clear Selection</button>
+            </div>
+            
+            @* Bulk operation buttons *@
+            <div class="bulk-actions">
+                <MudTooltip Text="Export selected items to CSV format">
+                    <MudButton Variant="Variant.Outlined" 
+                              Color="Color.Primary" 
+                              StartIcon="@Icons.Material.Filled.FileDownload" 
+                              Size="Size.Small"
+                              OnClick="ExportToCsv">
+                        Export CSV
+                    </MudButton>
+                </MudTooltip>
+                
+                <MudTooltip Text="Export selected items to JSON format">
+                    <MudButton Variant="Variant.Outlined" 
+                              Color="Color.Primary" 
+                              StartIcon="@Icons.Material.Filled.FileDownload" 
+                              Size="Size.Small"
+                              OnClick="ExportToJson">
+                        Export JSON
+                    </MudButton>
+                </MudTooltip>
+                
+                <MudTooltip Text="Copy work item IDs to clipboard (comma-separated)">
+                    <MudButton Variant="Variant.Outlined" 
+                              Color="Color.Secondary" 
+                              StartIcon="@Icons.Material.Filled.ContentCopy" 
+                              Size="Size.Small"
+                              OnClick="CopyIdsToClipboard">
+                        Copy IDs
+                    </MudButton>
+                </MudTooltip>
+                
+                <MudTooltip Text="Copy work item URLs to clipboard">
+                    <MudButton Variant="Variant.Outlined" 
+                              Color="Color.Secondary" 
+                              StartIcon="@Icons.Material.Filled.Link" 
+                              Size="Size.Small"
+                              OnClick="CopyUrlsToClipboard">
+                        Copy URLs
+                    </MudButton>
+                </MudTooltip>
+                
+                <MudTooltip Text="Generate summary report for selected items">
+                    <MudButton Variant="Variant.Filled" 
+                              Color="Color.Info" 
+                              StartIcon="@Icons.Material.Filled.Assessment" 
+                              Size="Size.Small"
+                              OnClick="GenerateReport">
+                        Generate Report
+                    </MudButton>
+                </MudTooltip>
             </div>
         }
         
@@ -151,6 +213,9 @@
     [Parameter]
     public EventCallback OnClearSelection { get; set; }
 
+    [Parameter]
+    public List<WorkItemDto> SelectedWorkItems { get; set; } = new();
+
     private bool AreAllFiltersEnabled => ValidationFilters.All(f => f.IsEnabled);
 
     private string GetFilterTooltip(string filterId)
@@ -202,5 +267,94 @@
             filter.IsEnabled = newState;
         }
         await OnValidationFiltersChanged.InvokeAsync(ValidationFilters);
+    }
+
+    // Bulk operation handlers
+    private async Task ExportToCsv()
+    {
+        try
+        {
+            var csv = ExportService.ExportToCsv(SelectedWorkItems);
+            await DownloadFile(csv, $"workitems_{DateTime.Now:yyyyMMdd_HHmmss}.csv", "text/csv");
+            Snackbar.Add($"Exported {SelectedWorkItems.Count} items to CSV", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to export CSV: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ExportToJson()
+    {
+        try
+        {
+            var json = ExportService.ExportToJson(SelectedWorkItems);
+            await DownloadFile(json, $"workitems_{DateTime.Now:yyyyMMdd_HHmmss}.json", "application/json");
+            Snackbar.Add($"Exported {SelectedWorkItems.Count} items to JSON", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to export JSON: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task CopyIdsToClipboard()
+    {
+        try
+        {
+            var ids = string.Join(", ", SelectedWorkItems.Select(w => w.TfsId));
+            await ClipboardService.CopyToClipboardAsync(ids);
+            Snackbar.Add($"Copied {SelectedWorkItems.Count} work item IDs to clipboard", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to copy IDs: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task CopyUrlsToClipboard()
+    {
+        try
+        {
+            var config = await TfsConfigService.GetConfigAsync();
+            if (config == null || string.IsNullOrEmpty(config.Url) || string.IsNullOrEmpty(config.Project))
+            {
+                Snackbar.Add("TFS configuration not found. Please configure Azure DevOps connection first.", Severity.Warning);
+                return;
+            }
+
+            var urls = SelectedWorkItems
+                .Select(w => Core.WorkItems.TfsUrlBuilder.BuildWorkItemUrl(config.Url, config.Project, w.TfsId))
+                .ToList();
+            
+            var urlsText = string.Join(Environment.NewLine, urls);
+            await ClipboardService.CopyToClipboardAsync(urlsText);
+            Snackbar.Add($"Copied {SelectedWorkItems.Count} work item URLs to clipboard", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to copy URLs: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task GenerateReport()
+    {
+        try
+        {
+            var report = ReportService.GenerateSummaryReport(SelectedWorkItems);
+            await DownloadFile(report, $"workitems_report_{DateTime.Now:yyyyMMdd_HHmmss}.md", "text/markdown");
+            Snackbar.Add($"Generated report for {SelectedWorkItems.Count} items", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to generate report: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DownloadFile(string content, string filename, string mimeType)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        var base64 = Convert.ToBase64String(bytes);
+        await JSRuntime.InvokeVoidAsync("downloadFile", filename, base64, mimeType);
     }
 }

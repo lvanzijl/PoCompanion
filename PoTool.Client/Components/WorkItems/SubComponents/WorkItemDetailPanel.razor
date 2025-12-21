@@ -1,5 +1,11 @@
 @using PoTool.Client.ApiClient
+@using PoTool.Core.Contracts
+@using PoTool.Client.Services
 @using System.Text.Json
+@inject IClipboardService ClipboardService
+@inject TfsConfigService TfsConfigService
+@inject BrowserNavigationService BrowserNavigationService
+@inject ISnackbar Snackbar
 
 @* Detail panel for displaying selected work item(s) *@
 
@@ -69,6 +75,40 @@ else if (SelectedWorkItem != null)
 {
     <div class="detail-panel">
         <h2>@SelectedWorkItem.Title</h2>
+        
+        @* Quick Actions *@
+        <div class="quick-actions">
+            <MudTooltip Text="Open this work item in Azure DevOps">
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.OpenInNew" 
+                          Size="Size.Small"
+                          OnClick="@(() => OpenInAzureDevOps(SelectedWorkItem.TfsId))">
+                    Open in Azure DevOps
+                </MudButton>
+            </MudTooltip>
+            
+            <MudTooltip Text="Copy work item ID to clipboard">
+                <MudButton Variant="Variant.Outlined" 
+                          Color="Color.Secondary" 
+                          StartIcon="@Icons.Material.Filled.ContentCopy" 
+                          Size="Size.Small"
+                          OnClick="@(() => CopyIdToClipboard(SelectedWorkItem.TfsId))">
+                    Copy ID
+                </MudButton>
+            </MudTooltip>
+            
+            <MudTooltip Text="Copy work item URL to clipboard">
+                <MudButton Variant="Variant.Outlined" 
+                          Color="Color.Secondary" 
+                          StartIcon="@Icons.Material.Filled.Link" 
+                          Size="Size.Small"
+                          OnClick="@(() => CopyUrlToClipboard(SelectedWorkItem.TfsId))">
+                    Copy URL
+                </MudButton>
+            </MudTooltip>
+        </div>
+        
         <div class="detail-field">
             <label>TFS ID:</label>
             <span>@SelectedWorkItem.TfsId</span>
@@ -191,5 +231,67 @@ else if (SelectedWorkItem != null)
         var firstAreaPath = SelectedWorkItems[0].AreaPath;
         if (firstAreaPath == null) return null;
         return SelectedWorkItems.All(w => w.AreaPath != null && w.AreaPath == firstAreaPath) ? firstAreaPath : null;
+    }
+
+    // Quick action handlers
+    private async Task OpenInAzureDevOps(int workItemId)
+    {
+        try
+        {
+            var config = await TfsConfigService.GetConfigAsync();
+            if (config == null || string.IsNullOrEmpty(config.Url) || string.IsNullOrEmpty(config.Project))
+            {
+                Snackbar.Add("TFS configuration not found. Please configure Azure DevOps connection first.", Severity.Warning);
+                return;
+            }
+
+            var url = PoTool.Core.WorkItems.TfsUrlBuilder.BuildWorkItemUrl(config.Url, config.Project, workItemId);
+            await OpenUrl(url);
+            Snackbar.Add($"Opening work item {workItemId} in Azure DevOps", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to open work item: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task CopyIdToClipboard(int workItemId)
+    {
+        try
+        {
+            await ClipboardService.CopyToClipboardAsync(workItemId.ToString());
+            Snackbar.Add($"Work item ID {workItemId} copied to clipboard", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to copy ID: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task CopyUrlToClipboard(int workItemId)
+    {
+        try
+        {
+            var config = await TfsConfigService.GetConfigAsync();
+            if (config == null || string.IsNullOrEmpty(config.Url) || string.IsNullOrEmpty(config.Project))
+            {
+                Snackbar.Add("TFS configuration not found. Please configure Azure DevOps connection first.", Severity.Warning);
+                return;
+            }
+
+            var url = PoTool.Core.WorkItems.TfsUrlBuilder.BuildWorkItemUrl(config.Url, config.Project, workItemId);
+            await ClipboardService.CopyToClipboardAsync(url);
+            Snackbar.Add($"Work item URL copied to clipboard", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to copy URL: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenUrl(string url)
+    {
+        // Open URL in new browser tab
+        await BrowserNavigationService.OpenInNewTabAsync(url);
     }
 }
