@@ -1,0 +1,397 @@
+@using PoTool.Client.Services
+@using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
+@inject IOnboardingService OnboardingService
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+@inject TfsConfigService TfsConfigService
+@inject ErrorMessageService ErrorMessageService
+@inject ISnackbar Snackbar
+
+@if (_isVisible)
+{
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h5">
+                @GetStepTitle()
+            </MudText>
+            <MudProgressLinear Color="Color.Primary" Value="@GetProgress()" Class="mt-2" />
+        </TitleContent>
+        <DialogContent>
+            <MudStack Spacing="4" Class="pa-4">
+                @if (_currentStep == 0)
+                {
+                    <!-- Step 1: Welcome & Overview -->
+                    <MudStack Spacing="4">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.WavingHand" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h6" Color="Color.Primary">Welcome to PO Companion!</MudText>
+                        </MudStack>
+                        <MudText Typo="Typo.body1">
+                            PO Companion is your Azure DevOps work item management companion, designed to help Product Owners:
+                        </MudText>
+                        <MudList T="string" Dense="true">
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
+                                <MudText>View and manage work items in a hierarchical tree structure</MudText>
+                            </MudListItem>
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
+                                <MudText>Validate work item relationships and identify issues</MudText>
+                            </MudListItem>
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
+                                <MudText>Track pull request metrics and iteration patterns</MudText>
+                            </MudListItem>
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
+                                <MudText>Sync with Azure DevOps in real-time</MudText>
+                            </MudListItem>
+                        </MudList>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Let's get you started in just a few simple steps!
+                        </MudText>
+                    </MudStack>
+                }
+                else if (_currentStep == 1)
+                {
+                    <!-- Step 2: TFS Configuration -->
+                    <MudStack Spacing="4">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h6" Color="Color.Primary">Configure Azure DevOps Connection</MudText>
+                        </MudStack>
+                        
+                        <MudForm @ref="_configForm" @bind-IsValid="_configFormValid">
+                            <MudTextField @bind-Value="_url" 
+                                         Label="Organization URL" 
+                                         Placeholder="https://dev.azure.com/yourorg"
+                                         Required="true"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         HelperText="The URL of your Azure DevOps organization" />
+
+                            <MudTextField @bind-Value="_project" 
+                                         Label="Project Name" 
+                                         Placeholder="MyProject"
+                                         Required="true"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         HelperText="The name of your project" />
+
+                            <MudTextField @bind-Value="_pat" 
+                                         Label="Personal Access Token (PAT)" 
+                                         Placeholder="Your PAT"
+                                         Required="true"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         InputType="InputType.Password"
+                                         HelperText="Your PAT will be encrypted at rest" />
+
+                            <MudStack Row="true" Spacing="2" Class="mt-2">
+                                <MudButton Variant="Variant.Filled" 
+                                          Color="Color.Primary" 
+                                          OnClick="SaveAndTestConfig"
+                                          Disabled="@(!_configFormValid || _isSaving || _isTesting)"
+                                          Size="Size.Small"
+                                          StartIcon="@Icons.Material.Filled.Check">
+                                    @if (_isSaving || _isTesting)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                        <span>@(_isSaving ? "Saving..." : "Testing...")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Save & Test Connection</span>
+                                    }
+                                </MudButton>
+                            </MudStack>
+                        </MudForm>
+
+                        @if (_connectionTestResult != null)
+                        {
+                            <MudAlert Severity="@(_connectionTestResult.Success ? Severity.Success : Severity.Error)" Dense="true">
+                                @_connectionTestResult.Message
+                            </MudAlert>
+                        }
+
+                        @if (_configErrorResponse != null)
+                        {
+                            <ErrorDisplay ErrorResponse="@_configErrorResponse" 
+                                         OnDismiss="ClearConfigError" />
+                        }
+                        
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            You can configure these settings now or skip and do it later from the Configuration page.
+                        </MudAlert>
+                    </MudStack>
+                }
+                else if (_currentStep == 2)
+                {
+                    <!-- Step 3: Initial Sync -->
+                    <MudStack Spacing="4">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Sync" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h6" Color="Color.Primary">Sync Your Work Items</MudText>
+                        </MudStack>
+                        <MudText Typo="Typo.body1">
+                            Once configured, you'll need to sync your work items from Azure DevOps.
+                        </MudText>
+                        
+                        <MudPaper Elevation="0" Class="pa-4 mud-background-gray">
+                            <MudStack Spacing="2">
+                                <MudText Typo="Typo.subtitle1"><strong>Full Sync</strong></MudText>
+                                <MudText Typo="Typo.body2">
+                                    Downloads all work items from Azure DevOps. Use this for the first sync or after major changes.
+                                </MudText>
+                            </MudStack>
+                        </MudPaper>
+
+                        <MudPaper Elevation="0" Class="pa-4 mud-background-gray">
+                            <MudStack Spacing="2">
+                                <MudText Typo="Typo.subtitle1"><strong>Incremental Sync</strong></MudText>
+                                <MudText Typo="Typo.body2">
+                                    Downloads only changes since the last sync. Faster for regular updates.
+                                </MudText>
+                            </MudStack>
+                        </MudPaper>
+
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            The first sync may take a few minutes depending on the number of work items in your project.
+                        </MudAlert>
+                    </MudStack>
+                }
+                else if (_currentStep == 3)
+                {
+                    <!-- Step 4: Feature Tour -->
+                    <MudStack Spacing="4">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Tour" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h6" Color="Color.Primary">Key Features</MudText>
+                        </MudStack>
+                        
+                        <MudPaper Elevation="0" Class="pa-4 mud-background-gray">
+                            <MudStack Spacing="2">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Primary" />
+                                    <MudText Typo="Typo.subtitle1"><strong>Filters and Search</strong></MudText>
+                                </MudStack>
+                                <MudText Typo="Typo.body2">
+                                    Filter work items by type, state, or search by title. Use validation filters to identify issues with parent progress or missing effort.
+                                </MudText>
+                            </MudStack>
+                        </MudPaper>
+
+                        <MudPaper Elevation="0" Class="pa-4 mud-background-gray">
+                            <MudStack Spacing="2">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                    <MudText Typo="Typo.subtitle1"><strong>Validation</strong></MudText>
+                                </MudStack>
+                                <MudText Typo="Typo.body2">
+                                    Automatically validate work item relationships and identify configuration issues.
+                                </MudText>
+                            </MudStack>
+                        </MudPaper>
+
+                        <MudPaper Elevation="0" Class="pa-4 mud-background-gray">
+                            <MudStack Spacing="2">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Keyboard" Color="Color.Info" />
+                                    <MudText Typo="Typo.subtitle1"><strong>Keyboard Shortcuts</strong></MudText>
+                                </MudStack>
+                                <MudText Typo="Typo.body2">
+                                    Navigate work items using arrow keys, expand/collapse with Enter, and use Ctrl+A to select all.
+                                </MudText>
+                            </MudStack>
+                        </MudPaper>
+
+                        <MudAlert Severity="Severity.Success" Dense="true">
+                            You're all set! Click "Get Started" to begin using PO Companion.
+                        </MudAlert>
+                    </MudStack>
+                }
+            </MudStack>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Skip" Color="Color.Default">
+                @if (_currentStep == 3)
+                {
+                    <text>Skip for Now</text>
+                }
+                else
+                {
+                    <text>Skip Tour</text>
+                }
+            </MudButton>
+            @if (_currentStep > 0)
+            {
+                <MudButton OnClick="Previous" Color="Color.Default" Variant="Variant.Outlined">
+                    Previous
+                </MudButton>
+            }
+            @if (_currentStep < 3)
+            {
+                <MudButton OnClick="Next" Color="Color.Primary" Variant="Variant.Filled">
+                    Next
+                </MudButton>
+            }
+            else
+            {
+                <MudButton OnClick="Complete" Color="Color.Success" Variant="Variant.Filled">
+                    Get Started
+                </MudButton>
+            }
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public EventCallback OnCompleted { get; set; }
+
+    private int _currentStep = 0;
+    private bool _isVisible = true;
+
+    // Configuration form fields
+    private MudForm? _configForm;
+    private bool _configFormValid;
+    private bool _isSaving;
+    private bool _isTesting;
+    private string _url = string.Empty;
+    private string _project = string.Empty;
+    private string _pat = string.Empty;
+    private ConnectionTestResult? _connectionTestResult;
+    private ErrorResponse? _configErrorResponse;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExistingConfig();
+    }
+
+    private async Task LoadExistingConfig()
+    {
+        try
+        {
+            var config = await TfsConfigService.GetConfigAsync();
+            if (config != null)
+            {
+                _url = config.Url ?? string.Empty;
+                _project = config.Project ?? string.Empty;
+                // Don't pre-fill PAT for security reasons
+            }
+        }
+        catch (ApiException ex) when (ex.StatusCode == 404)
+        {
+            // Expected on first launch when no config exists yet
+            // Leave fields empty for user to fill in
+        }
+        catch (Exception)
+        {
+            // On any other error, still allow wizard to show with empty fields
+            // User can fill in configuration manually
+        }
+    }
+
+    private string GetStepTitle()
+    {
+        return _currentStep switch
+        {
+            0 => "Welcome to PO Companion",
+            1 => "Configure Your Connection",
+            2 => "Sync Your Work Items",
+            3 => "Discover Key Features",
+            _ => "Getting Started"
+        };
+    }
+
+    private double GetProgress()
+    {
+        return (_currentStep + 1) * 25.0;
+    }
+
+    private void Next()
+    {
+        if (_currentStep < 3)
+        {
+            _currentStep++;
+            // Reset connection test result when moving to next step
+            _connectionTestResult = null;
+        }
+    }
+
+    private void Previous()
+    {
+        if (_currentStep > 0)
+        {
+            _currentStep--;
+        }
+    }
+
+    private async Task SaveAndTestConfig()
+    {
+        if (!_configFormValid) return;
+
+        ClearConfigError();
+        _isSaving = true;
+        
+        try
+        {
+            // Save configuration
+            await TfsConfigService.SaveConfigAsync(_url, _project, _pat);
+            
+            // Test connection
+            _isSaving = false;
+            _isTesting = true;
+            
+            var isValid = await TfsConfigService.ValidateConnectionAsync();
+            
+            if (isValid)
+            {
+                _connectionTestResult = new ConnectionTestResult(true, "Connection successful! You're all set.");
+                Snackbar.Add("Configuration saved and tested successfully", Severity.Success);
+            }
+            else
+            {
+                _connectionTestResult = new ConnectionTestResult(false, "Connection failed. Please check your settings.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _connectionTestResult = new ConnectionTestResult(false, "Connection test failed.");
+            ShowConfigError(ex, "Error testing connection");
+        }
+        finally
+        {
+            _isSaving = false;
+            _isTesting = false;
+        }
+    }
+
+    private void ShowConfigError(Exception ex, string context)
+    {
+        _configErrorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearConfigError()
+    {
+        _configErrorResponse = null;
+        _connectionTestResult = null;
+    }
+
+    private async Task Skip()
+    {
+        OnboardingService.MarkOnboardingSkipped();
+        await OnCompleted.InvokeAsync();
+        MudDialog?.Close(DialogResult.Cancel());
+    }
+
+    private async Task Complete()
+    {
+        OnboardingService.MarkOnboardingCompleted();
+        await OnCompleted.InvokeAsync();
+        MudDialog?.Close(DialogResult.Ok(true));
+    }
+
+    private record ConnectionTestResult(bool Success, string Message);
+}
