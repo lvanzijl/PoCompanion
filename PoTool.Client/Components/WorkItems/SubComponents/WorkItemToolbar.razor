@@ -136,7 +136,9 @@
         }
         
         <div class="selection-actions">
-            <button class="btn-select-all" @onclick="OnSelectAll">Select All</button>
+            <MudTooltip Text="Select all visible items (Ctrl+A)">
+                <button class="btn-select-all" @onclick="OnSelectAll">Select All</button>
+            </MudTooltip>
         </div>
         
         <div class="validation-filters">

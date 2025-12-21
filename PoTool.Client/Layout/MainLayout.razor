@@ -1,5 +1,6 @@
 ﻿@using PoTool.Client.Components.Settings
 @using PoTool.Client.Components.Onboarding
+@using PoTool.Client.Components.Common
 @using PoTool.Client.Services
 @inject IOnboardingService OnboardingService
 @inject IDialogService DialogService
@@ -10,7 +11,7 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<div class="page">
+<div class="page" @onkeydown="HandleGlobalKeyDown" tabindex="-1">
     <div class="sidebar">
         <NavMenu />
     </div>
@@ -22,6 +23,13 @@
                           OnClick="OpenOnboardingWizard" 
                           title="Getting Started" 
                           aria-label="Open getting started wizard" />
+            <MudTooltip Text="Keyboard Shortcuts (Press ?)">
+                <MudIconButton Icon="@Icons.Material.Filled.Keyboard" 
+                              Color="Color.Inherit" 
+                              OnClick="OpenKeyboardShortcuts" 
+                              title="Keyboard Shortcuts" 
+                              aria-label="Open keyboard shortcuts" />
+            </MudTooltip>
             <MudIconButton Icon="@Icons.Material.Filled.Settings" 
                           Color="Color.Inherit" 
                           OnClick="OpenSettings" 
@@ -73,6 +81,27 @@
         };
         
         await DialogService.ShowAsync<OnboardingWizard>("Getting Started", options);
+    }
+
+    private async Task OpenKeyboardShortcuts()
+    {
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        
+        await DialogService.ShowAsync<KeyboardShortcutsDialog>("Keyboard Shortcuts", options);
+    }
+
+    private async Task HandleGlobalKeyDown(KeyboardEventArgs e)
+    {
+        // Open keyboard shortcuts help with "?" key (Shift+/)
+        if (e.Key == "?" || (e.Key == "/" && e.ShiftKey))
+        {
+            await OpenKeyboardShortcuts();
+        }
     }
 
     private readonly MudTheme _darkTheme = new()
