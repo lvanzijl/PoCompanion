@@ -15,7 +15,15 @@
             Configure your Azure DevOps / TFS connection settings. Your Personal Access Token (PAT) will be encrypted and stored securely.
         </MudText>
 
-        <MudForm @ref="_form" @bind-IsValid="_formValid">
+        @if (_isLoading)
+        {
+            <div class="d-flex justify-center align-center pa-4">
+                <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+            </div>
+        }
+        else
+        {
+            <MudForm @ref="_form" @bind-IsValid="_formValid">
             <MudTextField @bind-Value="_url" 
                          Label="Organization URL" 
                          Placeholder="https://dev.azure.com/yourorg"
@@ -132,6 +140,7 @@
                 }
             </MudText>
         }
+        }
     </MudPaper>
 </MudContainer>
 
@@ -140,6 +149,7 @@
     private bool _formValid;
     private bool _isSaving;
     private bool _isTesting;
+    private bool _isLoading = true;
 
     private string _url = string.Empty;
     private string _project = string.Empty;
@@ -165,6 +175,7 @@
     {
         try
         {
+            _isLoading = true;
             ClearError();
             var config = await TfsConfigService.GetConfigAsync();
             if (config != null)
@@ -183,6 +194,10 @@
         catch (Exception ex)
         {
             ShowError(ex, "Error loading configuration");
+        }
+        finally
+        {
+            _isLoading = false;
         }
     }
 

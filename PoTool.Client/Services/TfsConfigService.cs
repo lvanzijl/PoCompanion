@@ -17,7 +17,7 @@ public class TfsConfigService
     /// <summary>
     /// Gets the current TFS configuration.
     /// </summary>
-    public async Task<TfsConfigDto?> GetConfigAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<TfsConfigDto?> GetConfigAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -39,7 +39,7 @@ public class TfsConfigService
     /// <summary>
     /// Saves the TFS configuration.
     /// </summary>
-    public async Task SaveConfigAsync(string url, string project, string pat, TfsAuthMode authMode = TfsAuthMode.Pat, 
+    public virtual async Task SaveConfigAsync(string url, string project, string pat, TfsAuthMode authMode = TfsAuthMode.Pat, 
         bool useDefaultCredentials = false, int timeoutSeconds = 30, string apiVersion = "7.0", CancellationToken cancellationToken = default)
     {
         var request = new TfsConfigRequest
@@ -55,7 +55,7 @@ public class TfsConfigService
     /// <summary>
     /// Validates the TFS connection.
     /// </summary>
-    public async Task<bool> ValidateConnectionAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<bool> ValidateConnectionAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -71,7 +71,7 @@ public class TfsConfigService
     /// <summary>
     /// Requests a work item sync operation.
     /// </summary>
-    public async Task<bool> RequestSyncAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<bool> RequestSyncAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -87,7 +87,7 @@ public class TfsConfigService
     /// <summary>
     /// Requests an incremental work item sync operation (only changed items since last sync).
     /// </summary>
-    public async Task<bool> RequestIncrementalSyncAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<bool> RequestIncrementalSyncAsync(CancellationToken cancellationToken = default)
     {
         // Note: The generated client doesn't support the incremental parameter yet
         // This will need to be handled differently or the API needs to expose a separate endpoint

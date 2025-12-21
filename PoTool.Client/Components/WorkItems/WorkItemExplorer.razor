@@ -31,12 +31,15 @@
                      FilterText="@_filterText"
                      ValidationFilters="@_validationFilters"
                      LastSyncTime="@_lastSyncTime"
+                     SelectedCount="@_selectedIds.Count"
                      OnSyncRequested="@RequestSync"
                      OnIncrementalSyncRequested="@RequestIncrementalSync"
                      OnClearState="@ClearExpandedState"
                      OnFilterChanged="@HandleFilterChanged"
                      OnValidationFiltersChanged="@HandleValidationFiltersChanged"
-                     OnSettingsRequested="@OpenSettings" />
+                     OnSettingsRequested="@OpenSettings"
+                     OnSelectAll="@SelectAllItems"
+                     OnClearSelection="@ClearSelection" />
 
     <ErrorDisplay ErrorResponse="@_errorResponse" 
                   Class="mx-4 mt-2"
@@ -88,8 +91,8 @@
     // Validation filters
     private readonly List<ValidationFilter> _validationFilters = new()
     {
-        new ValidationFilter { Id = "parentProgress", Label = "Parent Progress Issues", IsEnabled = false },
-        new ValidationFilter { Id = "missingEffort", Label = "Missing Effort Issues", IsEnabled = false }
+        new ValidationFilter { Id = "parentProgress", Label = "Parent Progress Issues", IsEnabled = false, Count = 0 },
+        new ValidationFilter { Id = "missingEffort", Label = "Missing Effort Issues", IsEnabled = false, Count = 0 }
     };
 
     // Resolved endpoints for debugging
@@ -180,6 +183,7 @@
                 : (await WorkItemService.GetAllWithValidationAsync()).ToList();
 
             ApplyFilter();
+            UpdateValidationFilterCounts();
             await SaveExpandedStateAsync();
         }
         catch (Exception ex)
@@ -380,6 +384,23 @@
         StateHasChanged();
     }
 
+    private void UpdateValidationFilterCounts()
+    {
+        foreach (var filter in _validationFilters)
+        {
+            filter.Count = filter.Id switch
+            {
+                "parentProgress" => _workItemsWithValidation.Count(wi => 
+                    wi.ValidationIssues.Any(issue => 
+                        issue.Message.Contains("Parent") || issue.Message.Contains("Ancestor"))),
+                "missingEffort" => _workItemsWithValidation.Count(wi => 
+                    wi.ValidationIssues.Any(issue => 
+                        issue.Message.Contains("effort"))),
+                _ => 0
+            };
+        }
+    }
+
     private IEnumerable<WorkItemWithValidationDto> FilterWithAncestorsValidation(
         IEnumerable<WorkItemWithValidationDto> items, 
         HashSet<int> targetIds)
@@ -517,6 +538,20 @@
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (_flatNodeList.Count == 0) return;
+
+        // Handle Ctrl+A for Select All
+        if (e.Key == "a" && e.CtrlKey)
+        {
+            SelectAllItems();
+            return;
+        }
+
+        // Handle Escape for Clear Selection
+        if (e.Key == "Escape")
+        {
+            ClearSelection();
+            return;
+        }
 
         var currentIndex = -1;
         if (_selectedWorkItem != null)
@@ -659,5 +694,39 @@
     private void ClearError()
     {
         _errorResponse = null;
+    }
+
+    private void SelectAllItems()
+    {
+        _selectedIds.Clear();
+        _selectedWorkItems.Clear();
+
+        // Add all visible nodes from flat list
+        foreach (var node in _flatNodeList)
+        {
+            _selectedIds.Add(node.Id);
+            if (!string.IsNullOrEmpty(node.JsonPayload))
+            {
+                var workItem = System.Text.Json.JsonSerializer.Deserialize<WorkItemDto>(node.JsonPayload);
+                if (workItem != null && !_selectedWorkItems.Any(w => w.TfsId == node.Id))
+                {
+                    _selectedWorkItems.Add(workItem);
+                }
+            }
+        }
+
+        // Set selected work item to first item
+        _selectedWorkItem = _selectedWorkItems.FirstOrDefault();
+        _selectedValidationIssues = GetValidationIssuesForNode(_selectedWorkItem?.TfsId);
+        StateHasChanged();
+    }
+
+    private void ClearSelection()
+    {
+        _selectedIds.Clear();
+        _selectedWorkItems.Clear();
+        _selectedWorkItem = null;
+        _selectedValidationIssues = new List<string>();
+        StateHasChanged();
     }
 }
