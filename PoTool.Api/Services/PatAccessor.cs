@@ -18,6 +18,7 @@ public class PatAccessor
 
     /// <summary>
     /// Gets the PAT from the current HTTP request context.
+    /// This method is thread-safe as HttpContext is scoped to the current request.
     /// </summary>
     /// <returns>The PAT if present in the request, otherwise null.</returns>
     public string? GetPat()

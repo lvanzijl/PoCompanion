@@ -24,7 +24,10 @@ public class PatHeaderHandler : DelegatingHandler
         HttpRequestMessage request, 
         CancellationToken cancellationToken)
     {
-        // Get PAT from secure storage
+        // Get PAT from secure storage on each request
+        // Note: Not cached intentionally for security - PAT should be retrieved fresh from
+        // secure storage on each request to ensure it's always current and to minimize
+        // time PAT is held in memory. SecureStorage retrieval is fast (platform API call).
         var pat = await _secureStorage.GetAsync(PatStorageKey);
 
         // Add PAT header if available
