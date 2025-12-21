@@ -53,12 +53,12 @@ public class TfsConfigService
             await _secureStorage.SetAsync(PatStorageKey, pat);
         }
 
-        // Send non-sensitive config to API (without PAT)
+        // Send non-sensitive config to API (PAT is NOT sent to server)
         var request = new TfsConfigRequest
         {
             Url = url,
             Project = project,
-            Pat = string.Empty // Don't send PAT to server for storage
+            Pat = null // PAT is never sent to server for storage
         };
         
         await _apiClient.PostApiTfsconfigAsync(request, cancellationToken);

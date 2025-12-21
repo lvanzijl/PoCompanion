@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -7,11 +6,15 @@ using PoTool.Api.Services;
 
 namespace PoTool.Tests.Unit;
 
+/// <summary>
+/// Tests for TfsConfigurationService.
+/// Note: PAT is no longer stored server-side, so PAT encryption tests have been removed.
+/// See docs/PAT_STORAGE_BEST_PRACTICES.md for details on the new client-side PAT storage approach.
+/// </summary>
 [TestClass]
 public class TfsConfigurationServiceTests
 {
     private PoToolDbContext _context = null!;
-    private IDataProtectionProvider _dataProtectionProvider = null!;
     private TfsConfigurationService _service = null!;
     private Mock<ILogger<TfsConfigurationService>> _loggerMock = null!;
 
@@ -23,13 +26,12 @@ public class TfsConfigurationServiceTests
             .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
             .Options;
         _context = new PoToolDbContext(options);
-
-        // Use ephemeral data protection provider for testing
-        _dataProtectionProvider = DataProtectionProvider.Create("PoToolTests");
         
         _loggerMock = new Mock<ILogger<TfsConfigurationService>>();
         
-        _service = new TfsConfigurationService(_context, _dataProtectionProvider, _loggerMock.Object);
+        // Note: TfsConfigurationService no longer requires IDataProtectionProvider
+        // PAT is stored client-side using MAUI SecureStorage
+        _service = new TfsConfigurationService(_context, _loggerMock.Object);
     }
 
     [TestCleanup]
@@ -40,41 +42,36 @@ public class TfsConfigurationServiceTests
     }
 
     [TestMethod]
-    public async Task SaveConfigAsync_NewConfig_SavesEncryptedPat()
+    public async Task SaveConfigAsync_NewConfig_SavesUrlAndProject()
     {
         // Arrange
         const string url = "https://dev.azure.com/myorg";
         const string project = "MyProject";
-        const string pat = "my-secret-pat-token";
 
-        // Act
-        await _service.SaveConfigAsync(url, project, pat);
+        // Act - Note: PAT parameter removed from SaveConfigAsync
+        await _service.SaveConfigAsync(url, project);
 
         // Assert
         var savedEntity = await _context.TfsConfigs.FirstOrDefaultAsync();
         Assert.IsNotNull(savedEntity);
         Assert.AreEqual(url, savedEntity.Url);
         Assert.AreEqual(project, savedEntity.Project);
-        Assert.IsNotNull(savedEntity.ProtectedPat);
-        Assert.AreNotEqual(pat, savedEntity.ProtectedPat, "PAT should be encrypted, not stored in plain text");
-        Assert.IsTrue(savedEntity.ProtectedPat.Length > pat.Length, "Encrypted PAT should be longer than original");
+        // PAT is no longer stored in the entity
     }
 
     [TestMethod]
-    public async Task SaveConfigAsync_UpdateExisting_UpdatesEncryptedPat()
+    public async Task SaveConfigAsync_UpdateExisting_UpdatesUrlAndProject()
     {
         // Arrange
         const string originalUrl = "https://dev.azure.com/org1";
         const string originalProject = "Project1";
-        const string originalPat = "original-pat";
-        await _service.SaveConfigAsync(originalUrl, originalProject, originalPat);
+        await _service.SaveConfigAsync(originalUrl, originalProject);
 
         const string newUrl = "https://dev.azure.com/org2";
         const string newProject = "Project2";
-        const string newPat = "new-pat";
 
         // Act
-        await _service.SaveConfigAsync(newUrl, newProject, newPat);
+        await _service.SaveConfigAsync(newUrl, newProject);
 
         // Assert
         var configs = await _context.TfsConfigs.ToListAsync();
@@ -83,7 +80,6 @@ public class TfsConfigurationServiceTests
         var config = configs[0];
         Assert.AreEqual(newUrl, config.Url);
         Assert.AreEqual(newProject, config.Project);
-        Assert.AreNotEqual(newPat, config.ProtectedPat, "New PAT should be encrypted");
     }
 
     [TestMethod]
@@ -92,8 +88,7 @@ public class TfsConfigurationServiceTests
         // Arrange
         const string url = "https://dev.azure.com/myorg";
         const string project = "MyProject";
-        const string pat = "my-secret-pat";
-        await _service.SaveConfigAsync(url, project, pat);
+        await _service.SaveConfigAsync(url, project);
 
         // Act
         var config = await _service.GetConfigAsync();
@@ -102,7 +97,7 @@ public class TfsConfigurationServiceTests
         Assert.IsNotNull(config);
         Assert.AreEqual(url, config.Url);
         Assert.AreEqual(project, config.Project);
-        // PAT should not be exposed in the public config object
+        // PAT is never included in server-side config
     }
 
     [TestMethod]
@@ -116,122 +111,46 @@ public class TfsConfigurationServiceTests
     }
 
     [TestMethod]
-    public async Task UnprotectPatEntity_ValidEntity_ReturnsDecryptedPat()
+    public async Task SaveConfigAsync_EmptyUrlAndProject_SavesEmptyStrings()
     {
         // Arrange
-        const string url = "https://dev.azure.com/myorg";
-        const string project = "MyProject";
-        const string originalPat = "my-secret-pat-123";
-        await _service.SaveConfigAsync(url, project, originalPat);
-
-        var entity = await _service.GetConfigEntityAsync();
+        const string url = "";
+        const string project = "";
 
         // Act
-        var unprotectedPat = _service.UnprotectPatEntity(entity);
-
-        // Assert
-        Assert.IsNotNull(unprotectedPat);
-        Assert.AreEqual(originalPat, unprotectedPat, "Decrypted PAT should match original");
-    }
-
-    [TestMethod]
-    public void UnprotectPatEntity_NullEntity_ReturnsNull()
-    {
-        // Act
-        var unprotectedPat = _service.UnprotectPatEntity(null);
-
-        // Assert
-        Assert.IsNull(unprotectedPat);
-    }
-
-    [TestMethod]
-    public async Task UnprotectPatEntity_InvalidProtectedPat_ReturnsNullAndLogsWarning()
-    {
-        // Arrange
-        await _service.SaveConfigAsync("url", "project", "pat");
-        var entity = await _service.GetConfigEntityAsync();
-        
-        // Corrupt the protected PAT
-        entity!.ProtectedPat = "corrupted-invalid-base64-string!@#$%";
-
-        // Act
-        var unprotectedPat = _service.UnprotectPatEntity(entity);
-
-        // Assert
-        Assert.IsNull(unprotectedPat, "Should return null for corrupted PAT");
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => true),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once,
-            "Should log warning when unprotect fails");
-    }
-
-    [TestMethod]
-    public async Task SaveConfigAsync_EmptyPat_EncryptsEmptyString()
-    {
-        // Arrange
-        const string url = "https://dev.azure.com/myorg";
-        const string project = "MyProject";
-        const string emptyPat = "";
-
-        // Act
-        await _service.SaveConfigAsync(url, project, emptyPat);
+        await _service.SaveConfigAsync(url, project);
 
         // Assert
         var entity = await _service.GetConfigEntityAsync();
         Assert.IsNotNull(entity);
-        Assert.IsNotNull(entity.ProtectedPat);
-        Assert.AreNotEqual("", entity.ProtectedPat, "Even empty PAT should be encrypted");
-        
-        var unprotected = _service.UnprotectPatEntity(entity);
-        Assert.AreEqual("", unprotected, "Decrypted empty PAT should be empty string");
+        Assert.AreEqual("", entity.Url);
+        Assert.AreEqual("", entity.Project);
     }
 
     [TestMethod]
-    public async Task SaveConfigAsync_SpecialCharactersInPat_EncryptsAndDecryptsCorrectly()
+    public async Task SaveConfigAsync_SpecialCharactersInUrl_SavesCorrectly()
     {
         // Arrange
-        const string url = "https://dev.azure.com/myorg";
-        const string project = "MyProject";
-        const string patWithSpecialChars = "p@t!#$%^&*()_+-=[]{}|;':\",./<>?`~";
+        const string url = "https://dev.azure.com/my-org_123";
+        const string project = "Project-Name_123";
 
         // Act
-        await _service.SaveConfigAsync(url, project, patWithSpecialChars);
+        await _service.SaveConfigAsync(url, project);
 
         // Assert
         var entity = await _service.GetConfigEntityAsync();
-        var unprotected = _service.UnprotectPatEntity(entity);
-        Assert.AreEqual(patWithSpecialChars, unprotected, "Special characters should survive encryption/decryption");
-    }
-
-    [TestMethod]
-    public async Task SaveConfigAsync_VeryLongPat_EncryptsAndDecryptsCorrectly()
-    {
-        // Arrange
-        const string url = "https://dev.azure.com/myorg";
-        const string project = "MyProject";
-        var longPat = new string('x', 1000); // 1000 character PAT
-
-        // Act
-        await _service.SaveConfigAsync(url, project, longPat);
-
-        // Assert
-        var entity = await _service.GetConfigEntityAsync();
-        var unprotected = _service.UnprotectPatEntity(entity);
-        Assert.AreEqual(longPat, unprotected, "Long PAT should survive encryption/decryption");
+        Assert.IsNotNull(entity);
+        Assert.AreEqual(url, entity.Url);
+        Assert.AreEqual(project, entity.Project);
     }
 
     [TestMethod]
     public async Task GetConfigEntityAsync_ReturnsLatestConfig_WhenMultipleExist()
     {
         // Arrange
-        await _service.SaveConfigAsync("url1", "project1", "pat1");
+        await _service.SaveConfigAsync("url1", "project1");
         await Task.Delay(50); // Ensure different timestamps
-        await _service.SaveConfigAsync("url2", "project2", "pat2");
+        await _service.SaveConfigAsync("url2", "project2");
 
         // Act
         var entity = await _service.GetConfigEntityAsync();
@@ -239,5 +158,39 @@ public class TfsConfigurationServiceTests
         // Assert
         Assert.IsNotNull(entity);
         Assert.AreEqual("url2", entity.Url, "Should return most recently updated config");
+    }
+
+    [TestMethod]
+    public async Task SaveConfigAsync_NullValues_SavesEmptyStrings()
+    {
+        // Act
+        await _service.SaveConfigAsync(null!, null!);
+
+        // Assert
+        var entity = await _service.GetConfigEntityAsync();
+        Assert.IsNotNull(entity);
+        Assert.AreEqual(string.Empty, entity.Url);
+        Assert.AreEqual(string.Empty, entity.Project);
+    }
+
+    [TestMethod]
+    public async Task SaveConfigEntityAsync_UpdatesEntity()
+    {
+        // Arrange
+        await _service.SaveConfigAsync("url", "project");
+        var entity = await _service.GetConfigEntityAsync();
+        Assert.IsNotNull(entity);
+        
+        entity.Url = "updated-url";
+        entity.Project = "updated-project";
+
+        // Act
+        await _service.SaveConfigEntityAsync(entity);
+
+        // Assert
+        var updatedEntity = await _service.GetConfigEntityAsync();
+        Assert.IsNotNull(updatedEntity);
+        Assert.AreEqual("updated-url", updatedEntity.Url);
+        Assert.AreEqual("updated-project", updatedEntity.Project);
     }
 }

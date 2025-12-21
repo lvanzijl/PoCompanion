@@ -20,7 +20,7 @@ public class MauiSecureStorageService : ISecureStorageService
         }
         catch (Exception ex)
         {
-            // Log the error but don't throw - this allows graceful degradation
+            // Log and re-throw - critical operation that should not fail silently
             System.Diagnostics.Debug.WriteLine($"Error storing secure value for key '{key}': {ex.Message}");
             throw new InvalidOperationException($"Failed to store secure value for key '{key}'", ex);
         }
@@ -65,7 +65,7 @@ public class MauiSecureStorageService : ISecureStorageService
         }
         catch (Exception ex)
         {
-            // Log the error but don't throw
+            // Log and re-throw - critical operation that should not fail silently
             System.Diagnostics.Debug.WriteLine($"Error removing all secure values: {ex.Message}");
             throw new InvalidOperationException("Failed to remove all secure values", ex);
         }

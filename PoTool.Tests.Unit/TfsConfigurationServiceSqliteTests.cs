@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -10,12 +9,12 @@ namespace PoTool.Tests.Unit;
 /// <summary>
 /// Unit tests for TfsConfigurationService using actual SQLite provider to verify DateTimeOffset ordering fix.
 /// Uses SQLite database provider (instead of InMemory) to test the actual database behavior.
+/// Note: PAT is no longer stored server-side - these tests verify non-sensitive config storage only.
 /// </summary>
 [TestClass]
 public class TfsConfigurationServiceSqliteTests
 {
     private PoToolDbContext _context = null!;
-    private IDataProtectionProvider _dataProtectionProvider = null!;
     private TfsConfigurationService _service = null!;
     private Mock<ILogger<TfsConfigurationService>> _loggerMock = null!;
     private string _dbPath = null!;
@@ -30,13 +29,11 @@ public class TfsConfigurationServiceSqliteTests
             .Options;
         _context = new PoToolDbContext(options);
         _context.Database.EnsureCreated();
-
-        // Use ephemeral data protection provider for testing
-        _dataProtectionProvider = DataProtectionProvider.Create("PoToolTests");
         
         _loggerMock = new Mock<ILogger<TfsConfigurationService>>();
         
-        _service = new TfsConfigurationService(_context, _dataProtectionProvider, _loggerMock.Object);
+        // Note: TfsConfigurationService no longer requires IDataProtectionProvider
+        _service = new TfsConfigurationService(_context, _loggerMock.Object);
     }
 
     [TestCleanup]
@@ -55,11 +52,12 @@ public class TfsConfigurationServiceSqliteTests
     public async Task GetConfigAsync_WithSqlite_OrdersByUpdatedAtCorrectly()
     {
         // Arrange - Create multiple configs with different timestamps
-        await _service.SaveConfigAsync("url1", "project1", "pat1");
+        // Note: PAT parameter removed from SaveConfigAsync
+        await _service.SaveConfigAsync("url1", "project1");
         await Task.Delay(100); // Ensure different timestamps
-        await _service.SaveConfigAsync("url2", "project2", "pat2");
+        await _service.SaveConfigAsync("url2", "project2");
         await Task.Delay(100);
-        await _service.SaveConfigAsync("url3", "project3", "pat3");
+        await _service.SaveConfigAsync("url3", "project3");
 
         // Act - This would fail with the old code (OrderBy DateTimeOffset in SQL)
         var config = await _service.GetConfigAsync();
@@ -74,9 +72,9 @@ public class TfsConfigurationServiceSqliteTests
     public async Task GetConfigEntityAsync_WithSqlite_OrdersByUpdatedAtCorrectly()
     {
         // Arrange - Create multiple configs
-        await _service.SaveConfigAsync("url1", "project1", "pat1");
+        await _service.SaveConfigAsync("url1", "project1");
         await Task.Delay(100);
-        await _service.SaveConfigAsync("url2", "project2", "pat2");
+        await _service.SaveConfigAsync("url2", "project2");
 
         // Act - This would fail with the old code
         var entity = await _service.GetConfigEntityAsync();
@@ -90,7 +88,7 @@ public class TfsConfigurationServiceSqliteTests
     public async Task GetConfigAsync_WithSingleConfig_ReturnsConfig()
     {
         // Arrange
-        await _service.SaveConfigAsync("https://dev.azure.com/test", "TestProject", "test-pat");
+        await _service.SaveConfigAsync("https://dev.azure.com/test", "TestProject");
 
         // Act
         var config = await _service.GetConfigAsync();
