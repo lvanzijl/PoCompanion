@@ -169,10 +169,14 @@ Frontend MUST NOT trigger implicit TFS mutations.
 
 ## 7. Authentication & secrets
 
-- PAT is user-configured
-- PAT MUST be encrypted at rest
-- PAT MUST NOT be exposed to the frontend
-- Backend is solely responsible for secure storage and usage
+**See comprehensive rules in:** `PAT_STORAGE_BEST_PRACTICES.md`
+
+Summary:
+- PAT MUST be stored client-side using MAUI SecureStorage (platform secure storage)
+- PAT MUST NEVER be persisted on the server/API (not in database, cache, or logs)
+- API receives PAT per request or per session for validation/usage only
+- Server-side storage is for non-sensitive configuration only (URL, Project, settings)
+- Client-side storage is for credentials and session-specific data
 
 ---
 

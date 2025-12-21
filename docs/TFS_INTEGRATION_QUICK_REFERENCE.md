@@ -289,7 +289,7 @@ public class TfsConfigEntity
 {
     public string Url { get; set; }              // e.g., "https://tfs.company.com/DefaultCollection"
     public string Project { get; set; }          // e.g., "MyProject"
-    public string EncryptedPat { get; set; }     // Encrypted PAT
+    // Note: PAT is no longer stored in database - stored client-side (see PAT_STORAGE_BEST_PRACTICES.md)
 }
 ```
 
@@ -300,7 +300,7 @@ public class TfsConfigEntity
     public string Url { get; set; }
     public string Project { get; set; }
     public TfsAuthMode AuthMode { get; set; }    // Pat or Ntlm
-    public string? EncryptedPat { get; set; }
+    // Note: PAT removed - stored client-side only (see PAT_STORAGE_BEST_PRACTICES.md)
     public bool UseDefaultCredentials { get; set; }
     public int TimeoutSeconds { get; set; } = 30;
     public string ApiVersion { get; set; } = "7.0";
