@@ -93,4 +93,73 @@ public class MetricsController : ControllerBase
             return StatusCode(500, "Error retrieving velocity trend");
         }
     }
+
+    /// <summary>
+    /// Gets backlog health metrics for a specific iteration.
+    /// </summary>
+    /// <param name="iterationPath">The iteration path of the sprint</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Backlog health metrics or 404 if no work items found</returns>
+    [HttpGet("backlog-health")]
+    public async Task<ActionResult<BacklogHealthDto>> GetBacklogHealth(
+        [FromQuery][Required] string iterationPath,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(iterationPath))
+            {
+                return BadRequest("Iteration path is required");
+            }
+
+            var health = await _mediator.Send(
+                new GetBacklogHealthQuery(iterationPath), 
+                cancellationToken);
+
+            if (health == null)
+            {
+                return NotFound($"No work items found for iteration path: {iterationPath}");
+            }
+
+            return Ok(health);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving backlog health for iteration: {IterationPath}", iterationPath);
+            return StatusCode(500, "Error retrieving backlog health");
+        }
+    }
+
+    /// <summary>
+    /// Gets aggregated backlog health across multiple iterations with trend analysis.
+    /// </summary>
+    /// <param name="areaPath">Optional area path to filter work items</param>
+    /// <param name="maxIterations">Maximum number of iterations to include (default: 5)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Multi-iteration backlog health with trend analysis</returns>
+    [HttpGet("multi-iteration-health")]
+    public async Task<ActionResult<MultiIterationBacklogHealthDto>> GetMultiIterationBacklogHealth(
+        [FromQuery] string? areaPath = null,
+        [FromQuery] int maxIterations = 5,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (maxIterations < 1 || maxIterations > 20)
+            {
+                return BadRequest("MaxIterations must be between 1 and 20");
+            }
+
+            var health = await _mediator.Send(
+                new GetMultiIterationBacklogHealthQuery(areaPath, maxIterations), 
+                cancellationToken);
+
+            return Ok(health);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving multi-iteration backlog health for area: {AreaPath}", areaPath ?? "All");
+            return StatusCode(500, "Error retrieving multi-iteration backlog health");
+        }
+    }
 }
