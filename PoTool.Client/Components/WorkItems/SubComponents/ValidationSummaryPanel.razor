@@ -1,0 +1,221 @@
+@using PoTool.Client.ApiClient
+
+@* Validation Summary Panel - shows overall data quality *@
+
+@if (WorkItemsWithValidation != null && WorkItemsWithValidation.Any())
+{
+    var totalItems = WorkItemsWithValidation.Count();
+    var itemsWithIssues = WorkItemsWithValidation.Count(wi => wi.ValidationIssues.Any());
+    var totalIssues = WorkItemsWithValidation.Sum(wi => wi.ValidationIssues.Count);
+    var errorCount = WorkItemsWithValidation.Sum(wi => wi.ValidationIssues.Count(issue => issue.Severity.Equals("Error", StringComparison.OrdinalIgnoreCase)));
+    var warningCount = WorkItemsWithValidation.Sum(wi => wi.ValidationIssues.Count(issue => issue.Severity.Equals("Warning", StringComparison.OrdinalIgnoreCase)));
+
+    <MudPaper Elevation="2" Class="pa-4 mb-4 mx-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Rule" Color="Color.Primary" />
+                <MudText Typo="Typo.h6">Data Quality Summary</MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2">
+                <MudTooltip Text="View help about data requirements">
+                    <MudIconButton Icon="@Icons.Material.Filled.Help" 
+                                   Color="Color.Info" 
+                                   Size="Size.Small"
+                                   Href="/help" />
+                </MudTooltip>
+                @if (IsExpanded)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.ExpandLess" 
+                                   OnClick="@(() => IsExpanded = false)" 
+                                   Size="Size.Small" />
+                }
+                else
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.ExpandMore" 
+                                   OnClick="@(() => IsExpanded = true)" 
+                                   Size="Size.Small" />
+                }
+            </MudStack>
+        </MudStack>
+
+        @if (IsExpanded)
+        {
+            <MudDivider Class="my-3" />
+            
+            <MudGrid>
+                <!-- Overall Health -->
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Outlined="true">
+                        <MudCardContent>
+                            <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@GetHealthIcon(itemsWithIssues, totalItems)" 
+                                        Color="@GetHealthColor(itemsWithIssues, totalItems)" 
+                                        Size="Size.Large" />
+                                <MudText Typo="Typo.h4">@GetHealthPercentage(itemsWithIssues, totalItems)%</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                                    Data Quality Score
+                                </MudText>
+                                <MudText Typo="Typo.body2" Align="Align.Center">
+                                    @(totalItems - itemsWithIssues) of @totalItems items are valid
+                                </MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <!-- Error Count -->
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Outlined="true">
+                        <MudCardContent>
+                            <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Error" 
+                                        Color="Color.Error" 
+                                        Size="Size.Large" />
+                                <MudText Typo="Typo.h4">@errorCount</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                                    Errors
+                                </MudText>
+                                <MudText Typo="Typo.body2" Align="Align.Center">
+                                    Critical issues
+                                </MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <!-- Warning Count -->
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Outlined="true">
+                        <MudCardContent>
+                            <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" 
+                                        Color="Color.Warning" 
+                                        Size="Size.Large" />
+                                <MudText Typo="Typo.h4">@warningCount</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                                    Warnings
+                                </MudText>
+                                <MudText Typo="Typo.body2" Align="Align.Center">
+                                    Recommended fixes
+                                </MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <!-- Items with Issues -->
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Outlined="true">
+                        <MudCardContent>
+                            <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Assignment" 
+                                        Color="Color.Info" 
+                                        Size="Size.Large" />
+                                <MudText Typo="Typo.h4">@itemsWithIssues</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                                    Items Need Attention
+                                </MudText>
+                                <MudText Typo="Typo.body2" Align="Align.Center">
+                                    Out of @totalItems items
+                                </MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+
+            <!-- Common Issues -->
+            @if (totalIssues > 0)
+            {
+                <MudDivider Class="my-3" />
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Common Issues:</MudText>
+                <MudStack Spacing="1">
+                    @if (errorCount > 0)
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true" Icon="@Icons.Material.Filled.Error">
+                            <strong>@errorCount error(s):</strong> Critical data quality issues that should be fixed immediately
+                        </MudAlert>
+                    }
+                    @if (warningCount > 0)
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true" Icon="@Icons.Material.Filled.Warning">
+                            <strong>@warningCount warning(s):</strong> Recommended improvements for better data quality
+                        </MudAlert>
+                    }
+                </MudStack>
+
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Size="Size.Small" />
+                    Tip: Click on individual work items to see specific validation issues and recommendations
+                </MudText>
+            }
+            else
+            {
+                <MudDivider Class="my-3" />
+                <MudAlert Severity="Severity.Success" Icon="@Icons.Material.Filled.CheckCircle">
+                    Excellent! All work items have valid data. Your metrics and reports will be accurate.
+                </MudAlert>
+            }
+        }
+        else
+        {
+            <!-- Compact View -->
+            <MudStack Row="true" Spacing="3" Class="mt-2" Justify="Justify.SpaceAround">
+                <MudChip T="string" Icon="@GetHealthIcon(itemsWithIssues, totalItems)" 
+                        Color="@GetHealthColor(itemsWithIssues, totalItems)" 
+                        Size="Size.Small">
+                    @GetHealthPercentage(itemsWithIssues, totalItems)% Valid
+                </MudChip>
+                @if (errorCount > 0)
+                {
+                    <MudChip T="string" Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Small">
+                        @errorCount Errors
+                    </MudChip>
+                }
+                @if (warningCount > 0)
+                {
+                    <MudChip T="string" Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small">
+                        @warningCount Warnings
+                    </MudChip>
+                }
+            </MudStack>
+        }
+    </MudPaper>
+}
+
+@code {
+    [Parameter]
+    public List<WorkItemWithValidationDto>? WorkItemsWithValidation { get; set; }
+
+    [Parameter]
+    public bool InitiallyExpanded { get; set; } = false;
+
+    private bool IsExpanded { get; set; }
+
+    protected override void OnInitialized()
+    {
+        IsExpanded = InitiallyExpanded;
+    }
+
+    private int GetHealthPercentage(int itemsWithIssues, int totalItems)
+    {
+        if (totalItems == 0) return 100;
+        return (int)Math.Round((totalItems - itemsWithIssues) * 100.0 / totalItems);
+    }
+
+    private string GetHealthIcon(int itemsWithIssues, int totalItems)
+    {
+        var percentage = GetHealthPercentage(itemsWithIssues, totalItems);
+        return percentage >= 90 ? Icons.Material.Filled.CheckCircle :
+               percentage >= 70 ? Icons.Material.Filled.Warning :
+               Icons.Material.Filled.Error;
+    }
+
+    private Color GetHealthColor(int itemsWithIssues, int totalItems)
+    {
+        var percentage = GetHealthPercentage(itemsWithIssues, totalItems);
+        return percentage >= 90 ? Color.Success :
+               percentage >= 70 ? Color.Warning :
+               Color.Error;
+    }
+}
