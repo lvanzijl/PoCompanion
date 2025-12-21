@@ -33,8 +33,8 @@ public class WorkItemTreeNodeTests : BunitTestContext
             .Add(p => p.Level, 0));
 
         // Assert
-        Assert.IsTrue(cut.Markup.Contains("Test Epic"));
-        Assert.IsTrue(cut.Markup.Contains("Epic"));
+        Assert.Contains("Test Epic", cut.Markup);
+        Assert.Contains("Epic", cut.Markup);
     }
 
     [TestMethod]
@@ -156,7 +156,7 @@ public class WorkItemTreeNodeTests : BunitTestContext
             .Add(p => p.Level, 0));
 
         // Assert
-        Assert.IsTrue(cut.Markup.Contains("selected"), "Selected node should have 'selected' CSS class");
+        Assert.Contains("selected", cut.Markup, "Selected node should have 'selected' CSS class");
     }
 
     [TestMethod]
@@ -181,7 +181,7 @@ public class WorkItemTreeNodeTests : BunitTestContext
             .Add(p => p.Level, 0));
 
         // Assert
-        Assert.IsTrue(cut.Markup.Contains("placeholder"), "Placeholder node should have 'placeholder' indicator");
+        Assert.Contains("placeholder", cut.Markup, "Placeholder node should have 'placeholder' indicator");
     }
 
     [TestMethod]
@@ -216,6 +216,6 @@ public class WorkItemTreeNodeTests : BunitTestContext
             .Add(p => p.Level, 0));
 
         // Assert
-        Assert.IsTrue(cut.Markup.Contains("Child Feature"), "Expanded node should render children");
+        Assert.Contains("Child Feature", cut.Markup, "Expanded node should render children");
     }
 }

@@ -62,17 +62,17 @@ public sealed class ReportServiceTests
         var result = _service.GenerateSummaryReport(workItems);
 
         // Assert
-        Assert.IsTrue(result.Contains("# Work Items Summary Report"));
-        Assert.IsTrue(result.Contains("**Total Items:** 1"));
-        Assert.IsTrue(result.Contains("## Summary by Type"));
-        Assert.IsTrue(result.Contains("**Epic:** 1"));
-        Assert.IsTrue(result.Contains("## Summary by State"));
-        Assert.IsTrue(result.Contains("**Active:** 1"));
-        Assert.IsTrue(result.Contains("## Effort Summary"));
-        Assert.IsTrue(result.Contains("**Total Effort:** 5"));
-        Assert.IsTrue(result.Contains("## Detailed List"));
-        Assert.IsTrue(result.Contains("123"));
-        Assert.IsTrue(result.Contains("Test Item"));
+        Assert.Contains("# Work Items Summary Report", result);
+        Assert.Contains("**Total Items:** 1", result);
+        Assert.Contains("## Summary by Type", result);
+        Assert.Contains("**Epic:** 1", result);
+        Assert.Contains("## Summary by State", result);
+        Assert.Contains("**Active:** 1", result);
+        Assert.Contains("## Effort Summary", result);
+        Assert.Contains("**Total Effort:** 5", result);
+        Assert.Contains("## Detailed List", result);
+        Assert.Contains("123", result);
+        Assert.Contains("Test Item", result);
     }
 
     [TestMethod]
@@ -126,14 +126,14 @@ public sealed class ReportServiceTests
         var result = _service.GenerateSummaryReport(workItems);
 
         // Assert
-        Assert.IsTrue(result.Contains("**Total Items:** 3"));
-        Assert.IsTrue(result.Contains("**Epic:** 1"));
-        Assert.IsTrue(result.Contains("**Feature:** 1"));
-        Assert.IsTrue(result.Contains("**Task:** 1"));
-        Assert.IsTrue(result.Contains("**Active:** 2"));
-        Assert.IsTrue(result.Contains("**Done:** 1"));
-        Assert.IsTrue(result.Contains("**Total Effort:** 10"));
-        Assert.IsTrue(result.Contains("**Average Effort:**"));
+        Assert.Contains("**Total Items:** 3", result);
+        Assert.Contains("**Epic:** 1", result);
+        Assert.Contains("**Feature:** 1", result);
+        Assert.Contains("**Task:** 1", result);
+        Assert.Contains("**Active:** 2", result);
+        Assert.Contains("**Done:** 1", result);
+        Assert.Contains("**Total Effort:** 10", result);
+        Assert.Contains("**Average Effort:**", result);
     }
 
     [TestMethod]
@@ -174,8 +174,8 @@ public sealed class ReportServiceTests
         var result = _service.GenerateSummaryReport(workItems);
 
         // Assert
-        Assert.IsTrue(result.Contains("**Items with Effort:** 1 of 2"));
-        Assert.IsTrue(result.Contains("**Total Effort:** 5"));
+        Assert.Contains("**Items with Effort:** 1 of 2", result);
+        Assert.Contains("**Total Effort:** 5", result);
     }
 
     [TestMethod]
@@ -229,9 +229,9 @@ public sealed class ReportServiceTests
         var result = _service.GenerateSummaryReport(workItems);
 
         // Assert
-        Assert.IsTrue(result.Contains("## Summary by Area Path"));
-        Assert.IsTrue(result.Contains("**Project\\\\Team A:** 2"));
-        Assert.IsTrue(result.Contains("**Project\\\\Team B:** 1"));
+        Assert.Contains("## Summary by Area Path", result);
+        Assert.Contains("**Project\\\\Team A:** 2", result);
+        Assert.Contains("**Project\\\\Team B:** 1", result);
     }
 
     [TestMethod]
@@ -259,8 +259,8 @@ public sealed class ReportServiceTests
         var result = _service.GenerateSummaryReport(workItems);
 
         // Assert
-        Assert.IsTrue(result.Contains("| ID | Type | State | Title | Effort |"));
-        Assert.IsTrue(result.Contains("|---|---|---|---|---|"));
-        Assert.IsTrue(result.Contains("| 123 | Epic | Active | Test Item | 5h |"));
+        Assert.Contains("| ID | Type | State | Title | Effort |", result);
+        Assert.Contains("|---|---|---|---|---|", result);
+        Assert.Contains("| 123 | Epic | Active | Test Item | 5h |", result);
     }
 }

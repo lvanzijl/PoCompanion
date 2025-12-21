@@ -62,11 +62,11 @@ public sealed class ExportServiceTests
         var result = _service.ExportToCsv(workItems);
 
         // Assert
-        Assert.IsTrue(result.Contains("ID,Title,Type,State,Area Path,Iteration Path,Parent ID,Effort,Retrieved At"));
-        Assert.IsTrue(result.Contains("123"));
-        Assert.IsTrue(result.Contains("Test Item"));
-        Assert.IsTrue(result.Contains("Epic"));
-        Assert.IsTrue(result.Contains("Active"));
+        Assert.Contains("ID,Title,Type,State,Area Path,Iteration Path,Parent ID,Effort,Retrieved At", result);
+        Assert.Contains("123", result);
+        Assert.Contains("Test Item", result);
+        Assert.Contains("Epic", result);
+        Assert.Contains("Active", result);
     }
 
     [TestMethod]
@@ -94,7 +94,7 @@ public sealed class ExportServiceTests
         var result = _service.ExportToCsv(workItems);
 
         // Assert
-        Assert.IsTrue(result.Contains("\"Test, with, commas\""));
+        Assert.Contains("\"Test, with, commas\"", result);
     }
 
     [TestMethod]
@@ -135,10 +135,10 @@ public sealed class ExportServiceTests
         var result = _service.ExportToCsv(workItems);
 
         // Assert
-        Assert.IsTrue(result.Contains("123"));
-        Assert.IsTrue(result.Contains("456"));
-        Assert.IsTrue(result.Contains("Item 1"));
-        Assert.IsTrue(result.Contains("Item 2"));
+        Assert.Contains("123", result);
+        Assert.Contains("456", result);
+        Assert.Contains("Item 1", result);
+        Assert.Contains("Item 2", result);
     }
 
     [TestMethod]
@@ -151,7 +151,7 @@ public sealed class ExportServiceTests
         var result = _service.ExportToJson(workItems);
 
         // Assert
-        Assert.IsTrue(result.Contains("[]"));
+        Assert.Contains("[]", result);
     }
 
     [TestMethod]
@@ -189,9 +189,9 @@ public sealed class ExportServiceTests
         var result = _service.ExportToJson(workItems);
 
         // Assert
-        Assert.IsTrue(result.Contains("\"tfsId\": 123"));
-        Assert.IsTrue(result.Contains("\"title\": \"Test Item\""));
-        Assert.IsTrue(result.Contains("\"type\": \"Epic\""));
+        Assert.Contains("\"tfsId\": 123", result);
+        Assert.Contains("\"title\": \"Test Item\"", result);
+        Assert.Contains("\"type\": \"Epic\"", result);
     }
 
     [TestMethod]
@@ -232,7 +232,7 @@ public sealed class ExportServiceTests
         var result = _service.ExportToJson(workItems);
 
         // Assert
-        Assert.IsTrue(result.Contains("\"tfsId\": 123"));
-        Assert.IsTrue(result.Contains("\"tfsId\": 456"));
+        Assert.Contains("\"tfsId\": 123", result);
+        Assert.Contains("\"tfsId\": 456", result);
     }
 }

@@ -196,7 +196,7 @@ public class ErrorMessageServiceTests
             // Assert
             Assert.IsNotNull(response, $"Response should not be null for status code {statusCode}");
             Assert.IsFalse(string.IsNullOrEmpty(response.UserMessage), $"UserMessage should not be empty for status code {statusCode}");
-            Assert.IsFalse(response.UserMessage.Contains(statusCode.ToString()), $"UserMessage should not contain status code {statusCode} directly");
+            Assert.DoesNotContain(statusCode.ToString(), response.UserMessage, $"UserMessage should not contain status code {statusCode} directly");
             Assert.IsNotNull(response.Suggestion, $"Suggestion should not be null for status code {statusCode}");
             Assert.AreEqual(statusCode, response.TechnicalDetails.StatusCode, $"StatusCode should match for {statusCode}");
         }

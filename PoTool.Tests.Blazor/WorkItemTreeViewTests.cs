@@ -68,8 +68,8 @@ public class WorkItemTreeViewTests : BunitTestContext
             .Add(p => p.TreeRoots, nodes));
 
         // Assert
-        Assert.IsTrue(cut.Markup.Contains("Epic 1"), "Should render first root node");
-        Assert.IsTrue(cut.Markup.Contains("Epic 2"), "Should render second root node");
+        Assert.Contains("Epic 1", cut.Markup, "Should render first root node");
+        Assert.Contains("Epic 2", cut.Markup, "Should render second root node");
     }
 
     [TestMethod]
@@ -104,6 +104,6 @@ public class WorkItemTreeViewTests : BunitTestContext
 
         // Assert
         // The selected node should have the 'selected' class
-        Assert.IsTrue(cut.Markup.Contains("selected"), "Selected node should be highlighted");
+        Assert.Contains("selected", cut.Markup, "Selected node should be highlighted");
     }
 }

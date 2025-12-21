@@ -46,10 +46,10 @@ public class WorkItemDetailPanelTests : BunitTestContext
             .Add(p => p.SelectedWorkItem, workItem));
 
         // Assert
-        Assert.IsTrue(cut.Markup.Contains("123"), "Should display work item ID");
-        Assert.IsTrue(cut.Markup.Contains("User Story"), "Should display work item type");
-        Assert.IsTrue(cut.Markup.Contains("Implement feature X"), "Should display title");
-        Assert.IsTrue(cut.Markup.Contains("Active"), "Should display state");
+        Assert.Contains("123", cut.Markup, "Should display work item ID");
+        Assert.Contains("User Story", cut.Markup, "Should display work item type");
+        Assert.Contains("Implement feature X", cut.Markup, "Should display title");
+        Assert.Contains("Active", cut.Markup, "Should display state");
     }
 
     [TestMethod]
@@ -75,8 +75,8 @@ public class WorkItemDetailPanelTests : BunitTestContext
             .Add(p => p.SelectedWorkItem, workItem));
 
         // Assert
-        Assert.IsTrue(cut.Markup.Contains("100"), "Should display parent ID");
-        Assert.IsTrue(cut.Markup.Contains("Parent"), "Should show parent label");
+        Assert.Contains("100", cut.Markup, "Should display parent ID");
+        Assert.Contains("Parent", cut.Markup, "Should show parent label");
     }
 
     [TestMethod]
@@ -103,8 +103,8 @@ public class WorkItemDetailPanelTests : BunitTestContext
 
         // Assert
         // Should show node details but not parent section
-        Assert.IsTrue(cut.Markup.Contains("Top level epic"));
-        Assert.IsFalse(cut.Markup.Contains("Parent ID"), 
+        Assert.Contains("Top level epic", cut.Markup);
+        Assert.DoesNotContain("Parent ID", cut.Markup, 
             "Should not show parent section for top-level items");
     }
 }

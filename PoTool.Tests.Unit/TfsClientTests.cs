@@ -297,6 +297,184 @@ public class TfsClientTests
         Assert.IsNull(results[0].ParentTfsId, "Invalid parent URL should be treated as null");
     }
 
+    [TestMethod]
+    public async Task GetWorkItemsAsync_EmptyResponse_ReturnsEmptyList()
+    {
+        // Arrange
+        var emptyResponse = new
+        {
+            count = 0,
+            value = Array.Empty<object>()
+        };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(emptyResponse));
+
+        // Act
+        var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
+
+        // Assert
+        Assert.AreEqual(0, results.Count, "Empty response should return empty list");
+    }
+
+    [TestMethod]
+    public async Task GetWorkItemsAsync_NullFields_HandledGracefully()
+    {
+        // Arrange
+        var workItemsResponse = new
+        {
+            count = 1,
+            value = new[]
+            {
+                new
+                {
+                    id = 123,
+                    url = "http://test.com/123",
+                    fields = new Dictionary<string, object?>
+                    {
+                        ["System.WorkItemType"] = "Task",
+                        ["System.Title"] = null,  // Null title
+                        ["System.State"] = "Active",
+                        ["System.AreaPath"] = null,  // Null area path
+                        ["System.IterationPath"] = "TestProject"
+                    }
+                }
+            }
+        };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(workItemsResponse));
+
+        // Act
+        var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
+
+        // Assert
+        Assert.AreEqual(1, results.Count);
+        Assert.AreEqual(string.Empty, results[0].Title, "Null title should be converted to empty string");
+        Assert.IsNotNull(results[0].AreaPath, "Null area path should be handled");
+    }
+
+    [TestMethod]
+    public async Task GetWorkItemsAsync_VeryLargeWorkItemCount_ReturnsAllItems()
+    {
+        // Arrange - Simulate large batch of work items
+        var items = Enumerable.Range(1, 500).Select(i => new
+        {
+            id = i,
+            url = $"http://test.com/{i}",
+            fields = new Dictionary<string, object>
+            {
+                ["System.WorkItemType"] = "Task",
+                ["System.Title"] = $"Task {i}",
+                ["System.State"] = "Active",
+                ["System.AreaPath"] = "TestProject",
+                ["System.IterationPath"] = "TestProject"
+            }
+        }).ToArray();
+
+        var workItemsResponse = new
+        {
+            count = items.Length,
+            value = items
+        };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(workItemsResponse));
+
+        // Act
+        var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
+
+        // Assert
+        Assert.AreEqual(500, results.Count, "Should handle large result sets");
+    }
+
+    [TestMethod]
+    public async Task GetWorkItemsAsync_SpecialCharactersInFields_HandledCorrectly()
+    {
+        // Arrange
+        var workItemsResponse = new
+        {
+            count = 1,
+            value = new[]
+            {
+                new
+                {
+                    id = 123,
+                    url = "http://test.com/123",
+                    fields = new Dictionary<string, object>
+                    {
+                        ["System.WorkItemType"] = "Task",
+                        ["System.Title"] = "Test with \"quotes\" and 'apostrophes' & <html> tags",
+                        ["System.State"] = "Active",
+                        ["System.AreaPath"] = "Project\\Area\\SubArea",
+                        ["System.IterationPath"] = "Sprint\\2024\\Q4"
+                    }
+                }
+            }
+        };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(workItemsResponse));
+
+        // Act
+        var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
+
+        // Assert
+        Assert.AreEqual(1, results.Count);
+        Assert.Contains("quotes", results[0].Title, "Should preserve special characters in title");
+        Assert.Contains("\\", results[0].AreaPath, "Should preserve backslashes in paths");
+    }
+
+    [TestMethod]
+    public async Task GetWorkItemsAsync_MixedValidAndInvalidData_ProcessesValidItems()
+    {
+        // Arrange - Mix of valid and items with missing required fields
+        var workItemsResponse = new
+        {
+            count = 3,
+            value = new[]
+            {
+                new
+                {
+                    id = 1,
+                    url = "http://test.com/1",
+                    fields = new Dictionary<string, object>
+                    {
+                        ["System.WorkItemType"] = "Task",
+                        ["System.Title"] = "Valid Task 1",
+                        ["System.State"] = "Active",
+                        ["System.AreaPath"] = "TestProject",
+                        ["System.IterationPath"] = "TestProject"
+                    }
+                },
+                new
+                {
+                    id = 2,
+                    url = "http://test.com/2",
+                    fields = new Dictionary<string, object>
+                    {
+                        // Missing WorkItemType - should be skipped or handled
+                        ["System.Title"] = "Invalid Task",
+                        ["System.State"] = "Active"
+                    }
+                },
+                new
+                {
+                    id = 3,
+                    url = "http://test.com/3",
+                    fields = new Dictionary<string, object>
+                    {
+                        ["System.WorkItemType"] = "Task",
+                        ["System.Title"] = "Valid Task 2",
+                        ["System.State"] = "Active",
+                        ["System.AreaPath"] = "TestProject",
+                        ["System.IterationPath"] = "TestProject"
+                    }
+                }
+            }
+        };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(workItemsResponse));
+
+        // Act
+        var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
+
+        // Assert - Should process at least the 2 valid items (may process all 3)
+        Assert.IsTrue(results.Count >= 2, "Should process at least the 2 valid items");
+        Assert.IsTrue(results.Count <= 3, "Should not process more than 3 items total");
+    }
+
     private int _responseIndex = 0;
     private readonly List<(HttpStatusCode statusCode, string content)> _responses = new();
 
