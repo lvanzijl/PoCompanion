@@ -93,7 +93,7 @@ public class PRInsightTests : BunitTestContext
 
         // Assert
         var progressBar = cut.FindAll("div.mud-progress-linear");
-        Assert.IsNotEmpty(progressBar, "Loading state should display progress bar");
+        Assert.AreNotEqual(0, progressBar.Count, "Loading state should display progress bar");
         
         // Complete the async operation to prevent hanging
         tcs.SetResult(new List<PullRequestMetricsDto>());
@@ -165,7 +165,7 @@ public class PRInsightTests : BunitTestContext
 
         // Assert
         var charts = cut.FindComponents<MudChart>();
-        Assert.IsNotEmpty(charts, "Should render charts when data is available");
+        Assert.AreNotEqual(0, charts.Count, "Should render charts when data is available");
     }
 
     [TestMethod]
