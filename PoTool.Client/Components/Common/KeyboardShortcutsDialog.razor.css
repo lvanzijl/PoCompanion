@@ -1,0 +1,14 @@
+.shortcut-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 8px;
+}
+
+.shortcut-key {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+}

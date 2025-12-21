@@ -1,0 +1,100 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Keyboard Shortcuts</MudText>
+
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Tree Navigation</MudText>
+        <MudList T="string" Dense="true" Class="mb-4">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowUpward">
+                <div class="shortcut-item">
+                    <span>Navigate up</span>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="shortcut-key">↑</MudChip>
+                </div>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowDownward">
+                <div class="shortcut-item">
+                    <span>Navigate down</span>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="shortcut-key">↓</MudChip>
+                </div>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowBack">
+                <div class="shortcut-item">
+                    <span>Collapse node</span>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="shortcut-key">←</MudChip>
+                </div>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowForward">
+                <div class="shortcut-item">
+                    <span>Expand node</span>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="shortcut-key">→</MudChip>
+                </div>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <div class="shortcut-item">
+                    <span>Toggle node expansion</span>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="shortcut-key">Enter</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="shortcut-key">Space</MudChip>
+                </div>
+            </MudListItem>
+        </MudList>
+
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Selection</MudText>
+        <MudList T="string" Dense="true" Class="mb-4">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.SelectAll">
+                <div class="shortcut-item">
+                    <span>Select all visible items</span>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="shortcut-key">Ctrl + A</MudChip>
+                </div>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Clear">
+                <div class="shortcut-item">
+                    <span>Clear selection</span>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="shortcut-key">Esc</MudChip>
+                </div>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Mouse">
+                <div class="shortcut-item">
+                    <span>Toggle item selection</span>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="shortcut-key">Click</MudChip>
+                </div>
+            </MudListItem>
+        </MudList>
+
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Application</MudText>
+        <MudList T="string" Dense="true" Class="mb-4">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Help">
+                <div class="shortcut-item">
+                    <span>Show this help dialog</span>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="shortcut-key">?</MudChip>
+                </div>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Close">
+                <div class="shortcut-item">
+                    <span>Close dialogs</span>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="shortcut-key">Esc</MudChip>
+                </div>
+            </MudListItem>
+        </MudList>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+            Keyboard shortcuts improve navigation speed and efficiency. Press <strong>?</strong> anytime to view this help.
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}
