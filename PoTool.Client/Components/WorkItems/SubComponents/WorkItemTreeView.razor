@@ -1,6 +1,6 @@
 @using PoTool.Client.Models
 
-@* Tree view container component *@
+@* Tree view container component with virtual scrolling *@
 
 <div class="tree-view">
     @if (IsLoading)
@@ -17,15 +17,46 @@
     else
     {
         <ul class="workitem-tree-root">
-            @foreach (var node in TreeRoots)
-            {
-                <WorkItemTreeNode Node="@node"
-                                 Level="0"
-                                 SelectedId="@SelectedId"
-                                 SelectedIds="@SelectedIds"
-                                 OnNodeToggled="@OnNodeToggled"
-                                 OnNodeSelected="@OnNodeSelected" />
-            }
+            @* Use MudVirtualize for performance with large datasets *@
+            <MudVirtualize Items="@GetFlatNodeList()" Context="node" OverscanCount="10">
+                <div class="virtualized-node" style="padding-left:@(node.Level * 1.25)rem">
+                    <div class="node-row">
+                        @if (node.Node.Children.Any())
+                        {
+                            <button type="button" 
+                                    class="@GetCaretClass(node.Node)" 
+                                    @onclick="() => OnNodeToggled.InvokeAsync(node.Node)">
+                                <span class="chev">?</span>
+                            </button>
+                        }
+                        else
+                        {
+                            <span class="leaf-placeholder"></span>
+                        }
+
+                        <span class="type-indicator" style="background-color: @node.Node.TypeColor" title="@node.Node.Type"></span>
+
+                        <span class="@GetTypeClass(node.Node)">
+                            @GetTypeText(node.Node)
+                        </span>
+
+                        <div class="title-block">
+                            <span class="@GetTitleClass(node.Node)" @onclick="() => OnNodeSelected.InvokeAsync(node.Node)" @onclick:stopPropagation="true">
+                                @node.Node.Title
+                            </span>
+                        </div>
+                        
+                        <span class="status-column">@node.Node.State</span>
+                        
+                        @if (node.Node.HasValidationIssues)
+                        {
+                            <span class="validation-icon" title="@GetValidationTooltip(node.Node)" role="img" aria-label="@GetValidationAriaLabel(node.Node)">
+                                @node.Node.ValidationIcon
+                            </span>
+                        }
+                    </div>
+                </div>
+            </MudVirtualize>
         </ul>
     }
 </div>
@@ -48,4 +79,72 @@
 
     [Parameter]
     public EventCallback<TreeNode> OnNodeSelected { get; set; }
+    
+    private record FlatNode(TreeNode Node, int Level);
+    
+    private List<FlatNode> GetFlatNodeList()
+    {
+        var flatList = new List<FlatNode>();
+        foreach (var root in TreeRoots)
+        {
+            AddNodeToFlatList(root, 0, flatList);
+        }
+        return flatList;
+    }
+    
+    private void AddNodeToFlatList(TreeNode node, int level, List<FlatNode> flatList)
+    {
+        flatList.Add(new FlatNode(node, level));
+        
+        if (node.IsExpanded && node.Children.Any())
+        {
+            foreach (var child in node.Children)
+            {
+                AddNodeToFlatList(child, level + 1, flatList);
+            }
+        }
+    }
+    
+    private bool IsPlaceholder(TreeNode node) => string.IsNullOrEmpty(node.JsonPayload);
+    
+    private string GetCaretClass(TreeNode node)
+    {
+        return node.IsExpanded ? "caret-button expanded" : "caret-button";
+    }
+    
+    private string GetTypeClass(TreeNode node)
+    {
+        if (IsPlaceholder(node))
+        {
+            return "workitem-type placeholder-type";
+        }
+        return $"workitem-type {node.Type}";
+    }
+    
+    private string GetTypeText(TreeNode node)
+    {
+        return IsPlaceholder(node) ? "(missing)" : node.Type;
+    }
+    
+    private string GetTitleClass(TreeNode node)
+    {
+        var className = IsPlaceholder(node) ? "workitem-title placeholder-title" : "workitem-title";
+        if ((SelectedId.HasValue && SelectedId.Value == node.Id) || 
+            (SelectedIds != null && SelectedIds.Contains(node.Id)))
+        {
+            className += " selected";
+        }
+        return className;
+    }
+    
+    private string GetValidationTooltip(TreeNode node)
+    {
+        return string.Join("\n", node.ValidationIssues);
+    }
+    
+    private string GetValidationAriaLabel(TreeNode node)
+    {
+        var issueCount = node.ValidationIssues.Count;
+        return $"{node.HighestSeverity}: {issueCount} validation issue{(issueCount != 1 ? "s" : "")}";
+    }
 }

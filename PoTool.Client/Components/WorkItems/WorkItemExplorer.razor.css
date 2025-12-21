@@ -351,6 +351,14 @@
     margin-left: var(--spacing-sm);
 }
 
+.virtualized-node {
+    margin-bottom: 0.25rem;
+}
+
+.virtualized-node .node-row {
+    padding-left: 0;
+}
+
 .workitem-type {
     display:inline-block;
     min-width: 4.5rem;
