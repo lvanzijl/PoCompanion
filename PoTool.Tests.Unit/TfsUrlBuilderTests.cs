@@ -1,3 +1,4 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit;
@@ -57,48 +58,90 @@ public sealed class TfsUrlBuilderTests
     public void BuildWorkItemUrl_NullOrganizationUrl_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.ThrowsException<ArgumentException>(() => 
-            TfsUrlBuilder.BuildWorkItemUrl(null!, "MyProject", 12345));
+        try
+        {
+            TfsUrlBuilder.BuildWorkItemUrl(null!, "MyProject", 12345);
+            Assert.Fail("Expected ArgumentException was not thrown");
+        }
+        catch (ArgumentException)
+        {
+            // Expected exception
+        }
     }
 
     [TestMethod]
     public void BuildWorkItemUrl_EmptyOrganizationUrl_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.ThrowsException<ArgumentException>(() => 
-            TfsUrlBuilder.BuildWorkItemUrl(string.Empty, "MyProject", 12345));
+        try
+        {
+            TfsUrlBuilder.BuildWorkItemUrl(string.Empty, "MyProject", 12345);
+            Assert.Fail("Expected ArgumentException was not thrown");
+        }
+        catch (ArgumentException)
+        {
+            // Expected exception
+        }
     }
 
     [TestMethod]
     public void BuildWorkItemUrl_NullProject_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.ThrowsException<ArgumentException>(() => 
-            TfsUrlBuilder.BuildWorkItemUrl("https://dev.azure.com/myorg", null!, 12345));
+        try
+        {
+            TfsUrlBuilder.BuildWorkItemUrl("https://dev.azure.com/myorg", null!, 12345);
+            Assert.Fail("Expected ArgumentException was not thrown");
+        }
+        catch (ArgumentException)
+        {
+            // Expected exception
+        }
     }
 
     [TestMethod]
     public void BuildWorkItemUrl_EmptyProject_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.ThrowsException<ArgumentException>(() => 
-            TfsUrlBuilder.BuildWorkItemUrl("https://dev.azure.com/myorg", string.Empty, 12345));
+        try
+        {
+            TfsUrlBuilder.BuildWorkItemUrl("https://dev.azure.com/myorg", string.Empty, 12345);
+            Assert.Fail("Expected ArgumentException was not thrown");
+        }
+        catch (ArgumentException)
+        {
+            // Expected exception
+        }
     }
 
     [TestMethod]
     public void BuildWorkItemUrl_ZeroWorkItemId_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.ThrowsException<ArgumentException>(() => 
-            TfsUrlBuilder.BuildWorkItemUrl("https://dev.azure.com/myorg", "MyProject", 0));
+        try
+        {
+            TfsUrlBuilder.BuildWorkItemUrl("https://dev.azure.com/myorg", "MyProject", 0);
+            Assert.Fail("Expected ArgumentException was not thrown");
+        }
+        catch (ArgumentException)
+        {
+            // Expected exception
+        }
     }
 
     [TestMethod]
     public void BuildWorkItemUrl_NegativeWorkItemId_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.ThrowsException<ArgumentException>(() => 
-            TfsUrlBuilder.BuildWorkItemUrl("https://dev.azure.com/myorg", "MyProject", -1));
+        try
+        {
+            TfsUrlBuilder.BuildWorkItemUrl("https://dev.azure.com/myorg", "MyProject", -1);
+            Assert.Fail("Expected ArgumentException was not thrown");
+        }
+        catch (ArgumentException)
+        {
+            // Expected exception
+        }
     }
 
     [TestMethod]
@@ -141,7 +184,14 @@ public sealed class TfsUrlBuilderTests
     public void BuildWorkItemUrls_NullCollection_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.ThrowsException<ArgumentNullException>(() => 
-            TfsUrlBuilder.BuildWorkItemUrls("https://dev.azure.com/myorg", "MyProject", null!));
+        try
+        {
+            TfsUrlBuilder.BuildWorkItemUrls("https://dev.azure.com/myorg", "MyProject", null!);
+            Assert.Fail("Expected ArgumentNullException was not thrown");
+        }
+        catch (ArgumentNullException)
+        {
+            // Expected exception
+        }
     }
 }

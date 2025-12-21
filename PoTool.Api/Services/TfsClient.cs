@@ -19,6 +19,7 @@ public class TfsClient : ITfsClient
     private readonly HttpClient _httpClient;
     private readonly TfsConfigurationService _configService;
     private readonly TfsAuthenticationProvider _authProvider;
+    private readonly PatAccessor _patAccessor;
     private readonly ILogger<TfsClient> _logger;
     private const int MaxRetries = 3;
 
@@ -26,11 +27,13 @@ public class TfsClient : ITfsClient
         HttpClient httpClient, 
         TfsConfigurationService configService, 
         TfsAuthenticationProvider authProvider,
+        PatAccessor patAccessor,
         ILogger<TfsClient> logger)
     {
         _httpClient = httpClient;
         _configService = configService;
         _authProvider = authProvider;
+        _patAccessor = patAccessor;
         _logger = logger;
     }
 
@@ -510,13 +513,21 @@ public class TfsClient : ITfsClient
     {
         if (entity.AuthMode == TfsAuthMode.Pat)
         {
-            // TODO: PAT is now stored client-side using MAUI SecureStorage
-            // This method needs to be refactored to accept PAT as a parameter
-            // See docs/PAT_STORAGE_BEST_PRACTICES.md
-            // For now, throw an exception indicating PAT must be provided
-            throw new TfsAuthenticationException(
-                "PAT must be provided by client. Server no longer stores PAT for security reasons. " +
-                "See docs/PAT_STORAGE_BEST_PRACTICES.md", (string?)null);
+            // Get PAT from current request context (provided via X-TFS-PAT header)
+            var pat = _patAccessor.GetPat();
+            
+            if (string.IsNullOrEmpty(pat))
+            {
+                throw new TfsAuthenticationException(
+                    "PAT must be provided via X-TFS-PAT header. " +
+                    "PAT is stored client-side for security. See docs/PAT_STORAGE_BEST_PRACTICES.md", 
+                    (string?)null);
+            }
+
+            // Configure HTTP client with PAT authentication
+            _authProvider.ConfigurePatAuthentication(_httpClient, pat);
+            
+            _logger.LogDebug("Configured PAT authentication for TFS request");
         }
         // NTLM is configured via HttpClientHandler, so no additional configuration needed here
     }
