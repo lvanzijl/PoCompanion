@@ -1,0 +1,260 @@
+@page "/velocity"
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@inject IMetricsClient MetricsClient
+@inject ISnackbar Snackbar
+
+<PageTitle>Velocity Dashboard</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">
+        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="mr-2" /> Velocity Dashboard
+    </MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+        Track team velocity and sprint metrics for data-driven planning
+    </MudText>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+    }
+    else if (_velocityTrend == null)
+    {
+        <MudAlert Severity="Severity.Info" Class="my-7">
+            <MudText Typo="Typo.h6" Class="mb-2">No Velocity Data Available</MudText>
+            <MudText>There are no sprints with completed work items to display velocity metrics.</MudText>
+            <MudText Class="mt-2">Make sure you have synced work items from Azure DevOps with iteration paths and completed story points.</MudText>
+        </MudAlert>
+    }
+    else
+    {
+        <!-- Velocity Summary Cards -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Average Velocity</MudText>
+                                <MudText Typo="Typo.h4">@_velocityTrend.AverageVelocity.ToString("F1")</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">story points</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Large" Color="Color.Primary" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Last 3 Sprints</MudText>
+                                <MudText Typo="Typo.h4">@_velocityTrend.ThreeSprintAverage.ToString("F1")</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">average velocity</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" Color="Color.Info" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Total Sprints</MudText>
+                                <MudText Typo="Typo.h4">@_velocityTrend.TotalSprints</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">tracked</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Timeline" Size="Size.Large" Color="Color.Success" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Total Completed</MudText>
+                                <MudText Typo="Typo.h4">@_velocityTrend.TotalCompletedStoryPoints</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">story points</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Tertiary" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Velocity Chart -->
+        <MudCard Elevation="2" Class="mb-6">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Velocity Trend</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                @if (_velocityTrend.Sprints.Any())
+                {
+                    <MudChart ChartType="ChartType.Line" 
+                              ChartSeries="@_chartSeries" 
+                              XAxisLabels="@_xAxisLabels.ToArray()"
+                              Width="100%" 
+                              Height="350px"
+                              ChartOptions="@_chartOptions" />
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="py-8">
+                        No sprint data available for chart
+                    </MudText>
+                }
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Sprint Details Table -->
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Sprint Details</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudTable Items="@_velocityTrend.Sprints" 
+                          Hover="true" 
+                          Striped="true" 
+                          Dense="true"
+                          Breakpoint="Breakpoint.Sm">
+                    <HeaderContent>
+                        <MudTh>Sprint</MudTh>
+                        <MudTh>Completed Points</MudTh>
+                        <MudTh>Planned Points</MudTh>
+                        <MudTh>Completion %</MudTh>
+                        <MudTh>Completed Items</MudTh>
+                        <MudTh>PBIs</MudTh>
+                        <MudTh>Bugs</MudTh>
+                        <MudTh>Tasks</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Sprint">
+                            <MudText Typo="Typo.body2"><strong>@context.SprintName</strong></MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.IterationPath</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Completed Points">
+                            <MudChip T="string" Color="Color.Primary" Size="Size.Small">@context.CompletedStoryPoints</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Planned Points">@context.PlannedStoryPoints</MudTd>
+                        <MudTd DataLabel="Completion %">
+                            @{
+                                var completionPercent = context.PlannedStoryPoints > 0 
+                                    ? (context.CompletedStoryPoints * 100.0 / context.PlannedStoryPoints) 
+                                    : 0;
+                                var color = completionPercent >= 90 ? Color.Success : 
+                                           completionPercent >= 70 ? Color.Warning : Color.Error;
+                            }
+                            <MudProgressLinear Color="@color" 
+                                             Value="@completionPercent" 
+                                             Class="my-2" 
+                                             Size="Size.Small" />
+                            <MudText Typo="Typo.caption">@completionPercent.ToString("F0")%</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Completed Items">
+                            @context.CompletedWorkItemCount / @context.TotalWorkItemCount
+                        </MudTd>
+                        <MudTd DataLabel="PBIs">@context.CompletedPBIs</MudTd>
+                        <MudTd DataLabel="Bugs">@context.CompletedBugs</MudTd>
+                        <MudTd DataLabel="Tasks">@context.CompletedTasks</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudCardContent>
+        </MudCard>
+    }
+
+    <!-- Refresh Button -->
+    <MudFab Color="Color.Primary" 
+            StartIcon="@Icons.Material.Filled.Refresh" 
+            Label="Refresh Metrics" 
+            Class="mt-4"
+            OnClick="@LoadVelocityData"
+            Disabled="@_isLoading" />
+</MudContainer>
+
+@code {
+    private bool _isLoading = true;
+    private VelocityTrendDto? _velocityTrend;
+    private List<ChartSeries> _chartSeries = new();
+    private List<string> _xAxisLabels = new();
+    private ChartOptions _chartOptions = new() 
+    { 
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 10,
+        YAxisLines = true,
+        XAxisLines = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadVelocityData();
+    }
+
+    private async Task LoadVelocityData()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Get velocity trend for last 10 sprints
+            _velocityTrend = await MetricsClient.GetVelocityTrendAsync(areaPath: null, maxSprints: 10);
+            
+            if (_velocityTrend?.Sprints.Any() == true)
+            {
+                PrepareChartData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading velocity data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void PrepareChartData()
+    {
+        if (_velocityTrend == null || !_velocityTrend.Sprints.Any())
+            return;
+
+        // Reverse sprints to show oldest to newest (left to right)
+        var sprints = _velocityTrend.Sprints.Reverse().ToList();
+
+        _xAxisLabels = sprints.Select(s => s.SprintName).ToList();
+
+        _chartSeries = new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Completed Story Points",
+                Data = sprints.Select(s => (double)s.CompletedStoryPoints).ToArray()
+            },
+            new ChartSeries
+            {
+                Name = "Planned Story Points",
+                Data = sprints.Select(s => (double)s.PlannedStoryPoints).ToArray()
+            },
+            new ChartSeries
+            {
+                Name = "Average Velocity",
+                Data = Enumerable.Repeat(_velocityTrend.AverageVelocity, sprints.Count).ToArray()
+            }
+        };
+    }
+}

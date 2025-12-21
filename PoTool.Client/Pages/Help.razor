@@ -1,0 +1,272 @@
+@page "/help"
+@using PoTool.Client.Components.Common
+
+<PageTitle>Help & Data Requirements</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">
+        <MudIcon Icon="@Icons.Material.Filled.Help" Class="mr-2" /> Help & Data Requirements
+    </MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+        Understanding data requirements and validation rules for PO Companion features
+    </MudText>
+
+    <!-- Introduction -->
+    <MudCard Elevation="2" Class="mb-4">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+                    Why Data Quality Matters
+                </MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudText Typo="Typo.body1" Paragraph="true">
+                PO Companion provides powerful analytics and insights based on your Azure DevOps work items. 
+                To get the most value from these features, certain data fields must be consistently filled in TFS/Azure DevOps.
+            </MudText>
+            <MudText Typo="Typo.body1" Paragraph="true">
+                This page explains what data is required for each feature and provides validation rules to help you maintain data quality.
+            </MudText>
+        </MudCardContent>
+    </MudCard>
+
+    <!-- Feature Requirements -->
+    <MudExpansionPanels MultiExpansion="true">
+        
+        <!-- Velocity Dashboard -->
+        <MudExpansionPanel>
+            <TitleContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Success" />
+                    <MudText Typo="Typo.h6">Velocity Dashboard</MudText>
+                </MudStack>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary" GutterBottom="true">Required Fields:</MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Iteration Path:</strong> Must be set for all work items to group them by sprint
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Effort (Story Points):</strong> Required for PBIs and tasks to calculate velocity
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>State:</strong> Must be "Done", "Closed", "Completed", or "Resolved" for items to count as completed
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Type:</strong> Work item type (PBI, Bug, Task) must be set correctly
+                    </MudListItem>
+                </MudList>
+
+                <MudText Typo="Typo.subtitle2" Color="Color.Warning" GutterBottom="true" Class="mt-4">Data Quality Impact:</MudText>
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
+                    <strong>Missing Effort:</strong> Work items without effort estimates won't contribute to velocity calculations
+                </MudAlert>
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
+                    <strong>Missing Iteration Path:</strong> Work items won't appear in any sprint metrics
+                </MudAlert>
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    <strong>Tip:</strong> Use consistent iteration path naming (e.g., "Project\2025\Q1\Sprint 1") for better organization
+                </MudAlert>
+            </ChildContent>
+        </MudExpansionPanel>
+
+        <!-- Work Item Explorer -->
+        <MudExpansionPanel>
+            <TitleContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.List" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Work Item Explorer</MudText>
+                </MudStack>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary" GutterBottom="true">Required Fields:</MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Title:</strong> Clear, descriptive titles for all work items
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Area Path:</strong> Must be set for filtering and organization
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Parent Work Item:</strong> Set for Features and PBIs to build hierarchy
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>State:</strong> Current state (New, In Progress, Done, etc.)
+                    </MudListItem>
+                </MudList>
+
+                <MudText Typo="Typo.subtitle2" Color="Color.Error" GutterBottom="true" Class="mt-4">Validation Rules:</MudText>
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">
+                    <strong>Rule 1:</strong> Work items "In Progress" must have an effort estimate
+                </MudAlert>
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">
+                    <strong>Rule 2:</strong> If a child work item is "In Progress", its parent must also be "In Progress" or "Done"
+                </MudAlert>
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    <strong>Tip:</strong> Use the validation panel in Work Item Explorer to identify and fix data quality issues
+                </MudAlert>
+            </ChildContent>
+        </MudExpansionPanel>
+
+        <!-- PR Insights -->
+        <MudExpansionPanel>
+            <TitleContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Insights" Color="Color.Tertiary" />
+                    <MudText Typo="Typo.h6">PR Insights</MudText>
+                </MudStack>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary" GutterBottom="true">Required Fields:</MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Iteration Path:</strong> Link PRs to work items with iteration paths for sprint analysis
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Created Date:</strong> Automatically captured by TFS
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Completed Date:</strong> Set when PR is completed/merged
+                    </MudListItem>
+                </MudList>
+
+                <MudText Typo="Typo.subtitle2" Color="Color.Info" GutterBottom="true" Class="mt-4">Best Practices:</MudText>
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                    Link pull requests to work items using "AB#123" syntax in commit messages or PR descriptions
+                </MudAlert>
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    Complete PRs promptly to get accurate cycle time metrics
+                </MudAlert>
+            </ChildContent>
+        </MudExpansionPanel>
+
+    </MudExpansionPanels>
+
+    <!-- Common Validation Rules -->
+    <MudCard Elevation="2" Class="mt-6">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.Rule" Class="mr-2" />
+                    Common Validation Rules
+                </MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudSimpleTable Striped="true">
+                <thead>
+                    <tr>
+                        <th>Rule</th>
+                        <th>Severity</th>
+                        <th>Description</th>
+                        <th>Impact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>In Progress → Effort Required</td>
+                        <td><MudChip T="string" Color="Color.Error" Size="Size.Small">Error</MudChip></td>
+                        <td>Work items in "In Progress" state must have an effort estimate</td>
+                        <td>Prevents incomplete velocity data and sprint planning issues</td>
+                    </tr>
+                    <tr>
+                        <td>Parent-Child State Consistency</td>
+                        <td><MudChip T="string" Color="Color.Error" Size="Size.Small">Error</MudChip></td>
+                        <td>If a child is "In Progress", parent must be "In Progress" or "Done"</td>
+                        <td>Maintains hierarchy consistency and accurate progress tracking</td>
+                    </tr>
+                    <tr>
+                        <td>Iteration Path Format</td>
+                        <td><MudChip T="string" Color="Color.Warning" Size="Size.Small">Warning</MudChip></td>
+                        <td>Use consistent naming: "Project\Year\Quarter\Sprint X"</td>
+                        <td>Improves sprint grouping and trend analysis</td>
+                    </tr>
+                    <tr>
+                        <td>Effort Value Range</td>
+                        <td><MudChip T="string" Color="Color.Warning" Size="Size.Small">Warning</MudChip></td>
+                        <td>Story points should typically be between 1 and 13</td>
+                        <td>Ensures realistic estimates and velocity calculations</td>
+                    </tr>
+                </tbody>
+            </MudSimpleTable>
+        </MudCardContent>
+    </MudCard>
+
+    <!-- Quick Reference -->
+    <MudCard Elevation="2" Class="mt-6 mb-6">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Class="mr-2" />
+                    Quick Reference: Required Fields by Work Item Type
+                </MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudText Typo="Typo.h6" Color="Color.Primary">Epic</MudText>
+                    <MudList T="string" Dense="true">
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Title</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Area Path</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">State</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Iteration Path (optional)</MudListItem>
+                    </MudList>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudText Typo="Typo.h6" Color="Color.Primary">Feature / PBI</MudText>
+                    <MudList T="string" Dense="true">
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Title</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Area Path</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Iteration Path</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">State</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Effort (Story Points)</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Parent Work Item</MudListItem>
+                    </MudList>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudText Typo="Typo.h6" Color="Color.Primary">Bug / Task</MudText>
+                    <MudList T="string" Dense="true">
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Title</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Area Path</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Iteration Path</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">State</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Effort (if applicable)</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">Parent Work Item</MudListItem>
+                    </MudList>
+                </MudItem>
+            </MudGrid>
+        </MudCardContent>
+    </MudCard>
+
+    <!-- Getting Help -->
+    <MudCard Elevation="2" Class="mb-6">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.Support" Class="mr-2" />
+                    Need More Help?
+                </MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudText Typo="Typo.body1" Paragraph="true">
+                If you're still experiencing issues or have questions about data requirements:
+            </MudText>
+            <MudList T="string">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Article">
+                    Review the validation messages in the Work Item Explorer for specific issues
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Settings">
+                    Check your TFS configuration in the Configuration page
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Sync">
+                    Sync your work items to ensure you have the latest data
+                </MudListItem>
+            </MudList>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
