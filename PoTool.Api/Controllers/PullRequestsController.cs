@@ -189,4 +189,42 @@ public class PullRequestsController : ControllerBase
             return StatusCode(500, "Error syncing pull requests");
         }
     }
+
+    /// <summary>
+    /// Gets PR review bottleneck analysis showing reviewer performance and bottlenecks.
+    /// </summary>
+    /// <param name="maxPRs">Maximum number of PRs to analyze (default: 100)</param>
+    /// <param name="daysBack">Number of days to look back (default: 30)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>PR review bottleneck analysis</returns>
+    [HttpGet("review-bottleneck")]
+    public async Task<ActionResult<PRReviewBottleneckDto>> GetReviewBottleneck(
+        [FromQuery] int maxPRs = 100,
+        [FromQuery] int daysBack = 30,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (maxPRs < 1 || maxPRs > 500)
+            {
+                return BadRequest("MaxPRs must be between 1 and 500");
+            }
+
+            if (daysBack < 1 || daysBack > 365)
+            {
+                return BadRequest("DaysBack must be between 1 and 365");
+            }
+
+            var analysis = await _mediator.Send(
+                new GetPRReviewBottleneckQuery(maxPRs, daysBack), 
+                cancellationToken);
+
+            return Ok(analysis);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving PR review bottleneck analysis");
+            return StatusCode(500, "Error retrieving PR review bottleneck analysis");
+        }
+    }
 }
