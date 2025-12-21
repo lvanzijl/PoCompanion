@@ -85,6 +85,8 @@ public static class MauiProgram
         builder.Services.AddScoped<TfsConfigService>();
         builder.Services.AddScoped<ModeIsolatedStateService>();
         builder.Services.AddScoped<ErrorMessageService>();
+        builder.Services.AddSingleton<IPreferencesService, MauiPreferencesService>();
+        builder.Services.AddScoped<IOnboardingService, OnboardingService>();
 
         // Add MudBlazor services
         builder.Services.AddMudServices();

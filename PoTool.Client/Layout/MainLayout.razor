@@ -1,4 +1,8 @@
 ﻿@using PoTool.Client.Components.Settings
+@using PoTool.Client.Components.Onboarding
+@using PoTool.Client.Services
+@inject IOnboardingService OnboardingService
+@inject IDialogService DialogService
 @inherits LayoutComponentBase
 
 <MudThemeProvider Theme="_darkTheme" IsDarkMode="true" />
@@ -13,6 +17,11 @@
 
     <main>
         <div class="top-row px-4 d-flex justify-content-end align-items-center">
+            <MudIconButton Icon="@Icons.Material.Filled.Help" 
+                          Color="Color.Inherit" 
+                          OnClick="OpenOnboardingWizard" 
+                          title="Getting Started" 
+                          aria-label="Open getting started wizard" />
             <MudIconButton Icon="@Icons.Material.Filled.Settings" 
                           Color="Color.Inherit" 
                           OnClick="OpenSettings" 
@@ -30,10 +39,40 @@
 
 @code {
     private bool _settingsVisible = false;
+    private bool _hasCheckedOnboarding = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        
+        if (firstRender && !_hasCheckedOnboarding)
+        {
+            _hasCheckedOnboarding = true;
+            
+            // Check if user needs onboarding
+            if (!OnboardingService.HasCompletedOnboarding())
+            {
+                await OpenOnboardingWizard();
+            }
+        }
+    }
 
     private void OpenSettings()
     {
         _settingsVisible = true;
+    }
+
+    private async Task OpenOnboardingWizard()
+    {
+        var options = new DialogOptions 
+        { 
+            CloseButton = false,
+            CloseOnEscapeKey = false,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+        
+        await DialogService.ShowAsync<OnboardingWizard>("Getting Started", options);
     }
 
     private readonly MudTheme _darkTheme = new()
