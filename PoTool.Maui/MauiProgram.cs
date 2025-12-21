@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Core.Contracts;
 using PoTool.Maui.Services;
 
 namespace PoTool.Maui;
@@ -87,6 +88,12 @@ public static class MauiProgram
         builder.Services.AddScoped<ErrorMessageService>();
         builder.Services.AddSingleton<IPreferencesService, MauiPreferencesService>();
         builder.Services.AddScoped<IOnboardingService, OnboardingService>();
+        
+        // Register clipboard, export and report services
+        builder.Services.AddScoped<IClipboardService, ClipboardService>();
+        builder.Services.AddScoped<ExportService>();
+        builder.Services.AddScoped<ReportService>();
+        builder.Services.AddScoped<BrowserNavigationService>();
 
         // Add MudBlazor services
         builder.Services.AddMudServices();
