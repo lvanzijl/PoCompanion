@@ -68,8 +68,6 @@ public class WorkItemService
         return await _client.GetAllWithValidationAsync();
     }
 
-    // TODO: Uncomment when API client is regenerated with revisions endpoint
-    /*
     /// <summary>
     /// Gets the revision history for a specific work item.
     /// </summary>
@@ -77,6 +75,5 @@ public class WorkItemService
     {
         return await _client.GetWorkItemRevisionsAsync(workItemId);
     }
-    */
 }
 

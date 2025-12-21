@@ -591,6 +591,41 @@
         }
       }
     },
+    "/api/WorkItems/{workItemId}/revisions": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetWorkItemRevisions",
+        "parameters": [
+          {
+            "name": "workItemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkItemRevisionDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/WorkItems/goals/all": {
       "get": {
         "tags": [
@@ -1149,6 +1184,54 @@
           },
           "message": {
             "type": "string"
+          }
+        }
+      },
+      "WorkItemRevisionDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "revisionNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "changedBy": {
+            "type": "string"
+          },
+          "changedDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fieldChanges": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/WorkItemFieldChange"
+            }
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "WorkItemFieldChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fieldName": {
+            "type": "string"
+          },
+          "oldValue": {
+            "type": "string",
+            "nullable": true
+          },
+          "newValue": {
+            "type": "string",
+            "nullable": true
           }
         }
       }
