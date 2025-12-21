@@ -67,7 +67,9 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
             wi.Type.Equals("Task", StringComparison.OrdinalIgnoreCase));
 
         // Extract sprint name from iteration path (last segment)
-        var sprintName = query.IterationPath.Split('\\').LastOrDefault() ?? query.IterationPath;
+        // Handle both backslash and forward slash separators
+        var separators = new[] { '\\', '/' };
+        var sprintName = query.IterationPath.Split(separators, StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? query.IterationPath;
 
         var metrics = new SprintMetricsDto(
             IterationPath: query.IterationPath,

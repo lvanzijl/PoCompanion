@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Core.Metrics;
@@ -32,7 +33,7 @@ public class MetricsController : ControllerBase
     /// <returns>Sprint metrics or 404 if no work items found for the sprint</returns>
     [HttpGet("sprint")]
     public async Task<ActionResult<SprintMetricsDto>> GetSprintMetrics(
-        [FromQuery] string iterationPath,
+        [FromQuery][Required] string iterationPath,
         CancellationToken cancellationToken)
     {
         try
