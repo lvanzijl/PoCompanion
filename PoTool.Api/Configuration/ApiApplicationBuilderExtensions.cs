@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Hubs;
+using PoTool.Api.Middleware;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
@@ -140,6 +141,9 @@ public static class ApiApplicationBuilderExtensions
 
         // Add routing so middleware such as CORS apply to endpoints including SignalR
         app.UseRouting();
+
+        // Add PAT authentication middleware to extract PAT from request headers
+        app.UsePatAuthentication();
 
         app.UseCors("AllowBlazorClient");
 

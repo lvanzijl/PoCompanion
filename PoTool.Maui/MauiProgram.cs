@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
 using PoTool.Client.ApiClient;
+using PoTool.Client.Handlers;
 using PoTool.Client.Services;
 using PoTool.Core.Contracts;
 using PoTool.Maui.Services;
@@ -36,10 +37,21 @@ public static class MauiProgram
         builder.Services.AddSingleton(apiHost);
         builder.Services.AddSingleton<ApiInitializer>();
 
-        // Configure HttpClient with API base address
-        builder.Services.AddScoped(sp => new HttpClient 
-        { 
-            BaseAddress = new Uri(apiHost.BaseUrl) 
+        // Register PAT header handler
+        builder.Services.AddTransient<PatHeaderHandler>();
+
+        // Configure HttpClient with API base address and PAT header handler
+        builder.Services.AddHttpClient("PoToolApi", client =>
+        {
+            client.BaseAddress = new Uri(apiHost.BaseUrl);
+        })
+        .AddHttpMessageHandler<PatHeaderHandler>();
+
+        // Register primary HttpClient for backward compatibility
+        builder.Services.AddScoped(sp =>
+        {
+            var factory = sp.GetRequiredService<IHttpClientFactory>();
+            return factory.CreateClient("PoToolApi");
         });
 
         // Register SignalR HubConnection

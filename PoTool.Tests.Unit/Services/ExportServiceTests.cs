@@ -52,7 +52,7 @@ public sealed class ExportServiceTests
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 1",
                 ParentTfsId = null,
-                Effort = 5.0,
+                Effort = 5,
                 RetrievedAt = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero),
                 JsonPayload = "{}"
             }
@@ -112,7 +112,7 @@ public sealed class ExportServiceTests
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 1",
                 ParentTfsId = null,
-                Effort = 5.0,
+                Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
                 JsonPayload = "{}"
             },
@@ -125,7 +125,7 @@ public sealed class ExportServiceTests
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 2",
                 ParentTfsId = 123,
-                Effort = 3.0,
+                Effort = 3,
                 RetrievedAt = DateTimeOffset.UtcNow,
                 JsonPayload = "{}"
             }
@@ -179,7 +179,7 @@ public sealed class ExportServiceTests
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 1",
                 ParentTfsId = null,
-                Effort = 5.0,
+                Effort = 5,
                 RetrievedAt = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero),
                 JsonPayload = "{}"
             }
@@ -209,7 +209,7 @@ public sealed class ExportServiceTests
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 1",
                 ParentTfsId = null,
-                Effort = 5.0,
+                Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
                 JsonPayload = "{}"
             },
@@ -222,7 +222,7 @@ public sealed class ExportServiceTests
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 2",
                 ParentTfsId = 123,
-                Effort = 3.0,
+                Effort = 3,
                 RetrievedAt = DateTimeOffset.UtcNow,
                 JsonPayload = "{}"
             }
