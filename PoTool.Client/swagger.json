@@ -143,6 +143,77 @@
         }
       }
     },
+    "/api/Metrics/backlog-health": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetBacklogHealth",
+        "parameters": [
+          {
+            "name": "iterationPath",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacklogHealthDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Metrics/multi-iteration-health": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetMultiIterationBacklogHealth",
+        "parameters": [
+          {
+            "name": "areaPath",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "maxIterations",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 5
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiIterationBacklogHealthDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/PullRequests": {
       "get": {
         "tags": [
@@ -784,6 +855,139 @@
             "format": "int32"
           }
         }
+      },
+      "BacklogHealthDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "iterationPath": {
+            "type": "string"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "totalWorkItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemsWithoutEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemsInProgressWithoutEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "parentProgressIssues": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "blockedItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inProgressAtIterationEnd": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "iterationStart": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "iterationEnd": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "validationIssues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationIssueSummary"
+            }
+          }
+        }
+      },
+      "ValidationIssueSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "validationType": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "affectedWorkItemIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "MultiIterationBacklogHealthDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "iterationHealth": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BacklogHealthDto"
+            }
+          },
+          "trend": {
+            "$ref": "#/components/schemas/BacklogHealthTrend"
+          },
+          "totalWorkItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalIssues": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "analysisTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BacklogHealthTrend": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "effortTrend": {
+            "$ref": "#/components/schemas/TrendDirection"
+          },
+          "validationTrend": {
+            "$ref": "#/components/schemas/TrendDirection"
+          },
+          "blockerTrend": {
+            "$ref": "#/components/schemas/TrendDirection"
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      },
+      "TrendDirection": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Improving",
+          "Stable",
+          "Degrading",
+          "Unknown"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
       },
       "PullRequestDto": {
         "type": "object",
