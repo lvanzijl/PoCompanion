@@ -353,8 +353,16 @@
 
     private async Task DownloadFile(string content, string filename, string mimeType)
     {
-        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
-        var base64 = Convert.ToBase64String(bytes);
-        await JSRuntime.InvokeVoidAsync("downloadFile", filename, base64, mimeType);
+        try
+        {
+            var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+            var base64 = Convert.ToBase64String(bytes);
+            await JSRuntime.InvokeVoidAsync("downloadFile", filename, base64, mimeType);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to download file: {ex.Message}", Severity.Error);
+            throw;
+        }
     }
 }

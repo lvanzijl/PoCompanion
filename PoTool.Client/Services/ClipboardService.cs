@@ -20,11 +20,19 @@ public class ClipboardService : IClipboardService
     /// </summary>
     /// <param name="text">The text to copy to the clipboard.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the clipboard operation fails.</exception>
     public async Task CopyToClipboardAsync(string text)
     {
         if (string.IsNullOrEmpty(text))
             return;
 
-        await _jsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        try
+        {
+            await _jsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        }
+        catch (JSException ex)
+        {
+            throw new InvalidOperationException("Failed to copy to clipboard. The browser may not support the Clipboard API or permission was denied.", ex);
+        }
     }
 }
