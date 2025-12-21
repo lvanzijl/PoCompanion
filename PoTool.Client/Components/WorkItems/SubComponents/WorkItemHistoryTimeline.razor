@@ -54,14 +54,15 @@
                                     </div>
                                 }
                                 
-                                @if (revision.FieldChanges != null && revision.FieldChanges.Any())
+                                @if (revision.FieldChanges != null && revision.FieldChanges.Count > 0)
                                 {
                                     <div class="field-changes">
                                         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
                                             Changed Fields:
                                         </MudText>
-                                        @foreach (var change in revision.FieldChanges.Values)
+                                        @foreach (var changeKvp in revision.FieldChanges)
                                         {
+                                            var change = changeKvp.Value;
                                             <div class="field-change-item">
                                                 <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">
                                                     @GetFriendlyFieldName(change.FieldName)

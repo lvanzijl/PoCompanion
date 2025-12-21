@@ -256,6 +256,53 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult(changes);
     }
 
+    public Task<IEnumerable<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(
+        int workItemId,
+        CancellationToken cancellationToken = default)
+    {
+        // Return mock revision history for testing
+        var mockRevisions = new List<WorkItemRevisionDto>
+        {
+            new WorkItemRevisionDto(
+                RevisionNumber: 1,
+                WorkItemId: workItemId,
+                ChangedBy: "Test User",
+                ChangedDate: DateTimeOffset.UtcNow.AddDays(-10),
+                FieldChanges: new Dictionary<string, WorkItemFieldChange>
+                {
+                    ["System.Title"] = new WorkItemFieldChange("System.Title", null, "Initial Title"),
+                    ["System.State"] = new WorkItemFieldChange("System.State", null, "New")
+                },
+                Comment: "Work item created"
+            ),
+            new WorkItemRevisionDto(
+                RevisionNumber: 2,
+                WorkItemId: workItemId,
+                ChangedBy: "Test User 2",
+                ChangedDate: DateTimeOffset.UtcNow.AddDays(-5),
+                FieldChanges: new Dictionary<string, WorkItemFieldChange>
+                {
+                    ["System.State"] = new WorkItemFieldChange("System.State", "New", "Active"),
+                    ["System.AssignedTo"] = new WorkItemFieldChange("System.AssignedTo", null, "Test User 2")
+                },
+                Comment: "Started work on this item"
+            ),
+            new WorkItemRevisionDto(
+                RevisionNumber: 3,
+                WorkItemId: workItemId,
+                ChangedBy: "Test User 2",
+                ChangedDate: DateTimeOffset.UtcNow.AddDays(-2),
+                FieldChanges: new Dictionary<string, WorkItemFieldChange>
+                {
+                    ["Microsoft.VSTS.Scheduling.Effort"] = new WorkItemFieldChange("Microsoft.VSTS.Scheduling.Effort", null, "5")
+                },
+                Comment: "Added effort estimate"
+            )
+        };
+
+        return Task.FromResult<IEnumerable<WorkItemRevisionDto>>(mockRevisions);
+    }
+
     /// <summary>
     /// Adds a mock pull request for testing purposes.
     /// </summary>

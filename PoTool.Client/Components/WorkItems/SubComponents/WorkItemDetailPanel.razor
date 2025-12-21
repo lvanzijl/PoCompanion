@@ -192,6 +192,7 @@ else if (SelectedWorkItem != null)
                 }
             </MudTabPanel>
             
+            <!-- TODO: Uncomment when API client is regenerated with revisions endpoint
             <MudTabPanel Text="History" Icon="@Icons.Material.Filled.History" OnClick="@LoadHistoryAsync">
                 <WorkItemHistoryTimeline 
                     Revisions="@_revisions" 
@@ -199,6 +200,7 @@ else if (SelectedWorkItem != null)
                     HasError="@_hasHistoryError"
                     ErrorMessage="@_historyErrorMessage" />
             </MudTabPanel>
+            -->
         </MudTabs>
     </div>
 }
@@ -223,12 +225,13 @@ else if (SelectedWorkItem != null)
         .Select(issue => issue.Substring(issue.IndexOf(':') + 1).Trim())
         .ToList() ?? new List<string>();
 
+    // TODO: Uncomment when API client is regenerated with revisions endpoint
     // History timeline state
-    private IEnumerable<PoTool.Core.WorkItems.WorkItemRevisionDto>? _revisions;
-    private bool _isLoadingHistory;
-    private bool _hasHistoryError;
-    private string? _historyErrorMessage;
-    private int? _lastLoadedWorkItemId;
+    //private IEnumerable<WorkItemRevisionDto>? _revisions;
+    //private bool _isLoadingHistory;
+    //private bool _hasHistoryError;
+    //private string? _historyErrorMessage;
+    //private int? _lastLoadedWorkItemId;
 
     private string? GetCommonType()
     {
@@ -254,6 +257,8 @@ else if (SelectedWorkItem != null)
         return SelectedWorkItems.All(w => w.AreaPath != null && w.AreaPath == firstAreaPath) ? firstAreaPath : null;
     }
 
+    // TODO: Uncomment when API client is regenerated with revisions endpoint
+    /*
     private async Task LoadHistoryAsync()
     {
         // Only load if we haven't already loaded for this work item
@@ -281,6 +286,7 @@ else if (SelectedWorkItem != null)
             _isLoadingHistory = false;
         }
     }
+    */
 
     // Quick action handlers
     private async Task OpenInAzureDevOps(int workItemId)
