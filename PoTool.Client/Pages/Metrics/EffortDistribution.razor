@@ -1,0 +1,17 @@
+@page "/effort-distribution"
+@inject ISnackbar Snackbar
+
+<PageTitle>Effort Distribution</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4">Effort Distribution Heat Map</MudText>
+    <MudText Typo="Typo.body2">Coming soon...</MudText>
+</MudContainer>
+
+@code {
+    private ChartOptions _chartOptions = new ChartOptions
+    {
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 10
+    };
+}

@@ -162,4 +162,44 @@ public class MetricsController : ControllerBase
             return StatusCode(500, "Error retrieving multi-iteration backlog health");
         }
     }
+
+    /// <summary>
+    /// Gets effort distribution heat map data across area paths and iterations.
+    /// </summary>
+    /// <param name="areaPathFilter">Optional area path filter</param>
+    /// <param name="maxIterations">Maximum number of iterations to include (default: 10)</param>
+    /// <param name="defaultCapacity">Default capacity per iteration for utilization calculations</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Effort distribution heat map data</returns>
+    [HttpGet("effort-distribution")]
+    public async Task<ActionResult<EffortDistributionDto>> GetEffortDistribution(
+        [FromQuery] string? areaPathFilter = null,
+        [FromQuery] int maxIterations = 10,
+        [FromQuery] int? defaultCapacity = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (maxIterations < 1 || maxIterations > 20)
+            {
+                return BadRequest("MaxIterations must be between 1 and 20");
+            }
+
+            if (defaultCapacity.HasValue && defaultCapacity.Value < 0)
+            {
+                return BadRequest("DefaultCapacity must be non-negative");
+            }
+
+            var distribution = await _mediator.Send(
+                new GetEffortDistributionQuery(areaPathFilter, maxIterations, defaultCapacity), 
+                cancellationToken);
+
+            return Ok(distribution);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving effort distribution for area: {AreaPath}", areaPathFilter ?? "All");
+            return StatusCode(500, "Error retrieving effort distribution");
+        }
+    }
 }
