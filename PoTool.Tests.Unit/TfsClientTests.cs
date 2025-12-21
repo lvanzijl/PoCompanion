@@ -413,8 +413,8 @@ public class TfsClientTests
 
         // Assert
         Assert.AreEqual(1, results.Count);
-        Assert.IsTrue(results[0].Title.Contains("quotes"), "Should preserve special characters in title");
-        Assert.IsTrue(results[0].AreaPath.Contains("\\"), "Should preserve backslashes in paths");
+        Assert.Contains("quotes", results[0].Title, "Should preserve special characters in title");
+        Assert.Contains("\\", results[0].AreaPath, "Should preserve backslashes in paths");
     }
 
     [TestMethod]
@@ -470,8 +470,9 @@ public class TfsClientTests
         // Act
         var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
 
-        // Assert
-        Assert.IsTrue(results.Count >= 2, "Should process valid items even with some invalid data");
+        // Assert - Should process at least the 2 valid items (may process all 3)
+        Assert.IsTrue(results.Count >= 2, "Should process at least the 2 valid items");
+        Assert.IsTrue(results.Count <= 3, "Should not process more than 3 items total");
     }
 
     private int _responseIndex = 0;

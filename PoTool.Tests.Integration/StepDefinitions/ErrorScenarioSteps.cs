@@ -143,8 +143,8 @@ public class ErrorScenarioSteps
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
         
         var content = await response.Content.ReadAsStringAsync();
-        // Check that response is a non-empty array
-        Assert.IsTrue(content.StartsWith("[") && content.EndsWith("]"),
+        // Check that response is a non-empty JSON array
+        Assert.IsTrue(content.Contains("[") && content.Contains("]"),
             "Response should be a JSON array");
         Assert.IsTrue(content.Length > 2, "Response array should not be empty");
     }

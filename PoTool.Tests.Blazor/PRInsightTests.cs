@@ -49,6 +49,18 @@ public class PRInsightTests : BunitTestContext
         });
     }
 
+    private void SetupMockWithMetrics(List<PullRequestMetricsDto> metrics)
+    {
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
+            .ReturnsAsync(metrics);
+    }
+
+    private void SetupMockWithEmptyMetrics()
+    {
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
+            .ReturnsAsync(new List<PullRequestMetricsDto>());
+    }
+
     [TestMethod]
     public void PRInsight_RendersCorrectly_WithData()
     {
@@ -59,8 +71,7 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(2, "PR 2", "User2", "Completed", 3, 15, 8)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
-            .ReturnsAsync(metrics);
+        SetupMockWithMetrics(metrics);
 
         // Act
         var cut = RenderPRInsightWithMudProvider();
