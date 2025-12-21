@@ -50,7 +50,7 @@ public class WorkItemInProgressWithoutEffortValidatorTests
         var issues = result[1];
         Assert.AreEqual(1, issues.Count, "Should have one error");
         Assert.AreEqual("Error", issues[0].Severity);
-        Assert.IsTrue(issues[0].Message.Contains("effort"), "Message should mention effort");
+        Assert.Contains("effort", issues[0].Message, "Message should mention effort");
     }
 
     [TestMethod]

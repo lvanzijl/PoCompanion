@@ -53,7 +53,7 @@ public class WorkItemParentProgressValidatorTests
         var issues = result[2];
         Assert.AreEqual(1, issues.Count, "Should have one error");
         Assert.AreEqual("Error", issues[0].Severity);
-        Assert.IsTrue(issues[0].Message.Contains("Parent"), "Message should mention parent");
+        Assert.Contains("Parent", issues[0].Message, "Message should mention parent");
     }
 
     [TestMethod]
@@ -82,7 +82,7 @@ public class WorkItemParentProgressValidatorTests
         Assert.IsTrue(result.ContainsKey(3));
         Assert.AreEqual(1, result[3].Count);
         Assert.AreEqual("Warning", result[3][0].Severity);
-        Assert.IsTrue(result[3][0].Message.Contains("Ancestor"), "Message should mention ancestor");
+        Assert.Contains("Ancestor", result[3][0].Message, "Message should mention ancestor");
     }
 
     [TestMethod]
