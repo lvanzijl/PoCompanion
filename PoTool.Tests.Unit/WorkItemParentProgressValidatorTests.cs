@@ -181,6 +181,95 @@ public class WorkItemParentProgressValidatorTests
         Assert.IsTrue(result.ContainsKey(2));
     }
 
+    [TestMethod]
+    public void ValidateWorkItems_EmptyList_NoIssues()
+    {
+        // Arrange: Empty list
+        var items = new List<WorkItemDto>();
+
+        // Act
+        var result = _validator.ValidateWorkItems(items);
+
+        // Assert
+        Assert.IsEmpty(result, "Empty list should have no validation issues");
+    }
+
+    [TestMethod]
+    public void ValidateWorkItems_NullParentIdWithZero_NoIssues()
+    {
+        // Arrange: Item with null parent ID and another with parent ID 0
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Goal", "In Progress", null),
+            CreateWorkItem(2, "Epic", "In Progress", 0) // Parent ID 0 (non-existent)
+        };
+
+        // Act
+        var result = _validator.ValidateWorkItems(items);
+
+        // Assert
+        Assert.IsEmpty(result, "Item with non-existent parent should have no issues");
+    }
+
+    [TestMethod]
+    public void ValidateWorkItems_CircularReference_HandledGracefully()
+    {
+        // Arrange: Circular reference (should not crash)
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Goal", "In Progress", 2),
+            CreateWorkItem(2, "Epic", "In Progress", 1)
+        };
+
+        // Act
+        var result = _validator.ValidateWorkItems(items);
+
+        // Assert - Should not throw, result may vary
+        Assert.IsNotNull(result, "Should handle circular reference gracefully");
+    }
+
+    [TestMethod]
+    public void ValidateWorkItems_DeepHierarchy_ValidatesCorrectly()
+    {
+        // Arrange: Deep hierarchy with 5 levels
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Goal", "In Progress", null),
+            CreateWorkItem(2, "Epic", "In Progress", 1),
+            CreateWorkItem(3, "Feature", "In Progress", 2),
+            CreateWorkItem(4, "Story", "In Progress", 3),
+            CreateWorkItem(5, "Task", "In Progress", 4)
+        };
+
+        // Act
+        var result = _validator.ValidateWorkItems(items);
+
+        // Assert
+        Assert.IsEmpty(result, "Deep valid hierarchy should have no issues");
+    }
+
+    [TestMethod]
+    public void ValidateWorkItems_MultipleChildren_SameParent()
+    {
+        // Arrange: Multiple children with same parent
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Goal", "New", null),
+            CreateWorkItem(2, "Epic 1", "In Progress", 1),
+            CreateWorkItem(3, "Epic 2", "In Progress", 1),
+            CreateWorkItem(4, "Epic 3", "In Progress", 1)
+        };
+
+        // Act
+        var result = _validator.ValidateWorkItems(items);
+
+        // Assert
+        Assert.AreEqual(3, result.Count, "All three children should have issues");
+        Assert.IsTrue(result.ContainsKey(2));
+        Assert.IsTrue(result.ContainsKey(3));
+        Assert.IsTrue(result.ContainsKey(4));
+    }
+
     private static WorkItemDto CreateWorkItem(int id, string type, string state, int? parentId)
     {
         return new WorkItemDto(
