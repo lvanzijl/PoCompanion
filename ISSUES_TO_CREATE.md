@@ -12,329 +12,7 @@ This document contains detailed issue templates for all deferred work identified
 
 ## MEDIUM PRIORITY (P1) - Next Sprint
 
-### Issue 4: Add Validation Filter Tooltips and Explanations
-
-**Title**: Add tooltips and help text to validation filters
-
-**Labels**: `ux`, `P1`, `enhancement`
-
-**Description**:
-
-Validation filter checkboxes ("Parent Progress Issues", "Missing Effort Issues") don't explain what they filter, causing user confusion.
-
-**Current State**:
-- Filter labels are unclear
-- No explanation of what each filter does
-- No indication of how many items have issues
-- Users must guess filter behavior
-
-**Expected State**:
-- Tooltip on each filter explaining what it does
-- Count of items with issues shown in label
-- Help icon with detailed explanation
-- Examples of what triggers each filter
-
-**Implementation Steps**:
-1. Add MudTooltip to each filter checkbox
-   - Parent Progress: "Highlights work items that are in progress but their parent/ancestor is not"
-   - Missing Effort: "Highlights work items in 'In Progress' state without effort/story points"
-
-2. Add issue counts to filter labels
-   - "Parent Progress Issues (5)" instead of just "Parent Progress Issues"
-   - Update count when data changes
-   - Show "(0)" if no issues
-
-3. Add help icon with detailed modal
-   - Click help icon opens explanation dialog
-   - Shows examples of when filter triggers
-   - Suggests how to resolve issues
-
-4. Improve filter naming
-   - Consider more descriptive names
-   - "Items with Parent/Ancestor Not In Progress" vs "Parent Progress Issues"
-
-**Acceptance Criteria**:
-- [ ] Each filter has tooltip explaining behavior
-- [ ] Issue counts shown in filter labels
-- [ ] Help icon with detailed explanation
-- [ ] Clear examples of filter triggers
-- [ ] Counts update when data changes
-
-**Estimated Effort**: 1 day
-
-**Files Affected**:
-- PoTool.Client/Components/WorkItems/SubComponents/WorkItemToolbar.razor
-- PoTool.Client/Components/WorkItems/WorkItemExplorer.razor
-- Create: PoTool.Client/Components/Help/ValidationFilterHelp.razor
-
-**References**:
-- PRODUCT_OWNER_FINDINGS.md UX-002
-
----
-
-### Issue 5: Add Multi-Selection Visual Feedback
-
-**Title**: Improve multi-selection UX with clear visual indicators
-
-**Labels**: `ux`, `P1`, `enhancement`
-
-**Description**:
-
-Multi-selection is possible but users don't know how many items are selected or that bulk actions are available.
-
-**Current State**:
-- Multi-selection works but no visual feedback
-- No count of selected items
-- No indication of multi-select capability
-- No bulk action toolbar
-
-**Expected State**:
-- Selection counter showing "X items selected"
-- Bulk action toolbar when multiple items selected
-- Clear visual indication of selection mode
-- Select All / Clear Selection buttons
-
-**Implementation Steps**:
-1. Add selection counter to toolbar
-   - Show "X items selected" when > 0
-   - Update on selection change
-   - Position prominently
-
-2. Add selection action buttons
-   - "Select All" button
-   - "Clear Selection" button
-   - Position near filter controls
-
-3. Create bulk action toolbar (phase 2 - see Feature issue)
-   - Appears when items selected
-   - Shows available bulk actions
-   - Context-sensitive actions
-
-4. Improve visual selection indicators
-   - Consider checkboxes instead of just highlighting
-   - Clearer selected state styling
-   - Multi-select affordance indicators
-
-5. Add keyboard shortcuts for selection
-   - Ctrl+A for select all
-   - Escape for clear selection
-   - Ctrl+Click for multi-select
-
-**Acceptance Criteria**:
-- [ ] Selection count always visible
-- [ ] "Select All" and "Clear Selection" buttons work
-- [ ] Clear visual indication of selected items
-- [ ] Keyboard shortcuts functional
-- [ ] Selection state persists during filtering
-
-**Estimated Effort**: 2 days
-
-**Files Affected**:
-- PoTool.Client/Components/WorkItems/SubComponents/WorkItemToolbar.razor
-- PoTool.Client/Components/WorkItems/WorkItemExplorer.razor
-- PoTool.Client/Components/WorkItems/SubComponents/WorkItemTreeNode.razor
-
-**References**:
-- PRODUCT_OWNER_FINDINGS.md UX-004
-
----
-
-### Issue 6: Enable Skipped TfsConfig Blazor Tests
-
-**Title**: Implement and enable skipped TfsConfig page bUnit tests
-
-**Labels**: `testing`, `P1`, `technical-debt`
-
-**Description**:
-
-Three bUnit tests for TfsConfig page are currently skipped, reducing test coverage of critical configuration UI.
-
-**Current State**:
-- `TfsConfig_RendersFormElements` - Skipped
-- `TfsConfig_DisplaysSaveButton` - Skipped
-- `TfsConfig_LoadsExistingConfiguration` - Skipped
-
-**Expected State**:
-- All TfsConfig tests implemented and passing
-- Proper mocking of TfsConfigService
-- Test coverage for form validation
-- Test coverage for save/test connection flows
-
-**Implementation Steps**:
-1. Analyze why tests are skipped
-   - Check for missing dependencies
-   - Identify mocking requirements
-   - Determine test infrastructure needs
-
-2. Implement TfsConfig_RendersFormElements
-   - Verify URL input field renders
-   - Verify Project input field renders
-   - Verify PAT input field renders
-   - Verify Auth Mode dropdown renders
-   - Verify Save and Test Connection buttons render
-
-3. Implement TfsConfig_DisplaysSaveButton
-   - Verify Save button is present
-   - Verify button enabled/disabled states
-   - Test button text and styling
-
-4. Implement TfsConfig_LoadsExistingConfiguration
-   - Mock TfsConfigService.GetConfigAsync
-   - Provide test configuration data
-   - Verify form fields populated with existing config
-   - Verify last validated timestamp displayed
-
-5. Add additional test coverage
-   - Form validation tests
-   - Save button click handler
-   - Test connection button click handler
-   - Error display tests
-
-**Acceptance Criteria**:
-- [ ] All three skipped tests implemented
-- [ ] All tests passing
-- [ ] TfsConfigService properly mocked
-- [ ] Form rendering fully tested
-- [ ] Configuration loading tested
-
-**Estimated Effort**: 1 day
-
-**Files Affected**:
-- PoTool.Tests.Blazor/TfsConfigPageTests.cs (currently empty or incomplete)
-
-**References**:
-- COMPLIANCE_FINDINGS.md Section 2.2
-- Test results showing 3 skipped tests
-
----
-
-### Issue 7: Add Sync Operation Tooltips
-
-**Title**: Add tooltips explaining Full Sync vs Incremental Sync
-
-**Labels**: `ux`, `P1`, `enhancement`
-
-**Description**:
-
-Users don't understand the difference between "Full Sync" and "Incremental Sync" buttons, leading to inefficient usage.
-
-**Current State**:
-- Two sync buttons with no explanation
-- No indication of which to use when
-- No feedback on sync duration or data volume
-
-**Expected State**:
-- Tooltip on Full Sync explaining behavior and use case
-- Tooltip on Incremental Sync explaining behavior and use case
-- Optional: Duration estimate or progress indicator
-
-**Implementation Steps**:
-1. Add MudTooltip to Full Sync button
-   - Text: "Downloads all work items from Azure DevOps (slower, but complete)"
-   - Suggest when to use: "Use when syncing for first time or after major changes"
-
-2. Add MudTooltip to Incremental Sync button
-   - Text: "Downloads only changes since last sync (faster)"
-   - Suggest when to use: "Use for regular updates"
-
-3. Consider adding sync status feedback
-   - Show "Last synced: X minutes ago"
-   - Show "Syncing X items..." during sync
-   - Show completion notification
-
-4. Add help icon with detailed explanation
-   - Opens modal with full explanation
-   - Includes recommendations for sync frequency
-   - Explains caching behavior
-
-**Acceptance Criteria**:
-- [ ] Full Sync has clear tooltip
-- [ ] Incremental Sync has clear tooltip
-- [ ] Tooltips explain when to use each option
-- [ ] Last sync time displayed
-- [ ] Sync progress feedback shown
-
-**Estimated Effort**: 0.5 days
-
-**Files Affected**:
-- PoTool.Client/Components/WorkItems/SubComponents/WorkItemToolbar.razor
-- PoTool.Client/Components/WorkItems/WorkItemExplorer.razor
-
-**References**:
-- PRODUCT_OWNER_FINDINGS.md UX-003
-
----
-
-### Issue 8: Standardize Loading States Across Application
-
-**Title**: Implement consistent loading indicators for all async operations
-
-**Labels**: `ux`, `P1`, `enhancement`
-
-**Description**:
-
-Loading states are inconsistent - some operations show spinners, others show nothing, creating uncertainty about whether actions are processing.
-
-**Current State**:
-- Inconsistent loading indicators
-- Some async operations have no feedback
-- Mix of spinners, progress bars, and nothing
-- Users uncertain if action is processing
-
-**Expected State**:
-- All async operations show loading state
-- Consistent loading indicator style
-- Skeleton screens for data loading
-- Progress indicators for long operations
-
-**Implementation Steps**:
-1. Create LoadingIndicator component
-   - Standardized spinner/progress design
-   - Configurable size and position
-   - Consistent with MudBlazor theme
-
-2. Create SkeletonLoader component
-   - For list/tree data loading
-   - Better UX than blank space + spinner
-   - Matches expected content layout
-
-3. Audit all async operations
-   - WorkItem sync operations
-   - TFS connection testing
-   - Settings save/load
-   - PR metrics loading
-   - Initial data loading
-
-4. Add loading states to each operation
-   - WorkItemExplorer data loading
-   - TfsConfig save/test operations
-   - PRInsight data loading and filtering
-   - Settings save operations
-
-5. Add progress indication for long operations
-   - Sync operations show progress
-   - "Syncing X of Y items"
-   - Estimated time remaining
-
-**Acceptance Criteria**:
-- [ ] All async operations show loading state
-- [ ] Consistent loading indicator design
-- [ ] Skeleton screens for data loading
-- [ ] Progress indicators for long operations
-- [ ] No operations without feedback
-
-**Estimated Effort**: 2 days
-
-**Files Affected**:
-- Create: PoTool.Client/Components/Common/LoadingIndicator.razor
-- Create: PoTool.Client/Components/Common/SkeletonLoader.razor
-- PoTool.Client/Components/WorkItems/WorkItemExplorer.razor
-- PoTool.Client/Pages/TfsConfig.razor
-- PoTool.Client/Pages/PullRequests/PRInsight.razor
-- PoTool.Client/Components/Settings/AppSettingsDialog.razor
-
-**References**:
-- PRODUCT_OWNER_FINDINGS.md UX-006
+**Issues 4-8 have been completed and implemented in the current PR.**
 
 ---
 
@@ -1102,34 +780,59 @@ Ensure PAT is only kept in memory as long as needed and cleared on component dis
 
 ## Summary
 
-**Total Issues**: 33
+**Total Issues**: 28 (5 completed: Issues 4-8)
+
+**Completed (as of current PR)**:
+- Issue 4: Add Validation Filter Tooltips and Explanations ✓
+- Issue 5: Add Multi-Selection Visual Feedback ✓
+- Issue 6: Enable Skipped TfsConfig Blazor Tests ✓
+- Issue 7: Add Sync Operation Tooltips ✓
+- Issue 8: Standardize Loading States Across Application ✓
 
 **By Priority**:
-- P0 (High Priority): 3 issues - ~8-12 days
-- P1 (Medium Priority): 12 issues - ~20-25 days
+- P0 (High Priority): 0 issues remaining (all completed)
+- P1 (Medium Priority): 7 issues - ~15-20 days
 - P2 (Nice to Have): 7 issues - ~10-15 days
 - P3 (Future): 11 issues - ~35-50 days
 
 **By Category**:
-- Architecture/Technical Debt: 4 issues
-- UX/User Experience: 13 issues
+- UX/User Experience: 8 issues remaining
 - Features: 10 issues
-- Testing: 4 issues
+- Testing: 3 issues remaining
 - Accessibility: 3 issues
 - Performance: 3 issues
-- Security: 3 issues
-- Bug Fixes: 1 issue
+- Security: 1 issue remaining
 
-**Recommended Implementation Order**:
-1. Issue 1 (NSwag Migration) - Highest priority architectural fix
-2. Issue 2 (Error Messages) - Critical UX improvement
-3. Issue 3 (Onboarding) - Critical for first-time users
-4. Issue 31 (CodeQL) - Security verification
-5. Issues 4-8 - P1 UX improvements
-6. Remaining issues based on business value
+**Recommended Implementation Order (grouped for efficient PRs)**:
+
+**Phase 1: Critical Functionality** (Can be done in parallel)
+- Group A: Issue 31 (CodeQL Security Scan) - 2-3 days
+- Group B: Issues 21-22 (Testing improvements) - 3-4 days
+
+**Phase 2: UX Polish** (Can combine in single PR)
+- Issues 9-11 (Bulk operations, keyboard shortcuts, quick actions) - 5-7 days
+  - These all enhance work item interaction and share similar UI patterns
+
+**Phase 3: Accessibility** (Single focused PR)
+- Issues 25-27 (ARIA labels, color patterns, focus indicators) - 4 days
+  - Related accessibility improvements that should be tested together
+
+**Phase 4: Advanced Features** (Separate PRs, can be done in parallel)
+- Issue 12 (PAT Field UX) - 0.5 days
+- Issues 13-14 (Saved filters & Export) - 6-9 days
+- Issue 15 (Dashboard) - 5-7 days
+- Issue 16 (Offline indicator) - 1-2 days
+
+**Phase 5: Advanced UX** (Optional, based on user feedback)
+- Issue 17 (Undo/Redo) - 2 days
+- Issues 18-20 (Templates, Collaboration, Advanced Validation) - 13-19 days
+
+**Phase 6: Performance** (When needed, based on metrics)
+- Issues 28-30 (Virtual scrolling, debouncing, memoization) - 4.5-5.5 days
 
 ---
 
-**Document Prepared**: 2025-12-20
-**Source**: Compliance and Quality Assurance Review
+**Document Prepared**: 2025-12-20  
+**Last Updated**: 2025-12-21  
+**Source**: Compliance and Quality Assurance Review  
 **References**: COMPLIANCE_FINDINGS.md, PRODUCT_OWNER_FINDINGS.md, EXECUTIVE_SUMMARY.md

@@ -1,23 +1,53 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
+using MudBlazor.Services;
 using PoTool.Client.Components.WorkItems.SubComponents;
 
 namespace PoTool.Tests.Blazor;
 
 /// <summary>
-/// bUnit tests for WorkItemToolbar component
+/// bUnit tests for WorkItemToolbar component with MudBlazor infrastructure
+/// Tests wrap components with MudPopoverProvider to satisfy MudTooltip requirements
 /// </summary>
 [TestClass]
 public class WorkItemToolbarTests : BunitTestContext
 {
+    [TestInitialize]
+    public void Setup()
+    {
+        // Add MudBlazor services
+        Services.AddMudServices();
+        
+        // Configure JSInterop in Loose mode to allow any JS calls without explicit setup
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
+    private IRenderedFragment RenderWithMudProvider(RenderFragment childContent)
+    {
+        return Render(builder =>
+        {
+            builder.OpenComponent<MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.AddContent(1, childContent);
+        });
+    }
+
     [TestMethod]
     public void WorkItemToolbar_RendersCorrectly()
     {
         // Arrange & Act
-        var cut = RenderComponent<WorkItemToolbar>(parameters => parameters
-            .Add(p => p.IsSyncing, false)
-            .Add(p => p.FilterText, ""));
+        var cut = RenderWithMudProvider(builder =>
+        {
+            builder.OpenComponent<WorkItemToolbar>(0);
+            builder.AddAttribute(1, "IsSyncing", false);
+            builder.AddAttribute(2, "FilterText", "");
+            builder.AddAttribute(3, "SelectedCount", 0);
+            builder.AddAttribute(4, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
+            builder.CloseComponent();
+        });
 
         // Assert
         Assert.IsNotNull(cut);
@@ -30,10 +60,16 @@ public class WorkItemToolbarTests : BunitTestContext
     {
         // Arrange
         var syncClicked = false;
-        var cut = RenderComponent<WorkItemToolbar>(parameters => parameters
-            .Add(p => p.IsSyncing, false)
-            .Add(p => p.FilterText, "")
-            .Add(p => p.OnSyncRequested, EventCallback.Factory.Create(this, () => { syncClicked = true; })));
+        var cut = RenderWithMudProvider(builder =>
+        {
+            builder.OpenComponent<WorkItemToolbar>(0);
+            builder.AddAttribute(1, "IsSyncing", false);
+            builder.AddAttribute(2, "FilterText", "");
+            builder.AddAttribute(3, "SelectedCount", 0);
+            builder.AddAttribute(4, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
+            builder.AddAttribute(5, "OnSyncRequested", EventCallback.Factory.Create(this, () => { syncClicked = true; }));
+            builder.CloseComponent();
+        });
 
         // Act
         var syncButton = cut.Find("button.btn-sync");
@@ -47,9 +83,15 @@ public class WorkItemToolbarTests : BunitTestContext
     public void WorkItemToolbar_SyncButton_DisabledWhenSyncInProgress()
     {
         // Arrange & Act
-        var cut = RenderComponent<WorkItemToolbar>(parameters => parameters
-            .Add(p => p.IsSyncing, true)
-            .Add(p => p.FilterText, ""));
+        var cut = RenderWithMudProvider(builder =>
+        {
+            builder.OpenComponent<WorkItemToolbar>(0);
+            builder.AddAttribute(1, "IsSyncing", true);
+            builder.AddAttribute(2, "FilterText", "");
+            builder.AddAttribute(3, "SelectedCount", 0);
+            builder.AddAttribute(4, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
+            builder.CloseComponent();
+        });
 
         // Assert
         var syncButton = cut.Find("button.btn-sync");
@@ -62,14 +104,20 @@ public class WorkItemToolbarTests : BunitTestContext
         // Arrange
         var filterChanged = false;
         string? newFilterValue = null;
-        var cut = RenderComponent<WorkItemToolbar>(parameters => parameters
-            .Add(p => p.IsSyncing, false)
-            .Add(p => p.FilterText, "")
-            .Add(p => p.OnFilterChanged, EventCallback.Factory.Create<string>(this, (value) => 
+        var cut = RenderWithMudProvider(builder =>
+        {
+            builder.OpenComponent<WorkItemToolbar>(0);
+            builder.AddAttribute(1, "IsSyncing", false);
+            builder.AddAttribute(2, "FilterText", "");
+            builder.AddAttribute(3, "SelectedCount", 0);
+            builder.AddAttribute(4, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
+            builder.AddAttribute(5, "OnFilterChanged", EventCallback.Factory.Create<string>(this, (value) => 
             { 
                 filterChanged = true;
                 newFilterValue = value;
-            })));
+            }));
+            builder.CloseComponent();
+        });
 
         // Act
         var filterInput = cut.Find("input[type='text']");
@@ -86,14 +134,18 @@ public class WorkItemToolbarTests : BunitTestContext
     public void WorkItemToolbar_FilterInput_DisplaysCurrentValue()
     {
         // Arrange & Act
-        var cut = RenderComponent<WorkItemToolbar>(parameters => parameters
-            .Add(p => p.IsSyncing, false)
-            .Add(p => p.FilterText, "my filter"));
+        var cut = RenderWithMudProvider(builder =>
+        {
+            builder.OpenComponent<WorkItemToolbar>(0);
+            builder.AddAttribute(1, "IsSyncing", false);
+            builder.AddAttribute(2, "FilterText", "my filter");
+            builder.AddAttribute(3, "SelectedCount", 0);
+            builder.AddAttribute(4, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
+            builder.CloseComponent();
+        });
 
-        // Assert
-        var filterInput = cut.Find("input[type='text']");
-        // Note: The value is bound via @bind, so it may not appear as an attribute immediately
-        // Instead check that the component has the parameter set
-        Assert.AreEqual("my filter", cut.Instance.FilterText);
+        // Assert - Find the WorkItemToolbar instance
+        var toolbar = cut.FindComponent<WorkItemToolbar>();
+        Assert.AreEqual("my filter", toolbar.Instance.FilterText);
     }
 }
