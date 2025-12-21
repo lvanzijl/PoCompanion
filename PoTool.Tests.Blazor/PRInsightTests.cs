@@ -48,17 +48,23 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(2, "PR 2", "User2", "Completed", 3, 15, 8)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<CancellationToken>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
             .ReturnsAsync(metrics);
 
         // Act
         var cut = RenderComponent<PRInsight>();
-        cut.WaitForState(() => !cut.Markup.Contains("No Pull Request Data Available"), timeout: TimeSpan.FromSeconds(5));
+        
+        // Wait for async rendering to complete
+        cut.WaitForAssertion(() => 
+        {
+            var markup = cut.Markup;
+            Assert.DoesNotContain("No Pull Request Data Available", markup);
+            Assert.Contains("Total PRs", markup);
+        }, timeout: TimeSpan.FromSeconds(5));
 
         // Assert
         Assert.IsNotNull(cut);
         Assert.Contains("PR Insight Dashboard", cut.Markup);
-        Assert.Contains("Total PRs", cut.Markup);
         Assert.Contains("Avg Time Open", cut.Markup);
         Assert.Contains("Avg Iterations", cut.Markup);
         Assert.Contains("Avg Files/PR", cut.Markup);
@@ -68,7 +74,7 @@ public class PRInsightTests : BunitTestContext
     public void PRInsight_ShowsEmptyState_WhenNoData()
     {
         // Arrange
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<CancellationToken>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
             .ReturnsAsync(new List<PullRequestMetricsDto>());
 
         // Act
@@ -85,7 +91,7 @@ public class PRInsightTests : BunitTestContext
     {
         // Arrange - Setup to delay the async call
         var tcs = new TaskCompletionSource<ICollection<PullRequestMetricsDto>>();
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<CancellationToken>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
             .Returns(tcs.Task);
 
         // Act
@@ -103,7 +109,7 @@ public class PRInsightTests : BunitTestContext
     public async Task PRInsight_SyncButton_InvokesService()
     {
         // Arrange
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<CancellationToken>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
             .ReturnsAsync(new List<PullRequestMetricsDto>());
 
         _mockPullRequestsClient.Setup(x => x.SyncAsync())
@@ -131,12 +137,17 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(3, "PR 3", "User3", "Active", 3, 15, 8)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<CancellationToken>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
             .ReturnsAsync(metrics);
 
         // Act
         var cut = RenderComponent<PRInsight>();
-        cut.WaitForState(() => !cut.Markup.Contains("No Pull Request Data Available"), timeout: TimeSpan.FromSeconds(5));
+        
+        // Wait for async rendering to complete
+        cut.WaitForAssertion(() => 
+        {
+            Assert.DoesNotContain("No Pull Request Data Available", cut.Markup);
+        }, timeout: TimeSpan.FromSeconds(5));
 
         // Assert
         var markup = cut.Markup;
@@ -156,12 +167,17 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(2, "PR 2", "User2", "Completed", 3, 15, 8)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<CancellationToken>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
             .ReturnsAsync(metrics);
 
         // Act
         var cut = RenderComponent<PRInsight>();
-        cut.WaitForState(() => !cut.Markup.Contains("No Pull Request Data Available"), timeout: TimeSpan.FromSeconds(5));
+        
+        // Wait for async rendering to complete
+        cut.WaitForAssertion(() => 
+        {
+            Assert.DoesNotContain("No Pull Request Data Available", cut.Markup);
+        }, timeout: TimeSpan.FromSeconds(5));
 
         // Assert
         var charts = cut.FindComponents<MudChart>();
@@ -177,12 +193,17 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(1, "PR 1", "User1", "Active", 2, 10, 5)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<CancellationToken>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
             .ReturnsAsync(metrics);
 
         // Act
         var cut = RenderComponent<PRInsight>();
-        cut.WaitForState(() => !cut.Markup.Contains("No Pull Request Data Available"), timeout: TimeSpan.FromSeconds(5));
+        
+        // Wait for async rendering to complete
+        cut.WaitForAssertion(() => 
+        {
+            Assert.DoesNotContain("No Pull Request Data Available", cut.Markup);
+        }, timeout: TimeSpan.FromSeconds(5));
 
         // Assert
         Assert.Contains("Filter by Date Range", cut.Markup);
@@ -198,12 +219,17 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(1, "PR 1", "User1", "Active", 2, 10, 5)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<CancellationToken>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
             .ReturnsAsync(metrics);
 
         // Act
         var cut = RenderComponent<PRInsight>();
-        cut.WaitForState(() => !cut.Markup.Contains("No Pull Request Data Available"), timeout: TimeSpan.FromSeconds(5));
+        
+        // Wait for async rendering to complete
+        cut.WaitForAssertion(() => 
+        {
+            Assert.DoesNotContain("No Pull Request Data Available", cut.Markup);
+        }, timeout: TimeSpan.FromSeconds(5));
 
         // Assert - When there's data, tabs should be visible in markup
         Assert.Contains("Overview", cut.Markup);
@@ -220,12 +246,17 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(1, "Test PR Title", "TestUser", "Active", 2, 10, 5)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<CancellationToken>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
             .ReturnsAsync(metrics);
 
         // Act
         var cut = RenderComponent<PRInsight>();
-        cut.WaitForState(() => !cut.Markup.Contains("No Pull Request Data Available"), timeout: TimeSpan.FromSeconds(5));
+        
+        // Wait for async rendering to complete
+        cut.WaitForAssertion(() => 
+        {
+            Assert.DoesNotContain("No Pull Request Data Available", cut.Markup);
+        }, timeout: TimeSpan.FromSeconds(5));
 
         // Assert - DataGrid elements should exist when there's data
         Assert.Contains("Test PR Title", cut.Markup);
