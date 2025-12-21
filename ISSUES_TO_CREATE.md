@@ -500,9 +500,34 @@ Allow teams to define custom validation rules beyond built-in ones.
 
 ### Issue 21: Add Missing Blazor Tests
 
+**Status**: 🔄 IN PROGRESS
+
 **Title**: Implement missing bUnit tests for PRInsight and enhanced WorkItemExplorer coverage
 
 **Labels**: `testing`, `P1`, `technical-debt`
+
+**Completion Date**: Partial completion on 2025-12-21
+
+**Implementation Summary**:
+Implemented comprehensive bUnit tests for PRInsight page including:
+- Test rendering with data (9 test cases created)
+- Test empty state display
+- Test sync button functionality
+- Test chart rendering
+- Test date filtering UI
+- Test multiple tabs (Overview, By User, Details)
+- Test data grid with PR details
+
+**Note**: Some async rendering issues remain to be resolved in the tests where component state updates don't trigger re-renders as expected in the test environment.
+
+Files created:
+- `/PoTool.Tests.Blazor/PRInsightTests.cs`
+
+**Remaining Work**:
+- Fix async rendering issues in PRInsight tests
+- Add enhanced WorkItemExplorer tests for multi-selection, validation filters, keyboard navigation, and empty states
+
+---
 
 **Description**:
 
@@ -536,9 +561,30 @@ Several components lack comprehensive bUnit test coverage.
 
 ### Issue 22: Improve Test Assertion Style
 
+**Status**: ✅ COMPLETED
+
 **Title**: Refactor tests to use modern Assert methods
 
 **Labels**: `testing`, `P2`, `code-quality`
+
+**Completion Date**: 2025-12-21
+
+**Implementation Summary**:
+Refactored all Blazor test assertions to use modern MSTest assertion methods:
+- Replaced `Assert.IsTrue(x.Contains())` with `Assert.Contains()`
+- Replaced `Assert.IsFalse(x.Contains())` with `Assert.DoesNotContain()`
+- Improved test readability and maintainability
+- Fixed all MSTEST0037 analyzer warnings
+
+Files modified:
+- `/PoTool.Tests.Blazor/WorkItemToolbarTests.cs`
+- `/PoTool.Tests.Blazor/WorkItemDetailPanelTests.cs`
+- `/PoTool.Tests.Blazor/WorkItemTreeViewTests.cs`
+- `/PoTool.Tests.Blazor/WorkItemTreeNodeTests.cs`
+
+**Impact**: Improved code quality and eliminated 16 test assertion style warnings.
+
+---
 
 **Description**:
 
@@ -596,9 +642,31 @@ Integration tests currently cover happy paths but miss error scenarios.
 
 ### Issue 24: Add Unit Tests for Edge Cases
 
+**Status**: 🔄 IN PROGRESS
+
 **Title**: Expand unit test coverage for edge cases and boundary conditions
 
 **Labels**: `testing`, `P2`, `technical-debt`
+
+**Completion Date**: Partial completion on 2025-12-21
+
+**Implementation Summary**:
+Added comprehensive edge case tests for WorkItemParentProgressValidator:
+- Empty list handling
+- Null and zero parent ID handling
+- Circular reference detection and graceful handling
+- Deep hierarchy validation (5 levels)
+- Multiple children with same parent validation
+
+Files modified:
+- `/PoTool.Tests.Unit/WorkItemParentProgressValidatorTests.cs` (added 6 new test cases)
+
+**Remaining Work**:
+- TfsClient edge cases
+- TreeBuilderService with complex hierarchies
+- Large dataset scenarios
+
+---
 
 **Description**:
 
@@ -850,7 +918,7 @@ Ensure PAT is only kept in memory as long as needed and cleared on component dis
 
 ## Summary
 
-**Total Issues**: 28 (8 completed: Issues 4-8, 9, 10, 11)
+**Total Issues**: 28 (9 completed: Issues 4-8, 9, 10, 11, 22)
 
 **Completed (as of current PR)**:
 - Issue 4: Add Validation Filter Tooltips and Explanations ✓
@@ -861,17 +929,22 @@ Ensure PAT is only kept in memory as long as needed and cleared on component dis
 - Issue 9: Implement Bulk Operations on Work Items ✓
 - Issue 10: Add Keyboard Shortcuts Help Panel ✓
 - Issue 11: Add Work Item Quick Actions ✓
+- Issue 22: Improve Test Assertion Style ✓
+
+**In Progress**:
+- Issue 21: Add Missing Blazor Tests (partial - PRInsight tests created)
+- Issue 24: Add Unit Tests for Edge Cases (partial - WorkItemParentProgressValidator enhanced)
 
 **By Priority**:
 - P0 (High Priority): 0 issues remaining (all completed)
-- P1 (Medium Priority): 7 issues - ~15-20 days
-- P2 (Nice to Have): 4 issues remaining - ~5-9 days
+- P1 (Medium Priority): 6 issues remaining - ~12-17 days
+- P2 (Nice to Have): 3 issues remaining - ~4-8 days
 - P3 (Future): 11 issues - ~35-50 days
 
 **By Category**:
 - UX/User Experience: 7 issues remaining
 - Features: 10 issues
-- Testing: 3 issues remaining
+- Testing: 2 issues in progress, 1 remaining
 - Accessibility: 3 issues
 - Performance: 3 issues
 - Security: 1 issue remaining
@@ -880,18 +953,16 @@ Ensure PAT is only kept in memory as long as needed and cleared on component dis
 
 **Phase 1: Critical Functionality** (Can be done in parallel)
 - Group A: Issue 31 (CodeQL Security Scan) - 2-3 days
-- Group B: Issues 21-22 (Testing improvements) - 3-4 days
+- Group B: Issues 21, 23, 24 (Complete testing improvements) - 4-6 days
 
 **Phase 2: UX Polish** (Can combine in single PR)
-- Issues 9-11 (Bulk operations, keyboard shortcuts, quick actions) - 5-7 days
-  - These all enhance work item interaction and share similar UI patterns
+- Issue 12 (PAT Field UX) - 0.5 days
 
 **Phase 3: Accessibility** (Single focused PR)
 - Issues 25-27 (ARIA labels, color patterns, focus indicators) - 4 days
   - Related accessibility improvements that should be tested together
 
 **Phase 4: Advanced Features** (Separate PRs, can be done in parallel)
-- Issue 12 (PAT Field UX) - 0.5 days
 - Issues 13-14 (Saved filters & Export) - 6-9 days
 - Issue 15 (Dashboard) - 5-7 days
 - Issue 16 (Offline indicator) - 1-2 days
