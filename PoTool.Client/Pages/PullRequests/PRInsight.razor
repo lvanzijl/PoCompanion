@@ -287,27 +287,7 @@
     
     private void InvalidateCache()
     {
-        // Calculate a comprehensive hash based on metrics collection
-        if (_metrics.Count == 0)
-        {
-            _cachedMetricsHashCode = 0;
-        }
-        else
-        {
-            var hash = new HashCode();
-            hash.Add(_metrics.Count);
-            // Sample multiple items across the collection for better change detection
-            hash.Add(_metrics[0].Title);
-            if (_metrics.Count > 1)
-                hash.Add(_metrics[_metrics.Count - 1].Title);
-            if (_metrics.Count > 2)
-                hash.Add(_metrics[_metrics.Count / 2].Title);
-            // Add aggregate values for additional validation
-            hash.Add(_metrics.Sum(m => m.TotalTimeOpen.TotalDays));
-            hash.Add(_metrics.Sum(m => m.IterationCount));
-            _cachedMetricsHashCode = hash.ToHashCode();
-        }
-        
+        _cachedMetricsHashCode = CalculateMetricsHashCode();
         _cachedStatusData = null;
         _cachedStatusLabels = null;
         _cachedTimeOpenData = null;
@@ -318,21 +298,27 @@
     
     private bool IsCacheValid()
     {
+        var currentHash = CalculateMetricsHashCode();
+        return currentHash == _cachedMetricsHashCode;
+    }
+    
+    private int CalculateMetricsHashCode()
+    {
         if (_metrics.Count == 0)
-            return _cachedMetricsHashCode == 0;
+            return 0;
         
         var hash = new HashCode();
         hash.Add(_metrics.Count);
+        // Sample multiple items across the collection for better change detection
         hash.Add(_metrics[0].Title);
         if (_metrics.Count > 1)
             hash.Add(_metrics[_metrics.Count - 1].Title);
         if (_metrics.Count > 2)
             hash.Add(_metrics[_metrics.Count / 2].Title);
+        // Add aggregate values for additional validation
         hash.Add(_metrics.Sum(m => m.TotalTimeOpen.TotalDays));
         hash.Add(_metrics.Sum(m => m.IterationCount));
-        var currentHash = hash.ToHashCode();
-        
-        return currentHash == _cachedMetricsHashCode;
+        return hash.ToHashCode();
     }
 
     private async Task SyncPullRequests()
