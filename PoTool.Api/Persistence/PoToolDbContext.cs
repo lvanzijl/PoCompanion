@@ -19,7 +19,9 @@ public class PoToolDbContext : DbContext
     public DbSet<WorkItemEntity> WorkItems => Set<WorkItemEntity>();
 
     /// <summary>
-    /// Persisted TFS configuration (encrypted PAT stored in ProtectedPat).
+    /// Persisted TFS configuration (non-sensitive data only).
+    /// PAT is stored client-side using MAUI SecureStorage for security.
+    /// See docs/PAT_STORAGE_BEST_PRACTICES.md
     /// </summary>
     public DbSet<TfsConfigEntity> TfsConfigs => Set<TfsConfigEntity>();
 
@@ -65,7 +67,7 @@ public class PoToolDbContext : DbContext
         modelBuilder.Entity<TfsConfigEntity>(entity =>
         {
             entity.HasIndex(e => e.Url);
-            entity.Property(e => e.ProtectedPat).IsRequired();
+            // NOTE: ProtectedPat property removed - PAT stored client-side now
             entity.Property(e => e.Url).HasMaxLength(1024).IsRequired();
             entity.Property(e => e.Project).HasMaxLength(256);
         });
