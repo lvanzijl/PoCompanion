@@ -100,7 +100,7 @@ This PR provides the **scaffolding baseline**:
 - Add hierarchical tree rendering (parent-child relationships)
 - Implement text highlighting for search matches
 - Add configuration dialog for Area Path and PAT
-- Add PAT encryption and secure storage
+- Client-side PAT storage using MAUI SecureStorage (see `docs/PAT_STORAGE_BEST_PRACTICES.md`)
 - Implement proper error handling and loading states
 
 ## Architecture Compliance

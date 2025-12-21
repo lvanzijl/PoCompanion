@@ -510,11 +510,13 @@ public class TfsClient : ITfsClient
     {
         if (entity.AuthMode == TfsAuthMode.Pat)
         {
-            var pat = _configService.UnprotectPatEntity(entity);
-            if (string.IsNullOrEmpty(pat))
-                throw new TfsAuthenticationException("PAT not configured", (string?)null);
-
-            _authProvider.ConfigurePatAuthentication(_httpClient, pat);
+            // TODO: PAT is now stored client-side using MAUI SecureStorage
+            // This method needs to be refactored to accept PAT as a parameter
+            // See docs/PAT_STORAGE_BEST_PRACTICES.md
+            // For now, throw an exception indicating PAT must be provided
+            throw new TfsAuthenticationException(
+                "PAT must be provided by client. Server no longer stores PAT for security reasons. " +
+                "See docs/PAT_STORAGE_BEST_PRACTICES.md", (string?)null);
         }
         // NTLM is configured via HttpClientHandler, so no additional configuration needed here
     }

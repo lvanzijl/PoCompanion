@@ -40,8 +40,9 @@ This document outlines the complete plan for implementing real on-premises Team 
 - API Version: `7.0` (Azure DevOps Services / TFS 2022+)
 
 **Authentication:**
-- PAT storage: Encrypted via ASP.NET Data Protection
-- Configuration: TfsConfigurationService manages URL, Project, PAT
+- PAT storage: Client-side using MAUI SecureStorage (see `PAT_STORAGE_BEST_PRACTICES.md`)
+- Configuration: TfsConfigurationService manages URL, Project (non-sensitive config only)
+- PAT provided by client per request or per session
 - No NTLM/Windows Authentication support yet
 
 **Testing:**
@@ -203,7 +204,7 @@ public class TfsAuthenticationProvider
     "Url": "https://tfs.company.com/DefaultCollection",
     "Project": "MyProject",
     "AuthMode": "Pat|Ntlm",
-    "Pat": "[encrypted]",
+    // Note: PAT is stored client-side in MAUI SecureStorage, not in config
     "UseDefaultCredentials": false,
     "Timeout": 30
   }
@@ -767,7 +768,7 @@ public class TfsConfigEntity
 {
     public string Url { get; set; }
     public string Project { get; set; }
-    public string EncryptedPat { get; set; }
+    // Note: PAT is no longer stored in database (see PAT_STORAGE_BEST_PRACTICES.md)
 }
 ```
 
@@ -781,7 +782,7 @@ public class TfsConfigEntity
     public string Url { get; set; } = string.Empty;
     public string Project { get; set; } = string.Empty;
     public TfsAuthMode AuthMode { get; set; } = TfsAuthMode.Pat;
-    public string? EncryptedPat { get; set; }
+    // Note: PAT removed from entity - stored client-side only (see PAT_STORAGE_BEST_PRACTICES.md)
     public bool UseDefaultCredentials { get; set; }
     public int TimeoutSeconds { get; set; } = 30;
     public string ApiVersion { get; set; } = "7.0";

@@ -57,6 +57,7 @@ Violating these rules is a design error, not an implementation shortcut.
 
 ### Additional Documentation
 9. **[SINGLE_EXECUTABLE_ARCHITECTURE.md](SINGLE_EXECUTABLE_ARCHITECTURE.md)** - MAUI Hybrid hosting model
+10. **[PAT_STORAGE_BEST_PRACTICES.md](PAT_STORAGE_BEST_PRACTICES.md)** - Security best practices for credential storage
 
 ---
 

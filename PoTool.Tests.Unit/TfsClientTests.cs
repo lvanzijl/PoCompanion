@@ -37,10 +37,9 @@ public class TfsClientTests
             .Options;
         _dbContext = new PoToolDbContext(options);
         
-        // Create real config service with ephemeral data protection
-        var dataProtectionProvider = DataProtectionProvider.Create("PoToolTests");
+        // Create config service (no longer requires data protection)
         var configLogger = new Mock<ILogger<TfsConfigurationService>>();
-        _configService = new TfsConfigurationService(_dbContext, dataProtectionProvider, configLogger.Object);
+        _configService = new TfsConfigurationService(_dbContext, configLogger.Object);
         
         _authProvider = new TfsAuthenticationProvider();
         _loggerMock = new Mock<ILogger<TfsClient>>();
@@ -59,11 +58,10 @@ public class TfsClientTests
     [TestMethod]
     public async Task GetWorkItemsAsync_ParsesParentId_WhenParentExists()
     {
-        // Arrange
+        // Arrange - Note: PAT parameter removed
         await _configService.SaveConfigAsync(
             "https://dev.azure.com/testorg",
-            "TestProject",
-            "test-pat");
+            "TestProject");
 
 
         // Mock WIQL response
@@ -131,11 +129,10 @@ public class TfsClientTests
     [TestMethod]
     public async Task GetWorkItemsAsync_HandlesMultipleLevelsOfHierarchy()
     {
-        // Arrange
+        // Arrange - Note: PAT parameter removed
         await _configService.SaveConfigAsync(
             "https://dev.azure.com/testorg",
-            "TestProject",
-            "test-pat");
+            "TestProject");
 
 
         // Mock WIQL response - Epic -> Feature -> User Story
@@ -216,11 +213,10 @@ public class TfsClientTests
     [TestMethod]
     public async Task GetWorkItemsAsync_HandlesEmptyParentField()
     {
-        // Arrange
+        // Arrange - Note: PAT parameter removed
         await _configService.SaveConfigAsync(
             "https://dev.azure.com/testorg",
-            "TestProject",
-            "test-pat");
+            "TestProject");
 
 
         var wiqlResponse = new { workItems = new[] { new { id = 100 } } };
@@ -258,11 +254,10 @@ public class TfsClientTests
     [TestMethod]
     public async Task GetWorkItemsAsync_HandlesInvalidParentUrl()
     {
-        // Arrange
+        // Arrange - Note: PAT parameter removed
         await _configService.SaveConfigAsync(
             "https://dev.azure.com/testorg",
-            "TestProject",
-            "test-pat");
+            "TestProject");
 
 
         var wiqlResponse = new { workItems = new[] { new { id = 100 } } };
