@@ -72,6 +72,77 @@
         }
       }
     },
+    "/api/Metrics/sprint": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetSprintMetrics",
+        "parameters": [
+          {
+            "name": "iterationPath",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SprintMetricsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Metrics/velocity": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetVelocityTrend",
+        "parameters": [
+          {
+            "name": "areaPath",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "maxSprints",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VelocityTrendDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/PullRequests": {
       "get": {
         "tags": [
@@ -594,6 +665,88 @@
           "pat": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "SprintMetricsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "iterationPath": {
+            "type": "string"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "completedStoryPoints": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "plannedStoryPoints": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedWorkItemCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalWorkItemCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedPBIs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedBugs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedTasks": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "VelocityTrendDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sprints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SprintMetricsDto"
+            }
+          },
+          "averageVelocity": {
+            "type": "number",
+            "format": "double"
+          },
+          "threeSprintAverage": {
+            "type": "number",
+            "format": "double"
+          },
+          "sixSprintAverage": {
+            "type": "number",
+            "format": "double"
+          },
+          "totalCompletedStoryPoints": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalSprints": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
