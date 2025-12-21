@@ -2,9 +2,11 @@
 @using PoTool.Client.Services
 @using PoTool.Client.Models
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
 @inject SettingsService SettingsService
 @inject ModeIsolatedStateService StateService
 @inject WorkItemService WorkItemService
+@inject ErrorMessageService ErrorMessageService
 
 <MudDialog>
     <DialogContent>
@@ -62,9 +64,11 @@
                     }
                 }
 
-                @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                @if (_errorResponse != null)
                 {
-                    <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
+                    <ErrorDisplay ErrorResponse="@_errorResponse" 
+                                  Class="mb-4"
+                                  OnDismiss="ClearError" />
                 }
 
                 <MudText Typo="Typo.caption" Color="Color.Info" Class="mb-2">
@@ -101,7 +105,7 @@
     private bool _isSaving = false;
     private bool _loadingGoals = false;
     private DataMode _dataMode = DataMode.Mock;
-    private string _errorMessage = string.Empty;
+    private ErrorResponse? _errorResponse;
     private List<WorkItemDto> _availableGoals = new();
     private IEnumerable<WorkItemDto> _selectedGoals = new List<WorkItemDto>();
 
@@ -130,7 +134,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to load settings: {ex.Message}";
+            ShowError(ex, "Error loading settings");
         }
         finally
         {
@@ -143,6 +147,7 @@
         _loadingGoals = true;
         try
         {
+            ClearError();
             var goals = await WorkItemService.GetAllGoalsAsync();
             _availableGoals = goals.OrderBy(g => g.Title).ToList();
             
@@ -157,7 +162,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to load available goals: {ex.Message}";
+            ShowError(ex, "Error loading available goals");
         }
         finally
         {
@@ -167,7 +172,7 @@
 
     private async Task SaveSettings()
     {
-        _errorMessage = string.Empty;
+        ClearError();
         
         try
         {
@@ -178,7 +183,11 @@
             
             if (goalIds.Count == 0)
             {
-                _errorMessage = "Please select at least one Goal";
+                _errorResponse = new ErrorResponse
+                {
+                    UserMessage = "Please select at least one Goal",
+                    Suggestion = "Choose at least one goal to track from the dropdown above."
+                };
                 return;
             }
 
@@ -199,12 +208,23 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to save settings: {ex.Message}";
+            ShowError(ex, "Error saving settings");
         }
         finally
         {
             _isSaving = false;
         }
+    }
+
+    private void ShowError(Exception ex, string context)
+    {
+        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
     }
 
     private void Cancel()

@@ -1,0 +1,92 @@
+@using PoTool.Client.Services
+
+@if (ErrorResponse != null)
+{
+    <MudAlert Severity="Severity.Error" Class="@Class" CloseIconClicked="OnDismiss" ShowCloseIcon="@Dismissible">
+        <div class="error-content">
+            <MudText Typo="Typo.body1" Class="mb-2">
+                <strong>@ErrorResponse.UserMessage</strong>
+            </MudText>
+            
+            @if (!string.IsNullOrEmpty(ErrorResponse.Suggestion))
+            {
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    @ErrorResponse.Suggestion
+                </MudText>
+            }
+
+            @if (ShowTechnicalDetails)
+            {
+                <MudExpansionPanels Class="mt-2">
+                    <MudExpansionPanel Text="Show Technical Details" Dense="true">
+                        <MudStack Spacing="1" Class="technical-details">
+                            @if (ErrorResponse.TechnicalDetails.StatusCode.HasValue)
+                            {
+                                <MudText Typo="Typo.caption">
+                                    <strong>HTTP Status Code:</strong> @ErrorResponse.TechnicalDetails.StatusCode.Value
+                                </MudText>
+                            }
+                            @if (!string.IsNullOrEmpty(ErrorResponse.TechnicalDetails.ExceptionType))
+                            {
+                                <MudText Typo="Typo.caption">
+                                    <strong>Exception Type:</strong> @ErrorResponse.TechnicalDetails.ExceptionType
+                                </MudText>
+                            }
+                            @if (!string.IsNullOrEmpty(ErrorResponse.TechnicalDetails.ExceptionMessage))
+                            {
+                                <MudText Typo="Typo.caption">
+                                    <strong>Exception Message:</strong> @ErrorResponse.TechnicalDetails.ExceptionMessage
+                                </MudText>
+                            }
+                            @if (!string.IsNullOrEmpty(ErrorResponse.TechnicalDetails.StackTrace) && ShowStackTrace)
+                            {
+                                <MudText Typo="Typo.caption" Class="stack-trace">
+                                    <strong>Stack Trace:</strong><br />
+                                    <pre>@ErrorResponse.TechnicalDetails.StackTrace</pre>
+                                </MudText>
+                            }
+                        </MudStack>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            }
+        </div>
+    </MudAlert>
+}
+
+@code {
+    /// <summary>
+    /// The error response to display.
+    /// </summary>
+    [Parameter]
+    public ErrorResponse? ErrorResponse { get; set; }
+
+    /// <summary>
+    /// Whether to show the technical details section.
+    /// </summary>
+    [Parameter]
+    public bool ShowTechnicalDetails { get; set; } = true;
+
+    /// <summary>
+    /// Whether to show the stack trace in technical details.
+    /// </summary>
+    [Parameter]
+    public bool ShowStackTrace { get; set; } = false;
+
+    /// <summary>
+    /// Whether the alert can be dismissed.
+    /// </summary>
+    [Parameter]
+    public bool Dismissible { get; set; } = true;
+
+    /// <summary>
+    /// Additional CSS classes.
+    /// </summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>
+    /// Callback when the alert is dismissed.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnDismiss { get; set; }
+}
