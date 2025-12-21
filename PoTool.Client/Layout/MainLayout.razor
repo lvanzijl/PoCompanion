@@ -97,8 +97,8 @@
 
     private async Task HandleGlobalKeyDown(KeyboardEventArgs e)
     {
-        // Open keyboard shortcuts help with "?" key (Shift+/)
-        if (e.Key == "?" || (e.Key == "/" && e.ShiftKey))
+        // Open keyboard shortcuts help with "?" key
+        if (e.Key == "?")
         {
             await OpenKeyboardShortcuts();
         }
