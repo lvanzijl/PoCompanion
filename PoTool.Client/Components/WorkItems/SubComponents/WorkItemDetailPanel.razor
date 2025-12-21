@@ -5,6 +5,7 @@
 @inject IClipboardService ClipboardService
 @inject TfsConfigService TfsConfigService
 @inject BrowserNavigationService BrowserNavigationService
+@inject WorkItemService WorkItemService
 @inject ISnackbar Snackbar
 
 @* Detail panel for displaying selected work item(s) *@
@@ -109,83 +110,96 @@ else if (SelectedWorkItem != null)
             </MudTooltip>
         </div>
         
-        <div class="detail-field">
-            <label>TFS ID:</label>
-            <span>@SelectedWorkItem.TfsId</span>
-        </div>
-        <div class="detail-field">
-            <label>Type:</label>
-            <span>@SelectedWorkItem.Type</span>
-        </div>
-        <div class="detail-field">
-            <label>State:</label>
-            <span>@SelectedWorkItem.State</span>
-        </div>
-        <div class="detail-field">
-            <label>Area Path:</label>
-            <span>@SelectedWorkItem.AreaPath</span>
-        </div>
-        <div class="detail-field">
-            <label>Iteration Path:</label>
-            <span>@SelectedWorkItem.IterationPath</span>
-        </div>
-        @if (SelectedWorkItem.ParentTfsId.HasValue)
-        {
-            <div class="detail-field">
-                <label>Parent ID:</label>
-                <span>@SelectedWorkItem.ParentTfsId.Value</span>
-            </div>
-        }
-        <div class="detail-field">
-            <label>Retrieved At:</label>
-            <span>@SelectedWorkItem.RetrievedAt.ToString("g")</span>
-        </div>
-        @if (SelectedWorkItem.Effort.HasValue)
-        {
-            <div class="detail-field">
-                <label>Effort:</label>
-                <span>@SelectedWorkItem.Effort.Value hours</span>
-            </div>
-        }
-        else
-        {
-            <div class="detail-field">
-                <label>Effort:</label>
-                <span class="no-value">(not set)</span>
-            </div>
-        }
+        @* Tabs for Details and History *@
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+            <MudTabPanel Text="Details" Icon="@Icons.Material.Filled.Info">
+                <div class="detail-field">
+                    <label>TFS ID:</label>
+                    <span>@SelectedWorkItem.TfsId</span>
+                </div>
+                <div class="detail-field">
+                    <label>Type:</label>
+                    <span>@SelectedWorkItem.Type</span>
+                </div>
+                <div class="detail-field">
+                    <label>State:</label>
+                    <span>@SelectedWorkItem.State</span>
+                </div>
+                <div class="detail-field">
+                    <label>Area Path:</label>
+                    <span>@SelectedWorkItem.AreaPath</span>
+                </div>
+                <div class="detail-field">
+                    <label>Iteration Path:</label>
+                    <span>@SelectedWorkItem.IterationPath</span>
+                </div>
+                @if (SelectedWorkItem.ParentTfsId.HasValue)
+                {
+                    <div class="detail-field">
+                        <label>Parent ID:</label>
+                        <span>@SelectedWorkItem.ParentTfsId.Value</span>
+                    </div>
+                }
+                <div class="detail-field">
+                    <label>Retrieved At:</label>
+                    <span>@SelectedWorkItem.RetrievedAt.ToString("g")</span>
+                </div>
+                @if (SelectedWorkItem.Effort.HasValue)
+                {
+                    <div class="detail-field">
+                        <label>Effort:</label>
+                        <span>@SelectedWorkItem.Effort.Value hours</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="detail-field">
+                        <label>Effort:</label>
+                        <span class="no-value">(not set)</span>
+                    </div>
+                }
 
-        @* Display validation issues section *@
-        @if (ValidationIssues != null && ValidationIssues.Any())
-        {
-            <div class="detail-section validation-section">
-                <h3>Validation Issues</h3>
-                @if (Errors.Any())
+                @* Display validation issues section *@
+                @if (ValidationIssues != null && ValidationIssues.Any())
                 {
-                    <div class="validation-group errors">
-                        <h4>❌ Errors</h4>
-                        <ul class="validation-list">
-                            @foreach (var error in Errors)
-                            {
-                                <li>@error</li>
-                            }
-                        </ul>
+                    <div class="detail-section validation-section">
+                        <h3>Validation Issues</h3>
+                        @if (Errors.Any())
+                        {
+                            <div class="validation-group errors">
+                                <h4>❌ Errors</h4>
+                                <ul class="validation-list">
+                                    @foreach (var error in Errors)
+                                    {
+                                        <li>@error</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                        @if (Warnings.Any())
+                        {
+                            <div class="validation-group warnings">
+                                <h4>⚠️ Warnings</h4>
+                                <ul class="validation-list">
+                                    @foreach (var warning in Warnings)
+                                    {
+                                        <li>@warning</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
                     </div>
                 }
-                @if (Warnings.Any())
-                {
-                    <div class="validation-group warnings">
-                        <h4>⚠️ Warnings</h4>
-                        <ul class="validation-list">
-                            @foreach (var warning in Warnings)
-                            {
-                                <li>@warning</li>
-                            }
-                        </ul>
-                    </div>
-                }
-            </div>
-        }
+            </MudTabPanel>
+            
+            <MudTabPanel Text="History" Icon="@Icons.Material.Filled.History" OnClick="@LoadHistoryAsync">
+                <WorkItemHistoryTimeline 
+                    Revisions="@_revisions" 
+                    IsLoading="@_isLoadingHistory"
+                    HasError="@_hasHistoryError"
+                    ErrorMessage="@_historyErrorMessage" />
+            </MudTabPanel>
+        </MudTabs>
     </div>
 }
 
@@ -209,6 +223,13 @@ else if (SelectedWorkItem != null)
         .Select(issue => issue.Substring(issue.IndexOf(':') + 1).Trim())
         .ToList() ?? new List<string>();
 
+    // History timeline state
+    private IEnumerable<WorkItemRevisionDto>? _revisions;
+    private bool _isLoadingHistory;
+    private bool _hasHistoryError;
+    private string? _historyErrorMessage;
+    private int? _lastLoadedWorkItemId;
+
     private string? GetCommonType()
     {
         if (SelectedWorkItems == null || !SelectedWorkItems.Any()) return null;
@@ -231,6 +252,34 @@ else if (SelectedWorkItem != null)
         var firstAreaPath = SelectedWorkItems[0].AreaPath;
         if (firstAreaPath == null) return null;
         return SelectedWorkItems.All(w => w.AreaPath != null && w.AreaPath == firstAreaPath) ? firstAreaPath : null;
+    }
+
+    private async Task LoadHistoryAsync()
+    {
+        // Only load if we haven't already loaded for this work item
+        if (SelectedWorkItem == null || _lastLoadedWorkItemId == SelectedWorkItem.TfsId)
+            return;
+
+        _isLoadingHistory = true;
+        _hasHistoryError = false;
+        _historyErrorMessage = null;
+        _revisions = null;
+        
+        try
+        {
+            _revisions = await WorkItemService.GetRevisionsAsync(SelectedWorkItem.TfsId);
+            _lastLoadedWorkItemId = SelectedWorkItem.TfsId;
+        }
+        catch (Exception ex)
+        {
+            _hasHistoryError = true;
+            _historyErrorMessage = ex.Message;
+            Snackbar.Add($"Failed to load revision history: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoadingHistory = false;
+        }
     }
 
     // Quick action handlers

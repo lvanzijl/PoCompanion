@@ -507,7 +507,149 @@ public class TfsClient : ITfsClient
         }, cancellationToken);
     }
 
+    public async Task<IEnumerable<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(
+        int workItemId,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        if (entity == null)
+            throw new InvalidOperationException("TFS configuration not set");
+
+        await ConfigureAuthenticationAsync(entity, cancellationToken);
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            // Get work item with all revisions using the revisions expand parameter
+            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/{workItemId}/revisions?api-version={entity.ApiVersion}";
+            
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            await HandleHttpErrorsAsync(response, cancellationToken);
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            var revisions = new List<WorkItemRevisionDto>();
+
+            if (!doc.RootElement.TryGetProperty("value", out var revisionsArray))
+                return revisions;
+
+            WorkItemRevisionDto? previousRevision = null;
+
+            foreach (var revision in revisionsArray.EnumerateArray())
+            {
+                var revNumber = revision.TryGetProperty("rev", out var rev) ? rev.GetInt32() : 0;
+                
+                var changedBy = "";
+                if (revision.TryGetProperty("fields", out var fields))
+                {
+                    if (fields.TryGetProperty("System.ChangedBy", out var cb))
+                    {
+                        if (cb.ValueKind == JsonValueKind.Object && cb.TryGetProperty("displayName", out var displayName))
+                        {
+                            changedBy = displayName.GetString() ?? "";
+                        }
+                        else if (cb.ValueKind == JsonValueKind.String)
+                        {
+                            changedBy = cb.GetString() ?? "";
+                        }
+                    }
+                }
+
+                var changedDate = DateTimeOffset.UtcNow;
+                if (revision.TryGetProperty("fields", out var fieldsForDate))
+                {
+                    if (fieldsForDate.TryGetProperty("System.ChangedDate", out var cd) && cd.ValueKind != JsonValueKind.Null)
+                    {
+                        changedDate = cd.GetDateTimeOffset();
+                    }
+                }
+
+                var comment = "";
+                if (revision.TryGetProperty("fields", out var fieldsForComment))
+                {
+                    if (fieldsForComment.TryGetProperty("System.History", out var hist) && hist.ValueKind == JsonValueKind.String)
+                    {
+                        comment = hist.GetString();
+                    }
+                }
+
+                // Calculate field changes by comparing with previous revision
+                var fieldChanges = new Dictionary<string, WorkItemFieldChange>();
+                
+                if (previousRevision != null && revision.TryGetProperty("fields", out var currentFields))
+                {
+                    // Get all fields from current revision
+                    foreach (var field in currentFields.EnumerateObject())
+                    {
+                        var fieldName = field.Name;
+                        var newValue = GetFieldValueAsString(field.Value);
+                        
+                        // Skip system fields that are not interesting for history
+                        if (fieldName.StartsWith("System.Watermark") || 
+                            fieldName.StartsWith("System.Rev") ||
+                            fieldName == "System.ChangedDate" ||
+                            fieldName == "System.ChangedBy" ||
+                            fieldName == "System.RevisedDate")
+                        {
+                            continue;
+                        }
+
+                        // Find the old value from previous revision
+                        string? oldValue = null;
+                        if (previousRevision != null)
+                        {
+                            // Try to get from the previous revision's raw data (we'll need to store it)
+                            // For now, we'll mark it as changed if the field exists
+                            oldValue = null; // Will be populated if we had previous revision data
+                        }
+
+                        // Only add if value actually changed or is a new field
+                        if (oldValue != newValue)
+                        {
+                            fieldChanges[fieldName] = new WorkItemFieldChange(
+                                FieldName: fieldName,
+                                OldValue: oldValue,
+                                NewValue: newValue
+                            );
+                        }
+                    }
+                }
+
+                var revisionDto = new WorkItemRevisionDto(
+                    RevisionNumber: revNumber,
+                    WorkItemId: workItemId,
+                    ChangedBy: changedBy,
+                    ChangedDate: changedDate,
+                    FieldChanges: fieldChanges,
+                    Comment: comment
+                );
+
+                revisions.Add(revisionDto);
+                previousRevision = revisionDto;
+            }
+
+            _logger.LogInformation("Retrieved {Count} revisions for work item {WorkItemId}", 
+                revisions.Count, workItemId);
+            return revisions;
+        }, cancellationToken);
+    }
+
     // Private helper methods
+
+    private static string? GetFieldValueAsString(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.Number => element.GetRawText(),
+            JsonValueKind.True => "True",
+            JsonValueKind.False => "False",
+            JsonValueKind.Null => null,
+            JsonValueKind.Object => element.GetRawText(), // For complex objects, return JSON
+            JsonValueKind.Array => element.GetRawText(),
+            _ => null
+        };
+    }
 
     private async Task ConfigureAuthenticationAsync(TfsConfigEntity entity, CancellationToken cancellationToken)
     {

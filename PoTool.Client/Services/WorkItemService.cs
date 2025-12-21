@@ -67,4 +67,13 @@ public class WorkItemService
     {
         return await _client.GetAllWithValidationAsync();
     }
+
+    /// <summary>
+    /// Gets the revision history for a specific work item.
+    /// </summary>
+    public async Task<IEnumerable<WorkItemRevisionDto>> GetRevisionsAsync(int workItemId)
+    {
+        return await _client.GetWorkItemRevisionsAsync(workItemId);
+    }
 }
+
