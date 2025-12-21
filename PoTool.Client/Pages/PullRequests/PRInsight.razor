@@ -214,6 +214,15 @@
         YAxisTicks = 5,
         MaxNumYAxisTicks = 10
     };
+    
+    // Cached chart data for memoization
+    private int _cachedMetricsHashCode = 0;
+    private double[]? _cachedStatusData;
+    private string[]? _cachedStatusLabels;
+    private double[]? _cachedTimeOpenData;
+    private string[]? _cachedTimeOpenLabels;
+    private double[]? _cachedPRsByUserData;
+    private string[]? _cachedUserLabels;
 
     protected override async Task OnInitializedAsync()
     {
@@ -229,6 +238,7 @@
             var metrics = await PullRequestService.GetMetricsAsync();
             _allMetrics = metrics.ToList();
             _metrics = _allMetrics;
+            InvalidateCache();
         }
         catch (Exception ex)
         {
@@ -245,6 +255,7 @@
         if (_dateRange == null || (!_dateRange.Start.HasValue && !_dateRange.End.HasValue))
         {
             _metrics = _allMetrics;
+            InvalidateCache();
             return;
         }
 
@@ -262,6 +273,7 @@
             return true;
         }).ToList();
 
+        InvalidateCache();
         StateHasChanged();
     }
 
@@ -269,7 +281,44 @@
     {
         _dateRange = null;
         _metrics = _allMetrics;
+        InvalidateCache();
         StateHasChanged();
+    }
+    
+    private void InvalidateCache()
+    {
+        _cachedMetricsHashCode = CalculateMetricsHashCode();
+        _cachedStatusData = null;
+        _cachedStatusLabels = null;
+        _cachedTimeOpenData = null;
+        _cachedTimeOpenLabels = null;
+        _cachedPRsByUserData = null;
+        _cachedUserLabels = null;
+    }
+    
+    private bool IsCacheValid()
+    {
+        var currentHash = CalculateMetricsHashCode();
+        return currentHash == _cachedMetricsHashCode;
+    }
+    
+    private int CalculateMetricsHashCode()
+    {
+        if (_metrics.Count == 0)
+            return 0;
+        
+        var hash = new HashCode();
+        hash.Add(_metrics.Count);
+        // Sample multiple items across the collection for better change detection
+        hash.Add(_metrics[0].Title);
+        if (_metrics.Count > 1)
+            hash.Add(_metrics[_metrics.Count - 1].Title);
+        if (_metrics.Count > 2)
+            hash.Add(_metrics[_metrics.Count / 2].Title);
+        // Add aggregate values for additional validation
+        hash.Add(_metrics.Sum(m => m.TotalTimeOpen.TotalDays));
+        hash.Add(_metrics.Sum(m => m.IterationCount));
+        return hash.ToHashCode();
     }
 
     private async Task SyncPullRequests()
@@ -325,47 +374,71 @@
         return avg.ToString("F0");
     }
 
-    // Chart data methods
+    // Chart data methods with memoization
     private double[] GetStatusData()
     {
+        if (IsCacheValid() && _cachedStatusData != null)
+            return _cachedStatusData;
+        
         var grouped = _metrics.GroupBy(m => m.Status).Select(g => (double)g.Count()).ToArray();
-        return grouped.Length > 0 ? grouped : new[] { 0.0 };
+        _cachedStatusData = grouped.Length > 0 ? grouped : new[] { 0.0 };
+        return _cachedStatusData;
     }
 
     private string[] GetStatusLabels()
     {
+        if (IsCacheValid() && _cachedStatusLabels != null)
+            return _cachedStatusLabels;
+        
         var labels = _metrics.GroupBy(m => m.Status).Select(g => g.Key).ToArray();
-        return labels.Length > 0 ? labels : new[] { "No data" };
+        _cachedStatusLabels = labels.Length > 0 ? labels : new[] { "No data" };
+        return _cachedStatusLabels;
     }
 
     private double[] GetTimeOpenData()
     {
-        return _metrics.OrderByDescending(m => m.TotalTimeOpen)
+        if (IsCacheValid() && _cachedTimeOpenData != null)
+            return _cachedTimeOpenData;
+        
+        _cachedTimeOpenData = _metrics.OrderByDescending(m => m.TotalTimeOpen)
             .Take(10)
             .Select(m => m.TotalTimeOpen.TotalDays)
             .ToArray();
+        return _cachedTimeOpenData;
     }
 
     private string[] GetTimeOpenLabels()
     {
-        return _metrics.OrderByDescending(m => m.TotalTimeOpen)
+        if (IsCacheValid() && _cachedTimeOpenLabels != null)
+            return _cachedTimeOpenLabels;
+        
+        _cachedTimeOpenLabels = _metrics.OrderByDescending(m => m.TotalTimeOpen)
             .Take(10)
             .Select(m => m.Title.Length > 30 ? m.Title.Substring(0, 27) + "..." : m.Title)
             .ToArray();
+        return _cachedTimeOpenLabels;
     }
 
     private double[] GetPRsByUserData()
     {
-        return _metrics.GroupBy(m => m.CreatedBy)
+        if (IsCacheValid() && _cachedPRsByUserData != null)
+            return _cachedPRsByUserData;
+        
+        _cachedPRsByUserData = _metrics.GroupBy(m => m.CreatedBy)
             .Select(g => (double)g.Count())
             .ToArray();
+        return _cachedPRsByUserData;
     }
 
     private string[] GetUserLabels()
     {
-        return _metrics.GroupBy(m => m.CreatedBy)
+        if (IsCacheValid() && _cachedUserLabels != null)
+            return _cachedUserLabels;
+        
+        _cachedUserLabels = _metrics.GroupBy(m => m.CreatedBy)
             .Select(g => g.Key)
             .ToArray();
+        return _cachedUserLabels;
     }
 
     private Color GetStatusColor(string status)

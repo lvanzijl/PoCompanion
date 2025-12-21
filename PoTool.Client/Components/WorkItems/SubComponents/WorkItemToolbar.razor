@@ -8,6 +8,7 @@
 @inject TfsConfigService TfsConfigService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
+@implements IDisposable
 
 @* Toolbar for work item explorer actions *@
 
@@ -219,6 +220,10 @@
     public List<WorkItemDto> SelectedWorkItems { get; set; } = new();
 
     private bool AreAllFiltersEnabled => ValidationFilters.All(f => f.IsEnabled);
+    
+    // Debouncing fields
+    private System.Threading.Timer? _debounceTimer;
+    private const int DebounceDelayMilliseconds = 300;
 
     private string GetFilterTooltip(string filterId)
     {
@@ -250,9 +255,32 @@
         await OnClearState.InvokeAsync();
     }
 
-    private async Task OnFilterKeyUp()
+    private void OnFilterKeyUp()
     {
-        await OnFilterChanged.InvokeAsync(FilterText);
+        // Cancel previous timer if it exists
+        _debounceTimer?.Dispose();
+        
+        // Create new timer that will fire after debounce delay
+        _debounceTimer = new System.Threading.Timer(async _ =>
+        {
+            try
+            {
+                await InvokeAsync(async () =>
+                {
+                    await OnFilterChanged.InvokeAsync(FilterText);
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log error silently - don't crash the UI
+                Console.WriteLine($"[WorkItemToolbar] Error in filter debounce: {ex.Message}");
+            }
+        }, null, DebounceDelayMilliseconds, System.Threading.Timeout.Infinite);
+    }
+    
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
     }
 
     private async Task OnValidationFilterChanged(ValidationFilter filter, bool isEnabled)

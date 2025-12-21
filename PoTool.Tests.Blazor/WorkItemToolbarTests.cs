@@ -5,6 +5,10 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
 using PoTool.Client.Components.WorkItems.SubComponents;
+using PoTool.Client.Services;
+using PoTool.Core.Contracts;
+using PoTool.Client.ApiClient;
+using Moq;
 
 namespace PoTool.Tests.Blazor;
 
@@ -20,6 +24,23 @@ public class WorkItemToolbarTests : BunitTestContext
     {
         // Add MudBlazor services
         Services.AddMudServices();
+        
+        // Register required services
+        Services.AddSingleton<ExportService>();
+        Services.AddSingleton<ReportService>();
+        
+        // Mock interface services
+        var mockClipboardService = new Mock<IClipboardService>();
+        mockClipboardService.Setup(x => x.CopyToClipboardAsync(It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+        Services.AddSingleton(mockClipboardService.Object);
+        
+        // Mock TfsConfigService dependencies
+        var mockApiClient = new Mock<IClient>();
+        var mockSecureStorage = new Mock<ISecureStorageService>();
+        Services.AddSingleton(mockApiClient.Object);
+        Services.AddSingleton(mockSecureStorage.Object);
+        Services.AddSingleton<TfsConfigService>();
         
         // Configure JSInterop in Loose mode to allow any JS calls without explicit setup
         JSInterop.Mode = JSRuntimeMode.Loose;
@@ -124,6 +145,9 @@ public class WorkItemToolbarTests : BunitTestContext
         await filterInput.InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "test filter" });
         // Trigger keyup event which actually invokes the callback
         await filterInput.KeyUpAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs());
+        
+        // Wait for debounce timer (300ms + buffer)
+        await Task.Delay(400);
 
         // Assert
         Assert.IsTrue(filterChanged, "Filter callback should have been invoked");
