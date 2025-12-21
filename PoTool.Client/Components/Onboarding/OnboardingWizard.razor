@@ -1,7 +1,11 @@
 @using PoTool.Client.Services
+@using PoTool.Client.Components.Common
 @inject IOnboardingService OnboardingService
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
+@inject TfsConfigService TfsConfigService
+@inject ErrorMessageService ErrorMessageService
+@inject ISnackbar Snackbar
 
 @if (_isVisible)
 {
@@ -52,32 +56,69 @@
                             <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Primary" Size="Size.Large" />
                             <MudText Typo="Typo.h6" Color="Color.Primary">Configure Azure DevOps Connection</MudText>
                         </MudStack>
-                        <MudText Typo="Typo.body1">
-                            To connect to your Azure DevOps organization, you'll need:
-                        </MudText>
-                        <MudList T="string" Dense="true">
-                            <MudListItem T="string" Icon="@Icons.Material.Filled.Link" IconColor="Color.Info">
-                                <MudText><strong>Organization URL:</strong> Your Azure DevOps organization URL</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Example: https://dev.azure.com/yourorganization</MudText>
-                            </MudListItem>
-                            <MudListItem T="string" Icon="@Icons.Material.Filled.Folder" IconColor="Color.Info">
-                                <MudText><strong>Project Name:</strong> The name of your project</MudText>
-                            </MudListItem>
-                            <MudListItem T="string" Icon="@Icons.Material.Filled.Key" IconColor="Color.Info">
-                                <MudText><strong>Personal Access Token (PAT):</strong> A token with read access to work items</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Your PAT is encrypted and stored securely</MudText>
-                            </MudListItem>
-                        </MudList>
+                        
+                        <MudForm @ref="_configForm" @bind-IsValid="_configFormValid">
+                            <MudTextField @bind-Value="_url" 
+                                         Label="Organization URL" 
+                                         Placeholder="https://dev.azure.com/yourorg"
+                                         Required="true"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         HelperText="The URL of your Azure DevOps organization" />
+
+                            <MudTextField @bind-Value="_project" 
+                                         Label="Project Name" 
+                                         Placeholder="MyProject"
+                                         Required="true"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         HelperText="The name of your project" />
+
+                            <MudTextField @bind-Value="_pat" 
+                                         Label="Personal Access Token (PAT)" 
+                                         Placeholder="Your PAT"
+                                         Required="true"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         InputType="InputType.Password"
+                                         HelperText="Your PAT will be encrypted at rest" />
+
+                            <MudStack Row="true" Spacing="2" Class="mt-2">
+                                <MudButton Variant="Variant.Filled" 
+                                          Color="Color.Primary" 
+                                          OnClick="SaveAndTestConfig"
+                                          Disabled="@(!_configFormValid || _isSaving || _isTesting)"
+                                          Size="Size.Small"
+                                          StartIcon="@Icons.Material.Filled.Check">
+                                    @if (_isSaving || _isTesting)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                        <span>@(_isSaving ? "Saving..." : "Testing...")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Save & Test Connection</span>
+                                    }
+                                </MudButton>
+                            </MudStack>
+                        </MudForm>
+
+                        @if (_connectionTestResult != null)
+                        {
+                            <MudAlert Severity="@(_connectionTestResult.Success ? Severity.Success : Severity.Error)" Dense="true">
+                                @_connectionTestResult.Message
+                            </MudAlert>
+                        }
+
+                        @if (_configErrorResponse != null)
+                        {
+                            <ErrorDisplay ErrorResponse="@_configErrorResponse" 
+                                         OnDismiss="ClearConfigError" />
+                        }
+                        
                         <MudAlert Severity="Severity.Info" Dense="true">
                             You can configure these settings now or skip and do it later from the Configuration page.
                         </MudAlert>
-                        <MudButton 
-                            Variant="Variant.Filled" 
-                            Color="Color.Primary" 
-                            StartIcon="@Icons.Material.Filled.Settings"
-                            OnClick="NavigateToConfig">
-                            Configure Now
-                        </MudButton>
                     </MudStack>
                 }
                 else if (_currentStep == 2)
@@ -210,6 +251,40 @@
     private int _currentStep = 0;
     private bool _isVisible = true;
 
+    // Configuration form fields
+    private MudForm? _configForm;
+    private bool _configFormValid;
+    private bool _isSaving;
+    private bool _isTesting;
+    private string _url = string.Empty;
+    private string _project = string.Empty;
+    private string _pat = string.Empty;
+    private ConnectionTestResult? _connectionTestResult;
+    private ErrorResponse? _configErrorResponse;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExistingConfig();
+    }
+
+    private async Task LoadExistingConfig()
+    {
+        try
+        {
+            var config = await TfsConfigService.GetConfigAsync();
+            if (config != null)
+            {
+                _url = config.Url ?? string.Empty;
+                _project = config.Project ?? string.Empty;
+                // Don't pre-fill PAT for security reasons
+            }
+        }
+        catch
+        {
+            // Ignore errors loading config on first launch
+        }
+    }
+
     private string GetStepTitle()
     {
         return _currentStep switch
@@ -232,6 +307,8 @@
         if (_currentStep < 3)
         {
             _currentStep++;
+            // Reset connection test result when moving to next step
+            _connectionTestResult = null;
         }
     }
 
@@ -243,12 +320,56 @@
         }
     }
 
-    private void NavigateToConfig()
+    private async Task SaveAndTestConfig()
     {
-        // Mark as skipped for now, user can return via Help menu
-        OnboardingService.MarkOnboardingSkipped();
-        MudDialog?.Close(DialogResult.Cancel());
-        NavigationManager.NavigateTo("/tfsconfig");
+        if (!_configFormValid) return;
+
+        ClearConfigError();
+        _isSaving = true;
+        
+        try
+        {
+            // Save configuration
+            await TfsConfigService.SaveConfigAsync(_url, _project, _pat);
+            
+            // Test connection
+            _isSaving = false;
+            _isTesting = true;
+            
+            var isValid = await TfsConfigService.ValidateConnectionAsync();
+            
+            if (isValid)
+            {
+                _connectionTestResult = new ConnectionTestResult(true, "Connection successful! You're all set.");
+                Snackbar.Add("Configuration saved and tested successfully", Severity.Success);
+            }
+            else
+            {
+                _connectionTestResult = new ConnectionTestResult(false, "Connection failed. Please check your settings.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _connectionTestResult = new ConnectionTestResult(false, "Connection test failed.");
+            ShowConfigError(ex, "Error testing connection");
+        }
+        finally
+        {
+            _isSaving = false;
+            _isTesting = false;
+        }
+    }
+
+    private void ShowConfigError(Exception ex, string context)
+    {
+        _configErrorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearConfigError()
+    {
+        _configErrorResponse = null;
+        _connectionTestResult = null;
     }
 
     private async Task Skip()
@@ -264,4 +385,6 @@
         await OnCompleted.InvokeAsync();
         MudDialog?.Close(DialogResult.Ok(true));
     }
+
+    private record ConnectionTestResult(bool Success, string Message);
 }
