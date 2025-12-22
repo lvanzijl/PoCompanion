@@ -143,6 +143,181 @@
             </ChildContent>
         </MudExpansionPanel>
 
+        <!-- Backlog Health Dashboard -->
+        <MudExpansionPanel>
+            <TitleContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Color="Color.Success" />
+                    <MudText Typo="Typo.h6">Backlog Health Dashboard</MudText>
+                </MudStack>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary" GutterBottom="true">Required Fields:</MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Iteration Path:</strong> Required for all work items to group by sprint and track health trends
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Effort:</strong> Used to detect missing effort issues, especially for 'In Progress' items
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>State:</strong> Used for parent-child state consistency validation
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Parent Link:</strong> Required for hierarchy validation
+                    </MudListItem>
+                </MudList>
+
+                <MudText Typo="Typo.subtitle2" Color="Color.Info" GutterBottom="true" Class="mt-4">Feature Description:</MudText>
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                    Monitors backlog health across multiple iterations, calculates health scores (% of items without issues), and identifies trends (improving/stable/degrading).
+                </MudAlert>
+                <MudAlert Severity="Severity.Success" Dense="true">
+                    <strong>Target:</strong> Aim for 90%+ health score indicating good data quality and process discipline
+                </MudAlert>
+            </ChildContent>
+        </MudExpansionPanel>
+
+        <!-- Dependency Graph -->
+        <MudExpansionPanel>
+            <TitleContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Dependency Chain Visualization</MudText>
+                </MudStack>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary" GutterBottom="true">Required Fields:</MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Parent-Child Links:</strong> Automatically created hierarchy relationships (Epic → Feature → PBI)
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Circle">
+                        <strong>Related Links:</strong> Optional manual dependency links like 'Predecessor' (blocks)
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>State:</strong> Used to identify blocking items and critical path bottlenecks
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Effort:</strong> Required for critical path calculation
+                    </MudListItem>
+                </MudList>
+
+                <MudText Typo="Typo.subtitle2" Color="Color.Info" GutterBottom="true" Class="mt-4">Feature Description:</MudText>
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                    Visualizes work item dependencies, identifies critical paths (longest dependency chain), and detects blocking items that prevent progress on other work.
+                </MudAlert>
+                <MudAlert Severity="Severity.Warning" Dense="true">
+                    <strong>Tip:</strong> Items blocking 3+ others should be highest priority. Critical path length determines minimum release time.
+                </MudAlert>
+            </ChildContent>
+        </MudExpansionPanel>
+
+        <!-- Epic Forecast -->
+        <MudExpansionPanel>
+            <TitleContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Info" />
+                    <MudText Typo="Typo.h6">Epic/Feature Completion Forecast</MudText>
+                </MudStack>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary" GutterBottom="true">Required Fields:</MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Effort:</strong> Required for all child work items to calculate total and remaining effort
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>State:</strong> Used to determine completed vs remaining work
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Parent-Child Links:</strong> Required to identify all child work items
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Iteration Path:</strong> Used for historical velocity calculation
+                    </MudListItem>
+                </MudList>
+
+                <MudText Typo="Typo.subtitle2" Color="Color.Info" GutterBottom="true" Class="mt-4">Feature Description:</MudText>
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                    Forecasts Epic/Feature completion based on historical velocity with best/likely/worst case scenarios. Provides confidence levels based on velocity consistency.
+                </MudAlert>
+                <MudAlert Severity="Severity.Success" Dense="true">
+                    <strong>Best Practice:</strong> Use 3-5 historical sprints for velocity calculation. High confidence (>75%) indicates reliable forecast.
+                </MudAlert>
+            </ChildContent>
+        </MudExpansionPanel>
+
+        <!-- State Timeline -->
+        <MudExpansionPanel>
+            <TitleContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Secondary" />
+                    <MudText Typo="Typo.h6">Work Item State Timeline</MudText>
+                </MudStack>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary" GutterBottom="true">Required Fields:</MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>State History:</strong> Azure DevOps automatically tracks all state changes with timestamps
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Changed Date:</strong> Timestamp of each field change (automatic)
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Created Date:</strong> Work item creation date for lead time calculation
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Circle">
+                        <strong>Closed Date:</strong> Optional - completion date for total cycle time
+                    </MudListItem>
+                </MudList>
+
+                <MudText Typo="Typo.subtitle2" Color="Color.Info" GutterBottom="true" Class="mt-4">Feature Description:</MudText>
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                    Analyzes work item lifecycle by tracking state transitions. Identifies bottlenecks (states taking 2x+ team average) and compares with team metrics.
+                </MudAlert>
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    <strong>Definitions:</strong> Lead Time = Created to Done (total time). Cycle Time = In Progress to Done (active work time).
+                </MudAlert>
+            </ChildContent>
+        </MudExpansionPanel>
+
+        <!-- Effort Distribution -->
+        <MudExpansionPanel>
+            <TitleContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.GridOn" Color="Color.Tertiary" />
+                    <MudText Typo="Typo.h6">Effort Distribution Heat Map</MudText>
+                </MudStack>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary" GutterBottom="true">Required Fields:</MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Iteration Path:</strong> Required to group work items by sprint (horizontal axis)
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Area Path:</strong> Required to group work items by team/component (vertical axis)
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                        <strong>Effort:</strong> Used to calculate total effort and capacity utilization
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Circle">
+                        <strong>State:</strong> Optional - filter to only planned work for future sprints
+                    </MudListItem>
+                </MudList>
+
+                <MudText Typo="Typo.subtitle2" Color="Color.Info" GutterBottom="true" Class="mt-4">Feature Description:</MudText>
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                    Visual capacity planning showing effort distribution across area paths and iterations. Color-coded heat map (red over 95%, green 60-95%, yellow under 60%) for quick identification of over/under-allocation.
+                </MudAlert>
+                <MudAlert Severity="Severity.Success" Dense="true">
+                    <strong>Target:</strong> Aim for 75-85% capacity utilization (green zone) to allow buffer for unexpected work.
+                </MudAlert>
+            </ChildContent>
+        </MudExpansionPanel>
+
     </MudExpansionPanels>
 
     <!-- Common Validation Rules -->

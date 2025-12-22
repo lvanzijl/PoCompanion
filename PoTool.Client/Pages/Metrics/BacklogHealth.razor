@@ -2,6 +2,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
+@using static PoTool.Client.Components.Common.PageHelp
 @inject IMetricsClient MetricsClient
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
@@ -9,6 +10,15 @@
 <PageTitle>Backlog Health Dashboard</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    
+    <!-- Context-Aware Help -->
+    <PageHelp Title="Backlog Health Dashboard Guide"
+              Description="Monitor the health of your backlog across multiple iterations. This dashboard identifies validation issues, tracks trends, and helps maintain data quality over time. Health scores are calculated based on the percentage of work items without validation issues."
+              Class="mb-4"
+              DataRequirements="@_healthDataRequirements"
+              BestPractices="@_healthBestPractices"
+              CommonIssues="@_healthCommonIssues" />
+    
     <MudText Typo="Typo.h4" GutterBottom="true">
         <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Class="mr-2" /> Backlog Health Dashboard
     </MudText>
@@ -312,4 +322,75 @@
             .Select(i => i.SprintName)
             .ToArray();
     }
+
+    private List<DataRequirement> _healthDataRequirements = new()
+    {
+        new DataRequirement 
+        { 
+            Field = "Iteration Path", 
+            Description = "Required for all work items to group by sprint and track health trends over time",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Effort (Story Points)", 
+            Description = "Used to detect missing effort issues, especially for 'In Progress' items",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "State", 
+            Description = "Used for parent-child state consistency validation",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Parent Link", 
+            Description = "Required for hierarchy validation and parent-child state consistency checks",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Area Path", 
+            Description = "Optional - used for filtering health analysis by team or component",
+            IsRequired = false 
+        }
+    };
+
+    private List<string> _healthBestPractices = new()
+    {
+        "Review backlog health weekly during sprint planning to identify issues early",
+        "Aim for 90%+ health score - indicates good data quality and process discipline",
+        "Fix 'Missing Effort' issues immediately for items in 'In Progress' state",
+        "Monitor health trends - declining trends indicate process issues that need attention",
+        "Use declining health as a trigger for team retrospective discussions",
+        "Address parent-child state inconsistencies before sprint start",
+        "Consistent 80%+ health across sprints indicates mature backlog management",
+        "Track issue types to identify systemic problems (e.g., always missing effort)"
+    };
+
+    private List<CommonIssue> _healthCommonIssues = new()
+    {
+        new CommonIssue 
+        { 
+            Problem = "Health score consistently below 80%",
+            Solution = "Review data entry practices with the team. Establish clear rules for when to set effort, states, and iteration paths. Consider adding validation in Azure DevOps work item templates."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Many 'Missing Effort' issues",
+            Solution = "Enforce effort estimation during sprint planning. Create a team agreement that items cannot move to 'In Progress' without effort estimates. Use Azure DevOps rules to prevent state transitions without effort."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Parent-child state inconsistencies",
+            Solution = "When moving child items to 'In Progress', also update parent to 'In Progress'. Educate team on hierarchy flow. Consider using Azure DevOps automation rules for parent state updates."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Health improving then degrading repeatedly",
+            Solution = "Indicates inconsistent process adherence. Review and simplify team processes, provide clearer guidance, and assign a team member as 'data quality champion' to monitor."
+        }
+    };
 }
+

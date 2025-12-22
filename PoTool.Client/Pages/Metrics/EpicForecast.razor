@@ -3,6 +3,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
+@using static PoTool.Client.Components.Common.PageHelp
 @inject IMetricsClient MetricsClient
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
@@ -11,6 +12,19 @@
 <PageTitle>Epic Completion Forecast</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    
+    <!-- Context-Aware Help -->
+    <PageHelp Title="Epic/Feature Completion Forecast Guide"
+              Description="Forecast when an Epic or Feature will be completed based on historical velocity and remaining work. Uses your team's actual delivery data to provide realistic completion estimates with best/likely/worst case scenarios."
+              Class="mb-4"
+              DataRequirements="@_forecastDataRequirements"
+              BestPractices="@_forecastBestPractices"
+              CommonIssues="@_forecastCommonIssues">
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+            <strong>Forecast Accuracy:</strong> Forecasts are most accurate when velocity is consistent (low standard deviation) and scope is frozen. Re-forecast after significant scope changes or team adjustments.
+        </MudAlert>
+    </PageHelp>
+    
     <MudText Typo="Typo.h4" GutterBottom="true">
         <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="mr-2" /> Epic/Feature Completion Forecast
     </MudText>
@@ -336,4 +350,69 @@
         
         return labels.ToArray();
     }
+
+    private List<DataRequirement> _forecastDataRequirements = new()
+    {
+        new DataRequirement 
+        { 
+            Field = "Effort (Story Points)", 
+            Description = "Required for all child work items to calculate total and remaining effort",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "State", 
+            Description = "Used to determine completed vs remaining work. 'Done' items don't count toward remaining effort",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Parent-Child Links", 
+            Description = "Required to identify all child work items of the Epic/Feature",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Iteration Path", 
+            Description = "Used for historical velocity calculation from completed sprints",
+            IsRequired = true 
+        }
+    };
+
+    private List<string> _forecastBestPractices = new()
+    {
+        "Use 3-5 historical sprints for velocity calculation - balance between recent and stable",
+        "Plan to 'likely case' scenario, but buffer for 'worst case'",
+        "Re-forecast weekly as work progresses and scope changes",
+        "Freeze scope before forecasting for most accurate predictions",
+        "High confidence (>75%) indicates consistent velocity - trust the forecast",
+        "Low confidence (<60%) means volatile velocity - add more buffer time",
+        "Track forecast vs actual completion to calibrate future estimates",
+        "Use for stakeholder communication and release planning"
+    };
+
+    private List<CommonIssue> _forecastCommonIssues = new()
+    {
+        new CommonIssue 
+        { 
+            Problem = "Forecast shows low confidence (<60%)",
+            Solution = "Velocity is inconsistent. Review team capacity changes, scope variations, or estimation accuracy. Consider using more historical sprints or stabilizing team size."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Forecast completion date keeps moving",
+            Solution = "Scope is changing or velocity is declining. Freeze scope, investigate velocity drops, or re-baseline the forecast. Communicate changes to stakeholders early."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Large gap between best case and worst case",
+            Solution = "High velocity variability. Review estimation practices, check for external dependencies affecting delivery, or investigate team disruptions."
+        },
+        new CommonIssue 
+        { 
+            Problem = "No forecast shown",
+            Solution = "Ensure: 1) Epic has child items, 2) Child items have effort estimates, 3) Historical sprints have completed work, 4) Iteration paths are set correctly."
+        }
+    };
 }
+

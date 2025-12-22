@@ -1,12 +1,22 @@
 @page "/velocity"
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
+@using static PoTool.Client.Components.Common.PageHelp
 @inject IMetricsClient MetricsClient
 @inject ISnackbar Snackbar
 
 <PageTitle>Velocity Dashboard</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    
+    <!-- Context-Aware Help -->
+    <PageHelp Title="Velocity Dashboard Guide"
+              Description="The Velocity Dashboard tracks your team's completed story points per sprint, helping you forecast future work and plan sprints more accurately. Velocity is calculated based on completed work items with effort estimates in each iteration."
+              Class="mb-4"
+              DataRequirements="@_velocityDataRequirements"
+              BestPractices="@_velocityBestPractices"
+              CommonIssues="@_velocityCommonIssues" />
+    
     <MudText Typo="Typo.h4" GutterBottom="true">
         <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="mr-2" /> Velocity Dashboard
     </MudText>
@@ -217,4 +227,74 @@
             }
         };
     }
+
+    private List<DataRequirement> _velocityDataRequirements = new()
+    {
+        new DataRequirement 
+        { 
+            Field = "Iteration Path", 
+            Description = "Must be set for all work items to group them by sprint. Use consistent naming like 'Project\\2025\\Sprint 1'",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Effort (Story Points)", 
+            Description = "Required for PBIs, Bugs, and Tasks to calculate velocity. Use Fibonacci scale (1,2,3,5,8,13) for consistency",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "State", 
+            Description = "Must be 'Done', 'Closed', 'Completed', or 'Resolved' for items to count as completed",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Work Item Type", 
+            Description = "Used to classify work (PBI, Bug, Task) and show effort distribution",
+            IsRequired = true 
+        }
+    };
+
+    private List<string> _velocityBestPractices = new()
+    {
+        "Use the 3-sprint average for most accurate short-term forecasting",
+        "Plan to 80-85% of velocity to allow buffer for unexpected work",
+        "Stable velocity is better than high velocity - consistency enables predictability",
+        "Update effort estimates before marking items as 'Done' for accurate velocity",
+        "Use velocity for planning, not for comparing teams (velocity is team-relative)",
+        "Re-evaluate velocity after significant team changes (new members, departures)",
+        "Track completion percentage - consistently below 90% indicates over-commitment",
+        "Use effort distribution to ensure balance between features, bugs, and technical work"
+    };
+
+    private List<CommonIssue> _velocityCommonIssues = new()
+    {
+        new CommonIssue 
+        { 
+            Problem = "Velocity shows 0 or no data",
+            Solution = "Ensure work items have: 1) Iteration Path set, 2) Effort values assigned, 3) State marked as 'Done', and 4) Data has been synced."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Velocity is highly inconsistent between sprints",
+            Solution = "Review effort estimation practices, check for incomplete items, and ensure consistent 'Done' criteria. Large swings may indicate over/under commitment."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Planned vs Completed shows large gaps",
+            Solution = "Team may be over-committing. Reduce planned work to 80-85% of recent velocity average, or investigate blockers causing incomplete work."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Some sprints missing from dashboard",
+            Solution = "Check that sprints have iteration paths in TFS and contain completed work items with effort. Empty sprints won't appear."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Effort distribution shows too many bugs",
+            Solution = "High bug percentage (>30%) may indicate quality issues. Review development practices, add automated testing, or improve code review process."
+        }
+    };
 }
+

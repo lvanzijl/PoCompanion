@@ -3,6 +3,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
+@using static PoTool.Client.Components.Common.PageHelp
 @inject IWorkItemsClient WorkItemsClient
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
@@ -11,6 +12,19 @@
 <PageTitle>Work Item State Timeline</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    
+    <!-- Context-Aware Help -->
+    <PageHelp Title="Work Item State Timeline Guide"
+              Description="Analyze the lifecycle of a work item by tracking state transitions over time. Identify bottlenecks, compare with team averages, and understand cycle time vs lead time. Use this for process optimization and retrospectives."
+              Class="mb-4"
+              DataRequirements="@_timelineDataRequirements"
+              BestPractices="@_timelineBestPractices"
+              CommonIssues="@_timelineCommonIssues">
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
+            <strong>Cycle Time vs Lead Time:</strong> Lead time = Created to Done (total time). Cycle time = In Progress to Done (active work time). Both are important for different planning purposes.
+        </MudAlert>
+    </PageHelp>
+    
     <MudText Typo="Typo.h4" GutterBottom="true">
         <MudIcon Icon="@Icons.Material.Filled.Timeline" Class="mr-2" /> Work Item State Timeline
     </MudText>
@@ -331,4 +345,69 @@
                 .Sum(t => t.TimeInPreviousState.TotalDays))
             .ToArray();
     }
+
+    private List<DataRequirement> _timelineDataRequirements = new()
+    {
+        new DataRequirement 
+        { 
+            Field = "State History", 
+            Description = "Azure DevOps automatically tracks all state changes with timestamps",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Changed Date", 
+            Description = "Timestamp of each field change, automatically captured by TFS",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Created Date", 
+            Description = "Work item creation date for lead time calculation",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Closed Date", 
+            Description = "Completion date for total cycle time measurement",
+            IsRequired = false 
+        }
+    };
+
+    private List<string> _timelineBestPractices = new()
+    {
+        "Analyze completed items during retrospectives to identify bottlenecks",
+        "Compare individual items with team averages to spot outliers",
+        "Items taking 2x team average indicate specific problems needing investigation",
+        "Track lead time for forecasting (includes wait time before starting work)",
+        "Track cycle time for capacity planning (actual work time)",
+        "Use bottleneck analysis to optimize team workflow and processes",
+        "Short cycle times (<2 weeks for PBIs) indicate efficient workflow",
+        "Document learnings from long-running items to improve future estimates"
+    };
+
+    private List<CommonIssue> _timelineCommonIssues = new()
+    {
+        new CommonIssue 
+        { 
+            Problem = "Very long 'In Progress' state (2x+ team average)",
+            Solution = "May indicate scope larger than estimated, technical complexity, or external dependencies. Break down large items, identify blockers early, or improve estimation accuracy."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Long wait times before 'In Progress' (high lead time)",
+            Solution = "Work sitting in backlog too long. Review prioritization, reduce WIP limits, or improve sprint planning to start work sooner."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Extended time in review/testing states",
+            Solution = "Reviewer capacity issues or insufficient test coverage. Schedule dedicated review time, reduce PR size, or improve automated testing."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Multiple transitions back to earlier states",
+            Solution = "Indicates rework or unclear acceptance criteria. Improve definition of done, enhance PR review quality, or clarify requirements upfront."
+        }
+    };
 }
+

@@ -3,6 +3,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Models
 @using PoTool.Client.Components.Common
+@using static PoTool.Client.Components.Common.PageHelp
 @inject PullRequestService PullRequestService
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
@@ -10,6 +11,19 @@
 <PageTitle>PR Insight Dashboard</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    
+    <!-- Context-Aware Help -->
+    <PageHelp Title="Pull Request Insights Guide"
+              Description="The PR Insights Dashboard analyzes pull request metrics to help identify bottlenecks in your code review process. Track metrics like time open, iteration counts, and file changes to optimize your development workflow."
+              Class="mb-4"
+              DataRequirements="@_prDataRequirements"
+              BestPractices="@_prBestPractices"
+              CommonIssues="@_prCommonIssues">
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
+            <strong>Linking PRs to Work Items:</strong> Use "AB#[WorkItemId]" in commit messages or PR descriptions to link pull requests to work items (e.g., "Fix login bug AB#12345"). This enables better traceability and sprint analysis.
+        </MudAlert>
+    </PageHelp>
+    
     <MudText Typo="Typo.h4" GutterBottom="true">
         <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" /> PR Insight Dashboard
     </MudText>
@@ -413,4 +427,69 @@
             _ => Color.Default
         };
     }
+
+    private List<DataRequirement> _prDataRequirements = new()
+    {
+        new DataRequirement 
+        { 
+            Field = "Pull Request Data", 
+            Description = "Azure DevOps automatically captures PR creation, completion, and update timestamps",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Work Item Links", 
+            Description = "Link PRs to work items using 'AB#[ID]' syntax in commits or PR descriptions for iteration analysis",
+            IsRequired = false 
+        },
+        new DataRequirement 
+        { 
+            Field = "File Changes", 
+            Description = "Number of files changed per PR, automatically tracked by Azure DevOps",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Review Iterations", 
+            Description = "Each push to a PR branch after initial creation counts as an iteration",
+            IsRequired = true 
+        }
+    };
+
+    private List<string> _prBestPractices = new()
+    {
+        "Keep PRs small (10-20 files) for faster review times",
+        "Aim for 1-3 day PR cycle time from creation to merge",
+        "Target 1-2 iterations per PR - more indicates unclear requirements or scope issues",
+        "Link PRs to work items using 'AB#[ID]' syntax for better traceability",
+        "Review PRs within 24 hours to prevent blocking other work",
+        "Use PR templates to ensure consistent descriptions and context",
+        "Break large features into smaller, focused PRs",
+        "Monitor outliers (>5 days open) to identify and resolve blockers"
+    };
+
+    private List<CommonIssue> _prCommonIssues = new()
+    {
+        new CommonIssue 
+        { 
+            Problem = "No PR data showing after sync",
+            Solution = "Ensure you have pull requests in your Azure DevOps project and that your PAT has permissions to read them. Check the repository/project settings."
+        },
+        new CommonIssue 
+        { 
+            Problem = "PRs taking too long to close (>5 days average)",
+            Solution = "Review team availability for code reviews, consider reducing PR size, implement clearer acceptance criteria, or schedule dedicated review time."
+        },
+        new CommonIssue 
+        { 
+            Problem = "High iteration count (>3 per PR)",
+            Solution = "May indicate unclear requirements, insufficient testing before PR, or communication gaps. Improve pre-PR testing and requirement clarity."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Large variation in PR size (files changed)",
+            Solution = "Establish team guidelines for PR size. Break large features into smaller PRs. Target 10-20 files per PR for optimal review efficiency."
+        }
+    };
 }
+

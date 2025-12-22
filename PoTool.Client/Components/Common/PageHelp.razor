@@ -1,0 +1,188 @@
+@* Context-aware help component for pages *@
+
+<MudPaper Elevation="2" Class="@($"pa-4 {Class}")">
+    <MudStack Spacing="3">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Color="Color.Info" />
+                <MudText Typo="Typo.h6">@Title</MudText>
+            </MudStack>
+            <MudIconButton Icon="@(_isExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                          OnClick="ToggleExpanded"
+                          Size="Size.Small" />
+        </MudStack>
+
+        @if (_isExpanded)
+        {
+            <MudDivider />
+            
+            @if (!string.IsNullOrEmpty(Description))
+            {
+                <MudText Typo="Typo.body2">@Description</MudText>
+            }
+
+            @if (ChildContent != null)
+            {
+                <div>
+                    @ChildContent
+                </div>
+            }
+
+            @if (DataRequirements?.Any() == true)
+            {
+                <MudCard Elevation="0" Class="mt-2">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">
+                                <MudIcon Icon="@Icons.Material.Filled.DataObject" Size="Size.Small" Class="mr-1" />
+                                Required TFS Data
+                            </MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudList T="string" Dense="true">
+                            @foreach (var req in DataRequirements)
+                            {
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="@(req.IsRequired ? Color.Success : Color.Default)">
+                                    <MudText>
+                                        <strong>@req.Field:</strong> @req.Description
+                                        @if (!req.IsRequired)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default">Optional</MudChip>
+                                        }
+                                    </MudText>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudCardContent>
+                </MudCard>
+            }
+
+            @if (BestPractices?.Any() == true)
+            {
+                <MudCard Elevation="0" Class="mt-2">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.subtitle2" Color="Color.Success">
+                                <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Size="Size.Small" Class="mr-1" />
+                                Best Practices
+                            </MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudList T="string" Dense="true">
+                            @foreach (var practice in BestPractices)
+                            {
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.TipsAndUpdates" IconColor="Color.Success">
+                                    <MudText>@practice</MudText>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudCardContent>
+                </MudCard>
+            }
+
+            @if (CommonIssues?.Any() == true)
+            {
+                <MudCard Elevation="0" Class="mt-2">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.subtitle2" Color="Color.Warning">
+                                <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Size="Size.Small" Class="mr-1" />
+                                Common Issues & Solutions
+                            </MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudList T="string" Dense="true">
+                            @foreach (var issue in CommonIssues)
+                            {
+                                <MudListItem T="string">
+                                    <MudText>
+                                        <strong>Issue:</strong> @issue.Problem<br />
+                                        <strong>Solution:</strong> @issue.Solution
+                                    </MudText>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudCardContent>
+                </MudCard>
+            }
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    private bool _isExpanded = false;
+
+    /// <summary>
+    /// Title of the help section
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Description of the page functionality
+    /// </summary>
+    [Parameter]
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// List of required TFS data fields
+    /// </summary>
+    [Parameter]
+    public List<DataRequirement>? DataRequirements { get; set; }
+
+    /// <summary>
+    /// List of best practices
+    /// </summary>
+    [Parameter]
+    public List<string>? BestPractices { get; set; }
+
+    /// <summary>
+    /// List of common issues with solutions
+    /// </summary>
+    [Parameter]
+    public List<CommonIssue>? CommonIssues { get; set; }
+
+    /// <summary>
+    /// Custom content for additional help information
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Additional CSS classes
+    /// </summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>
+    /// Whether the help is expanded by default
+    /// </summary>
+    [Parameter]
+    public bool IsExpandedByDefault { get; set; } = false;
+
+    protected override void OnInitialized()
+    {
+        _isExpanded = IsExpandedByDefault;
+    }
+
+    private void ToggleExpanded()
+    {
+        _isExpanded = !_isExpanded;
+    }
+
+    public class DataRequirement
+    {
+        public string Field { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public bool IsRequired { get; set; } = true;
+    }
+
+    public class CommonIssue
+    {
+        public string Problem { get; set; } = string.Empty;
+        public string Solution { get; set; } = string.Empty;
+    }
+}
