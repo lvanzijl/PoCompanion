@@ -1814,7 +1814,7 @@ New teams: 60-70% (learning curve)
 3. **Team Balancing:**
    - Monitor utilization per area
    - Identify under/over utilized teams
-   - Consider cross-training of reorg
+   - Consider cross-training or reorg
 
 **Tips:**
 - ✓ 🟢 Groen = gezonde utilization (60-95%)
