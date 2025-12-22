@@ -147,10 +147,10 @@ await this.FeatureBackgroundAsync();
                             "3",
                             "Project\\2024\\Sprint1"});
 #line 10
-    await testRunner.GivenAsync("work items exist for iteration \"Project\\\\2024\\\\Sprint1\"", ((string)(null)), table1, "Given ");
+    await testRunner.GivenAsync("work items exist for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), table1, "Given ");
 #line hidden
 #line 14
-    await testRunner.WhenAsync("I request sprint metrics for iteration \"Project\\\\2024\\\\Sprint1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I request sprint metrics for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 15
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -215,7 +215,7 @@ this.ScenarioInitialize(scenarioInfo);
 await this.FeatureBackgroundAsync();
 #line hidden
 #line 23
-    await testRunner.WhenAsync("I request sprint metrics for iteration \"NonExistent\\\\Sprint\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I request sprint metrics for iteration \"NonExistent\\Sprint\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 24
     await testRunner.ThenAsync("the response should be NotFound", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -401,7 +401,7 @@ this.ScenarioInitialize(scenarioInfo);
 await this.FeatureBackgroundAsync();
 #line hidden
 #line 48
-    await testRunner.WhenAsync("I request velocity trend with areaPath \"Project\\\\TeamA\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I request velocity trend with areaPath \"Project\\TeamA\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 49
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -453,10 +453,10 @@ await this.FeatureBackgroundAsync();
                             "3",
                             "Project\\2024\\Sprint1"});
 #line 52
-    await testRunner.GivenAsync("work items exist for iteration \"Project\\\\2024\\\\Sprint1\"", ((string)(null)), table3, "Given ");
+    await testRunner.GivenAsync("work items exist for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), table3, "Given ");
 #line hidden
 #line 56
-    await testRunner.WhenAsync("I request backlog health for iteration \"Project\\\\2024\\\\Sprint1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I request backlog health for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 57
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -697,7 +697,7 @@ this.ScenarioInitialize(scenarioInfo);
 await this.FeatureBackgroundAsync();
 #line hidden
 #line 88
-    await testRunner.WhenAsync("I request multi-iteration backlog health with areaPath \"Project\\\\TeamA\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I request multi-iteration backlog health with areaPath \"Project\\TeamA\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 89
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -910,7 +910,7 @@ this.ScenarioInitialize(scenarioInfo);
 await this.FeatureBackgroundAsync();
 #line hidden
 #line 116
-    await testRunner.WhenAsync("I request effort distribution with areaPathFilter \"Project\\\\TeamA\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I request effort distribution with areaPathFilter \"Project\\TeamA\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 117
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -941,8 +941,8 @@ this.ScenarioInitialize(scenarioInfo);
 await this.FeatureBackgroundAsync();
 #line hidden
 #line 120
-    await testRunner.WhenAsync(("I request effort distribution with areaPathFilter \"Project\\\\TeamA\" maxIterations " +
-                        "8 and defaultCapacity 40"), ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync(("I request effort distribution with areaPathFilter \"Project\\TeamA\" maxIterations 8" +
+                        " and defaultCapacity 40"), ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 121
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -997,10 +997,10 @@ await this.FeatureBackgroundAsync();
                             "Project\\2024\\Sprint1",
                             "Bob"});
 #line 124
-    await testRunner.GivenAsync("work items exist for iteration \"Project\\\\2024\\\\Sprint1\"", ((string)(null)), table6, "Given ");
+    await testRunner.GivenAsync("work items exist for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), table6, "Given ");
 #line hidden
 #line 128
-    await testRunner.WhenAsync("I request sprint capacity plan for iteration \"Project\\\\2024\\\\Sprint1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I request sprint capacity plan for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 129
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -1107,11 +1107,11 @@ await this.FeatureBackgroundAsync();
                             "5",
                             "Project\\2024\\Sprint1"});
 #line 140
-    await testRunner.GivenAsync("work items exist for iteration \"Project\\\\2024\\\\Sprint1\"", ((string)(null)), table7, "Given ");
+    await testRunner.GivenAsync("work items exist for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), table7, "Given ");
 #line hidden
 #line 143
-    await testRunner.WhenAsync(("I request sprint capacity plan for iteration \"Project\\\\2024\\\\Sprint1\" with defaul" +
-                        "tCapacity 50"), ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync(("I request sprint capacity plan for iteration \"Project\\2024\\Sprint1\" with defaultC" +
+                        "apacity 50"), ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 144
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -1142,8 +1142,8 @@ this.ScenarioInitialize(scenarioInfo);
 await this.FeatureBackgroundAsync();
 #line hidden
 #line 147
-    await testRunner.WhenAsync(("I request sprint capacity plan for iteration \"Project\\\\2024\\\\Sprint1\" with defaul" +
-                        "tCapacity -10"), ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync(("I request sprint capacity plan for iteration \"Project\\2024\\Sprint1\" with defaultC" +
+                        "apacity -10"), ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 148
     await testRunner.ThenAsync("the response should be BadRequest", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");

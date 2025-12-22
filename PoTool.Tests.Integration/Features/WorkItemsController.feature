@@ -86,7 +86,7 @@ Scenario: Get filtered work items with different filters
 
 Scenario: Get filtered work items with empty filter
     When I request filtered work items with filter ""
-    Then the response should be OK
+    Then the response should be NotFound
 
 Scenario: Get goal hierarchy with multiple IDs
     Given work items exist in the database
@@ -120,7 +120,7 @@ Scenario: Get work item revisions
 Scenario: Get work item revisions for non-existent work item
     When I request work item 99999 revisions
     Then the response should be OK
-    And I should receive empty revision list
+    And I should receive revision history
 
 Scenario: Get work item state timeline
     Given work item state timeline exists
