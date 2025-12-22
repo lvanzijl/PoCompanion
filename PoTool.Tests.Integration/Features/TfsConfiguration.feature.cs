@@ -156,20 +156,20 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table3 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table19 = new global::Reqnroll.Table(new string[] {
                             "Field",
                             "Value"});
-                table3.AddRow(new string[] {
+                table19.AddRow(new string[] {
                             "Url",
                             "https://dev.azure.com/testorg"});
-                table3.AddRow(new string[] {
+                table19.AddRow(new string[] {
                             "Project",
                             "TestProject"});
-                table3.AddRow(new string[] {
+                table19.AddRow(new string[] {
                             "Pat",
                             "test-pat-token-12345"});
 #line 14
-    await testRunner.GivenAsync("I have valid TFS credentials", ((string)(null)), table3, "Given ");
+    await testRunner.GivenAsync("I have valid TFS credentials", ((string)(null)), table19, "Given ");
 #line hidden
 #line 19
     await testRunner.WhenAsync("I save the TFS configuration", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -205,17 +205,17 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table4 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table20 = new global::Reqnroll.Table(new string[] {
                             "Field",
                             "Value"});
-                table4.AddRow(new string[] {
+                table20.AddRow(new string[] {
                             "Url",
                             "https://dev.azure.com/testorg"});
-                table4.AddRow(new string[] {
+                table20.AddRow(new string[] {
                             "Project",
                             "TestProject"});
 #line 24
-    await testRunner.GivenAsync("I have saved TFS configuration", ((string)(null)), table4, "Given ");
+    await testRunner.GivenAsync("I have saved TFS configuration", ((string)(null)), table20, "Given ");
 #line hidden
 #line 28
     await testRunner.WhenAsync("I request the TFS configuration", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -223,17 +223,17 @@ await this.FeatureBackgroundAsync();
 #line 29
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-                global::Reqnroll.Table table5 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table21 = new global::Reqnroll.Table(new string[] {
                             "Field",
                             "Value"});
-                table5.AddRow(new string[] {
+                table21.AddRow(new string[] {
                             "Url",
                             "https://dev.azure.com/testorg"});
-                table5.AddRow(new string[] {
+                table21.AddRow(new string[] {
                             "Project",
                             "TestProject"});
 #line 30
-    await testRunner.AndAsync("the returned configuration should match", ((string)(null)), table5, "And ");
+    await testRunner.AndAsync("the returned configuration should match", ((string)(null)), table21, "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();

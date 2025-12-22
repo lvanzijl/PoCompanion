@@ -156,17 +156,17 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table1 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table10 = new global::Reqnroll.Table(new string[] {
                             "Field",
                             "Value"});
-                table1.AddRow(new string[] {
+                table10.AddRow(new string[] {
                             "DataMode",
                             "Mock"});
-                table1.AddRow(new string[] {
+                table10.AddRow(new string[] {
                             "ConfiguredGoalIds",
                             "1000"});
 #line 14
-    await testRunner.GivenAsync("I have settings to update", ((string)(null)), table1, "Given ");
+    await testRunner.GivenAsync("I have settings to update", ((string)(null)), table10, "Given ");
 #line hidden
 #line 18
     await testRunner.WhenAsync("I update the application settings", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -242,17 +242,17 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table2 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table11 = new global::Reqnroll.Table(new string[] {
                             "Field",
                             "Value"});
-                table2.AddRow(new string[] {
+                table11.AddRow(new string[] {
                             "DataMode",
                             "Tfs"});
-                table2.AddRow(new string[] {
+                table11.AddRow(new string[] {
                             "ConfiguredGoalIds",
                             "1,2,3,4,5"});
 #line 30
-    await testRunner.GivenAsync("I have settings to update", ((string)(null)), table2, "Given ");
+    await testRunner.GivenAsync("I have settings to update", ((string)(null)), table11, "Given ");
 #line hidden
 #line 34
     await testRunner.WhenAsync("I update the application settings", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
