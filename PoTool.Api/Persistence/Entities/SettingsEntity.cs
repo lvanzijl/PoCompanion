@@ -27,6 +27,12 @@ public class SettingsEntity
     public string ConfiguredGoalIds { get; set; } = string.Empty;
 
     /// <summary>
+    /// The ID of the currently active profile.
+    /// Nullable to support legacy data where profiles don't exist yet.
+    /// </summary>
+    public int? ActiveProfileId { get; set; }
+
+    /// <summary>
     /// Timestamp when settings were last modified.
     /// </summary>
     [Required]

@@ -16,4 +16,9 @@ public interface ISettingsRepository
     /// Saves or updates the settings.
     /// </summary>
     Task<SettingsDto> SaveSettingsAsync(DataMode dataMode, List<int> configuredGoalIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sets the active profile ID.
+    /// </summary>
+    Task<SettingsDto> SetActiveProfileAsync(int? profileId, CancellationToken cancellationToken = default);
 }
