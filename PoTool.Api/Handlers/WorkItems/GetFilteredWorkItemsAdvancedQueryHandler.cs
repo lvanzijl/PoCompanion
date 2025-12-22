@@ -63,14 +63,6 @@ public sealed class GetFilteredWorkItemsAdvancedQueryHandler
                 wi.AreaPath.Contains(query.AreaPathFilter, StringComparison.OrdinalIgnoreCase));
         }
 
-        // Apply Assigned To filter
-        if (!string.IsNullOrWhiteSpace(query.AssignedToFilter))
-        {
-            filtered = filtered.Where(wi => 
-                wi.AssignedTo != null && 
-                wi.AssignedTo.Contains(query.AssignedToFilter, StringComparison.OrdinalIgnoreCase));
-        }
-
         // Apply Effort filters
         if (query.MinEffort.HasValue)
         {

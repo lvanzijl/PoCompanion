@@ -69,21 +69,24 @@ public sealed class GetEpicCompletionForecastQueryHandler
             : 0;
 
         // Determine confidence based on data availability
-        var confidence = DetermineConfidence(velocityTrend.SprintMetrics.Count, velocityTrend.VelocityStandardDeviation);
+        var confidence = DetermineConfidence(velocityTrend.Sprints.Count);
 
         // Build sprint-by-sprint forecast
         var forecastByDate = BuildSprintForecast(
-            velocityTrend.SprintMetrics,
+            velocityTrend.Sprints,
             remainingEffort,
             estimatedVelocity);
 
         // Estimate completion date based on last sprint end date + remaining sprints
         DateTimeOffset? estimatedCompletionDate = null;
-        if (velocityTrend.SprintMetrics.Any() && sprintsRemaining > 0)
+        if (velocityTrend.Sprints.Any() && sprintsRemaining > 0)
         {
-            var lastSprint = velocityTrend.SprintMetrics.OrderBy(s => s.SprintEndDate).Last();
+            var lastSprint = velocityTrend.Sprints.OrderBy(s => s.EndDate).Last();
             // Assume 2-week sprints (14 days)
-            estimatedCompletionDate = lastSprint.SprintEndDate.AddDays(sprintsRemaining * 14);
+            if (lastSprint.EndDate.HasValue)
+            {
+                estimatedCompletionDate = lastSprint.EndDate.Value.AddDays(sprintsRemaining * 14);
+            }
         }
 
         return new EpicCompletionForecastDto(
@@ -125,12 +128,12 @@ public sealed class GetEpicCompletionForecastQueryHandler
                state.Equals("Completed", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static ForecastConfidence DetermineConfidence(int sprintCount, double standardDeviation)
+    private static ForecastConfidence DetermineConfidence(int sprintCount)
     {
         if (sprintCount < 3)
             return ForecastConfidence.Low;
 
-        if (sprintCount < 5 || standardDeviation > 10)
+        if (sprintCount < 5)
             return ForecastConfidence.Medium;
 
         return ForecastConfidence.High;
@@ -146,13 +149,16 @@ public sealed class GetEpicCompletionForecastQueryHandler
         if (!historicalSprints.Any() || estimatedVelocity <= 0)
             return forecasts;
 
-        var lastSprint = historicalSprints.OrderBy(s => s.SprintEndDate).Last();
+        var lastSprint = historicalSprints.OrderBy(s => s.EndDate).Last();
+        if (!lastSprint.EndDate.HasValue)
+            return forecasts;
+
         var currentRemaining = remainingEffort;
         var sprintNumber = 1;
 
         while (currentRemaining > 0 && sprintNumber <= 20) // Cap at 20 sprints
         {
-            var sprintStart = lastSprint.SprintEndDate.AddDays((sprintNumber - 1) * 14);
+            var sprintStart = lastSprint.EndDate.Value.AddDays((sprintNumber - 1) * 14);
             var sprintEnd = sprintStart.AddDays(14);
             
             var expectedCompleted = Math.Min(currentRemaining, (int)Math.Round(estimatedVelocity));

@@ -11,7 +11,6 @@ public sealed record GetFilteredWorkItemsAdvancedQuery(
     string? StateFilter = null,
     string? IterationPathFilter = null,
     string? AreaPathFilter = null,
-    string? AssignedToFilter = null,
     int? MinEffort = null,
     int? MaxEffort = null,
     bool? HasValidationIssues = null,

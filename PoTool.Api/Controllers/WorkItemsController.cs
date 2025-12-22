@@ -223,7 +223,6 @@ public class WorkItemsController : ControllerBase
     /// <param name="stateFilter">Filter by state</param>
     /// <param name="iterationPathFilter">Filter by iteration path (contains)</param>
     /// <param name="areaPathFilter">Filter by area path (contains)</param>
-    /// <param name="assignedToFilter">Filter by assigned to (contains)</param>
     /// <param name="minEffort">Minimum effort value</param>
     /// <param name="maxEffort">Maximum effort value</param>
     /// <param name="hasValidationIssues">Filter items with validation issues</param>
@@ -237,7 +236,6 @@ public class WorkItemsController : ControllerBase
         [FromQuery] string? stateFilter = null,
         [FromQuery] string? iterationPathFilter = null,
         [FromQuery] string? areaPathFilter = null,
-        [FromQuery] string? assignedToFilter = null,
         [FromQuery] int? minEffort = null,
         [FromQuery] int? maxEffort = null,
         [FromQuery] bool? hasValidationIssues = null,
@@ -252,7 +250,6 @@ public class WorkItemsController : ControllerBase
                 stateFilter,
                 iterationPathFilter,
                 areaPathFilter,
-                assignedToFilter,
                 minEffort,
                 maxEffort,
                 hasValidationIssues,
