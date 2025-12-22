@@ -182,7 +182,7 @@ Based on the codebase analysis and README:
 
 ### Current State
 The application provides:
-- ✅ Hierarchical work item view (Epics → Features → PBIs)
+- ✅ Hierarchical work item view (Goal → Objective → Epic → Feature → PBI → Task)
 - ✅ Local caching with SQLite
 - ✅ Manual sync from TFS
 - ✅ Search and filter capability

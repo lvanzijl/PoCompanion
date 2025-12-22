@@ -25,7 +25,7 @@ public class WorkItemEntity
     public int? ParentTfsId { get; set; }
 
     /// <summary>
-    /// Work item type (Epic, Feature, PBI, etc.).
+    /// Work item type (Goal, Objective, Epic, Feature, PBI, Task, etc.).
     /// </summary>
     [Required]
     [MaxLength(50)]

@@ -271,7 +271,7 @@ De Work Item Explorer toont al uw work items in een hiërarchische boomstructuur
 **Belangrijkste functies:**
 
 1. **Hiërarchische Boomstructuur:**
-   - Epics → Features → PBIs/Bugs/Tasks
+   - Goal → Objective → Epic → Feature → PBI/Bug/Task
    - Uitklapbare/inklapbare nodes met ▶ en ▼ symbolen
    - Kleurgecodeerde work item types
 
@@ -301,13 +301,13 @@ De Work Item Explorer toont al uw work items in een hiërarchische boomstructuur
 
 5. **Hiërarchie Structuur:**
    ```
-   Epic (Grote initiatieven, strategische doelen)
-   ├── Feature (Grote functionaliteiten)
-   │   ├── PBI (Product Backlog Item - gebruikersverhaal)
-   │   ├── Bug (Fout die gerepareerd moet worden)
-   │   └── Task (Technische taak)
-   └── Feature (Grote functionaliteiten)
-       └── PBI (Product Backlog Item)
+   Goal (Strategische doelen op hoogste niveau)
+   ├── Objective (Strategische subdoelen)
+   │   └── Epic (Grote initiatieven)
+   │       └── Feature (Grote functionaliteiten)
+   │           ├── PBI (Product Backlog Item - gebruikersverhaal)
+   │           ├── Bug (Fout die gerepareerd moet worden)
+   │           └── Task (Technische taak)
    ```
 
 **Toetsenbord Navigatie:**
@@ -2033,7 +2033,7 @@ Data Requirements Check:
 ```
 Fix Hierarchy:
 1. Check parent-child links in Azure DevOps
-2. Verify work item types (Epic/Feature/PBI)
+2. Verify work item types (Goal/Objective/Epic/Feature/PBI/Task)
 3. Check voor circular dependencies
 4. Re-sync work items in PO Companion
 ```

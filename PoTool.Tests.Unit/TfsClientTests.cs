@@ -152,7 +152,7 @@ public class TfsClientTests
         };
         SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse));
 
-        // Mock work items with 3-level hierarchy
+        // Mock work items with 3-level test scenario (Epic → Feature → User Story)
         var workItemsResponse = new
         {
             value = new[]
