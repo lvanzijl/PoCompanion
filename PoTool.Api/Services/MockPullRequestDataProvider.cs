@@ -513,46 +513,64 @@ public class MockPullRequestDataProvider
 
     /// <summary>
     /// Generates mock comments for pull requests.
+    /// Provides representative comments for demonstration purposes.
     /// </summary>
     public List<PullRequestCommentDto> GetMockComments()
     {
         var now = DateTimeOffset.UtcNow;
         var comments = new List<PullRequestCommentDto>();
 
-        // PR 101: Quick PR - minimal comments, all resolved
-        comments.Add(new PullRequestCommentDto(1, 101, 1, "Alice Johnson", "LGTM", now.AddDays(-9).AddHours(-2), null, true, now.AddDays(-9).AddHours(-1), "Bob Smith"));
+        // Sprint 1 PRs - Simple, quick reviews
+        comments.Add(new PullRequestCommentDto(1, 101, 1, "Bob Smith", "LGTM, nice clean UI", now.AddDays(-329), null, true, now.AddDays(-328), "Alice Johnson"));
+        comments.Add(new PullRequestCommentDto(2, 102, 1, "Charlie Davis", "Good persistence implementation", now.AddDays(-326), null, true, now.AddDays(-325), "Bob Smith"));
 
-        // PR 102: Medium PR - some comments with resolution
-        comments.Add(new PullRequestCommentDto(2, 102, 1, "Charlie Davis", "Please add null checks", now.AddDays(-6), now.AddDays(-5), true, now.AddDays(-5), "Bob Smith"));
-        comments.Add(new PullRequestCommentDto(3, 102, 2, "Diana Evans", "Consider using string interpolation", now.AddDays(-5), null, true, now.AddDays(-4).AddHours(-3), "Bob Smith"));
+        // Sprint 2 PRs - Some iterations needed
+        comments.Add(new PullRequestCommentDto(3, 103, 1, "Diana Evans", "Please add null checks for edge cases", now.AddDays(-309), now.AddDays(-308), true, now.AddDays(-308), "Charlie Davis"));
+        comments.Add(new PullRequestCommentDto(4, 104, 1, "Eve Foster", "Consider performance optimization", now.AddDays(-304), null, true, now.AddDays(-303), "Diana Evans"));
 
-        // PR 103: Long-running PR - many comments showing rework
-        comments.Add(new PullRequestCommentDto(4, 103, 1, "Alice Johnson", "Architecture concerns - needs refactoring", now.AddDays(-19), now.AddDays(-17), true, now.AddDays(-17), "Charlie Davis"));
-        comments.Add(new PullRequestCommentDto(5, 103, 2, "Bob Smith", "Security issue with token handling", now.AddDays(-18), now.AddDays(-14), true, now.AddDays(-14), "Charlie Davis"));
-        comments.Add(new PullRequestCommentDto(6, 103, 3, "Diana Evans", "Missing unit tests", now.AddDays(-16), now.AddDays(-10), true, now.AddDays(-10), "Charlie Davis"));
-        comments.Add(new PullRequestCommentDto(7, 103, 4, "Eve Foster", "Performance concerns", now.AddDays(-12), now.AddDays(-8), true, now.AddDays(-8), "Charlie Davis"));
-        comments.Add(new PullRequestCommentDto(8, 103, 5, "Frank Green", "Documentation needed", now.AddDays(-9), now.AddDays(-7), true, now.AddDays(-7), "Charlie Davis"));
+        // Sprint 3 PRs - More complex reviews
+        comments.Add(new PullRequestCommentDto(5, 105, 1, "Frank Green", "Icon sizing needs adjustment", now.AddDays(-289), now.AddDays(-287), true, now.AddDays(-287), "Eve Foster"));
+        comments.Add(new PullRequestCommentDto(6, 106, 1, "Grace Hill", "Excellent drag-drop implementation!", now.AddDays(-287), null, true, now.AddDays(-284), "Frank Green"));
+        comments.Add(new PullRequestCommentDto(7, 107, 1, "Henry Irving", "Add keyboard shortcut documentation", now.AddDays(-281), null, true, now.AddDays(-280), "Grace Hill"));
 
-        // PR 104: Large PR - moderate comments
-        comments.Add(new PullRequestCommentDto(9, 104, 1, "Grace Hill", "Consider breaking into smaller PRs", now.AddDays(-11), null, true, now.AddDays(-8), "Diana Evans"));
-        comments.Add(new PullRequestCommentDto(10, 104, 2, "Henry Irving", "Naming conventions", now.AddDays(-9), now.AddDays(-5), true, now.AddDays(-5), "Diana Evans"));
+        // Sprint 4 PRs - Technical depth
+        comments.Add(new PullRequestCommentDto(8, 108, 1, "Ivy Jones", "Cache key naming convention", now.AddDays(-264), now.AddDays(-262), true, now.AddDays(-262), "Henry Irving"));
+        comments.Add(new PullRequestCommentDto(9, 109, 1, "Jack King", "Invalidation strategy looks solid", now.AddDays(-261), null, true, now.AddDays(-259), "Ivy Jones"));
 
-        // PR 105: Active PR - some resolved, some unresolved
-        comments.Add(new PullRequestCommentDto(11, 105, 1, "Alice Johnson", "Dark mode colors need adjustment", now.AddDays(-4), now.AddDays(-2), true, now.AddDays(-2), "Eve Foster"));
-        comments.Add(new PullRequestCommentDto(12, 105, 2, "Bob Smith", "Accessibility concerns", now.AddDays(-3), null, false, null, null));
-        comments.Add(new PullRequestCommentDto(13, 105, 3, "Charlie Davis", "Missing contrast ratios", now.AddDays(-2), null, false, null, null));
+        // Sprint 5 PRs
+        comments.Add(new PullRequestCommentDto(10, 110, 1, "Kate Lee", "Performance improvement confirmed", now.AddDays(-244), null, true, now.AddDays(-242), "Jack King"));
+        comments.Add(new PullRequestCommentDto(11, 111, 1, "Liam Moore", "Virtual scroll works great", now.AddDays(-239), null, true, now.AddDays(-238), "Kate Lee"));
 
-        // PR 106: Active PR with many comments - high activity
-        comments.Add(new PullRequestCommentDto(14, 106, 1, "Diana Evans", "Incomplete documentation", now.AddDays(-7), now.AddDays(-6), true, now.AddDays(-6), "Frank Green"));
-        comments.Add(new PullRequestCommentDto(15, 106, 2, "Eve Foster", "Missing examples", now.AddDays(-6), now.AddDays(-4), true, now.AddDays(-4), "Frank Green"));
-        comments.Add(new PullRequestCommentDto(16, 106, 3, "Grace Hill", "Incorrect API endpoint", now.AddDays(-5), now.AddDays(-4), true, now.AddDays(-4), "Frank Green"));
-        comments.Add(new PullRequestCommentDto(17, 106, 4, "Henry Irving", "Add authentication examples", now.AddDays(-4), now.AddDays(-1), true, now.AddDays(-1), "Frank Green"));
-        comments.Add(new PullRequestCommentDto(18, 106, 5, "Alice Johnson", "Format consistency", now.AddDays(-3), null, false, null, null));
-        comments.Add(new PullRequestCommentDto(19, 106, 6, "Bob Smith", "Typo in parameter name", now.AddDays(-2), null, false, null, null));
+        // Sprint 6 PRs - Complex features
+        comments.Add(new PullRequestCommentDto(12, 112, 1, "Mia Nelson", "Web worker implementation needs error handling", now.AddDays(-224), now.AddDays(-221), true, now.AddDays(-221), "Liam Moore"));
+        comments.Add(new PullRequestCommentDto(13, 112, 2, "Noah Parker", "Memory leak concern in worker thread", now.AddDays(-223), now.AddDays(-221), true, now.AddDays(-221), "Liam Moore"));
+        comments.Add(new PullRequestCommentDto(14, 113, 1, "Olivia Quinn", "Progress indicators are smooth", now.AddDays(-221), null, true, now.AddDays(-219), "Mia Nelson"));
 
-        // PR 107: Performance optimization - technical comments
-        comments.Add(new PullRequestCommentDto(20, 107, 1, "Charlie Davis", "Good improvements, consider caching", now.AddDays(-13), now.AddDays(-10), true, now.AddDays(-10), "Grace Hill"));
-        comments.Add(new PullRequestCommentDto(21, 107, 2, "Diana Evans", "Memory usage concerns", now.AddDays(-11), now.AddDays(-10), true, now.AddDays(-10), "Grace Hill"));
+        // Sprint 7 PRs - Testing focus
+        comments.Add(new PullRequestCommentDto(15, 115, 1, "Peter Roberts", "Excellent test coverage", now.AddDays(-199), null, true, now.AddDays(-197), "Olivia Quinn"));
+        comments.Add(new PullRequestCommentDto(16, 116, 1, "Quinn Scott", "Add more edge case tests", now.AddDays(-197), now.AddDays(-195), true, now.AddDays(-195), "Peter Roberts"));
+        comments.Add(new PullRequestCommentDto(17, 117, 1, "Rachel Taylor", "Validation logic is well tested", now.AddDays(-191), null, true, now.AddDays(-190), "Quinn Scott"));
+
+        // Sprint 8 PRs
+        comments.Add(new PullRequestCommentDto(18, 118, 1, "Sam Turner", "Handler tests are comprehensive", now.AddDays(-174), null, true, now.AddDays(-170), "Rachel Taylor"));
+        comments.Add(new PullRequestCommentDto(19, 119, 1, "Tara White", "Great edge case coverage", now.AddDays(-171), null, true, now.AddDays(-169), "Sam Turner"));
+
+        // Sprint 9 PRs - Integration testing
+        comments.Add(new PullRequestCommentDto(20, 120, 1, "Uma Young", "API integration tests look good", now.AddDays(-154), null, true, now.AddDays(-150), "Tara White"));
+        comments.Add(new PullRequestCommentDto(21, 121, 1, "Victor Zhang", "DB tests need cleanup in teardown", now.AddDays(-151), now.AddDays(-149), true, now.AddDays(-149), "Uma Young"));
+        comments.Add(new PullRequestCommentDto(22, 122, 1, "Wendy Adams", "SignalR tests work perfectly", now.AddDays(-146), null, true, now.AddDays(-144), "Victor Zhang"));
+
+        // Sprint 10 PRs - Current work
+        comments.Add(new PullRequestCommentDto(23, 123, 1, "Xander Brown", "Serilog config looks correct", now.AddDays(-124), null, true, now.AddDays(-122), "Wendy Adams"));
+        comments.Add(new PullRequestCommentDto(24, 124, 1, "Yara Clark", "Add more log level examples", now.AddDays(-120), null, false, null, null));
+
+        // Sprint 11 PRs - Active reviews
+        comments.Add(new PullRequestCommentDto(25, 125, 1, "Zach Davis", "Event structure needs refinement", now.AddDays(-9), null, false, null, null));
+        comments.Add(new PullRequestCommentDto(26, 125, 2, "Amy Evans", "Consider using structured logging patterns", now.AddDays(-7), null, false, null, null));
+        comments.Add(new PullRequestCommentDto(27, 126, 1, "Bob Smith", "Aggregation setup needs documentation", now.AddDays(-6), null, false, null, null));
+
+        // Sprint 12 PR - Just started
+        comments.Add(new PullRequestCommentDto(28, 127, 1, "Charlie Davis", "Swagger config looks good so far", now.AddDays(-1), null, false, null, null));
 
         return comments;
     }
