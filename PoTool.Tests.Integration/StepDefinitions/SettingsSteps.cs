@@ -38,6 +38,7 @@ public class SettingsSteps
             Id: 0,
             DataMode: dataMode,
             ConfiguredGoalIds: goalIds,
+            ActiveProfileId: null,
             LastModified: DateTimeOffset.UtcNow
         );
     }
@@ -55,6 +56,7 @@ public class SettingsSteps
             Id: 0,
             DataMode: dataModeEnum,
             ConfiguredGoalIds: goalIdList,
+            ActiveProfileId: null,
             LastModified: DateTimeOffset.UtcNow
         );
 
