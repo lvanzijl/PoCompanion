@@ -1,0 +1,337 @@
+@page "/state-timeline"
+@page "/state-timeline/{workItemId:int}"
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Services
+@inject WorkItemsClient WorkItemsClient
+@inject ErrorMessageService ErrorMessageService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Work Item State Timeline</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">
+        <MudIcon Icon="@Icons.Material.Filled.Timeline" Class="mr-2" /> Work Item State Timeline
+    </MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+        Historical state transitions and bottleneck analysis for work items
+    </MudText>
+
+    <!-- Work Item Selection -->
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudNumericField @bind-Value="_selectedWorkItemId" 
+                             Label="Work Item ID" 
+                             Variant="Variant.Outlined"
+                             Min="1"
+                             HelperText="Enter work item ID to analyze" 
+                             Style="max-width: 250px;" />
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       OnClick="LoadTimeline"
+                       Disabled="@(!_selectedWorkItemId.HasValue || _selectedWorkItemId.Value <= 0)"
+                       StartIcon="@Icons.Material.Filled.Search">
+                Analyze
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+    }
+    else if (_timelineData != null)
+    {
+        <ErrorDisplay ErrorResponse="@_errorResponse" 
+                      Class="mb-4"
+                      OnDismiss="ClearError" />
+
+        <!-- Work Item Info Card -->
+        <MudCard Elevation="3" Class="mb-6">
+            <MudCardContent>
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <div>
+                        <MudText Typo="Typo.h5">@_timelineData.Title</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            ID: @_timelineData.WorkItemId | Type: @_timelineData.Type
+                        </MudText>
+                    </div>
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.caption">
+                            <strong>Total Cycle Time:</strong> @FormatTimeSpan(_timelineData.TotalCycleTime)
+                        </MudText>
+                        <MudText Typo="Typo.caption">
+                            <strong>Time In Progress:</strong> @FormatTimeSpan(_timelineData.TotalTimeInProgress)
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Analyzed: @_timelineData.AnalysisTimestamp.LocalDateTime.ToString("g")
+                        </MudText>
+                    </MudStack>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Bottlenecks Alert -->
+        @if (_timelineData.Bottlenecks.Any())
+        {
+            <MudAlert Severity="Severity.Warning" Class="mb-6">
+                <MudText Typo="Typo.h6" Class="mb-2">⚠️ @_timelineData.Bottlenecks.Count Bottleneck(s) Identified</MudText>
+                <MudStack Spacing="2">
+                    @foreach (var bottleneck in _timelineData.Bottlenecks.OrderByDescending(b => b.Severity))
+                    {
+                        <MudChip Size="Size.Medium" 
+                                 Color="@GetSeverityColor(bottleneck.Severity)"
+                                 Icon="@Icons.Material.Filled.Warning">
+                            <strong>@bottleneck.State:</strong> @FormatTimeSpan(bottleneck.TimeSpent) - @bottleneck.Reason
+                        </MudChip>
+                    }
+                </MudStack>
+            </MudAlert>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Success" Class="mb-6">
+                <MudText Typo="Typo.h6">✓ No Significant Bottlenecks</MudText>
+                <MudText>Work item progressed through states at a normal pace.</MudText>
+            </MudAlert>
+        }
+
+        <!-- State Transition Timeline -->
+        @if (_timelineData.StateHistory.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-6">
+                <MudText Typo="Typo.h6" GutterBottom="true">State Transition History</MudText>
+                <MudTimeline TimelineOrientation="TimelineOrientation.Vertical" TimelinePosition="TimelinePosition.Start">
+                    @foreach (var transition in _timelineData.StateHistory.OrderBy(t => t.TransitionDate))
+                    {
+                        <MudTimelineItem Color="@GetTransitionColor(transition)" Size="Size.Small">
+                            <ItemOpposite>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @transition.TransitionDate.LocalDateTime.ToString("g")
+                                </MudText>
+                            </ItemOpposite>
+                            <ItemContent>
+                                <MudCard Elevation="1">
+                                    <MudCardContent>
+                                        <MudText Typo="Typo.body1">
+                                            <strong>@transition.FromState</strong> → <strong>@transition.ToState</strong>
+                                        </MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                            Changed by: @transition.ChangedBy
+                                        </MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                            Time in @transition.FromState: @FormatTimeSpan(transition.TimeInPreviousState)
+                                        </MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </ItemContent>
+                        </MudTimelineItem>
+                    }
+                </MudTimeline>
+            </MudPaper>
+
+            <!-- State Duration Chart -->
+            <MudPaper Elevation="2" Class="pa-4 mb-6">
+                <MudText Typo="Typo.h6" GutterBottom="true">Time Spent in Each State</MudText>
+                <MudChart ChartType="ChartType.Bar" 
+                          Width="100%" 
+                          Height="400px"
+                          ChartSeries="@GetStateDurationChartData()" 
+                          XAxisLabels="@GetStateLabels()"
+                          ChartOptions="@_chartOptions">
+                </MudChart>
+            </MudPaper>
+
+            <!-- State Transition Table -->
+            <MudPaper Elevation="2" Class="pa-4">
+                <MudText Typo="Typo.h6" GutterBottom="true">Detailed Transition Data</MudText>
+                <MudTable Items="@_timelineData.StateHistory.OrderBy(t => t.TransitionDate)" 
+                          Dense="true" Hover="true" Bordered="true">
+                    <HeaderContent>
+                        <MudTh>From State</MudTh>
+                        <MudTh>To State</MudTh>
+                        <MudTh>Transition Date</MudTh>
+                        <MudTh>Changed By</MudTh>
+                        <MudTh class="text-right">Time in Previous State</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="From State">@context.FromState</MudTd>
+                        <MudTd DataLabel="To State"><strong>@context.ToState</strong></MudTd>
+                        <MudTd DataLabel="Transition Date">@context.TransitionDate.LocalDateTime.ToString("g")</MudTd>
+                        <MudTd DataLabel="Changed By">@context.ChangedBy</MudTd>
+                        <MudTd DataLabel="Time in Previous State" class="text-right">
+                            @FormatTimeSpan(context.TimeInPreviousState)
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info">
+                <MudText Typo="Typo.h6">No State History Available</MudText>
+                <MudText>No state transitions found for this work item. It may have been recently created or has no revision history.</MudText>
+            </MudAlert>
+        }
+    }
+    else if (_errorResponse != null)
+    {
+        <ErrorDisplay ErrorResponse="@_errorResponse" 
+                      Class="mb-4"
+                      OnDismiss="ClearError" />
+    }
+    else if (!_isLoading && !_selectedWorkItemId.HasValue)
+    {
+        <MudPaper Elevation="2" Class="pa-8 text-center">
+            <MudIcon Icon="@Icons.Material.Filled.Timeline" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+            <MudText Typo="Typo.h5" GutterBottom="true">Analyze Work Item State History</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                Enter a work item ID above to visualize its state transitions and identify bottlenecks in the workflow.
+            </MudText>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public int? WorkItemId { get; set; }
+
+    private WorkItemStateTimelineDto? _timelineData;
+    private bool _isLoading = false;
+    private ErrorResponse? _errorResponse;
+    private int? _selectedWorkItemId;
+
+    private ChartOptions _chartOptions = new()
+    {
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 10,
+        YAxisFormat = "0.# days"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (WorkItemId.HasValue && WorkItemId.Value > 0)
+        {
+            _selectedWorkItemId = WorkItemId.Value;
+            await LoadTimeline();
+        }
+    }
+
+    private async Task LoadTimeline()
+    {
+        if (!_selectedWorkItemId.HasValue || _selectedWorkItemId.Value <= 0)
+        {
+            Snackbar.Add("Please enter a valid work item ID", Severity.Warning);
+            return;
+        }
+
+        _isLoading = true;
+        try
+        {
+            ClearError();
+            _timelineData = await WorkItemsClient.GetStateTimelineAsync(_selectedWorkItemId.Value);
+            
+            if (_timelineData == null)
+            {
+                ShowError(new Exception($"Work item {_selectedWorkItemId} not found"), "Work item not found");
+            }
+            else
+            {
+                // Update URL without reload
+                NavigationManager.NavigateTo($"/state-timeline/{_selectedWorkItemId.Value}", false);
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex, "Error loading state timeline");
+            _timelineData = null;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ShowError(Exception ex, string context)
+    {
+        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+
+    private string FormatTimeSpan(TimeSpan timeSpan)
+    {
+        if (timeSpan.TotalDays >= 1)
+            return $"{timeSpan.TotalDays:F1} days";
+        if (timeSpan.TotalHours >= 1)
+            return $"{timeSpan.TotalHours:F1} hours";
+        return $"{timeSpan.TotalMinutes:F0} minutes";
+    }
+
+    private Color GetSeverityColor(BottleneckSeverity severity)
+    {
+        return severity switch
+        {
+            BottleneckSeverity.Critical => Color.Error,
+            BottleneckSeverity.High => Color.Warning,
+            BottleneckSeverity.Medium => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetTransitionColor(StateTransition transition)
+    {
+        // Color code based on time spent in previous state
+        if (transition.TimeInPreviousState.TotalDays > 14)
+            return Color.Error;
+        if (transition.TimeInPreviousState.TotalDays > 7)
+            return Color.Warning;
+        if (transition.TimeInPreviousState.TotalDays > 3)
+            return Color.Info;
+        return Color.Success;
+    }
+
+    private List<ChartSeries> GetStateDurationChartData()
+    {
+        if (_timelineData == null || !_timelineData.StateHistory.Any())
+            return new List<ChartSeries>();
+
+        var stateGroups = _timelineData.StateHistory
+            .GroupBy(t => t.FromState)
+            .Select(g => new
+            {
+                State = g.Key,
+                TotalDays = g.Sum(t => t.TimeInPreviousState.TotalDays)
+            })
+            .OrderByDescending(s => s.TotalDays)
+            .ToList();
+
+        return new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Days in State",
+                Data = stateGroups.Select(s => s.TotalDays).ToArray()
+            }
+        };
+    }
+
+    private string[] GetStateLabels()
+    {
+        if (_timelineData == null || !_timelineData.StateHistory.Any())
+            return Array.Empty<string>();
+
+        return _timelineData.StateHistory
+            .GroupBy(t => t.FromState)
+            .Select(g => g.Key)
+            .OrderByDescending(state => _timelineData.StateHistory
+                .Where(t => t.FromState == state)
+                .Sum(t => t.TimeInPreviousState.TotalDays))
+            .ToArray();
+    }
+}
