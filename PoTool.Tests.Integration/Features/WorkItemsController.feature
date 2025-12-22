@@ -73,3 +73,73 @@ Scenario: Get all goals from controller
     When I request all goals from "/api/workitems/goals/all"
     Then the response should be OK
     And all returned work items should be of type "Goal"
+
+Scenario: Get filtered work items with different filters
+    Given work items exist in the database
+        | TfsId | Title          | Type      | State  |
+        | 5000  | Epic Story     | Epic      | Active |
+        | 5001  | Task Story     | Task      | New    |
+        | 5002  | Feature Story  | Feature   | Done   |
+    When I request filtered work items with filter "Epic"
+    Then the response should be OK
+    And the results should contain work items matching "Epic"
+
+Scenario: Get filtered work items with empty filter
+    When I request filtered work items with filter ""
+    Then the response should be NotFound
+
+Scenario: Get goal hierarchy with multiple IDs
+    Given work items exist in the database
+        | TfsId | Title     | Type      | State  |
+        | 6000  | Goal A    | Goal      | Active |
+        | 6001  | Goal B    | Goal      | Active |
+    When I request goal hierarchy for IDs "6000,6001"
+    Then the response should be OK
+
+Scenario: Get goal hierarchy with zero ID
+    When I request goal hierarchy for IDs "0"
+    Then the response should be BadRequest
+
+Scenario: Get goal hierarchy with overflow ID
+    When I request goal hierarchy for IDs "999999999999999999999"
+    Then the response should be BadRequest
+
+Scenario: Get goal hierarchy with empty IDs
+    When I request goal hierarchy for IDs ""
+    Then the response should be BadRequest
+
+Scenario: Get work item revisions
+    Given work item revisions exist
+        | WorkItemId | Revision | ChangedDate | ChangedBy |
+        | 1000       | 1        | 2024-01-01  | Alice     |
+        | 1000       | 2        | 2024-01-15  | Bob       |
+    When I request work item 1000 revisions
+    Then the response should be OK
+    And I should receive revision history
+
+Scenario: Get work item revisions for non-existent work item
+    When I request work item 99999 revisions
+    Then the response should be OK
+    And I should receive revision history
+
+Scenario: Get work item state timeline
+    Given work item state timeline exists
+        | WorkItemId | State       | EnteredDate | ExitedDate |
+        | 1000       | New         | 2024-01-01  | 2024-01-05 |
+        | 1000       | Active      | 2024-01-05  | 2024-01-15 |
+        | 1000       | In Progress | 2024-01-15  |            |
+    When I request work item 1000 state timeline
+    Then the response should be OK
+    And I should receive state timeline data
+
+Scenario: Get work item state timeline for non-existent work item
+    When I request work item 99999 state timeline
+    Then the response should be NotFound
+
+Scenario: Get work item by zero TFS ID
+    When I request work item 0 from controller
+    Then the response should be NotFound
+
+Scenario: Get work item by negative TFS ID
+    When I request work item -1 from controller
+    Then the response should be NotFound

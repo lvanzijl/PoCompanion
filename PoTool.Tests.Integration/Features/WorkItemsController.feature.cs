@@ -102,28 +102,28 @@ namespace PoTool.Tests.Integration.Features
 #line 7
     await testRunner.GivenAsync("the application is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-            global::Reqnroll.Table table7 = new global::Reqnroll.Table(new string[] {
+            global::Reqnroll.Table table23 = new global::Reqnroll.Table(new string[] {
                         "TfsId",
                         "Title",
                         "Type",
                         "State"});
-            table7.AddRow(new string[] {
+            table23.AddRow(new string[] {
                         "1000",
                         "Test Goal",
                         "Goal",
                         "Active"});
-            table7.AddRow(new string[] {
+            table23.AddRow(new string[] {
                         "1001",
                         "Test Objective",
                         "Objective",
                         "Active"});
-            table7.AddRow(new string[] {
+            table23.AddRow(new string[] {
                         "1002",
                         "Test Epic",
                         "Epic",
                         "New"});
 #line 8
-    await testRunner.AndAsync("work items exist in the database", ((string)(null)), table7, "And ");
+    await testRunner.AndAsync("work items exist in the database", ((string)(null)), table23, "And ");
 #line hidden
         }
         
@@ -380,26 +380,26 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table8 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table24 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State",
                             "ParentTfsId"});
-                table8.AddRow(new string[] {
+                table24.AddRow(new string[] {
                             "2000",
                             "Parent Goal",
                             "Goal",
                             "New",
                             ""});
-                table8.AddRow(new string[] {
+                table24.AddRow(new string[] {
                             "2001",
                             "Child in Progress",
                             "Objective",
                             "In Progress",
                             "2000"});
 #line 48
-    await testRunner.GivenAsync("work items exist in the database with parent-child relationships", ((string)(null)), table8, "Given ");
+    await testRunner.GivenAsync("work items exist in the database with parent-child relationships", ((string)(null)), table24, "Given ");
 #line hidden
 #line 52
     await testRunner.WhenAsync("I request all work items with validation from \"/api/workitems/validated\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -435,21 +435,21 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table9 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table25 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State",
                             "ParentTfsId",
                             "Effort"});
-                table9.AddRow(new string[] {
+                table25.AddRow(new string[] {
                             "3000",
                             "Parent Goal",
                             "Goal",
                             "In Progress",
                             "",
                             "10"});
-                table9.AddRow(new string[] {
+                table25.AddRow(new string[] {
                             "3001",
                             "Child in Progress",
                             "Objective",
@@ -457,7 +457,7 @@ await this.FeatureBackgroundAsync();
                             "3000",
                             "8"});
 #line 57
-    await testRunner.GivenAsync("work items exist in the database with parent-child relationships", ((string)(null)), table9, "Given ");
+    await testRunner.GivenAsync("work items exist in the database with parent-child relationships", ((string)(null)), table25, "Given ");
 #line hidden
 #line 61
     await testRunner.WhenAsync("I request all work items with validation from \"/api/workitems/validated\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -496,33 +496,33 @@ await this.FeatureBackgroundAsync();
 #line 66
     await testRunner.GivenAsync("the application is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-                global::Reqnroll.Table table10 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table26 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State"});
-                table10.AddRow(new string[] {
+                table26.AddRow(new string[] {
                             "4000",
                             "Goal One",
                             "Goal",
                             "Active"});
-                table10.AddRow(new string[] {
+                table26.AddRow(new string[] {
                             "4001",
                             "Goal Two",
                             "Goal",
                             "New"});
-                table10.AddRow(new string[] {
+                table26.AddRow(new string[] {
                             "4002",
                             "Test Objective",
                             "Objective",
                             "Active"});
-                table10.AddRow(new string[] {
+                table26.AddRow(new string[] {
                             "4003",
                             "Test Epic",
                             "Epic",
                             "New"});
 #line 67
-    await testRunner.AndAsync("work items exist in the database", ((string)(null)), table10, "And ");
+    await testRunner.AndAsync("work items exist in the database", ((string)(null)), table26, "And ");
 #line hidden
 #line 73
     await testRunner.WhenAsync("I request all goals from \"/api/workitems/goals/all\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -532,6 +532,472 @@ await this.FeatureBackgroundAsync();
 #line hidden
 #line 75
     await testRunner.AndAsync("all returned work items should be of type \"Goal\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get filtered work items with different filters")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetFilteredWorkItemsWithDifferentFilters()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get filtered work items with different filters", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 77
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+                global::Reqnroll.Table table27 = new global::Reqnroll.Table(new string[] {
+                            "TfsId",
+                            "Title",
+                            "Type",
+                            "State"});
+                table27.AddRow(new string[] {
+                            "5000",
+                            "Epic Story",
+                            "Epic",
+                            "Active"});
+                table27.AddRow(new string[] {
+                            "5001",
+                            "Task Story",
+                            "Task",
+                            "New"});
+                table27.AddRow(new string[] {
+                            "5002",
+                            "Feature Story",
+                            "Feature",
+                            "Done"});
+#line 78
+    await testRunner.GivenAsync("work items exist in the database", ((string)(null)), table27, "Given ");
+#line hidden
+#line 83
+    await testRunner.WhenAsync("I request filtered work items with filter \"Epic\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 84
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 85
+    await testRunner.AndAsync("the results should contain work items matching \"Epic\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get filtered work items with empty filter")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetFilteredWorkItemsWithEmptyFilter()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get filtered work items with empty filter", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 87
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 88
+    await testRunner.WhenAsync("I request filtered work items with filter \"\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 89
+    await testRunner.ThenAsync("the response should be NotFound", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get goal hierarchy with multiple IDs")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetGoalHierarchyWithMultipleIDs()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get goal hierarchy with multiple IDs", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 91
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+                global::Reqnroll.Table table28 = new global::Reqnroll.Table(new string[] {
+                            "TfsId",
+                            "Title",
+                            "Type",
+                            "State"});
+                table28.AddRow(new string[] {
+                            "6000",
+                            "Goal A",
+                            "Goal",
+                            "Active"});
+                table28.AddRow(new string[] {
+                            "6001",
+                            "Goal B",
+                            "Goal",
+                            "Active"});
+#line 92
+    await testRunner.GivenAsync("work items exist in the database", ((string)(null)), table28, "Given ");
+#line hidden
+#line 96
+    await testRunner.WhenAsync("I request goal hierarchy for IDs \"6000,6001\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 97
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get goal hierarchy with zero ID")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetGoalHierarchyWithZeroID()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get goal hierarchy with zero ID", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 99
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 100
+    await testRunner.WhenAsync("I request goal hierarchy for IDs \"0\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 101
+    await testRunner.ThenAsync("the response should be BadRequest", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get goal hierarchy with overflow ID")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetGoalHierarchyWithOverflowID()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get goal hierarchy with overflow ID", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 103
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 104
+    await testRunner.WhenAsync("I request goal hierarchy for IDs \"999999999999999999999\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 105
+    await testRunner.ThenAsync("the response should be BadRequest", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get goal hierarchy with empty IDs")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetGoalHierarchyWithEmptyIDs()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get goal hierarchy with empty IDs", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 107
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 108
+    await testRunner.WhenAsync("I request goal hierarchy for IDs \"\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 109
+    await testRunner.ThenAsync("the response should be BadRequest", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get work item revisions")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetWorkItemRevisions()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get work item revisions", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 111
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+                global::Reqnroll.Table table29 = new global::Reqnroll.Table(new string[] {
+                            "WorkItemId",
+                            "Revision",
+                            "ChangedDate",
+                            "ChangedBy"});
+                table29.AddRow(new string[] {
+                            "1000",
+                            "1",
+                            "2024-01-01",
+                            "Alice"});
+                table29.AddRow(new string[] {
+                            "1000",
+                            "2",
+                            "2024-01-15",
+                            "Bob"});
+#line 112
+    await testRunner.GivenAsync("work item revisions exist", ((string)(null)), table29, "Given ");
+#line hidden
+#line 116
+    await testRunner.WhenAsync("I request work item 1000 revisions", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 117
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 118
+    await testRunner.AndAsync("I should receive revision history", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get work item revisions for non-existent work item")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetWorkItemRevisionsForNon_ExistentWorkItem()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get work item revisions for non-existent work item", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 120
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 121
+    await testRunner.WhenAsync("I request work item 99999 revisions", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 122
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 123
+    await testRunner.AndAsync("I should receive revision history", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get work item state timeline")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetWorkItemStateTimeline()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get work item state timeline", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 125
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+                global::Reqnroll.Table table30 = new global::Reqnroll.Table(new string[] {
+                            "WorkItemId",
+                            "State",
+                            "EnteredDate",
+                            "ExitedDate"});
+                table30.AddRow(new string[] {
+                            "1000",
+                            "New",
+                            "2024-01-01",
+                            "2024-01-05"});
+                table30.AddRow(new string[] {
+                            "1000",
+                            "Active",
+                            "2024-01-05",
+                            "2024-01-15"});
+                table30.AddRow(new string[] {
+                            "1000",
+                            "In Progress",
+                            "2024-01-15",
+                            ""});
+#line 126
+    await testRunner.GivenAsync("work item state timeline exists", ((string)(null)), table30, "Given ");
+#line hidden
+#line 131
+    await testRunner.WhenAsync("I request work item 1000 state timeline", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 132
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 133
+    await testRunner.AndAsync("I should receive state timeline data", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get work item state timeline for non-existent work item")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetWorkItemStateTimelineForNon_ExistentWorkItem()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get work item state timeline for non-existent work item", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 135
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 136
+    await testRunner.WhenAsync("I request work item 99999 state timeline", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 137
+    await testRunner.ThenAsync("the response should be NotFound", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get work item by zero TFS ID")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetWorkItemByZeroTFSID()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get work item by zero TFS ID", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 139
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 140
+    await testRunner.WhenAsync("I request work item 0 from controller", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 141
+    await testRunner.ThenAsync("the response should be NotFound", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get work item by negative TFS ID")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Work Items Controller API")]
+        public async System.Threading.Tasks.Task GetWorkItemByNegativeTFSID()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get work item by negative TFS ID", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 143
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 144
+    await testRunner.WhenAsync("I request work item -1 from controller", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 145
+    await testRunner.ThenAsync("the response should be NotFound", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();

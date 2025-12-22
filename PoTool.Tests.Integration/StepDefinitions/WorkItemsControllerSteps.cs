@@ -128,7 +128,7 @@ public class WorkItemsControllerSteps
         }
     }
 
-    [When(@"I request work item (\d+) from controller")]
+    [When(@"I request work item (-?\d+) from controller")]
     public async Task WhenIRequestWorkItemFromController(int tfsId)
     {
         _response = await _client.GetAsync($"/api/workitems/{tfsId}");
@@ -253,5 +253,86 @@ public class WorkItemsControllerSteps
         Assert.IsTrue(_workItems.Count > 0, "Expected at least one work item");
         Assert.IsTrue(_workItems.All(w => w.Type == expectedType),
             $"Expected all work items to be of type {expectedType}");
+    }
+
+    [Given(@"work item revisions exist")]
+    public Task GivenWorkItemRevisionsExist(Table table)
+    {
+        // Mock TFS client is pre-configured to return revision data for all work item IDs
+        // This step is present for documentation in the feature file to make the test scenario clear
+        // The MockTfsClient.GetWorkItemRevisionsAsync() method returns 3 mock revisions for any work item ID
+        return Task.CompletedTask;
+    }
+
+    [Given(@"work item state timeline exists")]
+    public async Task GivenWorkItemStateTimelineExists(Table table)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+        foreach (var row in table.Rows)
+        {
+            var workItemId = int.Parse(row["WorkItemId"]);
+            
+            // Ensure the work item exists in the database
+            if (!dbContext.WorkItems.Any(w => w.TfsId == workItemId))
+            {
+                dbContext.WorkItems.Add(new WorkItemEntity
+                {
+                    TfsId = workItemId,
+                    Type = "Task",
+                    Title = $"Work Item {workItemId}",
+                    State = row["State"],
+                    AreaPath = "\\TestArea",
+                    IterationPath = "\\TestIteration",
+                    JsonPayload = "{}",
+                    RetrievedAt = DateTimeOffset.UtcNow
+                });
+            }
+        }
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    [When(@"I request work item (-?\d+) revisions")]
+    public async Task WhenIRequestWorkItemRevisions(int workItemId)
+    {
+        _response = await _client.GetAsync($"/api/workitems/{workItemId}/revisions");
+        _scenarioContext["Response"] = _response;
+    }
+
+    [When(@"I request work item (-?\d+) state timeline")]
+    public async Task WhenIRequestWorkItemStateTimeline(int workItemId)
+    {
+        _response = await _client.GetAsync($"/api/workitems/{workItemId}/state-timeline");
+        _scenarioContext["Response"] = _response;
+    }
+
+    [Then(@"I should receive revision history")]
+    public async Task ThenIShouldReceiveRevisionHistory()
+    {
+        Assert.IsNotNull(_response);
+        Assert.AreEqual(HttpStatusCode.OK, _response.StatusCode);
+        var content = await _response.Content.ReadAsStringAsync();
+        Assert.IsFalse(string.IsNullOrWhiteSpace(content));
+    }
+
+    [Then(@"I should receive empty revision list")]
+    public async Task ThenIShouldReceiveEmptyRevisionList()
+    {
+        Assert.IsNotNull(_response);
+        Assert.AreEqual(HttpStatusCode.OK, _response.StatusCode);
+        var revisions = await _response.Content.ReadFromJsonAsync<List<object>>();
+        Assert.IsNotNull(revisions);
+        Assert.AreEqual(0, revisions.Count);
+    }
+
+    [Then(@"I should receive state timeline data")]
+    public async Task ThenIShouldReceiveStateTimelineData()
+    {
+        Assert.IsNotNull(_response);
+        Assert.AreEqual(HttpStatusCode.OK, _response.StatusCode);
+        var content = await _response.Content.ReadAsStringAsync();
+        Assert.IsFalse(string.IsNullOrWhiteSpace(content));
     }
 }
