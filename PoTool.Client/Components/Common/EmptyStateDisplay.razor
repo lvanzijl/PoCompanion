@@ -1,0 +1,54 @@
+@* Reusable empty state display component *@
+
+<MudAlert Severity="@Severity" Class="@($"my-7 {Class}")">
+    <MudText Typo="Typo.h6" Class="mb-2">@Title</MudText>
+    <MudText>@Message</MudText>
+    @if (!string.IsNullOrEmpty(AdditionalInfo))
+    {
+        <MudText Class="mt-2">@AdditionalInfo</MudText>
+    }
+    @if (ChildContent != null)
+    {
+        <div class="mt-4">
+            @ChildContent
+        </div>
+    }
+</MudAlert>
+
+@code {
+    /// <summary>
+    /// The title of the empty state message.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The main message explaining the empty state.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Message { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional additional information or guidance.
+    /// </summary>
+    [Parameter]
+    public string? AdditionalInfo { get; set; }
+
+    /// <summary>
+    /// The severity level of the alert.
+    /// </summary>
+    [Parameter]
+    public Severity Severity { get; set; } = Severity.Info;
+
+    /// <summary>
+    /// Additional CSS classes to apply.
+    /// </summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>
+    /// Optional child content (e.g., buttons or additional UI).
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

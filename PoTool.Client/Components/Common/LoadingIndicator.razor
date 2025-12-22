@@ -1,0 +1,28 @@
+@* Reusable loading indicator component *@
+
+@if (IsLoading)
+{
+    <MudProgressLinear Color="@Color" 
+                       Indeterminate="true" 
+                       Class="@($"my-7 {Class}")" />
+}
+
+@code {
+    /// <summary>
+    /// Whether to show the loading indicator.
+    /// </summary>
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    /// <summary>
+    /// The color of the progress bar.
+    /// </summary>
+    [Parameter]
+    public Color Color { get; set; } = Color.Primary;
+
+    /// <summary>
+    /// Additional CSS classes to apply.
+    /// </summary>
+    [Parameter]
+    public string? Class { get; set; }
+}

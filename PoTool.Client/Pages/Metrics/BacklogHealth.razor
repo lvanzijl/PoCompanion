@@ -2,7 +2,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
-@inject MetricsClient MetricsClient
+@inject IMetricsClient MetricsClient
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 
@@ -16,16 +16,12 @@
         Multi-iteration backlog health analysis showing validation issues, effort tracking, and trends
     </MudText>
 
-    @if (_isLoading)
+    <LoadingIndicator IsLoading="@_isLoading" />
+    
+    @if (!_isLoading && (_healthData == null || !_healthData.IterationHealth.Any()))
     {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
-    }
-    else if (_healthData == null || !_healthData.IterationHealth.Any())
-    {
-        <MudAlert Severity="Severity.Info" Class="my-7">
-            <MudText Typo="Typo.h6" Class="mb-2">No Backlog Health Data Available</MudText>
-            <MudText>No work items found to analyze. Please sync work items first.</MudText>
-        </MudAlert>
+        <EmptyStateDisplay Title="No Backlog Health Data Available"
+                          Message="No work items found to analyze. Please sync work items first." />
     }
     else
     {

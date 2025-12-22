@@ -2,7 +2,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
-@inject MetricsClient MetricsClient
+@inject IMetricsClient MetricsClient
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 
@@ -16,16 +16,12 @@
         Visual capacity planning showing effort distribution across area paths and iterations
     </MudText>
 
-    @if (_isLoading)
+    <LoadingIndicator IsLoading="@_isLoading" />
+    
+    @if (!_isLoading && _distributionData == null)
     {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
-    }
-    else if (_distributionData == null)
-    {
-        <MudAlert Severity="Severity.Info" Class="my-7">
-            <MudText Typo="Typo.h6" Class="mb-2">No Effort Distribution Data Available</MudText>
-            <MudText>No work items found to analyze. Please sync work items first.</MudText>
-        </MudAlert>
+        <EmptyStateDisplay Title="No Effort Distribution Data Available"
+                          Message="No work items found to analyze. Please sync work items first." />
     }
     else
     {
@@ -35,58 +31,25 @@
 
         <!-- Summary Cards -->
         <MudGrid Class="mb-6">
-            <MudItem xs="12" sm="6" md="3">
-                <MudCard Elevation="2">
-                    <MudCardContent>
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <div>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Effort</MudText>
-                                <MudText Typo="Typo.h5">@_distributionData.TotalEffort</MudText>
-                            </div>
-                            <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Large" Color="Color.Primary" />
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudCard Elevation="2">
-                    <MudCardContent>
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <div>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">Area Paths</MudText>
-                                <MudText Typo="Typo.h5">@_distributionData.EffortByArea.Count</MudText>
-                            </div>
-                            <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Large" Color="Color.Info" />
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudCard Elevation="2">
-                    <MudCardContent>
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <div>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">Iterations</MudText>
-                                <MudText Typo="Typo.h5">@_distributionData.EffortByIteration.Count</MudText>
-                            </div>
-                            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" Color="Color.Success" />
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudCard Elevation="2">
-                    <MudCardContent>
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <div>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">Avg Utilization</MudText>
-                                <MudText Typo="Typo.h5">@GetAverageUtilization()%</MudText>
-                            </div>
-                            <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Large" Color="@GetUtilizationColor()" />
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+            <MetricSummaryCard Label="Total Effort"
+                              Value="@_distributionData.TotalEffort.ToString()"
+                              Icon="@Icons.Material.Filled.Assignment"
+                              IconColor="Color.Primary" />
+            
+            <MetricSummaryCard Label="Area Paths"
+                              Value="@_distributionData.EffortByArea.Count.ToString()"
+                              Icon="@Icons.Material.Filled.FolderOpen"
+                              IconColor="Color.Info" />
+            
+            <MetricSummaryCard Label="Iterations"
+                              Value="@_distributionData.EffortByIteration.Count.ToString()"
+                              Icon="@Icons.Material.Filled.CalendarMonth"
+                              IconColor="Color.Success" />
+            
+            <MetricSummaryCard Label="Avg Utilization"
+                              Value="@($"{GetAverageUtilization()}%")"
+                              Icon="@Icons.Material.Filled.Speed"
+                              IconColor="@GetUtilizationColor()" />
         </MudGrid>
 
         <!-- Filters -->

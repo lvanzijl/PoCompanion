@@ -3,7 +3,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
-@inject WorkItemsClient WorkItemsClient
+@inject IWorkItemsClient WorkItemsClient
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
@@ -37,10 +37,7 @@
         </MudStack>
     </MudPaper>
 
-    @if (_isLoading)
-    {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
-    }
+    <LoadingIndicator IsLoading="@_isLoading" />
     else if (_timelineData != null)
     {
         <ErrorDisplay ErrorResponse="@_errorResponse" 
