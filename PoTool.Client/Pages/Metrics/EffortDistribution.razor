@@ -2,6 +2,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
+@using static PoTool.Client.Components.Common.PageHelp
 @inject IMetricsClient MetricsClient
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
@@ -9,6 +10,19 @@
 <PageTitle>Effort Distribution Heat Map</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    
+    <!-- Context-Aware Help -->
+    <PageHelp Title="Effort Distribution Heat Map Guide"
+              Description="Visual capacity planning tool showing effort distribution across area paths and iterations. Use color-coded heat map to identify over/under-allocated teams and balance workload across sprints for sustainable delivery."
+              Class="mb-4"
+              DataRequirements="@_distributionDataRequirements"
+              BestPractices="@_distributionBestPractices"
+              CommonIssues="@_distributionCommonIssues">
+        <MudAlert Severity="Severity.Success" Dense="true" Class="mt-2">
+            <strong>Capacity Target:</strong> Aim for 75-85% capacity utilization (green zone). This provides buffer for unexpected work, code reviews, meetings, and prevents team burnout.
+        </MudAlert>
+    </PageHelp>
+    
     <MudText Typo="Typo.h4" GutterBottom="true">
         <MudIcon Icon="@Icons.Material.Filled.GridOn" Class="mr-2" /> Effort Distribution Heat Map
     </MudText>
@@ -359,4 +373,69 @@
             .Select(a => GetShortAreaPath(a.AreaPath))
             .ToArray();
     }
+
+    private List<DataRequirement> _distributionDataRequirements = new()
+    {
+        new DataRequirement 
+        { 
+            Field = "Iteration Path", 
+            Description = "Required to group work items by sprint for horizontal distribution",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Area Path", 
+            Description = "Required to group work items by team/component for vertical distribution",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Effort (Story Points)", 
+            Description = "Used to calculate total effort and capacity utilization percentages",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "State", 
+            Description = "Optional - filter to only planned work (not completed) for future sprints",
+            IsRequired = false 
+        }
+    };
+
+    private List<string> _distributionBestPractices = new()
+    {
+        "Plan to 80-85% of team capacity to allow buffer for unexpected work",
+        "Never plan to 100% capacity - leaves no room for bugs, meetings, or learning",
+        "Balance work evenly across sprints - avoid spike patterns",
+        "Under-utilized teams (<60%) may indicate incorrect capacity or need more work",
+        "Over-allocated sprints (>95%) should be rebalanced before sprint starts",
+        "Review heat map 2-3 sprints ahead during planning",
+        "Infrastructure/support teams typically run at 50-70% (on-call time)",
+        "Development teams should target 75-85% for sustainable pace"
+    };
+
+    private List<CommonIssue> _distributionCommonIssues = new()
+    {
+        new CommonIssue 
+        { 
+            Problem = "One sprint showing red (>95% utilization)",
+            Solution = "Move 10-15% of work to adjacent sprints. Prioritize must-have items and defer nice-to-have features to later sprints."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Consistent under-utilization (<60%) across all areas",
+            Solution = "Review if capacity settings are too high. Increase planned work or evaluate team size. May also indicate overly conservative estimates."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Uneven distribution between areas",
+            Solution = "May indicate uneven team sizes or work allocation. Consider cross-training team members or redistributing work across areas."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Volatile utilization (30%, 90%, 40%, 95%)",
+            Solution = "Indicates poor sprint planning. Level workload across sprints. Use rolling wave planning to maintain consistent utilization."
+        }
+    };
 }
+

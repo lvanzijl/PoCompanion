@@ -2,6 +2,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
+@using static PoTool.Client.Components.Common.PageHelp
 @inject IWorkItemsClient WorkItemsClient
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
@@ -9,6 +10,19 @@
 <PageTitle>Dependency Chain Visualization</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    
+    <!-- Context-Aware Help -->
+    <PageHelp Title="Dependency Chain Visualization Guide"
+              Description="Visualize work item dependencies and hierarchical relationships. Identify critical paths, blocking items, and complex dependency chains. This helps with release planning, risk identification, and understanding work sequencing."
+              Class="mb-4"
+              DataRequirements="@_dependencyDataRequirements"
+              BestPractices="@_dependencyBestPractices"
+              CommonIssues="@_dependencyCommonIssues">
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
+            <strong>Dependency Types:</strong> Azure DevOps supports parent-child (hierarchy), predecessor-successor (blocks), and related links. Use predecessor links ("A blocks B") to make dependencies explicit for better visibility.
+        </MudAlert>
+    </PageHelp>
+    
     <MudText Typo="Typo.h4" GutterBottom="true">
         <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-2" /> Dependency Chain Visualization
     </MudText>
@@ -293,4 +307,69 @@
             _ => Color.Default
         };
     }
+
+    private List<DataRequirement> _dependencyDataRequirements = new()
+    {
+        new DataRequirement 
+        { 
+            Field = "Parent-Child Links", 
+            Description = "Automatically created hierarchy relationships (Epic → Feature → PBI)",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Related Links", 
+            Description = "Manual dependency links like 'Predecessor' (blocks) or 'Related' for explicit dependencies",
+            IsRequired = false 
+        },
+        new DataRequirement 
+        { 
+            Field = "State", 
+            Description = "Used to identify blocking items and critical path bottlenecks",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Effort (Story Points)", 
+            Description = "Required for critical path calculation and effort roll-up across chains",
+            IsRequired = true 
+        }
+    };
+
+    private List<string> _dependencyBestPractices = new()
+    {
+        "Keep dependency chains shallow (max 4-5 levels) to reduce complexity",
+        "Use predecessor links ('blocks') to make blocking dependencies explicit",
+        "Identify and prioritize items that block multiple others (high blocker impact)",
+        "Critical path length determines minimum release time - plan accordingly",
+        "Minimize cross-team dependencies where possible for faster delivery",
+        "Review dependency graph during release planning to identify risks",
+        "Break circular dependencies immediately - they create deadlocks",
+        "Items blocking 3+ others should be highest priority"
+    };
+
+    private List<CommonIssue> _dependencyCommonIssues = new()
+    {
+        new CommonIssue 
+        { 
+            Problem = "Very long dependency chains (>5 levels)",
+            Solution = "Break down large work items into smaller, more independent pieces. Look for opportunities to parallelize work and reduce sequential dependencies."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Many items showing as blocking",
+            Solution = "This may indicate too many dependencies. Review if all dependencies are truly necessary. Consider refactoring work to reduce coupling between items."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Critical path much longer than expected",
+            Solution = "Look for opportunities to parallelize work, reduce sequential dependencies, or increase team capacity on critical path items."
+        },
+        new CommonIssue 
+        { 
+            Problem = "No dependencies visible despite having hierarchy",
+            Solution = "Ensure parent-child links are properly set in TFS. For blocking dependencies, explicitly add predecessor links using 'Add Link' in work item."
+        }
+    };
 }
+
