@@ -186,4 +186,33 @@ public class WorkItemsController : ControllerBase
             return StatusCode(500, "Error retrieving goal hierarchy");
         }
     }
+
+    /// <summary>
+    /// Gets historical state timeline for a specific work item showing state transitions and bottlenecks.
+    /// </summary>
+    /// <param name="id">Work item TFS ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Work item state timeline or 404 if work item not found</returns>
+    [HttpGet("{id:int}/state-timeline")]
+    public async Task<ActionResult<WorkItemStateTimelineDto>> GetStateTimeline(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var timeline = await _mediator.Send(new GetWorkItemStateTimelineQuery(id), cancellationToken);
+            
+            if (timeline == null)
+            {
+                return NotFound($"Work item with ID {id} not found");
+            }
+
+            return Ok(timeline);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving state timeline for work item ID: {WorkItemId}", id);
+            return StatusCode(500, "Error retrieving work item state timeline");
+        }
+    }
 }

@@ -596,6 +596,20 @@ namespace PoTool.Client.ApiClient
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<VelocityTrendDto> GetVelocityTrendAsync(string? areaPath, int? maxSprints, System.Threading.CancellationToken cancellationToken);
 
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<BacklogHealthDto> GetBacklogHealthAsync(string? iterationPath);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<BacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(string? areaPath, int? maxIterations);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -788,6 +802,174 @@ namespace PoTool.Client.ApiClient
                         if (status_ == 200)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<VelocityTrendDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<BacklogHealthDto> GetBacklogHealthAsync(string? iterationPath)
+        {
+            return GetBacklogHealthAsync(iterationPath, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<BacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/Metrics/backlog-health"
+                    urlBuilder_.Append("api/Metrics/backlog-health");
+                    urlBuilder_.Append('?');
+                    if (iterationPath != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("iterationPath")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(iterationPath, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<BacklogHealthDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(string? areaPath, int? maxIterations)
+        {
+            return GetMultiIterationBacklogHealthAsync(areaPath, maxIterations, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/Metrics/multi-iteration-health"
+                    urlBuilder_.Append("api/Metrics/multi-iteration-health");
+                    urlBuilder_.Append('?');
+                    if (areaPath != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("areaPath")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(areaPath, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (maxIterations != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("maxIterations")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(maxIterations, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<MultiIterationBacklogHealthDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -2973,6 +3155,113 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("totalSprints")]
         public int TotalSprints { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class BacklogHealthDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
+        public string SprintName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalWorkItems")]
+        public int TotalWorkItems { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemsWithoutEffort")]
+        public int WorkItemsWithoutEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemsInProgressWithoutEffort")]
+        public int WorkItemsInProgressWithoutEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("parentProgressIssues")]
+        public int ParentProgressIssues { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("blockedItems")]
+        public int BlockedItems { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("inProgressAtIterationEnd")]
+        public int InProgressAtIterationEnd { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationStart")]
+        public System.DateTimeOffset? IterationStart { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationEnd")]
+        public System.DateTimeOffset? IterationEnd { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("validationIssues")]
+        public System.Collections.Generic.ICollection<ValidationIssueSummary> ValidationIssues { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ValidationIssueSummary
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("validationType")]
+        public string ValidationType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("count")]
+        public int Count { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("affectedWorkItemIds")]
+        public System.Collections.Generic.ICollection<int> AffectedWorkItemIds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class MultiIterationBacklogHealthDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationHealth")]
+        public System.Collections.Generic.ICollection<BacklogHealthDto> IterationHealth { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("trend")]
+        public BacklogHealthTrend Trend { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalWorkItems")]
+        public int TotalWorkItems { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalIssues")]
+        public int TotalIssues { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class BacklogHealthTrend
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("effortTrend")]
+        public TrendDirection EffortTrend { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("validationTrend")]
+        public TrendDirection ValidationTrend { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("blockerTrend")]
+        public TrendDirection BlockerTrend { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("summary")]
+        public string Summary { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum TrendDirection
+    {
+
+        Improving = 0,
+
+        Stable = 1,
+
+        Degrading = 2,
+
+        Unknown = 3,
 
     }
 
