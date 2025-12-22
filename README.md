@@ -1,6 +1,6 @@
 # PO Tool
 
-A Product Owner companion tool for managing work items (Epics, Features, PBIs) from Azure DevOps/TFS.
+A Product Owner companion tool for managing work items (Goal → Objective → Epic → Feature → PBI → Task) from Azure DevOps/TFS.
 
 ## Architecture
 
@@ -78,7 +78,7 @@ The application uses SQLite for local caching:
 
 The Work Item Tree feature (as described in `features/Simple_workitem_explorer.md`) provides:
 
-1. **Hierarchical View** - Display Epics → Features → PBIs
+1. **Hierarchical View** - Display Goal → Objective → Epic → Feature → PBI → Task
 2. **Local Caching** - SQLite-based caching for offline access
 3. **Pull & Cache** - Manual sync button to retrieve work items from TFS
 4. **Search & Filter** - Filter work items by title

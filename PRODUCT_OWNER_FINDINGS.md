@@ -10,7 +10,7 @@ Based on code analysis of the PO Companion application, this document outlines f
 
 **Current Capabilities**:
 - Full sync and incremental sync from TFS/Azure DevOps
-- Hierarchical tree view (Epics → Features → PBIs)
+- Hierarchical tree view (Goal → Objective → Epic → Feature → PBI → Task)
 - Text-based filtering
 - Validation filters (parent progress, missing effort)
 - Keyboard navigation (Arrow keys, Enter, Space)

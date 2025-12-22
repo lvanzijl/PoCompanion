@@ -6,7 +6,7 @@
 ## What is PoCompanion?
 
 PoCompanion is a desktop application that helps Product Owners manage and understand their Azure DevOps work items and pull requests. It provides:
-- Hierarchical view of work items (Goals → Objectives → Epics → Features → PBIs)
+- Hierarchical view of work items (Goal → Objective → Epic → Feature → PBI → Task)
 - Local caching for offline work
 - Work item validation rules
 - Pull request analytics and insights
@@ -19,7 +19,7 @@ PoCompanion is a desktop application that helps Product Owners manage and unders
 **Purpose**: View and navigate work items hierarchically
 
 **Features**:
-- Three-level hierarchy display (Epics → Features → PBIs)
+- Six-level hierarchy display (Goal → Objective → Epic → Feature → PBI → Task)
 - Local SQLite caching for performance
 - Search and filter by title
 - Real-time sync status via SignalR

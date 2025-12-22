@@ -1,8 +1,8 @@
-## Feature: Work Item Tree (Epics → Features → PBIs)
+## Feature: Work Item Tree (Goal → Objective → Epic → Feature → PBI → Task)
 
 ### Goal
 
-Provide a hierarchical view of all work items (Epics, Features, PBIs) under a user-configured Area Path, with local caching, inline search filtering, highlight of matched text, and a globally accessible pull-and-cache command.
+Provide a hierarchical view of all work items (Goal, Objective, Epic, Feature, PBI, Task) under a user-configured Area Path, with local caching, inline search filtering, highlight of matched text, and a globally accessible pull-and-cache command.
 This feature must explicitly reference and comply with:
 
 * `docs/ux-principles.md`
@@ -19,7 +19,7 @@ The configuration dialog defines the scope and access parameters for work item r
 It contains:
 
 1. **Area Path Selector**
-   Field for specifying the base Area Path to collect all Epics, Features, and PBIs.
+   Field for specifying the base Area Path to collect all work items in the hierarchy (Goal, Objective, Epic, Feature, PBI, Task).
 
 2. **Personal Access Token (PAT)**
    Secure input field.
@@ -46,7 +46,7 @@ Within this menu bar is a **directly accessible button** for retrieving and cach
 
 ### Behavior
 
-* On click, the tool retrieves all Epics, Features, PBIs under the configured Area Path.
+* On click, the tool retrieves all work items under the configured Area Path following the 6-level hierarchy (Goal → Objective → Epic → Feature → PBI → Task).
 * Data is stored locally in SQLite, replacing previous cache atomically.
 * Any view relying on cached data re-renders after completion.
 * All communication paths, caching strategies, and component boundaries must follow `docs/ARCHITECTURE_RULES.md`.
@@ -57,13 +57,14 @@ Within this menu bar is a **directly accessible button** for retrieving and cach
 
 ### Structure
 
-Three-level hierarchy:
+Six-level hierarchy:
 
-* **Epic**
-
-  * **Feature**
-
-    * **PBI**
+* **Goal**
+  * **Objective**
+    * **Epic**
+      * **Feature**
+        * **PBI**
+          * **Task**
 
 ### Search Filter
 

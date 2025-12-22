@@ -11,7 +11,7 @@ public class TreeNode
     public int Id { get; set; }
 
     /// <summary>
-    /// The type of work item (Epic, Feature, User Story, etc.).
+    /// The type of work item (Goal, Objective, Epic, Feature, Product Backlog Item, Task).
     /// </summary>
     public string Type { get; set; } = string.Empty;
 
