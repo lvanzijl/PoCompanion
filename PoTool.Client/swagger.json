@@ -214,6 +214,139 @@
         }
       }
     },
+    "/api/Metrics/effort-distribution": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetEffortDistribution",
+        "parameters": [
+          {
+            "name": "areaPathFilter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "maxIterations",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            },
+            "x-position": 2
+          },
+          {
+            "name": "defaultCapacity",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffortDistributionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Metrics/capacity-plan": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetSprintCapacityPlan",
+        "parameters": [
+          {
+            "name": "iterationPath",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "defaultCapacity",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SprintCapacityPlanDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Metrics/epic-forecast/{epicId}": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetEpicForecast",
+        "parameters": [
+          {
+            "name": "epicId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "maxSprintsForVelocity",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 5
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EpicCompletionForecastDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/PullRequests": {
       "get": {
         "tags": [
@@ -490,6 +623,48 @@
         }
       }
     },
+    "/api/PullRequests/review-bottleneck": {
+      "get": {
+        "tags": [
+          "PullRequests"
+        ],
+        "operationId": "PullRequests_GetReviewBottleneck",
+        "parameters": [
+          {
+            "name": "maxPRs",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 100
+            },
+            "x-position": 1
+          },
+          {
+            "name": "daysBack",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 30
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PRReviewBottleneckDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Settings": {
       "get": {
         "tags": [
@@ -752,6 +927,186 @@
           }
         }
       }
+    },
+    "/api/WorkItems/{id}/state-timeline": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetStateTimeline",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkItemStateTimelineDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/WorkItems/advanced-filter": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetAdvancedFiltered",
+        "parameters": [
+          {
+            "name": "typeFilter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "stateFilter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "iterationPathFilter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 3
+          },
+          {
+            "name": "areaPathFilter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 4
+          },
+          {
+            "name": "minEffort",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 5
+          },
+          {
+            "name": "maxEffort",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 6
+          },
+          {
+            "name": "hasValidationIssues",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "nullable": true
+            },
+            "x-position": 7
+          },
+          {
+            "name": "isBlocked",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "nullable": true
+            },
+            "x-position": 8
+          },
+          {
+            "name": "titleSearch",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 9
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkItemDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/WorkItems/dependency-graph": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetDependencyGraph",
+        "parameters": [
+          {
+            "name": "areaPathFilter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "workItemIds",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DependencyGraphDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -989,6 +1344,341 @@
           3
         ]
       },
+      "EffortDistributionDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "effortByArea": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EffortByAreaPath"
+            }
+          },
+          "effortByIteration": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EffortByIteration"
+            }
+          },
+          "heatMapData": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EffortHeatMapCell"
+            }
+          },
+          "totalEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "analysisTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "EffortByAreaPath": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "areaPath": {
+            "type": "string"
+          },
+          "totalEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageEffortPerItem": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "EffortByIteration": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "iterationPath": {
+            "type": "string"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "totalEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "utilizationPercentage": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "EffortHeatMapCell": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "areaPath": {
+            "type": "string"
+          },
+          "iterationPath": {
+            "type": "string"
+          },
+          "effort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CapacityStatus"
+          }
+        }
+      },
+      "CapacityStatus": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Unknown",
+          "Underutilized",
+          "Normal",
+          "NearCapacity",
+          "OverCapacity"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "SprintCapacityPlanDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "iterationPath": {
+            "type": "string"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "totalPlannedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCapacity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "utilizationPercentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CapacityStatus"
+          },
+          "teamCapacities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberCapacity"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CapacityWarning"
+            }
+          },
+          "analysisTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TeamMemberCapacity": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "memberName": {
+            "type": "string"
+          },
+          "assignedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "availableCapacity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "utilizationPercentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CapacityStatus"
+          }
+        }
+      },
+      "CapacityWarning": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "level": {
+            "$ref": "#/components/schemas/WarningLevel"
+          },
+          "message": {
+            "type": "string"
+          },
+          "affectedMembers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "WarningLevel": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Info",
+          "Warning",
+          "Critical"
+        ],
+        "enum": [
+          0,
+          1,
+          2
+        ]
+      },
+      "EpicCompletionForecastDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "epicId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "totalEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "remainingEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "estimatedVelocity": {
+            "type": "number",
+            "format": "double"
+          },
+          "sprintsRemaining": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "estimatedCompletionDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "confidence": {
+            "$ref": "#/components/schemas/ForecastConfidence"
+          },
+          "forecastByDate": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SprintForecast"
+            }
+          },
+          "areaPath": {
+            "type": "string"
+          },
+          "analysisTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ForecastConfidence": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Low",
+          "Medium",
+          "High"
+        ],
+        "enum": [
+          0,
+          1,
+          2
+        ]
+      },
+      "SprintForecast": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sprintName": {
+            "type": "string"
+          },
+          "iterationPath": {
+            "type": "string"
+          },
+          "sprintStartDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sprintEndDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expectedCompletedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "remainingEffortAfterSprint": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "progressPercentage": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "PullRequestDto": {
         "type": "object",
         "additionalProperties": false,
@@ -1205,6 +1895,133 @@
           "linesModified": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "PRReviewBottleneckDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reviewerPerformances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewerPerformance"
+            }
+          },
+          "pRsWaitingLongest": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PRWaitingForReview"
+            }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ReviewMetricsSummary"
+          },
+          "analysisTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ReviewerPerformance": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reviewerName": {
+            "type": "string"
+          },
+          "totalReviewsAssigned": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reviewsCompleted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageResponseTimeHours": {
+            "type": "number",
+            "format": "double"
+          },
+          "medianResponseTimeHours": {
+            "type": "number",
+            "format": "double"
+          },
+          "pRsWaitingForReview": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReviewerStatus"
+          }
+        }
+      },
+      "ReviewerStatus": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Fast",
+          "Normal",
+          "Slow",
+          "Bottleneck"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "PRWaitingForReview": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pullRequestId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "hoursWaiting": {
+            "type": "number",
+            "format": "double"
+          },
+          "pendingReviewers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ReviewMetricsSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "averageTimeToFirstReviewHours": {
+            "type": "number",
+            "format": "double"
+          },
+          "averageTimeToCompleteReviewsHours": {
+            "type": "number",
+            "format": "double"
+          },
+          "totalPRsPendingReview": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bottleneckReviewer": {
+            "type": "string"
+          },
+          "fastestReviewer": {
+            "type": "string"
           }
         }
       },
@@ -1438,6 +2255,252 @@
             "nullable": true
           }
         }
+      },
+      "WorkItemStateTimelineDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "stateHistory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StateTransition"
+            }
+          },
+          "bottlenecks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimelineBottleneck"
+            }
+          },
+          "totalTimeInProgress": {
+            "type": "string",
+            "format": "duration"
+          },
+          "totalCycleTime": {
+            "type": "string",
+            "format": "duration"
+          },
+          "analysisTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "StateTransition": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fromState": {
+            "type": "string"
+          },
+          "toState": {
+            "type": "string"
+          },
+          "transitionDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "changedBy": {
+            "type": "string"
+          },
+          "timeInPreviousState": {
+            "type": "string",
+            "format": "duration"
+          }
+        }
+      },
+      "TimelineBottleneck": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "type": "string"
+          },
+          "timeSpent": {
+            "type": "string",
+            "format": "duration"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/BottleneckSeverity"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "BottleneckSeverity": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Low",
+          "Medium",
+          "High",
+          "Critical"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "DependencyGraphDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DependencyNode"
+            }
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DependencyLink"
+            }
+          },
+          "criticalPaths": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DependencyChain"
+            }
+          },
+          "blockedWorkItemIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "analysisTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DependencyNode": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "effort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "dependencyCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dependentCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isBlocking": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DependencyLink": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sourceWorkItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "targetWorkItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "linkType": {
+            "$ref": "#/components/schemas/DependencyLinkType"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "DependencyLinkType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "RelatedTo",
+          "DependsOn",
+          "Blocks",
+          "Parent",
+          "Child"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "DependencyChain": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "totalEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "chainLength": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "riskLevel": {
+            "$ref": "#/components/schemas/DependencyChainRisk"
+          }
+        }
+      },
+      "DependencyChainRisk": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Low",
+          "Medium",
+          "High",
+          "Critical"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
       }
     }
   }

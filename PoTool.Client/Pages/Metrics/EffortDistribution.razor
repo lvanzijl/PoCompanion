@@ -232,19 +232,19 @@
                     <MudTd DataLabel="Status">
                         @if (context.UtilizationPercentage > 100)
                         {
-                            <MudChip Size="Size.Small" Color="Color.Error">Overcommitted</MudChip>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error">Overcommitted</MudChip>
                         }
                         else if (context.UtilizationPercentage > 90)
                         {
-                            <MudChip Size="Size.Small" Color="Color.Warning">Near Capacity</MudChip>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">Near Capacity</MudChip>
                         }
                         else if (context.UtilizationPercentage > 70)
                         {
-                            <MudChip Size="Size.Small" Color="Color.Success">Normal</MudChip>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success">Normal</MudChip>
                         }
                         else
                         {
-                            <MudChip Size="Size.Small" Color="Color.Info">Underutilized</MudChip>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">Underutilized</MudChip>
                         }
                     </MudTd>
                 </RowTemplate>

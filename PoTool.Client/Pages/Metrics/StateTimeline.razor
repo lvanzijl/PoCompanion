@@ -80,7 +80,7 @@
                 <MudStack Spacing="2">
                     @foreach (var bottleneck in _timelineData.Bottlenecks.OrderByDescending(b => b.Severity))
                     {
-                        <MudChip Size="Size.Medium" 
+                        <MudChip T="string" Size="Size.Medium" 
                                  Color="@GetSeverityColor(bottleneck.Severity)"
                                  Icon="@Icons.Material.Filled.Warning">
                             <strong>@bottleneck.State:</strong> @FormatTimeSpan(bottleneck.TimeSpent) - @bottleneck.Reason
