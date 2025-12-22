@@ -132,5 +132,6 @@ public class SettingsControllerSteps
         CollectionAssert.AreEqual(expectedIds, _settings.ConfiguredGoalIds);
     }
 
-    // Response status checks use CommonSteps.ThenTheResponseShouldBe
+    // HTTP response status validation is handled by CommonSteps.ThenTheResponseShouldBe
+    // to maintain consistency across all test files and avoid duplicate step definitions.
 }

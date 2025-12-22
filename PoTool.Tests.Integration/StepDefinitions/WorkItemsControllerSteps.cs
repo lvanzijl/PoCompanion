@@ -258,8 +258,9 @@ public class WorkItemsControllerSteps
     [Given(@"work item revisions exist")]
     public Task GivenWorkItemRevisionsExist(Table table)
     {
-        // Mock TFS client already provides revision data
-        // This step is just for documentation in the feature file
+        // Mock TFS client is pre-configured to return revision data for all work item IDs
+        // This step is present for documentation in the feature file to make the test scenario clear
+        // The MockTfsClient.GetWorkItemRevisionsAsync() method returns 3 mock revisions for any work item ID
         return Task.CompletedTask;
     }
 

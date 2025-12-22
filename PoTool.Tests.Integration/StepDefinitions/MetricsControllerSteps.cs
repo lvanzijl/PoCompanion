@@ -55,11 +55,10 @@ public class MetricsControllerSteps
                 workItem.Effort = int.Parse(row["Effort"]);
             }
 
-            if (row.ContainsKey("AssignedTo") && !string.IsNullOrWhiteSpace(row["AssignedTo"]))
-            {
-                // Note: WorkItemEntity doesn't have AssignedTo field
-                // This info comes from JsonPayload in real implementation
-            }
+            // Note: WorkItemEntity doesn't have an AssignedTo field as a direct property.
+            // In the real system, AssignedTo data is stored in the JsonPayload field.
+            // For these tests, the AssignedTo information is not critical to the metrics calculations
+            // being tested, so we omit it to keep tests focused and simple.
 
             dbContext.WorkItems.Add(workItem);
         }
