@@ -23,13 +23,13 @@
     /// The label text displayed at the top of the card.
     /// </summary>
     [Parameter, EditorRequired]
-    public string Label { get; set; } = null!;
+    public string Label { get; set; } = string.Empty;
 
     /// <summary>
     /// The main value displayed prominently in the card.
     /// </summary>
     [Parameter, EditorRequired]
-    public string Value { get; set; } = null!;
+    public string Value { get; set; } = string.Empty;
 
     /// <summary>
     /// Optional sub-label text displayed below the value.
