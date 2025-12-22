@@ -794,6 +794,1037 @@ Voor accurate velocity metrics, zorg dat work items hebben:
 
 ---
 
+### Backlog Health Dashboard
+
+Monitor de gezondheid van uw backlog over meerdere iteraties en identificeer trends en problemen vroegtijdig.
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════╗
+║  Backlog Health Dashboard                                           🔄 Refresh    ║
+╠═══════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                    ║
+║  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            ║
+║  │ Total       │  │ Total       │  │ Area Paths  │  │ Iterations  │            ║
+║  │ Work Items  │  │ Issues      │  │ Analyzed    │  │ Tracked     │            ║
+║  │    425      │  │     23      │  │      8      │  │      6      │            ║
+║  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘            ║
+║                                                                                    ║
+║  Trend Summary: Health improving across recent sprints                            ║
+║  ├─ 📈 Effort Trend: Stable                                                       ║
+║  └─ 📉 Validation Trend: Improving                                                ║
+║                                                                                    ║
+║ ┌── Health per Sprint ─────────────────────────────────────────────────────────┐  ║
+║ │  Sprint      │ Work Items │ Issues │ Health %│ Trend                         │  ║
+║ │ ─────────────┼────────────┼────────┼─────────┼─────────                      │  ║
+║ │  Sprint 12   │    85      │   2    │   98%   │ ✅ Excellent                  │  ║
+║ │  Sprint 11   │    78      │   4    │   95%   │ ✅ Good                       │  ║
+║ │  Sprint 10   │    72      │   8    │   89%   │ ⚠️ Fair                       │  ║
+║ │  Sprint 9    │    68      │   5    │   93%   │ ✅ Good                       │  ║
+║ │  Sprint 8    │    65      │   9    │   86%   │ ⚠️ Fair                       │  ║
+║ │  Sprint 7    │    57      │   12   │   79%   │ ❌ Needs Attention            │  ║
+║ └───────────────────────────────────────────────────────────────────────────────┘  ║
+║                                                                                    ║
+║ ┌── Issue Types Breakdown ──────────────────────────────────────────────────────┐  ║
+║ │  Missing Effort:        ████████ 35% (8 items)                                │  ║
+║ │  Parent Progress Issue: ██████ 26% (6 items)                                  │  ║
+║ │  Missing Iteration:     █████ 22% (5 items)                                   │  ║
+║ │  Other Issues:          ████ 17% (4 items)                                    │  ║
+║ └───────────────────────────────────────────────────────────────────────────────┘  ║
+╚═══════════════════════════════════════════════════════════════════════════════════╝
+```
+
+**Belangrijkste Functies:**
+
+1. **Multi-Iteratie Analyse:**
+   - Track backlog health over meerdere sprints
+   - Identificeer trends en patronen
+   - Zie verbetering of verslechtering in de tijd
+
+2. **Health Score:**
+   ```
+   Health Score Berekening:
+   ─────────────────────────
+   100% = Geen issues
+    90%+ = Excellent (✅)
+    80-89% = Good (✅)
+    70-79% = Fair (⚠️)
+    <70% = Needs Attention (❌)
+   
+   Health = (Items zonder issues / Totaal items) × 100
+   ```
+
+3. **Issue Categorisatie:**
+   - **Missing Effort:** Items zonder effort estimate
+   - **Parent Progress Issue:** Parent-child state inconsistenties
+   - **Missing Iteration:** Items zonder sprint toewijzing
+   - **Other Issues:** Overige validatieproblemen
+
+**Vereiste TFS Data:**
+
+Voor een accurate Backlog Health analyse moet de volgende data aanwezig zijn in TFS:
+
+```
+╔═══════════════════════════════════════════════════════════╗
+║  Veld              │ Vereist │ Gebruikt voor              ║
+╠═══════════════════════════════════════════════════════════╣
+║  Iteration Path    │    ✓    │ Sprint groepering          ║
+║  Effort (SP)       │    ✓    │ Detectie missing effort    ║
+║  State             │    ✓    │ Parent-child validatie     ║
+║  Parent Link       │    ✓    │ Hiërarchie validatie       ║
+║  Area Path         │    ○    │ Optioneel voor filtering   ║
+║  Type              │    ✓    │ Work item classificatie    ║
+╚═══════════════════════════════════════════════════════════╝
+
+Legenda: ✓ = Verplicht, ○ = Optioneel
+```
+
+**Data Kwaliteit Impact:**
+
+```
+Scenario 1: Incomplete Effort Data
+┌──────────────────────────────────────────────────────┐
+│ Probleem: 15 PBIs in "In Progress" zonder effort    │
+│ Impact:   Health score daalt van 95% naar 82%       │
+│ Oplossing: Vul effort in voor "In Progress" items   │
+└──────────────────────────────────────────────────────┘
+
+Scenario 2: Missing Iteration Paths
+┌──────────────────────────────────────────────────────┐
+│ Probleem: 20 items zonder iteration path            │
+│ Impact:   Items niet zichtbaar in sprint analyse    │
+│ Oplossing: Wijs items toe aan sprints               │
+└──────────────────────────────────────────────────────┘
+
+Scenario 3: Parent-Child Inconsistency
+┌──────────────────────────────────────────────────────┐
+│ Probleem: Child "In Progress", parent "New"         │
+│ Impact:   Workflow inconsistentie, health issues    │
+│ Oplossing: Update parent state naar "In Progress"   │
+└──────────────────────────────────────────────────────┘
+```
+
+**Trends Interpretatie:**
+
+```
+Trend Indicators:
+─────────────────
+📈 Improving   - Health score stijgt over tijd
+📊 Stable      - Health score consistent
+📉 Declining   - Health score daalt over tijd
+⚠️ Volatile    - Grote schommelingen tussen sprints
+```
+
+**Best Practices:**
+
+1. **Wekelijkse Review:**
+   - Check health dashboard elke sprint planning
+   - Identificeer issues vroeg
+   - Fix issues voordat sprint start
+
+2. **Trend Monitoring:**
+   - Monitor trends over 3-4 sprints
+   - Declining trends → Proces review nodig
+   - Stable trends → Goede discipline
+
+3. **Issue Resolution:**
+   - Prioriteer "Missing Effort" issues
+   - Fix parent-child inconsistenties direct
+   - Wijs items toe aan juiste sprint
+
+**Tips:**
+- ✓ Health score van 90%+ is uitstekend
+- ✓ Declining trends vroeg detecteren voorkomt problemen
+- ✓ Fix issues direct in Azure DevOps en sync
+- ✓ Gebruik voor sprint readiness checks
+
+---
+
+### Dependency Graph Visualization
+
+Visualiseer afhankelijkheden tussen work items en identificeer kritieke paden en blokkerende relaties.
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════╗
+║  Dependency Chain Visualization                                                   ║
+╠═══════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                    ║
+║  [Area Path Filter: Web/Frontend     ] [Work Item IDs: 12345, 12348] [Load]     ║
+║                                                                                    ║
+║  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            ║
+║  │ Total       │  │ Chains      │  │ Critical    │  │ Blocking    │            ║
+║  │ Nodes       │  │ Found       │  │ Paths       │  │ Items       │            ║
+║  │     42      │  │      8      │  │      3      │  │      5      │            ║
+║  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘            ║
+║                                                                                    ║
+║ ┌── Dependency Chains ──────────────────────────────────────────────────────────┐  ║
+║ │                                                                                │  ║
+║ │  Chain 1: Epic → Feature → PBI (Length: 3)                                    │  ║
+║ │  ┌────────────────────────────────────────────────────────────────────┐       │  ║
+║ │  │  [Epic] E-Commerce Platform (#12340) → [Feature] Shopping Cart      │       │  ║
+║ │  │    State: In Progress | Effort: 150 SP                              │       │  ║
+║ │  │    │                                                                 │       │  ║
+║ │  │    └─> [Feature] Cart Management (#12345) ⚠️ BLOCKING               │       │  ║
+║ │  │        State: In Progress | Effort: 50 SP                            │       │  ║
+║ │  │        │                                                             │       │  ║
+║ │  │        └─> [PBI] Add to Cart (#12348)                                │       │  ║
+║ │  │            State: New | Effort: 8 SP                                 │       │  ║
+║ │  └────────────────────────────────────────────────────────────────────┘       │  ║
+║ │                                                                                │  ║
+║ │  Chain 2: Critical Path (Length: 4) ❌                                         │  ║
+║ │  ┌────────────────────────────────────────────────────────────────────┐       │  ║
+║ │  │  [Epic] User Management → [Feature] Authentication                  │       │  ║
+║ │  │    → [PBI] Login → [Task] DB Schema                                 │       │  ║
+║ │  │  Total Effort: 45 SP | Estimated: 2 sprints                         │       │  ║
+║ │  └────────────────────────────────────────────────────────────────────┘       │  ║
+║ └────────────────────────────────────────────────────────────────────────────────┘  ║
+║                                                                                    ║
+║ ┌── Blocking Items Analysis ────────────────────────────────────────────────────┐  ║
+║ │  ID     │ Title              │ Blocks │ State        │ Action Required       │  ║
+║ │ ────────┼────────────────────┼────────┼──────────────┼──────────────────────│  ║
+║ │  12345  │ Cart Management    │   3    │ In Progress  │ ❌ Priority 1        │  ║
+║ │  12350  │ API Integration    │   2    │ New          │ ⚠️ Start ASAP        │  ║
+║ │  12367  │ DB Migration       │   4    │ Blocked      │ ❌ Unblock first     │  ║
+║ └────────────────────────────────────────────────────────────────────────────────┘  ║
+╚═══════════════════════════════════════════════════════════════════════════════════╝
+```
+
+**Belangrijkste Functies:**
+
+1. **Dependency Chain Detectie:**
+   - Automatische detectie van parent-child relaties
+   - Visualisatie van volledige dependency chains
+   - Identificatie van diepte en complexiteit
+
+2. **Critical Path Analyse:**
+   ```
+   Critical Path = Langste dependency chain
+   
+   Voorbeeld:
+   Epic (150 SP) → Feature (50 SP) → PBI (13 SP) → Task (5 SP)
+   Total: 218 SP
+   Met velocity 40 SP/sprint = ~6 sprints critical path
+   ```
+
+3. **Blocking Items Detectie:**
+   - Items die meerdere andere items blokkeren
+   - Impact analyse van blokkades
+   - Prioriteit indicatoren voor actie
+
+**Vereiste TFS Data:**
+
+Voor accurate dependency analyse moet de volgende data aanwezig zijn in TFS:
+
+```
+╔═══════════════════════════════════════════════════════════╗
+║  Veld              │ Vereist │ Gebruikt voor              ║
+╠═══════════════════════════════════════════════════════════╣
+║  Parent Link       │    ✓    │ Hiërarchie detectie        ║
+║  Related Links     │    ○    │ Dependency relaties        ║
+║  State             │    ✓    │ Blokkade detectie          ║
+║  Effort (SP)       │    ✓    │ Critical path berekening   ║
+║  Area Path         │    ○    │ Filtering en groepering    ║
+║  Iteration Path    │    ○    │ Sprint planning            ║
+║  Type              │    ✓    │ Chain structuur            ║
+╚═══════════════════════════════════════════════════════════╝
+
+Legenda: ✓ = Verplicht, ○ = Optioneel
+```
+
+**Dependency Types in TFS:**
+
+Azure DevOps ondersteunt verschillende link types voor dependencies:
+
+```
+Link Types:
+───────────
+1. Parent-Child (automatisch gedetecteerd)
+   Epic → Feature → PBI → Task
+
+2. Predecessor-Successor (handmatig)
+   PBI #123 "blocks" → PBI #124
+   
+3. Related (handmatig)
+   PBI #123 "relates to" → Bug #125
+
+Setup in Azure DevOps:
+─────────────────────
+1. Open work item
+2. Klik "Add link" in Related Work sectie
+3. Selecteer link type: "Predecessor"
+4. Zoek en selecteer dependent work item
+5. Save
+```
+
+**Critical Path Gebruik:**
+
+```
+Scenario: Release Planning
+──────────────────────────
+Epic: "New Payment Gateway" (200 SP)
+├─> Feature: "Payment API" (80 SP) ← Critical Path starts
+│   └─> PBI: "Stripe Integration" (21 SP)
+│       └─> Task: "API Keys Setup" (3 SP)
+├─> Feature: "Payment UI" (60 SP) (depends on Payment API)
+└─> Feature: "Testing" (40 SP) (depends on Payment UI)
+
+Critical Path Length: 80 + 60 + 40 = 180 SP
+Parallel Work: 20 SP (non-critical)
+Total: 200 SP
+
+Met velocity 40 SP/sprint:
+- Critical path: 180/40 = 4.5 sprints
+- Minimum release time: 5 sprints
+```
+
+**Blocking Items Impact:**
+
+```
+High Impact Blocker (blocks 3+ items):
+┌────────────────────────────────────────────────┐
+│ [Feature] Authentication (#12345)             │
+│ Blocks:                                        │
+│  ├─> PBI: User Login (#12346)                 │
+│  ├─> PBI: Password Reset (#12347)             │
+│  └─> PBI: User Profile (#12348)               │
+│                                                │
+│ Action: Prioritize #12345 to unblock 3 items  │
+│ Impact: 3 sprints delay if not started        │
+└────────────────────────────────────────────────┘
+```
+
+**Best Practices:**
+
+1. **Dependency Management:**
+   - Minimaliseer dependencies tussen teams
+   - Maak dependencies expliciet in TFS
+   - Review critical paths bij release planning
+
+2. **Blokkade Preventie:**
+   - Identificeer blocking items vroeg
+   - Prioriteer items met hoge blokkade impact
+   - Monitor blokkades wekelijks
+
+3. **Chain Optimalisatie:**
+   - Breek lange chains op waar mogelijk
+   - Parallelliseer werk waar mogelijk
+   - Reduce chain depth voor snellere delivery
+
+**Tips:**
+- ✓ Check dependency graph bij start van elke sprint
+- ✓ Blocking items met 3+ dependencies = hoogste prioriteit
+- ✓ Critical path bepaalt minimum release tijd
+- ✓ Use related links in TFS voor expliciete dependencies
+
+---
+
+### Epic/Feature Completion Forecast
+
+Voorspel wanneer een Epic of Feature voltooid zal zijn op basis van historische velocity data.
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════╗
+║  Epic/Feature Completion Forecast                                                 ║
+╠═══════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                    ║
+║  [Epic/Feature ID: 12340    ] [Historical Sprints: 5 ] [Calculate]               ║
+║                                                                                    ║
+║ ┌── Epic/Feature Details ───────────────────────────────────────────────────────┐  ║
+║ │                                                                                │  ║
+║ │  [Epic] E-Commerce Platform (#12340)                                          │  ║
+║ │  State: In Progress | Area: Web/Frontend                                      │  ║
+║ │                                                                                │  ║
+║ │  Total Effort: 250 story points                                               │  ║
+║ │  ├─ Completed: 120 SP (48%)                                                   │  ║
+║ │  └─ Remaining: 130 SP (52%)                                                   │  ║
+║ │                                                                                │  ║
+║ │  Child Work Items: 18 total                                                   │  ║
+║ │  ├─ Done: 8 items (44%)                                                       │  ║
+║ │  ├─ In Progress: 4 items (22%)                                                │  ║
+║ │  └─ Not Started: 6 items (34%)                                                │  ║
+║ │                                                                                │  ║
+║ └────────────────────────────────────────────────────────────────────────────────┘  ║
+║                                                                                    ║
+║ ┌── Velocity Analysis ──────────────────────────────────────────────────────────┐  ║
+║ │                                                                                │  ║
+║ │  Historical Velocity (last 5 sprints):                                        │  ║
+║ │  Sprint 12: 45 SP                                                             │  ║
+║ │  Sprint 11: 42 SP                                                             │  ║
+║ │  Sprint 10: 38 SP                                                             │  ║
+║ │  Sprint 9:  44 SP                                                             │  ║
+║ │  Sprint 8:  41 SP                                                             │  ║
+║ │                                                                                │  ║
+║ │  Average Velocity: 42 SP per sprint                                           │  ║
+║ │  Standard Deviation: ±3 SP                                                    │  ║
+║ │                                                                                │  ║
+║ └────────────────────────────────────────────────────────────────────────────────┘  ║
+║                                                                                    ║
+║ ┌── Completion Forecast ────────────────────────────────────────────────────────┐  ║
+║ │                                                                                │  ║
+║ │  Remaining Work: 130 SP                                                       │  ║
+║ │  Average Velocity: 42 SP/sprint                                               │  ║
+║ │                                                                                │  ║
+║ │  📊 Forecast:                                                                  │  ║
+║ │  ├─ Best Case (45 SP/sprint):  ~3 sprints (6 weeks)                          │  ║
+║ │  ├─ Likely Case (42 SP/sprint): ~4 sprints (8 weeks)  ⭐ Most probable       │  ║
+║ │  └─ Worst Case (38 SP/sprint):  ~4 sprints (8-9 weeks)                       │  ║
+║ │                                                                                │  ║
+║ │  📅 Estimated Completion: Sprint 16 (Mid February 2025)                       │  ║
+║ │  🎯 Confidence: 75% (based on consistent velocity)                            │  ║
+║ │                                                                                │  ║
+║ └────────────────────────────────────────────────────────────────────────────────┘  ║
+║                                                                                    ║
+║ ┌── Sprint-by-Sprint Projection ───────────────────────────────────────────────┐  ║
+║ │  Sprint │ Projected Work │ Cumulative │ Remaining │ Status                   │  ║
+║ │ ────────┼────────────────┼────────────┼───────────┼─────────────────         │  ║
+║ │  S13    │    42 SP       │   162 SP   │   88 SP   │ 🔄 Current               │  ║
+║ │  S14    │    42 SP       │   204 SP   │   46 SP   │ 📅 Next sprint           │  ║
+║ │  S15    │    42 SP       │   246 SP   │    4 SP   │ 📅 Planned               │  ║
+║ │  S16    │     4 SP       │   250 SP   │    0 SP   │ ✅ Completion!           │  ║
+║ └────────────────────────────────────────────────────────────────────────────────┘  ║
+╚═══════════════════════════════════════════════════════════════════════════════════╝
+```
+
+**Belangrijkste Functies:**
+
+1. **Velocity-Based Forecasting:**
+   - Gebruikt historische velocity data
+   - Berekent best/likely/worst case scenarios
+   - Geeft confidence level op basis van consistentie
+
+2. **Progress Tracking:**
+   ```
+   Progress Berekening:
+   ───────────────────
+   Total Effort: 250 SP
+   Completed: 120 SP
+   Remaining: 130 SP
+   
+   % Complete = (120 / 250) × 100 = 48%
+   
+   Met velocity 42 SP/sprint:
+   Remaining sprints = 130 / 42 = 3.1 sprints
+   ```
+
+3. **Sprint-by-Sprint Projection:**
+   - Detailleerde breakdown per sprint
+   - Cumulatieve effort tracking
+   - Remaining work per sprint
+
+**Vereiste TFS Data:**
+
+Voor accurate forecasting moet de volgende data aanwezig zijn in TFS:
+
+```
+╔═══════════════════════════════════════════════════════════╗
+║  Veld              │ Vereist │ Gebruikt voor              ║
+╠═══════════════════════════════════════════════════════════╣
+║  Effort (SP)       │    ✓    │ Total en remaining work    ║
+║  State             │    ✓    │ Completed vs remaining     ║
+║  Parent Link       │    ✓    │ Child work items ophalen   ║
+║  Iteration Path    │    ✓    │ Velocity berekening        ║
+║  Completed Date    │    ○    │ Historische velocity       ║
+║  Area Path         │    ○    │ Context informatie         ║
+╚═══════════════════════════════════════════════════════════╝
+
+Legenda: ✓ = Verplicht, ○ = Optioneel
+```
+
+**Data Kwaliteit voor Accurate Forecasts:**
+
+```
+✓ Alle child items hebben effort estimates
+✓ Historische sprints hebben consistente velocity
+✓ Completed items zijn gemarkeerd als "Done"
+✓ Iteration paths zijn correct ingevuld
+✓ Geen grote effort schommelingen tussen sprints
+
+Example Impact:
+──────────────
+Scenario A: Perfect Data
+- 5 sprints met velocity 40, 42, 41, 43, 40
+- Forecast: 4 sprints ± 0.5 sprints
+- Confidence: 90%
+
+Scenario B: Inconsistent Data  
+- 5 sprints met velocity 20, 50, 35, 45, 25
+- Forecast: 4 sprints ± 2 sprints
+- Confidence: 60%
+```
+
+**Forecasting Scenarios:**
+
+```
+Scenario 1: On-Track Epic
+──────────────────────────
+Total: 200 SP | Completed: 100 SP (50%)
+Velocity: 40 SP/sprint (consistent)
+Forecast: 2.5 sprints remaining
+Confidence: HIGH ✅
+
+Action: Continue current pace
+
+Scenario 2: Behind Schedule Epic
+─────────────────────────────────
+Total: 200 SP | Completed: 40 SP (20%)
+Velocity: 25 SP/sprint (declining)
+Forecast: 6.4 sprints remaining
+Confidence: MEDIUM ⚠️
+
+Action: Review scope or increase capacity
+
+Scenario 3: Scope Creep Epic
+───────────────────────────
+Total: 300 SP (was 200 SP) | Completed: 80 SP
+Velocity: 40 SP/sprint
+Forecast: 5.5 sprints (was 3 sprints)
+Confidence: LOW ❌
+
+Action: Re-evaluate scope and priorities
+```
+
+**Confidence Level Interpretatie:**
+
+```
+╔═══════════════════════════════════════════════════════════╗
+║  Confidence │ Velocity Pattern    │ Forecast Reliability  ║
+╠═══════════════════════════════════════════════════════════╣
+║  90%+       │ Std dev < 5% avg    │ ✅ Zeer betrouwbaar  ║
+║  75-89%     │ Std dev 5-15% avg   │ ✅ Betrouwbaar       ║
+║  60-74%     │ Std dev 15-25% avg  │ ⚠️ Matig             ║
+║  < 60%      │ Std dev > 25% avg   │ ❌ Onbetrouwbaar     ║
+╚═══════════════════════════════════════════════════════════╝
+```
+
+**Best Practices:**
+
+1. **Velocity Stabiliteit:**
+   - Gebruik minimaal 3-5 sprints voor velocity berekening
+   - Meer sprints = betrouwbaardere forecast
+   - Monitor voor grote velocity swings
+
+2. **Scope Management:**
+   - Freeze scope voor accurate forecasts
+   - Track scope changes apart
+   - Re-forecast bij significante scope wijzigingen
+
+3. **Regular Updates:**
+   - Update forecast elke sprint
+   - Communiceer forecast wijzigingen
+   - Gebruik voor stakeholder management
+
+**Tips:**
+- ✓ Best case = optimistisch (max velocity)
+- ✓ Likely case = realistisch (gemiddelde velocity)
+- ✓ Worst case = conservatief (min velocity)
+- ✓ Plan op likely case, buffer voor worst case
+- ✓ Update forecast wekelijks voor accuracy
+
+---
+
+### State Timeline Analysis
+
+Analyseer de state transitions van work items en identificeer bottlenecks in uw workflow.
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════╗
+║  Work Item State Timeline                                                         ║
+╠═══════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                    ║
+║  [Work Item ID: 12345    ] [Analyze]                                              ║
+║                                                                                    ║
+║ ┌── Work Item Information ──────────────────────────────────────────────────────┐  ║
+║ │  [PBI] Implement Shopping Cart (#12345)                                       │  ║
+║ │  Type: Product Backlog Item | Area: Web/Frontend                              │  ║
+║ │  Current State: Done | Effort: 13 SP                                          │  ║
+║ │  Created: 2024-11-15 | Completed: 2024-12-18                                  │  ║
+║ │  Total Lead Time: 33 days                                                     │  ║
+║ └────────────────────────────────────────────────────────────────────────────────┘  ║
+║                                                                                    ║
+║ ┌── State Timeline ─────────────────────────────────────────────────────────────┐  ║
+║ │                                                                                │  ║
+║ │  New            In Progress      Code Review       Testing          Done      │  ║
+║ │  ●───────3d─────●──────12d──────●──────5d────────●─────8d──────────●         │  ║
+║ │  Nov 15         Nov 18           Nov 30           Dec 5             Dec 13    │  ║
+║ │  │              │                │                │                 │         │  ║
+║ │  Created        Started          Review           Testing           Closed    │  ║
+║ │                                                                                │  ║
+║ │  State Durations:                                                              │  ║
+║ │  ├─ New:          3 days (9%)                                                 │  ║
+║ │  ├─ In Progress: 12 days (36%) ⚠️ BOTTLENECK                                  │  ║
+║ │  ├─ Code Review:  5 days (15%)                                                │  ║
+║ │  ├─ Testing:      8 days (24%)                                                │  ║
+║ │  └─ Done:        ~5 days (remaining to today)                                 │  ║
+║ │                                                                                │  ║
+║ │  Total Cycle Time: 28 days (from start to done)                               │  ║
+║ │  Total Lead Time: 33 days (from created to done)                              │  ║
+║ │                                                                                │  ║
+║ └────────────────────────────────────────────────────────────────────────────────┘  ║
+║                                                                                    ║
+║ ┌── Bottleneck Analysis ────────────────────────────────────────────────────────┐  ║
+║ │                                                                                │  ║
+║ │  🚨 Bottleneck Detected: "In Progress" State                                   │  ║
+║ │                                                                                │  ║
+║ │  Duration: 12 days (36% of total time)                                        │  ║
+║ │  Team Average: 6 days for PBIs                                                │  ║
+║ │  Deviation: +100% (2x longer than average)                                    │  ║
+║ │                                                                                │  ║
+║ │  Possible Causes:                                                              │  ║
+║ │  • Scope larger than estimated (13 SP)                                        │  ║
+║ │  • Technical complexity                                                        │  ║
+║ │  • Dependencies on external teams                                              │  ║
+║ │  • Developer capacity issues                                                   │  ║
+║ │                                                                                │  ║
+║ │  Recommendations:                                                              │  ║
+║ │  ✓ Break down large PBIs (>8 SP)                                              │  ║
+║ │  ✓ Identify dependencies earlier                                              │  ║
+║ │  ✓ Review estimation accuracy                                                 │  ║
+║ │                                                                                │  ║
+║ └────────────────────────────────────────────────────────────────────────────────┘  ║
+║                                                                                    ║
+║ ┌── Comparison with Team Averages ──────────────────────────────────────────────┐  ║
+║ │  State        │ This Item │ Team Avg │ Difference │ Status                    │  ║
+║ │ ──────────────┼───────────┼──────────┼────────────┼───────────────            │  ║
+║ │  New          │   3 days  │  2 days  │   +1 day   │ ✅ Normal                 │  ║
+║ │  In Progress  │  12 days  │  6 days  │   +6 days  │ ❌ SLOW (2x)              │  ║
+║ │  Code Review  │   5 days  │  3 days  │   +2 days  │ ⚠️ Slower                 │  ║
+║ │  Testing      │   8 days  │  4 days  │   +4 days  │ ⚠️ Slower                 │  ║
+║ └────────────────────────────────────────────────────────────────────────────────┘  ║
+╚═══════════════════════════════════════════════════════════════════════════════════╝
+```
+
+**Belangrijkste Functies:**
+
+1. **State Transition Tracking:**
+   - Volledige historie van state changes
+   - Exacte timestamps van elke transition
+   - Tijd in elke state gemeten
+
+2. **Cycle Time vs Lead Time:**
+   ```
+   Definities:
+   ───────────
+   Lead Time = Van "Created" tot "Done"
+              (Totale tijd inclusief wachttijd)
+   
+   Cycle Time = Van "In Progress" tot "Done"
+               (Actieve werk tijd)
+   
+   Voorbeeld:
+   Created: Nov 15
+   Started: Nov 18 (3 dagen wachttijd)
+   Done:    Dec 13
+   
+   Lead Time = 28 dagen (Nov 15 - Dec 13)
+   Cycle Time = 25 dagen (Nov 18 - Dec 13)
+   ```
+
+3. **Bottleneck Detection:**
+   - Automatische identificatie van langzame states
+   - Vergelijking met team gemiddeldes
+   - Aanbevelingen voor verbetering
+
+**Vereiste TFS Data:**
+
+Voor State Timeline analyse moet de volgende data aanwezig zijn in TFS:
+
+```
+╔═══════════════════════════════════════════════════════════╗
+║  Veld              │ Vereist │ Gebruikt voor              ║
+╠═══════════════════════════════════════════════════════════╣
+║  State History     │    ✓    │ State transitions          ║
+║  Changed Date      │    ✓    │ Timestamps van changes     ║
+║  State             │    ✓    │ Huidige state              ║
+║  Created Date      │    ✓    │ Lead time berekening       ║
+║  Closed Date       │    ○    │ Completion tracking        ║
+║  Type              │    ✓    │ Team averages per type     ║
+║  Effort (SP)       │    ○    │ Complexity analyse         ║
+╚═══════════════════════════════════════════════════════════╝
+
+Legenda: ✓ = Verplicht, ○ = Optioneel
+```
+
+**State History in TFS:**
+
+Azure DevOps tracked automatisch alle state changes:
+
+```
+Work Item History bevat:
+───────────────────────
+✓ Welke velden zijn gewijzigd
+✓ Oude waarde → Nieuwe waarde
+✓ Wanneer (datum + tijd)
+✓ Door wie (user)
+
+Toegang via:
+1. Open work item in Azure DevOps
+2. Ga naar "History" tab
+3. Filter op "State" changes
+4. Zie volledige state transition log
+```
+
+**Bottleneck Patronen:**
+
+```
+Pattern 1: Development Bottleneck
+──────────────────────────────────
+State: "In Progress"
+Duration: 2-3x team average
+Oorzaak: Technical complexity, scope creep
+Actie: Better estimation, smaller PBIs
+
+Pattern 2: Review Bottleneck
+────────────────────────────
+State: "Code Review"
+Duration: 5+ dagen
+Oorzaak: Reviewer capacity, large PRs
+Actie: Smaller PRs, dedicated review time
+
+Pattern 3: Testing Bottleneck
+─────────────────────────────
+State: "Testing"
+Duration: 1+ week
+Oorzaak: Test environment issues, complex scenarios
+Actie: Test automation, better test data
+
+Pattern 4: Handoff Delays
+─────────────────────────
+Long transitions between states
+Oorzaak: Communication gaps, unclear handoffs
+Actie: Better team coordination, clear DoD
+```
+
+**Metrics Interpretatie:**
+
+```
+╔═══════════════════════════════════════════════════════════╗
+║  Metric          │ Good      │ Warning   │ Action Needed  ║
+╠═══════════════════════════════════════════════════════════╣
+║  Lead Time       │ < 2 weeks │ 2-4 weeks │ > 4 weeks      ║
+║  Cycle Time      │ < 1 week  │ 1-2 weeks │ > 2 weeks      ║
+║  Time in State   │ < avg     │ 1-2x avg  │ > 2x avg       ║
+║  State Changes   │ 3-5       │ 6-8       │ > 8 (churn)    ║
+╚═══════════════════════════════════════════════════════════╝
+```
+
+**Use Cases:**
+
+```
+Use Case 1: Sprint Retrospective
+─────────────────────────────────
+Analyse work items uit vorige sprint
+Identificeer gemeenschappelijke bottlenecks
+Bespreek in retro en maak verbeteracties
+
+Use Case 2: Process Improvement
+───────────────────────────────
+Track meerdere items over tijd
+Identificeer systematische delays
+Optimize workflow states/policies
+
+Use Case 3: Estimation Calibration
+──────────────────────────────────
+Vergelijk effort met cycle time
+Items met 13 SP → gemiddeld X dagen
+Update estimation baseline
+
+Use Case 4: Individual Item Analysis
+────────────────────────────────────
+Waarom duurde dit item zo lang?
+Lessons learned voor toekomst
+Document in work item notes
+```
+
+**Best Practices:**
+
+1. **Regular Analysis:**
+   - Analyseer items na completion
+   - Identificeer patterns over meerdere sprints
+   - Track improvements over tijd
+
+2. **Team Averages:**
+   - Gebruik voor relative comparison
+   - Niet voor absolute benchmarks
+   - Update periodiek (elke quarter)
+
+3. **Bottleneck Resolution:**
+   - Focus op grootste bottlenecks eerst
+   - Meet impact van wijzigingen
+   - Iterate op proces verbeteringen
+
+**Tips:**
+- ✓ Analyse volledige sprints voor patterns
+- ✓ 2x team average = significant bottleneck
+- ✓ Short cycle times = efficient workflow
+- ✓ Gebruik voor proces optimalisatie
+- ✓ Document learnings in retrospectives
+
+---
+
+### Effort Distribution Heat Map
+
+Visualiseer effort distributie over area paths en iteraties voor capaciteitsplanning.
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════╗
+║  Effort Distribution Heat Map                                     🔄 Refresh       ║
+╠═══════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                    ║
+║  [Area Path Filter: ___________] [Max Iterations: 6 ] [Default Capacity: 50 ]   ║
+║                                                                                    ║
+║  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            ║
+║  │ Total       │  │ Area Paths  │  │ Iterations  │  │ Avg         │            ║
+║  │ Effort      │  │ Tracked     │  │ Analyzed    │  │ Utilization │            ║
+║  │   450 SP    │  │      8      │  │      6      │  │    82%      │            ║
+║  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘            ║
+║                                                                                    ║
+║ ┌── Effort Heat Map (Area Path × Iteration) ───────────────────────────────────┐  ║
+║ │                                                                                │  ║
+║ │  Area Path       │ S10  │ S11  │ S12  │ S13  │ S14  │ S15  │ Total │ Avg   │  ║
+║ │ ─────────────────┼──────┼──────┼──────┼──────┼──────┼──────┼───────┼─────  │  ║
+║ │  Web/Frontend    │  45  │  48  │  42  │  50  │  47  │  45  │  277  │  46   │  ║
+║ │                  │ 🟢90%│ 🟢96%│ 🟢84%│ 🔴100│ 🟢94%│ 🟢90%│       │       │  ║
+║ │                  │      │      │      │      │      │      │       │       │  ║
+║ │  Web/Backend     │  38  │  42  │  40  │  35  │  38  │  40  │  233  │  39   │  ║
+║ │                  │ 🟢76%│ 🟢84%│ 🟢80%│ 🟢70%│ 🟢76%│ 🟢80%│       │       │  ║
+║ │                  │      │      │      │      │      │      │       │       │  ║
+║ │  Mobile/iOS      │  25  │  28  │  30  │  32  │  28  │  25  │  168  │  28   │  ║
+║ │                  │ 🟡50%│ 🟡56%│ 🟡60%│ 🟡64%│ 🟡56%│ 🟡50%│       │       │  ║
+║ │                  │      │      │      │      │      │      │       │       │  ║
+║ │  Mobile/Android  │  22  │  25  │  28  │  30  │  26  │  24  │  155  │  26   │  ║
+║ │                  │ 🟡44%│ 🟡50%│ 🟡56%│ 🟡60%│ 🟡52%│ 🟡48%│       │       │  ║
+║ │                  │      │      │      │      │      │      │       │       │  ║
+║ │  Infrastructure  │  15  │  18  │  20  │  15  │  18  │  16  │  102  │  17   │  ║
+║ │                  │ 🟢30%│ 🟢36%│ 🟡40%│ 🟢30%│ 🟢36%│ 🟢32%│       │       │  ║
+║ │ ─────────────────┼──────┼──────┼──────┼──────┼──────┼──────┼───────┼─────  │  ║
+║ │  Total per Sprint│ 145  │ 161  │ 160  │ 162  │ 157  │ 150  │  935  │       │  ║
+║ │  Capacity        │ 250  │ 250  │ 250  │ 250  │ 250  │ 250  │ 1500  │       │  ║
+║ │  % Utilization   │  58% │  64% │  64% │  65% │  63% │  60% │  62%  │       │  ║
+║ │                                                                                │  ║
+║ └────────────────────────────────────────────────────────────────────────────────┘  ║
+║                                                                                    ║
+║  Legend: 🔴 At/Over Capacity (>95%) | 🟢 Healthy (60-95%) | 🟡 Under-utilized (<60%) │
+║                                                                                    ║
+║ ┌── Capacity Planning Insights ─────────────────────────────────────────────────┐  ║
+║ │                                                                                │  ║
+║ │  ⚠️ Overallocation Detected:                                                   │  ║
+║ │  • Web/Frontend in Sprint 13: 50 SP (100% capacity)                           │  ║
+║ │    Action: Consider redistributing 5-10 SP to other sprints                   │  ║
+║ │                                                                                │  ║
+║ │  ℹ️ Under-utilization:                                                         │  ║
+║ │  • Mobile teams averaging 50-55% capacity                                     │  ║
+║ │    Action: Consider additional work or cross-training                         │  ║
+║ │                                                                                │  ║
+║ │  ✓ Balanced Areas:                                                             │  ║
+║ │  • Web/Backend: Consistent 76-84% utilization                                 │  ║
+║ │  • Infrastructure: Stable 30-40% (appropriate for support work)               │  ║
+║ │                                                                                │  ║
+║ └────────────────────────────────────────────────────────────────────────────────┘  ║
+╚═══════════════════════════════════════════════════════════════════════════════════╝
+```
+
+**Belangrijkste Functies:**
+
+1. **Heat Map Visualisatie:**
+   - Matrix van Area Path × Iteration
+   - Kleurcodering voor capacity utilization
+   - Snelle identificatie van over/under allocation
+
+2. **Capacity Utilization:**
+   ```
+   Utilization Berekening:
+   ──────────────────────
+   Utilization % = (Planned Effort / Capacity) × 100
+   
+   Voorbeeld:
+   Area: Web/Frontend
+   Sprint 13 Planned: 50 SP
+   Sprint 13 Capacity: 50 SP
+   Utilization: (50 / 50) × 100 = 100% 🔴
+   
+   Interpretatie:
+   🔴 >95%    = At/over capacity (risk!)
+   🟢 60-95%  = Healthy utilization
+   🟡 <60%    = Under-utilized (opportunity)
+   ```
+
+3. **Multi-Sprint Planning:**
+   - Zie effort distributie over meerdere sprints
+   - Identificeer overload in toekomstige sprints
+   - Balance work load vooraf
+
+**Vereiste TFS Data:**
+
+Voor Effort Distribution analyse moet de volgende data aanwezig zijn in TFS:
+
+```
+╔═══════════════════════════════════════════════════════════╗
+║  Veld              │ Vereist │ Gebruikt voor              ║
+╠═══════════════════════════════════════════════════════════╣
+║  Iteration Path    │    ✓    │ Sprint groepering          ║
+║  Area Path         │    ✓    │ Team/component groepering  ║
+║  Effort (SP)       │    ✓    │ Capacity berekening        ║
+║  State             │    ○    │ Planned vs done filtering  ║
+║  Type              │    ○    │ Work type analyse          ║
+╚═══════════════════════════════════════════════════════════╝
+
+Legenda: ✓ = Verplicht, ○ = Optioneel
+```
+
+**Capacity Planning in TFS:**
+
+TFS/Azure DevOps ondersteunt team capacity settings:
+
+```
+Setup Team Capacity:
+───────────────────
+1. Azure DevOps → Boards → Sprints
+2. Selecteer sprint (bijv. Sprint 13)
+3. Klik "Capacity" tab
+4. Voor elk team member:
+   ├─ Capacity per day: 6 hours
+   ├─ Days off: Mark vakantie
+   └─ Activity split: Development 80%, Testing 20%
+
+5. Team total capacity:
+   ├─ 5 developers × 6 hours × 10 days = 300 hours
+   ├─ Convert to SP: 300h / 6h per SP = 50 SP
+   └─ Set as sprint capacity
+
+PO Companion gebruikt:
+─────────────────────
+• Default capacity (configureerbaar)
+• Of haalt capacity uit TFS API (indien beschikbaar)
+• Vergelijkt planned effort met capacity
+```
+
+**Capacity Planning Scenarios:**
+
+```
+Scenario 1: Balanced Load
+─────────────────────────
+Area: Web/Backend
+6 sprints averaging 38-42 SP
+Team capacity: 50 SP
+Utilization: 76-84%
+Status: ✅ Healthy - goed gebalanceerd
+
+Scenario 2: Overallocation
+──────────────────────────
+Area: Web/Frontend  
+Sprint 13: 50 SP planned
+Team capacity: 50 SP
+Utilization: 100%
+Status: 🔴 Risk - geen buffer voor unexpected work
+Action: Reduce to 45 SP (90% utilization)
+
+Scenario 3: Under-utilization
+─────────────────────────────
+Area: Mobile/Android
+6 sprints averaging 25 SP
+Team capacity: 50 SP
+Utilization: 50%
+Status: 🟡 Opportunity - kan meer werk aan
+Action: Evaluate if capacity is correct, or add work
+
+Scenario 4: Uneven Distribution
+───────────────────────────────
+Sprints: 30, 60, 35, 55, 40, 45 SP
+Capacity: 50 SP
+Status: ⚠️ Volatile - re-balance needed
+Action: Move work from high sprints to low sprints
+```
+
+**Heat Map Patronen:**
+
+```
+Pattern: Even Horizontal Distribution
+─────────────────────────────────────
+Same area has consistent utilization across sprints
+Example: Backend → 80%, 82%, 79%, 81%, 80%, 82%
+Meaning: Stable team, predictable work
+Action: Continue current planning
+
+Pattern: Spike Detection
+───────────────────────
+One sprint significantly higher than others
+Example: S10:40, S11:40, S12:70, S13:40, S14:40
+Meaning: Overload in S12 (release sprint?)
+Action: Redistribute work or adjust expectations
+
+Pattern: Under-utilization Trend
+────────────────────────────────
+Decreasing utilization over sprints
+Example: 80% → 75% → 65% → 55% → 50%
+Meaning: Team capacity not fully utilized
+Action: Add work or review team size
+
+Pattern: Cross-Area Imbalance
+─────────────────────────────
+One area consistently high, others low
+Example: Frontend 90%, Backend 45%, Mobile 40%
+Meaning: Uneven team sizes or work distribution
+Action: Cross-training or rebalancing teams
+```
+
+**Capacity Optimization:**
+
+```
+Rule 1: Sweet Spot Utilization
+──────────────────────────────
+Target: 75-85% capacity utilization
+Reason: 
+├─ Buffer for unexpected work
+├─ Time for code reviews, meetings
+└─ Prevents burnout
+
+Rule 2: Never Plan to 100%
+──────────────────────────
+Max planning: 90% of capacity
+Reason:
+├─ Bugs and support work
+├─ Technical debt
+└─ Team meetings and planning
+
+Rule 3: Balance Across Sprints
+──────────────────────────────
+Avoid: 50%, 50%, 100%, 40%, 50%
+Better: 65%, 70%, 75%, 70%, 65%
+Reason:
+└─ Consistent velocity is sustainable
+
+Rule 4: Area-Specific Targets
+─────────────────────────────
+Development teams: 75-85%
+Infrastructure teams: 50-70% (on-call, support)
+New teams: 60-70% (learning curve)
+```
+
+**Best Practices:**
+
+1. **Sprint Planning:**
+   - Check heat map voor volgende 2-3 sprints
+   - Identificeer overallocations vroeg
+   - Rebalance work voordat sprint start
+
+2. **Release Planning:**
+   - Use heat map voor multi-sprint visibility
+   - Balance work evenly over release
+   - Avoid last-sprint cramming
+
+3. **Team Balancing:**
+   - Monitor utilization per area
+   - Identify under/over utilized teams
+   - Consider cross-training of reorg
+
+**Tips:**
+- ✓ 🟢 Groen = gezonde utilization (60-95%)
+- ✓ 🔴 Rood = risico van overload (>95%)
+- ✓ 🟡 Geel = onder-utilized (<60%)
+- ✓ Plan op 80-85% voor optimale buffer
+- ✓ Update capacity settings in TFS voor accuracy
+
+---
+
 ### Help & Datavereisten
 
 Uitleg over data requirements en validatieregels.
