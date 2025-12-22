@@ -2,6 +2,7 @@
 @using PoTool.Client.Services
 @using PoTool.Client.Components.Common
 @using PoTool.Core.Exceptions
+@using static PoTool.Client.Components.Common.PageHelp
 @inject TfsConfigService TfsConfigService
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
@@ -9,6 +10,19 @@
 <PageTitle>TFS Configuration</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    
+    <!-- Context-Aware Help -->
+    <PageHelp Title="Azure DevOps / TFS Configuration"
+              Description="Configure your connection to Azure DevOps or on-premises TFS. This page allows you to set up authentication, test the connection, and ensure PO Companion can access your work item data."
+              Class="mb-4"
+              DataRequirements="@_configDataRequirements"
+              BestPractices="@_configBestPractices"
+              CommonIssues="@_configCommonIssues">
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
+            <strong>Security Note:</strong> Your Personal Access Token is stored securely using platform-native secure storage (Windows DPAPI, macOS Keychain, Android KeyStore, iOS Keychain). The token is never sent to any external servers except your configured Azure DevOps instance.
+        </MudAlert>
+    </PageHelp>
+    
     <MudPaper Elevation="2" Class="pa-4">
         <MudText Typo="Typo.h4" Class="mb-4">TFS Configuration</MudText>
         <MudText Typo="Typo.body1" Class="mb-4">
@@ -278,4 +292,72 @@
     {
         _errorResponse = null;
     }
+
+    private List<DataRequirement> _configDataRequirements = new()
+    {
+        new DataRequirement 
+        { 
+            Field = "Organization URL", 
+            Description = "The URL of your Azure DevOps organization (e.g., https://dev.azure.com/yourorg) or on-premises TFS server",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Project Name", 
+            Description = "The exact name of your Azure DevOps project as it appears in the organization",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Personal Access Token (PAT)", 
+            Description = "Required for PAT authentication mode. Must have at least 'Work Items (Read)' permission",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Authentication Mode", 
+            Description = "PAT for Azure DevOps cloud, NTLM for on-premises TFS with Windows authentication",
+            IsRequired = true 
+        }
+    };
+
+    private List<string> _configBestPractices = new()
+    {
+        "Use Personal Access Token (PAT) authentication for Azure DevOps cloud instances",
+        "Create a dedicated PAT for PO Companion with minimal required permissions (Work Items Read)",
+        "Set PAT expiration to a reasonable timeframe (90-180 days) and renew before expiration",
+        "Test the connection after saving configuration to verify settings",
+        "For on-premises TFS, use NTLM authentication with your Windows credentials",
+        "Set timeout to 60+ seconds if working with large projects or slow network connections",
+        "Keep your Organization URL exact - include 'https://' and avoid trailing slashes"
+    };
+
+    private List<CommonIssue> _configCommonIssues = new()
+    {
+        new CommonIssue 
+        { 
+            Problem = "Connection test fails with 'Unauthorized' error",
+            Solution = "Verify your PAT is valid, not expired, and has 'Work Items (Read)' permission. Create a new PAT if needed."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Cannot connect to on-premises TFS server",
+            Solution = "Ensure you're using NTLM authentication mode, the server URL is accessible from your network, and your Windows credentials have access."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Connection times out",
+            Solution = "Increase the timeout value to 60 or more seconds. Check network connectivity and firewall settings."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Project not found error",
+            Solution = "Verify the project name is spelled exactly as it appears in Azure DevOps, including capitalization."
+        },
+        new CommonIssue 
+        { 
+            Problem = "PAT expired message",
+            Solution = "Generate a new PAT in Azure DevOps (User Settings → Personal Access Tokens → New Token) and update the configuration."
+        }
+    };
 }
