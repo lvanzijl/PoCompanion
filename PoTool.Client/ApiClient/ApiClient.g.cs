@@ -4511,6 +4511,9 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("configuredGoalIds")]
         public System.Collections.Generic.ICollection<int> ConfiguredGoalIds { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("activeProfileId")]
+        public int? ActiveProfileId { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("lastModified")]
         public System.DateTimeOffset LastModified { get; set; } = default!;
 
@@ -4929,6 +4932,196 @@ namespace PoTool.Client.ApiClient
         {
             Result = result;
         }
+    }
+
+    // Profile-related types (manually added until next API client regeneration)
+
+    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial interface IProfilesClient
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProfileDto>> GetAllProfilesAsync();
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProfileDto>> GetAllProfilesAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<ProfileDto> GetProfileByIdAsync(int id);
+        System.Threading.Tasks.Task<ProfileDto> GetProfileByIdAsync(int id, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<ProfileDto> GetActiveProfileAsync();
+        System.Threading.Tasks.Task<ProfileDto> GetActiveProfileAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<ProfileDto> CreateProfileAsync(CreateProfileRequest request);
+        System.Threading.Tasks.Task<ProfileDto> CreateProfileAsync(CreateProfileRequest request, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<ProfileDto> UpdateProfileAsync(int id, UpdateProfileRequest request);
+        System.Threading.Tasks.Task<ProfileDto> UpdateProfileAsync(int id, UpdateProfileRequest request, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task DeleteProfileAsync(int id);
+        System.Threading.Tasks.Task DeleteProfileAsync(int id, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<SettingsDto> SetActiveProfileAsync(SetActiveProfileRequest request);
+        System.Threading.Tasks.Task<SettingsDto> SetActiveProfileAsync(SetActiveProfileRequest request, System.Threading.CancellationToken cancellationToken);
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProfilesClient : IProfilesClient
+    {
+        private System.Net.Http.HttpClient _httpClient;
+        private string _baseUrl = "http://localhost:5291";
+
+        public ProfilesClient(System.Net.Http.HttpClient httpClient)
+        {
+            _httpClient = httpClient;
+        }
+
+        public System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProfileDto>> GetAllProfilesAsync()
+        {
+            return GetAllProfilesAsync(System.Threading.CancellationToken.None);
+        }
+
+        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProfileDto>> GetAllProfilesAsync(System.Threading.CancellationToken cancellationToken)
+        {
+            var url = $"{_baseUrl}/api/Profiles";
+            var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            return await System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<System.Collections.Generic.ICollection<ProfileDto>>(response.Content, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        public System.Threading.Tasks.Task<ProfileDto> GetProfileByIdAsync(int id)
+        {
+            return GetProfileByIdAsync(id, System.Threading.CancellationToken.None);
+        }
+
+        public async System.Threading.Tasks.Task<ProfileDto> GetProfileByIdAsync(int id, System.Threading.CancellationToken cancellationToken)
+        {
+            var url = $"{_baseUrl}/api/Profiles/{id}";
+            var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            return await System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<ProfileDto>(response.Content, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        public System.Threading.Tasks.Task<ProfileDto> GetActiveProfileAsync()
+        {
+            return GetActiveProfileAsync(System.Threading.CancellationToken.None);
+        }
+
+        public async System.Threading.Tasks.Task<ProfileDto> GetActiveProfileAsync(System.Threading.CancellationToken cancellationToken)
+        {
+            var url = $"{_baseUrl}/api/Profiles/active";
+            var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            return await System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<ProfileDto>(response.Content, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        public System.Threading.Tasks.Task<ProfileDto> CreateProfileAsync(CreateProfileRequest request)
+        {
+            return CreateProfileAsync(request, System.Threading.CancellationToken.None);
+        }
+
+        public async System.Threading.Tasks.Task<ProfileDto> CreateProfileAsync(CreateProfileRequest request, System.Threading.CancellationToken cancellationToken)
+        {
+            var url = $"{_baseUrl}/api/Profiles";
+            var content = System.Net.Http.Json.JsonContent.Create(request);
+            var response = await _httpClient.PostAsync(url, content, cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            return await System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<ProfileDto>(response.Content, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        public System.Threading.Tasks.Task<ProfileDto> UpdateProfileAsync(int id, UpdateProfileRequest request)
+        {
+            return UpdateProfileAsync(id, request, System.Threading.CancellationToken.None);
+        }
+
+        public async System.Threading.Tasks.Task<ProfileDto> UpdateProfileAsync(int id, UpdateProfileRequest request, System.Threading.CancellationToken cancellationToken)
+        {
+            var url = $"{_baseUrl}/api/Profiles/{id}";
+            var content = System.Net.Http.Json.JsonContent.Create(request);
+            var response = await _httpClient.PutAsync(url, content, cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            return await System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<ProfileDto>(response.Content, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        public System.Threading.Tasks.Task DeleteProfileAsync(int id)
+        {
+            return DeleteProfileAsync(id, System.Threading.CancellationToken.None);
+        }
+
+        public async System.Threading.Tasks.Task DeleteProfileAsync(int id, System.Threading.CancellationToken cancellationToken)
+        {
+            var url = $"{_baseUrl}/api/Profiles/{id}";
+            var response = await _httpClient.DeleteAsync(url, cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+        }
+
+        public System.Threading.Tasks.Task<SettingsDto> SetActiveProfileAsync(SetActiveProfileRequest request)
+        {
+            return SetActiveProfileAsync(request, System.Threading.CancellationToken.None);
+        }
+
+        public async System.Threading.Tasks.Task<SettingsDto> SetActiveProfileAsync(SetActiveProfileRequest request, System.Threading.CancellationToken cancellationToken)
+        {
+            var url = $"{_baseUrl}/api/Profiles/active";
+            var content = System.Net.Http.Json.JsonContent.Create(request);
+            var response = await _httpClient.PostAsync(url, content, cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            return await System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<SettingsDto>(response.Content, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProfileDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPaths")]
+        public System.Collections.Generic.ICollection<string> AreaPaths { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("teamName")]
+        public string TeamName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("goalIds")]
+        public System.Collections.Generic.ICollection<int> GoalIds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdAt")]
+        public System.DateTimeOffset CreatedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lastModified")]
+        public System.DateTimeOffset LastModified { get; set; } = default!;
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateProfileRequest
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPaths")]
+        public System.Collections.Generic.ICollection<string> AreaPaths { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("teamName")]
+        public string TeamName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("goalIds")]
+        public System.Collections.Generic.ICollection<int> GoalIds { get; set; } = default!;
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateProfileRequest
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPaths")]
+        public System.Collections.Generic.ICollection<string> AreaPaths { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("teamName")]
+        public string TeamName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("goalIds")]
+        public System.Collections.Generic.ICollection<int> GoalIds { get; set; } = default!;
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SetActiveProfileRequest
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("profileId")]
+        public int? ProfileId { get; set; } = default!;
     }
 
 }
