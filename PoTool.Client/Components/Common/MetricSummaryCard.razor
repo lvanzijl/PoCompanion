@@ -1,0 +1,63 @@
+@* Reusable metric summary card component for displaying key metrics *@
+
+<MudItem xs="12" sm="6" md="@ColumnSize">
+    <MudCard Elevation="@Elevation">
+        <MudCardContent>
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <div>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">@Label</MudText>
+                    <MudText Typo="Typo.h4">@Value</MudText>
+                    @if (!string.IsNullOrEmpty(SubLabel))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@SubLabel</MudText>
+                    }
+                </div>
+                <MudIcon Icon="@Icon" Size="Size.Large" Color="@IconColor" />
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+</MudItem>
+
+@code {
+    /// <summary>
+    /// The label text displayed at the top of the card.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = null!;
+
+    /// <summary>
+    /// The main value displayed prominently in the card.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Value { get; set; } = null!;
+
+    /// <summary>
+    /// Optional sub-label text displayed below the value.
+    /// </summary>
+    [Parameter]
+    public string? SubLabel { get; set; }
+
+    /// <summary>
+    /// The icon to display on the right side of the card.
+    /// </summary>
+    [Parameter]
+    public string Icon { get; set; } = Icons.Material.Filled.Info;
+
+    /// <summary>
+    /// The color of the icon.
+    /// </summary>
+    [Parameter]
+    public Color IconColor { get; set; } = Color.Primary;
+
+    /// <summary>
+    /// The elevation (shadow depth) of the card.
+    /// </summary>
+    [Parameter]
+    public int Elevation { get; set; } = 2;
+
+    /// <summary>
+    /// The column size for responsive grid layout (3 = 4 cards per row on large screens).
+    /// </summary>
+    [Parameter]
+    public int ColumnSize { get; set; } = 3;
+}

@@ -14,81 +14,41 @@
         Track team velocity and sprint metrics for data-driven planning
     </MudText>
 
-    @if (_isLoading)
+    <LoadingIndicator IsLoading="@_isLoading" />
+    
+    @if (!_isLoading && _velocityTrend == null)
     {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
-    }
-    else if (_velocityTrend == null)
-    {
-        <MudAlert Severity="Severity.Info" Class="my-7">
-            <MudText Typo="Typo.h6" Class="mb-2">No Velocity Data Available</MudText>
-            <MudText>There are no sprints with completed work items to display velocity metrics.</MudText>
-            <MudText Class="mt-2">Make sure you have synced work items from Azure DevOps with iteration paths and completed story points.</MudText>
-        </MudAlert>
+        <EmptyStateDisplay Title="No Velocity Data Available"
+                          Message="There are no sprints with completed work items to display velocity metrics."
+                          AdditionalInfo="Make sure you have synced work items from Azure DevOps with iteration paths and completed story points." />
     }
     else
     {
         <!-- Velocity Summary Cards -->
         <MudGrid Class="mb-6">
-            <MudItem xs="12" sm="6" md="3">
-                <MudCard Elevation="2">
-                    <MudCardContent>
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <div>
-                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Average Velocity</MudText>
-                                <MudText Typo="Typo.h4">@_velocityTrend.AverageVelocity.ToString("F1")</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">story points</MudText>
-                            </div>
-                            <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Large" Color="Color.Primary" />
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+            <MetricSummaryCard Label="Average Velocity"
+                              Value="@_velocityTrend.AverageVelocity.ToString("F1")"
+                              SubLabel="story points"
+                              Icon="@Icons.Material.Filled.Speed"
+                              IconColor="Color.Primary" />
             
-            <MudItem xs="12" sm="6" md="3">
-                <MudCard Elevation="2">
-                    <MudCardContent>
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <div>
-                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Last 3 Sprints</MudText>
-                                <MudText Typo="Typo.h4">@_velocityTrend.ThreeSprintAverage.ToString("F1")</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">average velocity</MudText>
-                            </div>
-                            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" Color="Color.Info" />
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+            <MetricSummaryCard Label="Last 3 Sprints"
+                              Value="@_velocityTrend.ThreeSprintAverage.ToString("F1")"
+                              SubLabel="average velocity"
+                              Icon="@Icons.Material.Filled.CalendarMonth"
+                              IconColor="Color.Info" />
 
-            <MudItem xs="12" sm="6" md="3">
-                <MudCard Elevation="2">
-                    <MudCardContent>
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <div>
-                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Total Sprints</MudText>
-                                <MudText Typo="Typo.h4">@_velocityTrend.TotalSprints</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">tracked</MudText>
-                            </div>
-                            <MudIcon Icon="@Icons.Material.Filled.Timeline" Size="Size.Large" Color="Color.Success" />
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+            <MetricSummaryCard Label="Total Sprints"
+                              Value="@_velocityTrend.TotalSprints.ToString()"
+                              SubLabel="tracked"
+                              Icon="@Icons.Material.Filled.Timeline"
+                              IconColor="Color.Success" />
 
-            <MudItem xs="12" sm="6" md="3">
-                <MudCard Elevation="2">
-                    <MudCardContent>
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <div>
-                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Total Completed</MudText>
-                                <MudText Typo="Typo.h4">@_velocityTrend.TotalCompletedStoryPoints</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">story points</MudText>
-                            </div>
-                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Tertiary" />
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+            <MetricSummaryCard Label="Total Completed"
+                              Value="@_velocityTrend.TotalCompletedStoryPoints.ToString()"
+                              SubLabel="story points"
+                              Icon="@Icons.Material.Filled.CheckCircle"
+                              IconColor="Color.Tertiary" />
         </MudGrid>
 
         <!-- Velocity Chart -->

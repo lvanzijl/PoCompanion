@@ -43,10 +43,7 @@
         </MudStack>
     </MudPaper>
 
-    @if (_isLoading)
-    {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
-    }
+    <LoadingIndicator IsLoading="@_isLoading" />
     else if (_forecastData != null)
     {
         <ErrorDisplay ErrorResponse="@_errorResponse" 

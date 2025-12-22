@@ -220,9 +220,9 @@ code {
     border-radius: 4px;
 }
 
-.status-success { background: rgba(76, 175, 80, 0.1); color: var(--color-success); }
-.status-error { background: rgba(244, 67, 54, 0.1); color: var(--color-error); }
-.status-info { background: rgba(33, 150, 243, 0.1); color: var(--color-info); }
+.status-success { background: color-mix(in srgb, var(--color-success) 10%, transparent); color: var(--color-success); }
+.status-error { background: color-mix(in srgb, var(--color-error) 10%, transparent); color: var(--color-error); }
+.status-info { background: color-mix(in srgb, var(--color-info) 10%, transparent); color: var(--color-info); }
 
 .form-group { margin-bottom: 0.75rem; }
 .form-text { font-size: 0.85rem; }
