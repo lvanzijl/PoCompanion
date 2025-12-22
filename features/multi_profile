@@ -1,0 +1,13 @@
+the user of the application should be able to select one or multiple area paths, like one for every product he owns. the user should also select the team responsible for this/these area paths. so one or multiple area paths and one team. such setting is a profile.
+
+the user should be able to create and switch between multiple such profiles, he could own multiple products over multiple teams. the third setting per profile is select one or more goals are applicable for him.
+
+these settings are user settings and in the event of starting the application for the first time the user has to set these settings up , select exactly one team, select one or more area paths and select zero (for all) or more goals.
+
+alle the features should use these settings to do their thing.
+
+update the settings, the onboarding wizard and all the features to introduce this (multi) profile feature.
+update the different pages help feature with what this means with profiles
+update the Dutch gebruikershandleiding.
+add tests where needed
+and comply with the rules of this repository 
