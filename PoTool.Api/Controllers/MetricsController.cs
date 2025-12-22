@@ -245,4 +245,42 @@ public class MetricsController : ControllerBase
             return StatusCode(500, "Error retrieving sprint capacity plan");
         }
     }
+
+    /// <summary>
+    /// Gets completion forecast for an Epic or Feature based on historical velocity.
+    /// </summary>
+    /// <param name="epicId">The TFS ID of the Epic or Feature</param>
+    /// <param name="maxSprintsForVelocity">Maximum number of sprints to use for velocity calculation (default: 5)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Epic completion forecast or 404 if Epic not found</returns>
+    [HttpGet("epic-forecast/{epicId:int}")]
+    public async Task<ActionResult<EpicCompletionForecastDto>> GetEpicForecast(
+        int epicId,
+        [FromQuery] int maxSprintsForVelocity = 5,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (maxSprintsForVelocity < 1 || maxSprintsForVelocity > 20)
+            {
+                return BadRequest("MaxSprintsForVelocity must be between 1 and 20");
+            }
+
+            var forecast = await _mediator.Send(
+                new GetEpicCompletionForecastQuery(epicId, maxSprintsForVelocity), 
+                cancellationToken);
+
+            if (forecast == null)
+            {
+                return NotFound($"Epic with ID {epicId} not found");
+            }
+
+            return Ok(forecast);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving Epic forecast for ID: {EpicId}", epicId);
+            return StatusCode(500, "Error retrieving Epic completion forecast");
+        }
+    }
 }
