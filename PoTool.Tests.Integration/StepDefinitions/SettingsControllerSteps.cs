@@ -51,6 +51,7 @@ public class SettingsControllerSteps
     public async Task WhenIRequestSettingsFrom(string endpoint)
     {
         _response = await _client.GetAsync(endpoint);
+        _scenarioContext["Response"] = _response;
         if (_response.IsSuccessStatusCode)
         {
             _settings = await _response.Content.ReadFromJsonAsync<SettingsDto>();
@@ -73,6 +74,7 @@ public class SettingsControllerSteps
         };
 
         _response = await _client.PutAsJsonAsync("/api/settings", request);
+        _scenarioContext["Response"] = _response;
         if (_response.IsSuccessStatusCode)
         {
             _settings = await _response.Content.ReadFromJsonAsync<SettingsDto>();
@@ -89,24 +91,11 @@ public class SettingsControllerSteps
         };
 
         _response = await _client.PutAsJsonAsync("/api/settings", request);
+        _scenarioContext["Response"] = _response;
         if (_response.IsSuccessStatusCode)
         {
             _settings = await _response.Content.ReadFromJsonAsync<SettingsDto>();
         }
-    }
-
-    [Then(@"the response should be OK")]
-    public void ThenTheResponseShouldBeOK()
-    {
-        Assert.IsNotNull(_response);
-        Assert.AreEqual(HttpStatusCode.OK, _response.StatusCode);
-    }
-
-    [Then(@"the response should be NotFound")]
-    public void ThenTheResponseShouldBeNotFound()
-    {
-        Assert.IsNotNull(_response);
-        Assert.AreEqual(HttpStatusCode.NotFound, _response.StatusCode);
     }
 
     [Then(@"the settings should have DataMode ""(.*)""")]
@@ -142,4 +131,6 @@ public class SettingsControllerSteps
             .ToList();
         CollectionAssert.AreEqual(expectedIds, _settings.ConfiguredGoalIds);
     }
+
+    // Response status checks use CommonSteps.ThenTheResponseShouldBe
 }

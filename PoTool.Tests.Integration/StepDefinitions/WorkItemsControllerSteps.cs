@@ -128,7 +128,7 @@ public class WorkItemsControllerSteps
         }
     }
 
-    [When(@"I request work item (\d+) from controller")]
+    [When(@"I request work item (-?\d+) from controller")]
     public async Task WhenIRequestWorkItemFromController(int tfsId)
     {
         _response = await _client.GetAsync($"/api/workitems/{tfsId}");
@@ -293,14 +293,14 @@ public class WorkItemsControllerSteps
         await dbContext.SaveChangesAsync();
     }
 
-    [When(@"I request work item (.*) revisions")]
+    [When(@"I request work item (-?\d+) revisions")]
     public async Task WhenIRequestWorkItemRevisions(int workItemId)
     {
         _response = await _client.GetAsync($"/api/workitems/{workItemId}/revisions");
         _scenarioContext["Response"] = _response;
     }
 
-    [When(@"I request work item (.*) state timeline")]
+    [When(@"I request work item (-?\d+) state timeline")]
     public async Task WhenIRequestWorkItemStateTimeline(int workItemId)
     {
         _response = await _client.GetAsync($"/api/workitems/{workItemId}/state-timeline");

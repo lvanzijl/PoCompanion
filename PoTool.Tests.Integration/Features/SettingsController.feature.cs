@@ -212,13 +212,13 @@ await this.FeatureBackgroundAsync();
     await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table13, "Given ");
 #line hidden
 #line 26
-    await testRunner.WhenAsync("I update settings with DataMode \"Live\" and goal IDs \"4,5,6\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I update settings with DataMode \"Tfs\" and goal IDs \"4,5,6\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 27
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
 #line 28
-    await testRunner.AndAsync("the updated settings should have DataMode \"Live\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("the updated settings should have DataMode \"Tfs\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 29
     await testRunner.AndAsync("the updated settings should have goal IDs \"4,5,6\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
@@ -268,13 +268,13 @@ await this.FeatureBackgroundAsync();
         }
         
         [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Update settings to Live mode")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Update settings to Tfs mode")]
         [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Settings Controller API")]
-        public async System.Threading.Tasks.Task UpdateSettingsToLiveMode()
+        public async System.Threading.Tasks.Task UpdateSettingsToTfsMode()
         {
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Update settings to Live mode", null, tagsOfScenario, argumentsOfScenario, featureTags);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Update settings to Tfs mode", null, tagsOfScenario, argumentsOfScenario, featureTags);
 #line 38
 this.ScenarioInitialize(scenarioInfo);
 #line hidden
@@ -298,13 +298,13 @@ await this.FeatureBackgroundAsync();
     await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table15, "Given ");
 #line hidden
 #line 42
-    await testRunner.WhenAsync("I update settings with DataMode \"Live\" and goal IDs \"1,2,3\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I update settings with DataMode \"Tfs\" and goal IDs \"1,2,3\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 43
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
 #line 44
-    await testRunner.AndAsync("the updated settings should have DataMode \"Live\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("the updated settings should have DataMode \"Tfs\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -335,7 +335,7 @@ await this.FeatureBackgroundAsync();
                             "DataMode",
                             "ConfiguredGoalIds"});
                 table16.AddRow(new string[] {
-                            "Live",
+                            "Tfs",
                             "1,2,3"});
 #line 47
     await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table16, "Given ");

@@ -58,17 +58,17 @@ public class PullRequestsControllerSteps
     [When(@"I request all pull requests from ""(.*)""")]
     public async Task WhenIRequestAllPullRequestsFrom(string endpoint)
     {
-        _response = await _client.GetAsync(endpoint);
+        _scenarioContext["Response"] = _response = await _client.GetAsync(endpoint);
         if (_response.IsSuccessStatusCode)
         {
             _pullRequests = await _response.Content.ReadFromJsonAsync<List<PullRequestDto>>();
         }
     }
 
-    [When(@"I request pull request (.*) from controller")]
+    [When(@"I request pull request (-?\d+) from controller")]
     public async Task WhenIRequestPullRequestFromController(int prId)
     {
-        _response = await _client.GetAsync($"/api/pullrequests/{prId}");
+        _scenarioContext["Response"] = _response = await _client.GetAsync($"/api/pullrequests/{prId}");
         if (_response.IsSuccessStatusCode)
         {
             _pullRequest = await _response.Content.ReadFromJsonAsync<PullRequestDto>();
@@ -78,7 +78,7 @@ public class PullRequestsControllerSteps
     [When(@"I request pull request metrics from ""(.*)""")]
     public async Task WhenIRequestPullRequestMetricsFrom(string endpoint)
     {
-        _response = await _client.GetAsync(endpoint);
+        _scenarioContext["Response"] = _response = await _client.GetAsync(endpoint);
         if (_response.IsSuccessStatusCode)
         {
             _metrics = await _response.Content.ReadFromJsonAsync<List<PullRequestMetricsDto>>();
@@ -88,7 +88,7 @@ public class PullRequestsControllerSteps
     [When(@"I request filtered pull requests with iterationPath ""(.*)""")]
     public async Task WhenIRequestFilteredPullRequestsWithIterationPath(string iterationPath)
     {
-        _response = await _client.GetAsync($"/api/pullrequests/filter?iterationPath={Uri.EscapeDataString(iterationPath)}");
+        _scenarioContext["Response"] = _response = await _client.GetAsync($"/api/pullrequests/filter?iterationPath={Uri.EscapeDataString(iterationPath)}");
         if (_response.IsSuccessStatusCode)
         {
             _pullRequests = await _response.Content.ReadFromJsonAsync<List<PullRequestDto>>();
@@ -98,7 +98,7 @@ public class PullRequestsControllerSteps
     [When(@"I request filtered pull requests with createdBy ""(.*)""")]
     public async Task WhenIRequestFilteredPullRequestsWithCreatedBy(string createdBy)
     {
-        _response = await _client.GetAsync($"/api/pullrequests/filter?createdBy={Uri.EscapeDataString(createdBy)}");
+        _scenarioContext["Response"] = _response = await _client.GetAsync($"/api/pullrequests/filter?createdBy={Uri.EscapeDataString(createdBy)}");
         if (_response.IsSuccessStatusCode)
         {
             _pullRequests = await _response.Content.ReadFromJsonAsync<List<PullRequestDto>>();
@@ -108,7 +108,7 @@ public class PullRequestsControllerSteps
     [When(@"I request filtered pull requests from ""(.*)"" to ""(.*)""")]
     public async Task WhenIRequestFilteredPullRequestsFromTo(string fromDate, string toDate)
     {
-        _response = await _client.GetAsync($"/api/pullrequests/filter?fromDate={Uri.EscapeDataString(fromDate)}&toDate={Uri.EscapeDataString(toDate)}");
+        _scenarioContext["Response"] = _response = await _client.GetAsync($"/api/pullrequests/filter?fromDate={Uri.EscapeDataString(fromDate)}&toDate={Uri.EscapeDataString(toDate)}");
         if (_response.IsSuccessStatusCode)
         {
             _pullRequests = await _response.Content.ReadFromJsonAsync<List<PullRequestDto>>();
@@ -118,7 +118,7 @@ public class PullRequestsControllerSteps
     [When(@"I request filtered pull requests with status ""(.*)""")]
     public async Task WhenIRequestFilteredPullRequestsWithStatus(string status)
     {
-        _response = await _client.GetAsync($"/api/pullrequests/filter?status={Uri.EscapeDataString(status)}");
+        _scenarioContext["Response"] = _response = await _client.GetAsync($"/api/pullrequests/filter?status={Uri.EscapeDataString(status)}");
         if (_response.IsSuccessStatusCode)
         {
             _pullRequests = await _response.Content.ReadFromJsonAsync<List<PullRequestDto>>();
@@ -135,7 +135,7 @@ public class PullRequestsControllerSteps
         var toDate = row["ToDate"];
         var status = row["Status"];
 
-        _response = await _client.GetAsync(
+        _scenarioContext["Response"] = _response = await _client.GetAsync(
             $"/api/pullrequests/filter?iterationPath={Uri.EscapeDataString(iterationPath)}&createdBy={Uri.EscapeDataString(createdBy)}&fromDate={Uri.EscapeDataString(fromDate)}&toDate={Uri.EscapeDataString(toDate)}&status={Uri.EscapeDataString(status)}");
         if (_response.IsSuccessStatusCode)
         {
@@ -143,40 +143,40 @@ public class PullRequestsControllerSteps
         }
     }
 
-    [When(@"I request pull request (.*) iterations")]
+    [When(@"I request pull request (-?\d+) iterations")]
     public async Task WhenIRequestPullRequestIterations(int prId)
     {
-        _response = await _client.GetAsync($"/api/pullrequests/{prId}/iterations");
+        _scenarioContext["Response"] = _response = await _client.GetAsync($"/api/pullrequests/{prId}/iterations");
     }
 
-    [When(@"I request pull request (.*) comments")]
+    [When(@"I request pull request (-?\d+) comments")]
     public async Task WhenIRequestPullRequestComments(int prId)
     {
-        _response = await _client.GetAsync($"/api/pullrequests/{prId}/comments");
+        _scenarioContext["Response"] = _response = await _client.GetAsync($"/api/pullrequests/{prId}/comments");
     }
 
-    [When(@"I request pull request (.*) file changes")]
+    [When(@"I request pull request (-?\d+) file changes")]
     public async Task WhenIRequestPullRequestFileChanges(int prId)
     {
-        _response = await _client.GetAsync($"/api/pullrequests/{prId}/filechanges");
+        _scenarioContext["Response"] = _response = await _client.GetAsync($"/api/pullrequests/{prId}/filechanges");
     }
 
     [When(@"I send sync pull requests command")]
     public async Task WhenISendSyncPullRequestsCommand()
     {
-        _response = await _client.PostAsync("/api/pullrequests/sync", null);
+        _scenarioContext["Response"] = _response = await _client.PostAsync("/api/pullrequests/sync", null);
     }
 
     [When(@"I request PR review bottleneck analysis")]
     public async Task WhenIRequestPRReviewBottleneckAnalysis()
     {
-        _response = await _client.GetAsync("/api/pullrequests/review-bottleneck");
+        _scenarioContext["Response"] = _response = await _client.GetAsync("/api/pullrequests/review-bottleneck");
     }
 
     [When(@"I request PR review bottleneck with maxPRs (.*) and daysBack (.*)")]
     public async Task WhenIRequestPRReviewBottleneckWithParameters(int maxPRs, int daysBack)
     {
-        _response = await _client.GetAsync($"/api/pullrequests/review-bottleneck?maxPRs={maxPRs}&daysBack={daysBack}");
+        _scenarioContext["Response"] = _response = await _client.GetAsync($"/api/pullrequests/review-bottleneck?maxPRs={maxPRs}&daysBack={daysBack}");
     }
 
     [Then(@"I should receive at least (.*) pull requests")]

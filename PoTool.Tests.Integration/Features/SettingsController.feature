@@ -23,9 +23,9 @@ Scenario: Update settings with valid data
     Given settings exist in the database
         | DataMode | ConfiguredGoalIds |
         | Mock     | 1,2,3             |
-    When I update settings with DataMode "Live" and goal IDs "4,5,6"
+    When I update settings with DataMode "Tfs" and goal IDs "4,5,6"
     Then the response should be OK
-    And the updated settings should have DataMode "Live"
+    And the updated settings should have DataMode "Tfs"
     And the updated settings should have goal IDs "4,5,6"
 
 Scenario: Update settings with empty goal IDs
@@ -35,18 +35,18 @@ Scenario: Update settings with empty goal IDs
     When I update settings with DataMode "Mock" and empty goal IDs
     Then the response should be OK
 
-Scenario: Update settings to Live mode
+Scenario: Update settings to Tfs mode
     Given settings exist in the database
         | DataMode | ConfiguredGoalIds |
         | Mock     | 1,2,3             |
-    When I update settings with DataMode "Live" and goal IDs "1,2,3"
+    When I update settings with DataMode "Tfs" and goal IDs "1,2,3"
     Then the response should be OK
-    And the updated settings should have DataMode "Live"
+    And the updated settings should have DataMode "Tfs"
 
 Scenario: Update settings to Mock mode
     Given settings exist in the database
         | DataMode | ConfiguredGoalIds |
-        | Live     | 1,2,3             |
+        | Tfs      | 1,2,3             |
     When I update settings with DataMode "Mock" and goal IDs "1,2,3"
     Then the response should be OK
     And the updated settings should have DataMode "Mock"
