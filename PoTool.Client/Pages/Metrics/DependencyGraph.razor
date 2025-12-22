@@ -1,0 +1,299 @@
+@page "/dependency-graph"
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Services
+@inject WorkItemsClient WorkItemsClient
+@inject ErrorMessageService ErrorMessageService
+@inject ISnackbar Snackbar
+
+<PageTitle>Dependency Chain Visualization</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">
+        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-2" /> Dependency Chain Visualization
+    </MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+        Visualize work item dependencies, identify critical paths, and detect blocking relationships
+    </MudText>
+
+    <!-- Filters -->
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudTextField @bind-Value="_areaPathFilter" 
+                         Label="Area Path Filter" 
+                         Variant="Variant.Outlined"
+                         Adornment="Adornment.End"
+                         AdornmentIcon="@Icons.Material.Filled.FilterAlt"
+                         HelperText="Filter by area path" />
+            <MudTextField @bind-Value="_workItemIdsFilter" 
+                         Label="Work Item IDs (comma-separated)" 
+                         Variant="Variant.Outlined"
+                         HelperText="Optional: specific work items" />
+            <MudButton Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      OnClick="LoadDependencyGraph"
+                      StartIcon="@Icons.Material.Filled.Refresh">
+                Load Graph
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+    }
+    else if (_graphData != null)
+    {
+        <ErrorDisplay ErrorResponse="@_errorResponse" 
+                      Class="mb-4"
+                      OnDismiss="ClearError" />
+
+        <!-- Summary Cards -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Nodes</MudText>
+                                <MudText Typo="Typo.h5">@_graphData.Nodes.Count</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Large" Color="Color.Primary" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Links</MudText>
+                                <MudText Typo="Typo.h5">@_graphData.Links.Count</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Link" Size="Size.Large" Color="Color.Info" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Critical Paths</MudText>
+                                <MudText Typo="Typo.h5">@_graphData.CriticalPaths.Count</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Large" Color="Color.Warning" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Blocked Items</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Error">@_graphData.BlockedWorkItemIds.Count</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Large" Color="Color.Error" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Critical Paths Alert -->
+        @if (_graphData.CriticalPaths.Any())
+        {
+            <MudAlert Severity="Severity.Warning" Class="mb-6">
+                <MudText Typo="Typo.h6" Class="mb-2">⚠️ Critical Dependency Chains Identified</MudText>
+                <MudText>@_graphData.CriticalPaths.Count dependency chain(s) found that may impact delivery timeline.</MudText>
+            </MudAlert>
+        }
+
+        <!-- Critical Paths -->
+        @if (_graphData.CriticalPaths.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-6">
+                <MudText Typo="Typo.h6" GutterBottom="true">Critical Dependency Chains</MudText>
+                <MudStack Spacing="3">
+                    @foreach (var chain in _graphData.CriticalPaths.OrderByDescending(c => c.RiskLevel))
+                    {
+                        <MudCard Elevation="1">
+                            <MudCardContent>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                                    <MudStack Row="true" Spacing="2">
+                                        <MudChip T="string" Size="Size.Small" Color="@GetRiskColor(chain.RiskLevel)">
+                                            @chain.RiskLevel Risk
+                                        </MudChip>
+                                        <MudText Typo="Typo.body1">
+                                            <strong>Chain Length:</strong> @chain.ChainLength items
+                                        </MudText>
+                                        <MudText Typo="Typo.body1">
+                                            <strong>Total Effort:</strong> @chain.TotalEffort
+                                        </MudText>
+                                    </MudStack>
+                                </MudStack>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    <strong>Work Items:</strong> @string.Join(" → ", chain.WorkItemIds)
+                                </MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    }
+                </MudStack>
+            </MudPaper>
+        }
+
+        <!-- Blocked Work Items -->
+        @if (_graphData.BlockedWorkItemIds.Any())
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-6">
+                <MudText Typo="Typo.h6">Blocking Work Items</MudText>
+                <MudText>The following work items are blocking others: @string.Join(", ", _graphData.BlockedWorkItemIds)</MudText>
+            </MudAlert>
+        }
+
+        <!-- Work Items with Dependencies -->
+        <MudPaper Elevation="2" Class="pa-4 mb-6">
+            <MudText Typo="Typo.h6" GutterBottom="true">Work Items with Dependencies</MudText>
+            <MudTable Items="@_graphData.Nodes.Where(n => n.DependencyCount > 0 || n.DependentCount > 0)" 
+                      Dense="true" Hover="true" Bordered="true">
+                <HeaderContent>
+                    <MudTh>ID</MudTh>
+                    <MudTh>Title</MudTh>
+                    <MudTh>Type</MudTh>
+                    <MudTh>State</MudTh>
+                    <MudTh class="text-right">Effort</MudTh>
+                    <MudTh class="text-right">Dependencies</MudTh>
+                    <MudTh class="text-right">Dependents</MudTh>
+                    <MudTh>Status</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="ID">@context.WorkItemId</MudTd>
+                    <MudTd DataLabel="Title">@context.Title</MudTd>
+                    <MudTd DataLabel="Type">@context.Type</MudTd>
+                    <MudTd DataLabel="State">@context.State</MudTd>
+                    <MudTd DataLabel="Effort" class="text-right">@(context.Effort?.ToString() ?? "N/A")</MudTd>
+                    <MudTd DataLabel="Dependencies" class="text-right">@context.DependencyCount</MudTd>
+                    <MudTd DataLabel="Dependents" class="text-right">@context.DependentCount</MudTd>
+                    <MudTd DataLabel="Status">
+                        @if (context.IsBlocking)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error">Blocking</MudChip>
+                        }
+                        else if (context.DependencyCount > 0)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">Has Dependencies</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success">Normal</MudChip>
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+
+        <!-- Dependency Links -->
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Dependency Links</MudText>
+            <MudTable Items="@_graphData.Links" Dense="true" Hover="true" Bordered="true">
+                <HeaderContent>
+                    <MudTh>Source ID</MudTh>
+                    <MudTh>Target ID</MudTh>
+                    <MudTh>Link Type</MudTh>
+                    <MudTh>Description</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Source ID">@context.SourceWorkItemId</MudTd>
+                    <MudTd DataLabel="Target ID">@context.TargetWorkItemId</MudTd>
+                    <MudTd DataLabel="Link Type">
+                        <MudChip T="string" Size="Size.Small" Color="@GetLinkTypeColor(context.LinkType)">
+                            @context.LinkType
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Description">@context.Description</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    }
+    else if (_errorResponse != null)
+    {
+        <ErrorDisplay ErrorResponse="@_errorResponse" 
+                      Class="mb-4"
+                      OnDismiss="ClearError" />
+    }
+    else if (!_isLoading)
+    {
+        <MudPaper Elevation="2" Class="pa-8 text-center">
+            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+            <MudText Typo="Typo.h5" GutterBottom="true">Visualize Dependency Chains</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                Click "Load Graph" to analyze work item dependencies and identify critical paths.
+            </MudText>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private DependencyGraphDto? _graphData;
+    private bool _isLoading = false;
+    private ErrorResponse? _errorResponse;
+    private string? _areaPathFilter;
+    private string? _workItemIdsFilter;
+
+    private async Task LoadDependencyGraph()
+    {
+        _isLoading = true;
+        try
+        {
+            ClearError();
+            _graphData = await WorkItemsClient.GetDependencyGraphAsync(_areaPathFilter, _workItemIdsFilter);
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex, "Error loading dependency graph");
+            _graphData = null;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ShowError(Exception ex, string context)
+    {
+        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+
+    private Color GetRiskColor(DependencyChainRisk risk)
+    {
+        return risk switch
+        {
+            DependencyChainRisk.Critical => Color.Error,
+            DependencyChainRisk.High => Color.Warning,
+            DependencyChainRisk.Medium => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetLinkTypeColor(DependencyLinkType linkType)
+    {
+        return linkType switch
+        {
+            DependencyLinkType.Blocks => Color.Error,
+            DependencyLinkType.DependsOn => Color.Warning,
+            DependencyLinkType.Parent => Color.Info,
+            DependencyLinkType.Child => Color.Success,
+            _ => Color.Default
+        };
+    }
+}
