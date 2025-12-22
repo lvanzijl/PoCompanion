@@ -215,4 +215,98 @@ public class WorkItemsController : ControllerBase
             return StatusCode(500, "Error retrieving work item state timeline");
         }
     }
+
+    /// <summary>
+    /// Gets work items using advanced multi-dimensional filtering.
+    /// </summary>
+    /// <param name="typeFilter">Filter by work item type</param>
+    /// <param name="stateFilter">Filter by state</param>
+    /// <param name="iterationPathFilter">Filter by iteration path (contains)</param>
+    /// <param name="areaPathFilter">Filter by area path (contains)</param>
+    /// <param name="minEffort">Minimum effort value</param>
+    /// <param name="maxEffort">Maximum effort value</param>
+    /// <param name="hasValidationIssues">Filter items with validation issues</param>
+    /// <param name="isBlocked">Filter blocked items</param>
+    /// <param name="titleSearch">Search in title (contains)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Filtered work items</returns>
+    [HttpGet("advanced-filter")]
+    public async Task<ActionResult<IEnumerable<WorkItemDto>>> GetAdvancedFiltered(
+        [FromQuery] string? typeFilter = null,
+        [FromQuery] string? stateFilter = null,
+        [FromQuery] string? iterationPathFilter = null,
+        [FromQuery] string? areaPathFilter = null,
+        [FromQuery] int? minEffort = null,
+        [FromQuery] int? maxEffort = null,
+        [FromQuery] bool? hasValidationIssues = null,
+        [FromQuery] bool? isBlocked = null,
+        [FromQuery] string? titleSearch = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var query = new GetFilteredWorkItemsAdvancedQuery(
+                typeFilter,
+                stateFilter,
+                iterationPathFilter,
+                areaPathFilter,
+                minEffort,
+                maxEffort,
+                hasValidationIssues,
+                isBlocked,
+                titleSearch
+            );
+
+            var workItems = await _mediator.Send(query, cancellationToken);
+            return Ok(workItems);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error filtering work items with advanced filter");
+            return StatusCode(500, "Error filtering work items");
+        }
+    }
+
+    /// <summary>
+    /// Gets dependency graph showing work item relationships and critical paths.
+    /// </summary>
+    /// <param name="areaPathFilter">Optional area path filter</param>
+    /// <param name="workItemIds">Optional comma-separated list of work item IDs to include</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Dependency graph with nodes, links, and critical paths</returns>
+    [HttpGet("dependency-graph")]
+    public async Task<ActionResult<DependencyGraphDto>> GetDependencyGraph(
+        [FromQuery] string? areaPathFilter = null,
+        [FromQuery] string? workItemIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            IReadOnlyList<int>? ids = null;
+            
+            if (!string.IsNullOrWhiteSpace(workItemIds))
+            {
+                try
+                {
+                    ids = workItemIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(int.Parse)
+                        .ToList();
+                }
+                catch (FormatException)
+                {
+                    return BadRequest("Invalid work item ID format. Must be comma-separated integers.");
+                }
+            }
+
+            var query = new GetDependencyGraphQuery(areaPathFilter, ids);
+            var graph = await _mediator.Send(query, cancellationToken);
+            
+            return Ok(graph);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving dependency graph");
+            return StatusCode(500, "Error retrieving dependency graph");
+        }
+    }
 }

@@ -1,17 +1,399 @@
 @page "/effort-distribution"
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Services
+@inject MetricsClient MetricsClient
+@inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 
-<PageTitle>Effort Distribution</PageTitle>
+<PageTitle>Effort Distribution Heat Map</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
-    <MudText Typo="Typo.h4">Effort Distribution Heat Map</MudText>
-    <MudText Typo="Typo.body2">Coming soon...</MudText>
+    <MudText Typo="Typo.h4" GutterBottom="true">
+        <MudIcon Icon="@Icons.Material.Filled.GridOn" Class="mr-2" /> Effort Distribution Heat Map
+    </MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+        Visual capacity planning showing effort distribution across area paths and iterations
+    </MudText>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+    }
+    else if (_distributionData == null)
+    {
+        <MudAlert Severity="Severity.Info" Class="my-7">
+            <MudText Typo="Typo.h6" Class="mb-2">No Effort Distribution Data Available</MudText>
+            <MudText>No work items found to analyze. Please sync work items first.</MudText>
+        </MudAlert>
+    }
+    else
+    {
+        <ErrorDisplay ErrorResponse="@_errorResponse" 
+                      Class="mb-4"
+                      OnDismiss="ClearError" />
+
+        <!-- Summary Cards -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Effort</MudText>
+                                <MudText Typo="Typo.h5">@_distributionData.TotalEffort</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Large" Color="Color.Primary" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Area Paths</MudText>
+                                <MudText Typo="Typo.h5">@_distributionData.EffortByArea.Count</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Large" Color="Color.Info" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Iterations</MudText>
+                                <MudText Typo="Typo.h5">@_distributionData.EffortByIteration.Count</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" Color="Color.Success" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Avg Utilization</MudText>
+                                <MudText Typo="Typo.h5">@GetAverageUtilization()%</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Large" Color="@GetUtilizationColor()" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Filters -->
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudTextField @bind-Value="_areaPathFilter" 
+                              Label="Area Path Filter" 
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Filled.FilterAlt"
+                              HelperText="Filter by area path" />
+                <MudNumericField @bind-Value="_maxIterations" 
+                                 Label="Max Iterations" 
+                                 Variant="Variant.Outlined"
+                                 Min="1" Max="20"
+                                 HelperText="Number of iterations to analyze" />
+                <MudNumericField @bind-Value="_defaultCapacity" 
+                                 Label="Default Capacity" 
+                                 Variant="Variant.Outlined"
+                                 Min="0"
+                                 HelperText="Default capacity per iteration" />
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           OnClick="LoadData"
+                           StartIcon="@Icons.Material.Filled.Refresh">
+                    Refresh
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        <!-- Heat Map -->
+        <MudPaper Elevation="2" Class="pa-4 mb-6">
+            <MudText Typo="Typo.h6" GutterBottom="true">Effort Heat Map (Area Path × Iteration)</MudText>
+            @if (_distributionData.HeatMapData.Any())
+            {
+                <MudSimpleTable Dense="true" Hover="true" Bordered="true" Style="overflow-x: auto;">
+                    <thead>
+                        <tr>
+                            <th>Area Path</th>
+                            @foreach (var iteration in _distributionData.EffortByIteration)
+                            {
+                                <th class="text-center">
+                                    <div>@iteration.SprintName</div>
+                                    @if (iteration.Capacity.HasValue)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Cap: @iteration.Capacity</MudText>
+                                    }
+                                </th>
+                            }
+                            <th class="text-center">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var areaPath in _distributionData.EffortByArea)
+                        {
+                            <tr>
+                                <td><strong>@GetShortAreaPath(areaPath.AreaPath)</strong></td>
+                                @foreach (var iteration in _distributionData.EffortByIteration)
+                                {
+                                    var cell = _distributionData.HeatMapData
+                                        .FirstOrDefault(c => c.AreaPath == areaPath.AreaPath && c.IterationPath == iteration.IterationPath);
+                                    <td class="text-center" style="@GetHeatMapCellStyle(cell)">
+                                        @if (cell != null && cell.Effort > 0)
+                                        {
+                                            <div>
+                                                <strong>@cell.Effort</strong>
+                                                <MudText Typo="Typo.caption" Style="display: block;">(@cell.WorkItemCount items)</MudText>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span>-</span>
+                                        }
+                                    </td>
+                                }
+                                <td class="text-center"><strong>@areaPath.TotalEffort</strong></td>
+                            </tr>
+                        }
+                        <tr style="background-color: var(--mud-palette-background-grey); font-weight: bold;">
+                            <td>Total</td>
+                            @foreach (var iteration in _distributionData.EffortByIteration)
+                            {
+                                <td class="text-center">@iteration.TotalEffort</td>
+                            }
+                            <td class="text-center">@_distributionData.TotalEffort</td>
+                        </tr>
+                    </tbody>
+                </MudSimpleTable>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info">No effort data available for heat map.</MudAlert>
+            }
+        </MudPaper>
+
+        <!-- Effort by Iteration Chart -->
+        <MudPaper Elevation="2" Class="pa-4 mb-6">
+            <MudText Typo="Typo.h6" GutterBottom="true">Effort by Iteration</MudText>
+            <MudChart ChartType="ChartType.Bar" 
+                      Width="100%" 
+                      Height="400px"
+                      ChartSeries="@GetIterationChartData()" 
+                      XAxisLabels="@GetIterationLabels()"
+                      ChartOptions="@_chartOptions">
+            </MudChart>
+        </MudPaper>
+
+        <!-- Effort by Area Path Chart -->
+        <MudPaper Elevation="2" Class="pa-4 mb-6">
+            <MudText Typo="Typo.h6" GutterBottom="true">Effort by Area Path</MudText>
+            <MudChart ChartType="ChartType.Pie" 
+                      Width="100%" 
+                      Height="400px"
+                      InputData="@GetAreaPathChartData()" 
+                      InputLabels="@GetAreaPathLabels()">
+            </MudChart>
+        </MudPaper>
+
+        <!-- Utilization Table -->
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Iteration Utilization</MudText>
+            <MudTable Items="@_distributionData.EffortByIteration" Dense="true" Hover="true" Bordered="true">
+                <HeaderContent>
+                    <MudTh>Sprint</MudTh>
+                    <MudTh>Iteration Path</MudTh>
+                    <MudTh class="text-right">Work Items</MudTh>
+                    <MudTh class="text-right">Total Effort</MudTh>
+                    <MudTh class="text-right">Capacity</MudTh>
+                    <MudTh class="text-right">Utilization</MudTh>
+                    <MudTh>Status</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Sprint">@context.SprintName</MudTd>
+                    <MudTd DataLabel="Iteration Path">@context.IterationPath</MudTd>
+                    <MudTd DataLabel="Work Items" class="text-right">@context.WorkItemCount</MudTd>
+                    <MudTd DataLabel="Total Effort" class="text-right">@context.TotalEffort</MudTd>
+                    <MudTd DataLabel="Capacity" class="text-right">
+                        @(context.Capacity?.ToString() ?? "N/A")
+                    </MudTd>
+                    <MudTd DataLabel="Utilization" class="text-right">
+                        @context.UtilizationPercentage.ToString("F1")%
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        @if (context.UtilizationPercentage > 100)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error">Overcommitted</MudChip>
+                        }
+                        else if (context.UtilizationPercentage > 90)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">Near Capacity</MudChip>
+                        }
+                        else if (context.UtilizationPercentage > 70)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success">Normal</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">Underutilized</MudChip>
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    }
 </MudContainer>
 
 @code {
-    private ChartOptions _chartOptions = new ChartOptions
+    private EffortDistributionDto? _distributionData;
+    private bool _isLoading = true;
+    private ErrorResponse? _errorResponse;
+    private string? _areaPathFilter;
+    private int _maxIterations = 10;
+    private int? _defaultCapacity = 40;
+
+    private ChartOptions _chartOptions = new()
     {
         YAxisTicks = 5,
-        MaxNumYAxisTicks = 10
+        MaxNumYAxisTicks = 10,
+        InterpolationOption = InterpolationOption.NaturalSpline
     };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        try
+        {
+            ClearError();
+            _distributionData = await MetricsClient.GetEffortDistributionAsync(
+                _areaPathFilter, 
+                _maxIterations,
+                _defaultCapacity);
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex, "Error loading effort distribution data");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ShowError(Exception ex, string context)
+    {
+        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+
+    private string GetAverageUtilization()
+    {
+        if (_distributionData == null || !_distributionData.EffortByIteration.Any())
+            return "0.0";
+        
+        var avg = _distributionData.EffortByIteration.Average(i => i.UtilizationPercentage);
+        return avg.ToString("F1");
+    }
+
+    private Color GetUtilizationColor()
+    {
+        if (_distributionData == null) return Color.Default;
+        
+        var avg = _distributionData.EffortByIteration.Average(i => i.UtilizationPercentage);
+        return avg switch
+        {
+            > 100 => Color.Error,
+            > 90 => Color.Warning,
+            > 70 => Color.Success,
+            _ => Color.Info
+        };
+    }
+
+    private string GetHeatMapCellStyle(EffortHeatMapCell? cell)
+    {
+        if (cell == null || cell.Effort == 0)
+            return "background-color: var(--mud-palette-background-grey); color: var(--mud-palette-text-disabled);";
+
+        var color = cell.Status switch
+        {
+            CapacityStatus.OverCapacity => "background-color: rgba(244, 67, 54, 0.3);",  // Red
+            CapacityStatus.NearCapacity => "background-color: rgba(255, 152, 0, 0.3);", // Orange
+            CapacityStatus.Normal => "background-color: rgba(76, 175, 80, 0.3);",       // Green
+            CapacityStatus.Underutilized => "background-color: rgba(33, 150, 243, 0.2);", // Blue
+            _ => "background-color: var(--mud-palette-background);"
+        };
+
+        return $"{color} font-weight: 500;";
+    }
+
+    private string GetShortAreaPath(string areaPath)
+    {
+        var parts = areaPath.Split('\\');
+        return parts.Length > 2 ? string.Join("\\", parts.Skip(parts.Length - 2)) : areaPath;
+    }
+
+    private List<ChartSeries> GetIterationChartData()
+    {
+        if (_distributionData == null) return new List<ChartSeries>();
+
+        return new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Total Effort",
+                Data = _distributionData.EffortByIteration.Select(i => (double)i.TotalEffort).ToArray()
+            },
+            new ChartSeries
+            {
+                Name = "Capacity",
+                Data = _distributionData.EffortByIteration.Select(i => (double)(i.Capacity ?? 0)).ToArray()
+            }
+        };
+    }
+
+    private string[] GetIterationLabels()
+    {
+        if (_distributionData == null) return Array.Empty<string>();
+        
+        return _distributionData.EffortByIteration
+            .Select(i => i.SprintName)
+            .ToArray();
+    }
+
+    private double[] GetAreaPathChartData()
+    {
+        if (_distributionData == null) return Array.Empty<double>();
+        
+        return _distributionData.EffortByArea
+            .Select(a => (double)a.TotalEffort)
+            .ToArray();
+    }
+
+    private string[] GetAreaPathLabels()
+    {
+        if (_distributionData == null) return Array.Empty<string>();
+        
+        return _distributionData.EffortByArea
+            .Select(a => GetShortAreaPath(a.AreaPath))
+            .ToArray();
+    }
 }

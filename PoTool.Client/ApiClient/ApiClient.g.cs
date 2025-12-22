@@ -610,6 +610,27 @@ namespace PoTool.Client.ApiClient
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
 
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<SprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? defaultCapacity);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<SprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity, System.Threading.CancellationToken cancellationToken);
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -996,6 +1017,268 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity)
+        {
+            return GetEffortDistributionAsync(areaPathFilter, maxIterations, defaultCapacity, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/Metrics/effort-distribution"
+                    urlBuilder_.Append("api/Metrics/effort-distribution");
+                    urlBuilder_.Append('?');
+                    if (areaPathFilter != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("areaPathFilter")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(areaPathFilter, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (maxIterations != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("maxIterations")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(maxIterations, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (defaultCapacity != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("defaultCapacity")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(defaultCapacity, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<EffortDistributionDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<SprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? defaultCapacity)
+        {
+            return GetSprintCapacityPlanAsync(iterationPath, defaultCapacity, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<SprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/Metrics/capacity-plan"
+                    urlBuilder_.Append("api/Metrics/capacity-plan");
+                    urlBuilder_.Append('?');
+                    if (iterationPath != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("iterationPath")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(iterationPath, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (defaultCapacity != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("defaultCapacity")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(defaultCapacity, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<SprintCapacityPlanDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<EpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity)
+        {
+            return GetEpicForecastAsync(epicId, maxSprintsForVelocity, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<EpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity, System.Threading.CancellationToken cancellationToken)
+        {
+            if (epicId == null)
+                throw new System.ArgumentNullException("epicId");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/Metrics/epic-forecast/{epicId}"
+                    urlBuilder_.Append("api/Metrics/epic-forecast/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(epicId, System.Globalization.CultureInfo.InvariantCulture)));
+                    urlBuilder_.Append('?');
+                    if (maxSprintsForVelocity != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("maxSprintsForVelocity")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(maxSprintsForVelocity, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<EpicCompletionForecastDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
         protected struct ObjectResponseResult<T>
         {
             public ObjectResponseResult(T responseObject, string responseText)
@@ -1163,6 +1446,13 @@ namespace PoTool.Client.ApiClient
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<int> SyncAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<PRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<PRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -1864,6 +2154,92 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<PRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack)
+        {
+            return GetReviewBottleneckAsync(maxPRs, daysBack, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<PRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/PullRequests/review-bottleneck"
+                    urlBuilder_.Append("api/PullRequests/review-bottleneck");
+                    urlBuilder_.Append('?');
+                    if (maxPRs != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("maxPRs")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(maxPRs, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (daysBack != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("daysBack")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(daysBack, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<PRReviewBottleneckDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
         protected struct ObjectResponseResult<T>
         {
             public ObjectResponseResult(T responseObject, string responseText)
@@ -2369,6 +2745,27 @@ namespace PoTool.Client.ApiClient
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetGoalHierarchyAsync(string? goalIds, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<WorkItemStateTimelineDto> GetStateTimelineAsync(int id);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<WorkItemStateTimelineDto> GetStateTimelineAsync(int id, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -2971,6 +3368,287 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<WorkItemStateTimelineDto> GetStateTimelineAsync(int id)
+        {
+            return GetStateTimelineAsync(id, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<WorkItemStateTimelineDto> GetStateTimelineAsync(int id, System.Threading.CancellationToken cancellationToken)
+        {
+            if (id == null)
+                throw new System.ArgumentNullException("id");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/WorkItems/{id}/state-timeline"
+                    urlBuilder_.Append("api/WorkItems/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(id, System.Globalization.CultureInfo.InvariantCulture)));
+                    urlBuilder_.Append("/state-timeline");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<WorkItemStateTimelineDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch)
+        {
+            return GetAdvancedFilteredAsync(typeFilter, stateFilter, iterationPathFilter, areaPathFilter, minEffort, maxEffort, hasValidationIssues, isBlocked, titleSearch, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/WorkItems/advanced-filter"
+                    urlBuilder_.Append("api/WorkItems/advanced-filter");
+                    urlBuilder_.Append('?');
+                    if (typeFilter != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("typeFilter")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(typeFilter, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (stateFilter != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("stateFilter")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(stateFilter, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (iterationPathFilter != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("iterationPathFilter")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(iterationPathFilter, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (areaPathFilter != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("areaPathFilter")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(areaPathFilter, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (minEffort != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("minEffort")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(minEffort, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (maxEffort != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("maxEffort")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(maxEffort, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (hasValidationIssues != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("hasValidationIssues")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(hasValidationIssues, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (isBlocked != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("isBlocked")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(isBlocked, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (titleSearch != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("titleSearch")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(titleSearch, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<WorkItemDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds)
+        {
+            return GetDependencyGraphAsync(areaPathFilter, workItemIds, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/WorkItems/dependency-graph"
+                    urlBuilder_.Append("api/WorkItems/dependency-graph");
+                    urlBuilder_.Append('?');
+                    if (areaPathFilter != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("areaPathFilter")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(areaPathFilter, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (workItemIds != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("workItemIds")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(workItemIds, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<DependencyGraphDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
         protected struct ObjectResponseResult<T>
         {
             public ObjectResponseResult(T responseObject, string responseText)
@@ -3266,6 +3944,277 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EffortDistributionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("effortByArea")]
+        public System.Collections.Generic.ICollection<EffortByAreaPath> EffortByArea { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effortByIteration")]
+        public System.Collections.Generic.ICollection<EffortByIteration> EffortByIteration { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("heatMapData")]
+        public System.Collections.Generic.ICollection<EffortHeatMapCell> HeatMapData { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
+        public int TotalEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EffortByAreaPath
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
+        public string AreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
+        public int TotalEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
+        public int WorkItemCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageEffortPerItem")]
+        public double AverageEffortPerItem { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EffortByIteration
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
+        public string SprintName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
+        public int TotalEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
+        public int WorkItemCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("capacity")]
+        public int? Capacity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
+        public double UtilizationPercentage { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EffortHeatMapCell
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
+        public string AreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effort")]
+        public int Effort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
+        public int WorkItemCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public CapacityStatus Status { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum CapacityStatus
+    {
+
+        Unknown = 0,
+
+        Underutilized = 1,
+
+        Normal = 2,
+
+        NearCapacity = 3,
+
+        OverCapacity = 4,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SprintCapacityPlanDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
+        public string SprintName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("startDate")]
+        public System.DateTimeOffset? StartDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("endDate")]
+        public System.DateTimeOffset? EndDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalPlannedEffort")]
+        public int TotalPlannedEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalCapacity")]
+        public int TotalCapacity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
+        public double UtilizationPercentage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public CapacityStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("teamCapacities")]
+        public System.Collections.Generic.ICollection<TeamMemberCapacity> TeamCapacities { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("warnings")]
+        public System.Collections.Generic.ICollection<CapacityWarning> Warnings { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TeamMemberCapacity
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("memberName")]
+        public string MemberName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("assignedEffort")]
+        public int AssignedEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("availableCapacity")]
+        public int AvailableCapacity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
+        public double UtilizationPercentage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public CapacityStatus Status { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CapacityWarning
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("level")]
+        public WarningLevel Level { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("message")]
+        public string Message { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("affectedMembers")]
+        public System.Collections.Generic.ICollection<string> AffectedMembers { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum WarningLevel
+    {
+
+        Info = 0,
+
+        Warning = 1,
+
+        Critical = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EpicCompletionForecastDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("epicId")]
+        public int EpicId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public string Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
+        public int TotalEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completedEffort")]
+        public int CompletedEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("remainingEffort")]
+        public int RemainingEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("estimatedVelocity")]
+        public double EstimatedVelocity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintsRemaining")]
+        public int SprintsRemaining { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("estimatedCompletionDate")]
+        public System.DateTimeOffset? EstimatedCompletionDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("confidence")]
+        public ForecastConfidence Confidence { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("forecastByDate")]
+        public System.Collections.Generic.ICollection<SprintForecast> ForecastByDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
+        public string AreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ForecastConfidence
+    {
+
+        Low = 0,
+
+        Medium = 1,
+
+        High = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SprintForecast
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
+        public string SprintName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintStartDate")]
+        public System.DateTimeOffset SprintStartDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintEndDate")]
+        public System.DateTimeOffset SprintEndDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("expectedCompletedEffort")]
+        public int ExpectedCompletedEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("remainingEffortAfterSprint")]
+        public int RemainingEffortAfterSprint { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("progressPercentage")]
+        public double ProgressPercentage { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PullRequestDto
     {
 
@@ -3442,6 +4391,110 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("linesModified")]
         public int LinesModified { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PRReviewBottleneckDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("reviewerPerformances")]
+        public System.Collections.Generic.ICollection<ReviewerPerformance> ReviewerPerformances { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pRsWaitingLongest")]
+        public System.Collections.Generic.ICollection<PRWaitingForReview> PRsWaitingLongest { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("summary")]
+        public ReviewMetricsSummary Summary { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReviewerPerformance
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("reviewerName")]
+        public string ReviewerName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalReviewsAssigned")]
+        public int TotalReviewsAssigned { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reviewsCompleted")]
+        public int ReviewsCompleted { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageResponseTimeHours")]
+        public double AverageResponseTimeHours { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("medianResponseTimeHours")]
+        public double MedianResponseTimeHours { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pRsWaitingForReview")]
+        public int PRsWaitingForReview { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public ReviewerStatus Status { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ReviewerStatus
+    {
+
+        Fast = 0,
+
+        Normal = 1,
+
+        Slow = 2,
+
+        Bottleneck = 3,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PRWaitingForReview
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
+        public int PullRequestId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("author")]
+        public string Author { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
+        public System.DateTimeOffset CreatedDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("hoursWaiting")]
+        public double HoursWaiting { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pendingReviewers")]
+        public System.Collections.Generic.ICollection<string> PendingReviewers { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReviewMetricsSummary
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageTimeToFirstReviewHours")]
+        public double AverageTimeToFirstReviewHours { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageTimeToCompleteReviewsHours")]
+        public double AverageTimeToCompleteReviewsHours { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalPRsPendingReview")]
+        public int TotalPRsPendingReview { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("bottleneckReviewer")]
+        public string BottleneckReviewer { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("fastestReviewer")]
+        public string FastestReviewer { get; set; } = default!;
 
     }
 
@@ -3638,6 +4691,206 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("newValue")]
         public string? NewValue { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WorkItemStateTimelineDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        public int WorkItemId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public string Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("stateHistory")]
+        public System.Collections.Generic.ICollection<StateTransition> StateHistory { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("bottlenecks")]
+        public System.Collections.Generic.ICollection<TimelineBottleneck> Bottlenecks { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalTimeInProgress")]
+        public System.TimeSpan TotalTimeInProgress { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalCycleTime")]
+        public System.TimeSpan TotalCycleTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class StateTransition
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("fromState")]
+        public string FromState { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("toState")]
+        public string ToState { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("transitionDate")]
+        public System.DateTimeOffset TransitionDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("changedBy")]
+        public string ChangedBy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("timeInPreviousState")]
+        public System.TimeSpan TimeInPreviousState { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TimelineBottleneck
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public string State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("timeSpent")]
+        public System.TimeSpan TimeSpent { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("severity")]
+        public BottleneckSeverity Severity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string Reason { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum BottleneckSeverity
+    {
+
+        Low = 0,
+
+        Medium = 1,
+
+        High = 2,
+
+        Critical = 3,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DependencyGraphDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("nodes")]
+        public System.Collections.Generic.ICollection<DependencyNode> Nodes { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("links")]
+        public System.Collections.Generic.ICollection<DependencyLink> Links { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("criticalPaths")]
+        public System.Collections.Generic.ICollection<DependencyChain> CriticalPaths { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("blockedWorkItemIds")]
+        public System.Collections.Generic.ICollection<int> BlockedWorkItemIds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DependencyNode
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        public int WorkItemId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public string Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public string State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effort")]
+        public int? Effort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("dependencyCount")]
+        public int DependencyCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("dependentCount")]
+        public int DependentCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isBlocking")]
+        public bool IsBlocking { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DependencyLink
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("sourceWorkItemId")]
+        public int SourceWorkItemId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("targetWorkItemId")]
+        public int TargetWorkItemId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("linkType")]
+        public DependencyLinkType LinkType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string Description { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum DependencyLinkType
+    {
+
+        RelatedTo = 0,
+
+        DependsOn = 1,
+
+        Blocks = 2,
+
+        Parent = 3,
+
+        Child = 4,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DependencyChain
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemIds")]
+        public System.Collections.Generic.ICollection<int> WorkItemIds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
+        public int TotalEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("chainLength")]
+        public int ChainLength { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("riskLevel")]
+        public DependencyChainRisk RiskLevel { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum DependencyChainRisk
+    {
+
+        Low = 0,
+
+        Medium = 1,
+
+        High = 2,
+
+        Critical = 3,
 
     }
 
