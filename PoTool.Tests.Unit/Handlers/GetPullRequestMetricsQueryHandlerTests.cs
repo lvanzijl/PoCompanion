@@ -294,9 +294,9 @@ public class GetPullRequestMetricsQueryHandlerTests
 
         var fileChanges = new List<PullRequestFileChangeDto>
         {
-            CreateFileChange(1, 1, "File1.cs", 100, 50, 0),  // 150 total lines
-            CreateFileChange(1, 1, "File2.cs", 50, 25, 0),   // 75 total lines
-            CreateFileChange(1, 1, "File3.cs", 25, 0, 0)     // 25 total lines
+            CreateFileChange(1, 1, "File1.cs", 100, 50, 0),  // 100 added + 50 deleted = 150 lines changed
+            CreateFileChange(1, 1, "File2.cs", 50, 25, 0),   // 50 added + 25 deleted = 75 lines changed
+            CreateFileChange(1, 1, "File3.cs", 25, 0, 0)     // 25 added + 0 deleted = 25 lines changed
         };
 
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -319,7 +319,7 @@ public class GetPullRequestMetricsQueryHandlerTests
         Assert.AreEqual(3, metrics.TotalFileCount);
         Assert.AreEqual(175, metrics.TotalLinesAdded);
         Assert.AreEqual(75, metrics.TotalLinesDeleted);
-        // Average = (150 + 75 + 25) / 3 = 83.33
+        // Average lines changed per file = (150 + 75 + 25) / 3 = 83.33
         Assert.AreEqual(83.33, metrics.AverageLinesPerFile, 0.01);
     }
 
