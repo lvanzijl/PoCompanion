@@ -79,7 +79,7 @@ namespace PoTool.Client.ApiClient
         public Client(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5555";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
@@ -648,7 +648,7 @@ namespace PoTool.Client.ApiClient
         public MetricsClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5555";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
@@ -1457,7 +1457,7 @@ namespace PoTool.Client.ApiClient
         public ProfilesClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5555";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
@@ -2291,7 +2291,7 @@ namespace PoTool.Client.ApiClient
         public PullRequestsClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5555";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
@@ -3203,7 +3203,7 @@ namespace PoTool.Client.ApiClient
         public SettingsClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5555";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
@@ -3581,11 +3581,11 @@ namespace PoTool.Client.ApiClient
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds);
+        System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -3604,7 +3604,7 @@ namespace PoTool.Client.ApiClient
         public WorkItemsClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5555";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
@@ -4384,14 +4384,14 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds)
+        public virtual System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes)
         {
-            return GetDependencyGraphAsync(areaPathFilter, workItemIds, System.Threading.CancellationToken.None);
+            return GetDependencyGraphAsync(areaPathFilter, workItemIds, workItemTypes, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -4414,6 +4414,10 @@ namespace PoTool.Client.ApiClient
                     if (workItemIds != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("workItemIds")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(workItemIds, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (workItemTypes != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("workItemTypes")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(workItemTypes, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     }
                     urlBuilder_.Length--;
 
@@ -5688,6 +5692,9 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("blockedWorkItemIds")]
         public System.Collections.Generic.ICollection<int> BlockedWorkItemIds { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("circularDependencies")]
+        public System.Collections.Generic.ICollection<CircularDependency> CircularDependencies { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
         public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
 
@@ -5786,6 +5793,18 @@ namespace PoTool.Client.ApiClient
         High = 2,
 
         Critical = 3,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CircularDependency
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("cycleWorkItemIds")]
+        public System.Collections.Generic.ICollection<int> CycleWorkItemIds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string Description { get; set; } = default!;
 
     }
 
