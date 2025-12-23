@@ -55,6 +55,11 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<PullRequestFileChangeEntity> PullRequestFileChanges => Set<PullRequestFileChangeEntity>();
 
+    /// <summary>
+    /// Effort estimation settings.
+    /// </summary>
+    public DbSet<EffortEstimationSettingsEntity> EffortEstimationSettings => Set<EffortEstimationSettingsEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -121,6 +126,11 @@ public class PoToolDbContext : DbContext
         modelBuilder.Entity<PullRequestFileChangeEntity>(entity =>
         {
             entity.HasIndex(e => new { e.PullRequestId, e.IterationId });
+        });
+
+        modelBuilder.Entity<EffortEstimationSettingsEntity>(entity =>
+        {
+            // EffortEstimationSettings entity configuration (Id is primary key by convention)
         });
     }
 }

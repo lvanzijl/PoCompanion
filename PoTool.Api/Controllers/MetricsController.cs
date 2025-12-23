@@ -413,4 +413,69 @@ public class MetricsController : ControllerBase
             return StatusCode(500, "Error retrieving effort concentration risk");
         }
     }
+
+    /// <summary>
+    /// Gets intelligent effort estimation suggestions for work items without effort.
+    /// Uses ML/heuristic analysis of historical data to suggest appropriate effort values.
+    /// </summary>
+    /// <param name="iterationPath">Optional iteration path filter</param>
+    /// <param name="areaPath">Optional area path filter</param>
+    /// <param name="onlyInProgressItems">Only include items in progress state (default: true)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of effort estimation suggestions with rationale and confidence scores</returns>
+    [HttpGet("effort-estimation-suggestions")]
+    public async Task<ActionResult<IReadOnlyList<EffortEstimationSuggestionDto>>> GetEffortEstimationSuggestions(
+        [FromQuery] string? iterationPath = null,
+        [FromQuery] string? areaPath = null,
+        [FromQuery] bool onlyInProgressItems = true,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var suggestions = await _mediator.Send(
+                new GetEffortEstimationSuggestionsQuery(iterationPath, areaPath, onlyInProgressItems),
+                cancellationToken);
+
+            return Ok(suggestions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving effort estimation suggestions");
+            return StatusCode(500, "Error retrieving effort estimation suggestions");
+        }
+    }
+
+    /// <summary>
+    /// Gets effort estimation quality metrics.
+    /// Analyzes historical estimation accuracy and patterns.
+    /// </summary>
+    /// <param name="areaPath">Optional area path filter</param>
+    /// <param name="maxIterations">Maximum number of iterations to analyze (default: 10)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Effort estimation quality analysis with trends and recommendations</returns>
+    [HttpGet("effort-estimation-quality")]
+    public async Task<ActionResult<EffortEstimationQualityDto>> GetEffortEstimationQuality(
+        [FromQuery] string? areaPath = null,
+        [FromQuery] int maxIterations = 10,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (maxIterations < 1 || maxIterations > 20)
+            {
+                return BadRequest("MaxIterations must be between 1 and 20");
+            }
+
+            var quality = await _mediator.Send(
+                new GetEffortEstimationQualityQuery(areaPath, maxIterations),
+                cancellationToken);
+
+            return Ok(quality);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving effort estimation quality for area: {AreaPath}", areaPath ?? "All");
+            return StatusCode(500, "Error retrieving effort estimation quality");
+        }
+    }
 }

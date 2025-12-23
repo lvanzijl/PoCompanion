@@ -125,6 +125,7 @@ public static class ApiServiceCollectionExtensions
         // Register background services
         services.AddSingleton<WorkItemSyncService>();
         services.AddHostedService(provider => provider.GetRequiredService<WorkItemSyncService>());
+        services.AddHostedService<EffortEstimationNotificationService>();
 
         // Add SignalR
         services.AddSignalR();

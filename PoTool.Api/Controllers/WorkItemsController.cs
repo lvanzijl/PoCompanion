@@ -412,4 +412,33 @@ public class WorkItemsController : ControllerBase
             return StatusCode(500, "Error fixing validation violations");
         }
     }
+
+    /// <summary>
+    /// Assigns effort estimates to multiple work items in batch.
+    /// Provides efficient bulk update with validation and error handling.
+    /// </summary>
+    /// <param name="command">Bulk effort assignment command with list of work item ID and effort pairs</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Result of bulk assignment operation showing success/failure for each item</returns>
+    [HttpPost("bulk-assign-effort")]
+    public async Task<ActionResult<BulkEffortAssignmentResultDto>> BulkAssignEffort(
+        [FromBody] BulkAssignEffortCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (command.Assignments == null || command.Assignments.Count == 0)
+            {
+                return BadRequest("At least one assignment must be provided");
+            }
+
+            var result = await _mediator.Send(command, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error assigning effort in bulk");
+            return StatusCode(500, "Error assigning effort in bulk");
+        }
+    }
 }

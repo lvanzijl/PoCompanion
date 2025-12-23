@@ -50,7 +50,7 @@ public class MetricsControllerSteps
                 RetrievedAt = DateTimeOffset.UtcNow
             };
 
-            if (row.ContainsKey("Effort") && !string.IsNullOrWhiteSpace(row["Effort"]))
+            if (row.ContainsKey("Effort") && !string.IsNullOrWhiteSpace(row["Effort"]) && row["Effort"] != "null")
             {
                 workItem.Effort = int.Parse(row["Effort"]);
             }
@@ -85,7 +85,7 @@ public class MetricsControllerSteps
                 RetrievedAt = DateTimeOffset.UtcNow
             };
 
-            if (row.ContainsKey("Effort") && !string.IsNullOrWhiteSpace(row["Effort"]))
+            if (row.ContainsKey("Effort") && !string.IsNullOrWhiteSpace(row["Effort"]) && row["Effort"] != "null")
             {
                 workItem.Effort = int.Parse(row["Effort"]);
             }
@@ -275,5 +275,91 @@ public class MetricsControllerSteps
     public void ThenTheSprintMetricsShouldHaveData()
     {
         Assert.IsNotNull(_sprintMetrics);
+    }
+
+    // Effort Estimation Suggestions steps
+    private IReadOnlyList<EffortEstimationSuggestionDto>? _effortSuggestions;
+
+    [When(@"I request effort estimation suggestions")]
+    public async Task WhenIRequestEffortEstimationSuggestions()
+    {
+        _scenarioContext["Response"] = _response = await _client.GetAsync("/api/metrics/effort-estimation-suggestions");
+        if (_response.IsSuccessStatusCode)
+        {
+            _effortSuggestions = await _response.Content.ReadFromJsonAsync<IReadOnlyList<EffortEstimationSuggestionDto>>();
+        }
+    }
+
+    [When(@"I request effort estimation suggestions for iteration ""(.*)""")]
+    public async Task WhenIRequestEffortEstimationSuggestionsForIteration(string iterationPath)
+    {
+        _scenarioContext["Response"] = _response = await _client.GetAsync(
+            $"/api/metrics/effort-estimation-suggestions?iterationPath={Uri.EscapeDataString(iterationPath)}");
+        if (_response.IsSuccessStatusCode)
+        {
+            _effortSuggestions = await _response.Content.ReadFromJsonAsync<IReadOnlyList<EffortEstimationSuggestionDto>>();
+        }
+    }
+
+    [When(@"I request effort estimation suggestions with onlyInProgressItems (.*)")]
+    public async Task WhenIRequestEffortEstimationSuggestionsWithOnlyInProgressItems(string onlyInProgress)
+    {
+        _scenarioContext["Response"] = _response = await _client.GetAsync(
+            $"/api/metrics/effort-estimation-suggestions?onlyInProgressItems={onlyInProgress}");
+        if (_response.IsSuccessStatusCode)
+        {
+            _effortSuggestions = await _response.Content.ReadFromJsonAsync<IReadOnlyList<EffortEstimationSuggestionDto>>();
+        }
+    }
+
+    [Then(@"the effort suggestions should contain suggestions")]
+    public void ThenTheEffortSuggestionsShouldContainSuggestions()
+    {
+        Assert.IsNotNull(_effortSuggestions);
+        Assert.IsTrue(_effortSuggestions.Count > 0);
+    }
+
+    [Then(@"the effort suggestions should contain (.*) suggestion")]
+    public void ThenTheEffortSuggestionsShouldContainSpecificCount(int count)
+    {
+        Assert.IsNotNull(_effortSuggestions);
+        Assert.AreEqual(count, _effortSuggestions.Count);
+    }
+
+    [Given(@"work items exist with mixed states")]
+    public async Task GivenWorkItemsExistWithMixedStates(Table table)
+    {
+        await GivenWorkItemsExistForMultipleIterations(table);
+    }
+
+    // Effort Estimation Quality steps
+    private EffortEstimationQualityDto? _effortQuality;
+
+    [When(@"I request effort estimation quality")]
+    public async Task WhenIRequestEffortEstimationQuality()
+    {
+        _scenarioContext["Response"] = _response = await _client.GetAsync("/api/metrics/effort-estimation-quality");
+        if (_response.IsSuccessStatusCode)
+        {
+            _effortQuality = await _response.Content.ReadFromJsonAsync<EffortEstimationQualityDto>();
+        }
+    }
+
+    [When(@"I request effort estimation quality with maxIterations (.*)")]
+    public async Task WhenIRequestEffortEstimationQualityWithMaxIterations(int maxIterations)
+    {
+        _scenarioContext["Response"] = _response = await _client.GetAsync(
+            $"/api/metrics/effort-estimation-quality?maxIterations={maxIterations}");
+        if (_response.IsSuccessStatusCode)
+        {
+            _effortQuality = await _response.Content.ReadFromJsonAsync<EffortEstimationQualityDto>();
+        }
+    }
+
+    [Then(@"the quality metrics should contain data")]
+    public void ThenTheQualityMetricsShouldContainData()
+    {
+        Assert.IsNotNull(_effortQuality);
+        Assert.IsTrue(_effortQuality.TotalCompletedWorkItems > 0);
     }
 }

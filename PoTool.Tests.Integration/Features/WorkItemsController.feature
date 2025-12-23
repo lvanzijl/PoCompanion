@@ -143,3 +143,50 @@ Scenario: Get work item by zero TFS ID
 Scenario: Get work item by negative TFS ID
     When I request work item -1 from controller
     Then the response should be NotFound
+
+Scenario: Bulk assign effort to multiple work items successfully
+    Given work items exist for testing
+        | TfsId | Title    | Type | State       | Effort | IterationPath           |
+        | 20000 | Story 1  | Task | In Progress | null   | Project\2024\Sprint1  |
+        | 20001 | Story 2  | Task | In Progress | null   | Project\2024\Sprint1  |
+    When I bulk assign effort with assignments
+        | WorkItemId | EffortValue |
+        | 20000      | 5           |
+        | 20001      | 3           |
+    Then the response should be OK
+    And the bulk assignment should show 2 successful updates
+
+Scenario: Bulk assign effort with empty list
+    When I bulk assign effort with empty assignments
+    Then the response should be BadRequest
+
+Scenario: Bulk assign effort with non-existent work item
+    When I bulk assign effort with assignments
+        | WorkItemId | EffortValue |
+        | 99999      | 5           |
+    Then the response should be OK
+    And the bulk assignment should show 0 successful updates
+    And the bulk assignment should show 1 failed updates
+
+Scenario: Bulk assign effort with negative effort value
+    Given work items exist for testing
+        | TfsId | Title    | Type | State       | Effort | IterationPath           |
+        | 21000 | Story 1  | Task | In Progress | null   | Project\2024\Sprint1  |
+    When I bulk assign effort with assignments
+        | WorkItemId | EffortValue |
+        | 21000      | -5          |
+    Then the response should be OK
+    And the bulk assignment should show 0 successful updates
+    And the bulk assignment should show 1 failed updates
+
+Scenario: Bulk assign effort with mixed results
+    Given work items exist for testing
+        | TfsId | Title    | Type | State       | Effort | IterationPath           |
+        | 22000 | Story 1  | Task | In Progress | null   | Project\2024\Sprint1  |
+    When I bulk assign effort with assignments
+        | WorkItemId | EffortValue |
+        | 22000      | 5           |
+        | 99999      | 3           |
+    Then the response should be OK
+    And the bulk assignment should show 1 successful updates
+    And the bulk assignment should show 1 failed updates

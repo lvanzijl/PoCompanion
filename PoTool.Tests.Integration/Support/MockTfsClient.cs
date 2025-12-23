@@ -361,4 +361,28 @@ public class MockTfsClient : ITfsClient
         // The handler will check the database repository, not our internal list
         return Task.FromResult(true);
     }
+
+    public Task<bool> UpdateWorkItemEffortAsync(int workItemId, int effort, CancellationToken cancellationToken = default)
+    {
+        // Mock implementation for integration tests
+        // Always return true for valid effort values to simulate successful TFS update
+        if (effort < 0)
+        {
+            return Task.FromResult(false);
+        }
+        
+        // Find and update the work item if it exists in our mock list
+        var workItem = _mockWorkItems.FirstOrDefault(wi => wi.TfsId == workItemId);
+        if (workItem != null)
+        {
+            // Remove old and add updated work item (since WorkItemDto is immutable)
+            _mockWorkItems.Remove(workItem);
+            var updatedWorkItem = workItem with { Effort = effort };
+            _mockWorkItems.Add(updatedWorkItem);
+        }
+        
+        // Return true regardless of whether work item is in our mock list
+        // The handler will check the database repository, not our internal list
+        return Task.FromResult(true);
+    }
 }
