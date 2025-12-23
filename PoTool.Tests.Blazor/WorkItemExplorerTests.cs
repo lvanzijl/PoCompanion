@@ -61,6 +61,8 @@ public class WorkItemExplorerTests : BunitTestContext
         _mockApiClient.Setup(x => x.GetApiTfsconfigAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new ApiException("Not found", 204, null, null, null));
 
+        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync())
+            .ReturnsAsync(new List<WorkItemWithValidationDto>());
         _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemWithValidationDto>());
 
@@ -139,7 +141,7 @@ public class WorkItemExplorerTests : BunitTestContext
             CreateWorkItemWithValidation(2, "User Story", "Test Story", 1, "Active")
         };
 
-        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()))
+        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync())
             .ReturnsAsync(workItems);
 
         var treeNodes = new List<TreeNode>
@@ -172,7 +174,7 @@ public class WorkItemExplorerTests : BunitTestContext
 
         // Assert
         Assert.Contains("Work Item Explorer", cut.Markup);
-        _mockWorkItemsClient.Verify(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        _mockWorkItemsClient.Verify(x => x.GetAllWithValidationAsync(), Times.AtLeastOnce);
     }
 
     [TestMethod]
@@ -261,7 +263,7 @@ public class WorkItemExplorerTests : BunitTestContext
         // Wait for initialization
         cut.WaitForAssertion(() =>
         {
-            _mockWorkItemsClient.Verify(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+            _mockWorkItemsClient.Verify(x => x.GetAllWithValidationAsync(), Times.AtLeastOnce);
         }, timeout: TimeSpan.FromSeconds(5));
     }
 
@@ -274,7 +276,7 @@ public class WorkItemExplorerTests : BunitTestContext
             CreateWorkItemWithValidation(1, "Epic", "Test Epic", null, "New")
         };
 
-        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()))
+        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync())
             .ReturnsAsync(workItems);
 
         // Act

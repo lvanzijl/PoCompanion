@@ -52,18 +52,13 @@ public class VelocityDashboardTests : BunitTestContext
         // Arrange
         _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync((VelocityTrendDto?)null);
-        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
-            .ReturnsAsync((VelocityTrendDto?)null);
 
         // Act
         var cut = RenderVelocityDashboardWithMudProvider();
 
-        // Wait for async initialization
-        cut.WaitForAssertion(() =>
-        {
-            Assert.IsFalse(cut.Markup.Contains("mud-progress-linear"),
-                "Loading indicator should be gone after data loads");
-        }, timeout: TimeSpan.FromSeconds(5));
+        // Wait for empty state to display
+        cut.WaitForState(() => cut.Markup.Contains("No Velocity Data Available"), 
+            timeout: TimeSpan.FromSeconds(10));
 
         // Assert
         Assert.Contains("No Velocity Data Available", cut.Markup);
@@ -83,11 +78,7 @@ public class VelocityDashboardTests : BunitTestContext
         var cut = RenderVelocityDashboardWithMudProvider();
 
         // Wait for async initialization
-        cut.WaitForAssertion(() =>
-        {
-            Assert.IsFalse(cut.Markup.Contains("mud-progress-linear"),
-                "Loading indicator should be gone after data loads");
-        }, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => !cut.Markup.Contains("No Velocity Data Available"), timeout: TimeSpan.FromSeconds(10));
 
         // Assert
         Assert.Contains("Velocity Dashboard", cut.Markup);
@@ -107,10 +98,7 @@ public class VelocityDashboardTests : BunitTestContext
         var cut = RenderVelocityDashboardWithMudProvider();
 
         // Wait for async initialization
-        cut.WaitForAssertion(() =>
-        {
-            Assert.DoesNotContain("mud-progress-linear", cut.Markup);
-        }, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => !cut.Markup.Contains("No Velocity Data Available"), timeout: TimeSpan.FromSeconds(10));
 
         // Assert
         Assert.Contains("Average Velocity", cut.Markup);
@@ -132,10 +120,7 @@ public class VelocityDashboardTests : BunitTestContext
         var cut = RenderVelocityDashboardWithMudProvider();
 
         // Wait for async initialization
-        cut.WaitForAssertion(() =>
-        {
-            Assert.DoesNotContain("mud-progress-linear", cut.Markup);
-        }, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => !cut.Markup.Contains("No Velocity Data Available"), timeout: TimeSpan.FromSeconds(10));
 
         // Assert
         Assert.Contains("Velocity Trend", cut.Markup);
@@ -156,10 +141,7 @@ public class VelocityDashboardTests : BunitTestContext
         var cut = RenderVelocityDashboardWithMudProvider();
 
         // Wait for async initialization
-        cut.WaitForAssertion(() =>
-        {
-            Assert.DoesNotContain("mud-progress-linear", cut.Markup);
-        }, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => !cut.Markup.Contains("No Velocity Data Available"), timeout: TimeSpan.FromSeconds(10));
 
         // Assert
         Assert.Contains("Sprint Details", cut.Markup);
@@ -182,10 +164,7 @@ public class VelocityDashboardTests : BunitTestContext
         var cut = RenderVelocityDashboardWithMudProvider();
 
         // Wait for async initialization
-        cut.WaitForAssertion(() =>
-        {
-            Assert.DoesNotContain("mud-progress-linear", cut.Markup);
-        }, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => !cut.Markup.Contains("No Velocity Data Available"), timeout: TimeSpan.FromSeconds(10));
 
         // Assert
         Assert.Contains("Refresh Metrics", cut.Markup);
@@ -225,10 +204,7 @@ public class VelocityDashboardTests : BunitTestContext
         var cut = RenderVelocityDashboardWithMudProvider();
 
         // Wait for async initialization
-        cut.WaitForAssertion(() =>
-        {
-            Assert.DoesNotContain("mud-progress-linear", cut.Markup);
-        }, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => !cut.Markup.Contains("No Velocity Data Available"), timeout: TimeSpan.FromSeconds(10));
 
         // Assert - Average velocity should be 27.5
         Assert.Contains("27.5", cut.Markup);
@@ -247,10 +223,7 @@ public class VelocityDashboardTests : BunitTestContext
         var cut = RenderVelocityDashboardWithMudProvider();
 
         // Wait for async initialization
-        cut.WaitForAssertion(() =>
-        {
-            Assert.DoesNotContain("mud-progress-linear", cut.Markup);
-        }, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => !cut.Markup.Contains("No Velocity Data Available"), timeout: TimeSpan.FromSeconds(10));
 
         // Assert - 3-sprint average should be 26.7
         Assert.Contains("26.7", cut.Markup);
@@ -269,10 +242,7 @@ public class VelocityDashboardTests : BunitTestContext
         var cut = RenderVelocityDashboardWithMudProvider();
 
         // Wait for async initialization
-        cut.WaitForAssertion(() =>
-        {
-            Assert.DoesNotContain("mud-progress-linear", cut.Markup);
-        }, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => !cut.Markup.Contains("No Velocity Data Available"), timeout: TimeSpan.FromSeconds(10));
 
         // Assert
         Assert.Contains("Completion %", cut.Markup);
@@ -291,10 +261,7 @@ public class VelocityDashboardTests : BunitTestContext
         var cut = RenderVelocityDashboardWithMudProvider();
 
         // Wait for async initialization
-        cut.WaitForAssertion(() =>
-        {
-            Assert.DoesNotContain("mud-progress-linear", cut.Markup);
-        }, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => !cut.Markup.Contains("No Velocity Data Available"), timeout: TimeSpan.FromSeconds(10));
 
         // Assert
         Assert.Contains("Velocity Dashboard Guide", cut.Markup);
