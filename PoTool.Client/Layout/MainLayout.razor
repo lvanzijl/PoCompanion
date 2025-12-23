@@ -17,24 +17,34 @@
     </div>
 
     <main>
-        <div class="top-row px-4 d-flex justify-content-end align-items-center">
-            <MudIconButton Icon="@Icons.Material.Filled.Help" 
-                          Color="Color.Inherit" 
-                          OnClick="OpenOnboardingWizard" 
-                          title="Getting Started" 
-                          aria-label="Open getting started wizard" />
-            <MudTooltip Text="Keyboard Shortcuts (Press ?)">
-                <MudIconButton Icon="@Icons.Material.Filled.Keyboard" 
+        <div class="top-row px-4 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <ProfileSelector @ref="_profileSelector" OnProfileChanged="HandleProfileChanged" />
+            </div>
+            <div class="d-flex align-items-center">
+                <MudIconButton Icon="@Icons.Material.Filled.Help" 
                               Color="Color.Inherit" 
-                              OnClick="OpenKeyboardShortcuts" 
-                              title="Keyboard Shortcuts" 
-                              aria-label="Open keyboard shortcuts" />
-            </MudTooltip>
-            <MudIconButton Icon="@Icons.Material.Filled.Settings" 
-                          Color="Color.Inherit" 
-                          OnClick="OpenSettings" 
-                          title="Settings" 
-                          aria-label="Open settings" />
+                              OnClick="OpenOnboardingWizard" 
+                              title="Getting Started" 
+                              aria-label="Open getting started wizard" />
+                <MudTooltip Text="Keyboard Shortcuts (Press ?)">
+                    <MudIconButton Icon="@Icons.Material.Filled.Keyboard" 
+                                  Color="Color.Inherit" 
+                                  OnClick="OpenKeyboardShortcuts" 
+                                  title="Keyboard Shortcuts" 
+                                  aria-label="Open keyboard shortcuts" />
+                </MudTooltip>
+                <MudIconButton Icon="@Icons.Material.Filled.AccountBox" 
+                              Color="Color.Inherit" 
+                              OnClick="OpenProfileManager" 
+                              title="Manage Profiles" 
+                              aria-label="Manage profiles" />
+                <MudIconButton Icon="@Icons.Material.Filled.Settings" 
+                              Color="Color.Inherit" 
+                              OnClick="OpenSettings" 
+                              title="Settings" 
+                              aria-label="Open settings" />
+            </div>
         </div>
 
         <article class="content px-4">
@@ -48,6 +58,7 @@
 @code {
     private bool _settingsVisible = false;
     private bool _hasCheckedOnboarding = false;
+    private ProfileSelector? _profileSelector;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -93,6 +104,31 @@
         };
         
         await DialogService.ShowAsync<KeyboardShortcutsDialog>("Keyboard Shortcuts", options);
+    }
+
+    private async Task OpenProfileManager()
+    {
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+        
+        await DialogService.ShowAsync<ProfileManagerDialog>("Manage Profiles", options);
+        
+        // Refresh the profile selector after the dialog closes
+        if (_profileSelector != null)
+        {
+            await _profileSelector.RefreshAsync();
+        }
+    }
+
+    private async Task HandleProfileChanged()
+    {
+        // Refresh the current page when profile changes
+        await Task.CompletedTask;
+        StateHasChanged();
     }
 
     private async Task HandleGlobalKeyDown(KeyboardEventArgs e)

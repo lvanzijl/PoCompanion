@@ -1,9 +1,11 @@
 @using MudBlazor
 @using PoTool.Client.Services
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Settings
 @inject ProfileService ProfileService
 @inject SettingsService SettingsService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <MudMenu Icon="@Icons.Material.Filled.AccountCircle" 
          Color="Color.Inherit" 
@@ -121,8 +123,18 @@
 
     private async Task ManageProfiles()
     {
-        // This will be called from parent to open the ProfileManagerDialog
-        await OnProfileChanged.InvokeAsync();
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+        
+        await DialogService.ShowAsync<ProfileManagerDialog>("Manage Profiles", options);
+        
+        // Refresh profiles after dialog closes
+        await LoadProfilesAndActiveProfile();
+        StateHasChanged();
     }
 
     public async Task RefreshAsync()
