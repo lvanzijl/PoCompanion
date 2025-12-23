@@ -455,6 +455,7 @@
     private string? _areaPathFilter;
     private int _maxIterations = 10;
     private int? _defaultCapacity = 40;
+    private double _imbalanceThreshold = 0.3;
 
     private ChartOptions _chartOptions = new()
     {
@@ -498,7 +499,7 @@
                 _areaPathFilter,
                 _maxIterations,
                 _defaultCapacity,
-                0.3);
+                _imbalanceThreshold);
             StateHasChanged();
         }
         catch (Exception ex)

@@ -191,11 +191,12 @@ public sealed class GetEffortImbalanceQueryHandler
 
     private static ImbalanceRiskLevel DetermineImbalanceRisk(double deviation, double threshold)
     {
+        // Use threshold as base, with Medium at threshold, High at 1.5x, Critical at 2x
         return deviation switch
         {
-            < 0.3 => ImbalanceRiskLevel.Low,
-            >= 0.3 and < 0.5 => ImbalanceRiskLevel.Medium,
-            >= 0.5 and < 0.8 => ImbalanceRiskLevel.High,
+            var d when d < threshold => ImbalanceRiskLevel.Low,
+            var d when d < threshold * 1.5 => ImbalanceRiskLevel.Medium,
+            var d when d < threshold * 2.5 => ImbalanceRiskLevel.High,
             _ => ImbalanceRiskLevel.Critical
         };
     }

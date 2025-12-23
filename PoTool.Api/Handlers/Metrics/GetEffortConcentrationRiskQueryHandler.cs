@@ -204,10 +204,12 @@ public sealed class GetEffortConcentrationRiskQueryHandler
         var maxConcentration = allRisks.Max(r => r.PercentageOfTotal);
         
         // Herfindahl-Hirschman Index (HHI) for concentration
-        // Higher values indicate more concentration (0-10000 scale)
-        var hhi = allRisks.Sum(r => Math.Pow(r.PercentageOfTotal, 2));
+        // HHI = Σ(market share as decimal)² × 10,000
+        // Convert percentages to decimals (0-1 range) before squaring
+        var hhi = allRisks.Sum(r => Math.Pow(r.PercentageOfTotal / 100.0, 2)) * 10000;
         
-        // Normalize to 0-100 scale
+        // HHI ranges: 0-1500 (unconcentrated), 1500-2500 (moderate), 2500+ (high concentration)
+        // Normalize to 0-100 scale for UI display
         var concentrationIndex = Math.Min(100, hhi / 100);
 
         var overallRisk = maxConcentration switch

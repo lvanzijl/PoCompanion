@@ -61,11 +61,13 @@ public sealed class GetEffortDistributionTrendQueryHandler
         }
 
         // Get recent iterations ordered chronologically
+        // Note: Simple string sorting works if iteration paths follow consistent naming (e.g., "Sprint 01", "Sprint 02")
+        // For more complex scenarios, consider extracting dates or numeric values for proper chronological ordering
         var iterationPaths = workItemsWithEffort
             .Where(wi => !string.IsNullOrWhiteSpace(wi.IterationPath))
             .Select(wi => wi.IterationPath)
             .Distinct()
-            .OrderBy(path => path) // Chronological order for trend analysis
+            .OrderBy(path => path) // Chronological order - assumes consistent naming
             .Take(query.MaxIterations)
             .ToList();
 
@@ -211,10 +213,8 @@ public sealed class GetEffortDistributionTrendQueryHandler
         // Forecast next 3 sprints
         for (int i = 1; i <= 3; i++)
         {
-            var sprintIndex = historicalSprintCount + i;
-            
-            // Linear projection with trend
-            var forecastedEffort = (int)(avgEffort + slope * sprintIndex);
+            // Linear projection with trend - use forecast position (i), not cumulative sprint count
+            var forecastedEffort = (int)(avgEffort + slope * i);
             
             // Confidence interval (assuming 95% confidence ~ 2 standard deviations)
             var confidenceMargin = (int)(2 * stdDev);
