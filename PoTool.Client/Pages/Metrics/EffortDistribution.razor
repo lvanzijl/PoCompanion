@@ -183,7 +183,7 @@
         </MudPaper>
 
         <!-- Utilization Table -->
-        <MudPaper Elevation="2" Class="pa-4">
+        <MudPaper Elevation="2" Class="pa-4 mb-6">
             <MudText Typo="Typo.h6" GutterBottom="true">Iteration Utilization</MudText>
             <MudTable Items="@_distributionData.EffortByIteration" Dense="true" Hover="true" Bordered="true">
                 <HeaderContent>
@@ -227,11 +227,229 @@
                 </RowTemplate>
             </MudTable>
         </MudPaper>
+
+        <!-- Enhanced Analytics Section -->
+        <MudText Typo="Typo.h5" Class="mt-8 mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.Analytics" Class="mr-2" /> Enhanced Analytics
+        </MudText>
+
+        <!-- Analytics Tabs -->
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+                <MudTabPanel Text="Imbalance Detection" Icon="@Icons.Material.Filled.BalanceOutlined">
+                    @if (_imbalanceData != null)
+                    {
+                        <MudGrid Class="mb-4">
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudCard>
+                                    <MudCardContent>
+                                        <MudText Typo="Typo.h6">Overall Risk</MudText>
+                                        <MudChip T="string" Size="Size.Large" Color="@GetImbalanceRiskColor(_imbalanceData.OverallRiskLevel)">
+                                            @_imbalanceData.OverallRiskLevel
+                                        </MudChip>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudCard>
+                                    <MudCardContent>
+                                        <MudText Typo="Typo.h6">Imbalance Score</MudText>
+                                        <MudText Typo="Typo.h4">@_imbalanceData.ImbalanceScore.ToString("F1")%</MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        </MudGrid>
+
+                        @if (_imbalanceData.TeamImbalances.Any())
+                        {
+                            <MudText Typo="Typo.h6" GutterBottom="true">Team Imbalances</MudText>
+                            <MudTable Items="@_imbalanceData.TeamImbalances" Dense="true" Hover="true" Class="mb-4">
+                                <HeaderContent>
+                                    <MudTh>Area Path</MudTh>
+                                    <MudTh class="text-right">Total Effort</MudTh>
+                                    <MudTh class="text-right">Average</MudTh>
+                                    <MudTh class="text-right">Deviation</MudTh>
+                                    <MudTh>Risk Level</MudTh>
+                                    <MudTh>Description</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="Area Path">@context.AreaPath</MudTd>
+                                    <MudTd DataLabel="Total Effort" class="text-right">@context.TotalEffort</MudTd>
+                                    <MudTd DataLabel="Average" class="text-right">@context.AverageEffortAcrossTeams</MudTd>
+                                    <MudTd DataLabel="Deviation" class="text-right">@context.DeviationPercentage.ToString("F1")%</MudTd>
+                                    <MudTd DataLabel="Risk Level">
+                                        <MudChip T="string" Size="Size.Small" Color="@GetImbalanceRiskColor(context.RiskLevel)">
+                                            @context.RiskLevel
+                                        </MudChip>
+                                    </MudTd>
+                                    <MudTd DataLabel="Description">@context.Description</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
+
+                        @if (_imbalanceData.Recommendations.Any())
+                        {
+                            <MudText Typo="Typo.h6" GutterBottom="true">Recommendations</MudText>
+                            <MudList T="string" Dense="true">
+                                @foreach (var rec in _imbalanceData.Recommendations)
+                                {
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Lightbulb" IconColor="@GetImbalanceRiskColor(rec.Priority)">
+                                        <MudText Typo="Typo.subtitle2"><strong>@rec.Title</strong></MudText>
+                                        <MudText Typo="Typo.body2">@rec.Description</MudText>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadImbalanceData" StartIcon="@Icons.Material.Filled.Analytics">
+                            Analyze Imbalances
+                        </MudButton>
+                    }
+                </MudTabPanel>
+
+                <MudTabPanel Text="Trend Analysis" Icon="@Icons.Material.Filled.TrendingUp">
+                    @if (_trendData != null)
+                    {
+                        <MudGrid Class="mb-4">
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudCard>
+                                    <MudCardContent>
+                                        <MudText Typo="Typo.h6">Overall Trend</MudText>
+                                        <MudChip T="string" Size="Size.Large" Color="@GetTrendColor(_trendData.OverallTrend)">
+                                            @_trendData.OverallTrend
+                                        </MudChip>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudCard>
+                                    <MudCardContent>
+                                        <MudText Typo="Typo.h6">Trend Slope</MudText>
+                                        <MudText Typo="Typo.h4">@_trendData.TrendSlope.ToString("F2")</MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        </MudGrid>
+
+                        <MudText Typo="Typo.h6" GutterBottom="true">Sprint Trends</MudText>
+                        <MudChart ChartType="ChartType.Line" 
+                                  Width="100%" 
+                                  Height="350px"
+                                  ChartSeries="@GetTrendChartData()" 
+                                  XAxisLabels="@GetTrendLabels()">
+                        </MudChart>
+
+                        @if (_trendData.Forecasts.Any())
+                        {
+                            <MudText Typo="Typo.h6" GutterBottom="true" Class="mt-4">Forecasts (Next 3 Sprints)</MudText>
+                            <MudTable Items="@_trendData.Forecasts" Dense="true" Hover="true">
+                                <HeaderContent>
+                                    <MudTh>Sprint</MudTh>
+                                    <MudTh class="text-right">Forecasted Effort</MudTh>
+                                    <MudTh class="text-right">Low Estimate</MudTh>
+                                    <MudTh class="text-right">High Estimate</MudTh>
+                                    <MudTh class="text-right">Confidence</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="Sprint">@context.SprintName</MudTd>
+                                    <MudTd DataLabel="Forecasted" class="text-right"><strong>@context.ForecastedEffort</strong></MudTd>
+                                    <MudTd DataLabel="Low" class="text-right">@context.LowEstimate</MudTd>
+                                    <MudTd DataLabel="High" class="text-right">@context.HighEstimate</MudTd>
+                                    <MudTd DataLabel="Confidence" class="text-right">@((context.ConfidenceLevel * 100).ToString("F0"))%</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadTrendData" StartIcon="@Icons.Material.Filled.TrendingUp">
+                            Analyze Trends
+                        </MudButton>
+                    }
+                </MudTabPanel>
+
+                <MudTabPanel Text="Concentration Risk" Icon="@Icons.Material.Filled.Warning">
+                    @if (_concentrationData != null)
+                    {
+                        <MudGrid Class="mb-4">
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudCard>
+                                    <MudCardContent>
+                                        <MudText Typo="Typo.h6">Risk Level</MudText>
+                                        <MudChip T="string" Size="Size.Large" Color="@GetConcentrationRiskColor(_concentrationData.OverallRiskLevel)">
+                                            @_concentrationData.OverallRiskLevel
+                                        </MudChip>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudCard>
+                                    <MudCardContent>
+                                        <MudText Typo="Typo.h6">Concentration Index</MudText>
+                                        <MudText Typo="Typo.h4">@_concentrationData.ConcentrationIndex.ToString("F1")</MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        </MudGrid>
+
+                        @if (_concentrationData.AreaPathRisks.Any())
+                        {
+                            <MudText Typo="Typo.h6" GutterBottom="true">Area Path Concentration</MudText>
+                            <MudTable Items="@_concentrationData.AreaPathRisks" Dense="true" Hover="true" Class="mb-4">
+                                <HeaderContent>
+                                    <MudTh>Area</MudTh>
+                                    <MudTh class="text-right">Effort</MudTh>
+                                    <MudTh class="text-right">% of Total</MudTh>
+                                    <MudTh>Risk Level</MudTh>
+                                    <MudTh>Description</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="Area">@context.Name</MudTd>
+                                    <MudTd DataLabel="Effort" class="text-right">@context.EffortAmount</MudTd>
+                                    <MudTd DataLabel="% of Total" class="text-right">@context.PercentageOfTotal.ToString("F1")%</MudTd>
+                                    <MudTd DataLabel="Risk Level">
+                                        <MudChip T="string" Size="Size.Small" Color="@GetConcentrationRiskColor(context.RiskLevel)">
+                                            @context.RiskLevel
+                                        </MudChip>
+                                    </MudTd>
+                                    <MudTd DataLabel="Description">@context.Description</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
+
+                        @if (_concentrationData.Recommendations.Any())
+                        {
+                            <MudText Typo="Typo.h6" GutterBottom="true">Mitigation Recommendations</MudText>
+                            <MudList T="string" Dense="true">
+                                @foreach (var rec in _concentrationData.Recommendations)
+                                {
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Security" IconColor="@GetConcentrationRiskColor(rec.Priority)">
+                                        <MudText Typo="Typo.subtitle2"><strong>@rec.Title</strong></MudText>
+                                        <MudText Typo="Typo.body2">@rec.Description</MudText>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadConcentrationData" StartIcon="@Icons.Material.Filled.Warning">
+                            Analyze Concentration Risk
+                        </MudButton>
+                    }
+                </MudTabPanel>
+            </MudTabs>
+        </MudPaper>
     }
 </MudContainer>
 
 @code {
     private EffortDistributionDto? _distributionData;
+    private EffortImbalanceDto? _imbalanceData;
+    private EffortDistributionTrendDto? _trendData;
+    private EffortConcentrationRiskDto? _concentrationData;
     private bool _isLoading = true;
     private ErrorResponse? _errorResponse;
     private string? _areaPathFilter;
@@ -271,6 +489,58 @@
         }
     }
 
+    private async Task LoadImbalanceData()
+    {
+        try
+        {
+            ClearError();
+            _imbalanceData = await MetricsClient.GetEffortImbalanceAsync(
+                _areaPathFilter,
+                _maxIterations,
+                _defaultCapacity,
+                0.3);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex, "Error loading imbalance analysis");
+        }
+    }
+
+    private async Task LoadTrendData()
+    {
+        try
+        {
+            ClearError();
+            _trendData = await MetricsClient.GetEffortDistributionTrendAsync(
+                _areaPathFilter,
+                _maxIterations,
+                _defaultCapacity);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex, "Error loading trend analysis");
+        }
+    }
+
+    private async Task LoadConcentrationData()
+    {
+        try
+        {
+            ClearError();
+            _concentrationData = await MetricsClient.GetEffortConcentrationRiskAsync(
+                _areaPathFilter,
+                _maxIterations,
+                0.5);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex, "Error loading concentration risk");
+        }
+    }
+
     private void ShowError(Exception ex, string context)
     {
         _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
@@ -303,6 +573,63 @@
             > 70 => Color.Success,
             _ => Color.Info
         };
+    }
+
+    private Color GetImbalanceRiskColor(ImbalanceRiskLevel risk)
+    {
+        return risk switch
+        {
+            ImbalanceRiskLevel.Critical => Color.Error,
+            ImbalanceRiskLevel.High => Color.Warning,
+            ImbalanceRiskLevel.Medium => Color.Info,
+            _ => Color.Success
+        };
+    }
+
+    private Color GetConcentrationRiskColor(ConcentrationRiskLevel risk)
+    {
+        return risk switch
+        {
+            ConcentrationRiskLevel.Critical => Color.Error,
+            ConcentrationRiskLevel.High => Color.Warning,
+            ConcentrationRiskLevel.Medium => Color.Info,
+            ConcentrationRiskLevel.Low => Color.Success,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetTrendColor(EffortTrendDirection trend)
+    {
+        return trend switch
+        {
+            EffortTrendDirection.Volatile => Color.Error,
+            EffortTrendDirection.Increasing => Color.Warning,
+            EffortTrendDirection.Decreasing => Color.Info,
+            _ => Color.Success
+        };
+    }
+
+    private List<ChartSeries> GetTrendChartData()
+    {
+        if (_trendData == null) return new List<ChartSeries>();
+
+        return new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Total Effort",
+                Data = _trendData.TrendBySprint.Select(t => (double)t.TotalEffort).ToArray()
+            }
+        };
+    }
+
+    private string[] GetTrendLabels()
+    {
+        if (_trendData == null) return Array.Empty<string>();
+        
+        return _trendData.TrendBySprint
+            .Select(t => t.SprintName)
+            .ToArray();
     }
 
     private string GetHeatMapCellStyle(EffortHeatMapCell? cell)
@@ -411,7 +738,10 @@
         "Over-allocated sprints (>95%) should be rebalanced before sprint starts",
         "Review heat map 2-3 sprints ahead during planning",
         "Infrastructure/support teams typically run at 50-70% (on-call time)",
-        "Development teams should target 75-85% for sustainable pace"
+        "Development teams should target 75-85% for sustainable pace",
+        "Use imbalance detection to identify overloaded teams early",
+        "Monitor trend analysis to catch workload increases before they become problems",
+        "Concentration risk flags single points of failure - diversify effort across teams"
     };
 
     private List<CommonIssue> _distributionCommonIssues = new()
@@ -435,6 +765,11 @@
         { 
             Problem = "Volatile utilization (30%, 90%, 40%, 95%)",
             Solution = "Indicates poor sprint planning. Level workload across sprints. Use rolling wave planning to maintain consistent utilization."
+        },
+        new CommonIssue
+        {
+            Problem = "High concentration risk (>60% in single area/sprint)",
+            Solution = "Single point of failure detected. Break down large work items and distribute across multiple teams/sprints to reduce risk."
         }
     };
 }
