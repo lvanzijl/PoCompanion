@@ -4,6 +4,7 @@
 @using PoTool.Client.Services
 @using static PoTool.Client.Components.Common.PageHelp
 @inject IMetricsClient MetricsClient
+@inject BacklogHealthCalculationService HealthCalculationService
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 
@@ -247,80 +248,34 @@
 
     private int GetHealthScore(BacklogHealthDto iteration)
     {
-        if (iteration.TotalWorkItems == 0) return 100;
-
-        var issues = iteration.WorkItemsWithoutEffort + 
-                    iteration.WorkItemsInProgressWithoutEffort + 
-                    iteration.ParentProgressIssues + 
-                    iteration.BlockedItems;
-        
-        var issuePercentage = (double)issues / iteration.TotalWorkItems;
-        return (int)Math.Max(0, 100 - (issuePercentage * 100));
+        return HealthCalculationService.CalculateHealthScore(iteration);
     }
 
     private Color GetTrendColor(TrendDirection trend)
     {
-        return trend switch
-        {
-            TrendDirection.Improving => Color.Success,
-            TrendDirection.Stable => Color.Info,
-            TrendDirection.Degrading => Color.Error,
-            _ => Color.Default
-        };
+        return HealthCalculationService.GetTrendColor(trend);
     }
 
     private string GetTrendIcon(TrendDirection trend)
     {
-        return trend switch
-        {
-            TrendDirection.Improving => Icons.Material.Filled.TrendingUp,
-            TrendDirection.Stable => Icons.Material.Filled.TrendingFlat,
-            TrendDirection.Degrading => Icons.Material.Filled.TrendingDown,
-            _ => Icons.Material.Filled.HelpOutline
-        };
+        return HealthCalculationService.GetTrendIcon(trend);
     }
 
     private Color GetSeverityColor(string severity)
     {
-        return severity.ToLower() switch
-        {
-            "error" => Color.Error,
-            "warning" => Color.Warning,
-            _ => Color.Info
-        };
+        return HealthCalculationService.GetSeverityColor(severity);
     }
 
     private List<ChartSeries> GetComparisonData()
     {
         if (_healthData == null) return new List<ChartSeries>();
-
-        return new List<ChartSeries>
-        {
-            new ChartSeries
-            {
-                Name = "Without Effort",
-                Data = _healthData.IterationHealth.Select(i => (double)i.WorkItemsWithoutEffort).ToArray()
-            },
-            new ChartSeries
-            {
-                Name = "Parent Issues",
-                Data = _healthData.IterationHealth.Select(i => (double)i.ParentProgressIssues).ToArray()
-            },
-            new ChartSeries
-            {
-                Name = "Blocked",
-                Data = _healthData.IterationHealth.Select(i => (double)i.BlockedItems).ToArray()
-            }
-        };
+        return HealthCalculationService.GenerateComparisonChartData(_healthData);
     }
 
     private string[] GetIterationLabels()
     {
         if (_healthData == null) return Array.Empty<string>();
-        
-        return _healthData.IterationHealth
-            .Select(i => i.SprintName)
-            .ToArray();
+        return HealthCalculationService.GetIterationLabels(_healthData);
     }
 
     private List<DataRequirement> _healthDataRequirements = new()

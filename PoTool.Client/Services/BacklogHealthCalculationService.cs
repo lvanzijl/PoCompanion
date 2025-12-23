@@ -1,0 +1,114 @@
+using PoTool.Client.ApiClient;
+using MudBlazor;
+
+namespace PoTool.Client.Services;
+
+/// <summary>
+/// Service for calculating backlog health scores and trends.
+/// </summary>
+public class BacklogHealthCalculationService
+{
+    /// <summary>
+    /// Calculates the health score for an iteration based on validation issues.
+    /// </summary>
+    /// <param name="iteration">Iteration health data.</param>
+    /// <returns>Health score from 0 to 100.</returns>
+    public int CalculateHealthScore(BacklogHealthDto iteration)
+    {
+        if (iteration.TotalWorkItems == 0) return 100;
+
+        var issues = iteration.WorkItemsWithoutEffort +
+                    iteration.WorkItemsInProgressWithoutEffort +
+                    iteration.ParentProgressIssues +
+                    iteration.BlockedItems;
+
+        var issuePercentage = (double)issues / iteration.TotalWorkItems;
+        return (int)Math.Max(0, 100 - (issuePercentage * 100));
+    }
+
+    /// <summary>
+    /// Determines the color associated with a trend direction.
+    /// </summary>
+    /// <param name="trend">Trend direction.</param>
+    /// <returns>MudBlazor color.</returns>
+    public Color GetTrendColor(TrendDirection trend)
+    {
+        return trend switch
+        {
+            TrendDirection.Improving => Color.Success,
+            TrendDirection.Stable => Color.Info,
+            TrendDirection.Degrading => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    /// <summary>
+    /// Determines the icon associated with a trend direction.
+    /// </summary>
+    /// <param name="trend">Trend direction.</param>
+    /// <returns>Material icon string.</returns>
+    public string GetTrendIcon(TrendDirection trend)
+    {
+        return trend switch
+        {
+            TrendDirection.Improving => Icons.Material.Filled.TrendingUp,
+            TrendDirection.Stable => Icons.Material.Filled.TrendingFlat,
+            TrendDirection.Degrading => Icons.Material.Filled.TrendingDown,
+            _ => Icons.Material.Filled.HelpOutline
+        };
+    }
+
+    /// <summary>
+    /// Determines the color associated with a validation severity.
+    /// </summary>
+    /// <param name="severity">Severity string.</param>
+    /// <returns>MudBlazor color.</returns>
+    public Color GetSeverityColor(string severity)
+    {
+        return severity.ToLower() switch
+        {
+            "error" => Color.Error,
+            "warning" => Color.Warning,
+            _ => Color.Info
+        };
+    }
+
+    /// <summary>
+    /// Generates chart series data for comparing issues across iterations.
+    /// </summary>
+    /// <param name="healthData">Multi-iteration health data.</param>
+    /// <returns>List of chart series.</returns>
+    public List<ChartSeries> GenerateComparisonChartData(MultiIterationBacklogHealthDto healthData)
+    {
+        return new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Without Effort",
+                Data = healthData.IterationHealth.Select(i => (double)i.WorkItemsWithoutEffort).ToArray()
+            },
+            new ChartSeries
+            {
+                Name = "Parent Issues",
+                Data = healthData.IterationHealth.Select(i => (double)i.ParentProgressIssues).ToArray()
+            },
+            new ChartSeries
+            {
+                Name = "Blocked",
+                Data = healthData.IterationHealth.Select(i => (double)i.BlockedItems).ToArray()
+            }
+        };
+    }
+
+    /// <summary>
+    /// Extracts iteration labels for chart X-axis.
+    /// </summary>
+    /// <param name="healthData">Multi-iteration health data.</param>
+    /// <returns>Array of iteration names.</returns>
+    public string[] GetIterationLabels(MultiIterationBacklogHealthDto healthData)
+    {
+        return healthData.IterationHealth
+            .Select(i => i.SprintName)
+            .ToArray();
+    }
+}

@@ -5,6 +5,7 @@
 @using PoTool.Client.Components.Common
 @using static PoTool.Client.Components.Common.PageHelp
 @inject PullRequestService PullRequestService
+@inject PullRequestMetricsService MetricsService
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 
@@ -235,19 +236,10 @@
             return;
         }
 
-        _metrics = _allMetrics.Where(m =>
-        {
-            // Assuming metrics have a CreatedDate property - adjust as needed
-            var createdDate = m.CreatedDate;
-            
-            if (_dateRange.Start.HasValue && createdDate < _dateRange.Start.Value)
-                return false;
-            
-            if (_dateRange.End.HasValue && createdDate > _dateRange.End.Value)
-                return false;
-            
-            return true;
-        }).ToList();
+        _metrics = MetricsService.FilterByDateRange(
+            _allMetrics,
+            _dateRange.Start,
+            _dateRange.End).ToList();
 
         InvalidateCache();
         StateHasChanged();
@@ -263,7 +255,7 @@
     
     private void InvalidateCache()
     {
-        _cachedMetricsHashCode = CalculateMetricsHashCode();
+        _cachedMetricsHashCode = MetricsService.CalculateMetricsHashCode(_metrics);
         _cachedStatusData = null;
         _cachedStatusLabels = null;
         _cachedTimeOpenData = null;
@@ -274,27 +266,8 @@
     
     private bool IsCacheValid()
     {
-        var currentHash = CalculateMetricsHashCode();
+        var currentHash = MetricsService.CalculateMetricsHashCode(_metrics);
         return currentHash == _cachedMetricsHashCode;
-    }
-    
-    private int CalculateMetricsHashCode()
-    {
-        if (_metrics.Count == 0)
-            return 0;
-        
-        var hash = new HashCode();
-        hash.Add(_metrics.Count);
-        // Sample multiple items across the collection for better change detection
-        hash.Add(_metrics[0].Title);
-        if (_metrics.Count > 1)
-            hash.Add(_metrics[_metrics.Count - 1].Title);
-        if (_metrics.Count > 2)
-            hash.Add(_metrics[_metrics.Count / 2].Title);
-        // Add aggregate values for additional validation
-        hash.Add(_metrics.Sum(m => m.TotalTimeOpen.TotalDays));
-        hash.Add(_metrics.Sum(m => m.IterationCount));
-        return hash.ToHashCode();
     }
 
     private async Task SyncPullRequests()
@@ -331,23 +304,17 @@
     // Metrics calculations
     private string GetAverageTimeOpen()
     {
-        if (!_metrics.Any()) return "0d";
-        var avgDays = _metrics.Average(m => m.TotalTimeOpen.TotalDays);
-        return $"{avgDays:F1}d";
+        return MetricsService.CalculateAverageTimeOpen(_metrics);
     }
 
     private string GetAverageIterations()
     {
-        if (!_metrics.Any()) return "0";
-        var avg = _metrics.Average(m => m.IterationCount);
-        return avg.ToString("F1");
+        return MetricsService.CalculateAverageIterations(_metrics);
     }
 
     private string GetAverageFiles()
     {
-        if (!_metrics.Any()) return "0";
-        var avg = _metrics.Average(m => m.TotalFileCount);
-        return avg.ToString("F0");
+        return MetricsService.CalculateAverageFiles(_metrics);
     }
 
     // Chart data methods with memoization
@@ -356,8 +323,8 @@
         if (IsCacheValid() && _cachedStatusData != null)
             return _cachedStatusData;
         
-        var grouped = _metrics.GroupBy(m => m.Status).Select(g => (double)g.Count()).ToArray();
-        _cachedStatusData = grouped.Length > 0 ? grouped : new[] { 0.0 };
+        var (data, _) = MetricsService.GetStatusChartData(_metrics);
+        _cachedStatusData = data;
         return _cachedStatusData;
     }
 
@@ -366,8 +333,8 @@
         if (IsCacheValid() && _cachedStatusLabels != null)
             return _cachedStatusLabels;
         
-        var labels = _metrics.GroupBy(m => m.Status).Select(g => g.Key).ToArray();
-        _cachedStatusLabels = labels.Length > 0 ? labels : new[] { "No data" };
+        var (_, labels) = MetricsService.GetStatusChartData(_metrics);
+        _cachedStatusLabels = labels;
         return _cachedStatusLabels;
     }
 
@@ -376,10 +343,8 @@
         if (IsCacheValid() && _cachedTimeOpenData != null)
             return _cachedTimeOpenData;
         
-        _cachedTimeOpenData = _metrics.OrderByDescending(m => m.TotalTimeOpen)
-            .Take(10)
-            .Select(m => m.TotalTimeOpen.TotalDays)
-            .ToArray();
+        var (data, _) = MetricsService.GetTimeOpenChartData(_metrics);
+        _cachedTimeOpenData = data;
         return _cachedTimeOpenData;
     }
 
@@ -388,10 +353,8 @@
         if (IsCacheValid() && _cachedTimeOpenLabels != null)
             return _cachedTimeOpenLabels;
         
-        _cachedTimeOpenLabels = _metrics.OrderByDescending(m => m.TotalTimeOpen)
-            .Take(10)
-            .Select(m => m.Title.Length > 30 ? m.Title.Substring(0, 27) + "..." : m.Title)
-            .ToArray();
+        var (_, labels) = MetricsService.GetTimeOpenChartData(_metrics);
+        _cachedTimeOpenLabels = labels;
         return _cachedTimeOpenLabels;
     }
 
@@ -400,9 +363,8 @@
         if (IsCacheValid() && _cachedPRsByUserData != null)
             return _cachedPRsByUserData;
         
-        _cachedPRsByUserData = _metrics.GroupBy(m => m.CreatedBy)
-            .Select(g => (double)g.Count())
-            .ToArray();
+        var (data, _) = MetricsService.GetPRsByUserChartData(_metrics);
+        _cachedPRsByUserData = data;
         return _cachedPRsByUserData;
     }
 
@@ -411,9 +373,8 @@
         if (IsCacheValid() && _cachedUserLabels != null)
             return _cachedUserLabels;
         
-        _cachedUserLabels = _metrics.GroupBy(m => m.CreatedBy)
-            .Select(g => g.Key)
-            .ToArray();
+        var (_, labels) = MetricsService.GetPRsByUserChartData(_metrics);
+        _cachedUserLabels = labels;
         return _cachedUserLabels;
     }
 
