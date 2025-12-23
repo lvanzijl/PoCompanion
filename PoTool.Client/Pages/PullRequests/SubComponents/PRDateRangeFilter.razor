@@ -1,0 +1,56 @@
+@* Date range filter component for filtering pull requests by date *@
+
+<MudPaper Elevation="2" Class="pa-4 mb-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+        <MudDateRangePicker @bind-DateRange="DateRange" 
+                           Label="Filter by Date Range" 
+                           Variant="Variant.Outlined"
+                           Clearable="true"
+                           HelperText="Select a date range to filter pull requests" />
+        <MudButton Variant="Variant.Filled" 
+                  Color="Color.Primary" 
+                  OnClick="HandleApplyFilter"
+                  StartIcon="@Icons.Material.Filled.FilterAlt">
+            Apply Filter
+        </MudButton>
+        @if (DateRange != null && (DateRange.Start.HasValue || DateRange.End.HasValue))
+        {
+            <MudButton Variant="Variant.Outlined" 
+                      Color="Color.Default" 
+                      OnClick="HandleClearFilter"
+                      StartIcon="@Icons.Material.Filled.Clear">
+                Clear
+            </MudButton>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// The current date range selection
+    /// </summary>
+    [Parameter]
+    public DateRange? DateRange { get; set; }
+
+    /// <summary>
+    /// Callback invoked when Apply Filter button is clicked
+    /// </summary>
+    [Parameter]
+    public EventCallback OnApplyFilter { get; set; }
+
+    /// <summary>
+    /// Callback invoked when Clear button is clicked
+    /// </summary>
+    [Parameter]
+    public EventCallback OnClearFilter { get; set; }
+
+    private async Task HandleApplyFilter()
+    {
+        await OnApplyFilter.InvokeAsync();
+    }
+
+    private async Task HandleClearFilter()
+    {
+        await OnClearFilter.InvokeAsync();
+    }
+}

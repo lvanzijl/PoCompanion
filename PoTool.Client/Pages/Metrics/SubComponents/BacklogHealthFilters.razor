@@ -1,0 +1,48 @@
+@* Filter controls for backlog health analysis *@
+
+<MudPaper Elevation="2" Class="pa-4 mb-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+        <MudTextField @bind-Value="AreaPathFilter" 
+                     Label="Area Path Filter" 
+                     Variant="Variant.Outlined"
+                     Adornment="Adornment.End"
+                     AdornmentIcon="@Icons.Material.Filled.FilterAlt"
+                     HelperText="Filter work items by area path" />
+        <MudNumericField @bind-Value="MaxIterations" 
+                        Label="Max Iterations" 
+                        Variant="Variant.Outlined"
+                        Min="1" Max="20"
+                        HelperText="Number of iterations to analyze" />
+        <MudButton Variant="Variant.Filled" 
+                  Color="Color.Primary" 
+                  OnClick="HandleRefresh"
+                  StartIcon="@Icons.Material.Filled.Refresh">
+            Refresh
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// Area path filter value
+    /// </summary>
+    [Parameter]
+    public string? AreaPathFilter { get; set; }
+
+    /// <summary>
+    /// Maximum number of iterations to analyze
+    /// </summary>
+    [Parameter]
+    public int MaxIterations { get; set; } = 5;
+
+    /// <summary>
+    /// Callback invoked when Refresh button is clicked
+    /// </summary>
+    [Parameter]
+    public EventCallback OnRefresh { get; set; }
+
+    private async Task HandleRefresh()
+    {
+        await OnRefresh.InvokeAsync();
+    }
+}

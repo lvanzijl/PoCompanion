@@ -2,6 +2,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
+@using PoTool.Client.Pages.Metrics.SubComponents
 @using static PoTool.Client.Components.Common.PageHelp
 @inject IMetricsClient MetricsClient
 @inject BacklogHealthCalculationService HealthCalculationService
@@ -41,146 +42,21 @@
                       OnDismiss="ClearError" />
 
         <!-- Trend Summary Card -->
-        <MudCard Elevation="3" Class="mb-6">
-            <MudCardContent>
-                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                    <div>
-                        <MudText Typo="Typo.h5">@_healthData.Trend.Summary</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            Based on @_healthData.IterationHealth.Count iteration(s) | Total: @_healthData.TotalWorkItems work items | @_healthData.TotalIssues issues found
-                        </MudText>
-                    </div>
-                    <MudStack Spacing="2">
-                        <MudText Typo="Typo.caption">
-                            <MudIcon Icon="@GetTrendIcon(_healthData.Trend.EffortTrend)" Size="Size.Small" Color="@GetTrendColor(_healthData.Trend.EffortTrend)" />
-                            Effort: @_healthData.Trend.EffortTrend
-                        </MudText>
-                        <MudText Typo="Typo.caption">
-                            <MudIcon Icon="@GetTrendIcon(_healthData.Trend.ValidationTrend)" Size="Size.Small" Color="@GetTrendColor(_healthData.Trend.ValidationTrend)" />
-                            Validation: @_healthData.Trend.ValidationTrend
-                        </MudText>
-                        <MudText Typo="Typo.caption">
-                            <MudIcon Icon="@GetTrendIcon(_healthData.Trend.BlockerTrend)" Size="Size.Small" Color="@GetTrendColor(_healthData.Trend.BlockerTrend)" />
-                            Blockers: @_healthData.Trend.BlockerTrend
-                        </MudText>
-                    </MudStack>
-                </MudStack>
-            </MudCardContent>
-        </MudCard>
+        <BacklogHealthTrendCard TrendSummary="@_healthData.Trend.Summary"
+                               IterationCount="@_healthData.IterationHealth.Count"
+                               TotalWorkItems="@_healthData.TotalWorkItems"
+                               TotalIssues="@_healthData.TotalIssues"
+                               EffortTrend="@_healthData.Trend.EffortTrend"
+                               ValidationTrend="@_healthData.Trend.ValidationTrend"
+                               BlockerTrend="@_healthData.Trend.BlockerTrend" />
 
         <!-- Filters -->
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudTextField @bind-Value="_areaPathFilter" 
-                             Label="Area Path Filter" 
-                             Variant="Variant.Outlined"
-                             Adornment="Adornment.End"
-                             AdornmentIcon="@Icons.Material.Filled.FilterAlt"
-                             HelperText="Filter work items by area path" />
-                <MudNumericField @bind-Value="_maxIterations" 
-                                Label="Max Iterations" 
-                                Variant="Variant.Outlined"
-                                Min="1" Max="20"
-                                HelperText="Number of iterations to analyze" />
-                <MudButton Variant="Variant.Filled" 
-                          Color="Color.Primary" 
-                          OnClick="LoadData"
-                          StartIcon="@Icons.Material.Filled.Refresh">
-                    Refresh
-                </MudButton>
-            </MudStack>
-        </MudPaper>
+        <BacklogHealthFilters AreaPathFilter="@_areaPathFilter"
+                             MaxIterations="@_maxIterations"
+                             OnRefresh="@LoadData" />
 
         <!-- Iteration Health Cards -->
-        <MudGrid>
-            @foreach (var iteration in _healthData.IterationHealth)
-            {
-                <MudItem xs="12" md="6" lg="4">
-                    <MudCard Elevation="2" Class="mud-height-full">
-                        <MudCardHeader>
-                            <CardHeaderContent>
-                                <MudText Typo="Typo.h6">@iteration.SprintName</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@iteration.IterationPath</MudText>
-                            </CardHeaderContent>
-                            <CardHeaderActions>
-                                @{
-                                    var healthScore = GetHealthScore(iteration);
-                                }
-                                @if (healthScore < 70)
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Medium" />
-                                }
-                                else if (healthScore < 90)
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Warning" Size="Size.Medium" />
-                                }
-                                else
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Medium" />
-                                }
-                            </CardHeaderActions>
-                        </MudCardHeader>
-                        <MudCardContent>
-                            <MudStack Spacing="2">
-                                <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                    <MudText Typo="Typo.body2">Total Work Items</MudText>
-                                    <MudText Typo="Typo.body1" Color="Color.Primary">@iteration.TotalWorkItems</MudText>
-                                </MudStack>
-                                <MudDivider />
-                                <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                    <MudText Typo="Typo.body2">Without Effort</MudText>
-                                    <MudText Typo="Typo.body1" Color="@(iteration.WorkItemsWithoutEffort > 0 ? Color.Warning : Color.Default)">
-                                        @iteration.WorkItemsWithoutEffort
-                                    </MudText>
-                                </MudStack>
-                                <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                    <MudText Typo="Typo.body2">In Progress w/o Effort</MudText>
-                                    <MudText Typo="Typo.body1" Color="@(iteration.WorkItemsInProgressWithoutEffort > 0 ? Color.Error : Color.Default)">
-                                        @iteration.WorkItemsInProgressWithoutEffort
-                                    </MudText>
-                                </MudStack>
-                                <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                    <MudText Typo="Typo.body2">Parent Progress Issues</MudText>
-                                    <MudText Typo="Typo.body1" Color="@(iteration.ParentProgressIssues > 0 ? Color.Error : Color.Default)">
-                                        @iteration.ParentProgressIssues
-                                    </MudText>
-                                </MudStack>
-                                <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                    <MudText Typo="Typo.body2">Blocked Items</MudText>
-                                    <MudText Typo="Typo.body1" Color="@(iteration.BlockedItems > 0 ? Color.Error : Color.Default)">
-                                        @iteration.BlockedItems
-                                    </MudText>
-                                </MudStack>
-                                @if (iteration.InProgressAtIterationEnd > 0)
-                                {
-                                    <MudDivider />
-                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                        <MudText Typo="Typo.body2">In Progress at End</MudText>
-                                        <MudText Typo="Typo.body1" Color="Color.Warning">
-                                            @iteration.InProgressAtIterationEnd
-                                        </MudText>
-                                    </MudStack>
-                                }
-                            </MudStack>
-
-                            @if (iteration.ValidationIssues.Any())
-                            {
-                                <MudDivider Class="my-3" />
-                                <MudText Typo="Typo.subtitle2" Class="mb-2">Validation Issues</MudText>
-                                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
-                                    @foreach (var issue in iteration.ValidationIssues)
-                                    {
-                                        <MudBadge Color="@GetSeverityColor(issue.ValidationType)" Content="@issue.Count" Overlap="true">
-                                            <MudText Typo="Typo.caption">@issue.ValidationType</MudText>
-                                        </MudBadge>
-                                    }
-                                </MudStack>
-                            }
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-            }
-        </MudGrid>
+        <IterationHealthTable Iterations="@_healthData.IterationHealth.ToList()" />
 
         <!-- Comparison Chart -->
         <MudPaper Elevation="2" Class="pa-4 mt-6">
@@ -244,26 +120,6 @@
     private void ClearError()
     {
         _errorResponse = null;
-    }
-
-    private int GetHealthScore(BacklogHealthDto iteration)
-    {
-        return HealthCalculationService.CalculateHealthScore(iteration);
-    }
-
-    private Color GetTrendColor(TrendDirection trend)
-    {
-        return HealthCalculationService.GetTrendColor(trend);
-    }
-
-    private string GetTrendIcon(TrendDirection trend)
-    {
-        return HealthCalculationService.GetTrendIcon(trend);
-    }
-
-    private Color GetSeverityColor(string severity)
-    {
-        return HealthCalculationService.GetSeverityColor(severity);
     }
 
     private List<ChartSeries> GetComparisonData()
