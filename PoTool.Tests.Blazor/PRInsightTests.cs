@@ -34,6 +34,7 @@ public class PRInsightTests : BunitTestContext
         // Register mock services
         Services.AddSingleton(_mockPullRequestsClient.Object);
         Services.AddSingleton<PullRequestService>();
+        Services.AddSingleton<PullRequestMetricsService>();
         Services.AddSingleton<ErrorMessageService>();
         Services.AddSingleton(_mockSnackbar.Object);
     }
