@@ -5,11 +5,12 @@ namespace PoTool.Maui.Services;
 /// <summary>
 /// Helper service to initialize the API and wait for it to be ready.
 /// </summary>
-public class ApiInitializer
+public class ApiInitializer : IDisposable
 {
     private readonly ApiHostService _apiHost;
     private readonly ILogger<ApiInitializer> _logger;
     private readonly HttpClient _httpClient;
+    private bool _disposed;
 
     public ApiInitializer(ApiHostService apiHost, ILogger<ApiInitializer> logger)
     {
@@ -66,5 +67,23 @@ public class ApiInitializer
             _logger.LogError(ex, "Failed to initialize API");
             return false;
         }
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+
+        if (disposing)
+        {
+            _httpClient?.Dispose();
+        }
+
+        _disposed = true;
     }
 }

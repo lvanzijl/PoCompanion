@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PoTool.Api.Helpers;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
@@ -29,10 +30,12 @@ public class WorkItemRepository : IWorkItemRepository
 
     public async Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter, CancellationToken cancellationToken = default)
     {
+        var sanitizedFilter = InputValidator.SanitizeFilter(filter);
+        
         var q = _context.WorkItems.AsNoTracking();
-        if (!string.IsNullOrWhiteSpace(filter))
+        if (!string.IsNullOrWhiteSpace(sanitizedFilter))
         {
-            q = q.Where(w => w.Title.Contains(filter));
+            q = q.Where(w => w.Title.Contains(sanitizedFilter));
         }
 
         var entities = await q.ToListAsync(cancellationToken);
@@ -45,6 +48,13 @@ public class WorkItemRepository : IWorkItemRepository
         if (areaPaths == null || areaPaths.Count == 0)
         {
             return await GetAllAsync(cancellationToken);
+        }
+
+        // Validate all area paths
+        var invalidPaths = areaPaths.Where(ap => !InputValidator.IsValidAreaPath(ap)).ToList();
+        if (invalidPaths.Any())
+        {
+            throw new ArgumentException($"Invalid area path(s): {string.Join(", ", invalidPaths)}");
         }
 
         var entities = await _context.WorkItems
