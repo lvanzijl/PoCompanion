@@ -1,6 +1,7 @@
 @using PoTool.Client.Services
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @inject IOnboardingService OnboardingService
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
@@ -481,8 +482,8 @@
         
         try
         {
-            var areaPaths = ParseCommaSeparatedStrings(_profileAreaPaths);
-            var goalIds = ParseCommaSeparatedInts(_profileGoalIds);
+            var areaPaths = InputParsingHelper.ParseCommaSeparatedStrings(_profileAreaPaths);
+            var goalIds = InputParsingHelper.ParseCommaSeparatedInts(_profileGoalIds);
 
             if (areaPaths.Count == 0)
             {
@@ -511,32 +512,7 @@
         }
     }
 
-    private List<string> ParseCommaSeparatedStrings(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return new List<string>();
-        }
 
-        return input.Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => s.Trim())
-            .Where(s => !string.IsNullOrWhiteSpace(s))
-            .ToList();
-    }
-
-    private List<int> ParseCommaSeparatedInts(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return new List<int>();
-        }
-
-        return input.Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => s.Trim())
-            .Where(s => int.TryParse(s, out _))
-            .Select(int.Parse)
-            .ToList();
-    }
 
     private void ShowProfileError(Exception ex, string context)
     {

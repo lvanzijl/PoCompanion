@@ -124,10 +124,9 @@
         }
     }
 
-    private async Task HandleProfileChanged()
+    private void HandleProfileChanged()
     {
         // Refresh the current page when profile changes
-        await Task.CompletedTask;
         StateHasChanged();
     }
 

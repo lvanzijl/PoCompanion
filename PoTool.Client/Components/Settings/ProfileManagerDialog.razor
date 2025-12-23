@@ -3,6 +3,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Validators
+@using PoTool.Client.Helpers
 @inject ProfileService ProfileService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -222,8 +223,8 @@
             _isSaving = true;
             ClearError();
 
-            var areaPaths = ParseCommaSeparatedStrings(_areaPathsInput);
-            var goalIds = ParseCommaSeparatedInts(_goalIdsInput);
+            var areaPaths = InputParsingHelper.ParseCommaSeparatedStrings(_areaPathsInput);
+            var goalIds = InputParsingHelper.ParseCommaSeparatedInts(_goalIdsInput);
 
             if (_isEditing && _editingProfileId.HasValue)
             {
@@ -274,32 +275,7 @@
         _form?.ResetValidation();
     }
 
-    private List<string> ParseCommaSeparatedStrings(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return new List<string>();
-        }
 
-        return input.Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => s.Trim())
-            .Where(s => !string.IsNullOrWhiteSpace(s))
-            .ToList();
-    }
-
-    private List<int> ParseCommaSeparatedInts(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return new List<int>();
-        }
-
-        return input.Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => s.Trim())
-            .Where(s => int.TryParse(s, out _))
-            .Select(int.Parse)
-            .ToList();
-    }
 
     private void ShowError(Exception ex, string context)
     {
