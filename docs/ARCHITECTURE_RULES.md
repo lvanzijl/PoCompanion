@@ -333,6 +333,7 @@ Handlers and pipelines live in Api.
 8. Only approved dependencies are allowed
 9. Microsoft DI is mandatory
 10. Only the source-generated Mediator is allowed
+11. Never manually edit generated code files (*.g.cs)
 
 ---
 
