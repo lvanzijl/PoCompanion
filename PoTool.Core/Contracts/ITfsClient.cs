@@ -106,4 +106,16 @@ public interface ITfsClient
         int workItemId,
         string newState,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates the effort (story points) of a work item in TFS.
+    /// </summary>
+    /// <param name="workItemId">The work item ID.</param>
+    /// <param name="effort">The new effort value.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if the update was successful, false otherwise.</returns>
+    Task<bool> UpdateWorkItemEffortAsync(
+        int workItemId,
+        int effort,
+        CancellationToken cancellationToken = default);
 }

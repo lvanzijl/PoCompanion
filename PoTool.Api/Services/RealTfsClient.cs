@@ -855,4 +855,65 @@ public class RealTfsClient : ITfsClient
             return false;
         }
     }
+
+    public async Task<bool> UpdateWorkItemEffortAsync(int workItemId, int effort, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Updating work item {WorkItemId} effort to {Effort}", workItemId, effort);
+
+            var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+            if (entity == null)
+            {
+                _logger.LogWarning("No TFS configuration found for updating work item effort");
+                return false;
+            }
+
+            var pat = _patAccessor.GetPat();
+            if (string.IsNullOrEmpty(pat))
+            {
+                _logger.LogWarning("No PAT found for updating work item effort");
+                return false;
+            }
+
+            // Build JSON Patch document for effort (Microsoft.VSTS.Scheduling.Effort)
+            var patchDocument = new[]
+            {
+                new
+                {
+                    op = "add",
+                    path = "/fields/Microsoft.VSTS.Scheduling.Effort",
+                    value = effort
+                }
+            };
+
+            var updateUrl = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
+            using var content = new StringContent(
+                JsonSerializer.Serialize(patchDocument), 
+                System.Text.Encoding.UTF8, 
+                "application/json-patch+json");
+
+            _logger.LogDebug("Sending PATCH request to update work item {WorkItemId} effort", workItemId);
+            
+            var response = await _httpClient.PatchAsync(updateUrl, content, cancellationToken);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully updated work item {WorkItemId} effort to {Effort}", workItemId, effort);
+                return true;
+            }
+            else
+            {
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Failed to update work item {WorkItemId} effort. Status: {StatusCode}, Response: {Response}", 
+                    workItemId, response.StatusCode, responseBody);
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating work item {WorkItemId} effort to {Effort}", workItemId, effort);
+            return false;
+        }
+    }
 }

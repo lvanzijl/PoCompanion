@@ -197,4 +197,21 @@ public class MockTfsClient : ITfsClient
             workItemId, newState);
         return Task.FromResult(true);
     }
+
+    public Task<bool> UpdateWorkItemEffortAsync(int workItemId, int effort, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemEffortAsync called for workItemId={WorkItemId}, effort={Effort}", 
+            workItemId, effort);
+        
+        // Mock implementation always succeeds for valid effort values
+        if (effort < 0)
+        {
+            _logger.LogWarning("Mock TFS client: Invalid effort value {Effort} provided (must be >= 0)", effort);
+            return Task.FromResult(false);
+        }
+        
+        _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} effort to {Effort}", 
+            workItemId, effort);
+        return Task.FromResult(true);
+    }
 }

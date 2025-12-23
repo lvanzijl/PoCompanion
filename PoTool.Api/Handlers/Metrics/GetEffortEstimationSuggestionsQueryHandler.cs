@@ -1,0 +1,260 @@
+using Mediator;
+using PoTool.Core.Contracts;
+using PoTool.Core.Metrics;
+using PoTool.Core.Metrics.Queries;
+using PoTool.Core.WorkItems;
+
+namespace PoTool.Api.Handlers.Metrics;
+
+/// <summary>
+/// Handler for GetEffortEstimationSuggestionsQuery.
+/// Provides intelligent effort estimation suggestions based on historical data and ML/heuristic analysis.
+/// </summary>
+public sealed class GetEffortEstimationSuggestionsQueryHandler 
+    : IQueryHandler<GetEffortEstimationSuggestionsQuery, IReadOnlyList<EffortEstimationSuggestionDto>>
+{
+    private readonly IWorkItemRepository _repository;
+    private readonly ILogger<GetEffortEstimationSuggestionsQueryHandler> _logger;
+
+    public GetEffortEstimationSuggestionsQueryHandler(
+        IWorkItemRepository repository,
+        ILogger<GetEffortEstimationSuggestionsQueryHandler> logger)
+    {
+        _repository = repository;
+        _logger = logger;
+    }
+
+    public async ValueTask<IReadOnlyList<EffortEstimationSuggestionDto>> Handle(
+        GetEffortEstimationSuggestionsQuery query,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogDebug("Handling GetEffortEstimationSuggestionsQuery for iteration={IterationPath}, area={AreaPath}, onlyInProgress={OnlyInProgress}",
+            query.IterationPath, query.AreaPath, query.OnlyInProgressItems);
+
+        var allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        var workItemsList = allWorkItems.ToList();
+
+        // Filter work items without effort
+        var itemsWithoutEffort = workItemsList
+            .Where(wi => !wi.Effort.HasValue || wi.Effort.Value == 0)
+            .ToList();
+
+        // Apply filters
+        if (!string.IsNullOrEmpty(query.IterationPath))
+        {
+            itemsWithoutEffort = itemsWithoutEffort
+                .Where(wi => wi.IterationPath.Equals(query.IterationPath, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        if (!string.IsNullOrEmpty(query.AreaPath))
+        {
+            itemsWithoutEffort = itemsWithoutEffort
+                .Where(wi => wi.AreaPath.StartsWith(query.AreaPath, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        if (query.OnlyInProgressItems)
+        {
+            itemsWithoutEffort = itemsWithoutEffort
+                .Where(wi => wi.State.Equals("In Progress", StringComparison.OrdinalIgnoreCase) ||
+                             wi.State.Equals("Active", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        _logger.LogDebug("Found {Count} work items without effort matching criteria", itemsWithoutEffort.Count);
+
+        // Get historical completed work items with effort for analysis
+        var completedWorkItemsWithEffort = workItemsList
+            .Where(wi => wi.Effort.HasValue && wi.Effort.Value > 0)
+            .Where(wi => wi.State.Equals("Done", StringComparison.OrdinalIgnoreCase) ||
+                         wi.State.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
+                         wi.State.Equals("Resolved", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        _logger.LogDebug("Found {Count} completed work items with effort for historical analysis", completedWorkItemsWithEffort.Count);
+
+        // Generate suggestions for each work item without effort
+        var suggestions = new List<EffortEstimationSuggestionDto>();
+
+        foreach (var workItem in itemsWithoutEffort)
+        {
+            var suggestion = GenerateSuggestion(workItem, completedWorkItemsWithEffort);
+            suggestions.Add(suggestion);
+        }
+
+        _logger.LogInformation("Generated {Count} effort estimation suggestions", suggestions.Count);
+
+        return suggestions;
+    }
+
+    private EffortEstimationSuggestionDto GenerateSuggestion(
+        WorkItemDto workItem,
+        List<WorkItemDto> historicalData)
+    {
+        // Find similar work items by type
+        var similarByType = historicalData
+            .Where(wi => wi.Type.Equals(workItem.Type, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (similarByType.Count == 0)
+        {
+            // No historical data for this type, use default estimation
+            var defaultEffort = GetDefaultEffortForType(workItem.Type);
+            return new EffortEstimationSuggestionDto(
+                WorkItemId: workItem.TfsId,
+                WorkItemTitle: workItem.Title,
+                WorkItemType: workItem.Type,
+                CurrentEffort: workItem.Effort,
+                SuggestedEffort: defaultEffort,
+                Confidence: 0.3, // Low confidence without historical data
+                Rationale: $"No historical data available. Using typical {workItem.Type} estimate.",
+                SimilarWorkItems: new List<HistoricalEffortExample>()
+            );
+        }
+
+        // Calculate similarity scores and find most similar work items
+        var scoredWorkItems = similarByType
+            .Select(wi => new
+            {
+                WorkItem = wi,
+                SimilarityScore = CalculateSimilarity(workItem, wi)
+            })
+            .OrderByDescending(x => x.SimilarityScore)
+            .Take(5)
+            .ToList();
+
+        // Calculate suggested effort based on similar items
+        var efforts = scoredWorkItems.Select(x => x.WorkItem.Effort!.Value).ToList();
+        var suggestedEffort = CalculateMedian(efforts);
+        var minEffort = efforts.Min();
+        var maxEffort = efforts.Max();
+
+        // Calculate confidence based on variance and sample size
+        var variance = CalculateVariance(efforts);
+        var confidence = CalculateConfidence(scoredWorkItems.Count, variance);
+
+        // Build rationale
+        var rationale = BuildRationale(workItem.Type, suggestedEffort, minEffort, maxEffort, scoredWorkItems.Count);
+
+        // Build similar work items list
+        var similarWorkItems = scoredWorkItems
+            .Select(x => new HistoricalEffortExample(
+                WorkItemId: x.WorkItem.TfsId,
+                Title: x.WorkItem.Title,
+                Effort: x.WorkItem.Effort!.Value,
+                State: x.WorkItem.State,
+                SimilarityScore: x.SimilarityScore
+            ))
+            .ToList();
+
+        return new EffortEstimationSuggestionDto(
+            WorkItemId: workItem.TfsId,
+            WorkItemTitle: workItem.Title,
+            WorkItemType: workItem.Type,
+            CurrentEffort: workItem.Effort,
+            SuggestedEffort: suggestedEffort,
+            Confidence: confidence,
+            Rationale: rationale,
+            SimilarWorkItems: similarWorkItems
+        );
+    }
+
+    private double CalculateSimilarity(WorkItemDto target, WorkItemDto historical)
+    {
+        double score = 0.0;
+
+        // Same type: +40%
+        if (target.Type.Equals(historical.Type, StringComparison.OrdinalIgnoreCase))
+            score += 0.4;
+
+        // Same area path: +30%
+        if (target.AreaPath.Equals(historical.AreaPath, StringComparison.OrdinalIgnoreCase))
+            score += 0.3;
+        else if (historical.AreaPath.StartsWith(target.AreaPath, StringComparison.OrdinalIgnoreCase) ||
+                 target.AreaPath.StartsWith(historical.AreaPath, StringComparison.OrdinalIgnoreCase))
+            score += 0.15; // Partial area path match
+
+        // Title similarity (simple keyword matching): +30%
+        var titleSimilarity = CalculateTitleSimilarity(target.Title, historical.Title);
+        score += titleSimilarity * 0.3;
+
+        return Math.Min(1.0, score);
+    }
+
+    private double CalculateTitleSimilarity(string title1, string title2)
+    {
+        // Simple keyword-based similarity
+        var words1 = title1.ToLowerInvariant().Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+        var words2 = title2.ToLowerInvariant().Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (words1.Length == 0 || words2.Length == 0)
+            return 0.0;
+
+        var commonWords = words1.Intersect(words2).Count();
+        var totalUniqueWords = words1.Union(words2).Count();
+
+        return totalUniqueWords > 0 ? (double)commonWords / totalUniqueWords : 0.0;
+    }
+
+    private int CalculateMedian(List<int> values)
+    {
+        if (values.Count == 0)
+            return 0;
+
+        var sorted = values.OrderBy(x => x).ToList();
+        var mid = sorted.Count / 2;
+
+        if (sorted.Count % 2 == 0)
+            return (sorted[mid - 1] + sorted[mid]) / 2;
+        else
+            return sorted[mid];
+    }
+
+    private double CalculateVariance(List<int> values)
+    {
+        if (values.Count <= 1)
+            return 0.0;
+
+        var mean = values.Average();
+        var sumOfSquaredDifferences = values.Sum(val => Math.Pow(val - mean, 2));
+        return sumOfSquaredDifferences / values.Count;
+    }
+
+    private double CalculateConfidence(int sampleSize, double variance)
+    {
+        // Base confidence on sample size and variance
+        var sampleConfidence = Math.Min(1.0, sampleSize / 10.0); // Max confidence at 10+ samples
+        var varianceConfidence = variance < 4 ? 1.0 : Math.Max(0.3, 1.0 - (variance / 100.0));
+
+        return (sampleConfidence + varianceConfidence) / 2.0;
+    }
+
+    private string BuildRationale(string type, int suggested, int min, int max, int sampleCount)
+    {
+        if (min == max)
+        {
+            return $"{type} items typically have {suggested} points (based on {sampleCount} completed items)";
+        }
+        else
+        {
+            return $"{type} items typically range from {min}-{max} points, median {suggested} (based on {sampleCount} completed items)";
+        }
+    }
+
+    private int GetDefaultEffortForType(string type)
+    {
+        // Default estimates based on common work item types
+        return type.ToLowerInvariant() switch
+        {
+            "task" => 3,
+            "bug" => 3,
+            "user story" => 5,
+            "product backlog item" => 5,
+            "pbi" => 5,
+            "feature" => 13,
+            "epic" => 21,
+            _ => 5
+        };
+    }
+}
