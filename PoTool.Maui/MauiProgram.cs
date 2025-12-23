@@ -109,6 +109,12 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISecureStorageService, MauiSecureStorageService>();
         builder.Services.AddScoped<IOnboardingService, OnboardingService>();
         
+        // Register business logic services
+        builder.Services.AddScoped<WorkItemFilteringService>();
+        builder.Services.AddScoped<WorkItemSelectionService>();
+        builder.Services.AddScoped<PullRequestMetricsService>();
+        builder.Services.AddScoped<BacklogHealthCalculationService>();
+        
         // Register clipboard, export and report services
         builder.Services.AddScoped<IClipboardService, ClipboardService>();
         builder.Services.AddScoped<ExportService>();

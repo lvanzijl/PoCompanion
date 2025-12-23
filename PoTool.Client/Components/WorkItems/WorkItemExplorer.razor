@@ -10,6 +10,8 @@
 @inject WorkItemService WorkItemService
 @inject IWorkItemSyncHubService SyncHubService
 @inject ITreeBuilderService TreeBuilderService
+@inject WorkItemFilteringService FilteringService
+@inject WorkItemSelectionService SelectionService
 @inject SettingsService SettingsService
 @inject TfsConfigService TfsConfigService
 @inject ModeIsolatedStateService StateService
@@ -105,10 +107,13 @@
 
     // Tree structure
     private List<TreeNode> _treeRoots = new();
-    private readonly List<TreeNode> _flatNodeList = new(); // Flat list for keyboard navigation
+    private List<TreeNode> _flatNodeList = new(); // Flat list for keyboard navigation
 
     // Preserve expanded state across reloads and filters
     private readonly Dictionary<int, bool> _expandedState = new();
+    
+    // Selection service state
+    private WorkItemSelectionService.SelectionState _selectionState = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -178,13 +183,16 @@
             var settings = await SettingsService.GetOrCreateDefaultSettingsAsync();
             StateService.SetMode(settings.DataMode);
 
-            // Load hierarchy with validation
+            // Load hierarchy with validation - get all first
+            var allWorkItems = (await WorkItemService.GetAllWithValidationAsync()).ToList();
+            
+            // Then filter by goals if configured
             var goalIds = settings.ConfiguredGoalIds.ToList();
             _workItemsWithValidation = goalIds.Count > 0
-                ? (await WorkItemService.GetAllWithValidationAsync()).Where(wi => 
+                ? allWorkItems.Where(wi => 
                     goalIds.Contains(wi.TfsId) || 
-                    IsDescendantOfGoals(wi, goalIds)).ToList()
-                : (await WorkItemService.GetAllWithValidationAsync()).ToList();
+                    FilteringService.IsDescendantOfGoals(wi, goalIds, allWorkItems)).ToList()
+                : allWorkItems;
 
             ApplyFilter();
             UpdateValidationFilterCounts();
@@ -198,33 +206,6 @@
         {
             _isLoading = false;
         }
-    }
-
-    private bool IsDescendantOfGoals(WorkItemWithValidationDto item, List<int> goalIds)
-    {
-        if (goalIds == null || goalIds.Count == 0)
-            return true;
-
-        // Check if this item is itself a goal
-        if (goalIds.Contains(item.TfsId))
-            return true;
-
-        // Create lookup dictionary for efficient parent traversal
-        var itemLookup = _workItemsWithValidation.ToDictionary(wi => wi.TfsId);
-
-        // Traverse up the parent chain to see if any ancestor is a configured goal
-        var current = item;
-        while (current.ParentTfsId.HasValue)
-        {
-            if (goalIds.Contains(current.ParentTfsId.Value))
-                return true;
-
-            // Find parent in lookup dictionary
-            if (!itemLookup.TryGetValue(current.ParentTfsId.Value, out current))
-                break;
-        }
-
-        return false;
     }
 
     private async Task RequestSync()
@@ -340,51 +321,19 @@
 
     private void ApplyFilter()
     {
-        // Apply text filter and validation filters together
-        var filteredItems = _workItemsWithValidation.AsEnumerable();
+        // Get enabled filter IDs
+        var enabledFilterIds = _validationFilters
+            .Where(f => f.IsEnabled)
+            .Select(f => f.Id);
 
-        // Filter by validation issues if any filters are enabled (OR logic)
-        var enabledFilters = _validationFilters.Where(f => f.IsEnabled).ToList();
-        if (enabledFilters.Any())
-        {
-            var invalidIds = new HashSet<int>();
-            
-            foreach (var filter in enabledFilters)
-            {
-                IEnumerable<int> filterInvalidIds = filter.Id switch
-                {
-                    "parentProgress" => _workItemsWithValidation
-                        .Where(wi => wi.ValidationIssues.Any(issue => 
-                            issue.Message.Contains("Parent") || issue.Message.Contains("Ancestor")))
-                        .Select(wi => wi.TfsId),
-                    "missingEffort" => _workItemsWithValidation
-                        .Where(wi => wi.ValidationIssues.Any(issue => 
-                            issue.Message.Contains("effort")))
-                        .Select(wi => wi.TfsId),
-                    _ => Enumerable.Empty<int>()
-                };
-                
-                foreach (var id in filterInvalidIds)
-                {
-                    invalidIds.Add(id);
-                }
-            }
-
-            // Include invalid items and their ancestors
-            filteredItems = FilterWithAncestorsValidation(filteredItems, invalidIds);
-        }
-
-        // Then apply text filter if present
-        if (!string.IsNullOrWhiteSpace(_filterText))
-        {
-            filteredItems = TreeBuilderService.FilterWithAncestors(
-                filteredItems.Select(ConvertToWorkItemDto).ToList(), 
-                _filterText
-            ).Select(dto => _workItemsWithValidation.First(wi => wi.TfsId == dto.TfsId));
-        }
+        // Apply combined filtering using service
+        var filteredItems = FilteringService.ApplyCombinedFilter(
+            _workItemsWithValidation,
+            _filterText,
+            enabledFilterIds);
 
         _treeRoots = TreeBuilderService.BuildTreeWithValidation(filteredItems, _expandedState);
-        RebuildFlatNodeListFromTree();
+        _flatNodeList = SelectionService.BuildFlatNodeList(_treeRoots);
         StateHasChanged();
     }
 
@@ -392,96 +341,7 @@
     {
         foreach (var filter in _validationFilters)
         {
-            filter.Count = filter.Id switch
-            {
-                "parentProgress" => _workItemsWithValidation.Count(wi => 
-                    wi.ValidationIssues.Any(issue => 
-                        issue.Message.Contains("Parent") || issue.Message.Contains("Ancestor"))),
-                "missingEffort" => _workItemsWithValidation.Count(wi => 
-                    wi.ValidationIssues.Any(issue => 
-                        issue.Message.Contains("effort"))),
-                _ => 0
-            };
-        }
-    }
-
-    private IEnumerable<WorkItemWithValidationDto> FilterWithAncestorsValidation(
-        IEnumerable<WorkItemWithValidationDto> items, 
-        HashSet<int> targetIds)
-    {
-        var itemsList = items.ToList();
-        var itemLookup = itemsList.ToDictionary(w => w.TfsId);
-        var toInclude = new Dictionary<int, WorkItemWithValidationDto>();
-
-        foreach (var targetId in targetIds)
-        {
-            if (!itemLookup.TryGetValue(targetId, out var item))
-                continue;
-
-            // Include the target item
-            if (!toInclude.ContainsKey(item.TfsId))
-            {
-                toInclude[item.TfsId] = item;
-            }
-
-            // Include all ancestors
-            var current = item;
-            while (current.ParentTfsId.HasValue)
-            {
-                var parentId = current.ParentTfsId.Value;
-                if (itemLookup.TryGetValue(parentId, out var parent))
-                {
-                    if (!toInclude.ContainsKey(parent.TfsId))
-                    {
-                        toInclude[parent.TfsId] = parent;
-                    }
-                    current = parent;
-                }
-                else
-                {
-                    break;
-                }
-            }
-        }
-
-        return toInclude.Values.ToList();
-    }
-
-    private WorkItemDto ConvertToWorkItemDto(WorkItemWithValidationDto item)
-    {
-        return new WorkItemDto
-        {
-            TfsId = item.TfsId,
-            Type = item.Type,
-            Title = item.Title,
-            ParentTfsId = item.ParentTfsId,
-            AreaPath = item.AreaPath,
-            IterationPath = item.IterationPath,
-            State = item.State,
-            JsonPayload = item.JsonPayload,
-            RetrievedAt = item.RetrievedAt,
-            Effort = item.Effort
-        };
-    }
-
-    private void RebuildFlatNodeListFromTree()
-    {
-        _flatNodeList.Clear();
-        foreach (var root in _treeRoots)
-        {
-            AddNodeToFlatList(root);
-        }
-    }
-
-    private void AddNodeToFlatList(TreeNode node)
-    {
-        _flatNodeList.Add(node);
-        if (node.IsExpanded)
-        {
-            foreach (var child in node.Children)
-            {
-                AddNodeToFlatList(child);
-            }
+            filter.Count = FilteringService.CountWorkItemsByValidationFilter(_workItemsWithValidation, filter.Id);
         }
     }
 
@@ -489,42 +349,19 @@
     {
         node.IsExpanded = !node.IsExpanded;
         _expandedState[node.Id] = node.IsExpanded;
+        _flatNodeList = SelectionService.BuildFlatNodeList(_treeRoots);
         await SaveExpandedStateAsync();
         StateHasChanged();
     }
 
     private void HandleNodeSelected(TreeNode node)
     {
-        // Deserialize the work item from JSON payload
-        if (!string.IsNullOrEmpty(node.JsonPayload))
-        {
-            var workItem = System.Text.Json.JsonSerializer.Deserialize<WorkItemDto>(node.JsonPayload);
-            if (workItem != null)
-            {
-                // Toggle selection: if already selected, remove from multi-selection
-                if (_selectedIds.Contains(node.Id))
-                {
-                    _selectedIds.Remove(node.Id);
-                    _selectedWorkItems.RemoveAll(w => w.TfsId == node.Id);
-                    
-                    // Update single selection to first remaining item or null
-                    _selectedWorkItem = _selectedWorkItems.FirstOrDefault();
-                    _selectedValidationIssues = GetValidationIssuesForNode(_selectedWorkItem?.TfsId);
-                }
-                else
-                {
-                    _selectedIds.Add(node.Id);
-                    if (!_selectedWorkItems.Any(w => w.TfsId == node.Id))
-                    {
-                        _selectedWorkItems.Add(workItem);
-                    }
-                    
-                    // Update single selection to last clicked item
-                    _selectedWorkItem = workItem;
-                    _selectedValidationIssues = node.ValidationIssues;
-                }
-            }
-        }
+        // Use selection service
+        _selectionState = SelectionService.ToggleNodeSelection(node, _selectionState);
+        
+        // Sync local state with service state
+        SyncSelectionStateToLocal();
+        _selectedValidationIssues = node.ValidationIssues;
     }
 
     private List<string> GetValidationIssuesForNode(int? tfsId)
@@ -541,8 +378,6 @@
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (_flatNodeList.Count == 0) return;
-
         // Handle Ctrl+A for Select All
         if (e.Key == "a" && e.CtrlKey)
         {
@@ -557,67 +392,17 @@
             return;
         }
 
-        var currentIndex = -1;
-        if (_selectedWorkItem != null)
+        // Use selection service for keyboard navigation
+        var result = SelectionService.HandleKeyboardNavigation(e.Key, _selectionState, _flatNodeList);
+        
+        if (result.nodeToToggle != null && result.shouldToggle)
         {
-            currentIndex = _flatNodeList.FindIndex(n => n.Id == _selectedWorkItem.TfsId);
+            await HandleNodeToggled(result.nodeToToggle);
         }
-
-        switch (e.Key)
+        else if (result.newState != _selectionState)
         {
-            case "ArrowDown":
-                if (currentIndex < _flatNodeList.Count - 1)
-                {
-                    var nextNode = _flatNodeList[currentIndex + 1];
-                    HandleNodeSelected(nextNode);
-                }
-                break;
-
-            case "ArrowUp":
-                if (currentIndex > 0)
-                {
-                    var prevNode = _flatNodeList[currentIndex - 1];
-                    HandleNodeSelected(prevNode);
-                }
-                else if (currentIndex == -1 && _flatNodeList.Count > 0)
-                {
-                    HandleNodeSelected(_flatNodeList[0]);
-                }
-                break;
-
-            case "ArrowRight":
-                if (currentIndex >= 0)
-                {
-                    var node = _flatNodeList[currentIndex];
-                    if (node.Children.Any() && !node.IsExpanded)
-                    {
-                        await HandleNodeToggled(node);
-                    }
-                }
-                break;
-
-            case "ArrowLeft":
-                if (currentIndex >= 0)
-                {
-                    var node = _flatNodeList[currentIndex];
-                    if (node.Children.Any() && node.IsExpanded)
-                    {
-                        await HandleNodeToggled(node);
-                    }
-                }
-                break;
-
-            case "Enter":
-            case " ":
-                if (currentIndex >= 0)
-                {
-                    var node = _flatNodeList[currentIndex];
-                    if (node.Children.Any())
-                    {
-                        await HandleNodeToggled(node);
-                    }
-                }
-                break;
+            _selectionState = result.newState;
+            SyncSelectionStateToLocal();
         }
 
         StateHasChanged();
@@ -702,35 +487,30 @@
 
     private void SelectAllItems()
     {
-        _selectedIds.Clear();
-        _selectedWorkItems.Clear();
-
-        // Add all visible nodes from flat list
-        foreach (var node in _flatNodeList)
-        {
-            _selectedIds.Add(node.Id);
-            if (!string.IsNullOrEmpty(node.JsonPayload))
-            {
-                var workItem = System.Text.Json.JsonSerializer.Deserialize<WorkItemDto>(node.JsonPayload);
-                if (workItem != null && !_selectedWorkItems.Any(w => w.TfsId == node.Id))
-                {
-                    _selectedWorkItems.Add(workItem);
-                }
-            }
-        }
-
-        // Set selected work item to first item
-        _selectedWorkItem = _selectedWorkItems.FirstOrDefault();
+        _selectionState = SelectionService.SelectAllNodes(_flatNodeList);
+        SyncSelectionStateToLocal();
         _selectedValidationIssues = GetValidationIssuesForNode(_selectedWorkItem?.TfsId);
         StateHasChanged();
     }
 
     private void ClearSelection()
     {
-        _selectedIds.Clear();
-        _selectedWorkItems.Clear();
-        _selectedWorkItem = null;
+        _selectionState = SelectionService.ClearSelection();
+        SyncSelectionStateToLocal();
         _selectedValidationIssues = new List<string>();
         StateHasChanged();
+    }
+    
+    private void SyncSelectionStateToLocal()
+    {
+        _selectedIds.Clear();
+        foreach (var id in _selectionState.SelectedIds)
+        {
+            _selectedIds.Add(id);
+        }
+        
+        _selectedWorkItems.Clear();
+        _selectedWorkItems.AddRange(_selectionState.SelectedWorkItems);
+        _selectedWorkItem = _selectionState.PrimarySelectedWorkItem;
     }
 }
