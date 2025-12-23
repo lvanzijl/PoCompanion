@@ -1,10 +1,12 @@
 @using PoTool.Client.Services
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @inject IOnboardingService OnboardingService
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
 @inject TfsConfigService TfsConfigService
+@inject ProfileService ProfileService
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 
@@ -124,7 +126,86 @@
                 }
                 else if (_currentStep == 2)
                 {
-                    <!-- Step 3: Initial Sync -->
+                    <!-- Step 3: Setup Profile -->
+                    <MudStack Spacing="4">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h6" Color="Color.Primary">Setup Your Profile</MudText>
+                        </MudStack>
+                        <MudText Typo="Typo.body1">
+                            Create a profile with your team name, area paths, and goals to personalize your experience.
+                        </MudText>
+
+                        <MudForm @ref="_profileForm" @bind-IsValid="_profileFormValid">
+                            <MudTextField @bind-Value="_profileName" 
+                                          Label="Profile Name" 
+                                          Required="true"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          HelperText="e.g., 'Product A - Team Alpha'" />
+
+                            <MudTextField @bind-Value="_profileTeamName" 
+                                          Label="Team Name" 
+                                          Required="true"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          HelperText="The team you work with" />
+
+                            <MudTextField @bind-Value="_profileAreaPaths" 
+                                          Label="Area Paths (comma-separated)" 
+                                          Required="true"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          Lines="2"
+                                          HelperText="e.g., 'ProjectA\\ProductA, ProjectA\\ProductA\\FeatureX'" />
+
+                            <MudTextField @bind-Value="_profileGoalIds" 
+                                          Label="Goal IDs (comma-separated, optional)" 
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          HelperText="Leave empty for all goals, or specify IDs like '1000,2000'" />
+
+                            <MudStack Row="true" Spacing="2" Class="mt-2">
+                                <MudButton Variant="Variant.Filled" 
+                                          Color="Color.Primary" 
+                                          OnClick="SaveProfile"
+                                          Disabled="@(!_profileFormValid || _isSavingProfile)"
+                                          Size="Size.Small"
+                                          StartIcon="@Icons.Material.Filled.Save">
+                                    @if (_isSavingProfile)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                        <span>Saving...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Save Profile</span>
+                                    }
+                                </MudButton>
+                            </MudStack>
+                        </MudForm>
+
+                        @if (_profileSaveResult != null)
+                        {
+                            <MudAlert Severity="@(_profileSaveResult.Success ? Severity.Success : Severity.Error)" Dense="true">
+                                @_profileSaveResult.Message
+                            </MudAlert>
+                        }
+
+                        @if (_profileErrorResponse != null)
+                        {
+                            <ErrorDisplay ErrorResponse="@_profileErrorResponse" 
+                                         OnDismiss="ClearProfileError" />
+                        }
+                        
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            You can skip this step and create profiles later from the Settings page.
+                        </MudAlert>
+                    </MudStack>
+                }
+                else if (_currentStep == 3)
+                {
+                    <!-- Step 4: Initial Sync -->
                     <MudStack Spacing="4">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudIcon Icon="@Icons.Material.Filled.Sync" Color="Color.Primary" Size="Size.Large" />
@@ -157,9 +238,9 @@
                         </MudAlert>
                     </MudStack>
                 }
-                else if (_currentStep == 3)
+                else if (_currentStep == 4)
                 {
-                    <!-- Step 4: Feature Tour -->
+                    <!-- Step 5: Feature Tour -->
                     <MudStack Spacing="4">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudIcon Icon="@Icons.Material.Filled.Tour" Color="Color.Primary" Size="Size.Large" />
@@ -211,7 +292,7 @@
         </DialogContent>
         <DialogActions>
             <MudButton OnClick="Skip" Color="Color.Default">
-                @if (_currentStep == 3)
+                @if (_currentStep == 4)
                 {
                     <text>Skip for Now</text>
                 }
@@ -226,7 +307,7 @@
                     Previous
                 </MudButton>
             }
-            @if (_currentStep < 3)
+            @if (_currentStep < 4)
             {
                 <MudButton OnClick="Next" Color="Color.Primary" Variant="Variant.Filled">
                     Next
@@ -263,6 +344,17 @@
     private ConnectionTestResult? _connectionTestResult;
     private ErrorResponse? _configErrorResponse;
 
+    // Profile form fields
+    private MudForm? _profileForm;
+    private bool _profileFormValid;
+    private bool _isSavingProfile;
+    private string _profileName = string.Empty;
+    private string _profileTeamName = string.Empty;
+    private string _profileAreaPaths = string.Empty;
+    private string _profileGoalIds = string.Empty;
+    private ConnectionTestResult? _profileSaveResult;
+    private ErrorResponse? _profileErrorResponse;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadExistingConfig();
@@ -298,24 +390,26 @@
         {
             0 => "Welcome to PO Companion",
             1 => "Configure Your Connection",
-            2 => "Sync Your Work Items",
-            3 => "Discover Key Features",
+            2 => "Setup Your Profile",
+            3 => "Sync Your Work Items",
+            4 => "Discover Key Features",
             _ => "Getting Started"
         };
     }
 
     private double GetProgress()
     {
-        return (_currentStep + 1) * 25.0;
+        return (_currentStep + 1) * 20.0;
     }
 
     private void Next()
     {
-        if (_currentStep < 3)
+        if (_currentStep < 4)
         {
             _currentStep++;
             // Reset connection test result when moving to next step
             _connectionTestResult = null;
+            _profileSaveResult = null;
         }
     }
 
@@ -377,6 +471,59 @@
     {
         _configErrorResponse = null;
         _connectionTestResult = null;
+    }
+
+    private async Task SaveProfile()
+    {
+        if (!_profileFormValid) return;
+
+        ClearProfileError();
+        _isSavingProfile = true;
+        
+        try
+        {
+            var areaPaths = InputParsingHelper.ParseCommaSeparatedStrings(_profileAreaPaths);
+            var goalIds = InputParsingHelper.ParseCommaSeparatedInts(_profileGoalIds);
+
+            if (areaPaths.Count == 0)
+            {
+                _profileSaveResult = new ConnectionTestResult(false, "Please specify at least one area path.");
+                return;
+            }
+
+            // Create and activate the profile
+            await ProfileService.CreateAndActivateProfileAsync(
+                _profileName,
+                areaPaths,
+                _profileTeamName,
+                goalIds);
+            
+            _profileSaveResult = new ConnectionTestResult(true, "Profile created and activated successfully!");
+            Snackbar.Add("Profile saved successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            _profileSaveResult = new ConnectionTestResult(false, "Profile save failed.");
+            ShowProfileError(ex, "Error saving profile");
+        }
+        finally
+        {
+            _isSavingProfile = false;
+        }
+    }
+
+
+
+    private void ShowProfileError(Exception ex, string context)
+    {
+        _profileErrorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearProfileError()
+    {
+        _profileErrorResponse = null;
+        _profileSaveResult = null;
     }
 
     private async Task Skip()

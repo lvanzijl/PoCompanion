@@ -1,0 +1,294 @@
+@using MudBlazor
+@using PoTool.Client.Services
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Validators
+@using PoTool.Client.Helpers
+@inject ProfileService ProfileService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject ErrorMessageService ErrorMessageService
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Manage Profiles</MudText>
+
+        @if (_isLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else
+        {
+            <!-- List of existing profiles -->
+            @if (_profiles != null && _profiles.Any())
+            {
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Your Profiles</MudText>
+                <MudList T="string" Dense="true" Class="mb-4">
+                    @foreach (var profile in _profiles)
+                    {
+                        <MudListItem T="string">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.body1"><strong>@profile.Name</strong></MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        Team: @profile.TeamName | @profile.AreaPaths.Count area path(s) | @profile.GoalIds.Count goal(s)
+                                    </MudText>
+                                </MudStack>
+                                <MudStack Row="true" Spacing="1">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                   Color="Color.Primary" 
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => EditProfile(profile))" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                   Color="Color.Error" 
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => DeleteProfile(profile))" />
+                                </MudStack>
+                            </MudStack>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
+                    No profiles yet. Create your first profile to get started.
+                </MudAlert>
+            }
+
+            <!-- Create/Edit Profile Form -->
+            <MudText Typo="Typo.subtitle1" Class="mb-2">
+                @(_isEditing ? "Edit Profile" : "Create New Profile")
+            </MudText>
+
+            <MudForm @ref="_form">
+                <MudTextField @bind-Value="_profileName" 
+                              Label="Profile Name" 
+                              Required="true"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              HelperText="e.g., 'Product A - Team Alpha'" />
+
+                <MudTextField @bind-Value="_teamName" 
+                              Label="Team Name" 
+                              Required="true"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              HelperText="The team responsible for these area paths" />
+
+                <MudTextField @bind-Value="_areaPathsInput" 
+                              Label="Area Paths (comma-separated)" 
+                              Required="true"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Lines="3"
+                              HelperText="e.g., 'ProjectA\\ProductA, ProjectA\\ProductA\\FeatureX'" />
+
+                <MudTextField @bind-Value="_goalIdsInput" 
+                              Label="Goal IDs (comma-separated, optional)" 
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              HelperText="Leave empty for all goals, or specify IDs like '1000,2000'" />
+
+                @if (_errorResponse != null)
+                {
+                    <ErrorDisplay ErrorResponse="@_errorResponse" 
+                                  Class="mt-4"
+                                  OnDismiss="ClearError" />
+                }
+
+                <MudStack Row="true" Class="mt-4" Spacing="2">
+                    <MudButton OnClick="SaveProfile" 
+                               Color="Color.Primary" 
+                               Variant="Variant.Filled" 
+                               Disabled="_isSaving"
+                               StartIcon="@Icons.Material.Filled.Save">
+                        @if (_isSaving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <span>@(_isEditing ? "Update" : "Create") Profile</span>
+                        }
+                    </MudButton>
+                    @if (_isEditing)
+                    {
+                        <MudButton OnClick="CancelEdit" 
+                                   Color="Color.Default" 
+                                   Variant="Variant.Outlined">
+                            Cancel
+                        </MudButton>
+                    }
+                </MudStack>
+            </MudForm>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Default">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private MudForm _form = null!;
+
+    private IEnumerable<ProfileDto> _profiles = Enumerable.Empty<ProfileDto>();
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private bool _isEditing = false;
+    private int? _editingProfileId;
+
+    private string _profileName = string.Empty;
+    private string _teamName = string.Empty;
+    private string _areaPathsInput = string.Empty;
+    private string _goalIdsInput = string.Empty;
+
+    private ErrorResponse? _errorResponse;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfiles();
+    }
+
+    private async Task LoadProfiles()
+    {
+        try
+        {
+            _isLoading = true;
+            ClearError();
+            _profiles = await ProfileService.GetAllProfilesAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex, "Error loading profiles");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void EditProfile(ProfileDto profile)
+    {
+        _isEditing = true;
+        _editingProfileId = profile.Id;
+        _profileName = profile.Name;
+        _teamName = profile.TeamName;
+        _areaPathsInput = string.Join(", ", profile.AreaPaths);
+        _goalIdsInput = string.Join(", ", profile.GoalIds);
+    }
+
+    private async Task DeleteProfile(ProfileDto profile)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete the profile '{profile.Name}'?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try
+            {
+                var deleted = await ProfileService.DeleteProfileAsync(profile.Id);
+                if (deleted)
+                {
+                    Snackbar.Add($"Profile '{profile.Name}' deleted successfully", Severity.Success);
+                    await LoadProfiles();
+                    ClearForm();
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowError(ex, "Error deleting profile");
+            }
+        }
+    }
+
+    private async Task SaveProfile()
+    {
+        await _form.Validate();
+        if (!_form.IsValid)
+        {
+            return;
+        }
+
+        try
+        {
+            _isSaving = true;
+            ClearError();
+
+            var areaPaths = InputParsingHelper.ParseCommaSeparatedStrings(_areaPathsInput);
+            var goalIds = InputParsingHelper.ParseCommaSeparatedInts(_goalIdsInput);
+
+            if (_isEditing && _editingProfileId.HasValue)
+            {
+                await ProfileService.UpdateProfileAsync(
+                    _editingProfileId.Value,
+                    _profileName,
+                    areaPaths,
+                    _teamName,
+                    goalIds);
+                Snackbar.Add("Profile updated successfully", Severity.Success);
+            }
+            else
+            {
+                await ProfileService.CreateProfileAsync(
+                    _profileName,
+                    areaPaths,
+                    _teamName,
+                    goalIds);
+                Snackbar.Add("Profile created successfully", Severity.Success);
+            }
+
+            await LoadProfiles();
+            ClearForm();
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex, _isEditing ? "Error updating profile" : "Error creating profile");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        ClearForm();
+    }
+
+    private void ClearForm()
+    {
+        _isEditing = false;
+        _editingProfileId = null;
+        _profileName = string.Empty;
+        _teamName = string.Empty;
+        _areaPathsInput = string.Empty;
+        _goalIdsInput = string.Empty;
+        _form?.ResetValidation();
+    }
+
+
+
+    private void ShowError(Exception ex, string context)
+    {
+        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+
+    private void Close()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}

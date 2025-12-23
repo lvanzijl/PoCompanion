@@ -78,6 +78,7 @@ public static class ApiServiceCollectionExtensions
             services.AddScoped<IWorkItemRepository, WorkItemRepository>();
         }
         services.AddScoped<ISettingsRepository, SettingsRepository>();
+        services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<IPullRequestRepository, PullRequestRepository>();
 
         // Register mock data providers
@@ -101,6 +102,7 @@ public static class ApiServiceCollectionExtensions
         services.AddDataProtection();
         services.AddScoped<TfsConfigurationService>();
         services.AddScoped<TfsAuthenticationProvider>();
+        services.AddScoped<ProfileFilterService>();
         
         // Register PAT accessor to retrieve PAT from request context
         services.AddHttpContextAccessor();

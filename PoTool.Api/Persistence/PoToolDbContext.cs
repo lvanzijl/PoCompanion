@@ -31,6 +31,11 @@ public class PoToolDbContext : DbContext
     public DbSet<SettingsEntity> Settings => Set<SettingsEntity>();
 
     /// <summary>
+    /// User profiles (area paths, team, goals).
+    /// </summary>
+    public DbSet<ProfileEntity> Profiles => Set<ProfileEntity>();
+
+    /// <summary>
     /// Pull requests cached from TFS/Azure DevOps.
     /// </summary>
     public DbSet<PullRequestEntity> PullRequests => Set<PullRequestEntity>();
@@ -75,6 +80,15 @@ public class PoToolDbContext : DbContext
         modelBuilder.Entity<SettingsEntity>(entity =>
         {
             // Settings entity configuration (Id is primary key by convention)
+        });
+
+        modelBuilder.Entity<ProfileEntity>(entity =>
+        {
+            entity.HasIndex(e => e.Name);
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.AreaPaths).HasMaxLength(2000).IsRequired();
+            entity.Property(e => e.TeamName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.GoalIds).HasMaxLength(1000);
         });
 
         modelBuilder.Entity<PullRequestEntity>(entity =>

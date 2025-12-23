@@ -40,6 +40,26 @@ public class WorkItemRepository : IWorkItemRepository
         return entities.Select(MapToDto);
     }
 
+    public async Task<IEnumerable<WorkItemDto>> GetByAreaPathsAsync(List<string> areaPaths, CancellationToken cancellationToken = default)
+    {
+        if (areaPaths == null || areaPaths.Count == 0)
+        {
+            return await GetAllAsync(cancellationToken);
+        }
+
+        var entities = await _context.WorkItems
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        // Filter using hierarchical area path matching
+        var filtered = entities.Where(e => 
+            areaPaths.Any(profilePath => 
+                e.AreaPath.Equals(profilePath, StringComparison.OrdinalIgnoreCase) ||
+                e.AreaPath.StartsWith(profilePath + "\\", StringComparison.OrdinalIgnoreCase)));
+
+        return filtered.Select(MapToDto);
+    }
+
     public async Task<WorkItemDto?> GetByTfsIdAsync(int tfsId, CancellationToken cancellationToken = default)
     {
         var entity = await _context.WorkItems

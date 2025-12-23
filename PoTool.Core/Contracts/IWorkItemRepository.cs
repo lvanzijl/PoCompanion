@@ -23,6 +23,14 @@ public interface IWorkItemRepository
     Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves work items matching the specified area paths.
+    /// </summary>
+    /// <param name="areaPaths">List of area paths to filter by (hierarchical matching).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Filtered collection of work item DTOs.</returns>
+    Task<IEnumerable<WorkItemDto>> GetByAreaPathsAsync(List<string> areaPaths, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves a work item by its TFS ID.
     /// </summary>
     /// <param name="tfsId">The TFS work item ID.</param>

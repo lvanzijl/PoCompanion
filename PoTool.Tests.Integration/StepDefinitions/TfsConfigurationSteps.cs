@@ -23,13 +23,6 @@ public class TfsConfigurationSteps
         _client = _factory.CreateClient();
     }
 
-    [Given(@"the application is running")]
-    public void GivenTheApplicationIsRunning()
-    {
-        // Application is already running via the factory
-        Assert.IsNotNull(_client);
-    }
-
     [Given(@"I have valid TFS credentials")]
     public void GivenIHaveValidTfsCredentials(Table table)
     {

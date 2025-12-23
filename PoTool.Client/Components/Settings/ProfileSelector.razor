@@ -1,0 +1,145 @@
+@using MudBlazor
+@using PoTool.Client.Services
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Settings
+@inject ProfileService ProfileService
+@inject SettingsService SettingsService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudMenu Icon="@Icons.Material.Filled.AccountCircle" 
+         Color="Color.Inherit" 
+         AnchorOrigin="Origin.BottomLeft"
+         Dense="true"
+         Label="@GetProfileLabel()">
+    @if (_isLoading)
+    {
+        <MudMenuItem Disabled="true">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            <span class="ml-2">Loading...</span>
+        </MudMenuItem>
+    }
+    else
+    {
+        @if (_profiles != null && _profiles.Any())
+        {
+            <MudMenuItem Disabled="true">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Select Profile</MudText>
+            </MudMenuItem>
+            @foreach (var profile in _profiles)
+            {
+                <MudMenuItem OnClick="@(() => SetActiveProfile(profile))">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        @if (_activeProfileId == profile.Id)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" />
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Transparent" Size="Size.Small" />
+                        }
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2">@profile.Name</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@profile.TeamName</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudMenuItem>
+            }
+            <MudDivider />
+        }
+        else
+        {
+            <MudMenuItem Disabled="true">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">No profiles yet</MudText>
+            </MudMenuItem>
+        }
+        <MudMenuItem OnClick="ManageProfiles">
+            <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-2" />
+            Manage Profiles
+        </MudMenuItem>
+    }
+</MudMenu>
+
+@code {
+    [Parameter]
+    public EventCallback OnProfileChanged { get; set; }
+
+    private IEnumerable<ProfileDto> _profiles = Enumerable.Empty<ProfileDto>();
+    private int? _activeProfileId;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfilesAndActiveProfile();
+    }
+
+    private async Task LoadProfilesAndActiveProfile()
+    {
+        try
+        {
+            _isLoading = true;
+            _profiles = await ProfileService.GetAllProfilesAsync();
+            
+            var settings = await SettingsService.GetSettingsAsync();
+            _activeProfileId = settings?.ActiveProfileId;
+        }
+        catch (Exception)
+        {
+            // Silently fail - user can manage profiles manually
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SetActiveProfile(ProfileDto profile)
+    {
+        try
+        {
+            await ProfileService.SetActiveProfileAsync(profile.Id);
+            _activeProfileId = profile.Id;
+            Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
+            
+            // Notify parent component that profile changed
+            await OnProfileChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error switching profile: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private string GetProfileLabel()
+    {
+        if (_isLoading)
+        {
+            return "Profile";
+        }
+
+        var activeProfile = _profiles.FirstOrDefault(p => p.Id == _activeProfileId);
+        return activeProfile != null ? activeProfile.Name : "No Profile";
+    }
+
+    private async Task ManageProfiles()
+    {
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+        
+        await DialogService.ShowAsync<ProfileManagerDialog>("Manage Profiles", options);
+        
+        // Refresh profiles after dialog closes
+        await LoadProfilesAndActiveProfile();
+        StateHasChanged();
+    }
+
+    public async Task RefreshAsync()
+    {
+        await LoadProfilesAndActiveProfile();
+        StateHasChanged();
+    }
+}

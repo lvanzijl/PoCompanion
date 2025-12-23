@@ -82,6 +82,12 @@ public static class MauiProgram
             return new SettingsClient(httpClient);
         });
         
+        builder.Services.AddScoped<IProfilesClient>(sp =>
+        {
+            var httpClient = sp.GetRequiredService<HttpClient>();
+            return new ProfilesClient(httpClient);
+        });
+        
         builder.Services.AddScoped<IPullRequestsClient>(sp =>
         {
             var httpClient = sp.GetRequiredService<HttpClient>();
@@ -95,6 +101,7 @@ public static class MauiProgram
         builder.Services.AddScoped<ITreeBuilderService, TreeBuilderService>();
         builder.Services.AddScoped<ICorrelationIdService, CorrelationIdService>();
         builder.Services.AddScoped<SettingsService>();
+        builder.Services.AddScoped<ProfileService>();
         builder.Services.AddScoped<TfsConfigService>();
         builder.Services.AddScoped<ModeIsolatedStateService>();
         builder.Services.AddScoped<ErrorMessageService>();
