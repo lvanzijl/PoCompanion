@@ -94,4 +94,16 @@ public interface ITfsClient
     Task<IEnumerable<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(
         int workItemId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates the state of a work item in TFS.
+    /// </summary>
+    /// <param name="workItemId">The work item ID.</param>
+    /// <param name="newState">The new state value.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if the update was successful, false otherwise.</returns>
+    Task<bool> UpdateWorkItemStateAsync(
+        int workItemId,
+        string newState,
+        CancellationToken cancellationToken = default);
 }

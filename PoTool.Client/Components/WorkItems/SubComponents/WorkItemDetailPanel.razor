@@ -171,7 +171,16 @@ else if (SelectedWorkItem != null)
                                 <ul class="validation-list">
                                     @foreach (var error in Errors)
                                     {
-                                        <li>@error</li>
+                                        <li>
+                                            @error
+                                            @if (error.Contains("Parent") && error.Contains("not in progress") && SelectedWorkItem != null)
+                                            {
+                                                <div class="fix-suggestion">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Size="Size.Small" Color="Color.Info" />
+                                                    <strong>Suggested Fix:</strong> Set parent work item to "In Progress" state
+                                                </div>
+                                            }
+                                        </li>
                                     }
                                 </ul>
                             </div>
@@ -183,7 +192,16 @@ else if (SelectedWorkItem != null)
                                 <ul class="validation-list">
                                     @foreach (var warning in Warnings)
                                     {
-                                        <li>@warning</li>
+                                        <li>
+                                            @warning
+                                            @if (warning.Contains("Ancestor") && warning.Contains("not in progress"))
+                                            {
+                                                <div class="fix-suggestion">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Info" />
+                                                    <strong>Suggestion:</strong> Review parent hierarchy and ensure all ancestors are in progress
+                                                </div>
+                                            }
+                                        </li>
                                     }
                                 </ul>
                             </div>

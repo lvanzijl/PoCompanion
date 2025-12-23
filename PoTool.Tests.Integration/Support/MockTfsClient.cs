@@ -334,4 +334,31 @@ public class MockTfsClient : ITfsClient
     {
         _mockFileChanges.Add(fileChange);
     }
+
+    public Task<bool> UpdateWorkItemStateAsync(int workItemId, string newState, CancellationToken cancellationToken = default)
+    {
+        // Mock implementation for integration tests
+        // Always return true for valid state values to simulate successful TFS update
+        var validStates = new[] { "New", "Active", "In Progress", "Resolved", "Closed", "Done", "Removed" };
+        var isValidState = validStates.Contains(newState, StringComparer.OrdinalIgnoreCase);
+        
+        if (!isValidState)
+        {
+            return Task.FromResult(false);
+        }
+        
+        // Find and update the work item if it exists in our mock list
+        var workItem = _mockWorkItems.FirstOrDefault(wi => wi.TfsId == workItemId);
+        if (workItem != null)
+        {
+            // Remove old and add updated work item (since WorkItemDto is immutable)
+            _mockWorkItems.Remove(workItem);
+            var updatedWorkItem = workItem with { State = newState };
+            _mockWorkItems.Add(updatedWorkItem);
+        }
+        
+        // Return true regardless of whether work item is in our mock list
+        // The handler will check the database repository, not our internal list
+        return Task.FromResult(true);
+    }
 }
