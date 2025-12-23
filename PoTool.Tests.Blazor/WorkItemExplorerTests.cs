@@ -18,15 +18,16 @@ namespace PoTool.Tests.Blazor;
 [TestClass]
 public class WorkItemExplorerTests : BunitTestContext
 {
-    private Mock<WorkItemService> _mockWorkItemService = null!;
+    private Mock<IWorkItemsClient> _mockWorkItemsClient = null!;
     private Mock<IWorkItemSyncHubService> _mockSyncHubService = null!;
     private Mock<ITreeBuilderService> _mockTreeBuilderService = null!;
-    private Mock<SettingsService> _mockSettingsService = null!;
-    private Mock<TfsConfigService> _mockTfsConfigService = null!;
-    private Mock<ModeIsolatedStateService> _mockStateService = null!;
+    private Mock<ISettingsClient> _mockSettingsClient = null!;
+    private Mock<IClient> _mockApiClient = null!;
+    private Mock<ISecureStorageService> _mockSecureStorage = null!;
+    private Mock<Core.Contracts.IClipboardService> _mockClipboardService = null!;
     private Mock<IDialogService> _mockDialogService = null!;
     private Mock<ISnackbar> _mockSnackbar = null!;
-    private Mock<IJSRuntime> _mockJSRuntime = null!;
+    private Mock<Microsoft.Extensions.Logging.ILogger<ModeIsolatedStateService>> _mockLogger = null!;
 
     [TestInitialize]
     public void Setup()
@@ -37,52 +38,58 @@ public class WorkItemExplorerTests : BunitTestContext
         // Configure JSInterop in Loose mode
         JSInterop.Mode = JSRuntimeMode.Loose;
 
-        // Setup mocks
-        _mockWorkItemService = new Mock<WorkItemService>();
+        // Setup mocks for underlying clients
+        _mockWorkItemsClient = new Mock<IWorkItemsClient>();
         _mockSyncHubService = new Mock<IWorkItemSyncHubService>();
         _mockTreeBuilderService = new Mock<ITreeBuilderService>();
-        _mockSettingsService = new Mock<SettingsService>();
-        _mockTfsConfigService = new Mock<TfsConfigService>();
-        _mockStateService = new Mock<ModeIsolatedStateService>();
+        _mockSettingsClient = new Mock<ISettingsClient>();
+        _mockApiClient = new Mock<IClient>();
+        _mockSecureStorage = new Mock<ISecureStorageService>();
+        _mockClipboardService = new Mock<Core.Contracts.IClipboardService>();
         _mockDialogService = new Mock<IDialogService>();
         _mockSnackbar = new Mock<ISnackbar>();
-        _mockJSRuntime = new Mock<IJSRuntime>();
+        _mockLogger = new Mock<Microsoft.Extensions.Logging.ILogger<ModeIsolatedStateService>>();
 
         // Setup default behaviors
         _mockSyncHubService.Setup(x => x.StartAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
         _mockSyncHubService.Setup(x => x.IsConnected).Returns(true);
 
-        _mockStateService.Setup(x => x.LoadExpandedStateAsync())
-            .ReturnsAsync(new Dictionary<int, bool>());
-        _mockStateService.Setup(x => x.SaveExpandedStateAsync(It.IsAny<Dictionary<int, bool>>()))
-            .Returns(Task.CompletedTask);
-
-        _mockSettingsService.Setup(x => x.GetOrCreateDefaultSettingsAsync(It.IsAny<CancellationToken>()))
+        _mockSettingsClient.Setup(x => x.GetSettingsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SettingsDto { DataMode = DataMode.Mock, ConfiguredGoalIds = new List<int>() });
 
-        _mockTfsConfigService.Setup(x => x.GetConfigAsync())
-            .ReturnsAsync((TfsConfigDto?)null);
+        _mockApiClient.Setup(x => x.GetApiTfsconfigAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ApiException("Not found", 204, null, null, null));
 
-        _mockWorkItemService.Setup(x => x.GetAllWithValidationAsync())
-            .ReturnsAsync(new List<WorkItemWithValidationDto>() as IEnumerable<WorkItemWithValidationDto>);
+        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkItemWithValidationDto>());
 
         _mockTreeBuilderService.Setup(x => x.BuildTreeWithValidation(
                 It.IsAny<IEnumerable<WorkItemWithValidationDto>>(),
                 It.IsAny<Dictionary<int, bool>>()))
             .Returns(new List<TreeNode>());
 
-        // Register mock services
-        Services.AddSingleton(_mockWorkItemService.Object);
+        _mockClipboardService.Setup(x => x.CopyToClipboardAsync(It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+
+        // Register mock clients
+        Services.AddSingleton(_mockWorkItemsClient.Object);
+        Services.AddSingleton(_mockSettingsClient.Object);
         Services.AddSingleton(_mockSyncHubService.Object);
         Services.AddSingleton(_mockTreeBuilderService.Object);
-        Services.AddSingleton(_mockSettingsService.Object);
-        Services.AddSingleton(_mockTfsConfigService.Object);
-        Services.AddSingleton(_mockStateService.Object);
+        Services.AddSingleton(_mockApiClient.Object);
+        Services.AddSingleton(_mockSecureStorage.Object);
+        Services.AddSingleton(_mockClipboardService.Object);
         Services.AddSingleton(_mockDialogService.Object);
         Services.AddSingleton(_mockSnackbar.Object);
+        Services.AddSingleton(_mockLogger.Object);
+        
+        // Register concrete services that wrap the clients
+        Services.AddSingleton<WorkItemService>();
+        Services.AddSingleton<SettingsService>();
+        Services.AddSingleton<TfsConfigService>();
         Services.AddSingleton<ErrorMessageService>();
-        Services.AddSingleton(_mockJSRuntime.Object);
+        Services.AddSingleton<ModeIsolatedStateService>();
     }
 
     private IRenderedFragment RenderWorkItemExplorerWithMudProvider()
@@ -100,8 +107,8 @@ public class WorkItemExplorerTests : BunitTestContext
     public void WorkItemExplorer_RendersCorrectly_WithEmptyData()
     {
         // Arrange
-        _mockWorkItemService.Setup(x => x.GetAllWithValidationAsync())
-            .ReturnsAsync(new List<WorkItemWithValidationDto>() as IEnumerable<WorkItemWithValidationDto>);
+        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkItemWithValidationDto>());
 
         // Act
         var cut = RenderWorkItemExplorerWithMudProvider();
@@ -129,7 +136,7 @@ public class WorkItemExplorerTests : BunitTestContext
             CreateWorkItemWithValidation(2, "User Story", "Test Story", 1, "Active")
         };
 
-        _mockWorkItemService.Setup(x => x.GetAllWithValidationAsync())
+        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
 
         var treeNodes = new List<TreeNode>
@@ -162,15 +169,15 @@ public class WorkItemExplorerTests : BunitTestContext
 
         // Assert
         Assert.Contains("Work Item Explorer", cut.Markup);
-        _mockWorkItemService.Verify(x => x.GetAllWithValidationAsync(), Times.Once);
+        _mockWorkItemsClient.Verify(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
     [TestMethod]
     public void WorkItemExplorer_DisplaysLoadingState_Initially()
     {
         // Arrange
-        var tcs = new TaskCompletionSource<IEnumerable<WorkItemWithValidationDto>>();
-        _mockWorkItemService.Setup(x => x.GetAllWithValidationAsync())
+        var tcs = new TaskCompletionSource<ICollection<WorkItemWithValidationDto>>();
+        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()))
             .Returns(tcs.Task);
 
         // Act
@@ -181,7 +188,7 @@ public class WorkItemExplorerTests : BunitTestContext
         Assert.IsNotNull(cut);
 
         // Complete the async operation
-        tcs.SetResult(new List<WorkItemWithValidationDto>() as IEnumerable<WorkItemWithValidationDto>);
+        tcs.SetResult(new List<WorkItemWithValidationDto>() );
     }
 
     [TestMethod]
@@ -238,7 +245,7 @@ public class WorkItemExplorerTests : BunitTestContext
         // Wait for initialization
         cut.WaitForAssertion(() =>
         {
-            _mockSettingsService.Verify(x => x.GetOrCreateDefaultSettingsAsync(), Times.Once);
+            _mockSettingsClient.Verify(x => x.GetSettingsAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
         }, timeout: TimeSpan.FromSeconds(5));
     }
 
@@ -251,7 +258,7 @@ public class WorkItemExplorerTests : BunitTestContext
         // Wait for initialization
         cut.WaitForAssertion(() =>
         {
-            _mockWorkItemService.Verify(x => x.GetAllWithValidationAsync(), Times.Once);
+            _mockWorkItemsClient.Verify(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce);
         }, timeout: TimeSpan.FromSeconds(5));
     }
 
@@ -264,7 +271,7 @@ public class WorkItemExplorerTests : BunitTestContext
             CreateWorkItemWithValidation(1, "Epic", "Test Epic", null, "New")
         };
 
-        _mockWorkItemService.Setup(x => x.GetAllWithValidationAsync())
+        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
 
         // Act
