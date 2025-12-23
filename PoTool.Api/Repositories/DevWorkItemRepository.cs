@@ -31,6 +31,20 @@ public class DevWorkItemRepository : IWorkItemRepository
         return Task.FromResult(result);
     }
 
+    public Task<IEnumerable<WorkItemDto>> GetByAreaPathsAsync(List<string> areaPaths, CancellationToken cancellationToken = default)
+    {
+        if (areaPaths == null || areaPaths.Count == 0)
+            return Task.FromResult(_items.AsEnumerable());
+
+        // Filter using hierarchical area path matching
+        var filtered = _items.Where(item => 
+            areaPaths.Any(profilePath => 
+                item.AreaPath.Equals(profilePath, StringComparison.OrdinalIgnoreCase) ||
+                item.AreaPath.StartsWith(profilePath + "\\", StringComparison.OrdinalIgnoreCase)));
+
+        return Task.FromResult(filtered);
+    }
+
     public Task<WorkItemDto?> GetByTfsIdAsync(int tfsId, CancellationToken cancellationToken = default)
     {
         var item = _items.FirstOrDefault(w => w.TfsId == tfsId);

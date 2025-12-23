@@ -102,6 +102,7 @@ public static class ApiServiceCollectionExtensions
         services.AddDataProtection();
         services.AddScoped<TfsConfigurationService>();
         services.AddScoped<TfsAuthenticationProvider>();
+        services.AddScoped<ProfileFilterService>();
         
         // Register PAT accessor to retrieve PAT from request context
         services.AddHttpContextAccessor();

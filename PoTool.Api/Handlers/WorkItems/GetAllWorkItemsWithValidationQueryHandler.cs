@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Queries;
@@ -9,21 +10,25 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// <summary>
 /// Handler for GetAllWorkItemsWithValidationQuery.
 /// Retrieves all work items and attaches validation results.
+/// Automatically filters by active profile's area paths if a profile is set.
 /// </summary>
 public sealed class GetAllWorkItemsWithValidationQueryHandler 
     : IQueryHandler<GetAllWorkItemsWithValidationQuery, IEnumerable<WorkItemWithValidationDto>>
 {
     private readonly IWorkItemRepository _repository;
     private readonly IWorkItemValidator _validator;
+    private readonly ProfileFilterService _profileFilterService;
     private readonly ILogger<GetAllWorkItemsWithValidationQueryHandler> _logger;
 
     public GetAllWorkItemsWithValidationQueryHandler(
         IWorkItemRepository repository,
         IWorkItemValidator validator,
+        ProfileFilterService profileFilterService,
         ILogger<GetAllWorkItemsWithValidationQueryHandler> logger)
     {
         _repository = repository;
         _validator = validator;
+        _profileFilterService = profileFilterService;
         _logger = logger;
     }
 
@@ -33,10 +38,23 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
     {
         _logger.LogDebug("Handling GetAllWorkItemsWithValidationQuery");
         
-        var workItems = (await _repository.GetAllAsync(cancellationToken)).ToList();
-        var validationResults = _validator.ValidateWorkItems(workItems);
+        var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
+        
+        IEnumerable<WorkItemDto> workItems;
+        if (profileAreaPaths != null && profileAreaPaths.Count > 0)
+        {
+            _logger.LogDebug("Filtering work items by active profile area paths for validation");
+            workItems = await _repository.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
+        }
+        else
+        {
+            workItems = await _repository.GetAllAsync(cancellationToken);
+        }
+        
+        var workItemsList = workItems.ToList();
+        var validationResults = _validator.ValidateWorkItems(workItemsList);
 
-        return workItems.Select(wi => new WorkItemWithValidationDto(
+        return workItemsList.Select(wi => new WorkItemWithValidationDto(
             wi.TfsId,
             wi.Type,
             wi.Title,
