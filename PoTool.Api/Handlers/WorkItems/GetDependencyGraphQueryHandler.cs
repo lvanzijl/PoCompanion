@@ -164,11 +164,9 @@ public sealed class GetDependencyGraphQueryHandler
                 }
             }
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
-            // Log but don't fail - just return empty relations
-            // Note: We don't have access to logger in this static method,
-            // so we silently ignore JSON parsing errors
+            // Silently ignore JSON parsing errors - just return empty relations
         }
 
         return relations;
