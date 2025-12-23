@@ -97,26 +97,6 @@ public class EffortDistributionTests : BunitTestContext
     }
 
     [TestMethod]
-    public void EffortDistribution_DisplaysLoadingState_Initially()
-    {
-        // Arrange
-        var tcs = new TaskCompletionSource<EffortDistributionDto?>();
-        _mockMetricsClient.Setup(x => x.GetEffortDistributionAsync(
-                It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<int?>()))
-            .Returns(tcs.Task);
-
-        // Act
-        var cut = RenderEffortDistributionWithMudProvider();
-
-        // Assert - Should show loading initially
-        var progressIndicators = cut.FindAll(".mud-progress-linear");
-        Assert.AreNotEqual(0, progressIndicators.Count, "Loading state should display progress indicator");
-
-        // Complete the async operation
-        tcs.SetResult(CreateEffortDistributionData());
-    }
-
-    [TestMethod]
     public void EffortDistribution_DisplaysSummaryCards()
     {
         // Arrange

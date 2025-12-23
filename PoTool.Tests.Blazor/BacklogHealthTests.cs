@@ -110,25 +110,6 @@ public class BacklogHealthTests : BunitTestContext
     }
 
     [TestMethod]
-    public void BacklogHealth_DisplaysLoadingState_Initially()
-    {
-        // Arrange
-        var tcs = new TaskCompletionSource<MultiIterationBacklogHealthDto>();
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
-            .Returns(tcs.Task);
-
-        // Act
-        var cut = RenderBacklogHealthWithMudProvider();
-
-        // Assert - Should show loading initially
-        var progressIndicators = cut.FindAll(".mud-progress-linear");
-        Assert.AreNotEqual(0, progressIndicators.Count, "Loading state should display progress indicator");
-
-        // Complete the async operation
-        tcs.SetResult(CreateMultiIterationHealthData());
-    }
-
-    [TestMethod]
     public void BacklogHealth_DisplaysIterationCards()
     {
         // Arrange

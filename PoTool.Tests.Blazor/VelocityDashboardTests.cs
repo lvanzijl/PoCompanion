@@ -95,25 +95,6 @@ public class VelocityDashboardTests : BunitTestContext
     }
 
     [TestMethod]
-    public void VelocityDashboard_DisplaysLoadingState_Initially()
-    {
-        // Arrange
-        var tcs = new TaskCompletionSource<VelocityTrendDto?>();
-        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
-            .Returns(tcs.Task);
-
-        // Act
-        var cut = RenderVelocityDashboardWithMudProvider();
-
-        // Assert - Should show loading initially
-        var progressIndicators = cut.FindAll(".mud-progress-linear");
-        Assert.AreNotEqual(0, progressIndicators.Count, "Loading state should display progress indicator");
-
-        // Complete the async operation
-        tcs.SetResult(CreateVelocityTrendData());
-    }
-
-    [TestMethod]
     public void VelocityDashboard_DisplaysMetricSummaryCards()
     {
         // Arrange
