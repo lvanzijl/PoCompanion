@@ -104,7 +104,7 @@ public class PullRequestMetricsService
             .ToList();
 
         var data = topItems.Select(m => m.TotalTimeOpen.TotalDays).ToArray();
-        var labels = topItems.Select(m => m.Title.Length > 30 ? m.Title.Substring(0, 27) + "..." : m.Title).ToArray();
+        var labels = topItems.Select(m => m.Title.Length > 30 ? m.Title[0..27] + "..." : m.Title).ToArray();
 
         return (data, labels);
     }

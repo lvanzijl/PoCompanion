@@ -137,10 +137,11 @@ public class WorkItemFilteringService
         // Then apply text filter if present
         if (!string.IsNullOrWhiteSpace(textFilter))
         {
+            var workItemsLookup = workItems.ToDictionary(wi => wi.TfsId);
             filteredItems = _treeBuilderService.FilterWithAncestors(
                 filteredItems.Select(ConvertToWorkItemDto).ToList(),
                 textFilter
-            ).Select(dto => workItems.First(wi => wi.TfsId == dto.TfsId));
+            ).Select(dto => workItemsLookup[dto.TfsId]);
         }
 
         return filteredItems;

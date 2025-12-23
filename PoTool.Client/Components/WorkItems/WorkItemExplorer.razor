@@ -183,13 +183,16 @@
             var settings = await SettingsService.GetOrCreateDefaultSettingsAsync();
             StateService.SetMode(settings.DataMode);
 
-            // Load hierarchy with validation
+            // Load hierarchy with validation - get all first
+            var allWorkItems = (await WorkItemService.GetAllWithValidationAsync()).ToList();
+            
+            // Then filter by goals if configured
             var goalIds = settings.ConfiguredGoalIds.ToList();
             _workItemsWithValidation = goalIds.Count > 0
-                ? (await WorkItemService.GetAllWithValidationAsync()).Where(wi => 
+                ? allWorkItems.Where(wi => 
                     goalIds.Contains(wi.TfsId) || 
-                    FilteringService.IsDescendantOfGoals(wi, goalIds, _workItemsWithValidation)).ToList()
-                : (await WorkItemService.GetAllWithValidationAsync()).ToList();
+                    FilteringService.IsDescendantOfGoals(wi, goalIds, allWorkItems)).ToList()
+                : allWorkItems;
 
             ApplyFilter();
             UpdateValidationFilterCounts();
