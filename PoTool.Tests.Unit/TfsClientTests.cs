@@ -20,8 +20,8 @@ public class TfsClientTests
     private TfsConfigurationService _configService = null!;
     private TfsAuthenticationProvider _authProvider = null!;
     private PoToolDbContext _dbContext = null!;
-    private Mock<ILogger<TfsClient>> _loggerMock = null!;
-    private TfsClient _client = null!;
+    private Mock<ILogger<RealTfsClient>> _loggerMock = null!;
+    private RealTfsClient _client = null!;
 
     [TestInitialize]
     public void Setup()
@@ -43,13 +43,13 @@ public class TfsClientTests
         _configService = new TfsConfigurationService(_dbContext, configLogger.Object);
         
         _authProvider = new TfsAuthenticationProvider();
-        _loggerMock = new Mock<ILogger<TfsClient>>();
+        _loggerMock = new Mock<ILogger<RealTfsClient>>();
         
         // Create mock PatAccessor that returns null (tests don't need PAT auth for mock responses)
         var mockPatAccessor = new Mock<PatAccessor>(Mock.Of<IHttpContextAccessor>());
         mockPatAccessor.Setup(p => p.GetPat()).Returns((string?)null);
         
-        _client = new TfsClient(_httpClient, _configService, _authProvider, mockPatAccessor.Object, _loggerMock.Object);
+        _client = new RealTfsClient(_httpClient, _configService, _authProvider, mockPatAccessor.Object, _loggerMock.Object);
     }
 
     [TestCleanup]
