@@ -283,4 +283,134 @@ public class MetricsController : ControllerBase
             return StatusCode(500, "Error retrieving Epic completion forecast");
         }
     }
+
+    /// <summary>
+    /// Gets effort imbalance analysis across teams and sprints.
+    /// Identifies disproportionate allocations and provides rebalancing recommendations.
+    /// </summary>
+    /// <param name="areaPathFilter">Optional area path filter</param>
+    /// <param name="maxIterations">Maximum number of iterations to include (default: 10)</param>
+    /// <param name="defaultCapacity">Default capacity per iteration for utilization calculations</param>
+    /// <param name="imbalanceThreshold">Threshold for imbalance detection (default: 0.3 = 30%)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Effort imbalance analysis with recommendations</returns>
+    [HttpGet("effort-imbalance")]
+    public async Task<ActionResult<EffortImbalanceDto>> GetEffortImbalance(
+        [FromQuery] string? areaPathFilter = null,
+        [FromQuery] int maxIterations = 10,
+        [FromQuery] int? defaultCapacity = null,
+        [FromQuery] double imbalanceThreshold = 0.3,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (maxIterations < 1 || maxIterations > 20)
+            {
+                return BadRequest("MaxIterations must be between 1 and 20");
+            }
+
+            if (imbalanceThreshold < 0 || imbalanceThreshold > 1)
+            {
+                return BadRequest("ImbalanceThreshold must be between 0 and 1");
+            }
+
+            if (defaultCapacity.HasValue && defaultCapacity.Value < 0)
+            {
+                return BadRequest("DefaultCapacity must be non-negative");
+            }
+
+            var imbalance = await _mediator.Send(
+                new GetEffortImbalanceQuery(areaPathFilter, maxIterations, defaultCapacity, imbalanceThreshold), 
+                cancellationToken);
+
+            return Ok(imbalance);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving effort imbalance for area: {AreaPath}", areaPathFilter ?? "All");
+            return StatusCode(500, "Error retrieving effort imbalance");
+        }
+    }
+
+    /// <summary>
+    /// Gets effort distribution trend analysis over time.
+    /// Shows how distribution patterns change sprint by sprint with forecasts.
+    /// </summary>
+    /// <param name="areaPathFilter">Optional area path filter</param>
+    /// <param name="maxIterations">Maximum number of iterations to include (default: 10)</param>
+    /// <param name="defaultCapacity">Default capacity per iteration for utilization calculations</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Effort distribution trend with forecasts</returns>
+    [HttpGet("effort-distribution-trend")]
+    public async Task<ActionResult<EffortDistributionTrendDto>> GetEffortDistributionTrend(
+        [FromQuery] string? areaPathFilter = null,
+        [FromQuery] int maxIterations = 10,
+        [FromQuery] int? defaultCapacity = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (maxIterations < 1 || maxIterations > 20)
+            {
+                return BadRequest("MaxIterations must be between 1 and 20");
+            }
+
+            if (defaultCapacity.HasValue && defaultCapacity.Value < 0)
+            {
+                return BadRequest("DefaultCapacity must be non-negative");
+            }
+
+            var trend = await _mediator.Send(
+                new GetEffortDistributionTrendQuery(areaPathFilter, maxIterations, defaultCapacity), 
+                cancellationToken);
+
+            return Ok(trend);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving effort distribution trend for area: {AreaPath}", areaPathFilter ?? "All");
+            return StatusCode(500, "Error retrieving effort distribution trend");
+        }
+    }
+
+    /// <summary>
+    /// Gets effort concentration risk analysis.
+    /// Identifies scenarios where effort is concentrated in single features or areas.
+    /// </summary>
+    /// <param name="areaPathFilter">Optional area path filter</param>
+    /// <param name="maxIterations">Maximum number of iterations to include (default: 10)</param>
+    /// <param name="concentrationThreshold">Threshold for concentration risk (default: 0.5 = 50%)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Concentration risk analysis with mitigation recommendations</returns>
+    [HttpGet("effort-concentration-risk")]
+    public async Task<ActionResult<EffortConcentrationRiskDto>> GetEffortConcentrationRisk(
+        [FromQuery] string? areaPathFilter = null,
+        [FromQuery] int maxIterations = 10,
+        [FromQuery] double concentrationThreshold = 0.5,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (maxIterations < 1 || maxIterations > 20)
+            {
+                return BadRequest("MaxIterations must be between 1 and 20");
+            }
+
+            if (concentrationThreshold < 0 || concentrationThreshold > 1)
+            {
+                return BadRequest("ConcentrationThreshold must be between 0 and 1");
+            }
+
+            var risk = await _mediator.Send(
+                new GetEffortConcentrationRiskQuery(areaPathFilter, maxIterations, concentrationThreshold), 
+                cancellationToken);
+
+            return Ok(risk);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving effort concentration risk for area: {AreaPath}", areaPathFilter ?? "All");
+            return StatusCode(500, "Error retrieving effort concentration risk");
+        }
+    }
 }

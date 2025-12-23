@@ -347,6 +347,169 @@
         }
       }
     },
+    "/api/Metrics/effort-imbalance": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetEffortImbalance",
+        "parameters": [
+          {
+            "name": "areaPathFilter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "maxIterations",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            },
+            "x-position": 2
+          },
+          {
+            "name": "defaultCapacity",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 3
+          },
+          {
+            "name": "imbalanceThreshold",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "format": "double",
+              "default": 0.3
+            },
+            "x-position": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffortImbalanceDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Metrics/effort-distribution-trend": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetEffortDistributionTrend",
+        "parameters": [
+          {
+            "name": "areaPathFilter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "maxIterations",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            },
+            "x-position": 2
+          },
+          {
+            "name": "defaultCapacity",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffortDistributionTrendDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Metrics/effort-concentration-risk": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetEffortConcentrationRisk",
+        "parameters": [
+          {
+            "name": "areaPathFilter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "maxIterations",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            },
+            "x-position": 2
+          },
+          {
+            "name": "concentrationThreshold",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "format": "double",
+              "default": 0.5
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffortConcentrationRiskDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Profiles": {
       "get": {
         "tags": [
@@ -2072,6 +2235,435 @@
             "format": "double"
           }
         }
+      },
+      "EffortImbalanceDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamImbalances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamImbalance"
+            }
+          },
+          "sprintImbalances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SprintImbalance"
+            }
+          },
+          "overallRiskLevel": {
+            "$ref": "#/components/schemas/ImbalanceRiskLevel"
+          },
+          "imbalanceScore": {
+            "type": "number",
+            "format": "double"
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RebalancingRecommendation"
+            }
+          },
+          "analysisTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TeamImbalance": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "areaPath": {
+            "type": "string"
+          },
+          "totalEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageEffortAcrossTeams": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "deviationPercentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "riskLevel": {
+            "$ref": "#/components/schemas/ImbalanceRiskLevel"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "ImbalanceRiskLevel": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Low",
+          "Medium",
+          "High",
+          "Critical"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "SprintImbalance": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "iterationPath": {
+            "type": "string"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "totalEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageEffortAcrossSprints": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "deviationPercentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "riskLevel": {
+            "$ref": "#/components/schemas/ImbalanceRiskLevel"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "RebalancingRecommendation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/RecommendationType"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/ImbalanceRiskLevel"
+          },
+          "targetAreaPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "targetIterationPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "suggestedEffortChange": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "RecommendationType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "ReduceTeamLoad",
+          "IncreaseTeamLoad",
+          "LevelSprintLoad",
+          "RedistributeAcrossTeams",
+          "AddCapacity",
+          "DeferWork"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "EffortDistributionTrendDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "trendBySprint": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SprintTrendData"
+            }
+          },
+          "trendByAreaPath": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AreaPathTrendData"
+            }
+          },
+          "overallTrend": {
+            "$ref": "#/components/schemas/EffortTrendDirection"
+          },
+          "trendSlope": {
+            "type": "number",
+            "format": "double"
+          },
+          "forecasts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DistributionForecast"
+            }
+          },
+          "analysisTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SprintTrendData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "iterationPath": {
+            "type": "string"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "totalEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "utilizationPercentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "changeFromPrevious": {
+            "type": "number",
+            "format": "double"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/EffortTrendDirection"
+          }
+        }
+      },
+      "EffortTrendDirection": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Stable",
+          "Increasing",
+          "Decreasing",
+          "Volatile"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "AreaPathTrendData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "areaPath": {
+            "type": "string"
+          },
+          "effortBySprint": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "averageEffort": {
+            "type": "number",
+            "format": "double"
+          },
+          "standardDeviation": {
+            "type": "number",
+            "format": "double"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/EffortTrendDirection"
+          },
+          "trendSlope": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "DistributionForecast": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sprintName": {
+            "type": "string"
+          },
+          "forecastedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lowEstimate": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "highEstimate": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "confidenceLevel": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "EffortConcentrationRiskDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "areaPathRisks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConcentrationRisk"
+            }
+          },
+          "iterationRisks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConcentrationRisk"
+            }
+          },
+          "overallRiskLevel": {
+            "$ref": "#/components/schemas/ConcentrationRiskLevel"
+          },
+          "concentrationIndex": {
+            "type": "number",
+            "format": "double"
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RiskMitigationRecommendation"
+            }
+          },
+          "analysisTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ConcentrationRisk": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "effortAmount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "percentageOfTotal": {
+            "type": "number",
+            "format": "double"
+          },
+          "riskLevel": {
+            "$ref": "#/components/schemas/ConcentrationRiskLevel"
+          },
+          "description": {
+            "type": "string"
+          },
+          "topWorkItems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ConcentrationRiskLevel": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "None",
+          "Low",
+          "Medium",
+          "High",
+          "Critical"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "RiskMitigationRecommendation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "strategy": {
+            "$ref": "#/components/schemas/MitigationStrategy"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/ConcentrationRiskLevel"
+          },
+          "targetPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "effortToRedistribute": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "MitigationStrategy": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "DiversifyAcrossAreas",
+          "SpreadAcrossSprints",
+          "BreakDownLargeItems",
+          "AddParallelCapacity",
+          "DeferNonCritical",
+          "IncreaseBacklog"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
       },
       "ProfileDto": {
         "type": "object",
