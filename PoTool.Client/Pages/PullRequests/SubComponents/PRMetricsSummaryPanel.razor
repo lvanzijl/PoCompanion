@@ -1,0 +1,52 @@
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+
+@* Summary panel displaying key PR metrics as cards *@
+
+<MudGrid Class="mb-6">
+    <MetricSummaryCard Label="Total PRs"
+                      Value="@TotalPRs"
+                      Icon="@Icons.Material.Filled.CallMerge"
+                      IconColor="Color.Primary" />
+    
+    <MetricSummaryCard Label="Avg Time Open"
+                      Value="@AvgTimeOpen"
+                      Icon="@Icons.Material.Filled.Schedule"
+                      IconColor="Color.Info" />
+    
+    <MetricSummaryCard Label="Avg Iterations"
+                      Value="@AvgIterations"
+                      Icon="@Icons.Material.Filled.Loop"
+                      IconColor="Color.Warning" />
+    
+    <MetricSummaryCard Label="Avg Files/PR"
+                      Value="@AvgFiles"
+                      Icon="@Icons.Material.Filled.InsertDriveFile"
+                      IconColor="Color.Success" />
+</MudGrid>
+
+@code {
+    /// <summary>
+    /// Total number of pull requests
+    /// </summary>
+    [Parameter]
+    public string TotalPRs { get; set; } = "0";
+
+    /// <summary>
+    /// Average time PRs remain open (formatted string)
+    /// </summary>
+    [Parameter]
+    public string AvgTimeOpen { get; set; } = "0d";
+
+    /// <summary>
+    /// Average number of iterations per PR (formatted string)
+    /// </summary>
+    [Parameter]
+    public string AvgIterations { get; set; } = "0";
+
+    /// <summary>
+    /// Average number of files changed per PR (formatted string)
+    /// </summary>
+    [Parameter]
+    public string AvgFiles { get; set; } = "0";
+}

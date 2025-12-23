@@ -1,0 +1,88 @@
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Services
+
+@* Trend summary card displaying overall backlog health trends *@
+
+<MudCard Elevation="3" Class="mb-6">
+    <MudCardContent>
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <div>
+                <MudText Typo="Typo.h5">@TrendSummary</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Based on @IterationCount iteration(s) | Total: @TotalWorkItems work items | @TotalIssues issues found
+                </MudText>
+            </div>
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.caption">
+                    <MudIcon Icon="@GetTrendIcon(EffortTrend)" Size="Size.Small" Color="@GetTrendColor(EffortTrend)" />
+                    Effort: @EffortTrend
+                </MudText>
+                <MudText Typo="Typo.caption">
+                    <MudIcon Icon="@GetTrendIcon(ValidationTrend)" Size="Size.Small" Color="@GetTrendColor(ValidationTrend)" />
+                    Validation: @ValidationTrend
+                </MudText>
+                <MudText Typo="Typo.caption">
+                    <MudIcon Icon="@GetTrendIcon(BlockerTrend)" Size="Size.Small" Color="@GetTrendColor(BlockerTrend)" />
+                    Blockers: @BlockerTrend
+                </MudText>
+            </MudStack>
+        </MudStack>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Inject]
+    private BacklogHealthCalculationService HealthCalculationService { get; set; } = default!;
+
+    /// <summary>
+    /// Overall trend summary text
+    /// </summary>
+    [Parameter]
+    public string TrendSummary { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Number of iterations analyzed
+    /// </summary>
+    [Parameter]
+    public int IterationCount { get; set; }
+
+    /// <summary>
+    /// Total work items across all iterations
+    /// </summary>
+    [Parameter]
+    public int TotalWorkItems { get; set; }
+
+    /// <summary>
+    /// Total issues found
+    /// </summary>
+    [Parameter]
+    public int TotalIssues { get; set; }
+
+    /// <summary>
+    /// Effort trend direction
+    /// </summary>
+    [Parameter]
+    public TrendDirection EffortTrend { get; set; }
+
+    /// <summary>
+    /// Validation trend direction
+    /// </summary>
+    [Parameter]
+    public TrendDirection ValidationTrend { get; set; }
+
+    /// <summary>
+    /// Blocker trend direction
+    /// </summary>
+    [Parameter]
+    public TrendDirection BlockerTrend { get; set; }
+
+    private Color GetTrendColor(TrendDirection trend)
+    {
+        return HealthCalculationService.GetTrendColor(trend);
+    }
+
+    private string GetTrendIcon(TrendDirection trend)
+    {
+        return HealthCalculationService.GetTrendIcon(trend);
+    }
+}

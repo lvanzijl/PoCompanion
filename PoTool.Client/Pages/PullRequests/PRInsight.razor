@@ -3,6 +3,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Models
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Pages.PullRequests.SubComponents
 @using static PoTool.Client.Components.Common.PageHelp
 @inject PullRequestService PullRequestService
 @inject PullRequestMetricsService MetricsService
@@ -51,96 +52,38 @@
         <ErrorDisplay ErrorResponse="@_errorResponse" 
                       Class="mb-4"
                       OnDismiss="ClearError" />
+        
         <!-- Top Metrics Cards -->
-        <MudGrid Class="mb-6">
-            <MetricSummaryCard Label="Total PRs"
-                              Value="@_metrics.Count().ToString()"
-                              Icon="@Icons.Material.Filled.CallMerge"
-                              IconColor="Color.Primary" />
-            
-            <MetricSummaryCard Label="Avg Time Open"
-                              Value="@GetAverageTimeOpen()"
-                              Icon="@Icons.Material.Filled.Schedule"
-                              IconColor="Color.Info" />
-            
-            <MetricSummaryCard Label="Avg Iterations"
-                              Value="@GetAverageIterations()"
-                              Icon="@Icons.Material.Filled.Loop"
-                              IconColor="Color.Warning" />
-            
-            <MetricSummaryCard Label="Avg Files/PR"
-                              Value="@GetAverageFiles()"
-                              Icon="@Icons.Material.Filled.InsertDriveFile"
-                              IconColor="Color.Success" />
-        </MudGrid>
+        <PRMetricsSummaryPanel TotalPRs="@_metrics.Count().ToString()"
+                              AvgTimeOpen="@GetAverageTimeOpen()"
+                              AvgIterations="@GetAverageIterations()"
+                              AvgFiles="@GetAverageFiles()" />
 
         <!-- Date Range Filter -->
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudDateRangePicker @bind-DateRange="_dateRange" 
-                                   Label="Filter by Date Range" 
-                                   Variant="Variant.Outlined"
-                                   Clearable="true"
-                                   HelperText="Select a date range to filter pull requests" />
-                <MudButton Variant="Variant.Filled" 
-                          Color="Color.Primary" 
-                          OnClick="ApplyDateFilter"
-                          StartIcon="@Icons.Material.Filled.FilterAlt">
-                    Apply Filter
-                </MudButton>
-                @if (_dateRange != null && (_dateRange.Start.HasValue || _dateRange.End.HasValue))
-                {
-                    <MudButton Variant="Variant.Outlined" 
-                              Color="Color.Default" 
-                              OnClick="ClearDateFilter"
-                              StartIcon="@Icons.Material.Filled.Clear">
-                        Clear
-                    </MudButton>
-                }
-            </MudStack>
-        </MudPaper>
+        <PRDateRangeFilter DateRange="@_dateRange"
+                          OnApplyFilter="@ApplyDateFilter"
+                          OnClearFilter="@ClearDateFilter" />
 
         <!-- Tabs for different views -->
         <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
             <MudTabPanel Text="Overview" Icon="@Icons.Material.Filled.Dashboard">
                 <MudGrid>
                     <MudItem xs="12" md="6">
-                        <MudPaper Elevation="1" Class="pa-4">
-                            <MudText Typo="Typo.h6" GutterBottom="true">PR Status Distribution</MudText>
-                            <MudChart ChartType="ChartType.Donut" 
-                                      Width="300px" 
-                                      Height="300px"
-                                      InputData="@GetStatusData()" 
-                                      InputLabels="@GetStatusLabels()">
-                            </MudChart>
-                        </MudPaper>
+                        <PRStatusChart StatusData="@GetStatusData()" 
+                                      StatusLabels="@GetStatusLabels()" />
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudPaper Elevation="1" Class="pa-4">
-                            <MudText Typo="Typo.h6" GutterBottom="true">Time Open Distribution</MudText>
-                            <MudChart ChartType="ChartType.Bar" 
-                                      Width="100%" 
-                                      Height="300px"
-                                      InputData="@GetTimeOpenData()" 
-                                      InputLabels="@GetTimeOpenLabels()"
-                                      ChartOptions="@_barChartOptions">
-                            </MudChart>
-                        </MudPaper>
+                        <PRTimeOpenChart TimeOpenData="@GetTimeOpenData()" 
+                                        TimeOpenLabels="@GetTimeOpenLabels()"
+                                        ChartOptions="@_barChartOptions" />
                     </MudItem>
                 </MudGrid>
             </MudTabPanel>
 
             <MudTabPanel Text="By User" Icon="@Icons.Material.Filled.People">
-                <MudPaper Elevation="1" Class="pa-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">PRs by User</MudText>
-                    <MudChart ChartType="ChartType.Bar" 
-                              Width="100%" 
-                              Height="400px"
-                              InputData="@GetPRsByUserData()" 
-                              InputLabels="@GetUserLabels()"
-                              ChartOptions="@_barChartOptions">
-                    </MudChart>
-                </MudPaper>
+                <PRUserChart UserData="@GetPRsByUserData()" 
+                            UserLabels="@GetUserLabels()"
+                            ChartOptions="@_barChartOptions" />
             </MudTabPanel>
 
             <MudTabPanel Text="Details" Icon="@Icons.Material.Filled.List">

@@ -1,0 +1,34 @@
+@using MudBlazor
+
+@* Bar chart showing pull requests grouped by user *@
+
+<MudPaper Elevation="1" Class="pa-4">
+    <MudText Typo="Typo.h6" GutterBottom="true">PRs by User</MudText>
+    <MudChart ChartType="ChartType.Bar" 
+              Width="100%" 
+              Height="400px"
+              InputData="@UserData" 
+              InputLabels="@UserLabels"
+              ChartOptions="@ChartOptions">
+    </MudChart>
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// Data values for the user chart (PR counts per user)
+    /// </summary>
+    [Parameter]
+    public double[] UserData { get; set; } = Array.Empty<double>();
+
+    /// <summary>
+    /// User labels for the chart
+    /// </summary>
+    [Parameter]
+    public string[] UserLabels { get; set; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Chart options for customizing the appearance
+    /// </summary>
+    [Parameter]
+    public ChartOptions? ChartOptions { get; set; }
+}

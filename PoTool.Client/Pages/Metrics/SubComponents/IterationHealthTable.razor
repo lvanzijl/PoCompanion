@@ -1,0 +1,115 @@
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Services
+
+@* Grid of iteration health cards showing validation issues and metrics *@
+
+<MudGrid>
+    @foreach (var iteration in Iterations)
+    {
+        <MudItem xs="12" md="6" lg="4">
+            <MudCard Elevation="2" Class="mud-height-full">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@iteration.SprintName</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@iteration.IterationPath</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        @{
+                            var healthScore = GetHealthScore(iteration);
+                        }
+                        @if (healthScore < 70)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Medium" />
+                        }
+                        else if (healthScore < 90)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Warning" Size="Size.Medium" />
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Medium" />
+                        }
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="2">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.body2">Total Work Items</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Primary">@iteration.TotalWorkItems</MudText>
+                        </MudStack>
+                        <MudDivider />
+                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.body2">Without Effort</MudText>
+                            <MudText Typo="Typo.body1" Color="@(iteration.WorkItemsWithoutEffort > 0 ? Color.Warning : Color.Default)">
+                                @iteration.WorkItemsWithoutEffort
+                            </MudText>
+                        </MudStack>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.body2">In Progress w/o Effort</MudText>
+                            <MudText Typo="Typo.body1" Color="@(iteration.WorkItemsInProgressWithoutEffort > 0 ? Color.Error : Color.Default)">
+                                @iteration.WorkItemsInProgressWithoutEffort
+                            </MudText>
+                        </MudStack>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.body2">Parent Progress Issues</MudText>
+                            <MudText Typo="Typo.body1" Color="@(iteration.ParentProgressIssues > 0 ? Color.Error : Color.Default)">
+                                @iteration.ParentProgressIssues
+                            </MudText>
+                        </MudStack>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.body2">Blocked Items</MudText>
+                            <MudText Typo="Typo.body1" Color="@(iteration.BlockedItems > 0 ? Color.Error : Color.Default)">
+                                @iteration.BlockedItems
+                            </MudText>
+                        </MudStack>
+                        @if (iteration.InProgressAtIterationEnd > 0)
+                        {
+                            <MudDivider />
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2">In Progress at End</MudText>
+                                <MudText Typo="Typo.body1" Color="Color.Warning">
+                                    @iteration.InProgressAtIterationEnd
+                                </MudText>
+                            </MudStack>
+                        }
+                    </MudStack>
+
+                    @if (iteration.ValidationIssues.Any())
+                    {
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Validation Issues</MudText>
+                        <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                            @foreach (var issue in iteration.ValidationIssues)
+                            {
+                                <MudBadge Color="@GetSeverityColor(issue.ValidationType)" Content="@issue.Count" Overlap="true">
+                                    <MudText Typo="Typo.caption">@issue.ValidationType</MudText>
+                                </MudBadge>
+                            }
+                        </MudStack>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    [Inject]
+    private BacklogHealthCalculationService HealthCalculationService { get; set; } = default!;
+
+    /// <summary>
+    /// List of iteration health data to display
+    /// </summary>
+    [Parameter]
+    public List<BacklogHealthDto> Iterations { get; set; } = new();
+
+    private int GetHealthScore(BacklogHealthDto iteration)
+    {
+        return HealthCalculationService.CalculateHealthScore(iteration);
+    }
+
+    private Color GetSeverityColor(string severity)
+    {
+        return HealthCalculationService.GetSeverityColor(severity);
+    }
+}
