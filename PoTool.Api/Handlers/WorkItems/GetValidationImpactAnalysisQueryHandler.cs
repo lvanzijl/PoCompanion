@@ -184,14 +184,16 @@ public sealed class GetValidationImpactAnalysisQueryHandler
     private int GetHierarchyRoot(int workItemId, Dictionary<int, WorkItemDto> workItemLookup)
     {
         var current = workItemId;
+        var visited = new HashSet<int>();
         
         while (workItemLookup.TryGetValue(current, out var workItem) && workItem.ParentTfsId.HasValue)
         {
-            current = workItem.ParentTfsId.Value;
-            
             // Prevent infinite loop in case of circular references
-            if (current == workItemId)
+            if (visited.Contains(current))
                 break;
+                
+            visited.Add(current);
+            current = workItem.ParentTfsId.Value;
         }
 
         return current;

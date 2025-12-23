@@ -13,6 +13,8 @@ namespace PoTool.Api.Handlers.WorkItems;
 public sealed class GetValidationViolationHistoryQueryHandler 
     : IQueryHandler<GetValidationViolationHistoryQuery, IEnumerable<ValidationViolationHistoryDto>>
 {
+    private const string ParentProgressValidationType = "ParentProgress";
+    
     private readonly IWorkItemRepository _repository;
     private readonly IWorkItemValidator _validator;
     private readonly ILogger<GetValidationViolationHistoryQueryHandler> _logger;
@@ -74,7 +76,7 @@ public sealed class GetValidationViolationHistoryQueryHandler
                     WorkItemId: workItem.TfsId,
                     WorkItemType: workItem.Type,
                     WorkItemTitle: workItem.Title,
-                    ValidationType: "ParentProgress",
+                    ValidationType: ParentProgressValidationType,
                     Severity: issue.Severity,
                     ViolationMessage: issue.Message,
                     AreaPath: workItem.AreaPath,
