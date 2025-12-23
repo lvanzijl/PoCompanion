@@ -108,7 +108,19 @@ public static class ApiServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddScoped<PatAccessor>();
         
-        services.AddHttpClient<ITfsClient, TfsClient>();
+        // Register TFS client based on configuration
+        var useMockClient = configuration.GetValue<bool>("TfsIntegration:UseMockClient", false);
+        
+        if (useMockClient)
+        {
+            // Use mock TFS client with predefined test data
+            services.AddScoped<ITfsClient, MockTfsClient>();
+        }
+        else
+        {
+            // Use real TFS client that connects to Azure DevOps/TFS
+            services.AddHttpClient<ITfsClient, RealTfsClient>();
+        }
 
         // Register background services
         services.AddSingleton<WorkItemSyncService>();

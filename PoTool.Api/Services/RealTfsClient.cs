@@ -11,24 +11,25 @@ using PoTool.Api.Persistence.Entities;
 namespace PoTool.Api.Services;
 
 /// <summary>
-/// Azure DevOps/TFS REST client implementation with retry logic and enhanced error handling.
+/// Real Azure DevOps/TFS REST client implementation with retry logic and enhanced error handling.
 /// Supports Azure DevOps Server 2022.2 (API 7.0) and TFS 2019+ (API 5.1+).
+/// This is the production implementation that connects to actual Azure DevOps/TFS servers.
 /// </summary>
-public class TfsClient : ITfsClient
+public class RealTfsClient : ITfsClient
 {
     private readonly HttpClient _httpClient;
     private readonly TfsConfigurationService _configService;
     private readonly TfsAuthenticationProvider _authProvider;
     private readonly PatAccessor _patAccessor;
-    private readonly ILogger<TfsClient> _logger;
+    private readonly ILogger<RealTfsClient> _logger;
     private const int MaxRetries = 3;
 
-    public TfsClient(
+    public RealTfsClient(
         HttpClient httpClient, 
         TfsConfigurationService configService, 
         TfsAuthenticationProvider authProvider,
         PatAccessor patAccessor,
-        ILogger<TfsClient> logger)
+        ILogger<RealTfsClient> logger)
     {
         _httpClient = httpClient;
         _configService = configService;
