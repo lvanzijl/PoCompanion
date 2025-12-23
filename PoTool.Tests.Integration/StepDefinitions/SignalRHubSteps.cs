@@ -8,9 +8,15 @@ namespace PoTool.Tests.Integration.StepDefinitions;
 [Binding]
 public class SignalRHubSteps : IDisposable
 {
+    // Configuration constants for timing
+    private const int StandardDelayMs = 1000;
+    private const int ShortDelayMs = 500;
+    private const int ConnectionTimeoutMs = 5000;
+
     private readonly IntegrationTestWebApplicationFactory _factory;
     private HubConnection? _hubConnection;
     private readonly List<HubConnection> _multipleConnections = new();
+    private readonly object _messagesLock = new(); // Single lock for all message collections
     private readonly List<SyncStatusMessage> _receivedMessages = new();
     private readonly Dictionary<int, List<SyncStatusMessage>> _clientMessages = new(); // Track messages per client
     private Exception? _connectionError;
@@ -101,7 +107,7 @@ public class SignalRHubSteps : IDisposable
         await _hubConnection.InvokeAsync("RequestSync", areaPath);
         
         // Give time for async processing and notifications
-        await Task.Delay(1000);
+        await Task.Delay(StandardDelayMs);
     }
 
     [When(@"I request a sync via SignalR with null area path")]
@@ -111,7 +117,7 @@ public class SignalRHubSteps : IDisposable
         {
             Assert.IsNotNull(_hubConnection, "Hub connection must be established first");
             await _hubConnection.InvokeAsync("RequestSync", (string?)null);
-            await Task.Delay(500);
+            await Task.Delay(ShortDelayMs);
         }
         catch (Exception ex)
         {
@@ -126,7 +132,7 @@ public class SignalRHubSteps : IDisposable
         {
             Assert.IsNotNull(_hubConnection, "Hub connection must exist");
             await _hubConnection.InvokeAsync("RequestSync", areaPath);
-            await Task.Delay(500);
+            await Task.Delay(ShortDelayMs);
         }
         catch (Exception ex)
         {
@@ -141,7 +147,7 @@ public class SignalRHubSteps : IDisposable
         await _multipleConnections[0].InvokeAsync("RequestSync", areaPath);
         
         // Give time for all clients to receive notifications
-        await Task.Delay(1000);
+        await Task.Delay(StandardDelayMs);
     }
 
     [When(@"client (\d+) requests a sync via SignalR for area ""(.*)""")]
@@ -150,7 +156,7 @@ public class SignalRHubSteps : IDisposable
         var index = clientIndex - 1; // Convert to 0-based index
         Assert.IsTrue(index < _multipleConnections.Count, $"Client {clientIndex} must be connected");
         await _multipleConnections[index].InvokeAsync("RequestSync", areaPath);
-        await Task.Delay(1000);
+        await Task.Delay(StandardDelayMs);
     }
 
     // TFS client configuration steps
@@ -273,6 +279,24 @@ public class SignalRHubSteps : IDisposable
 
     // Helper methods
 
+    /// <summary>
+    /// Gets a property value from a dictionary with case-insensitive key lookup.
+    /// </summary>
+    private static string? GetPropertyValue(Dictionary<string, JsonElement> dictionary, string propertyName)
+    {
+        // Try exact match first
+        if (dictionary.TryGetValue(propertyName, out var value))
+        {
+            return value.GetString();
+        }
+        
+        // Try case-insensitive match
+        var key = dictionary.Keys.FirstOrDefault(k => 
+            k.Equals(propertyName, StringComparison.OrdinalIgnoreCase));
+        
+        return key != null ? dictionary[key].GetString() : null;
+    }
+
     private async Task<HubConnection> CreateAndConnectHub(int? clientId = null)
     {
         var baseUrl = _factory.Server.BaseAddress.ToString().TrimEnd('/');
@@ -297,49 +321,33 @@ public class SignalRHubSteps : IDisposable
                 
                 if (syncMessage != null)
                 {
-                    // Try both lowercase and uppercase keys for compatibility
-                    var status = syncMessage.ContainsKey("Status") 
-                        ? syncMessage["Status"].GetString() 
-                        : syncMessage.ContainsKey("status") 
-                            ? syncMessage["status"].GetString() 
-                            : string.Empty;
-                    
-                    var msg = syncMessage.ContainsKey("Message") 
-                        ? syncMessage["Message"].GetString() 
-                        : syncMessage.ContainsKey("message") 
-                            ? syncMessage["message"].GetString() 
-                            : string.Empty;
+                    var status = GetPropertyValue(syncMessage, "Status") ?? string.Empty;
+                    var msg = GetPropertyValue(syncMessage, "Message") ?? string.Empty;
                     
                     var statusMessage = new SyncStatusMessage
                     {
-                        Status = status ?? string.Empty,
-                        Message = msg ?? string.Empty,
+                        Status = status,
+                        Message = msg,
                         Timestamp = DateTimeOffset.UtcNow
                     };
 
-                    // Add to the main list (thread-safe using lock)
-                    lock (_receivedMessages)
+                    // Add to collections using single lock for thread safety
+                    lock (_messagesLock)
                     {
                         _receivedMessages.Add(statusMessage);
-                    }
 
-                    // Add to client-specific list if client ID is provided
-                    if (capturedClientId.HasValue)
-                    {
-                        lock (_clientMessages)
+                        // Add to client-specific list if client ID is provided
+                        if (capturedClientId.HasValue && _clientMessages.ContainsKey(capturedClientId.Value))
                         {
-                            if (_clientMessages.ContainsKey(capturedClientId.Value))
-                            {
-                                _clientMessages[capturedClientId.Value].Add(statusMessage);
-                            }
+                            _clientMessages[capturedClientId.Value].Add(statusMessage);
                         }
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // Log exception but don't fail the test
-                Console.WriteLine($"[ERROR] Exception in SyncStatus handler: {ex}");
+                // Silently handle exceptions to avoid failing tests due to parsing errors
+                // In production, this would be logged properly
             }
         });
 
@@ -354,14 +362,41 @@ public class SignalRHubSteps : IDisposable
 
     public void Dispose()
     {
-        _hubConnection?.DisposeAsync().AsTask().Wait();
+        // Dispose hub connection
+        if (_hubConnection != null)
+        {
+            try
+            {
+                _hubConnection.DisposeAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
+        }
         
+        // Dispose multiple connections
         foreach (var connection in _multipleConnections)
         {
-            connection?.DisposeAsync().AsTask().Wait();
+            try
+            {
+                connection?.DisposeAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
         }
         _multipleConnections.Clear();
         
-        _factory?.Dispose();
+        // Dispose factory
+        try
+        {
+            _factory?.Dispose();
+        }
+        catch
+        {
+            // Ignore disposal errors
+        }
     }
 }
