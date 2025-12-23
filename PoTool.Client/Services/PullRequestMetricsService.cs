@@ -106,9 +106,6 @@ public class PullRequestMetricsService
             .Take(10)
             .ToList();
 
-        if (!topItems.Any())
-            return (Array.Empty<double>(), Array.Empty<string>());
-
         var data = topItems.Select(m => m.TotalTimeOpen.TotalDays).ToArray();
         var labels = topItems.Select(m => m.Title.Length > 30 ? m.Title[0..27] + "..." : m.Title).ToArray();
 
@@ -127,9 +124,6 @@ public class PullRequestMetricsService
             return (Array.Empty<double>(), Array.Empty<string>());
 
         var grouped = metricsList.GroupBy(m => m.CreatedBy).ToList();
-        if (!grouped.Any())
-            return (Array.Empty<double>(), Array.Empty<string>());
-
         var data = grouped.Select(g => (double)g.Count()).ToArray();
         var labels = grouped.Select(g => g.Key).ToArray();
 

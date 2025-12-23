@@ -344,7 +344,6 @@ public class PullRequestMetricsServiceTests
         // Assert
         Assert.AreNotEqual(hash1, hash2);
     }
-}
 
     [TestMethod]
     public void GetTimeOpenChartData_EmptyList_ReturnsEmptyArrays()

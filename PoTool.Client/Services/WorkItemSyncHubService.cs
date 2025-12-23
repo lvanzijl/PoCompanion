@@ -33,7 +33,11 @@ public class WorkItemSyncHubService : IWorkItemSyncHubService, IAsyncDisposable
                     Console.WriteLine("[WorkItemSyncHubService] Already connected");
                     return;
                 }
-                await StopAsync();
+                // Only stop if connection exists and is not already disconnected
+                if (_hubConnection.State != HubConnectionState.Disconnected)
+                {
+                    await StopAsync();
+                }
             }
 
             Console.WriteLine($"[WorkItemSyncHubService] Connecting to hub: {hubUrl}");
