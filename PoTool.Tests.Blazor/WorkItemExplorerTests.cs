@@ -90,6 +90,9 @@ public class WorkItemExplorerTests : BunitTestContext
         Services.AddSingleton<TfsConfigService>();
         Services.AddSingleton<ErrorMessageService>();
         Services.AddSingleton<ModeIsolatedStateService>();
+        Services.AddSingleton<ExportService>();
+        Services.AddSingleton<ReportService>();
+        Services.AddSingleton<BrowserNavigationService>();
     }
 
     private IRenderedFragment RenderWorkItemExplorerWithMudProvider()
