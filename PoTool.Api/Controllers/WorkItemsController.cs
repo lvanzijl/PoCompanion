@@ -272,12 +272,14 @@ public class WorkItemsController : ControllerBase
     /// </summary>
     /// <param name="areaPathFilter">Optional area path filter</param>
     /// <param name="workItemIds">Optional comma-separated list of work item IDs to include</param>
+    /// <param name="workItemTypes">Optional comma-separated list of work item types to include (e.g., "Epic,Feature,Task")</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Dependency graph with nodes, links, and critical paths</returns>
+    /// <returns>Dependency graph with nodes, links, critical paths, and circular dependencies</returns>
     [HttpGet("dependency-graph")]
     public async Task<ActionResult<DependencyGraphDto>> GetDependencyGraph(
         [FromQuery] string? areaPathFilter = null,
         [FromQuery] string? workItemIds = null,
+        [FromQuery] string? workItemTypes = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -298,7 +300,15 @@ public class WorkItemsController : ControllerBase
                 }
             }
 
-            var query = new GetDependencyGraphQuery(areaPathFilter, ids);
+            IReadOnlyList<string>? types = null;
+            if (!string.IsNullOrWhiteSpace(workItemTypes))
+            {
+                types = workItemTypes.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(t => t.Trim())
+                    .ToList();
+            }
+
+            var query = new GetDependencyGraphQuery(areaPathFilter, ids, types);
             var graph = await _mediator.Send(query, cancellationToken);
             
             return Ok(graph);
