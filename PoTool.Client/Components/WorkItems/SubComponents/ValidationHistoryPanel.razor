@@ -1,0 +1,228 @@
+@using PoTool.Client.ApiClient
+@inject WorkItemsClient WorkItemsClient
+@inject ISnackbar Snackbar
+
+@* Validation History Panel - shows historical violations trend *@
+
+<MudPaper Elevation="2" Class="pa-4 mb-4 mx-4">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Validation History</MudText>
+        </MudStack>
+        <MudStack Row="true" Spacing="2">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       Size="Size.Small"
+                       OnClick="LoadHistoryAsync"
+                       Disabled="@_isLoading">
+                Refresh
+            </MudButton>
+            @if (IsExpanded)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.ExpandLess" 
+                               OnClick="@(() => IsExpanded = false)" 
+                               Size="Size.Small" />
+            }
+            else
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.ExpandMore" 
+                               OnClick="@(() => IsExpanded = true)" 
+                               Size="Size.Small" />
+            }
+        </MudStack>
+    </MudStack>
+
+    @if (IsExpanded)
+    {
+        <!-- Filters -->
+        <MudGrid Class="mb-3">
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField @bind-Value="_areaPathFilter" 
+                              Label="Area Path Filter" 
+                              Variant="Variant.Outlined"
+                              Clearable="true"
+                              Immediate="true"
+                              DebounceInterval="500"
+                              OnDebounceIntervalElapsed="LoadHistoryAsync" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudDatePicker @bind-Date="_startDate" 
+                               Label="Start Date" 
+                               Variant="Variant.Outlined"
+                               Clearable="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudDatePicker @bind-Date="_endDate" 
+                               Label="End Date" 
+                               Variant="Variant.Outlined"
+                               Clearable="true" />
+            </MudItem>
+        </MudGrid>
+
+        <MudDivider Class="my-3" />
+
+        @if (_isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-3" />
+        }
+
+        @if (_historyRecords != null && _historyRecords.Any())
+        {
+            <!-- Summary Cards -->
+            <MudGrid Class="mb-3">
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Outlined="true">
+                        <MudCardContent>
+                            <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.BugReport" Color="Color.Error" Size="Size.Large" />
+                                <MudText Typo="Typo.h4">@_historyRecords.Count()</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                                    Total Violations
+                                </MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Outlined="true">
+                        <MudCardContent>
+                            <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Info" Size="Size.Large" />
+                                <MudText Typo="Typo.h4">@_historyRecords.Select(h => h.WorkItemId).Distinct().Count()</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                                    Affected Work Items
+                                </MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Outlined="true">
+                        <MudCardContent>
+                            <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Color="Color.Warning" Size="Size.Large" />
+                                <MudText Typo="Typo.h4">@_historyRecords.Select(h => h.AreaPath).Distinct().Count()</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                                    Affected Areas
+                                </MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Outlined="true">
+                        <MudCardContent>
+                            <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" />
+                                <MudText Typo="Typo.h4">@_historyRecords.Count(h => h.Severity == "Error")</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                                    Errors
+                                </MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+
+            <!-- History Table -->
+            <MudTable Items="@_historyRecords" Dense="true" Hover="true" Striped="true" FixedHeader="true" Height="400px">
+                <HeaderContent>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Work Item</MudTh>
+                    <MudTh>Type</MudTh>
+                    <MudTh>Severity</MudTh>
+                    <MudTh>Violation</MudTh>
+                    <MudTh>Area Path</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Date">@context.DetectedAt.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                    <MudTd DataLabel="Work Item">
+                        <MudText Typo="Typo.body2">@context.WorkItemId</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@context.WorkItemTitle</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Type">@context.WorkItemType</MudTd>
+                    <MudTd DataLabel="Severity">
+                        @if (context.Severity == "Error")
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.Error">Error</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.Warning">Warning</MudChip>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Violation">@context.ViolationMessage</MudTd>
+                    <MudTd DataLabel="Area Path">@context.AreaPath</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+        else if (!_isLoading)
+        {
+            <MudAlert Severity="Severity.Info">
+                No validation history found for the selected filters.
+            </MudAlert>
+        }
+    }
+</MudPaper>
+
+@code {
+    [Parameter]
+    public bool InitiallyExpanded { get; set; } = false;
+
+    private bool IsExpanded { get; set; }
+    private bool _isLoading;
+    private ICollection<ValidationViolationHistoryDto>? _historyRecords;
+    private string? _areaPathFilter;
+    private DateTime? _startDate;
+    private DateTime? _endDate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsExpanded = InitiallyExpanded;
+        if (IsExpanded)
+        {
+            await LoadHistoryAsync();
+        }
+    }
+
+    private async Task LoadHistoryAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            DateTimeOffset? startDateOffset = _startDate.HasValue 
+                ? new DateTimeOffset(_startDate.Value, TimeSpan.Zero) 
+                : null;
+            DateTimeOffset? endDateOffset = _endDate.HasValue 
+                ? new DateTimeOffset(_endDate.Value, TimeSpan.Zero) 
+                : null;
+
+            _historyRecords = await WorkItemsClient.GetValidationHistoryAsync(
+                _areaPathFilter, 
+                startDateOffset, 
+                endDateOffset, 
+                null);
+
+            if (_historyRecords?.Count == 0)
+            {
+                Snackbar.Add("No validation history found", Severity.Info);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading validation history: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

@@ -49,7 +49,10 @@
                   OnDismiss="ClearError" />
 
     <ValidationSummaryPanel WorkItemsWithValidation="@_workItemsWithValidation" 
-                           InitiallyExpanded="false" />
+                           InitiallyExpanded="false"
+                           OnFixesApplied="HandleFixesApplied" />
+
+    <ValidationHistoryPanel InitiallyExpanded="false" />
 
     <div class="type-legend">
         @foreach (var type in WorkItemTypeHelper.AllTypes)
@@ -458,6 +461,13 @@
     private async Task HandleSettingsSaved()
     {
         // Reload work items after settings change
+        await LoadWorkItems();
+    }
+
+    private async Task HandleFixesApplied()
+    {
+        // Reload work items after fixes are applied
+        Snackbar.Add("Reloading work items to reflect changes...", Severity.Info);
         await LoadWorkItems();
     }
 

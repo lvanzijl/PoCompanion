@@ -1366,6 +1366,141 @@
           }
         }
       }
+    },
+    "/api/WorkItems/validation-history": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetValidationHistory",
+        "parameters": [
+          {
+            "name": "areaPathFilter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "nullable": true
+            },
+            "x-position": 3
+          },
+          {
+            "name": "violationType",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationViolationHistoryDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/WorkItems/validation-impact-analysis": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetValidationImpactAnalysis",
+        "parameters": [
+          {
+            "name": "areaPathFilter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "iterationPathFilter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationImpactAnalysisDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/WorkItems/fix-validation-violations": {
+      "post": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_FixValidationViolations",
+        "requestBody": {
+          "x-name": "command",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixValidationViolationBatchCommand"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixValidationViolationResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2882,6 +3017,200 @@
             }
           },
           "description": {
+            "type": "string"
+          }
+        }
+      },
+      "ValidationViolationHistoryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemType": {
+            "type": "string"
+          },
+          "workItemTitle": {
+            "type": "string"
+          },
+          "validationType": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "violationMessage": {
+            "type": "string"
+          },
+          "areaPath": {
+            "type": "string"
+          },
+          "iterationPath": {
+            "type": "string"
+          },
+          "detectedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ValidationImpactAnalysisDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "violations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ViolationImpact"
+            }
+          },
+          "totalBlockedItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalAffectedHierarchies": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowRecommendation"
+            }
+          }
+        }
+      },
+      "ViolationImpact": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemType": {
+            "type": "string"
+          },
+          "workItemTitle": {
+            "type": "string"
+          },
+          "violationType": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "blockedChildrenIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "blockedDescendantIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "WorkflowRecommendation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "recommendationType": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "affectedWorkItemIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "priority": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "FixValidationViolationResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "totalAttempted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "successfulFixes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failedFixes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FixResult"
+            }
+          }
+        }
+      },
+      "FixResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "FixValidationViolationBatchCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fixes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FixValidationViolationDto"
+            }
+          }
+        }
+      },
+      "FixValidationViolationDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "fixType": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "newState": {
+            "type": "string"
+          },
+          "justification": {
             "type": "string"
           }
         }

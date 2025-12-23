@@ -1,4 +1,6 @@
 @using PoTool.Client.ApiClient
+@inject WorkItemsClient WorkItemsClient
+@inject ISnackbar Snackbar
 
 @* Validation Summary Panel - shows overall data quality *@
 
@@ -17,6 +19,22 @@
                 <MudText Typo="Typo.h6">Data Quality Summary</MudText>
             </MudStack>
             <MudStack Row="true" Spacing="2">
+                @if (errorCount > 0 && !_isProcessingFixes)
+                {
+                    <MudTooltip Text="Analyze and fix validation issues automatically">
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.AutoFixHigh"
+                                   Size="Size.Small"
+                                   OnClick="ShowImpactAnalysisAsync">
+                            Fix Issues
+                        </MudButton>
+                    </MudTooltip>
+                }
+                @if (_isProcessingFixes)
+                {
+                    <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+                }
                 <MudTooltip Text="View help about data requirements">
                     <MudIconButton Icon="@Icons.Material.Filled.Help" 
                                    Color="Color.Info" 
@@ -144,6 +162,50 @@
                     }
                 </MudStack>
 
+                @if (_impactAnalysis != null)
+                {
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Impact Analysis:</MudText>
+                    <MudCard Outlined="true" Class="mb-3">
+                        <MudCardContent>
+                            <MudStack Spacing="2">
+                                <MudStack Row="true" Spacing="3">
+                                    <MudChip T="string" Icon="@Icons.Material.Filled.Block" Color="Color.Error" Size="Size.Small">
+                                        @_impactAnalysis.TotalBlockedItems Blocked Items
+                                    </MudChip>
+                                    <MudChip T="string" Icon="@Icons.Material.Filled.AccountTree" Color="Color.Warning" Size="Size.Small">
+                                        @_impactAnalysis.TotalAffectedHierarchies Affected Hierarchies
+                                    </MudChip>
+                                </MudStack>
+
+                                @if (_impactAnalysis.Recommendations.Any())
+                                {
+                                    <MudText Typo="Typo.subtitle2" Class="mt-2">Recommendations:</MudText>
+                                    @foreach (var recommendation in _impactAnalysis.Recommendations.OrderBy(r => r.Priority))
+                                    {
+                                        <MudAlert Severity="Severity.Info" Dense="true" Icon="@Icons.Material.Filled.Lightbulb">
+                                            <strong>@recommendation.RecommendationType:</strong> @recommendation.Description
+                                        </MudAlert>
+
+                                        @if (recommendation.RecommendationType == "SetParentsToInProgress" && recommendation.AffectedWorkItemIds.Any())
+                                        {
+                                            <MudButton Variant="Variant.Filled" 
+                                                       Color="Color.Success" 
+                                                       Size="Size.Small"
+                                                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                                                       OnClick="@(() => ApplyFixesAsync(recommendation.AffectedWorkItemIds.ToList()))"
+                                                       Disabled="@_isProcessingFixes"
+                                                       Class="ml-4">
+                                                Apply Fix (@recommendation.AffectedWorkItemIds.Count items)
+                                            </MudButton>
+                                        }
+                                    }
+                                }
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                }
+
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-3">
                     <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Size="Size.Small" />
                     Tip: Click on individual work items to see specific validation issues and recommendations
@@ -190,11 +252,115 @@
     [Parameter]
     public bool InitiallyExpanded { get; set; } = false;
 
+    [Parameter]
+    public EventCallback OnFixesApplied { get; set; }
+
     private bool IsExpanded { get; set; }
+    private ValidationImpactAnalysisDto? _impactAnalysis;
+    private bool _isProcessingFixes;
 
     protected override void OnInitialized()
     {
         IsExpanded = InitiallyExpanded;
+    }
+
+    private async Task ShowImpactAnalysisAsync()
+    {
+        try
+        {
+            _isProcessingFixes = true;
+            StateHasChanged();
+
+            _impactAnalysis = await WorkItemsClient.GetValidationImpactAnalysisAsync(null, null);
+            IsExpanded = true;
+
+            if (_impactAnalysis.Violations.Count == 0)
+            {
+                Snackbar.Add("No validation violations found that can be auto-fixed", Severity.Info);
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error analyzing validation issues: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isProcessingFixes = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ApplyFixesAsync(IReadOnlyList<int> workItemIds)
+    {
+        try
+        {
+            _isProcessingFixes = true;
+            StateHasChanged();
+
+            // Convert to list for processing
+            var workItemIdsList = workItemIds.ToList();
+
+            // Create fix suggestions for each work item
+            var fixes = new List<FixValidationViolationDto>();
+            foreach (var workItemId in workItemIdsList)
+            {
+                var workItem = WorkItemsWithValidation?.FirstOrDefault(w => w.TfsId == workItemId);
+                if (workItem != null)
+                {
+                    fixes.Add(new FixValidationViolationDto
+                    {
+                        WorkItemId = workItemId,
+                        FixType = "SetToInProgress",
+                        Description = $"Set {workItem.Type} '{workItem.Title}' to In Progress",
+                        NewState = "In Progress",
+                        Justification = "Required to unblock child work items"
+                    });
+                }
+            }
+
+            if (fixes.Count == 0)
+            {
+                Snackbar.Add("No fixes to apply", Severity.Warning);
+                return;
+            }
+
+            // Apply the fixes
+            var command = new FixValidationViolationBatchCommand
+            {
+                Fixes = fixes
+            };
+
+            var result = await WorkItemsClient.FixValidationViolationsAsync(command);
+
+            // Show results
+            if (result.SuccessfulFixes > 0)
+            {
+                Snackbar.Add($"Successfully fixed {result.SuccessfulFixes} work item(s)", Severity.Success);
+                
+                // Clear the impact analysis to refresh
+                _impactAnalysis = null;
+                
+                // Notify parent to refresh data
+                await OnFixesApplied.InvokeAsync();
+            }
+
+            if (result.FailedFixes > 0)
+            {
+                var failedItems = result.Results.Where(r => !r.Success).Select(r => r.WorkItemId);
+                Snackbar.Add($"Failed to fix {result.FailedFixes} work item(s): {string.Join(", ", failedItems)}", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error applying fixes: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isProcessingFixes = false;
+            StateHasChanged();
+        }
     }
 
     private int GetHealthPercentage(int itemsWithIssues, int totalItems)
