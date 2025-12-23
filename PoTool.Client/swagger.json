@@ -8,7 +8,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5555"
+      "url": "http://localhost:5291"
     }
   ],
   "paths": {
@@ -1342,6 +1342,15 @@
               "nullable": true
             },
             "x-position": 2
+          },
+          {
+            "name": "workItemTypes",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 3
           }
         ],
         "responses": {
@@ -2736,6 +2745,12 @@
               "format": "int32"
             }
           },
+          "circularDependencies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CircularDependency"
+            }
+          },
           "analysisTimestamp": {
             "type": "string",
             "format": "date-time"
@@ -2854,6 +2869,22 @@
           2,
           3
         ]
+      },
+      "CircularDependency": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cycleWorkItemIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "description": {
+            "type": "string"
+          }
+        }
       }
     }
   }

@@ -48,6 +48,12 @@ public sealed class GetDependencyGraphQueryHandler
             filteredItems = filteredItems.Where(wi => query.WorkItemIds.Contains(wi.TfsId));
         }
 
+        if (query.WorkItemTypes != null && query.WorkItemTypes.Any())
+        {
+            filteredItems = filteredItems.Where(wi => 
+                query.WorkItemTypes.Contains(wi.Type, StringComparer.OrdinalIgnoreCase));
+        }
+
         var relevantWorkItems = filteredItems.ToList();
 
         // Build nodes and links
@@ -96,6 +102,9 @@ public sealed class GetDependencyGraphQueryHandler
         // Find critical paths (longest dependency chains)
         var criticalPaths = FindCriticalPaths(nodes, links, workItemMap);
 
+        // Detect circular dependencies
+        var circularDependencies = DetectCircularDependencies(nodes, links);
+
         // Identify blocked work items
         var blockedWorkItemIds = nodes
             .Where(n => n.IsBlocking && n.DependentCount > 0)
@@ -107,6 +116,7 @@ public sealed class GetDependencyGraphQueryHandler
             Links: links,
             CriticalPaths: criticalPaths,
             BlockedWorkItemIds: blockedWorkItemIds,
+            CircularDependencies: circularDependencies,
             AnalysisTimestamp: DateTimeOffset.UtcNow
         );
     }
@@ -154,10 +164,9 @@ public sealed class GetDependencyGraphQueryHandler
                 }
             }
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
-            // Log but don't fail - just return empty relations
-            Console.WriteLine($"Error parsing JSON payload: {ex.Message}");
+            // Silently ignore JSON parsing errors - just return empty relations
         }
 
         return relations;
@@ -192,10 +201,10 @@ public sealed class GetDependencyGraphQueryHandler
             adjacency[link.SourceWorkItemId].Add(link.TargetWorkItemId);
         }
 
-        // Find all paths using DFS
-        var visited = new HashSet<int>();
+        // Find all paths using DFS - use fresh visited set for each starting node
         foreach (var node in nodes)
         {
+            var visited = new HashSet<int>();
             var path = new List<int>();
             FindLongestPath(node.WorkItemId, adjacency, visited, path, chains, workItemMap);
         }
@@ -258,5 +267,92 @@ public sealed class GetDependencyGraphQueryHandler
         if (chainLength >= 3 || totalEffort >= 15)
             return DependencyChainRisk.Medium;
         return DependencyChainRisk.Low;
+    }
+
+    private static List<CircularDependency> DetectCircularDependencies(
+        List<DependencyNode> nodes,
+        List<DependencyLink> links)
+    {
+        var circularDependencies = new List<CircularDependency>();
+        var seenCycles = new HashSet<string>(); // Use normalized string representation for O(1) lookup
+        
+        // Build adjacency list for dependency links only (not parent-child)
+        var adjacency = new Dictionary<int, List<int>>();
+        foreach (var link in links.Where(l => l.LinkType == DependencyLinkType.DependsOn || l.LinkType == DependencyLinkType.Blocks))
+        {
+            if (!adjacency.ContainsKey(link.SourceWorkItemId))
+                adjacency[link.SourceWorkItemId] = new List<int>();
+            
+            adjacency[link.SourceWorkItemId].Add(link.TargetWorkItemId);
+        }
+
+        var visited = new HashSet<int>();
+        var recursionStack = new HashSet<int>();
+        var currentPath = new List<int>();
+
+        foreach (var node in nodes)
+        {
+            if (!visited.Contains(node.WorkItemId))
+            {
+                DetectCyclesFromNode(
+                    node.WorkItemId, 
+                    adjacency, 
+                    visited, 
+                    recursionStack, 
+                    currentPath, 
+                    circularDependencies,
+                    seenCycles);
+            }
+        }
+
+        return circularDependencies;
+    }
+
+    private static void DetectCyclesFromNode(
+        int nodeId,
+        Dictionary<int, List<int>> adjacency,
+        HashSet<int> visited,
+        HashSet<int> recursionStack,
+        List<int> currentPath,
+        List<CircularDependency> circularDependencies,
+        HashSet<string> seenCycles)
+    {
+        visited.Add(nodeId);
+        recursionStack.Add(nodeId);
+        currentPath.Add(nodeId);
+
+        if (adjacency.ContainsKey(nodeId))
+        {
+            foreach (var neighbor in adjacency[nodeId])
+            {
+                if (!visited.Contains(neighbor))
+                {
+                    DetectCyclesFromNode(neighbor, adjacency, visited, recursionStack, currentPath, circularDependencies, seenCycles);
+                }
+                else if (recursionStack.Contains(neighbor))
+                {
+                    // Found a cycle - extract the cycle path
+                    var cycleStartIndex = currentPath.IndexOf(neighbor);
+                    var cycleIds = currentPath.Skip(cycleStartIndex).ToList();
+                    cycleIds.Add(neighbor); // Close the cycle
+                    
+                    // Create normalized cycle key (sorted IDs joined as string) for O(1) duplicate detection
+                    var normalizedKey = string.Join(",", cycleIds.OrderBy(id => id));
+                    
+                    if (!seenCycles.Contains(normalizedKey))
+                    {
+                        seenCycles.Add(normalizedKey);
+                        var description = $"Circular dependency detected: {string.Join(" → ", cycleIds)}";
+                        
+                        circularDependencies.Add(new CircularDependency(
+                            CycleWorkItemIds: cycleIds,
+                            Description: description));
+                    }
+                }
+            }
+        }
+
+        currentPath.RemoveAt(currentPath.Count - 1);
+        recursionStack.Remove(nodeId);
     }
 }

@@ -102,28 +102,28 @@ namespace PoTool.Tests.Integration.Features
 #line 7
     await testRunner.GivenAsync("the application is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-            global::Reqnroll.Table table23 = new global::Reqnroll.Table(new string[] {
+            global::Reqnroll.Table table30 = new global::Reqnroll.Table(new string[] {
                         "TfsId",
                         "Title",
                         "Type",
                         "State"});
-            table23.AddRow(new string[] {
+            table30.AddRow(new string[] {
                         "1000",
                         "Test Goal",
                         "Goal",
                         "Active"});
-            table23.AddRow(new string[] {
+            table30.AddRow(new string[] {
                         "1001",
                         "Test Objective",
                         "Objective",
                         "Active"});
-            table23.AddRow(new string[] {
+            table30.AddRow(new string[] {
                         "1002",
                         "Test Epic",
                         "Epic",
                         "New"});
 #line 8
-    await testRunner.AndAsync("work items exist in the database", ((string)(null)), table23, "And ");
+    await testRunner.AndAsync("work items exist in the database", ((string)(null)), table30, "And ");
 #line hidden
         }
         
@@ -380,26 +380,26 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table24 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table31 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State",
                             "ParentTfsId"});
-                table24.AddRow(new string[] {
+                table31.AddRow(new string[] {
                             "2000",
                             "Parent Goal",
                             "Goal",
                             "New",
                             ""});
-                table24.AddRow(new string[] {
+                table31.AddRow(new string[] {
                             "2001",
                             "Child in Progress",
                             "Objective",
                             "In Progress",
                             "2000"});
 #line 48
-    await testRunner.GivenAsync("work items exist in the database with parent-child relationships", ((string)(null)), table24, "Given ");
+    await testRunner.GivenAsync("work items exist in the database with parent-child relationships", ((string)(null)), table31, "Given ");
 #line hidden
 #line 52
     await testRunner.WhenAsync("I request all work items with validation from \"/api/workitems/validated\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -435,21 +435,21 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table25 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table32 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State",
                             "ParentTfsId",
                             "Effort"});
-                table25.AddRow(new string[] {
+                table32.AddRow(new string[] {
                             "3000",
                             "Parent Goal",
                             "Goal",
                             "In Progress",
                             "",
                             "10"});
-                table25.AddRow(new string[] {
+                table32.AddRow(new string[] {
                             "3001",
                             "Child in Progress",
                             "Objective",
@@ -457,7 +457,7 @@ await this.FeatureBackgroundAsync();
                             "3000",
                             "8"});
 #line 57
-    await testRunner.GivenAsync("work items exist in the database with parent-child relationships", ((string)(null)), table25, "Given ");
+    await testRunner.GivenAsync("work items exist in the database with parent-child relationships", ((string)(null)), table32, "Given ");
 #line hidden
 #line 61
     await testRunner.WhenAsync("I request all work items with validation from \"/api/workitems/validated\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -496,33 +496,33 @@ await this.FeatureBackgroundAsync();
 #line 66
     await testRunner.GivenAsync("the application is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-                global::Reqnroll.Table table26 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table33 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State"});
-                table26.AddRow(new string[] {
+                table33.AddRow(new string[] {
                             "4000",
                             "Goal One",
                             "Goal",
                             "Active"});
-                table26.AddRow(new string[] {
+                table33.AddRow(new string[] {
                             "4001",
                             "Goal Two",
                             "Goal",
                             "New"});
-                table26.AddRow(new string[] {
+                table33.AddRow(new string[] {
                             "4002",
                             "Test Objective",
                             "Objective",
                             "Active"});
-                table26.AddRow(new string[] {
+                table33.AddRow(new string[] {
                             "4003",
                             "Test Epic",
                             "Epic",
                             "New"});
 #line 67
-    await testRunner.AndAsync("work items exist in the database", ((string)(null)), table26, "And ");
+    await testRunner.AndAsync("work items exist in the database", ((string)(null)), table33, "And ");
 #line hidden
 #line 73
     await testRunner.WhenAsync("I request all goals from \"/api/workitems/goals/all\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -558,28 +558,28 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table27 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table34 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State"});
-                table27.AddRow(new string[] {
+                table34.AddRow(new string[] {
                             "5000",
                             "Epic Story",
                             "Epic",
                             "Active"});
-                table27.AddRow(new string[] {
+                table34.AddRow(new string[] {
                             "5001",
                             "Task Story",
                             "Task",
                             "New"});
-                table27.AddRow(new string[] {
+                table34.AddRow(new string[] {
                             "5002",
                             "Feature Story",
                             "Feature",
                             "Done"});
 #line 78
-    await testRunner.GivenAsync("work items exist in the database", ((string)(null)), table27, "Given ");
+    await testRunner.GivenAsync("work items exist in the database", ((string)(null)), table34, "Given ");
 #line hidden
 #line 83
     await testRunner.WhenAsync("I request filtered work items with filter \"Epic\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -646,23 +646,23 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table28 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table35 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State"});
-                table28.AddRow(new string[] {
+                table35.AddRow(new string[] {
                             "6000",
                             "Goal A",
                             "Goal",
                             "Active"});
-                table28.AddRow(new string[] {
+                table35.AddRow(new string[] {
                             "6001",
                             "Goal B",
                             "Goal",
                             "Active"});
 #line 92
-    await testRunner.GivenAsync("work items exist in the database", ((string)(null)), table28, "Given ");
+    await testRunner.GivenAsync("work items exist in the database", ((string)(null)), table35, "Given ");
 #line hidden
 #line 96
     await testRunner.WhenAsync("I request goal hierarchy for IDs \"6000,6001\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -788,23 +788,23 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table29 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table36 = new global::Reqnroll.Table(new string[] {
                             "WorkItemId",
                             "Revision",
                             "ChangedDate",
                             "ChangedBy"});
-                table29.AddRow(new string[] {
+                table36.AddRow(new string[] {
                             "1000",
                             "1",
                             "2024-01-01",
                             "Alice"});
-                table29.AddRow(new string[] {
+                table36.AddRow(new string[] {
                             "1000",
                             "2",
                             "2024-01-15",
                             "Bob"});
 #line 112
-    await testRunner.GivenAsync("work item revisions exist", ((string)(null)), table29, "Given ");
+    await testRunner.GivenAsync("work item revisions exist", ((string)(null)), table36, "Given ");
 #line hidden
 #line 116
     await testRunner.WhenAsync("I request work item 1000 revisions", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -874,28 +874,28 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table30 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table37 = new global::Reqnroll.Table(new string[] {
                             "WorkItemId",
                             "State",
                             "EnteredDate",
                             "ExitedDate"});
-                table30.AddRow(new string[] {
+                table37.AddRow(new string[] {
                             "1000",
                             "New",
                             "2024-01-01",
                             "2024-01-05"});
-                table30.AddRow(new string[] {
+                table37.AddRow(new string[] {
                             "1000",
                             "Active",
                             "2024-01-05",
                             "2024-01-15"});
-                table30.AddRow(new string[] {
+                table37.AddRow(new string[] {
                             "1000",
                             "In Progress",
                             "2024-01-15",
                             ""});
 #line 126
-    await testRunner.GivenAsync("work item state timeline exists", ((string)(null)), table30, "Given ");
+    await testRunner.GivenAsync("work item state timeline exists", ((string)(null)), table37, "Given ");
 #line hidden
 #line 131
     await testRunner.WhenAsync("I request work item 1000 state timeline", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");

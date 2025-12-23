@@ -32,23 +32,33 @@
 
     <!-- Filters -->
     <MudPaper Elevation="2" Class="pa-4 mb-4">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-            <MudTextField @bind-Value="_areaPathFilter" 
-                         Label="Area Path Filter" 
-                         Variant="Variant.Outlined"
-                         Adornment="Adornment.End"
-                         AdornmentIcon="@Icons.Material.Filled.FilterAlt"
-                         HelperText="Filter by area path" />
-            <MudTextField @bind-Value="_workItemIdsFilter" 
-                         Label="Work Item IDs (comma-separated)" 
-                         Variant="Variant.Outlined"
-                         HelperText="Optional: specific work items" />
-            <MudButton Variant="Variant.Filled" 
-                      Color="Color.Primary" 
-                      OnClick="LoadDependencyGraph"
-                      StartIcon="@Icons.Material.Filled.Refresh">
-                Load Graph
-            </MudButton>
+        <MudStack Spacing="3">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudTextField @bind-Value="_areaPathFilter" 
+                             Label="Area Path Filter" 
+                             Variant="Variant.Outlined"
+                             Adornment="Adornment.End"
+                             AdornmentIcon="@Icons.Material.Filled.FilterAlt"
+                             HelperText="Filter by area path" />
+                <MudTextField @bind-Value="_workItemIdsFilter" 
+                             Label="Work Item IDs (comma-separated)" 
+                             Variant="Variant.Outlined"
+                             HelperText="Optional: specific work items" />
+            </MudStack>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudTextField @bind-Value="_workItemTypesFilter" 
+                             Label="Work Item Types (comma-separated)" 
+                             Variant="Variant.Outlined"
+                             Adornment="Adornment.End"
+                             AdornmentIcon="@Icons.Material.Filled.Category"
+                             HelperText="e.g., Epic,Feature,Task" />
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          OnClick="LoadDependencyGraph"
+                          StartIcon="@Icons.Material.Filled.Refresh">
+                    Load Graph
+                </MudButton>
+            </MudStack>
         </MudStack>
     </MudPaper>
 
@@ -121,6 +131,21 @@
             <MudAlert Severity="Severity.Warning" Class="mb-6">
                 <MudText Typo="Typo.h6" Class="mb-2">⚠️ Critical Dependency Chains Identified</MudText>
                 <MudText>@_graphData.CriticalPaths.Count dependency chain(s) found that may impact delivery timeline.</MudText>
+            </MudAlert>
+        }
+
+        <!-- Circular Dependencies Alert -->
+        @if (_graphData.CircularDependencies.Any())
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-6">
+                <MudText Typo="Typo.h6" Class="mb-2">🔄 Circular Dependencies Detected</MudText>
+                <MudText Class="mb-2">@_graphData.CircularDependencies.Count circular dependency cycle(s) found. These create deadlocks and must be resolved immediately.</MudText>
+                <MudStack Spacing="1">
+                    @foreach (var cycle in _graphData.CircularDependencies)
+                    {
+                        <MudText Typo="Typo.body2">• @cycle.Description</MudText>
+                    }
+                </MudStack>
             </MudAlert>
         }
 
@@ -254,6 +279,7 @@
     private ErrorResponse? _errorResponse;
     private string? _areaPathFilter;
     private string? _workItemIdsFilter;
+    private string? _workItemTypesFilter;
 
     private async Task LoadDependencyGraph()
     {
@@ -261,7 +287,7 @@
         try
         {
             ClearError();
-            _graphData = await WorkItemsClient.GetDependencyGraphAsync(_areaPathFilter, _workItemIdsFilter);
+            _graphData = await WorkItemsClient.GetDependencyGraphAsync(_areaPathFilter, _workItemIdsFilter, _workItemTypesFilter);
         }
         catch (Exception ex)
         {

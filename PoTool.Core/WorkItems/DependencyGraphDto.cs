@@ -9,7 +9,16 @@ public sealed record DependencyGraphDto(
     IReadOnlyList<DependencyLink> Links,
     IReadOnlyList<DependencyChain> CriticalPaths,
     IReadOnlyList<int> BlockedWorkItemIds,
+    IReadOnlyList<CircularDependency> CircularDependencies,
     DateTimeOffset AnalysisTimestamp
+);
+
+/// <summary>
+/// Represents a circular dependency cycle in the work item graph.
+/// </summary>
+public sealed record CircularDependency(
+    IReadOnlyList<int> CycleWorkItemIds,
+    string Description
 );
 
 /// <summary>
