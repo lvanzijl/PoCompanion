@@ -16,7 +16,6 @@ namespace PoTool.Tests.Blazor;
 public class BacklogHealthTests : BunitTestContext
 {
     private Mock<IMetricsClient> _mockMetricsClient = null!;
-    private Mock<ErrorMessageService> _mockErrorMessageService = null!;
     private Mock<ISnackbar> _mockSnackbar = null!;
 
     [TestInitialize]
@@ -30,20 +29,11 @@ public class BacklogHealthTests : BunitTestContext
 
         // Setup mocks
         _mockMetricsClient = new Mock<IMetricsClient>();
-        _mockErrorMessageService = new Mock<ErrorMessageService>();
         _mockSnackbar = new Mock<ISnackbar>();
-
-        // Setup default error response
-        _mockErrorMessageService.Setup(x => x.GetErrorResponse(It.IsAny<Exception>(), It.IsAny<string>()))
-            .Returns(new ErrorResponse
-            {
-                UserMessage = "Test error",
-                TechnicalDetails = "Test details"
-            });
 
         // Register mock services
         Services.AddSingleton(_mockMetricsClient.Object);
-        Services.AddSingleton(_mockErrorMessageService.Object);
+        Services.AddSingleton<ErrorMessageService>();
         Services.AddSingleton(_mockSnackbar.Object);
     }
 
@@ -67,7 +57,7 @@ public class BacklogHealthTests : BunitTestContext
             IterationHealth = new List<BacklogHealthDto>(),
             TotalWorkItems = 0,
             TotalIssues = 0,
-            Trend = new BacklogHealthTrendDto
+            Trend = new BacklogHealthTrend
             {
                 Summary = "No data available",
                 EffortTrend = TrendDirection.Stable,
@@ -357,9 +347,9 @@ public class BacklogHealthTests : BunitTestContext
                     ParentProgressIssues = 2,
                     BlockedItems = 1,
                     InProgressAtIterationEnd = 4,
-                    ValidationIssues = new List<ValidationIssueSummaryDto>
+                    ValidationIssues = new List<ValidationIssueSummary>
                     {
-                        new ValidationIssueSummaryDto { ValidationType = "Error", Count = 3 }
+                        new ValidationIssueSummary { ValidationType = "Error", Count = 3, AffectedWorkItemIds = new List<int>() }
                     }
                 },
                 new BacklogHealthDto
@@ -372,15 +362,15 @@ public class BacklogHealthTests : BunitTestContext
                     ParentProgressIssues = 1,
                     BlockedItems = 0,
                     InProgressAtIterationEnd = 3,
-                    ValidationIssues = new List<ValidationIssueSummaryDto>
+                    ValidationIssues = new List<ValidationIssueSummary>
                     {
-                        new ValidationIssueSummaryDto { ValidationType = "Warning", Count = 2 }
+                        new ValidationIssueSummary { ValidationType = "Warning", Count = 2, AffectedWorkItemIds = new List<int>() }
                     }
                 }
             },
             TotalWorkItems = 45,
             TotalIssues = 6,
-            Trend = new BacklogHealthTrendDto
+            Trend = new BacklogHealthTrend
             {
                 Summary = "Health improving",
                 EffortTrend = TrendDirection.Improving,

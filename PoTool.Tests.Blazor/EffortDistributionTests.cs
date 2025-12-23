@@ -16,7 +16,6 @@ namespace PoTool.Tests.Blazor;
 public class EffortDistributionTests : BunitTestContext
 {
     private Mock<IMetricsClient> _mockMetricsClient = null!;
-    private Mock<ErrorMessageService> _mockErrorMessageService = null!;
     private Mock<ISnackbar> _mockSnackbar = null!;
 
     [TestInitialize]
@@ -30,20 +29,11 @@ public class EffortDistributionTests : BunitTestContext
 
         // Setup mocks
         _mockMetricsClient = new Mock<IMetricsClient>();
-        _mockErrorMessageService = new Mock<ErrorMessageService>();
         _mockSnackbar = new Mock<ISnackbar>();
-
-        // Setup default error response
-        _mockErrorMessageService.Setup(x => x.GetErrorResponse(It.IsAny<Exception>(), It.IsAny<string>()))
-            .Returns(new ErrorResponse
-            {
-                UserMessage = "Test error",
-                TechnicalDetails = "Test details"
-            });
 
         // Register mock services
         Services.AddSingleton(_mockMetricsClient.Object);
-        Services.AddSingleton(_mockErrorMessageService.Object);
+        Services.AddSingleton<ErrorMessageService>();
         Services.AddSingleton(_mockSnackbar.Object);
     }
 
@@ -392,24 +382,26 @@ public class EffortDistributionTests : BunitTestContext
         return new EffortDistributionDto
         {
             TotalEffort = 150,
-            EffortByArea = new List<AreaEffortDto>
+            EffortByArea = new List<EffortByAreaPath>
             {
-                new AreaEffortDto
+                new EffortByAreaPath
                 {
                     AreaPath = "Project\\Team A",
                     TotalEffort = 80,
-                    WorkItemCount = 20
+                    WorkItemCount = 20,
+                    AverageEffortPerItem = 4.0
                 },
-                new AreaEffortDto
+                new EffortByAreaPath
                 {
                     AreaPath = "Project\\Team B",
                     TotalEffort = 70,
-                    WorkItemCount = 18
+                    WorkItemCount = 18,
+                    AverageEffortPerItem = 3.89
                 }
             },
-            EffortByIteration = new List<IterationEffortDto>
+            EffortByIteration = new List<EffortByIteration>
             {
-                new IterationEffortDto
+                new EffortByIteration
                 {
                     SprintName = "Sprint 1",
                     IterationPath = "Project\\2025\\Sprint 1",
@@ -418,7 +410,7 @@ public class EffortDistributionTests : BunitTestContext
                     Capacity = 80,
                     UtilizationPercentage = 93.75
                 },
-                new IterationEffortDto
+                new EffortByIteration
                 {
                     SprintName = "Sprint 2",
                     IterationPath = "Project\\2025\\Sprint 2",

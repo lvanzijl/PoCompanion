@@ -326,9 +326,9 @@ public class VelocityDashboardTests : BunitTestContext
             ThreeSprintAverage = 26.7,
             TotalSprints = 3,
             TotalCompletedStoryPoints = 82,
-            Sprints = new List<SprintVelocityDto>
+            Sprints = new List<SprintMetricsDto>
             {
-                new SprintVelocityDto
+                new SprintMetricsDto
                 {
                     SprintName = "Sprint 1",
                     IterationPath = "Project\\2025\\Sprint 1",
@@ -340,7 +340,7 @@ public class VelocityDashboardTests : BunitTestContext
                     CompletedBugs = 2,
                     CompletedTasks = 2
                 },
-                new SprintVelocityDto
+                new SprintMetricsDto
                 {
                     SprintName = "Sprint 2",
                     IterationPath = "Project\\2025\\Sprint 2",
@@ -352,7 +352,7 @@ public class VelocityDashboardTests : BunitTestContext
                     CompletedBugs = 3,
                     CompletedTasks = 2
                 },
-                new SprintVelocityDto
+                new SprintMetricsDto
                 {
                     SprintName = "Sprint 3",
                     IterationPath = "Project\\2025\\Sprint 3",

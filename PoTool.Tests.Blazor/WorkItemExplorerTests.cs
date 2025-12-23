@@ -26,7 +26,6 @@ public class WorkItemExplorerTests : BunitTestContext
     private Mock<ModeIsolatedStateService> _mockStateService = null!;
     private Mock<IDialogService> _mockDialogService = null!;
     private Mock<ISnackbar> _mockSnackbar = null!;
-    private Mock<ErrorMessageService> _mockErrorMessageService = null!;
     private Mock<IJSRuntime> _mockJSRuntime = null!;
 
     [TestInitialize]
@@ -47,7 +46,6 @@ public class WorkItemExplorerTests : BunitTestContext
         _mockStateService = new Mock<ModeIsolatedStateService>();
         _mockDialogService = new Mock<IDialogService>();
         _mockSnackbar = new Mock<ISnackbar>();
-        _mockErrorMessageService = new Mock<ErrorMessageService>();
         _mockJSRuntime = new Mock<IJSRuntime>();
 
         // Setup default behaviors
@@ -60,26 +58,19 @@ public class WorkItemExplorerTests : BunitTestContext
         _mockStateService.Setup(x => x.SaveExpandedStateAsync(It.IsAny<Dictionary<int, bool>>()))
             .Returns(Task.CompletedTask);
 
-        _mockSettingsService.Setup(x => x.GetOrCreateDefaultSettingsAsync())
-            .ReturnsAsync(new AppSettings { DataMode = DataMode.AllData, ConfiguredGoalIds = new List<int>() });
+        _mockSettingsService.Setup(x => x.GetOrCreateDefaultSettingsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SettingsDto { DataMode = DataMode.Mock, ConfiguredGoalIds = new List<int>() });
 
         _mockTfsConfigService.Setup(x => x.GetConfigAsync())
             .ReturnsAsync((TfsConfigDto?)null);
 
         _mockWorkItemService.Setup(x => x.GetAllWithValidationAsync())
-            .ReturnsAsync(new List<WorkItemWithValidationDto>());
+            .ReturnsAsync(new List<WorkItemWithValidationDto>() as IEnumerable<WorkItemWithValidationDto>);
 
         _mockTreeBuilderService.Setup(x => x.BuildTreeWithValidation(
                 It.IsAny<IEnumerable<WorkItemWithValidationDto>>(),
                 It.IsAny<Dictionary<int, bool>>()))
             .Returns(new List<TreeNode>());
-
-        _mockErrorMessageService.Setup(x => x.GetErrorResponse(It.IsAny<Exception>(), It.IsAny<string>()))
-            .Returns(new ErrorResponse 
-            { 
-                UserMessage = "Test error",
-                TechnicalDetails = "Test details"
-            });
 
         // Register mock services
         Services.AddSingleton(_mockWorkItemService.Object);
@@ -90,7 +81,7 @@ public class WorkItemExplorerTests : BunitTestContext
         Services.AddSingleton(_mockStateService.Object);
         Services.AddSingleton(_mockDialogService.Object);
         Services.AddSingleton(_mockSnackbar.Object);
-        Services.AddSingleton(_mockErrorMessageService.Object);
+        Services.AddSingleton<ErrorMessageService>();
         Services.AddSingleton(_mockJSRuntime.Object);
     }
 
@@ -110,7 +101,7 @@ public class WorkItemExplorerTests : BunitTestContext
     {
         // Arrange
         _mockWorkItemService.Setup(x => x.GetAllWithValidationAsync())
-            .ReturnsAsync(new List<WorkItemWithValidationDto>());
+            .ReturnsAsync(new List<WorkItemWithValidationDto>() as IEnumerable<WorkItemWithValidationDto>);
 
         // Act
         var cut = RenderWorkItemExplorerWithMudProvider();
@@ -178,7 +169,7 @@ public class WorkItemExplorerTests : BunitTestContext
     public void WorkItemExplorer_DisplaysLoadingState_Initially()
     {
         // Arrange
-        var tcs = new TaskCompletionSource<List<WorkItemWithValidationDto>>();
+        var tcs = new TaskCompletionSource<IEnumerable<WorkItemWithValidationDto>>();
         _mockWorkItemService.Setup(x => x.GetAllWithValidationAsync())
             .Returns(tcs.Task);
 
@@ -190,7 +181,7 @@ public class WorkItemExplorerTests : BunitTestContext
         Assert.IsNotNull(cut);
 
         // Complete the async operation
-        tcs.SetResult(new List<WorkItemWithValidationDto>());
+        tcs.SetResult(new List<WorkItemWithValidationDto>() as IEnumerable<WorkItemWithValidationDto>);
     }
 
     [TestMethod]
@@ -310,7 +301,7 @@ public class WorkItemExplorerTests : BunitTestContext
             JsonPayload = "{}",
             RetrievedAt = DateTimeOffset.Now,
             Effort = null,
-            ValidationIssues = new List<ValidationIssueDto>()
+            ValidationIssues = new List<ValidationIssue>()
         };
     }
 }
