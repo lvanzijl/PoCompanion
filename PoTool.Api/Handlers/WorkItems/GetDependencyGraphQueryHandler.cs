@@ -167,7 +167,8 @@ public sealed class GetDependencyGraphQueryHandler
         catch (JsonException ex)
         {
             // Log but don't fail - just return empty relations
-            Console.WriteLine($"Error parsing JSON payload: {ex.Message}");
+            // Note: We don't have access to logger in this static method,
+            // so we silently ignore JSON parsing errors
         }
 
         return relations;
@@ -202,10 +203,10 @@ public sealed class GetDependencyGraphQueryHandler
             adjacency[link.SourceWorkItemId].Add(link.TargetWorkItemId);
         }
 
-        // Find all paths using DFS
-        var visited = new HashSet<int>();
+        // Find all paths using DFS - use fresh visited set for each starting node
         foreach (var node in nodes)
         {
+            var visited = new HashSet<int>();
             var path = new List<int>();
             FindLongestPath(node.WorkItemId, adjacency, visited, path, chains, workItemMap);
         }
@@ -275,6 +276,7 @@ public sealed class GetDependencyGraphQueryHandler
         List<DependencyLink> links)
     {
         var circularDependencies = new List<CircularDependency>();
+        var seenCycles = new HashSet<string>(); // Use normalized string representation for O(1) lookup
         
         // Build adjacency list for dependency links only (not parent-child)
         var adjacency = new Dictionary<int, List<int>>();
@@ -300,7 +302,8 @@ public sealed class GetDependencyGraphQueryHandler
                     visited, 
                     recursionStack, 
                     currentPath, 
-                    circularDependencies);
+                    circularDependencies,
+                    seenCycles);
             }
         }
 
@@ -313,7 +316,8 @@ public sealed class GetDependencyGraphQueryHandler
         HashSet<int> visited,
         HashSet<int> recursionStack,
         List<int> currentPath,
-        List<CircularDependency> circularDependencies)
+        List<CircularDependency> circularDependencies,
+        HashSet<string> seenCycles)
     {
         visited.Add(nodeId);
         recursionStack.Add(nodeId);
@@ -325,7 +329,7 @@ public sealed class GetDependencyGraphQueryHandler
             {
                 if (!visited.Contains(neighbor))
                 {
-                    DetectCyclesFromNode(neighbor, adjacency, visited, recursionStack, currentPath, circularDependencies);
+                    DetectCyclesFromNode(neighbor, adjacency, visited, recursionStack, currentPath, circularDependencies, seenCycles);
                 }
                 else if (recursionStack.Contains(neighbor))
                 {
@@ -334,16 +338,14 @@ public sealed class GetDependencyGraphQueryHandler
                     var cycleIds = currentPath.Skip(cycleStartIndex).ToList();
                     cycleIds.Add(neighbor); // Close the cycle
                     
-                    var description = $"Circular dependency detected: {string.Join(" → ", cycleIds)}";
+                    // Create normalized cycle key (sorted IDs joined as string) for O(1) duplicate detection
+                    var normalizedKey = string.Join(",", cycleIds.OrderBy(id => id));
                     
-                    // Check if this cycle is already recorded (avoid duplicates)
-                    var cycleSet = new HashSet<int>(cycleIds);
-                    var isDuplicate = circularDependencies.Any(cd => 
-                        cd.CycleWorkItemIds.Count == cycleSet.Count && 
-                        cd.CycleWorkItemIds.All(id => cycleSet.Contains(id)));
-                    
-                    if (!isDuplicate)
+                    if (!seenCycles.Contains(normalizedKey))
                     {
+                        seenCycles.Add(normalizedKey);
+                        var description = $"Circular dependency detected: {string.Join(" → ", cycleIds)}";
+                        
                         circularDependencies.Add(new CircularDependency(
                             CycleWorkItemIds: cycleIds,
                             Description: description));
