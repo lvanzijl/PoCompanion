@@ -1151,6 +1151,342 @@ await this.FeatureBackgroundAsync();
             }
             await this.ScenarioCleanupAsync();
         }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get effort estimation suggestions with default parameters")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Metrics Controller API")]
+        public async System.Threading.Tasks.Task GetEffortEstimationSuggestionsWithDefaultParameters()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get effort estimation suggestions with default parameters", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 150
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+                global::Reqnroll.Table table15 = new global::Reqnroll.Table(new string[] {
+                            "TfsId",
+                            "Title",
+                            "Type",
+                            "State",
+                            "Effort",
+                            "IterationPath"});
+                table15.AddRow(new string[] {
+                            "12000",
+                            "Story 1",
+                            "Task",
+                            "Done",
+                            "5",
+                            "Project\\2024\\Sprint1"});
+                table15.AddRow(new string[] {
+                            "12001",
+                            "Story 2",
+                            "Task",
+                            "Done",
+                            "3",
+                            "Project\\2024\\Sprint1"});
+                table15.AddRow(new string[] {
+                            "12002",
+                            "Story 3",
+                            "Task",
+                            "In Progress",
+                            "null",
+                            "Project\\2024\\Sprint2"});
+#line 151
+    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table15, "Given ");
+#line hidden
+#line 156
+    await testRunner.WhenAsync("I request effort estimation suggestions", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 157
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 158
+    await testRunner.AndAsync("the effort suggestions should contain suggestions", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get effort estimation suggestions for specific iteration")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Metrics Controller API")]
+        public async System.Threading.Tasks.Task GetEffortEstimationSuggestionsForSpecificIteration()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get effort estimation suggestions for specific iteration", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 160
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+                global::Reqnroll.Table table16 = new global::Reqnroll.Table(new string[] {
+                            "TfsId",
+                            "Title",
+                            "Type",
+                            "State",
+                            "Effort",
+                            "IterationPath"});
+                table16.AddRow(new string[] {
+                            "13000",
+                            "Story 1",
+                            "Task",
+                            "In Progress",
+                            "null",
+                            "Project\\2024\\Sprint1"});
+                table16.AddRow(new string[] {
+                            "13001",
+                            "Story 2",
+                            "Task",
+                            "In Progress",
+                            "null",
+                            "Project\\2024\\Sprint2"});
+#line 161
+    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table16, "Given ");
+#line hidden
+#line 165
+    await testRunner.WhenAsync("I request effort estimation suggestions for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 166
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 167
+    await testRunner.AndAsync("the effort suggestions should contain 1 suggestion", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get effort estimation suggestions only for in-progress items")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Metrics Controller API")]
+        public async System.Threading.Tasks.Task GetEffortEstimationSuggestionsOnlyForIn_ProgressItems()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get effort estimation suggestions only for in-progress items", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 169
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+                global::Reqnroll.Table table17 = new global::Reqnroll.Table(new string[] {
+                            "TfsId",
+                            "Title",
+                            "Type",
+                            "State",
+                            "Effort",
+                            "IterationPath"});
+                table17.AddRow(new string[] {
+                            "14000",
+                            "Story 1",
+                            "Task",
+                            "In Progress",
+                            "null",
+                            "Project\\2024\\Sprint1"});
+                table17.AddRow(new string[] {
+                            "14001",
+                            "Story 2",
+                            "Task",
+                            "New",
+                            "null",
+                            "Project\\2024\\Sprint1"});
+#line 170
+    await testRunner.GivenAsync("work items exist with mixed states", ((string)(null)), table17, "Given ");
+#line hidden
+#line 174
+    await testRunner.WhenAsync("I request effort estimation suggestions with onlyInProgressItems true", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 175
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get effort estimation quality with default parameters")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Metrics Controller API")]
+        public async System.Threading.Tasks.Task GetEffortEstimationQualityWithDefaultParameters()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get effort estimation quality with default parameters", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 177
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+                global::Reqnroll.Table table18 = new global::Reqnroll.Table(new string[] {
+                            "TfsId",
+                            "Title",
+                            "Type",
+                            "State",
+                            "Effort",
+                            "IterationPath"});
+                table18.AddRow(new string[] {
+                            "15000",
+                            "Story 1",
+                            "Task",
+                            "Done",
+                            "5",
+                            "Project\\2024\\Sprint1"});
+                table18.AddRow(new string[] {
+                            "15001",
+                            "Story 2",
+                            "Task",
+                            "Done",
+                            "5",
+                            "Project\\2024\\Sprint1"});
+                table18.AddRow(new string[] {
+                            "15002",
+                            "Story 3",
+                            "Task",
+                            "Done",
+                            "3",
+                            "Project\\2024\\Sprint2"});
+#line 178
+    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table18, "Given ");
+#line hidden
+#line 183
+    await testRunner.WhenAsync("I request effort estimation quality", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 184
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 185
+    await testRunner.AndAsync("the quality metrics should contain data", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get effort estimation quality with maxIterations")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Metrics Controller API")]
+        public async System.Threading.Tasks.Task GetEffortEstimationQualityWithMaxIterations()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get effort estimation quality with maxIterations", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 187
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 188
+    await testRunner.WhenAsync("I request effort estimation quality with maxIterations 5", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 189
+    await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get effort estimation quality with maxIterations below minimum")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Metrics Controller API")]
+        public async System.Threading.Tasks.Task GetEffortEstimationQualityWithMaxIterationsBelowMinimum()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get effort estimation quality with maxIterations below minimum", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 191
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 192
+    await testRunner.WhenAsync("I request effort estimation quality with maxIterations 0", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 193
+    await testRunner.ThenAsync("the response should be BadRequest", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get effort estimation quality with maxIterations above maximum")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Metrics Controller API")]
+        public async System.Threading.Tasks.Task GetEffortEstimationQualityWithMaxIterationsAboveMaximum()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get effort estimation quality with maxIterations above maximum", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 195
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 196
+    await testRunner.WhenAsync("I request effort estimation quality with maxIterations 25", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 197
+    await testRunner.ThenAsync("the response should be BadRequest", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
     }
 }
 #pragma warning restore

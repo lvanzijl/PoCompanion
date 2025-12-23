@@ -335,4 +335,80 @@ public class WorkItemsControllerSteps
         var content = await _response.Content.ReadAsStringAsync();
         Assert.IsFalse(string.IsNullOrWhiteSpace(content));
     }
+
+    // Bulk Assign Effort steps
+    private Core.WorkItems.BulkEffortAssignmentResultDto? _bulkAssignmentResult;
+
+    [Given(@"work items exist for testing")]
+    public async Task GivenWorkItemsExistForTesting(Table table)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+        foreach (var row in table.Rows)
+        {
+            var workItem = new WorkItemEntity
+            {
+                TfsId = int.Parse(row["TfsId"]),
+                Type = row["Type"],
+                Title = row["Title"],
+                State = row["State"],
+                AreaPath = "\\TestArea",
+                IterationPath = row["IterationPath"],
+                JsonPayload = "{}",
+                RetrievedAt = DateTimeOffset.UtcNow
+            };
+
+            if (row.ContainsKey("Effort") && !string.IsNullOrWhiteSpace(row["Effort"]) && row["Effort"] != "null")
+            {
+                workItem.Effort = int.Parse(row["Effort"]);
+            }
+
+            dbContext.WorkItems.Add(workItem);
+        }
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    [When(@"I bulk assign effort with assignments")]
+    public async Task WhenIBulkAssignEffortWithAssignments(Table table)
+    {
+        var assignments = new List<Core.WorkItems.BulkEffortAssignmentDto>();
+        foreach (var row in table.Rows)
+        {
+            assignments.Add(new Core.WorkItems.BulkEffortAssignmentDto(
+                WorkItemId: int.Parse(row["WorkItemId"]),
+                EffortValue: int.Parse(row["EffortValue"])
+            ));
+        }
+
+        var command = new Core.WorkItems.Commands.BulkAssignEffortCommand(assignments);
+        _scenarioContext["Response"] = _response = await _client.PostAsJsonAsync("/api/workitems/bulk-assign-effort", command);
+        
+        if (_response.IsSuccessStatusCode)
+        {
+            _bulkAssignmentResult = await _response.Content.ReadFromJsonAsync<Core.WorkItems.BulkEffortAssignmentResultDto>();
+        }
+    }
+
+    [When(@"I bulk assign effort with empty assignments")]
+    public async Task WhenIBulkAssignEffortWithEmptyAssignments()
+    {
+        var command = new Core.WorkItems.Commands.BulkAssignEffortCommand(new List<Core.WorkItems.BulkEffortAssignmentDto>());
+        _scenarioContext["Response"] = _response = await _client.PostAsJsonAsync("/api/workitems/bulk-assign-effort", command);
+    }
+
+    [Then(@"the bulk assignment should show (.*) successful updates")]
+    public void ThenTheBulkAssignmentShouldShowSuccessfulUpdates(int expectedCount)
+    {
+        Assert.IsNotNull(_bulkAssignmentResult);
+        Assert.AreEqual(expectedCount, _bulkAssignmentResult.SuccessfulUpdates);
+    }
+
+    [Then(@"the bulk assignment should show (.*) failed updates")]
+    public void ThenTheBulkAssignmentShouldShowFailedUpdates(int expectedCount)
+    {
+        Assert.IsNotNull(_bulkAssignmentResult);
+        Assert.AreEqual(expectedCount, _bulkAssignmentResult.FailedUpdates);
+    }
 }

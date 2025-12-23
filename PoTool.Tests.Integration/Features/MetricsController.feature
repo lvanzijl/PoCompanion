@@ -146,3 +146,52 @@ Scenario: Get sprint capacity plan with custom default capacity
 Scenario: Get sprint capacity plan with negative default capacity
     When I request sprint capacity plan for iteration "Project\2024\Sprint1" with defaultCapacity -10
     Then the response should be BadRequest
+
+Scenario: Get effort estimation suggestions with default parameters
+    Given work items exist for multiple iterations
+        | TfsId | Title    | Type | State       | Effort | IterationPath           |
+        | 12000 | Story 1  | Task | Done        | 5      | Project\2024\Sprint1  |
+        | 12001 | Story 2  | Task | Done        | 3      | Project\2024\Sprint1  |
+        | 12002 | Story 3  | Task | In Progress | null   | Project\2024\Sprint2  |
+    When I request effort estimation suggestions
+    Then the response should be OK
+    And the effort suggestions should contain suggestions
+
+Scenario: Get effort estimation suggestions for specific iteration
+    Given work items exist for multiple iterations
+        | TfsId | Title    | Type | State       | Effort | IterationPath           |
+        | 13000 | Story 1  | Task | In Progress | null   | Project\2024\Sprint1  |
+        | 13001 | Story 2  | Task | In Progress | null   | Project\2024\Sprint2  |
+    When I request effort estimation suggestions for iteration "Project\2024\Sprint1"
+    Then the response should be OK
+    And the effort suggestions should contain 1 suggestion
+
+Scenario: Get effort estimation suggestions only for in-progress items
+    Given work items exist with mixed states
+        | TfsId | Title    | Type | State       | Effort | IterationPath           |
+        | 14000 | Story 1  | Task | In Progress | null   | Project\2024\Sprint1  |
+        | 14001 | Story 2  | Task | New         | null   | Project\2024\Sprint1  |
+    When I request effort estimation suggestions with onlyInProgressItems true
+    Then the response should be OK
+
+Scenario: Get effort estimation quality with default parameters
+    Given work items exist for multiple iterations
+        | TfsId | Title    | Type | State | Effort | IterationPath           |
+        | 15000 | Story 1  | Task | Done  | 5      | Project\2024\Sprint1  |
+        | 15001 | Story 2  | Task | Done  | 5      | Project\2024\Sprint1  |
+        | 15002 | Story 3  | Task | Done  | 3      | Project\2024\Sprint2  |
+    When I request effort estimation quality
+    Then the response should be OK
+    And the quality metrics should contain data
+
+Scenario: Get effort estimation quality with maxIterations
+    When I request effort estimation quality with maxIterations 5
+    Then the response should be OK
+
+Scenario: Get effort estimation quality with maxIterations below minimum
+    When I request effort estimation quality with maxIterations 0
+    Then the response should be BadRequest
+
+Scenario: Get effort estimation quality with maxIterations above maximum
+    When I request effort estimation quality with maxIterations 25
+    Then the response should be BadRequest
