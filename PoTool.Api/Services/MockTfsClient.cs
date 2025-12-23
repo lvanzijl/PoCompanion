@@ -177,4 +177,24 @@ public class MockTfsClient : ITfsClient
         _logger.LogInformation("Mock TFS client: Returning {Count} revisions", mockRevisions.Count);
         return Task.FromResult<IEnumerable<WorkItemRevisionDto>>(mockRevisions);
     }
+
+    public Task<bool> UpdateWorkItemStateAsync(int workItemId, string newState, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemStateAsync called for workItemId={WorkItemId}, newState={NewState}", 
+            workItemId, newState);
+        
+        // Mock implementation always succeeds for valid state values
+        var validStates = new[] { "New", "Active", "In Progress", "Resolved", "Closed", "Done", "Removed" };
+        var isValidState = validStates.Contains(newState, StringComparer.OrdinalIgnoreCase);
+        
+        if (!isValidState)
+        {
+            _logger.LogWarning("Mock TFS client: Invalid state '{NewState}' provided", newState);
+            return Task.FromResult(false);
+        }
+        
+        _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} to state '{NewState}'", 
+            workItemId, newState);
+        return Task.FromResult(true);
+    }
 }

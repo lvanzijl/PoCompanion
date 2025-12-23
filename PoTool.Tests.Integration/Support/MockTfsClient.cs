@@ -334,4 +334,21 @@ public class MockTfsClient : ITfsClient
     {
         _mockFileChanges.Add(fileChange);
     }
+
+    public Task<bool> UpdateWorkItemStateAsync(int workItemId, string newState, CancellationToken cancellationToken = default)
+    {
+        // Mock implementation for integration tests
+        // Find and update the work item if it exists
+        var workItem = _mockWorkItems.FirstOrDefault(wi => wi.TfsId == workItemId);
+        if (workItem != null)
+        {
+            // Remove old and add updated work item (since WorkItemDto is immutable)
+            _mockWorkItems.Remove(workItem);
+            var updatedWorkItem = workItem with { State = newState };
+            _mockWorkItems.Add(updatedWorkItem);
+            return Task.FromResult(true);
+        }
+        
+        return Task.FromResult(false);
+    }
 }

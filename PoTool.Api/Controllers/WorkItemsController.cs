@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Queries;
+using PoTool.Core.WorkItems.Commands;
 
 namespace PoTool.Api.Controllers;
 
@@ -317,6 +318,98 @@ public class WorkItemsController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving dependency graph");
             return StatusCode(500, "Error retrieving dependency graph");
+        }
+    }
+
+    /// <summary>
+    /// Gets historical validation violation records for tracking patterns over time.
+    /// </summary>
+    /// <param name="areaPathFilter">Optional area path filter</param>
+    /// <param name="startDate">Optional start date for filtering violations</param>
+    /// <param name="endDate">Optional end date for filtering violations</param>
+    /// <param name="violationType">Optional violation type filter</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Historical validation violation records</returns>
+    [HttpGet("validation-history")]
+    public async Task<ActionResult<IEnumerable<ValidationViolationHistoryDto>>> GetValidationHistory(
+        [FromQuery] string? areaPathFilter = null,
+        [FromQuery] DateTimeOffset? startDate = null,
+        [FromQuery] DateTimeOffset? endDate = null,
+        [FromQuery] string? violationType = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var query = new GetValidationViolationHistoryQuery(
+                areaPathFilter,
+                startDate,
+                endDate,
+                violationType
+            );
+            var history = await _mediator.Send(query, cancellationToken);
+            return Ok(history);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving validation history");
+            return StatusCode(500, "Error retrieving validation history");
+        }
+    }
+
+    /// <summary>
+    /// Gets impact analysis of validation violations showing blocked work items and recommendations.
+    /// </summary>
+    /// <param name="areaPathFilter">Optional area path filter</param>
+    /// <param name="iterationPathFilter">Optional iteration path filter</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Validation impact analysis with blocked items and workflow recommendations</returns>
+    [HttpGet("validation-impact-analysis")]
+    public async Task<ActionResult<ValidationImpactAnalysisDto>> GetValidationImpactAnalysis(
+        [FromQuery] string? areaPathFilter = null,
+        [FromQuery] string? iterationPathFilter = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var query = new GetValidationImpactAnalysisQuery(
+                areaPathFilter,
+                iterationPathFilter
+            );
+            var analysis = await _mediator.Send(query, cancellationToken);
+            return Ok(analysis);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving validation impact analysis");
+            return StatusCode(500, "Error retrieving validation impact analysis");
+        }
+    }
+
+    /// <summary>
+    /// Fixes validation violations in batch by updating work item states in TFS.
+    /// </summary>
+    /// <param name="command">Batch fix command with list of fixes to apply</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Result of batch fix operation showing success/failure for each item</returns>
+    [HttpPost("fix-validation-violations")]
+    public async Task<ActionResult<FixValidationViolationResultDto>> FixValidationViolations(
+        [FromBody] FixValidationViolationBatchCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (command.Fixes == null || command.Fixes.Count == 0)
+            {
+                return BadRequest("At least one fix must be provided");
+            }
+
+            var result = await _mediator.Send(command, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fixing validation violations");
+            return StatusCode(500, "Error fixing validation violations");
         }
     }
 }
