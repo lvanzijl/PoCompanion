@@ -143,6 +143,153 @@ public class GetSprintMetricsQueryHandlerTests
         Assert.AreEqual(3, result.CompletedWorkItemCount);
     }
 
+    [TestMethod]
+    public async Task Handle_WithZeroEffortValues_IncludesInCount()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "PBI", "Done", "Sprint 1", 0),
+            CreateWorkItem(2, "PBI", "Done", "Sprint 1", 5),
+            CreateWorkItem(3, "Task", "In Progress", "Sprint 1", 0)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+        var query = new GetSprintMetricsQuery("Sprint 1");
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(5, result.CompletedStoryPoints); // Only item 2 has effort
+        Assert.AreEqual(5, result.PlannedStoryPoints);
+        Assert.AreEqual(2, result.CompletedWorkItemCount); // Items 1 and 2
+        Assert.AreEqual(3, result.TotalWorkItemCount);
+    }
+
+    [TestMethod]
+    public async Task Handle_WithAllNullEffort_ReturnsZeroStoryPoints()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "PBI", "Done", "Sprint 1", null),
+            CreateWorkItem(2, "Bug", "Done", "Sprint 1", null),
+            CreateWorkItem(3, "Task", "In Progress", "Sprint 1", null)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+        var query = new GetSprintMetricsQuery("Sprint 1");
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(0, result.CompletedStoryPoints);
+        Assert.AreEqual(0, result.PlannedStoryPoints);
+        Assert.AreEqual(2, result.CompletedWorkItemCount);
+        Assert.AreEqual(3, result.TotalWorkItemCount);
+    }
+
+    [TestMethod]
+    public async Task Handle_WithUserStoryType_CountsAsPBI()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "User Story", "Done", "Sprint 1", 5),
+            CreateWorkItem(2, "Product Backlog Item", "Done", "Sprint 1", 8)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+        var query = new GetSprintMetricsQuery("Sprint 1");
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(2, result.CompletedPBIs); // Both counted as PBIs
+        Assert.AreEqual(0, result.CompletedBugs);
+        Assert.AreEqual(0, result.CompletedTasks);
+    }
+
+    [TestMethod]
+    public async Task Handle_WithComplexIterationPath_ExtractsCorrectSprintName()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "PBI", "Done", "Project\\Team A\\2024\\Sprint 5", 5)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+        var query = new GetSprintMetricsQuery("Project\\Team A\\2024\\Sprint 5");
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual("Sprint 5", result.SprintName);
+        Assert.AreEqual("Project\\Team A\\2024\\Sprint 5", result.IterationPath);
+    }
+
+    [TestMethod]
+    public async Task Handle_WithForwardSlashSeparator_ExtractsCorrectSprintName()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "PBI", "Done", "Project/Team A/2024/Sprint 5", 5)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+        var query = new GetSprintMetricsQuery("Project/Team A/2024/Sprint 5");
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual("Sprint 5", result.SprintName);
+    }
+
+    [TestMethod]
+    public async Task Handle_WithMixedCompletionStates_CountsOnlyCompleted()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "PBI", "Done", "Sprint 1", 5),
+            CreateWorkItem(2, "PBI", "New", "Sprint 1", 8),
+            CreateWorkItem(3, "PBI", "Active", "Sprint 1", 3),
+            CreateWorkItem(4, "Bug", "Closed", "Sprint 1", 2),
+            CreateWorkItem(5, "Task", "Removed", "Sprint 1", 1)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+        var query = new GetSprintMetricsQuery("Sprint 1");
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(7, result.CompletedStoryPoints); // 5 + 2 = 7
+        Assert.AreEqual(19, result.PlannedStoryPoints); // All items
+        Assert.AreEqual(2, result.CompletedWorkItemCount); // Done and Closed only
+        Assert.AreEqual(5, result.TotalWorkItemCount);
+    }
+
     private static WorkItemDto CreateWorkItem(
         int id,
         string type,

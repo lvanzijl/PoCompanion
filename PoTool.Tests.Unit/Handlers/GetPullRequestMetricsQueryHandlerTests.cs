@@ -1,0 +1,404 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using PoTool.Api.Handlers.PullRequests;
+using PoTool.Core.Contracts;
+using PoTool.Core.PullRequests;
+using PoTool.Core.PullRequests.Queries;
+
+namespace PoTool.Tests.Unit.Handlers;
+
+[TestClass]
+public class GetPullRequestMetricsQueryHandlerTests
+{
+    private Mock<IPullRequestRepository> _mockRepository = null!;
+    private Mock<ILogger<GetPullRequestMetricsQueryHandler>> _mockLogger = null!;
+    private GetPullRequestMetricsQueryHandler _handler = null!;
+
+    [TestInitialize]
+    public void Setup()
+    {
+        _mockRepository = new Mock<IPullRequestRepository>();
+        _mockLogger = new Mock<ILogger<GetPullRequestMetricsQueryHandler>>();
+        _handler = new GetPullRequestMetricsQueryHandler(
+            _mockRepository.Object,
+            _mockLogger.Object);
+    }
+
+    [TestMethod]
+    public async Task Handle_WithNoPullRequests_ReturnsEmptyList()
+    {
+        // Arrange
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestDto>());
+        var query = new GetPullRequestMetricsQuery();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(0, result.Count());
+    }
+
+    [TestMethod]
+    public async Task Handle_WithSinglePullRequest_CalculatesMetricsCorrectly()
+    {
+        // Arrange
+        var createdDate = DateTimeOffset.UtcNow.AddDays(-7);
+        var completedDate = DateTimeOffset.UtcNow;
+        var pr = CreatePullRequest(1, "Test PR", "TestUser", createdDate, completedDate, "Completed");
+
+        var iterations = new List<PullRequestIterationDto>
+        {
+            CreateIteration(1, 1, createdDate, createdDate.AddHours(2)),
+            CreateIteration(1, 2, createdDate.AddDays(1), createdDate.AddDays(1).AddHours(1))
+        };
+
+        var comments = new List<PullRequestCommentDto>
+        {
+            CreateComment(1, 1, "Author1", createdDate.AddHours(1), false),
+            CreateComment(2, 1, "Author2", createdDate.AddHours(3), true)
+        };
+
+        var fileChanges = new List<PullRequestFileChangeDto>
+        {
+            CreateFileChange(1, 1, "File1.cs", 50, 10, 5),
+            CreateFileChange(1, 1, "File2.cs", 30, 20, 10)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestDto> { pr });
+        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(iterations);
+        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(comments);
+        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileChanges);
+
+        var query = new GetPullRequestMetricsQuery();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        var metrics = result.Single();
+        Assert.AreEqual(1, metrics.PullRequestId);
+        Assert.AreEqual("Test PR", metrics.Title);
+        Assert.AreEqual(2, metrics.IterationCount);
+        Assert.AreEqual(2, metrics.CommentCount);
+        Assert.AreEqual(1, metrics.UnresolvedCommentCount);
+        Assert.AreEqual(2, metrics.TotalFileCount);
+        Assert.AreEqual(80, metrics.TotalLinesAdded);
+        Assert.AreEqual(30, metrics.TotalLinesDeleted);
+    }
+
+    [TestMethod]
+    public async Task Handle_WithOpenPullRequest_UsesCurrentTimeForCalculation()
+    {
+        // Arrange
+        var createdDate = DateTimeOffset.UtcNow.AddDays(-3);
+        var pr = CreatePullRequest(1, "Open PR", "TestUser", createdDate, null, "Active");
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestDto> { pr });
+        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestIterationDto>());
+        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestCommentDto>());
+        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestFileChangeDto>());
+
+        var query = new GetPullRequestMetricsQuery();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        var metrics = result.Single();
+        Assert.IsTrue(metrics.TotalTimeOpen.TotalDays >= 3);
+        Assert.IsNull(metrics.CompletedDate);
+    }
+
+    [TestMethod]
+    public async Task Handle_WithNoIterations_ReturnsNullEffectiveWorkTime()
+    {
+        // Arrange
+        var createdDate = DateTimeOffset.UtcNow.AddDays(-5);
+        var completedDate = DateTimeOffset.UtcNow;
+        var pr = CreatePullRequest(1, "Simple PR", "TestUser", createdDate, completedDate, "Completed");
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestDto> { pr });
+        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestIterationDto>());
+        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestCommentDto>());
+        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestFileChangeDto>());
+
+        var query = new GetPullRequestMetricsQuery();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        var metrics = result.Single();
+        Assert.IsNull(metrics.EffectiveWorkTime);
+    }
+
+    [TestMethod]
+    public async Task Handle_WithNoFileChanges_ReturnsZeroFileMetrics()
+    {
+        // Arrange
+        var createdDate = DateTimeOffset.UtcNow.AddDays(-2);
+        var completedDate = DateTimeOffset.UtcNow;
+        var pr = CreatePullRequest(1, "No Files PR", "TestUser", createdDate, completedDate, "Completed");
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestDto> { pr });
+        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestIterationDto>());
+        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestCommentDto>());
+        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestFileChangeDto>());
+
+        var query = new GetPullRequestMetricsQuery();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        var metrics = result.Single();
+        Assert.AreEqual(0, metrics.TotalFileCount);
+        Assert.AreEqual(0, metrics.TotalLinesAdded);
+        Assert.AreEqual(0, metrics.TotalLinesDeleted);
+        Assert.AreEqual(0, metrics.AverageLinesPerFile);
+    }
+
+    [TestMethod]
+    public async Task Handle_WithMultipleChangesToSameFile_CountsFileOnce()
+    {
+        // Arrange
+        var createdDate = DateTimeOffset.UtcNow.AddDays(-1);
+        var completedDate = DateTimeOffset.UtcNow;
+        var pr = CreatePullRequest(1, "Multi-edit PR", "TestUser", createdDate, completedDate, "Completed");
+
+        var fileChanges = new List<PullRequestFileChangeDto>
+        {
+            CreateFileChange(1, 1, "File1.cs", 10, 5, 0),
+            CreateFileChange(1, 2, "File1.cs", 20, 10, 5), // Same file, different iteration
+            CreateFileChange(1, 1, "File2.cs", 30, 0, 0)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestDto> { pr });
+        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestIterationDto>());
+        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestCommentDto>());
+        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileChanges);
+
+        var query = new GetPullRequestMetricsQuery();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        var metrics = result.Single();
+        Assert.AreEqual(2, metrics.TotalFileCount); // File1.cs and File2.cs
+        Assert.AreEqual(60, metrics.TotalLinesAdded); // 10 + 20 + 30
+        Assert.AreEqual(15, metrics.TotalLinesDeleted); // 5 + 10 + 0
+    }
+
+    [TestMethod]
+    public async Task Handle_WithAllCommentsResolved_ReturnsZeroUnresolved()
+    {
+        // Arrange
+        var createdDate = DateTimeOffset.UtcNow.AddDays(-2);
+        var completedDate = DateTimeOffset.UtcNow;
+        var pr = CreatePullRequest(1, "Resolved PR", "TestUser", createdDate, completedDate, "Completed");
+
+        var comments = new List<PullRequestCommentDto>
+        {
+            CreateComment(1, 1, "Author1", createdDate.AddHours(1), true),
+            CreateComment(2, 1, "Author2", createdDate.AddHours(2), true),
+            CreateComment(3, 1, "Author3", createdDate.AddHours(3), true)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestDto> { pr });
+        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestIterationDto>());
+        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(comments);
+        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestFileChangeDto>());
+
+        var query = new GetPullRequestMetricsQuery();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        var metrics = result.Single();
+        Assert.AreEqual(3, metrics.CommentCount);
+        Assert.AreEqual(0, metrics.UnresolvedCommentCount);
+    }
+
+    [TestMethod]
+    public async Task Handle_WithMultiplePullRequests_ReturnsAllMetrics()
+    {
+        // Arrange
+        var createdDate1 = DateTimeOffset.UtcNow.AddDays(-5);
+        var createdDate2 = DateTimeOffset.UtcNow.AddDays(-3);
+        var pr1 = CreatePullRequest(1, "PR 1", "User1", createdDate1, DateTimeOffset.UtcNow, "Completed");
+        var pr2 = CreatePullRequest(2, "PR 2", "User2", createdDate2, null, "Active");
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestDto> { pr1, pr2 });
+        _mockRepository.Setup(r => r.GetIterationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestIterationDto>());
+        _mockRepository.Setup(r => r.GetCommentsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestCommentDto>());
+        _mockRepository.Setup(r => r.GetFileChangesAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestFileChangeDto>());
+
+        var query = new GetPullRequestMetricsQuery();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(2, result.Count());
+        Assert.IsTrue(result.Any(m => m.PullRequestId == 1));
+        Assert.IsTrue(result.Any(m => m.PullRequestId == 2));
+    }
+
+    [TestMethod]
+    public async Task Handle_CalculatesAverageLinesPerFileCorrectly()
+    {
+        // Arrange
+        var createdDate = DateTimeOffset.UtcNow.AddDays(-1);
+        var completedDate = DateTimeOffset.UtcNow;
+        var pr = CreatePullRequest(1, "Avg Lines PR", "TestUser", createdDate, completedDate, "Completed");
+
+        var fileChanges = new List<PullRequestFileChangeDto>
+        {
+            CreateFileChange(1, 1, "File1.cs", 100, 50, 0),  // 150 total lines
+            CreateFileChange(1, 1, "File2.cs", 50, 25, 0),   // 75 total lines
+            CreateFileChange(1, 1, "File3.cs", 25, 0, 0)     // 25 total lines
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestDto> { pr });
+        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestIterationDto>());
+        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestCommentDto>());
+        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileChanges);
+
+        var query = new GetPullRequestMetricsQuery();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        var metrics = result.Single();
+        Assert.AreEqual(3, metrics.TotalFileCount);
+        Assert.AreEqual(175, metrics.TotalLinesAdded);
+        Assert.AreEqual(75, metrics.TotalLinesDeleted);
+        // Average = (150 + 75 + 25) / 3 = 83.33
+        Assert.AreEqual(83.33, metrics.AverageLinesPerFile, 0.01);
+    }
+
+    private static PullRequestDto CreatePullRequest(
+        int id,
+        string title,
+        string createdBy,
+        DateTimeOffset createdDate,
+        DateTimeOffset? completedDate,
+        string status)
+    {
+        return new PullRequestDto(
+            Id: id,
+            RepositoryName: "TestRepo",
+            Title: title,
+            CreatedBy: createdBy,
+            CreatedDate: createdDate,
+            CompletedDate: completedDate,
+            Status: status,
+            IterationPath: "TestIteration",
+            SourceBranch: "feature/test",
+            TargetBranch: "main",
+            RetrievedAt: DateTimeOffset.UtcNow
+        );
+    }
+
+    private static PullRequestIterationDto CreateIteration(
+        int prId,
+        int iterationNumber,
+        DateTimeOffset createdDate,
+        DateTimeOffset updatedDate)
+    {
+        return new PullRequestIterationDto(
+            PullRequestId: prId,
+            IterationNumber: iterationNumber,
+            CreatedDate: createdDate,
+            UpdatedDate: updatedDate,
+            CommitCount: 1,
+            ChangeCount: 1
+        );
+    }
+
+    private static PullRequestCommentDto CreateComment(
+        int id,
+        int prId,
+        string author,
+        DateTimeOffset createdDate,
+        bool isResolved)
+    {
+        return new PullRequestCommentDto(
+            Id: id,
+            PullRequestId: prId,
+            ThreadId: id,
+            Author: author,
+            Content: $"Comment {id}",
+            CreatedDate: createdDate,
+            UpdatedDate: null,
+            IsResolved: isResolved,
+            ResolvedDate: isResolved ? createdDate.AddHours(1) : null,
+            ResolvedBy: isResolved ? "Reviewer" : null
+        );
+    }
+
+    private static PullRequestFileChangeDto CreateFileChange(
+        int prId,
+        int iterationId,
+        string filePath,
+        int linesAdded,
+        int linesDeleted,
+        int linesModified)
+    {
+        return new PullRequestFileChangeDto(
+            PullRequestId: prId,
+            IterationId: iterationId,
+            FilePath: filePath,
+            ChangeType: "Edit",
+            LinesAdded: linesAdded,
+            LinesDeleted: linesDeleted,
+            LinesModified: linesModified
+        );
+    }
+}
