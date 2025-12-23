@@ -7,17 +7,17 @@
 ## Current Implementation Status
 
 ### ✅ Implemented
-- Work Items: Basic retrieval
+- Work Items: Full retrieval with incremental sync support
+- Pull Requests: All methods (GetPullRequestsAsync, GetIterationsAsync, GetCommentsAsync, GetFileChangesAsync)
 - PAT Authentication
 - Configuration: TfsConfigurationService
-- Tests: MockTfsClient, TfsClientTests
+- Tests: MockTfsClient, RealTfsClient, TfsClientTests
+- **Mock/Real Client Switching**: Configurable via appsettings.json
 
 ### ❌ Not Implemented (Stubs Only)
-- Pull Requests: All methods
 - NTLM Authentication
-- Retry Logic
-- Incremental Sync
-- Error Recovery
+- Advanced Retry Logic (basic retry implemented)
+- Advanced Error Recovery
 
 ---
 
@@ -61,6 +61,73 @@ GET {tfsUrl}/{project}/_apis/git/repositories/{repo}/pullrequests/{prId}/threads
 ```http
 GET {tfsUrl}/{project}/_apis/git/repositories/{repo}/pullrequests/{prId}/iterations/{iterationId}/changes?api-version=7.0
 ```
+
+---
+
+## TFS Client Configuration
+
+### Switching Between Mock and Real TFS Client
+
+The application supports two TFS client implementations:
+- **RealTfsClient**: Connects to actual Azure DevOps/TFS servers via REST API
+- **MockTfsClient**: Returns predefined mock data for development and testing
+
+You can switch between them using the `appsettings.json` configuration:
+
+```json
+{
+  "TfsIntegration": {
+    "UseMockClient": false  // false = RealTfsClient, true = MockTfsClient
+  }
+}
+```
+
+**Development (appsettings.Development.json):**
+```json
+{
+  "TfsIntegration": {
+    "UseMockClient": true   // Use mock data for development
+  }
+}
+```
+
+**Production (appsettings.json):**
+```json
+{
+  "TfsIntegration": {
+    "UseMockClient": false  // Connect to real TFS
+  }
+}
+```
+
+### Implementation Details
+
+The DI registration in `ApiServiceCollectionExtensions.cs` conditionally registers the appropriate implementation:
+
+```csharp
+var useMockClient = configuration.GetValue<bool>("TfsIntegration:UseMockClient", false);
+
+if (useMockClient)
+{
+    // Use mock TFS client with predefined test data
+    services.AddScoped<ITfsClient, MockTfsClient>();
+}
+else
+{
+    // Use real TFS client that connects to Azure DevOps/TFS
+    services.AddHttpClient<ITfsClient, RealTfsClient>();
+}
+```
+
+**MockTfsClient** uses existing mock data providers:
+- `MockDataProvider`: Provides work item hierarchies
+- `MockPullRequestDataProvider`: Provides pull request data with iterations, comments, and file changes
+
+**RealTfsClient** implements the full Azure DevOps REST API integration with:
+- PAT authentication
+- Retry logic for transient failures
+- Comprehensive error handling
+- Performance metrics logging
 
 ---
 
@@ -426,11 +493,12 @@ curl --ntlm -u : https://tfs.company.com/_apis/projects?api-version=7.0
 
 **Code Locations:**
 - Interface: `PoTool.Core/Contracts/ITfsClient.cs`
-- Implementation: `PoTool.Api/Services/TfsClient.cs`
+- Real Implementation: `PoTool.Api/Services/RealTfsClient.cs`
+- Mock Implementation: `PoTool.Api/Services/MockTfsClient.cs`
+- Integration Test Mock: `PoTool.Tests.Integration/Support/MockTfsClient.cs`
 - Tests: `PoTool.Tests.Unit/TfsClientTests.cs`
-- Mock: `PoTool.Tests.Integration/Support/MockTfsClient.cs`
 
 ---
 
-**Last Updated:** December 20, 2024  
+**Last Updated:** December 23, 2024  
 **Maintainer:** Engineering Team
