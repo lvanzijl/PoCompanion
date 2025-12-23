@@ -12,6 +12,7 @@
 3. [Hoofdfuncties](#hoofdfuncties)
    - [Startpagina](#startpagina)
    - [TFS/Azure DevOps Configuratie](#tfsazure-devops-configuratie)
+   - [Profielbeheer](#profielbeheer)
    - [Work Item Explorer](#work-item-explorer)
    - [PR Insights Dashboard](#pr-insights-dashboard)
    - [Velocity Dashboard](#velocity-dashboard)
@@ -226,6 +227,141 @@ Configureer hier uw verbinding met Azure DevOps of TFS.
 - ✓ PAT wordt veilig opgeslagen met platform-native secure storage
 - ✓ Timeout verhogen bij trage verbindingen
 - ✓ Bewaar een kopie van uw PAT op een veilige plek
+
+---
+
+### Profielbeheer
+
+Profielen stellen u in staat om meerdere product ownership contexten te beheren met verschillende area paths, teamtoewijzingen en doelselecties. Dit is bijzonder nuttig wanneer u meerdere producten of teams binnen hetzelfde Azure DevOps project beheert.
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║              Profielbeheer                                    ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  ┌─ Actief Profiel ────────────────────────────────────────┐ ║
+║  │ 📋 Product A - Team Alpha                               │ ║
+║  │   ├─ Area Paths: MyProject\ProductA, MyProject\...     │ ║
+║  │   ├─ Team: Team Alpha                                   │ ║
+║  │   └─ Goals: 3 geselecteerd                              │ ║
+║  └──────────────────────────────────────────────────────────┘ ║
+║                                                               ║
+║  [➕ Nieuw Profiel] [✏️ Bewerk] [🗑️ Verwijder]               ║
+║                                                               ║
+║  Andere Profielen:                                            ║
+║  ├─ Product B - Team Beta                                    ║
+║  └─ Mobile Apps Team                                         ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Wat is een Profiel?**
+
+Een profiel bevat:
+
+- **Area Paths:** Work items worden automatisch gefilterd om alleen items te tonen die overeenkomen met deze area paths
+- **Teamnaam:** Het team dat verantwoordelijk is voor de area paths  
+- **Goals:** Specifieke goals (work items) relevant voor dit profiel
+
+**Profielen Aanmaken en Beheren:**
+
+1. **Tijdens Onboarding:**
+   ```
+   Stap 1: TFS Configuratie
+   Stap 2: Profiel Aanmaken ← Nieuw!
+   Stap 3: Work Items Synchroniseren
+   Stap 4: Functies Ontdekken
+   ```
+   - Maak uw eerste profiel in de onboarding wizard (Stap 3)
+   - Vul profielnaam, area paths, team en goals in
+   - Het profiel wordt automatisch geactiveerd
+
+2. **Profielen Beheren:**
+   - Klik op de "Manage Profiles" knop in de bovenste navigatiebalk
+   - Voeg nieuwe profielen toe, bewerk of verwijder bestaande
+   - Schakel tussen profielen met de dropdown selector linksboven
+
+3. **Profiel Wisselen:**
+   ```
+   ┌─ Profiel Selector ─────────────┐
+   │ ✓ Product A - Team Alpha       │
+   │   Product B - Team Beta        │
+   │   Mobile Apps Team             │
+   │ ─────────────────────────────  │
+   │ ⚙️ Manage Profiles              │
+   └────────────────────────────────┘
+   ```
+   - Gebruik de dropdown in de linkerbovenhoek
+   - Het actieve profiel heeft een vinkje (✓)
+   - Alle werk items worden automatisch gefilterd
+
+**Area Path Filtering:**
+
+Profielen ondersteunen hiërarchische area path matching:
+
+- **Parent/Child Relaties:** Als uw profiel "MyProject\\ProductA" bevat, worden ook "MyProject\\ProductA\\FeatureX" en alle andere child paths getoond
+- **Automatisch Filteren:** Wanneer een profiel actief is, filteren alle werk item queries automatisch op de area paths van het profiel
+- **Geen Actief Profiel:** Als geen profiel is geselecteerd, worden alle werk items getoond (geen filtering)
+
+**Voorbeelden:**
+
+```
+Profiel: "Product A - Team Alpha"
+Area Paths: 
+  - MyProject\ProductA
+  - MyProject\ProductA\Mobile
+  
+Resultaat:
+✓ Toont: MyProject\ProductA\*
+✓ Toont: MyProject\ProductA\Mobile\*
+✗ Verbergt: MyProject\ProductB\*
+✗ Verbergt: MyProject\Infrastructure\*
+```
+
+**Best Practices:**
+
+1. **Beschrijvende Namen:**
+   - ✓ "Product A - Team Alpha"
+   - ✓ "Mobile Apps Team"
+   - ✗ "Profiel 1"
+
+2. **Volledige Area Paths:**
+   - Neem alle relevante area paths op
+   - Gebruik parent paths om automatisch child paths in te sluiten
+   - Voorbeeld: "Project\\Product" in plaats van elk child path apart
+
+3. **Regular Updates:**
+   - Update profielen wanneer uw teamstructuur verandert
+   - Voeg nieuwe area paths toe wanneer nieuwe features starten
+   - Verwijder oude area paths die niet meer gebruikt worden
+
+4. **Team Alignment:**
+   - Eén profiel per team of product
+   - Zorg dat area paths overeenkomen met team verantwoordelijkheden
+   - Gebruik goals om team doelstellingen te koppelen
+
+**Toegepast op Features:**
+
+Wanneer een profiel actief is, worden de volgende features automatisch gefilterd:
+
+- ✓ **Work Item Explorer:** Toont alleen work items met matching area paths
+- ✓ **Goals Selectie:** Filtert beschikbare goals op area paths
+- ✓ **Validation:** Valideert alleen werk items binnen profiel area paths
+- ✓ **Metrics:** Velocity en andere metrics gebaseerd op gefilterde items
+
+**Veelgestelde Vragen:**
+
+Q: *Kan ik meerdere profielen tegelijk actief hebben?*  
+A: Nee, slechts één profiel kan tegelijk actief zijn. Wissel tussen profielen via de dropdown selector.
+
+Q: *Wat gebeurt er als ik geen profiel selecteer?*  
+A: Alle work items worden getoond zonder filtering. Dit behoudt backward compatibility.
+
+Q: *Kan ik area paths wijzigen na het aanmaken?*  
+A: Ja, bewerk het profiel via "Manage Profiles" en update de area paths wanneer nodig.
+
+Q: *Werken profielen met mock data?*  
+A: Ja, profielen werken zowel met mock data als met echte TFS/Azure DevOps data.
 
 ---
 

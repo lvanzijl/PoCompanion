@@ -417,6 +417,83 @@
         </MudCardContent>
     </MudCard>
 
+    <!-- Profile Management -->
+    <MudCard Elevation="2" Class="mb-4">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Class="mr-2" />
+                    Profile Management
+                </MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudText Typo="Typo.body1" Paragraph="true">
+                Profiles allow you to manage multiple product ownership contexts with distinct area paths, team assignments, and goal selections. 
+                This is particularly useful when managing multiple products or teams within the same Azure DevOps project.
+            </MudText>
+
+            <MudText Typo="Typo.subtitle2" Color="Color.Primary" GutterBottom="true" Class="mt-4">What are Profiles?</MudText>
+            <MudText Typo="Typo.body2" Paragraph="true">
+                A profile contains:
+            </MudText>
+            <MudList T="string" Dense="true">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Folder">
+                    <strong>Area Paths:</strong> Work items are automatically filtered to show only items matching these area paths
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Group">
+                    <strong>Team Name:</strong> The team responsible for the area paths
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Flag">
+                    <strong>Goals:</strong> Specific goals (work items) relevant to this profile
+                </MudListItem>
+            </MudList>
+
+            <MudText Typo="Typo.subtitle2" Color="Color.Primary" GutterBottom="true" Class="mt-4">Creating and Managing Profiles:</MudText>
+            <MudList T="string" Dense="true">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Add">
+                    <strong>During Onboarding:</strong> Create your first profile in the onboarding wizard (Step 3)
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Settings">
+                    <strong>Manage Profiles:</strong> Click the "Manage Profiles" button in the top navigation bar
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.SwapHoriz">
+                    <strong>Switch Profiles:</strong> Use the profile selector dropdown in the top-left corner
+                </MudListItem>
+            </MudList>
+
+            <MudText Typo="Typo.subtitle2" Color="Color.Success" GutterBottom="true" Class="mt-4">Area Path Filtering:</MudText>
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                <strong>Hierarchical Matching:</strong> Area paths support parent/child relationships. For example, if your profile includes 
+                "MyProject\\ProductA", it will also match "MyProject\\ProductA\\FeatureX" and all other child paths.
+            </MudAlert>
+            <MudAlert Severity="Severity.Success" Dense="true" Class="mb-2">
+                <strong>Automatic Filtering:</strong> When a profile is active, all work item queries automatically filter to show only 
+                items matching the profile's area paths. This includes the Work Item Explorer, Goals, and validation views.
+            </MudAlert>
+            <MudAlert Severity="Severity.Warning" Dense="true">
+                <strong>No Active Profile:</strong> If no profile is selected, all work items are shown (no filtering applied). 
+                This maintains backward compatibility with existing usage.
+            </MudAlert>
+
+            <MudText Typo="Typo.subtitle2" Color="Color.Warning" GutterBottom="true" Class="mt-4">Best Practices:</MudText>
+            <MudList T="string" Dense="true">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.TipsAndUpdates">
+                    Use descriptive profile names (e.g., "Product A - Team Alpha", "Mobile Apps Team")
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.TipsAndUpdates">
+                    Include all relevant area paths to ensure complete visibility of work items
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.TipsAndUpdates">
+                    Update profiles when your team structure or area paths change
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.TipsAndUpdates">
+                    Use parent area paths (e.g., "MyProject\\Product") to automatically include all child paths
+                </MudListItem>
+            </MudList>
+        </MudCardContent>
+    </MudCard>
+
     <!-- Getting Help -->
     <MudCard Elevation="2" Class="mb-6">
         <MudCardHeader>
@@ -437,6 +514,9 @@
                 </MudListItem>
                 <MudListItem T="string" Icon="@Icons.Material.Filled.Settings">
                     Check your TFS configuration in the Configuration page
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.AccountCircle">
+                    Manage your profiles to filter work items by area paths and teams
                 </MudListItem>
                 <MudListItem T="string" Icon="@Icons.Material.Filled.Sync">
                     Sync your work items to ensure you have the latest data
