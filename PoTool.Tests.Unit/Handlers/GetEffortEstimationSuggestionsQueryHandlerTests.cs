@@ -1,10 +1,13 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Mediator;
 using PoTool.Api.Handlers.Metrics;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
+using PoTool.Core.Settings;
+using PoTool.Core.Settings.Queries;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -12,6 +15,7 @@ namespace PoTool.Tests.Unit.Handlers;
 public class GetEffortEstimationSuggestionsQueryHandlerTests
 {
     private Mock<IWorkItemRepository> _mockRepository = null!;
+    private Mock<IMediator> _mockMediator = null!;
     private Mock<ILogger<GetEffortEstimationSuggestionsQueryHandler>> _mockLogger = null!;
     private GetEffortEstimationSuggestionsQueryHandler _handler = null!;
 
@@ -19,8 +23,14 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
     public void Setup()
     {
         _mockRepository = new Mock<IWorkItemRepository>();
+        _mockMediator = new Mock<IMediator>();
         _mockLogger = new Mock<ILogger<GetEffortEstimationSuggestionsQueryHandler>>();
-        _handler = new GetEffortEstimationSuggestionsQueryHandler(_mockRepository.Object, _mockLogger.Object);
+        
+        // Setup default effort estimation settings
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetEffortEstimationSettingsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EffortEstimationSettingsDto.Default);
+        
+        _handler = new GetEffortEstimationSuggestionsQueryHandler(_mockRepository.Object, _mockMediator.Object, _mockLogger.Object);
     }
 
     [TestMethod]

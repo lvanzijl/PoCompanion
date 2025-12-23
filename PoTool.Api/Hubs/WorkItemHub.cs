@@ -47,4 +47,13 @@ public class WorkItemHub : Hub
 
         await _syncService.TriggerSyncAsync(areaPath);
     }
+
+    /// <summary>
+    /// Notifies all clients about work items without effort estimation.
+    /// </summary>
+    public async Task NotifyWorkItemsWithoutEffort(IReadOnlyList<int> workItemIds)
+    {
+        _logger.LogInformation("Broadcasting notification for {Count} work items without effort", workItemIds.Count);
+        await Clients.All.SendAsync("WorkItemsWithoutEffort", workItemIds);
+    }
 }

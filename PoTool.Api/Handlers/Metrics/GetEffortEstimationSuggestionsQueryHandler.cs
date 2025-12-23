@@ -3,6 +3,7 @@ using PoTool.Core.Contracts;
 using PoTool.Core.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
+using PoTool.Core.Settings.Queries;
 
 namespace PoTool.Api.Handlers.Metrics;
 
@@ -19,23 +20,17 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
     private const double MinConfidenceWithNoData = 0.3;
     private const double VarianceScalingFactor = 100.0;
 
-    // Default effort values by work item type
-    private const int DefaultEffortTask = 3;
-    private const int DefaultEffortBug = 3;
-    private const int DefaultEffortUserStory = 5;
-    private const int DefaultEffortPBI = 5;
-    private const int DefaultEffortFeature = 13;
-    private const int DefaultEffortEpic = 21;
-    private const int DefaultEffortGeneric = 5;
-
     private readonly IWorkItemRepository _repository;
+    private readonly IMediator _mediator;
     private readonly ILogger<GetEffortEstimationSuggestionsQueryHandler> _logger;
 
     public GetEffortEstimationSuggestionsQueryHandler(
         IWorkItemRepository repository,
+        IMediator mediator,
         ILogger<GetEffortEstimationSuggestionsQueryHandler> logger)
     {
         _repository = repository;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -92,9 +87,12 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
         // Generate suggestions for each work item without effort
         var suggestions = new List<EffortEstimationSuggestionDto>();
 
+        // Get effort estimation settings
+        var settings = await _mediator.Send(new GetEffortEstimationSettingsQuery(), cancellationToken);
+
         foreach (var workItem in itemsWithoutEffort)
         {
-            var suggestion = GenerateSuggestion(workItem, completedWorkItemsWithEffort);
+            var suggestion = GenerateSuggestion(workItem, completedWorkItemsWithEffort, settings);
             suggestions.Add(suggestion);
         }
 
@@ -105,7 +103,8 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
 
     private EffortEstimationSuggestionDto GenerateSuggestion(
         WorkItemDto workItem,
-        List<WorkItemDto> historicalData)
+        List<WorkItemDto> historicalData,
+        Core.Settings.EffortEstimationSettingsDto settings)
     {
         // Find similar work items by type
         var similarByType = historicalData
@@ -114,8 +113,8 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
 
         if (similarByType.Count == 0)
         {
-            // No historical data for this type, use default estimation
-            var defaultEffort = GetDefaultEffortForType(workItem.Type);
+            // No historical data for this type, use default estimation from settings
+            var defaultEffort = settings.GetDefaultEffortForType(workItem.Type);
             return new EffortEstimationSuggestionDto(
                 WorkItemId: workItem.TfsId,
                 WorkItemTitle: workItem.Title,
@@ -123,7 +122,7 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
                 CurrentEffort: workItem.Effort,
                 SuggestedEffort: defaultEffort,
                 Confidence: MinConfidenceWithNoData,
-                Rationale: $"No historical data available. Using typical {workItem.Type} estimate.",
+                Rationale: $"No historical data available. Using configured default {workItem.Type} estimate.",
                 SimilarWorkItems: new List<HistoricalEffortExample>()
             );
         }
@@ -199,17 +198,47 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
 
     private double CalculateTitleSimilarity(string title1, string title2)
     {
-        // Simple keyword-based similarity
-        var words1 = title1.ToLowerInvariant().Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
-        var words2 = title2.ToLowerInvariant().Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+        // Enhanced similarity algorithm with stop word filtering and n-gram analysis
+        var stopWords = new HashSet<string> { "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "from", "as", "is", "was", "are", "be", "been" };
+        
+        // Tokenize and clean
+        var words1 = title1.ToLowerInvariant()
+            .Split(new[] { ' ', '-', '_', ',', '.', ':', ';' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 2 && !stopWords.Contains(w))
+            .ToList();
+            
+        var words2 = title2.ToLowerInvariant()
+            .Split(new[] { ' ', '-', '_', ',', '.', ':', ';' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 2 && !stopWords.Contains(w))
+            .ToList();
 
-        if (words1.Length == 0 || words2.Length == 0)
+        if (words1.Count == 0 || words2.Count == 0)
             return 0.0;
 
-        var commonWords = words1.Intersect(words2).Count();
-        var totalUniqueWords = words1.Union(words2).Count();
+        // Calculate Jaccard similarity (intersection / union)
+        var intersection = words1.Intersect(words2).Count();
+        var union = words1.Union(words2).Count();
+        var jaccardSimilarity = union > 0 ? (double)intersection / union : 0.0;
 
-        return totalUniqueWords > 0 ? (double)commonWords / totalUniqueWords : 0.0;
+        // Calculate character-level similarity for partial word matches (edit distance approximation)
+        var characterSimilarity = CalculateCharacterOverlap(string.Join("", words1), string.Join("", words2));
+
+        // Weighted combination: 70% word-level, 30% character-level
+        return (jaccardSimilarity * 0.7) + (characterSimilarity * 0.3);
+    }
+
+    private double CalculateCharacterOverlap(string str1, string str2)
+    {
+        if (string.IsNullOrEmpty(str1) || string.IsNullOrEmpty(str2))
+            return 0.0;
+
+        var chars1 = str1.ToHashSet();
+        var chars2 = str2.ToHashSet();
+        
+        var intersection = chars1.Intersect(chars2).Count();
+        var union = chars1.Union(chars2).Count();
+        
+        return union > 0 ? (double)intersection / union : 0.0;
     }
 
     private int CalculateMedian(List<int> values)
@@ -257,21 +286,5 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
         {
             return $"{type} items typically range from {min}-{max} points, median {suggested} (based on {sampleCount} completed items)";
         }
-    }
-
-    private int GetDefaultEffortForType(string type)
-    {
-        // Default estimates based on common work item types
-        return type.ToLowerInvariant() switch
-        {
-            "task" => DefaultEffortTask,
-            "bug" => DefaultEffortBug,
-            "user story" => DefaultEffortUserStory,
-            "product backlog item" => DefaultEffortPBI,
-            "pbi" => DefaultEffortPBI,
-            "feature" => DefaultEffortFeature,
-            "epic" => DefaultEffortEpic,
-            _ => DefaultEffortGeneric
-        };
     }
 }
