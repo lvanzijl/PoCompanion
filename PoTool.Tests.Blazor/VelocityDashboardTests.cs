@@ -52,6 +52,8 @@ public class VelocityDashboardTests : BunitTestContext
         // Arrange
         _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync((VelocityTrendDto?)null);
+        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
+            .ReturnsAsync((VelocityTrendDto?)null);
 
         // Act
         var cut = RenderVelocityDashboardWithMudProvider();
