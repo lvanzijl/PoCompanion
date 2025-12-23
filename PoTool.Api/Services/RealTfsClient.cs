@@ -24,6 +24,10 @@ public class RealTfsClient : ITfsClient
     private readonly ILogger<RealTfsClient> _logger;
     private const int MaxRetries = 3;
 
+    // TFS field paths
+    private const string TfsFieldEffort = "Microsoft.VSTS.Scheduling.Effort";
+    private const string TfsFieldState = "System.State";
+
     public RealTfsClient(
         HttpClient httpClient, 
         TfsConfigurationService configService, 
@@ -821,7 +825,7 @@ public class RealTfsClient : ITfsClient
                 new
                 {
                     op = "add",
-                    path = "/fields/System.State",
+                    path = $"/fields/{TfsFieldState}",
                     value = newState
                 }
             };
@@ -882,7 +886,7 @@ public class RealTfsClient : ITfsClient
                 new
                 {
                     op = "add",
-                    path = "/fields/Microsoft.VSTS.Scheduling.Effort",
+                    path = $"/fields/{TfsFieldEffort}",
                     value = effort
                 }
             };

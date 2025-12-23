@@ -13,6 +13,21 @@ namespace PoTool.Api.Handlers.Metrics;
 public sealed class GetEffortEstimationSuggestionsQueryHandler 
     : IQueryHandler<GetEffortEstimationSuggestionsQuery, IReadOnlyList<EffortEstimationSuggestionDto>>
 {
+    // Confidence calculation constants
+    private const int MinSampleSizeForMaxConfidence = 10;
+    private const double MaxVarianceForHighConfidence = 4.0;
+    private const double MinConfidenceWithNoData = 0.3;
+    private const double VarianceScalingFactor = 100.0;
+
+    // Default effort values by work item type
+    private const int DefaultEffortTask = 3;
+    private const int DefaultEffortBug = 3;
+    private const int DefaultEffortUserStory = 5;
+    private const int DefaultEffortPBI = 5;
+    private const int DefaultEffortFeature = 13;
+    private const int DefaultEffortEpic = 21;
+    private const int DefaultEffortGeneric = 5;
+
     private readonly IWorkItemRepository _repository;
     private readonly ILogger<GetEffortEstimationSuggestionsQueryHandler> _logger;
 
@@ -107,7 +122,7 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
                 WorkItemType: workItem.Type,
                 CurrentEffort: workItem.Effort,
                 SuggestedEffort: defaultEffort,
-                Confidence: 0.3, // Low confidence without historical data
+                Confidence: MinConfidenceWithNoData,
                 Rationale: $"No historical data available. Using typical {workItem.Type} estimate.",
                 SimilarWorkItems: new List<HistoricalEffortExample>()
             );
@@ -224,8 +239,10 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
     private double CalculateConfidence(int sampleSize, double variance)
     {
         // Base confidence on sample size and variance
-        var sampleConfidence = Math.Min(1.0, sampleSize / 10.0); // Max confidence at 10+ samples
-        var varianceConfidence = variance < 4 ? 1.0 : Math.Max(0.3, 1.0 - (variance / 100.0));
+        var sampleConfidence = Math.Min(1.0, sampleSize / (double)MinSampleSizeForMaxConfidence);
+        var varianceConfidence = variance < MaxVarianceForHighConfidence 
+            ? 1.0 
+            : Math.Max(MinConfidenceWithNoData, 1.0 - (variance / VarianceScalingFactor));
 
         return (sampleConfidence + varianceConfidence) / 2.0;
     }
@@ -247,14 +264,14 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
         // Default estimates based on common work item types
         return type.ToLowerInvariant() switch
         {
-            "task" => 3,
-            "bug" => 3,
-            "user story" => 5,
-            "product backlog item" => 5,
-            "pbi" => 5,
-            "feature" => 13,
-            "epic" => 21,
-            _ => 5
+            "task" => DefaultEffortTask,
+            "bug" => DefaultEffortBug,
+            "user story" => DefaultEffortUserStory,
+            "product backlog item" => DefaultEffortPBI,
+            "pbi" => DefaultEffortPBI,
+            "feature" => DefaultEffortFeature,
+            "epic" => DefaultEffortEpic,
+            _ => DefaultEffortGeneric
         };
     }
 }

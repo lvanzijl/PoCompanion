@@ -198,7 +198,7 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_WithDifferentWorkItemTypes_ProvidesTypSpecificSuggestions()
+    public async Task Handle_WithDifferentWorkItemTypes_ProvidesTypeSpecificSuggestions()
     {
         // Arrange
         var workItems = new List<WorkItemDto>
