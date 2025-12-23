@@ -589,6 +589,262 @@ Each feature is rated 1-10 in four categories:
 
 ---
 
+## Actionable Copilot Prompts for Critical Issues
+
+This section provides ready-to-use prompts that can be given to GitHub Copilot to address each critical issue identified in this report.
+
+### 1. Add Blazor Component Tests (Priority: HIGH)
+
+**Issue:** Almost zero Blazor component tests across all features (major gap affecting production readiness)
+
+**Copilot Prompt:**
+```
+Add comprehensive bUnit tests for the following Blazor components, following the existing test patterns in PoTool.Tests.Blazor:
+
+1. PoTool.Client/Components/WorkItems/WorkItemExplorer.razor
+2. PoTool.Client/Pages/PullRequests/PRInsight.razor
+3. PoTool.Client/Pages/Metrics/BacklogHealth.razor
+4. PoTool.Client/Pages/Metrics/VelocityDashboard.razor
+5. PoTool.Client/Pages/Metrics/EffortDistribution.razor
+
+For each component, test:
+- Initial rendering with empty data
+- Rendering with populated data
+- User interactions (button clicks, filter changes)
+- Error state display
+- Loading state display
+- Navigation events
+
+Use MSTest as the test runner, follow the repository's ARCHITECTURE_RULES.md and PROCESS_RULES.md, and ensure tests use mock services (no real TFS calls). Place tests in PoTool.Tests.Blazor with naming pattern: {ComponentName}Tests.cs
+```
+
+### 2. Implement Real TFS Integration (Priority: HIGH)
+
+**Issue:** All TFS integration uses mock/stub implementations; not using real Azure DevOps REST API
+
+**Copilot Prompt:**
+```
+Implement real Azure DevOps TFS integration by replacing the current mock ITfsClient implementation with a production-ready implementation:
+
+1. Create a new TfsClient implementation in PoTool.Api/Services/TfsClient.cs that:
+   - Uses Azure DevOps REST API (https://docs.microsoft.com/en-us/rest/api/azure/devops/)
+   - Implements ITfsClient interface from PoTool.Core
+   - Authenticates using Personal Access Token (PAT)
+   - Handles rate limiting and transient failures with Polly retry policies
+   - Maps Azure DevOps work item responses to WorkItemDto
+   - Maps Azure DevOps pull request responses to PullRequestDto
+
+2. Follow repository rules:
+   - Keep all TFS access in Api layer only (ARCHITECTURE_RULES.md section 6)
+   - No TFS calls from Core or Frontend
+   - Use dependency injection for ITfsClient
+   - Add comprehensive error handling and logging
+   - Store PAT securely per PAT_STORAGE_BEST_PRACTICES.md
+
+3. Maintain existing unit tests with file-based mocks
+4. Add integration tests that use test data (not real TFS calls)
+
+Do not modify Core layer or add new dependencies without approval.
+```
+
+### 3. Complete Dependency Graph Implementation (Priority: HIGH)
+
+**Issue:** Dependency Graph feature has 4/10 test coverage, incomplete implementation, and unclear graph visualization approach
+
+**Copilot Prompt:**
+```
+Complete the Dependency Graph feature implementation:
+
+1. Review and enhance PoTool.Core/WorkItems/DependencyGraphDto.cs and GetDependencyGraphQuery.cs
+2. Implement PoTool.Api handler for GetDependencyGraphQuery with proper work item relationship traversal
+3. Create or enhance PoTool.Client/Pages/Metrics/DependencyGraph.razor to:
+   - Use an approved open-source Blazor graph library (MudBlazor, Radzen, or Fluent UI if they support graphs)
+   - If no approved library supports graphs, use a simple hierarchical list view instead
+   - Display work item dependencies (parent-child and custom links)
+   - Detect circular dependencies and highlight them
+   - Support filtering by work item type and area path
+   - Follow UI_RULES.md (dark theme, no custom JS widgets)
+
+4. Add comprehensive tests:
+   - Integration tests in PoTool.Tests.Integration/Features/MetricsController.feature for dependency graph API
+   - Unit tests for relationship traversal logic
+   - Blazor component tests in PoTool.Tests.Blazor
+
+5. Create feature specification document following the pattern in features/Simple_workitem_explorer.md
+
+If graph visualization requires unapproved libraries, ask for guidance before implementing.
+```
+
+### 4. Extract UI Business Logic to Services (Priority: HIGH)
+
+**Issue:** Business logic exists in UI components (filtering, calculation logic) violating architecture rules
+
+**Copilot Prompt:**
+```
+Refactor business logic from UI components into proper service classes:
+
+1. Identify business logic in these components:
+   - PoTool.Client/Components/WorkItems/WorkItemExplorer.razor (filtering, tree expansion logic)
+   - PoTool.Client/Pages/PullRequests/PRInsight.razor (metrics calculations, filtering)
+   - PoTool.Client/Pages/Metrics/BacklogHealth.razor (health score calculations)
+
+2. For each component:
+   - Extract business logic into a service class in PoTool.Client/Services/
+   - Keep components thin - only UI rendering and event handling
+   - Move filtering logic to services
+   - Move calculation logic to services or Core layer (if reusable)
+   - Use dependency injection for service access
+
+3. Follow ARCHITECTURE_RULES.md section 7 (State & UI behavior):
+   - Keep UI components as thin as possible
+   - Separate state management from presentation
+   - No business logic in Blazor components
+
+4. Add unit tests for new service classes in PoTool.Tests.Unit
+5. Update existing Blazor component tests to use mocked services
+
+Do not change observable behavior - this is a refactoring exercise only.
+```
+
+### 5. Add Unit Tests for Calculation Logic (Priority: MEDIUM)
+
+**Issue:** Metrics, forecasting, and health score calculations lack unit tests
+
+**Copilot Prompt:**
+```
+Add comprehensive unit tests for calculation logic in Core and Api layers:
+
+1. Create unit tests for:
+   - Sprint metrics calculations (velocity, capacity, completion rate)
+   - Backlog health score calculations
+   - Epic forecast calculations (completion estimates, confidence intervals)
+   - PR metrics calculations (avg time open, avg iterations, avg files changed)
+   - Effort distribution calculations
+
+2. Test files to create/enhance:
+   - PoTool.Tests.Unit/Handlers/GetSprintMetricsQueryHandlerTests.cs (already exists - enhance)
+   - PoTool.Tests.Unit/Handlers/GetBacklogHealthQueryHandlerTests.cs (new)
+   - PoTool.Tests.Unit/Handlers/GetEpicCompletionForecastQueryHandlerTests.cs (new)
+   - PoTool.Tests.Unit/Handlers/GetPullRequestMetricsQueryHandlerTests.cs (new)
+   - PoTool.Tests.Unit/Handlers/GetEffortDistributionQueryHandlerTests.cs (new)
+
+3. For each test class:
+   - Use MSTest framework
+   - Test happy path with valid data
+   - Test edge cases (empty data, zero values, negative values)
+   - Test boundary conditions
+   - Use file-based test data (no real TFS calls)
+   - Follow existing test patterns in PoTool.Tests.Unit
+
+4. Aim for 100% coverage of calculation logic in handlers
+```
+
+### 6. Create Missing Feature Specifications (Priority: MEDIUM)
+
+**Issue:** Epic Forecast, Dependency Graph, and State Timeline lack formal feature specifications
+
+**Copilot Prompt:**
+```
+Create formal feature specification documents for the following features, following the structure and format of features/Simple_workitem_explorer.md:
+
+1. features/epic_forecast.md - Epic Completion Forecast feature
+2. features/dependency_graph.md - Work Item Dependency Graph feature
+3. features/state_timeline.md - Work Item State Timeline feature
+
+Each specification must include:
+- Feature goal and description
+- Value proposition (what it adds beyond TFS WebUI)
+- Configuration requirements (if any)
+- Main view structure and components
+- User interactions and behavior
+- Filters and search capabilities
+- Data requirements and caching strategy
+- Mandatory references to:
+  - docs/UX_PRINCIPLES.md
+  - docs/UI_RULES.md
+  - docs/ARCHITECTURE_RULES.md
+  - docs/PROCESS_RULES.md
+
+Use clear, technical language suitable for development teams. Focus on functional requirements, UI/UX expectations, and architectural constraints. Reference existing implementations in PoTool.Client/Pages/Metrics/ and PoTool.Core/ as needed.
+```
+
+### 7. Decompose Large Blazor Components (Priority: MEDIUM)
+
+**Issue:** WorkItemExplorer, PRInsight, and BacklogHealth components are large and should be decomposed
+
+**Copilot Prompt:**
+```
+Decompose large Blazor components into smaller, reusable sub-components following UI_RULES.md and ARCHITECTURE_RULES.md:
+
+1. PoTool.Client/Components/WorkItems/WorkItemExplorer.razor:
+   - Extract search/filter controls into WorkItemFilterPanel.razor
+   - Extract toolbar into WorkItemToolbar.razor (if not already extracted)
+   - Extract tree view into WorkItemTreeView.razor (if not already extracted)
+   - Extract detail panel (already done as WorkItemDetailPanel.razor)
+   - Main component should orchestrate sub-components only
+
+2. PoTool.Client/Pages/PullRequests/PRInsight.razor:
+   - Extract metric summary cards into PRMetricsSummaryPanel.razor
+   - Extract date filter controls into PRDateRangeFilter.razor
+   - Extract charts into separate components (PRTimeOpenChart.razor, PRIterationChart.razor, etc.)
+   - Main page should handle data loading and coordinate sub-components
+
+3. PoTool.Client/Pages/Metrics/BacklogHealth.razor:
+   - Extract trend summary card into BacklogHealthTrendCard.razor
+   - Extract filter controls into BacklogHealthFilters.razor
+   - Extract iteration health table into IterationHealthTable.razor
+   - Main page should orchestrate only
+
+Requirements:
+- Each sub-component should be self-contained with clear parameters
+- Use MudBlazor components consistently
+- Apply CSS isolation per component (*.razor.css files)
+- Follow dark theme throughout
+- Keep components under 200 lines
+- Add component-level documentation
+- Update or create bUnit tests for each new component
+```
+
+### 8. Add SignalR End-to-End Tests (Priority: MEDIUM)
+
+**Issue:** No SignalR real-time update tests end-to-end
+
+**Copilot Prompt:**
+```
+Add end-to-end integration tests for SignalR real-time update flows:
+
+1. Create PoTool.Tests.Integration/Features/SignalRHub.feature (already exists - enhance) with scenarios:
+   - Work item sync progress notifications
+   - Pull request sync progress notifications
+   - Real-time metric updates
+   - Multiple concurrent client connections
+   - Connection lifecycle (connect, disconnect, reconnect)
+   - Error handling and notification
+
+2. In step definitions (PoTool.Tests.Integration/StepDefinitions/SignalRSteps.cs):
+   - Create SignalR client connections
+   - Subscribe to hub methods
+   - Trigger backend actions that send notifications
+   - Verify notifications are received with correct data
+   - Test timing and ordering of notifications
+   - Test hub method invocations from client
+
+3. Test the following hubs:
+   - WorkItemHub (if exists) - work item sync notifications
+   - Any other SignalR hubs in PoTool.Api/Hubs/
+
+4. Follow ARCHITECTURE_RULES.md section 10.2:
+   - Use Reqnroll for BDD-style test definitions
+   - Start full ASP.NET Core application
+   - Use real SignalR connections (no mocking)
+   - Mock TFS integration only
+   - Ensure tests are independent and clean up after themselves
+
+5. Verify all hub methods have 100% integration test coverage
+```
+
+---
+
 ## Conclusion
 
 **Overall Assessment: 7.0/10 - Good**
