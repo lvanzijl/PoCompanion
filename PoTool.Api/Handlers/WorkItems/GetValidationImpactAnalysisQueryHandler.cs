@@ -66,7 +66,9 @@ public sealed class GetValidationImpactAnalysisQueryHandler
 
         foreach (var (workItemId, issues) in validationResults)
         {
-            var workItem = workItemLookup[workItemId];
+            // Skip work items that were filtered out
+            if (!workItemLookup.TryGetValue(workItemId, out var workItem))
+                continue;
             
             // Find blocked children (direct children that cannot progress)
             var blockedChildren = GetBlockedChildren(workItemId, childrenLookup, workItemLookup);
