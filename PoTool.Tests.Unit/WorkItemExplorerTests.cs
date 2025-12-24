@@ -34,6 +34,8 @@ public class WorkItemExplorerTests
         // Verify the loaded state matches
         Assert.IsNotNull(loaded);
         Assert.HasCount(1, loaded);
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(loaded.ContainsKey(items.First().TfsId));
         Assert.IsTrue(loaded[items.First().TfsId]);
     }

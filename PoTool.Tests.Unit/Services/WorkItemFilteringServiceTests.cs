@@ -120,8 +120,12 @@ public class WorkItemFilteringServiceTests
 
         // Assert
         Assert.HasCount(2, result);
-        Assert.Contains(result, 1);
-        Assert.Contains(result, 3);
+        
+#pragma warning disable MSTEST0037
+        Assert.IsTrue(result.Contains(1));
+        
+#pragma warning disable MSTEST0037
+        Assert.IsTrue(result.Contains(3));
     }
 
     [TestMethod]
@@ -155,7 +159,9 @@ public class WorkItemFilteringServiceTests
 
         // Assert
         Assert.HasCount(1, result);
-        Assert.Contains(result, 1);
+        
+#pragma warning disable MSTEST0037
+        Assert.IsTrue(result.Contains(1));
     }
 
     [TestMethod]

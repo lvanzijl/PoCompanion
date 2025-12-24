@@ -69,7 +69,9 @@ public class GetEffortConcentrationRiskQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         // Well distributed - no single entity has > 25% of total
-        Assert.IsLessThanOrEqualTo(result.OverallRiskLevel, ConcentrationRiskLevel.Medium);
+#pragma warning disable MSTEST0037 // Enum comparison not supported by Assert.IsLessThanOrEqualTo
+        Assert.IsTrue(result.OverallRiskLevel <= ConcentrationRiskLevel.Medium);
+#pragma warning restore MSTEST0037
         Assert.IsLessThan(result.ConcentrationIndex, 70);
     }
 
@@ -120,10 +122,14 @@ public class GetEffortConcentrationRiskQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsGreaterThanOrEqualTo(result.OverallRiskLevel, ConcentrationRiskLevel.High);
+#pragma warning disable MSTEST0037 // Enum comparison
+        Assert.IsTrue(result.OverallRiskLevel >= ConcentrationRiskLevel.High);
+#pragma warning restore MSTEST0037
         Assert.IsNotEmpty(result.IterationRisks);
         var highRiskSprint = result.IterationRisks.First();
-        Assert.IsGreaterThanOrEqualTo(highRiskSprint.RiskLevel, ConcentrationRiskLevel.High);
+#pragma warning disable MSTEST0037 // Enum comparison
+        Assert.IsTrue(highRiskSprint.RiskLevel >= ConcentrationRiskLevel.High);
+#pragma warning restore MSTEST0037
     }
 
     [TestMethod]
@@ -147,7 +153,9 @@ public class GetEffortConcentrationRiskQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsGreaterThanOrEqualTo(result.OverallRiskLevel, ConcentrationRiskLevel.Medium);
+#pragma warning disable MSTEST0037 // Enum comparison
+        Assert.IsTrue(result.OverallRiskLevel >= ConcentrationRiskLevel.Medium);
+#pragma warning restore MSTEST0037
         var mainArea = result.AreaPathRisks.FirstOrDefault(r => r.Path == "MainArea");
         Assert.IsNotNull(mainArea);
         Assert.AreEqual(ConcentrationRiskLevel.Medium, mainArea.RiskLevel);
@@ -238,7 +246,9 @@ public class GetEffortConcentrationRiskQueryHandlerTests
         var result2 = await _handler.Handle(query2, CancellationToken.None);
 
         // Assert - concentrated should have higher risk than distributed
-        Assert.IsGreaterThan(result1.OverallRiskLevel, result2.OverallRiskLevel);
+#pragma warning disable MSTEST0037 // Enum comparison not supported by Assert.IsGreaterThan
+        Assert.IsTrue(result1.OverallRiskLevel > result2.OverallRiskLevel);
+#pragma warning restore MSTEST0037
         Assert.IsGreaterThanOrEqualTo(result1.ConcentrationIndex, result2.ConcentrationIndex);
     }
 

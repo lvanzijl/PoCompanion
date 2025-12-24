@@ -45,6 +45,8 @@ public class WorkItemInProgressWithoutEffortValidatorTests
 
         // Assert
         Assert.HasCount(1, result, "Should have one item with issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(1), "Item should have validation issues");
         
         var issues = result[1];
@@ -67,6 +69,8 @@ public class WorkItemInProgressWithoutEffortValidatorTests
 
         // Assert
         Assert.HasCount(1, result, "Should have one item with issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(1), "Item should have validation issues");
     }
 
@@ -105,10 +109,20 @@ public class WorkItemInProgressWithoutEffortValidatorTests
 
         // Assert
         Assert.HasCount(2, result, "Should have two items with issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(2), "Item 2 should have issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(4), "Item 4 should have issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsFalse(result.ContainsKey(1), "Item 1 should not have issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsFalse(result.ContainsKey(3), "Item 3 should not have issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsFalse(result.ContainsKey(5), "Item 5 should not have issues");
     }
 

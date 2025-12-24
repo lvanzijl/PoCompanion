@@ -94,7 +94,9 @@ public class GetEffortImbalanceQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsGreaterThanOrEqualTo(result.OverallRiskLevel, ImbalanceRiskLevel.Medium);
+#pragma warning disable MSTEST0037 // Enum comparison
+        Assert.IsTrue(result.OverallRiskLevel >= ImbalanceRiskLevel.Medium);
+#pragma warning restore MSTEST0037
         Assert.IsNotEmpty(result.TeamImbalances);
         Assert.IsTrue(result.TeamImbalances.Any(t => t.RiskLevel >= ImbalanceRiskLevel.High));
     }

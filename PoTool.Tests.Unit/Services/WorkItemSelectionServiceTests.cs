@@ -57,7 +57,9 @@ public class WorkItemSelectionServiceTests
 
         // Assert
         Assert.HasCount(1, newState.SelectedIds);
-        Assert.Contains(newState.SelectedIds, 1);
+        
+#pragma warning disable MSTEST0037
+        Assert.IsTrue(newState.SelectedIds.Contains(1));
         Assert.HasCount(1, newState.SelectedWorkItems);
         Assert.IsNotNull(newState.PrimarySelectedWorkItem);
         Assert.AreEqual(1, newState.PrimarySelectedWorkItem.TfsId);
@@ -101,8 +103,12 @@ public class WorkItemSelectionServiceTests
 
         // Assert
         Assert.HasCount(2, state2.SelectedIds);
-        Assert.Contains(state2.SelectedIds, 1);
-        Assert.Contains(state2.SelectedIds, 2);
+        
+#pragma warning disable MSTEST0037
+        Assert.IsTrue(state2.SelectedIds.Contains(1));
+        
+#pragma warning disable MSTEST0037
+        Assert.IsTrue(state2.SelectedIds.Contains(2));
         Assert.HasCount(2, state2.SelectedWorkItems);
         Assert.AreEqual(2, state2.PrimarySelectedWorkItem?.TfsId); // Last selected
     }

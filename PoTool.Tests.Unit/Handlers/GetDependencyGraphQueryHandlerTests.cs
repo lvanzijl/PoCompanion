@@ -233,6 +233,8 @@ public class GetDependencyGraphQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.IsNotEmpty(result.BlockedWorkItemIds, "Should identify blocking work items");
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.BlockedWorkItemIds.Contains(1), "Work item 1 should be marked as blocking");
     }
 

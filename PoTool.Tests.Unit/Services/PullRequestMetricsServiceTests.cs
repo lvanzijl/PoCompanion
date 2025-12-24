@@ -214,7 +214,11 @@ public class PullRequestMetricsServiceTests
         // Assert
         Assert.HasCount(2, data);
         Assert.HasCount(2, labels);
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(data.Contains(2.0)); // 2 Active
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(data.Contains(1.0)); // 1 Completed
     }
 
@@ -285,6 +289,8 @@ public class PullRequestMetricsServiceTests
         // Assert
         Assert.HasCount(3, data); // 3 unique users
         Assert.HasCount(3, labels);
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(data.Contains(2.0)); // User0 has 2 PRs
     }
 

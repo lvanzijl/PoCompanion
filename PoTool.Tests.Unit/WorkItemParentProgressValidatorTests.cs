@@ -48,6 +48,8 @@ public class WorkItemParentProgressValidatorTests
 
         // Assert
         Assert.HasCount(1, result, "Should have one item with issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(2), "Epic should have validation issues");
         
         var issues = result[2];
@@ -74,11 +76,15 @@ public class WorkItemParentProgressValidatorTests
         Assert.HasCount(2, result, "Both Epic and Feature should have issues");
         
         // Epic has error for parent being New
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(2));
         Assert.HasCount(1, result[2]);
         Assert.AreEqual("Error", result[2][0].Severity);
         
         // Feature has warning for grandparent being New
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(3));
         Assert.HasCount(1, result[3]);
         Assert.AreEqual("Warning", result[3][0].Severity);
@@ -101,6 +107,8 @@ public class WorkItemParentProgressValidatorTests
 
         // Assert
         Assert.HasCount(1, result, "Only Feature should have issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(3));
         
         var issues = result[3];
@@ -178,6 +186,8 @@ public class WorkItemParentProgressValidatorTests
 
         // Assert
         Assert.HasCount(1, result, "Should detect issue with case-sensitive match");
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(2));
     }
 
@@ -265,8 +275,14 @@ public class WorkItemParentProgressValidatorTests
 
         // Assert
         Assert.HasCount(3, result, "All three children should have issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(2));
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(3));
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(4));
     }
 
