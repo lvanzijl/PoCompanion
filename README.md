@@ -38,35 +38,37 @@ This solution follows a three-layer architecture as defined in `docs/ARCHITECTUR
 
 ### Prerequisites
 - .NET 10 SDK
-- .NET MAUI workload (for building MAUI app): `dotnet workload install maui`
+- Visual Studio 2022 (version 17.8 or later) or VS Code
+- ASP.NET and web development workload (for Visual Studio)
 
-### Build
+### Running from Visual Studio
+
+📖 **[Complete Visual Studio Instructions](docs/RUNNING_FROM_VISUAL_STUDIO.md)**
+
+Quick start:
+1. Open `PoTool.sln` in Visual Studio 2022
+2. Set **PoTool.Api** as the startup project
+3. Press **F5** to run
+4. Open browser to `http://localhost:5291`
+
+### Running from Command Line
+
+#### Build
 ```bash
 dotnet build
 ```
 
-### Run Application
-```bash
-cd PoTool.Maui
-dotnet run
-```
-
-The application starts as a native desktop app with:
-- Embedded API at `http://localhost:5291`
-- Blazor UI in native WebView
-- OpenAPI documentation at `http://localhost:5291/swagger` (development only)
-- Health endpoint at `http://localhost:5291/health`
-
-### Run API Standalone (for testing)
+#### Run Application
 ```bash
 cd PoTool.Api
 dotnet run
 ```
 
 The API will be available at `http://localhost:5291` with:
-- OpenAPI documentation at `/swagger`
-- Health endpoint at `/health`
-- SignalR hub at `/hubs/workitems`
+- **Main Application**: `http://localhost:5291`
+- **OpenAPI documentation**: `http://localhost:5291/swagger` (development only)
+- **Health endpoint**: `http://localhost:5291/health`
+- **SignalR hub**: `http://localhost:5291/hubs/workitems`
 
 ## Database
 
