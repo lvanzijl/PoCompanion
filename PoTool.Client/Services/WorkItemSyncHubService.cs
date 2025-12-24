@@ -5,9 +5,11 @@ namespace PoTool.Client.Services;
 /// <summary>
 /// Implementation of SignalR connection management for work item synchronization.
 /// </summary>
-public class WorkItemSyncHubService : IWorkItemSyncHubService
+public class WorkItemSyncHubService : IWorkItemSyncHubService, IAsyncDisposable
 {
     private HubConnection? _hubConnection;
+    private readonly SemaphoreSlim _connectionLock = new(1, 1);
+    private bool _isDisposed;
 
     /// <inheritdoc/>
     public event Action<string, string>? OnSyncStatusChanged;
@@ -18,22 +20,35 @@ public class WorkItemSyncHubService : IWorkItemSyncHubService
     /// <inheritdoc/>
     public async Task StartAsync(string hubUrl)
     {
-        if (_hubConnection != null)
-        {
-            await StopAsync();
-        }
-
-        Console.WriteLine($"[WorkItemSyncHubService] Connecting to hub: {hubUrl}");
-
-        _hubConnection = new HubConnectionBuilder()
-            .WithUrl(hubUrl)
-            .WithAutomaticReconnect()
-            .Build();
-
-        _hubConnection.On<object>("SyncStatus", HandleSyncStatus);
-
+        await _connectionLock.WaitAsync();
         try
         {
+            if (_isDisposed)
+                throw new ObjectDisposedException(nameof(WorkItemSyncHubService));
+
+            if (_hubConnection != null)
+            {
+                if (_hubConnection.State == HubConnectionState.Connected)
+                {
+                    Console.WriteLine("[WorkItemSyncHubService] Already connected");
+                    return;
+                }
+                // Only stop if connection exists and is not already disconnected
+                if (_hubConnection.State != HubConnectionState.Disconnected)
+                {
+                    await StopAsync();
+                }
+            }
+
+            Console.WriteLine($"[WorkItemSyncHubService] Connecting to hub: {hubUrl}");
+
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(hubUrl)
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On<object>("SyncStatus", HandleSyncStatus);
+
             await _hubConnection.StartAsync();
             Console.WriteLine("[WorkItemSyncHubService] SignalR connected successfully");
         }
@@ -41,6 +56,10 @@ public class WorkItemSyncHubService : IWorkItemSyncHubService
         {
             Console.WriteLine($"[WorkItemSyncHubService] Error connecting to SignalR hub: {ex.Message}");
             throw;
+        }
+        finally
+        {
+            _connectionLock.Release();
         }
     }
 
@@ -84,11 +103,15 @@ public class WorkItemSyncHubService : IWorkItemSyncHubService
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
+        _isDisposed = true;
+        
         if (_hubConnection != null)
         {
             await _hubConnection.DisposeAsync();
             _hubConnection = null;
         }
+        
+        _connectionLock.Dispose();
     }
 
     private void HandleSyncStatus(object status)

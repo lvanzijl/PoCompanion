@@ -344,4 +344,47 @@ public class PullRequestMetricsServiceTests
         // Assert
         Assert.AreNotEqual(hash1, hash2);
     }
+
+    [TestMethod]
+    public void GetTimeOpenChartData_EmptyList_ReturnsEmptyArrays()
+    {
+        // Arrange
+        var metrics = new List<PullRequestMetricsDto>();
+
+        // Act
+        var (data, labels) = _service.GetTimeOpenChartData(metrics);
+
+        // Assert
+        Assert.AreEqual(0, data.Length);
+        Assert.AreEqual(0, labels.Length);
+    }
+
+    [TestMethod]
+    public void GetPRsByUserChartData_EmptyList_ReturnsEmptyArrays()
+    {
+        // Arrange
+        var metrics = new List<PullRequestMetricsDto>();
+
+        // Act
+        var (data, labels) = _service.GetPRsByUserChartData(metrics);
+
+        // Assert
+        Assert.AreEqual(0, data.Length);
+        Assert.AreEqual(0, labels.Length);
+    }
+
+    [TestMethod]
+    public void GetStatusChartData_EmptyList_ReturnsNoDataIndicator()
+    {
+        // Arrange
+        var metrics = new List<PullRequestMetricsDto>();
+
+        // Act
+        var (data, labels) = _service.GetStatusChartData(metrics);
+
+        // Assert
+        Assert.AreEqual(1, data.Length);
+        Assert.AreEqual(0.0, data[0]);
+        Assert.AreEqual("No data", labels[0]);
+    }
 }

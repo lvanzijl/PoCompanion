@@ -98,6 +98,9 @@ public class PullRequestMetricsService
     public (double[] data, string[] labels) GetTimeOpenChartData(IEnumerable<PullRequestMetricsDto> metrics)
     {
         var metricsList = metrics.ToList();
+        if (!metricsList.Any())
+            return (Array.Empty<double>(), Array.Empty<string>());
+
         var topItems = metricsList
             .OrderByDescending(m => m.TotalTimeOpen)
             .Take(10)
@@ -117,6 +120,9 @@ public class PullRequestMetricsService
     public (double[] data, string[] labels) GetPRsByUserChartData(IEnumerable<PullRequestMetricsDto> metrics)
     {
         var metricsList = metrics.ToList();
+        if (!metricsList.Any())
+            return (Array.Empty<double>(), Array.Empty<string>());
+
         var grouped = metricsList.GroupBy(m => m.CreatedBy).ToList();
         var data = grouped.Select(g => (double)g.Count()).ToArray();
         var labels = grouped.Select(g => g.Key).ToArray();
