@@ -19,14 +19,21 @@ This document defines the authoritative rules for storing Personal Access Tokens
 
 ### 2. Client-Side Secure Storage
 
-**Rule**: PAT MUST be stored using browser-based secure storage mechanisms with appropriate security measures.
+**Rule**: PAT MUST be stored using browser-based secure storage mechanisms with encryption or session-only storage.
 
-**Implementation**:
-- **Browser storage**: localStorage or sessionStorage with appropriate encryption
-- **Session-based**: In-memory storage for the duration of the session
-- **HTTP-only cookies**: For token-based authentication scenarios
+**Implementation Options** (in order of security preference):
+1. **Session-only storage (most secure)**: Store PAT only in memory during browser session - requires re-entry on page refresh
+2. **Encrypted browser storage**: Use localStorage/sessionStorage with client-side encryption and secure key management
+3. **HTTP-only cookies**: Server-managed tokens with HTTP-only and Secure flags
 
-**Note**: Since the application uses Blazor WebAssembly, browser-based secure storage is used instead of platform-specific credential stores.
+**Security Requirements**:
+- **NEVER** store PAT in plain text in browser storage
+- Implement Content Security Policy (CSP) to mitigate XSS attacks
+- Use HTTPS for all communications
+- Implement automatic session timeout
+- Clear PAT from memory when no longer needed
+
+**Note**: Since the application uses Blazor WebAssembly, browser-based secure storage with encryption or session-only storage is recommended. For production use, strongly consider session-only storage that requires users to re-enter PAT after browser refresh, as this provides the highest security.
 
 ### 3. No Server Persistence
 
@@ -68,22 +75,63 @@ Settings that are browser/session-specific and security-sensitive:
 
 ### Client Implementation
 
-1. **Use browser-based secure storage for PAT**:
+1. **Use browser-based secure storage for PAT with encryption**:
+
+**Security Note**: Since Blazor WebAssembly runs in the browser, PAT storage requires additional security measures:
+- **Never store PAT in plain text** in localStorage or sessionStorage
+- **Always encrypt** sensitive data before storing in browser storage
+- Consider using **session-only storage** (in-memory) when possible
+- Implement **XSS protection** measures (Content Security Policy)
+- Consider using **HTTP-only cookies** for token-based authentication instead
+
 ```csharp
-// In Blazor WebAssembly, use JavaScript interop with localStorage
-// or implement a secure storage service
+// Example: Secure storage with encryption in Blazor WebAssembly
+// Note: This is a conceptual example - actual implementation should use
+// a robust encryption library and secure key management
 
-// Store PAT (via JavaScript interop)
-await JSRuntime.InvokeVoidAsync("localStorage.setItem", "tfs_pat", patValue);
+public class SecureStorageService
+{
+    private readonly IJSRuntime _jsRuntime;
+    private readonly IEncryptionService _encryption;
+    
+    public async Task<string> GetPatAsync()
+    {
+        var encrypted = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "tfs_pat_enc");
+        if (string.IsNullOrEmpty(encrypted))
+            return null;
+        
+        return _encryption.Decrypt(encrypted);
+    }
+    
+    public async Task SetPatAsync(string pat)
+    {
+        var encrypted = _encryption.Encrypt(pat);
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "tfs_pat_enc", encrypted);
+    }
+    
+    public async Task RemovePatAsync()
+    {
+        await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "tfs_pat_enc");
+    }
+}
 
-// Retrieve PAT
-string pat = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "tfs_pat");
-
-// Remove PAT
-await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "tfs_pat");
-
-// Note: Consider additional encryption for sensitive data in browser storage
+// Alternative: Session-only storage (more secure but requires re-entry)
+// Store PAT only in memory during the browser session
+public class SessionStorageService
+{
+    private string _pat;
+    
+    public void SetPat(string pat) => _pat = pat;
+    public string GetPat() => _pat;
+    public void Clear() => _pat = null;
+}
 ```
+
+**Recommended Approach**:
+- Use session-only storage (in-memory) for PATs when possible
+- If persistence is required, use encrypted storage with proper key management
+- Implement automatic session timeout and PAT clearing
+- Add Content Security Policy (CSP) headers to prevent XSS attacks
 
 2. **PAT Lifecycle**:
    - User enters PAT in UI
@@ -217,15 +265,36 @@ POST /api/sessions/tfs
 
 Before considering this change complete, verify:
 
-- [ ] PAT stored using browser secure storage with appropriate security measures
+- [ ] PAT stored using browser secure storage with encryption OR session-only storage
+- [ ] PAT never stored in plain text in browser storage
+- [ ] Content Security Policy (CSP) headers configured
 - [ ] PAT never written to database
 - [ ] PAT cleared from server memory after use
+- [ ] Automatic session timeout implemented
 - [ ] Database migration removes ProtectedPat column
 - [ ] TFS operations work with client-provided PAT
 - [ ] PAT validation endpoint works without storing PAT
 - [ ] All tests pass
 - [ ] Security scan (CodeQL) passes
 - [ ] Documentation updated
+
+## Security Considerations for Browser Storage
+
+### XSS Attack Mitigation
+- Implement Content Security Policy (CSP) headers
+- Sanitize all user input
+- Use Blazor's built-in XSS protection
+- Avoid using `eval()` or similar unsafe JavaScript
+
+### Storage Security
+- **Preferred**: Use session-only (in-memory) storage
+- **Acceptable**: Use encrypted browser storage with secure key management
+- **Never**: Store PAT in plain text
+
+### Transport Security
+- Always use HTTPS in production
+- Implement HTTP Strict Transport Security (HSTS)
+- Validate TLS certificates
 
 ## References
 
