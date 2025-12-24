@@ -43,6 +43,11 @@ artifacts/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 *.trx
+test-results/
+
+# Playwright
+.playwright/
+ms-playwright/
 
 # Database files
 *.db
