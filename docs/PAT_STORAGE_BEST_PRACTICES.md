@@ -87,7 +87,8 @@ Settings that are browser/session-specific and security-sensitive:
 ```csharp
 // Example: Secure storage with encryption in Blazor WebAssembly
 // Note: This is a conceptual example - actual implementation should use
-// a robust encryption library and secure key management
+// a robust encryption library like System.Security.Cryptography
+// and implement proper error handling and key management
 
 public class SecureStorageService
 {
@@ -96,11 +97,20 @@ public class SecureStorageService
     
     public async Task<string> GetPatAsync()
     {
-        var encrypted = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "tfs_pat_enc");
-        if (string.IsNullOrEmpty(encrypted))
+        try
+        {
+            var encrypted = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "tfs_pat_enc");
+            if (string.IsNullOrEmpty(encrypted))
+                return null;
+            
+            return _encryption.Decrypt(encrypted);
+        }
+        catch (CryptographicException ex)
+        {
+            // Handle decryption failures (corrupted data, wrong key, etc.)
+            // Log error and return null or throw appropriate exception
             return null;
-        
-        return _encryption.Decrypt(encrypted);
+        }
     }
     
     public async Task SetPatAsync(string pat)
@@ -114,6 +124,16 @@ public class SecureStorageService
         await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "tfs_pat_enc");
     }
 }
+
+// Encryption service interface - implement using System.Security.Cryptography
+public interface IEncryptionService
+{
+    string Encrypt(string plainText);
+    string Decrypt(string cipherText);
+}
+
+// Recommended: Use AES encryption with a secure key derivation function
+// See: https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.aes
 
 // Alternative: Session-only storage (more secure but requires re-entry)
 // Store PAT only in memory during the browser session

@@ -337,7 +337,7 @@ Handlers and pipelines live in Api.
 
 ### 15.1 Warnings Policy
 - **All warnings MUST be treated as errors** in all projects
-- Projects MUST set `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` in their .csproj files
+- Projects MUST set `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` in their .csproj files (MSBuild XML)
 - No exceptions to this rule
 - Code MUST build without any warnings before being merged
 
