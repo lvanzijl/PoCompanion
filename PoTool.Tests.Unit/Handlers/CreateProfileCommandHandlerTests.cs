@@ -59,9 +59,9 @@ public class CreateProfileCommandHandlerTests
         Assert.IsNotNull(result);
         Assert.AreEqual(1, result.Id);
         Assert.AreEqual("Test Profile", result.Name);
-        Assert.AreEqual(2, result.AreaPaths.Count);
+        Assert.HasCount(2, result.AreaPaths);
         Assert.AreEqual("Team Alpha", result.TeamName);
-        Assert.AreEqual(3, result.GoalIds.Count);
+        Assert.HasCount(3, result.GoalIds);
 
         _mockRepository.Verify(r => r.CreateProfileAsync(
             "Test Profile",
@@ -106,8 +106,8 @@ public class CreateProfileCommandHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual("Minimal Profile", result.Name);
-        Assert.AreEqual(0, result.AreaPaths.Count);
-        Assert.AreEqual(0, result.GoalIds.Count);
+        Assert.IsEmpty(result.AreaPaths);
+        Assert.IsEmpty(result.GoalIds);
     }
 
     [TestMethod]
@@ -151,7 +151,7 @@ public class CreateProfileCommandHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(3, result.AreaPaths.Count);
+        Assert.HasCount(3, result.AreaPaths);
         Assert.AreEqual("Project\\ProductA", result.AreaPaths[0]);
         Assert.AreEqual("Project\\ProductA\\Mobile", result.AreaPaths[1]);
         Assert.AreEqual("Project\\ProductB", result.AreaPaths[2]);

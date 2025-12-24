@@ -56,9 +56,9 @@ public class WorkItemSelectionServiceTests
         var newState = _service.ToggleNodeSelection(node, currentState);
 
         // Assert
-        Assert.AreEqual(1, newState.SelectedIds.Count);
-        Assert.IsTrue(newState.SelectedIds.Contains(1));
-        Assert.AreEqual(1, newState.SelectedWorkItems.Count);
+        Assert.HasCount(1, newState.SelectedIds);
+        Assert.Contains(newState.SelectedIds, 1);
+        Assert.HasCount(1, newState.SelectedWorkItems);
         Assert.IsNotNull(newState.PrimarySelectedWorkItem);
         Assert.AreEqual(1, newState.PrimarySelectedWorkItem.TfsId);
     }
@@ -82,8 +82,8 @@ public class WorkItemSelectionServiceTests
         var newState = _service.ToggleNodeSelection(node, currentState);
 
         // Assert
-        Assert.AreEqual(0, newState.SelectedIds.Count);
-        Assert.AreEqual(0, newState.SelectedWorkItems.Count);
+        Assert.IsEmpty(newState.SelectedIds);
+        Assert.IsEmpty(newState.SelectedWorkItems);
         Assert.IsNull(newState.PrimarySelectedWorkItem);
     }
 
@@ -100,10 +100,10 @@ public class WorkItemSelectionServiceTests
         var state2 = _service.ToggleNodeSelection(node2, state1);
 
         // Assert
-        Assert.AreEqual(2, state2.SelectedIds.Count);
-        Assert.IsTrue(state2.SelectedIds.Contains(1));
-        Assert.IsTrue(state2.SelectedIds.Contains(2));
-        Assert.AreEqual(2, state2.SelectedWorkItems.Count);
+        Assert.HasCount(2, state2.SelectedIds);
+        Assert.Contains(state2.SelectedIds, 1);
+        Assert.Contains(state2.SelectedIds, 2);
+        Assert.HasCount(2, state2.SelectedWorkItems);
         Assert.AreEqual(2, state2.PrimarySelectedWorkItem?.TfsId); // Last selected
     }
 
@@ -122,8 +122,8 @@ public class WorkItemSelectionServiceTests
         var state = _service.SelectAllNodes(flatNodeList);
 
         // Assert
-        Assert.AreEqual(3, state.SelectedIds.Count);
-        Assert.AreEqual(3, state.SelectedWorkItems.Count);
+        Assert.HasCount(3, state.SelectedIds);
+        Assert.HasCount(3, state.SelectedWorkItems);
         Assert.IsNotNull(state.PrimarySelectedWorkItem);
         Assert.AreEqual(1, state.PrimarySelectedWorkItem.TfsId); // First item
     }
@@ -138,8 +138,8 @@ public class WorkItemSelectionServiceTests
         var state = _service.SelectAllNodes(flatNodeList);
 
         // Assert
-        Assert.AreEqual(0, state.SelectedIds.Count);
-        Assert.AreEqual(0, state.SelectedWorkItems.Count);
+        Assert.IsEmpty(state.SelectedIds);
+        Assert.IsEmpty(state.SelectedWorkItems);
         Assert.IsNull(state.PrimarySelectedWorkItem);
     }
 
@@ -152,8 +152,8 @@ public class WorkItemSelectionServiceTests
         var state = _service.ClearSelection();
 
         // Assert
-        Assert.AreEqual(0, state.SelectedIds.Count);
-        Assert.AreEqual(0, state.SelectedWorkItems.Count);
+        Assert.IsEmpty(state.SelectedIds);
+        Assert.IsEmpty(state.SelectedWorkItems);
         Assert.IsNull(state.PrimarySelectedWorkItem);
     }
 
@@ -270,7 +270,7 @@ public class WorkItemSelectionServiceTests
         var flatList = _service.BuildFlatNodeList(treeRoots);
 
         // Assert
-        Assert.AreEqual(3, flatList.Count);
+        Assert.HasCount(3, flatList);
         Assert.AreEqual(1, flatList[0].Id);
         Assert.AreEqual(2, flatList[1].Id);
         Assert.AreEqual(3, flatList[2].Id);
@@ -293,7 +293,7 @@ public class WorkItemSelectionServiceTests
         var flatList = _service.BuildFlatNodeList(treeRoots);
 
         // Assert
-        Assert.AreEqual(1, flatList.Count); // Only parent, no children
+        Assert.HasCount(1, flatList); // Only parent, no children
         Assert.AreEqual(1, flatList[0].Id);
     }
 }

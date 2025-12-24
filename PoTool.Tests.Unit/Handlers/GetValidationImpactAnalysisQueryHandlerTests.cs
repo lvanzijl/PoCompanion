@@ -53,7 +53,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.Violations.Count);
+        Assert.IsEmpty(result.Violations);
         Assert.AreEqual(0, result.TotalBlockedItems);
         Assert.AreEqual(0, result.TotalAffectedHierarchies);
     }
@@ -89,11 +89,11 @@ public class GetValidationImpactAnalysisQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(1, result.Violations.Count);
+        Assert.HasCount(1, result.Violations);
         Assert.AreEqual(2, result.Violations[0].WorkItemId);
         Assert.AreEqual("Epic", result.Violations[0].WorkItemType);
         Assert.AreEqual("Error", result.Violations[0].Severity);
-        Assert.IsTrue(result.TotalBlockedItems >= 0);
+        Assert.IsGreaterThanOrEqualTo(result.TotalBlockedItems, 0);
     }
 
     [TestMethod]
@@ -128,12 +128,12 @@ public class GetValidationImpactAnalysisQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.TotalBlockedItems > 0);
-        Assert.AreEqual(1, result.Violations.Count);
+        Assert.IsGreaterThan(result.TotalBlockedItems, 0);
+        Assert.HasCount(1, result.Violations);
         
         // The violation should have descendants
         var violation = result.Violations[0];
-        Assert.IsTrue(violation.BlockedDescendantIds.Count > 0);
+        Assert.IsNotEmpty(violation.BlockedDescendantIds);
     }
 
     [TestMethod]
@@ -168,13 +168,13 @@ public class GetValidationImpactAnalysisQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.IsNotNull(result.Recommendations);
-        Assert.IsTrue(result.Recommendations.Count > 0);
+        Assert.IsNotEmpty(result.Recommendations);
         
         // Should have a recommendation to set parents to in progress
         var setParentsRecommendation = result.Recommendations
             .FirstOrDefault(r => r.RecommendationType == "SetParentsToInProgress");
         Assert.IsNotNull(setParentsRecommendation);
-        Assert.IsTrue(setParentsRecommendation.Priority > 0);
+        Assert.IsGreaterThan(setParentsRecommendation.Priority, 0);
     }
 
     [TestMethod]
@@ -213,7 +213,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(1, result.Violations.Count);
+        Assert.HasCount(1, result.Violations);
         Assert.AreEqual(2, result.Violations[0].WorkItemId);
     }
 

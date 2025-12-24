@@ -118,7 +118,7 @@ public class GetPullRequestMetricsQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         var metrics = result.Single();
-        Assert.IsTrue(metrics.TotalTimeOpen.TotalDays >= 3);
+        Assert.IsGreaterThanOrEqualTo(metrics.TotalTimeOpen.TotalDays, 3);
         Assert.IsNull(metrics.CompletedDate);
     }
 

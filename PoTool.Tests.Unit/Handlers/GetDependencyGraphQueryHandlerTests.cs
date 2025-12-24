@@ -36,11 +36,11 @@ public class GetDependencyGraphQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.Nodes.Count);
-        Assert.AreEqual(0, result.Links.Count);
-        Assert.AreEqual(0, result.CriticalPaths.Count);
-        Assert.AreEqual(0, result.BlockedWorkItemIds.Count);
-        Assert.AreEqual(0, result.CircularDependencies.Count);
+        Assert.IsEmpty(result.Nodes);
+        Assert.IsEmpty(result.Links);
+        Assert.IsEmpty(result.CriticalPaths);
+        Assert.IsEmpty(result.BlockedWorkItemIds);
+        Assert.IsEmpty(result.CircularDependencies);
     }
 
     [TestMethod]
@@ -64,8 +64,8 @@ public class GetDependencyGraphQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(2, result.Nodes.Count);
-        Assert.AreEqual(2, result.Links.Count);
+        Assert.HasCount(2, result.Nodes);
+        Assert.HasCount(2, result.Links);
         
         var node1 = result.Nodes.FirstOrDefault(n => n.WorkItemId == 1);
         Assert.IsNotNull(node1);
@@ -100,7 +100,7 @@ public class GetDependencyGraphQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(2, result.Nodes.Count);
+        Assert.HasCount(2, result.Nodes);
         Assert.IsTrue(result.Nodes.All(n => n.WorkItemId == 1 || n.WorkItemId == 3));
     }
 
@@ -124,7 +124,7 @@ public class GetDependencyGraphQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(2, result.Nodes.Count);
+        Assert.HasCount(2, result.Nodes);
         Assert.IsTrue(result.Nodes.All(n => n.Type == "Epic" || n.Type == "Feature"));
     }
 
@@ -148,7 +148,7 @@ public class GetDependencyGraphQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(2, result.Nodes.Count);
+        Assert.HasCount(2, result.Nodes);
         Assert.IsTrue(result.Nodes.All(n => n.WorkItemId == 1 || n.WorkItemId == 3));
     }
 
@@ -175,8 +175,8 @@ public class GetDependencyGraphQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(3, result.Nodes.Count);
-        Assert.IsTrue(result.CircularDependencies.Count > 0, "Should detect circular dependency");
+        Assert.HasCount(3, result.Nodes);
+        Assert.IsNotEmpty(result.CircularDependencies, "Should detect circular dependency");
     }
 
     [TestMethod]
@@ -203,8 +203,8 @@ public class GetDependencyGraphQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(4, result.Nodes.Count);
-        Assert.IsTrue(result.CriticalPaths.Count > 0, "Should find critical paths");
+        Assert.HasCount(4, result.Nodes);
+        Assert.IsNotEmpty(result.CriticalPaths, "Should find critical paths");
         
         var longestPath = result.CriticalPaths.OrderByDescending(p => p.ChainLength).First();
         Assert.AreEqual(4, longestPath.ChainLength);
@@ -232,7 +232,7 @@ public class GetDependencyGraphQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.BlockedWorkItemIds.Count > 0, "Should identify blocking work items");
+        Assert.IsNotEmpty(result.BlockedWorkItemIds, "Should identify blocking work items");
         Assert.IsTrue(result.BlockedWorkItemIds.Contains(1), "Work item 1 should be marked as blocking");
     }
 
@@ -257,8 +257,8 @@ public class GetDependencyGraphQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(2, result.Nodes.Count);
-        Assert.AreEqual(2, result.Links.Count);
+        Assert.HasCount(2, result.Nodes);
+        Assert.HasCount(2, result.Links);
         
         // Hierarchy links are mapped as RelatedTo since they don't contain "parent" or "child" keywords
         var hierarchyLink = result.Links.FirstOrDefault(l => l.LinkType == DependencyLinkType.RelatedTo);
@@ -284,7 +284,7 @@ public class GetDependencyGraphQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(2, result.Nodes.Count);
+        Assert.HasCount(2, result.Nodes);
         
         var node1 = result.Nodes.FirstOrDefault(n => n.WorkItemId == 1);
         Assert.IsNotNull(node1);
@@ -310,8 +310,8 @@ public class GetDependencyGraphQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(1, result.Nodes.Count);
-        Assert.AreEqual(0, result.Links.Count, "Should not create link to missing work item");
+        Assert.HasCount(1, result.Nodes);
+        Assert.IsEmpty(result.Links, "Should not create link to missing work item");
     }
 
     private static WorkItemDto CreateWorkItem(int tfsId, string type, string state, string areaPath, int? effort, string jsonPayload)

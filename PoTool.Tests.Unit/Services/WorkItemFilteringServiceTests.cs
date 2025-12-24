@@ -34,7 +34,7 @@ public class WorkItemFilteringServiceTests
         var result = _service.FilterByValidationWithAncestors(workItems, targetIds).ToList();
 
         // Assert
-        Assert.AreEqual(3, result.Count);
+        Assert.HasCount(3, result);
         Assert.IsTrue(result.Any(wi => wi.TfsId == 1)); // Goal included
         Assert.IsTrue(result.Any(wi => wi.TfsId == 2)); // Feature included
         Assert.IsTrue(result.Any(wi => wi.TfsId == 3)); // Story included
@@ -58,7 +58,7 @@ public class WorkItemFilteringServiceTests
         var result = _service.FilterByValidationWithAncestors(workItems, targetIds).ToList();
 
         // Assert
-        Assert.AreEqual(5, result.Count); // All items should be included
+        Assert.HasCount(5, result); // All items should be included
     }
 
     [TestMethod]
@@ -76,7 +76,7 @@ public class WorkItemFilteringServiceTests
         var result = _service.FilterByValidationWithAncestors(workItems, targetIds).ToList();
 
         // Assert
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.IsTrue(result.Any(wi => wi.TfsId == 3)); // Only the orphan itself
     }
 
@@ -119,9 +119,9 @@ public class WorkItemFilteringServiceTests
         var result = _service.GetWorkItemIdsByValidationFilter(workItems, "parentProgress").ToList();
 
         // Assert
-        Assert.AreEqual(2, result.Count);
-        Assert.IsTrue(result.Contains(1));
-        Assert.IsTrue(result.Contains(3));
+        Assert.HasCount(2, result);
+        Assert.Contains(result, 1);
+        Assert.Contains(result, 3);
     }
 
     [TestMethod]
@@ -154,8 +154,8 @@ public class WorkItemFilteringServiceTests
         var result = _service.GetWorkItemIdsByValidationFilter(workItems, "missingEffort").ToList();
 
         // Assert
-        Assert.AreEqual(1, result.Count);
-        Assert.IsTrue(result.Contains(1));
+        Assert.HasCount(1, result);
+        Assert.Contains(result, 1);
     }
 
     [TestMethod]
@@ -211,7 +211,7 @@ public class WorkItemFilteringServiceTests
         var result = _service.ApplyCombinedFilter(workItems, null, Enumerable.Empty<string>()).ToList();
 
         // Assert
-        Assert.AreEqual(2, result.Count);
+        Assert.HasCount(2, result);
     }
 
     [TestMethod]
@@ -244,7 +244,7 @@ public class WorkItemFilteringServiceTests
         var result = _service.ApplyCombinedFilter(workItems, null, enabledFilters).ToList();
 
         // Assert
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual(1, result[0].TfsId);
     }
 

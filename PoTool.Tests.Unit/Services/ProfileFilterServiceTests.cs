@@ -81,7 +81,7 @@ public class ProfileFilterServiceTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(2, result.Count);
+        Assert.HasCount(2, result);
         Assert.AreEqual("Project\\ProductA", result[0]);
         Assert.AreEqual("Project\\ProductB", result[1]);
     }

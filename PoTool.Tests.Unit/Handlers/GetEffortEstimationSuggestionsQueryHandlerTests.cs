@@ -52,7 +52,7 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.Count);
+        Assert.IsEmpty(result);
     }
 
     [TestMethod]
@@ -78,9 +78,9 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual(4, result[0].WorkItemId);
-        Assert.IsTrue(result[0].SuggestedEffort > 0);
+        Assert.IsGreaterThan(result[0].SuggestedEffort, 0);
         Assert.IsTrue(result[0].Confidence >= 0 && result[0].Confidence <= 1);
         Assert.IsFalse(string.IsNullOrEmpty(result[0].Rationale));
     }
@@ -104,7 +104,7 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual(1, result[0].WorkItemId);
     }
 
@@ -127,7 +127,7 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual(1, result[0].WorkItemId);
     }
 
@@ -149,10 +149,10 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual(3, result[0].SuggestedEffort); // Default for Task
-        Assert.IsTrue(result[0].Confidence < 0.5); // Low confidence without history
-        Assert.IsTrue(result[0].Rationale.Contains("No historical data"));
+        Assert.IsLessThan(result[0].Confidence, 0.5); // Low confidence without history
+        Assert.Contains(result[0].Rationale, "No historical data");
     }
 
     [TestMethod]
@@ -179,9 +179,9 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual(5, result[0].SuggestedEffort); // Median of 3,5,5,8 is 5
-        Assert.IsTrue(result[0].SimilarWorkItems.Count > 0);
+        Assert.IsNotEmpty(result[0].SimilarWorkItems);
     }
 
     [TestMethod]
@@ -203,7 +203,7 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual(1, result[0].WorkItemId);
     }
 
@@ -231,7 +231,7 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(2, result.Count);
+        Assert.HasCount(2, result);
         var taskSuggestion = result.First(s => s.WorkItemType == "Task");
         var storySuggestion = result.First(s => s.WorkItemType == "User Story");
         

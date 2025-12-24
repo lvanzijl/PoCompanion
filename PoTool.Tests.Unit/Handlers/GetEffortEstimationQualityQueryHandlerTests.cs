@@ -44,7 +44,7 @@ public class GetEffortEstimationQualityQueryHandlerTests
         Assert.IsNotNull(result);
         Assert.AreEqual(0, result.TotalCompletedWorkItems);
         Assert.AreEqual(0, result.WorkItemsWithEstimates);
-        Assert.AreEqual(0, result.QualityByType.Count);
+        Assert.IsEmpty(result.QualityByType);
     }
 
     [TestMethod]
@@ -71,7 +71,7 @@ public class GetEffortEstimationQualityQueryHandlerTests
         Assert.IsNotNull(result);
         Assert.AreEqual(5, result.TotalCompletedWorkItems);
         Assert.AreEqual(5, result.WorkItemsWithEstimates);
-        Assert.AreEqual(2, result.QualityByType.Count); // Task and Bug
+        Assert.HasCount(2, result.QualityByType); // Task and Bug
         Assert.IsTrue(result.AverageEstimationAccuracy >= 0 && result.AverageEstimationAccuracy <= 1);
     }
 
@@ -96,14 +96,14 @@ public class GetEffortEstimationQualityQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(1, result.QualityByType.Count);
+        Assert.HasCount(1, result.QualityByType);
         var taskQuality = result.QualityByType[0];
         Assert.AreEqual("Task", taskQuality.WorkItemType);
         Assert.AreEqual(4, taskQuality.Count);
         Assert.AreEqual(5, taskQuality.AverageEffort);
         Assert.AreEqual(5, taskQuality.TypicalEffortMin);
         Assert.AreEqual(5, taskQuality.TypicalEffortMax);
-        Assert.IsTrue(taskQuality.AverageAccuracy > 0.9); // Very consistent
+        Assert.IsGreaterThan(taskQuality.AverageAccuracy, 0.9); // Very consistent
     }
 
     [TestMethod]
@@ -131,7 +131,7 @@ public class GetEffortEstimationQualityQueryHandlerTests
         Assert.AreEqual("Task", taskQuality.WorkItemType);
         Assert.AreEqual(1, taskQuality.TypicalEffortMin);
         Assert.AreEqual(20, taskQuality.TypicalEffortMax);
-        Assert.IsTrue(taskQuality.AverageAccuracy < 0.9); // Less consistent
+        Assert.IsLessThan(taskQuality.AverageAccuracy, 0.9); // Less consistent
     }
 
     [TestMethod]
@@ -179,7 +179,7 @@ public class GetEffortEstimationQualityQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.TrendOverTime.Count >= 2); // At least 2 iterations
+        Assert.IsGreaterThanOrEqualTo(result.TrendOverTime.Count, 2); // At least 2 iterations
     }
 
     [TestMethod]
@@ -201,7 +201,7 @@ public class GetEffortEstimationQualityQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.TrendOverTime.Count <= 5);
+        Assert.IsLessThanOrEqualTo(result.TrendOverTime.Count, 5);
     }
 
     [TestMethod]

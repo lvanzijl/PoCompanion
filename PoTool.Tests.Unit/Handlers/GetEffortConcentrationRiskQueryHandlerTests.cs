@@ -41,9 +41,9 @@ public class GetEffortConcentrationRiskQueryHandlerTests
         Assert.IsNotNull(result);
         Assert.AreEqual(ConcentrationRiskLevel.None, result.OverallRiskLevel);
         Assert.AreEqual(0, result.ConcentrationIndex);
-        Assert.AreEqual(0, result.AreaPathRisks.Count);
-        Assert.AreEqual(0, result.IterationRisks.Count);
-        Assert.AreEqual(0, result.Recommendations.Count);
+        Assert.IsEmpty(result.AreaPathRisks);
+        Assert.IsEmpty(result.IterationRisks);
+        Assert.IsEmpty(result.Recommendations);
     }
 
     [TestMethod]
@@ -69,8 +69,8 @@ public class GetEffortConcentrationRiskQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         // Well distributed - no single entity has > 25% of total
-        Assert.IsTrue(result.OverallRiskLevel <= ConcentrationRiskLevel.Medium);
-        Assert.IsTrue(result.ConcentrationIndex < 70);
+        Assert.IsLessThanOrEqualTo(result.OverallRiskLevel, ConcentrationRiskLevel.Medium);
+        Assert.IsLessThan(result.ConcentrationIndex, 70);
     }
 
     [TestMethod]
@@ -94,10 +94,10 @@ public class GetEffortConcentrationRiskQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(ConcentrationRiskLevel.Critical, result.OverallRiskLevel);
-        Assert.IsTrue(result.AreaPathRisks.Count > 0);
+        Assert.IsNotEmpty(result.AreaPathRisks);
         var dominantArea = result.AreaPathRisks.First();
         Assert.AreEqual(ConcentrationRiskLevel.Critical, dominantArea.RiskLevel);
-        Assert.IsTrue(dominantArea.PercentageOfTotal > 80);
+        Assert.IsGreaterThan(dominantArea.PercentageOfTotal, 80);
     }
 
     [TestMethod]
@@ -120,10 +120,10 @@ public class GetEffortConcentrationRiskQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.OverallRiskLevel >= ConcentrationRiskLevel.High);
-        Assert.IsTrue(result.IterationRisks.Count > 0);
+        Assert.IsGreaterThanOrEqualTo(result.OverallRiskLevel, ConcentrationRiskLevel.High);
+        Assert.IsNotEmpty(result.IterationRisks);
         var highRiskSprint = result.IterationRisks.First();
-        Assert.IsTrue(highRiskSprint.RiskLevel >= ConcentrationRiskLevel.High);
+        Assert.IsGreaterThanOrEqualTo(highRiskSprint.RiskLevel, ConcentrationRiskLevel.High);
     }
 
     [TestMethod]
@@ -147,7 +147,7 @@ public class GetEffortConcentrationRiskQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.OverallRiskLevel >= ConcentrationRiskLevel.Medium);
+        Assert.IsGreaterThanOrEqualTo(result.OverallRiskLevel, ConcentrationRiskLevel.Medium);
         var mainArea = result.AreaPathRisks.FirstOrDefault(r => r.Path == "MainArea");
         Assert.IsNotNull(mainArea);
         Assert.AreEqual(ConcentrationRiskLevel.Medium, mainArea.RiskLevel);
@@ -172,7 +172,7 @@ public class GetEffortConcentrationRiskQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.Recommendations.Count > 0);
+        Assert.IsNotEmpty(result.Recommendations);
         Assert.IsTrue(result.Recommendations.Any(r => 
             r.Strategy == MitigationStrategy.DiversifyAcrossAreas));
     }
@@ -199,8 +199,8 @@ public class GetEffortConcentrationRiskQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         var highRiskArea = result.AreaPathRisks.First();
-        Assert.IsTrue(highRiskArea.TopWorkItems.Count > 0);
-        Assert.IsTrue(highRiskArea.TopWorkItems.Count <= 5);
+        Assert.IsNotEmpty(highRiskArea.TopWorkItems);
+        Assert.IsLessThanOrEqualTo(highRiskArea.TopWorkItems.Count, 5);
     }
 
     [TestMethod]
@@ -238,8 +238,8 @@ public class GetEffortConcentrationRiskQueryHandlerTests
         var result2 = await _handler.Handle(query2, CancellationToken.None);
 
         // Assert - concentrated should have higher risk than distributed
-        Assert.IsTrue(result1.OverallRiskLevel > result2.OverallRiskLevel);
-        Assert.IsTrue(result1.ConcentrationIndex >= result2.ConcentrationIndex);
+        Assert.IsGreaterThan(result1.OverallRiskLevel, result2.OverallRiskLevel);
+        Assert.IsGreaterThanOrEqualTo(result1.ConcentrationIndex, result2.ConcentrationIndex);
     }
 
     [TestMethod]

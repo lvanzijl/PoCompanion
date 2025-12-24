@@ -119,7 +119,7 @@ public class TfsClientTests
         var results = (await _client.GetWorkItemsAsync("TestProject\\Area1")).ToList();
 
         // Assert
-        Assert.AreEqual(2, results.Count);
+        Assert.HasCount(2, results);
         
         var parentItem = results.First(x => x.TfsId == 100);
         Assert.IsNull(parentItem.ParentTfsId, "Root item should have no parent");
@@ -203,7 +203,7 @@ public class TfsClientTests
         var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
 
         // Assert
-        Assert.AreEqual(3, results.Count);
+        Assert.HasCount(3, results);
         
         var epic = results.First(x => x.TfsId == 1);
         Assert.IsNull(epic.ParentTfsId, "Epic should have no parent");
@@ -252,7 +252,7 @@ public class TfsClientTests
         var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
 
         // Assert
-        Assert.AreEqual(1, results.Count);
+        Assert.HasCount(1, results);
         Assert.IsNull(results[0].ParentTfsId, "Empty parent should be treated as null");
     }
 
@@ -293,7 +293,7 @@ public class TfsClientTests
         var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
 
         // Assert
-        Assert.AreEqual(1, results.Count);
+        Assert.HasCount(1, results);
         Assert.IsNull(results[0].ParentTfsId, "Invalid parent URL should be treated as null");
     }
 
@@ -312,7 +312,7 @@ public class TfsClientTests
         var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
 
         // Assert
-        Assert.AreEqual(0, results.Count, "Empty response should return empty list");
+        Assert.IsEmpty(results, "Empty response should return empty list");
     }
 
     [TestMethod]
@@ -345,7 +345,7 @@ public class TfsClientTests
         var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
 
         // Assert
-        Assert.AreEqual(1, results.Count);
+        Assert.HasCount(1, results);
         Assert.AreEqual(string.Empty, results[0].Title, "Null title should be converted to empty string");
         Assert.IsNotNull(results[0].AreaPath, "Null area path should be handled");
     }
@@ -379,7 +379,7 @@ public class TfsClientTests
         var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
 
         // Assert
-        Assert.AreEqual(500, results.Count, "Should handle large result sets");
+        Assert.HasCount(500, results, "Should handle large result sets");
     }
 
     [TestMethod]
@@ -412,7 +412,7 @@ public class TfsClientTests
         var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
 
         // Assert
-        Assert.AreEqual(1, results.Count);
+        Assert.HasCount(1, results);
         Assert.Contains("quotes", results[0].Title, "Should preserve special characters in title");
         Assert.Contains("\\", results[0].AreaPath, "Should preserve backslashes in paths");
     }
@@ -471,8 +471,8 @@ public class TfsClientTests
         var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
 
         // Assert - Should process at least the 2 valid items (may process all 3)
-        Assert.IsTrue(results.Count >= 2, "Should process at least the 2 valid items");
-        Assert.IsTrue(results.Count <= 3, "Should not process more than 3 items total");
+        Assert.IsGreaterThanOrEqualTo(results.Count, 2, "Should process at least the 2 valid items");
+        Assert.IsLessThanOrEqualTo(results.Count, 3, "Should not process more than 3 items total");
     }
 
     private int _responseIndex = 0;

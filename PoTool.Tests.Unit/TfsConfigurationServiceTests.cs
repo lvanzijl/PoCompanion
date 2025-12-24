@@ -75,7 +75,7 @@ public class TfsConfigurationServiceTests
 
         // Assert
         var configs = await _context.TfsConfigs.ToListAsync();
-        Assert.AreEqual(1, configs.Count, "Should only have one config");
+        Assert.HasCount(1, configs, "Should only have one config");
         
         var config = configs[0];
         Assert.AreEqual(newUrl, config.Url);

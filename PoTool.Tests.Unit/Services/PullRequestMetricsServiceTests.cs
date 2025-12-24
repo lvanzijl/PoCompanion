@@ -138,7 +138,7 @@ public class PullRequestMetricsServiceTests
         var result = _service.FilterByDateRange(metrics, null, null).ToList();
 
         // Assert
-        Assert.AreEqual(2, result.Count);
+        Assert.HasCount(2, result);
     }
 
     [TestMethod]
@@ -157,7 +157,7 @@ public class PullRequestMetricsServiceTests
         var result = _service.FilterByDateRange(metrics, startDate, null).ToList();
 
         // Assert
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual(2, result[0].PullRequestId);
     }
 
@@ -177,7 +177,7 @@ public class PullRequestMetricsServiceTests
         var result = _service.FilterByDateRange(metrics, null, endDate).ToList();
 
         // Assert
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual(1, result[0].PullRequestId);
     }
 
@@ -191,9 +191,9 @@ public class PullRequestMetricsServiceTests
         var (data, labels) = _service.GetStatusChartData(metrics);
 
         // Assert
-        Assert.AreEqual(1, data.Length);
+        Assert.HasCount(1, data);
         Assert.AreEqual(0.0, data[0]);
-        Assert.AreEqual(1, labels.Length);
+        Assert.HasCount(1, labels);
         Assert.AreEqual("No data", labels[0]);
     }
 
@@ -212,8 +212,8 @@ public class PullRequestMetricsServiceTests
         var (data, labels) = _service.GetStatusChartData(metrics);
 
         // Assert
-        Assert.AreEqual(2, data.Length);
-        Assert.AreEqual(2, labels.Length);
+        Assert.HasCount(2, data);
+        Assert.HasCount(2, labels);
         Assert.IsTrue(data.Contains(2.0)); // 2 Active
         Assert.IsTrue(data.Contains(1.0)); // 1 Completed
     }
@@ -232,8 +232,8 @@ public class PullRequestMetricsServiceTests
         var (data, labels) = _service.GetTimeOpenChartData(metrics);
 
         // Assert
-        Assert.AreEqual(10, data.Length);
-        Assert.AreEqual(10, labels.Length);
+        Assert.HasCount(10, data);
+        Assert.HasCount(10, labels);
         Assert.AreEqual(15.0, data[0]); // Highest time open first
         Assert.AreEqual(6.0, data[9]); // 10th highest
     }
@@ -262,9 +262,9 @@ public class PullRequestMetricsServiceTests
         var (_, labels) = _service.GetTimeOpenChartData(metrics);
 
         // Assert
-        Assert.AreEqual(1, labels.Length);
-        Assert.IsTrue(labels[0].EndsWith("..."));
-        Assert.IsTrue(labels[0].Length <= 30);
+        Assert.HasCount(1, labels);
+        Assert.EndsWith(labels[0], "...");
+        Assert.IsLessThanOrEqualTo(labels[0].Length, 30);
     }
 
     [TestMethod]
@@ -283,8 +283,8 @@ public class PullRequestMetricsServiceTests
         var (data, labels) = _service.GetPRsByUserChartData(metrics);
 
         // Assert
-        Assert.AreEqual(3, data.Length); // 3 unique users
-        Assert.AreEqual(3, labels.Length);
+        Assert.HasCount(3, data); // 3 unique users
+        Assert.HasCount(3, labels);
         Assert.IsTrue(data.Contains(2.0)); // User0 has 2 PRs
     }
 
@@ -355,8 +355,8 @@ public class PullRequestMetricsServiceTests
         var (data, labels) = _service.GetTimeOpenChartData(metrics);
 
         // Assert
-        Assert.AreEqual(0, data.Length);
-        Assert.AreEqual(0, labels.Length);
+        Assert.HasCount(0, data);
+        Assert.HasCount(0, labels);
     }
 
     [TestMethod]
@@ -369,8 +369,8 @@ public class PullRequestMetricsServiceTests
         var (data, labels) = _service.GetPRsByUserChartData(metrics);
 
         // Assert
-        Assert.AreEqual(0, data.Length);
-        Assert.AreEqual(0, labels.Length);
+        Assert.HasCount(0, data);
+        Assert.HasCount(0, labels);
     }
 
     [TestMethod]
@@ -383,7 +383,7 @@ public class PullRequestMetricsServiceTests
         var (data, labels) = _service.GetStatusChartData(metrics);
 
         // Assert
-        Assert.AreEqual(1, data.Length);
+        Assert.HasCount(1, data);
         Assert.AreEqual(0.0, data[0]);
         Assert.AreEqual("No data", labels[0]);
     }

@@ -40,9 +40,9 @@ public class GetEffortDistributionQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(0, result.TotalEffort);
-        Assert.AreEqual(0, result.EffortByArea.Count);
-        Assert.AreEqual(0, result.EffortByIteration.Count);
-        Assert.AreEqual(0, result.HeatMapData.Count);
+        Assert.IsEmpty(result.EffortByArea);
+        Assert.IsEmpty(result.EffortByIteration);
+        Assert.IsEmpty(result.HeatMapData);
     }
 
     [TestMethod]
@@ -67,8 +67,8 @@ public class GetEffortDistributionQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(29, result.TotalEffort); // 5 + 8 + 3 + 13
-        Assert.IsTrue(result.EffortByArea.Count > 0);
-        Assert.IsTrue(result.EffortByIteration.Count > 0);
+        Assert.IsNotEmpty(result.EffortByArea);
+        Assert.IsNotEmpty(result.EffortByIteration);
     }
 
     [TestMethod]
@@ -114,7 +114,7 @@ public class GetEffortDistributionQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.EffortByIteration.Count <= 5);
+        Assert.IsLessThanOrEqualTo(result.EffortByIteration.Count, 5);
     }
 
     [TestMethod]
@@ -186,7 +186,7 @@ public class GetEffortDistributionQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.HeatMapData.Count > 0);
+        Assert.IsNotEmpty(result.HeatMapData);
         
         // Check specific cell
         var area1Sprint1 = result.HeatMapData.FirstOrDefault(c => 
@@ -320,7 +320,7 @@ public class GetEffortDistributionQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.EffortByArea.Count <= 10);
+        Assert.IsLessThanOrEqualTo(result.EffortByArea.Count, 10);
     }
 
     [TestMethod]

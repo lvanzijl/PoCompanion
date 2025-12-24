@@ -41,9 +41,9 @@ public class GetEffortDistributionTrendQueryHandlerTests
         Assert.IsNotNull(result);
         Assert.AreEqual(EffortTrendDirection.Stable, result.OverallTrend);
         Assert.AreEqual(0, result.TrendSlope);
-        Assert.AreEqual(0, result.TrendBySprint.Count);
-        Assert.AreEqual(0, result.TrendByAreaPath.Count);
-        Assert.AreEqual(0, result.Forecasts.Count);
+        Assert.IsEmpty(result.TrendBySprint);
+        Assert.IsEmpty(result.TrendByAreaPath);
+        Assert.IsEmpty(result.Forecasts);
     }
 
     [TestMethod]
@@ -68,8 +68,8 @@ public class GetEffortDistributionTrendQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(EffortTrendDirection.Increasing, result.OverallTrend);
-        Assert.IsTrue(result.TrendSlope > 0);
-        Assert.AreEqual(4, result.TrendBySprint.Count);
+        Assert.IsGreaterThan(result.TrendSlope, 0);
+        Assert.HasCount(4, result.TrendBySprint);
     }
 
     [TestMethod]
@@ -94,7 +94,7 @@ public class GetEffortDistributionTrendQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(EffortTrendDirection.Decreasing, result.OverallTrend);
-        Assert.IsTrue(result.TrendSlope < 0);
+        Assert.IsLessThan(result.TrendSlope, 0);
     }
 
     [TestMethod]
@@ -119,7 +119,7 @@ public class GetEffortDistributionTrendQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(EffortTrendDirection.Stable, result.OverallTrend);
-        Assert.IsTrue(Math.Abs(result.TrendSlope) < 1); // Near zero
+        Assert.IsLessThan(Math.Abs(result.TrendSlope), 1); // Near zero
     }
 
     [TestMethod]
@@ -167,8 +167,8 @@ public class GetEffortDistributionTrendQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.Forecasts.Count > 0);
-        Assert.IsTrue(result.Forecasts.Count <= 3); // Should forecast 3 future sprints
+        Assert.IsNotEmpty(result.Forecasts);
+        Assert.IsLessThanOrEqualTo(result.Forecasts.Count, 3); // Should forecast 3 future sprints
         Assert.IsTrue(result.Forecasts.All(f => f.ForecastedEffort > 0));
         Assert.IsTrue(result.Forecasts.All(f => f.ConfidenceLevel > 0 && f.ConfidenceLevel <= 1));
     }
@@ -191,7 +191,7 @@ public class GetEffortDistributionTrendQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.Forecasts.Count);
+        Assert.IsEmpty(result.Forecasts);
     }
 
     [TestMethod]
@@ -214,7 +214,7 @@ public class GetEffortDistributionTrendQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(3, result.TrendBySprint.Count);
+        Assert.HasCount(3, result.TrendBySprint);
         
         var sprint2 = result.TrendBySprint[1];
         Assert.IsTrue(sprint2.ChangeFromPrevious > 20 && sprint2.ChangeFromPrevious < 30);
@@ -244,7 +244,7 @@ public class GetEffortDistributionTrendQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.TrendByAreaPath.Count >= 2);
+        Assert.IsGreaterThanOrEqualTo(result.TrendByAreaPath.Count, 2);
         
         var teamATrend = result.TrendByAreaPath.FirstOrDefault(t => t.AreaPath == "TeamA");
         Assert.IsNotNull(teamATrend);
