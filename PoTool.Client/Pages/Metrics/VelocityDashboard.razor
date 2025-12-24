@@ -32,7 +32,7 @@
                           Message="There are no sprints with completed work items to display velocity metrics."
                           AdditionalInfo="Make sure you have synced work items from Azure DevOps with iteration paths and completed story points." />
     }
-    else
+    else if (!_isLoading && _velocityTrend != null)
     {
         <!-- Velocity Summary Cards -->
         <MudGrid Class="mb-6">

@@ -35,7 +35,7 @@
         <EmptyStateDisplay Title="No Backlog Health Data Available"
                           Message="No work items found to analyze. Please sync work items first." />
     }
-    else
+    else if (!_isLoading && _healthData != null)
     {
         <ErrorDisplay ErrorResponse="@_errorResponse" 
                       Class="mb-4"
@@ -76,7 +76,7 @@
     private MultiIterationBacklogHealthDto? _healthData;
     private bool _isLoading = true;
     private ErrorResponse? _errorResponse;
-    private string? _areaPathFilter;
+    private string? _areaPathFilter = null;
     private int _maxIterations = 5;
 
     private ChartOptions _chartOptions = new()

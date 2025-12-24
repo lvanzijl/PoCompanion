@@ -37,7 +37,7 @@
         <EmptyStateDisplay Title="No Effort Distribution Data Available"
                           Message="No work items found to analyze. Please sync work items first." />
     }
-    else
+    else if (!_isLoading && _distributionData != null)
     {
         <ErrorDisplay ErrorResponse="@_errorResponse" 
                       Class="mb-4"

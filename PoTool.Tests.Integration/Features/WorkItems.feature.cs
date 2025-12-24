@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Work Items Management", "    As a user\r\n    I want to retrieve and sync work items from TFS\r\n    So that I" +
-                " can view and manage my backlog", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Work Items Management", ("    As a user\n    I want to retrieve and sync work items from TFS\n    So that I c" +
+                "an view and manage my backlog"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "WorkItems.feature"
 #line hidden

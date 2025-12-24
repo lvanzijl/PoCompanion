@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Settings Management", "    As a user\r\n    I want to manage application settings\r\n    So that I can confi" +
-                "gure my preferences", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Settings Management", ("    As a user\n    I want to manage application settings\n    So that I can configu" +
+                "re my preferences"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "Settings.feature"
 #line hidden

@@ -123,7 +123,6 @@ public class WorkItemSelectionService
         }
 
         TreeNode? targetNode = null;
-        bool shouldToggle = false;
 
         switch (key)
         {

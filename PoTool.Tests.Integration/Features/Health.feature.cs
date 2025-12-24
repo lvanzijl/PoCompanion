@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Health Check Endpoint", "    As a system administrator\r\n    I want to check the application health\r\n    So" +
-                " that I can monitor its status", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Health Check Endpoint", ("    As a system administrator\n    I want to check the application health\n    So t" +
+                "hat I can monitor its status"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "Health.feature"
 #line hidden

@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Dependency Graph API", "    As a user\r\n    I want to access dependency graph through the API\r\n    So that" +
-                " I can visualize work item dependencies and detect circular dependencies", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Dependency Graph API", ("    As a user\n    I want to access dependency graph through the API\n    So that I" +
+                " can visualize work item dependencies and detect circular dependencies"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "DependencyGraphController.feature"
 #line hidden
@@ -140,8 +140,8 @@ await this.FeatureBackgroundAsync();
                             "New",
                             "20",
                             "Project\\TeamA",
-                            "{\"relations\":[{\"rel\":\"System.LinkTypes.Hierarchy-Forward\",\"url\":\"http://tfs/workI" +
-                                "tems/1002\"}]}"});
+                            ("{\"relations\":[{\"rel\":\"System.LinkTypes.Hierarchy-Forward\",\"url\":\"http://tfs/workI" +
+                                "tems/1002\"}]}")});
                 table1.AddRow(new string[] {
                             "1002",
                             "Feature 1",
@@ -149,9 +149,9 @@ await this.FeatureBackgroundAsync();
                             "New",
                             "10",
                             "Project\\TeamA",
-                            "{\"relations\":[{\"rel\":\"System.LinkTypes.Hierarchy-Reverse\",\"url\":\"http://tfs/workI" +
+                            ("{\"relations\":[{\"rel\":\"System.LinkTypes.Hierarchy-Reverse\",\"url\":\"http://tfs/workI" +
                                 "tems/1001\"},{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/workI" +
-                                "tems/1003\"}]}"});
+                                "tems/1003\"}]}")});
                 table1.AddRow(new string[] {
                             "1003",
                             "Task 1",
@@ -159,8 +159,8 @@ await this.FeatureBackgroundAsync();
                             "New",
                             "5",
                             "Project\\TeamA",
-                            "{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Reverse\",\"url\":\"http://tfs/work" +
-                                "Items/1002\"}]}"});
+                            ("{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Reverse\",\"url\":\"http://tfs/work" +
+                                "Items/1002\"}]}")});
 #line 10
     await testRunner.GivenAsync("work items with dependencies exist", ((string)(null)), table1, "Given ");
 #line hidden
@@ -415,8 +415,8 @@ await this.FeatureBackgroundAsync();
                             "New",
                             "5",
                             "Project\\TeamA",
-                            "{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
-                                "Items/5002\"}]}"});
+                            ("{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
+                                "Items/5002\"}]}")});
                 table5.AddRow(new string[] {
                             "5002",
                             "Task B",
@@ -424,8 +424,8 @@ await this.FeatureBackgroundAsync();
                             "New",
                             "5",
                             "Project\\TeamA",
-                            "{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
-                                "Items/5003\"}]}"});
+                            ("{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
+                                "Items/5003\"}]}")});
                 table5.AddRow(new string[] {
                             "5003",
                             "Task C",
@@ -433,8 +433,8 @@ await this.FeatureBackgroundAsync();
                             "New",
                             "5",
                             "Project\\TeamA",
-                            "{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
-                                "Items/5001\"}]}"});
+                            ("{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
+                                "Items/5001\"}]}")});
 #line 50
     await testRunner.GivenAsync("work items with circular dependencies exist", ((string)(null)), table5, "Given ");
 #line hidden
@@ -490,8 +490,8 @@ await this.FeatureBackgroundAsync();
                             "New",
                             "5",
                             "Project\\TeamA",
-                            "{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
-                                "Items/6002\"}]}"});
+                            ("{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
+                                "Items/6002\"}]}")});
                 table6.AddRow(new string[] {
                             "6002",
                             "Task 2",
@@ -499,8 +499,8 @@ await this.FeatureBackgroundAsync();
                             "New",
                             "8",
                             "Project\\TeamA",
-                            "{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
-                                "Items/6003\"}]}"});
+                            ("{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
+                                "Items/6003\"}]}")});
                 table6.AddRow(new string[] {
                             "6003",
                             "Task 3",
@@ -508,8 +508,8 @@ await this.FeatureBackgroundAsync();
                             "New",
                             "10",
                             "Project\\TeamA",
-                            "{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
-                                "Items/6004\"}]}"});
+                            ("{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
+                                "Items/6004\"}]}")});
                 table6.AddRow(new string[] {
                             "6004",
                             "Task 4",
@@ -517,8 +517,8 @@ await this.FeatureBackgroundAsync();
                             "New",
                             "15",
                             "Project\\TeamA",
-                            "{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
-                                "Items/6005\"}]}"});
+                            ("{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
+                                "Items/6005\"}]}")});
                 table6.AddRow(new string[] {
                             "6005",
                             "Task 5",
@@ -582,8 +582,8 @@ await this.FeatureBackgroundAsync();
                             "New",
                             "10",
                             "Project\\TeamA",
-                            "{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Reverse\",\"url\":\"http://tfs/work" +
-                                "Items/7002\"}]}"});
+                            ("{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Reverse\",\"url\":\"http://tfs/work" +
+                                "Items/7002\"}]}")});
                 table7.AddRow(new string[] {
                             "7002",
                             "Dependent",
@@ -591,8 +591,8 @@ await this.FeatureBackgroundAsync();
                             "New",
                             "5",
                             "Project\\TeamA",
-                            "{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
-                                "Items/7001\"}]}"});
+                            ("{\"relations\":[{\"rel\":\"System.LinkTypes.Dependency-Forward\",\"url\":\"http://tfs/work" +
+                                "Items/7001\"}]}")});
 #line 74
     await testRunner.GivenAsync("work items with blocking relationships exist", ((string)(null)), table7, "Given ");
 #line hidden

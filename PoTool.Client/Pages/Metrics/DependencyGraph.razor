@@ -63,7 +63,8 @@
     </MudPaper>
 
     <LoadingIndicator IsLoading="@_isLoading" />
-    else if (_graphData != null)
+    
+    @if (!_isLoading && _graphData != null)
     {
         <ErrorDisplay ErrorResponse="@_errorResponse" 
                       Class="mb-4"
