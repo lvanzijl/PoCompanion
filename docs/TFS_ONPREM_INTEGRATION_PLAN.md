@@ -40,7 +40,7 @@ This document outlines the complete plan for implementing real on-premises Team 
 - API Version: `7.0` (Azure DevOps Services / TFS 2022+)
 
 **Authentication:**
-- PAT storage: Client-side using MAUI SecureStorage (see `PAT_STORAGE_BEST_PRACTICES.md`)
+- PAT storage: Client-side using browser secure storage (see `PAT_STORAGE_BEST_PRACTICES.md`)
 - Configuration: TfsConfigurationService manages URL, Project (non-sensitive config only)
 - PAT provided by client per request or per session
 - No NTLM/Windows Authentication support yet
@@ -204,7 +204,7 @@ public class TfsAuthenticationProvider
     "Url": "https://tfs.company.com/DefaultCollection",
     "Project": "MyProject",
     "AuthMode": "Pat|Ntlm",
-    // Note: PAT is stored client-side in MAUI SecureStorage, not in config
+    // Note: PAT is stored client-side in browser secure storage, not in config
     "UseDefaultCredentials": false,
     "Timeout": 30
   }

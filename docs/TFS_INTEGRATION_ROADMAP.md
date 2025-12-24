@@ -49,7 +49,7 @@ This roadmap is the single source of truth for implementing real on-premises TFS
 - Parent-child work item relationships
 - Configuration management (TfsConfigurationService)
 - Test infrastructure (MockTfsClient, unit tests)
-- Client-side PAT storage using MAUI SecureStorage (see PAT_STORAGE_BEST_PRACTICES.md)
+- Client-side PAT storage using browser secure storage (see PAT_STORAGE_BEST_PRACTICES.md)
 
 ### ❌ What's Missing
 - **Pull Requests** - All methods are stubs (not implemented)

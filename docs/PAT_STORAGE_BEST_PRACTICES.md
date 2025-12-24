@@ -17,16 +17,23 @@ This document defines the authoritative rules for storing Personal Access Tokens
 - Users may have different credentials on different workstations
 - Credentials should not roam between workstations for security reasons
 
-### 2. Platform-Specific Secure Storage
+### 2. Client-Side Secure Storage
 
-**Rule**: PAT MUST be stored using platform-native secure storage mechanisms via MAUI SecureStorage API.
+**Rule**: PAT MUST be stored using browser-based secure storage mechanisms with encryption or session-only storage.
 
-**Implementation**:
-- **Windows**: Windows Credential Manager (DPAPI encryption)
-- **macOS**: Keychain Services
-- **Linux**: Secret Service API (libsecret/GNOME Keyring)
+**Implementation Options** (in order of security preference):
+1. **Session-only storage (most secure)**: Store PAT only in memory during browser session - requires re-entry on page refresh
+2. **Encrypted browser storage**: Use localStorage/sessionStorage with client-side encryption and secure key management
+3. **HTTP-only cookies**: Server-managed tokens with HTTP-only and Secure flags
 
-**MAUI SecureStorage** automatically selects the appropriate platform mechanism.
+**Security Requirements**:
+- **NEVER** store PAT in plain text in browser storage
+- Implement Content Security Policy (CSP) to mitigate XSS attacks
+- Use HTTPS for all communications
+- Implement automatic session timeout
+- Clear PAT from memory when no longer needed
+
+**Note**: Since the application uses Blazor WebAssembly, browser-based secure storage with encryption or session-only storage is recommended. For production use, strongly consider session-only storage that requires users to re-enter PAT after browser refresh, as this provides the highest security.
 
 ### 3. No Server Persistence
 
@@ -55,28 +62,96 @@ Settings that should persist across workstations:
 - User preferences (UI settings, filters, etc.)
 - Application state (work item caches, metadata)
 
-#### Client-Side Storage (Secure Local)
-Settings that are workstation-specific and security-sensitive:
+#### Client-Side Storage (Browser Secure Local)
+Settings that are browser/session-specific and security-sensitive:
 - Personal Access Token (PAT)
 - Session tokens
 - Temporary authentication state
 - User-specific secrets
 
+**Note**: When using browser storage, consider additional security measures like encryption and secure transmission.
+
 ## Implementation Requirements
 
 ### Client Implementation
 
-1. **Use MAUI SecureStorage for PAT**:
+1. **Use browser-based secure storage for PAT with encryption**:
+
+**Security Note**: Since Blazor WebAssembly runs in the browser, PAT storage requires additional security measures:
+- **Never store PAT in plain text** in localStorage or sessionStorage
+- **Always encrypt** sensitive data before storing in browser storage
+- Consider using **session-only storage** (in-memory) when possible
+- Implement **XSS protection** measures (Content Security Policy)
+- Consider using **HTTP-only cookies** for token-based authentication instead
+
 ```csharp
-// Store PAT
-await SecureStorage.SetAsync("tfs_pat", patValue);
+// Example: Secure storage with encryption in Blazor WebAssembly
+// Note: This is a conceptual example - actual implementation should use
+// a robust encryption library like System.Security.Cryptography
+// and implement proper error handling and key management
 
-// Retrieve PAT
-string pat = await SecureStorage.GetAsync("tfs_pat");
+public class SecureStorageService
+{
+    private readonly IJSRuntime _jsRuntime;
+    private readonly IEncryptionService _encryption;
+    
+    public async Task<string> GetPatAsync()
+    {
+        try
+        {
+            var encrypted = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "tfs_pat_enc");
+            if (string.IsNullOrEmpty(encrypted))
+                return null;
+            
+            return _encryption.Decrypt(encrypted);
+        }
+        catch (CryptographicException ex)
+        {
+            // Handle decryption failures (corrupted data, wrong key, etc.)
+            // Log error and return null or throw appropriate exception
+            return null;
+        }
+    }
+    
+    public async Task SetPatAsync(string pat)
+    {
+        var encrypted = _encryption.Encrypt(pat);
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "tfs_pat_enc", encrypted);
+    }
+    
+    public async Task RemovePatAsync()
+    {
+        await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "tfs_pat_enc");
+    }
+}
 
-// Remove PAT
-SecureStorage.Remove("tfs_pat");
+// Encryption service interface - implement using System.Security.Cryptography
+public interface IEncryptionService
+{
+    string Encrypt(string plainText);
+    string Decrypt(string cipherText);
+}
+
+// Recommended: Use AES encryption with a secure key derivation function
+// See: https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.aes
+
+// Alternative: Session-only storage (more secure but requires re-entry)
+// Store PAT only in memory during the browser session
+public class SessionStorageService
+{
+    private string _pat;
+    
+    public void SetPat(string pat) => _pat = pat;
+    public string GetPat() => _pat;
+    public void Clear() => _pat = null;
+}
 ```
+
+**Recommended Approach**:
+- Use session-only storage (in-memory) for PATs when possible
+- If persistence is required, use encrypted storage with proper key management
+- Implement automatic session timeout and PAT clearing
+- Add Content Security Policy (CSP) headers to prevent XSS attacks
 
 2. **PAT Lifecycle**:
    - User enters PAT in UI
@@ -174,16 +249,16 @@ POST /api/sessions/tfs
 - Client retrieves config without PAT
 
 ### Target State (To-Be)
-- PAT stored in MAUI SecureStorage on client
+- PAT stored in browser secure storage on client
 - API receives PAT per request or per session
 - Database contains only non-sensitive config (URL, Project)
 - Client manages PAT lifecycle
 
 ### Migration Steps
 
-1. **Add SecureStorage to Client**
+1. **Add Secure Storage to Client**
    - Create secure storage service abstraction
-   - Implement MAUI SecureStorage wrapper
+   - Implement browser storage wrapper with encryption
    - Add PAT storage/retrieval methods
 
 2. **Update Client UI**
@@ -210,9 +285,12 @@ POST /api/sessions/tfs
 
 Before considering this change complete, verify:
 
-- [ ] PAT stored using MAUI SecureStorage
+- [ ] PAT stored using browser secure storage with encryption OR session-only storage
+- [ ] PAT never stored in plain text in browser storage
+- [ ] Content Security Policy (CSP) headers configured
 - [ ] PAT never written to database
 - [ ] PAT cleared from server memory after use
+- [ ] Automatic session timeout implemented
 - [ ] Database migration removes ProtectedPat column
 - [ ] TFS operations work with client-provided PAT
 - [ ] PAT validation endpoint works without storing PAT
@@ -220,9 +298,27 @@ Before considering this change complete, verify:
 - [ ] Security scan (CodeQL) passes
 - [ ] Documentation updated
 
+## Security Considerations for Browser Storage
+
+### XSS Attack Mitigation
+- Implement Content Security Policy (CSP) headers
+- Sanitize all user input
+- Use Blazor's built-in XSS protection
+- Avoid using `eval()` or similar unsafe JavaScript
+
+### Storage Security
+- **Preferred**: Use session-only (in-memory) storage
+- **Acceptable**: Use encrypted browser storage with secure key management
+- **Never**: Store PAT in plain text
+
+### Transport Security
+- Always use HTTPS in production
+- Implement HTTP Strict Transport Security (HSTS)
+- Validate TLS certificates
+
 ## References
 
-- [MAUI SecureStorage Documentation](https://learn.microsoft.com/en-us/dotnet/maui/platform-integration/storage/secure-storage)
+- [Browser Storage Security](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API/Using_the_Web_Storage_API#security)
 - [Azure DevOps PAT Best Practices](https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate)
 - [OWASP Credential Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Credential_Storage_Cheat_Sheet.html)
 

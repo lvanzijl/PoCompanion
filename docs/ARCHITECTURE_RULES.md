@@ -23,15 +23,14 @@ The application consists of four strictly separated layers:
    - Persistence and integrations
 
 3. **Frontend**
-   - Blazor Hybrid (not WebAssembly)
+   - Blazor WebAssembly
    - Razor class library
    - UI logic and presentation
    - Communicates only with Api
 
-4. **Shell**
-   - MAUI Hybrid desktop application
-   - Hosts Blazor frontend in BlazorWebView
-   - Manages backend lifecycle via ApiHostService
+4. **Hosting**
+   - ASP.NET Core Web API hosts both backend and frontend
+   - Serves Blazor WebAssembly as static files
    - Single executable deployment
 
 Layer boundaries are absolute.
@@ -72,7 +71,7 @@ Api MUST NOT:
 
 ### 2.3 Frontend
 Frontend:
-- MUST be Blazor Hybrid (Razor class library)
+- MUST be Blazor WebAssembly (Razor class library)
 - MUST communicate exclusively via:
   - HTTP Web API
   - SignalR
@@ -86,35 +85,34 @@ Frontend MUST NOT:
 
 ---
 
-### 2.4 Shell
-Shell:
-- Hosts the frontend
-- Starts and monitors the backend
-- Performs health checks only
+### 2.4 Hosting
+Hosting:
+- ASP.NET Core Web API serves both API and frontend
+- Frontend is served as static files via Blazor WebAssembly Server hosting
+- Single executable contains all components
 
-Shell MUST NOT:
-- Contain business logic
-- Access TFS
-- Perform data processing
-- Communicate with backend other than startup and health monitoring
+Hosting MUST NOT:
+- Allow direct method calls between frontend and backend
+- Bypass API layer for frontend communication
 
 ---
 
 ## 3. Hosting model
 
 ### 3.1 Current model
-- Application runs as a single executable
-- Backend is started in-process by the Shell
-- Frontend runs in a MAUI WebView
-- Communication via `localhost` HTTP + SignalR
+- Application runs as a single ASP.NET Core executable
+- Backend Web API and frontend are hosted in-process
+- Frontend is Blazor WebAssembly served as static files
+- Communication via HTTP + SignalR
 
-### 3.2 Future model
+### 3.2 Deployment flexibility
 Backend MUST be able to run without code changes as:
-- Separate process
+- Standalone process
 - Windows service
 - Containerized service
+- Cloud-hosted service
 
-Frontend communication remains unchanged.
+Frontend communication remains unchanged regardless of deployment model.
 
 ---
 
@@ -172,7 +170,7 @@ Frontend MUST NOT trigger implicit TFS mutations.
 **See comprehensive rules in:** `PAT_STORAGE_BEST_PRACTICES.md`
 
 Summary:
-- PAT MUST be stored client-side using MAUI SecureStorage (platform secure storage)
+- PAT MUST be stored client-side using browser secure storage (localStorage with appropriate security measures)
 - PAT MUST NEVER be persisted on the server/API (not in database, cache, or logs)
 - API receives PAT per request or per session for validation/usage only
 - Server-side storage is for non-sensitive configuration only (URL, Project, settings)
@@ -188,7 +186,7 @@ Summary:
   - Significant actions
 - Logs MUST NOT contain sensitive data
 - Backend MUST expose a health endpoint
-- Shell monitors backend health via this endpoint
+- Health endpoint can be used for monitoring and readiness checks
 
 ---
 
@@ -209,9 +207,6 @@ The solution MUST contain at least:
 
 - **Frontend**
   - Blazor WebAssembly application
-
-- **Shell**
-  - MAUI desktop application
 
 - **Tests.Unit**
   - MSTest unit tests
@@ -328,62 +323,26 @@ Handlers and pipelines live in Api.
 3. Backend is the single integration point
 4. All TFS mutations are explicit and traceable
 5. Views define navigation; features define content only
-6. Backend runs in-process and out-of-process without changes
+6. Backend can be deployed standalone or as a hosted service without code changes
 7. Unit tests never use real TFS
 8. Only approved dependencies are allowed
 9. Microsoft DI is mandatory
 10. Only the source-generated Mediator is allowed
 11. Never manually edit generated code files (*.g.cs)
+12. Warnings are not allowed - all projects MUST treat warnings as errors
 
 ---
 
-## 15. MAUI Hybrid Architecture
+## 15. Code Quality
 
-### 15.1 Hosting Model
-- The application is a **MAUI Hybrid** app
-- ASP.NET Core API runs **in-process** within the MAUI app via `ApiHostService`
-- Blazor UI runs in a `BlazorWebView` (Blazor Hybrid, not WebAssembly)
-- Communication is via HTTP and SignalR over localhost (default: http://localhost:5291)
-- Single executable deployment containing all components
+### 15.1 Warnings Policy
+- **All warnings MUST be treated as errors** in all projects
+- Projects MUST set `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` in their .csproj files (MSBuild XML)
+- No exceptions to this rule
+- Code MUST build without any warnings before being merged
 
-### 15.2 API Lifecycle
-- API is started by `ApiHostService` during MAUI app initialization
-- API listens on `http://localhost:5291` (configurable)
-- API is stopped gracefully on app shutdown
-- Health checks ensure API availability before UI loads
-- `ApiInitializer` performs readiness polling with retry logic
-
-### 15.3 Future Scalability
-- API configuration MUST remain environment-agnostic
-- API MUST be able to run standalone without code changes (via PoTool.Api project)
-- Client MUST NOT assume in-process hosting
-- Communication MUST always be via HTTP/SignalR (no direct method calls)
-- To scale to client-server model: change HttpClient BaseAddress only
-
-### 15.4 Deployment
-- Single executable contains:
-  - MAUI shell
-  - API layer (embedded)
-  - Blazor components (embedded)
-  - All dependencies
-- No separate backend deployment needed for single-user scenarios
-- Database is local SQLite by default (located in app data directory)
-
-### 15.5 Platform Support
-- **Windows** (primary target) - net10.0-windows10.0.19041.0
-- **macOS** (via Mac Catalyst) - net10.0-maccatalyst
-- **Android** (optional) - net10.0-android
-- **iOS** (optional) - net10.0-ios
-
-### 15.6 Development Workflow
-- Run `PoTool.Maui` project to start complete application
-- API automatically starts on app launch
-- Blazor debugging available in development mode
-- API can still be run standalone via `PoTool.Api` for testing
-
-### 15.7 Architecture Compliance
-- All existing architecture rules (sections 1-14) remain in force
-- Layer boundaries are maintained (Core, Api, Frontend, Shell)
-- Communication between layers is strictly via HTTP/SignalR
-- No direct method calls between Frontend and Api
-- This model supports both in-process and out-of-process hosting
+### 15.2 Rationale
+- Warnings often indicate potential bugs or design issues
+- Treating warnings as errors enforces clean code
+- Prevents accumulation of technical debt
+- Ensures consistent code quality across the codebase

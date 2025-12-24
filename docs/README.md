@@ -1,11 +1,11 @@
 ## Architecture Summary (Read First)
 
-PO Companion is a strictly layered desktop application.
+PO Companion is a strictly layered web application.
 
 - **Core** contains all business logic and is infrastructure-agnostic.
 - **Backend (ASP.NET Core)** exposes all functionality via Web API and SignalR.
-- **Frontend (Blazor WASM)** consumes backend APIs only.
-- **Shell (MAUI)** hosts the frontend and manages backend lifecycle, nothing more.
+- **Frontend (Blazor WebAssembly)** consumes backend APIs only.
+- **Hosting** - ASP.NET Core hosts both backend and frontend as a single executable.
 
 Hard rules:
 - Frontend never talks to TFS.
@@ -13,7 +13,8 @@ Hard rules:
 - Backend is the only layer allowed to integrate with TFS.
 - All mutations are explicit, logged, and traceable.
 - UI navigation is view-driven; features never add navigation.
-- The backend must run both in-process and out-of-process without code changes.
+- The backend must run both in-process and standalone without code changes.
+- Warnings are not allowed - all projects MUST treat warnings as errors.
 
 Violating these rules is a design error, not an implementation shortcut.
 
@@ -56,7 +57,7 @@ Violating these rules is a design error, not an implementation shortcut.
    - Common issues and solutions
 
 ### Additional Documentation
-9. **[SINGLE_EXECUTABLE_ARCHITECTURE.md](SINGLE_EXECUTABLE_ARCHITECTURE.md)** - MAUI Hybrid hosting model
+9. **[SINGLE_EXECUTABLE_ARCHITECTURE.md](SINGLE_EXECUTABLE_ARCHITECTURE.md)** - ASP.NET Core single executable hosting model
 10. **[PAT_STORAGE_BEST_PRACTICES.md](PAT_STORAGE_BEST_PRACTICES.md)** - Security best practices for credential storage
 
 ---
