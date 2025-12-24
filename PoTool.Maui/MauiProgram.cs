@@ -5,9 +5,7 @@ using PoTool.Client.ApiClient;
 using PoTool.Client.Handlers;
 using PoTool.Client.Services;
 using PoTool.Core.Contracts;
-#if WINDOWS
 using PoTool.Maui.Services;
-#endif
 
 namespace PoTool.Maui;
 
@@ -79,7 +77,7 @@ public static class MauiProgram
         builder.Services.AddScoped<IClient>(sp =>
         {
             var httpClient = sp.GetRequiredService<HttpClient>();
-            return new Client(httpClient);
+            return new PoTool.Client.ApiClient.Client(httpClient);
         });
         
         builder.Services.AddScoped<IWorkItemsClient>(sp =>

@@ -31,6 +31,7 @@
     <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
     <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
 
-    <Color x:Key="PageBackgroundColor">{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Black}}</Color>
+    <!-- Use White as default page background color -->
+    <Color x:Key="PageBackgroundColor">#FFFFFF</Color>
 
 </ResourceDictionary>
