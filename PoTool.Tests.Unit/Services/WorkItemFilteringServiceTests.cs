@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Core.WorkItems.Filtering;
 using Moq;
 
 namespace PoTool.Tests.Unit.Services;
@@ -15,7 +16,8 @@ public class WorkItemFilteringServiceTests
     public void TestInitialize()
     {
         _mockTreeBuilderService = new Mock<ITreeBuilderService>();
-        _service = new WorkItemFilteringService(_mockTreeBuilderService.Object);
+        var filterer = new WorkItemFilterer();
+        _service = new WorkItemFilteringService(_mockTreeBuilderService.Object, filterer);
     }
 
     [TestMethod]

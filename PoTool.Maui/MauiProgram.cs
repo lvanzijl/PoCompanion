@@ -5,6 +5,8 @@ using PoTool.Client.ApiClient;
 using PoTool.Client.Handlers;
 using PoTool.Client.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Health;
+using PoTool.Core.WorkItems.Filtering;
 using PoTool.Maui.Services;
 
 namespace PoTool.Maui;
@@ -118,6 +120,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<IPreferencesService, MauiPreferencesService>();
         builder.Services.AddSingleton<ISecureStorageService, MauiSecureStorageService>();
         builder.Services.AddScoped<IOnboardingService, OnboardingService>();
+        
+        // Register Core business logic services (layer separation)
+        builder.Services.AddScoped<BacklogHealthCalculator>();
+        builder.Services.AddScoped<WorkItemFilterer>();
         
         // Register business logic services
         builder.Services.AddScoped<WorkItemFilteringService>();

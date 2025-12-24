@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MudBlazor;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Core.Health;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -13,7 +14,8 @@ public class BacklogHealthCalculationServiceTests
     [TestInitialize]
     public void TestInitialize()
     {
-        _service = new BacklogHealthCalculationService();
+        var calculator = new BacklogHealthCalculator();
+        _service = new BacklogHealthCalculationService(calculator);
     }
 
     private BacklogHealthDto CreateHealthDto(

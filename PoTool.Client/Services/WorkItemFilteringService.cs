@@ -1,19 +1,22 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
+using PoTool.Core.WorkItems.Filtering;
 
 namespace PoTool.Client.Services;
 
 /// <summary>
-/// Service for filtering work items with validation and text-based criteria.
-/// Handles ancestor inclusion logic to maintain hierarchy visibility.
+/// UI service for filtering work items with validation and text-based criteria.
+/// Business logic is delegated to Core layer.
 /// </summary>
 public class WorkItemFilteringService
 {
     private readonly ITreeBuilderService _treeBuilderService;
+    private readonly WorkItemFilterer _filterer;
 
-    public WorkItemFilteringService(ITreeBuilderService treeBuilderService)
+    public WorkItemFilteringService(ITreeBuilderService treeBuilderService, WorkItemFilterer filterer)
     {
         _treeBuilderService = treeBuilderService ?? throw new ArgumentNullException(nameof(treeBuilderService));
+        _filterer = filterer ?? throw new ArgumentNullException(nameof(filterer));
     }
 
     /// <summary>
@@ -26,42 +29,10 @@ public class WorkItemFilteringService
         IEnumerable<WorkItemWithValidationDto> items,
         HashSet<int> targetIds)
     {
-        var itemsList = items.ToList();
-        var itemLookup = itemsList.ToDictionary(w => w.TfsId);
-        var toInclude = new Dictionary<int, WorkItemWithValidationDto>();
-
-        foreach (var targetId in targetIds)
-        {
-            if (!itemLookup.TryGetValue(targetId, out var item))
-                continue;
-
-            // Include the target item
-            if (!toInclude.ContainsKey(item.TfsId))
-            {
-                toInclude[item.TfsId] = item;
-            }
-
-            // Include all ancestors
-            var current = item;
-            while (current.ParentTfsId.HasValue)
-            {
-                var parentId = current.ParentTfsId.Value;
-                if (itemLookup.TryGetValue(parentId, out var parent))
-                {
-                    if (!toInclude.ContainsKey(parent.TfsId))
-                    {
-                        toInclude[parent.TfsId] = parent;
-                    }
-                    current = parent;
-                }
-                else
-                {
-                    break;
-                }
-            }
-        }
-
-        return toInclude.Values.ToList();
+        // Wrap DTOs to match Core interface
+        var wrapped = items.Select(dto => new FilterableWorkItemAdapter(dto));
+        var filtered = _filterer.FilterByValidationWithAncestors(wrapped, targetIds);
+        return filtered.Select(w => w.WorkItem);
     }
 
     /// <summary>
@@ -74,18 +45,8 @@ public class WorkItemFilteringService
         IEnumerable<WorkItemWithValidationDto> workItems,
         string filterId)
     {
-        return filterId switch
-        {
-            "parentProgress" => workItems
-                .Where(wi => wi.ValidationIssues.Any(issue =>
-                    issue.Message.Contains("Parent") || issue.Message.Contains("Ancestor")))
-                .Select(wi => wi.TfsId),
-            "missingEffort" => workItems
-                .Where(wi => wi.ValidationIssues.Any(issue =>
-                    issue.Message.Contains("effort")))
-                .Select(wi => wi.TfsId),
-            _ => Enumerable.Empty<int>()
-        };
+        var wrapped = workItems.Select(dto => new FilterableWorkItemAdapter(dto));
+        return _filterer.GetWorkItemIdsByValidationFilter(wrapped, filterId);
     }
 
     /// <summary>
@@ -98,7 +59,8 @@ public class WorkItemFilteringService
         IEnumerable<WorkItemWithValidationDto> workItems,
         string filterId)
     {
-        return GetWorkItemIdsByValidationFilter(workItems, filterId).Count();
+        var wrapped = workItems.Select(dto => new FilterableWorkItemAdapter(dto));
+        return _filterer.CountWorkItemsByValidationFilter(wrapped, filterId);
     }
 
     /// <summary>
@@ -159,29 +121,9 @@ public class WorkItemFilteringService
         List<int> goalIds,
         IEnumerable<WorkItemWithValidationDto> allWorkItems)
     {
-        if (goalIds == null || goalIds.Count == 0)
-            return true;
-
-        // Check if this item is itself a goal
-        if (goalIds.Contains(item.TfsId))
-            return true;
-
-        // Create lookup dictionary for efficient parent traversal
-        var itemLookup = allWorkItems.ToDictionary(wi => wi.TfsId);
-
-        // Traverse up the parent chain to see if any ancestor is a configured goal
-        var current = item;
-        while (current.ParentTfsId.HasValue)
-        {
-            if (goalIds.Contains(current.ParentTfsId.Value))
-                return true;
-
-            // Find parent in lookup dictionary
-            if (!itemLookup.TryGetValue(current.ParentTfsId.Value, out current))
-                break;
-        }
-
-        return false;
+        var wrapped = new FilterableWorkItemAdapter(item);
+        var wrappedAll = allWorkItems.Select(wi => new FilterableWorkItemAdapter(wi));
+        return _filterer.IsDescendantOfGoals(wrapped, goalIds, wrappedAll);
     }
 
     private static WorkItemDto ConvertToWorkItemDto(WorkItemWithValidationDto item)
@@ -199,5 +141,35 @@ public class WorkItemFilteringService
             RetrievedAt = item.RetrievedAt,
             Effort = item.Effort
         };
+    }
+
+    /// <summary>
+    /// Adapter to make API DTOs compatible with Core filtering interfaces.
+    /// </summary>
+    private class FilterableWorkItemAdapter : WorkItemFilterer.IFilterableWorkItem
+    {
+        public WorkItemWithValidationDto WorkItem { get; }
+
+        public FilterableWorkItemAdapter(WorkItemWithValidationDto workItem)
+        {
+            WorkItem = workItem;
+        }
+
+        public int TfsId => WorkItem.TfsId;
+        public int? ParentTfsId => WorkItem.ParentTfsId;
+        public IEnumerable<WorkItemFilterer.IValidationIssue> ValidationIssues => 
+            WorkItem.ValidationIssues.Select(vi => new ValidationIssueAdapter(vi));
+
+        private class ValidationIssueAdapter : WorkItemFilterer.IValidationIssue
+        {
+            private readonly ValidationIssue _issue;
+
+            public ValidationIssueAdapter(ValidationIssue issue)
+            {
+                _issue = issue;
+            }
+
+            public string Message => _issue.Message;
+        }
     }
 }
