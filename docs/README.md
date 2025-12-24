@@ -57,8 +57,9 @@ Violating these rules is a design error, not an implementation shortcut.
    - Common issues and solutions
 
 ### Additional Documentation
-9. **[SINGLE_EXECUTABLE_ARCHITECTURE.md](SINGLE_EXECUTABLE_ARCHITECTURE.md)** - ASP.NET Core single executable hosting model
-10. **[PAT_STORAGE_BEST_PRACTICES.md](PAT_STORAGE_BEST_PRACTICES.md)** - Security best practices for credential storage
+9. **[RUNNING_FROM_VISUAL_STUDIO.md](RUNNING_FROM_VISUAL_STUDIO.md)** - Complete guide for running the application from Visual Studio
+10. **[SINGLE_EXECUTABLE_ARCHITECTURE.md](SINGLE_EXECUTABLE_ARCHITECTURE.md)** - ASP.NET Core single executable hosting model
+11. **[PAT_STORAGE_BEST_PRACTICES.md](PAT_STORAGE_BEST_PRACTICES.md)** - Security best practices for credential storage
 
 ---
 
@@ -66,9 +67,10 @@ Violating these rules is a design error, not an implementation shortcut.
 
 ### For New Developers
 1. Read **Architecture Summary** (above)
-2. Read **ARCHITECTURE_RULES.md** - Understand layer boundaries
-3. Read **COPILOT_ARCHITECTURE_CONTRACT.md** - AI assistance rules
-4. Read **TFS_INTEGRATION_QUICK_REFERENCE.md** - For TFS-related work
+2. Read **RUNNING_FROM_VISUAL_STUDIO.md** - Get the application running
+3. Read **ARCHITECTURE_RULES.md** - Understand layer boundaries
+4. Read **COPILOT_ARCHITECTURE_CONTRACT.md** - AI assistance rules
+5. Read **TFS_INTEGRATION_QUICK_REFERENCE.md** - For TFS-related work
 
 ### For Stakeholders/Product Owners
 1. Read **TFS_INTEGRATION_EXECUTIVE_SUMMARY.md** - Implementation plan overview
@@ -90,6 +92,7 @@ Violating these rules is a design error, not an implementation shortcut.
 
 ## Quick Links
 
+- **Getting Started**: [Running from Visual Studio](RUNNING_FROM_VISUAL_STUDIO.md)
 - **Planning**: [TFS Integration Executive Summary](TFS_INTEGRATION_EXECUTIVE_SUMMARY.md)
 - **Implementation**: [TFS Integration Technical Plan](TFS_ONPREM_INTEGRATION_PLAN.md)
 - **Development**: [TFS Integration Quick Reference](TFS_INTEGRATION_QUICK_REFERENCE.md)
