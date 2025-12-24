@@ -17,16 +17,16 @@ This document defines the authoritative rules for storing Personal Access Tokens
 - Users may have different credentials on different workstations
 - Credentials should not roam between workstations for security reasons
 
-### 2. Platform-Specific Secure Storage
+### 2. Client-Side Secure Storage
 
-**Rule**: PAT MUST be stored using platform-native secure storage mechanisms via MAUI SecureStorage API.
+**Rule**: PAT MUST be stored using browser-based secure storage mechanisms with appropriate security measures.
 
 **Implementation**:
-- **Windows**: Windows Credential Manager (DPAPI encryption)
-- **macOS**: Keychain Services
-- **Linux**: Secret Service API (libsecret/GNOME Keyring)
+- **Browser storage**: localStorage or sessionStorage with appropriate encryption
+- **Session-based**: In-memory storage for the duration of the session
+- **HTTP-only cookies**: For token-based authentication scenarios
 
-**MAUI SecureStorage** automatically selects the appropriate platform mechanism.
+**Note**: Since the application uses Blazor WebAssembly, browser-based secure storage is used instead of platform-specific credential stores.
 
 ### 3. No Server Persistence
 
@@ -55,27 +55,34 @@ Settings that should persist across workstations:
 - User preferences (UI settings, filters, etc.)
 - Application state (work item caches, metadata)
 
-#### Client-Side Storage (Secure Local)
-Settings that are workstation-specific and security-sensitive:
+#### Client-Side Storage (Browser Secure Local)
+Settings that are browser/session-specific and security-sensitive:
 - Personal Access Token (PAT)
 - Session tokens
 - Temporary authentication state
 - User-specific secrets
 
+**Note**: When using browser storage, consider additional security measures like encryption and secure transmission.
+
 ## Implementation Requirements
 
 ### Client Implementation
 
-1. **Use MAUI SecureStorage for PAT**:
+1. **Use browser-based secure storage for PAT**:
 ```csharp
-// Store PAT
-await SecureStorage.SetAsync("tfs_pat", patValue);
+// In Blazor WebAssembly, use JavaScript interop with localStorage
+// or implement a secure storage service
+
+// Store PAT (via JavaScript interop)
+await JSRuntime.InvokeVoidAsync("localStorage.setItem", "tfs_pat", patValue);
 
 // Retrieve PAT
-string pat = await SecureStorage.GetAsync("tfs_pat");
+string pat = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "tfs_pat");
 
 // Remove PAT
-SecureStorage.Remove("tfs_pat");
+await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "tfs_pat");
+
+// Note: Consider additional encryption for sensitive data in browser storage
 ```
 
 2. **PAT Lifecycle**:
@@ -174,16 +181,16 @@ POST /api/sessions/tfs
 - Client retrieves config without PAT
 
 ### Target State (To-Be)
-- PAT stored in MAUI SecureStorage on client
+- PAT stored in browser secure storage on client
 - API receives PAT per request or per session
 - Database contains only non-sensitive config (URL, Project)
 - Client manages PAT lifecycle
 
 ### Migration Steps
 
-1. **Add SecureStorage to Client**
+1. **Add Secure Storage to Client**
    - Create secure storage service abstraction
-   - Implement MAUI SecureStorage wrapper
+   - Implement browser storage wrapper with encryption
    - Add PAT storage/retrieval methods
 
 2. **Update Client UI**
@@ -210,7 +217,7 @@ POST /api/sessions/tfs
 
 Before considering this change complete, verify:
 
-- [ ] PAT stored using MAUI SecureStorage
+- [ ] PAT stored using browser secure storage with appropriate security measures
 - [ ] PAT never written to database
 - [ ] PAT cleared from server memory after use
 - [ ] Database migration removes ProtectedPat column
@@ -222,7 +229,7 @@ Before considering this change complete, verify:
 
 ## References
 
-- [MAUI SecureStorage Documentation](https://learn.microsoft.com/en-us/dotnet/maui/platform-integration/storage/secure-storage)
+- [Browser Storage Security](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API/Using_the_Web_Storage_API#security)
 - [Azure DevOps PAT Best Practices](https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate)
 - [OWASP Credential Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Credential_Storage_Cheat_Sheet.html)
 
