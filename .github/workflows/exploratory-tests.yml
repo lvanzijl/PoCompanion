@@ -30,9 +30,9 @@ jobs:
 
       - name: Install Playwright browsers
         run: |
-          cd PoTool.Tests.AutomatedExploratory
-          dotnet build
-          pwsh bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+          dotnet tool install --global Microsoft.Playwright.CLI || true
+          playwright install --with-deps chromium
+        working-directory: PoTool.Tests.AutomatedExploratory
 
       - name: Start API server in background
         run: |
