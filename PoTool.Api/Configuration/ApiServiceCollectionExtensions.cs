@@ -62,8 +62,17 @@ public static class ApiServiceCollectionExtensions
             else
             {
                 services.AddDbContext<PoToolDbContext>(options =>
+                {
                     options.UseSqlite(configuration.GetConnectionString("DefaultConnection")
-                        ?? "Data Source=potool.db"));
+                        ?? "Data Source=potool.db");
+                    
+                    // Suppress pending model changes warning in development for exploratory testing
+                    if (isDevelopment)
+                    {
+                        options.ConfigureWarnings(warnings =>
+                            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+                    }
+                });
             }
         }
 
