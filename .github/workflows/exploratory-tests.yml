@@ -61,7 +61,7 @@ jobs:
       - name: Start Client server in background
         run: |
           cd PoTool.Client
-          dotnet run --no-build --configuration Release > ../client.log 2>&1 &
+          dotnet run --no-build --configuration Release --urls http://localhost:5001 > ../client.log 2>&1 &
           echo $! > ../client.pid
 
       - name: Wait for Client to be ready
