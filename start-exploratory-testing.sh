@@ -64,10 +64,14 @@ echo -e "${YELLOW}[4/6] Starting API server...${NC}"
 API_URL="http://localhost:5000"
 
 # Kill any existing process on port 5000
-if lsof -Pi :5000 -sTCP:LISTEN -t &>/dev/null; then
-    echo -e "${YELLOW}⚠ Port 5000 is already in use. Attempting to stop existing process...${NC}"
-    lsof -ti:5000 | xargs kill -9 2>/dev/null || true
-    sleep 2
+if command -v lsof &> /dev/null; then
+    if lsof -Pi :5000 -sTCP:LISTEN -t &>/dev/null; then
+        echo -e "${YELLOW}⚠ Port 5000 is already in use. Attempting to stop existing process...${NC}"
+        lsof -ti:5000 | xargs kill -9 2>/dev/null || true
+        sleep 2
+    fi
+else
+    echo -e "${YELLOW}⚠ lsof not available, skipping port check. If port 5000 is in use, startup may fail.${NC}"
 fi
 
 # Start the API

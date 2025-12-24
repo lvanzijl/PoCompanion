@@ -72,7 +72,8 @@ try {
         exit 1
     }
 } catch {
-    Write-Host "✗ Build failed: $_" -ForegroundColor Red
+    Write-Host "✗ Build failed with exception: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  See error details above for more information" -ForegroundColor Red
     exit 1
 }
 

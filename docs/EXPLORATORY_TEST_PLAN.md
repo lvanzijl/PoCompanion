@@ -493,7 +493,7 @@ Use this checklist to track progress:
 ## Troubleshooting
 
 ### API Won't Start
-- Check port 5000 is not in use: `lsof -i :5000` (Mac/Linux) or `netstat -ano | findstr :5000` (Windows)
+- Check port 5000 is not in use: `lsof -Pi :5000 -sTCP:LISTEN` (Mac/Linux) or `netstat -ano | findstr :5000` (Windows)
 - Verify `appsettings.Development.json` is valid JSON
 - Check `api.log` for error messages
 - Ensure .NET 10.0 SDK is installed
