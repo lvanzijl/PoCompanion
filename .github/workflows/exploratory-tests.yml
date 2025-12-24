@@ -1,123 +1,45 @@
 name: Exploratory Tests
 
 on:
-  workflow_dispatch:  # Manual trigger
-  # Optional: schedule for regular testing
-  # schedule:
-  #   - cron: '0 2 * * 1'  # Weekly on Mondays at 2 AM UTC
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   exploratory-tests:
+    timeout-minutes: 60
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup .NET 10
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: 10.0.x
+          dotnet-quality: preview
 
       - name: Restore dependencies
-        run: dotnet restore PoTool.sln
+        run: dotnet restore
 
-      - name: Build solution
-        run: dotnet build PoTool.sln --configuration Release --no-restore
+      - name: Build
+        run: dotnet build --no-restore
 
       - name: Install Playwright browsers
-        run: |
-          dotnet tool install --global Microsoft.Playwright.CLI || true
-          playwright install --with-deps chromium
+        run: dotnet build
         working-directory: PoTool.Tests.AutomatedExploratory
 
-      - name: Start API server in background
-        run: |
-          cd PoTool.Api
-          export ASPNETCORE_ENVIRONMENT=Development
-          dotnet run --no-build --configuration Release --urls http://localhost:5000 > ../api.log 2>&1 &
-          echo $! > ../api.pid
-        env:
-          ASPNETCORE_ENVIRONMENT: Development
-
-      - name: Wait for API to be ready
-        run: |
-          echo "Waiting for API health check..."
-          for i in {1..30}; do
-            if curl -s http://localhost:5000/health > /dev/null; then
-              echo "API is ready!"
-              exit 0
-            fi
-            echo "Attempt $i/30: API not ready yet..."
-            sleep 2
-          done
-          echo "API failed to start within timeout"
-          cat api.log
-          exit 1
-
-      - name: Start Client server in background
-        run: |
-          cd PoTool.Client
-          dotnet run --no-build --configuration Release --urls http://localhost:5001 > ../client.log 2>&1 &
-          echo $! > ../client.pid
-
-      - name: Wait for Client to be ready
-        run: |
-          echo "Waiting for Client to be ready..."
-          for i in {1..30}; do
-            if curl -s http://localhost:5001 > /dev/null; then
-              echo "Client is ready!"
-              exit 0
-            fi
-            echo "Attempt $i/30: Client not ready yet..."
-            sleep 2
-          done
-          echo "Client failed to start within timeout"
-          cat client.log
-          exit 1
+      - name: Install Playwright dependencies  
+        run: pwsh PoTool.Tests.AutomatedExploratory/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
 
       - name: Run exploratory tests
-        run: |
-          cd PoTool.Tests.AutomatedExploratory
-          dotnet test --no-build --configuration Release --logger "console;verbosity=detailed"
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
+        run: dotnet test --no-build --verbosity normal
+        working-directory: PoTool.Tests.AutomatedExploratory
 
-      - name: Upload test results
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: exploratory-test-results
-          path: |
-            PoTool.Tests.AutomatedExploratory/bin/Release/net10.0/test-results/
-            PoTool.Tests.AutomatedExploratory/test-results/
-          if-no-files-found: warn
-
-      - name: Upload API logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: api-logs
-          path: api.log
-          if-no-files-found: warn
-
-      - name: Upload Client logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: client-logs
-          path: client.log
-          if-no-files-found: warn
-
-      - name: Cleanup - Stop servers
-        if: always()
-        run: |
-          if [ -f api.pid ]; then
-            kill $(cat api.pid) || true
-          fi
-          if [ -f client.pid ]; then
-            kill $(cat client.pid) || true
-          fi
+          name: playwright-report
+          path: PoTool.Tests.AutomatedExploratory/playwright-report/
+          retention-days: 30
