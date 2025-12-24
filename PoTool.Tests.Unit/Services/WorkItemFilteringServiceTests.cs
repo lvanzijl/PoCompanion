@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Core.WorkItems.Filtering;
 using Moq;
 
 namespace PoTool.Tests.Unit.Services;
@@ -15,7 +16,8 @@ public class WorkItemFilteringServiceTests
     public void TestInitialize()
     {
         _mockTreeBuilderService = new Mock<ITreeBuilderService>();
-        _service = new WorkItemFilteringService(_mockTreeBuilderService.Object);
+        var filterer = new WorkItemFilterer();
+        _service = new WorkItemFilteringService(_mockTreeBuilderService.Object, filterer);
     }
 
     [TestMethod]
@@ -34,7 +36,7 @@ public class WorkItemFilteringServiceTests
         var result = _service.FilterByValidationWithAncestors(workItems, targetIds).ToList();
 
         // Assert
-        Assert.AreEqual(3, result.Count);
+        Assert.HasCount(3, result);
         Assert.IsTrue(result.Any(wi => wi.TfsId == 1)); // Goal included
         Assert.IsTrue(result.Any(wi => wi.TfsId == 2)); // Feature included
         Assert.IsTrue(result.Any(wi => wi.TfsId == 3)); // Story included
@@ -58,7 +60,7 @@ public class WorkItemFilteringServiceTests
         var result = _service.FilterByValidationWithAncestors(workItems, targetIds).ToList();
 
         // Assert
-        Assert.AreEqual(5, result.Count); // All items should be included
+        Assert.HasCount(5, result); // All items should be included
     }
 
     [TestMethod]
@@ -76,7 +78,7 @@ public class WorkItemFilteringServiceTests
         var result = _service.FilterByValidationWithAncestors(workItems, targetIds).ToList();
 
         // Assert
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.IsTrue(result.Any(wi => wi.TfsId == 3)); // Only the orphan itself
     }
 
@@ -119,8 +121,12 @@ public class WorkItemFilteringServiceTests
         var result = _service.GetWorkItemIdsByValidationFilter(workItems, "parentProgress").ToList();
 
         // Assert
-        Assert.AreEqual(2, result.Count);
+        Assert.HasCount(2, result);
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.Contains(1));
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.Contains(3));
     }
 
@@ -154,7 +160,9 @@ public class WorkItemFilteringServiceTests
         var result = _service.GetWorkItemIdsByValidationFilter(workItems, "missingEffort").ToList();
 
         // Assert
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.Contains(1));
     }
 
@@ -211,7 +219,7 @@ public class WorkItemFilteringServiceTests
         var result = _service.ApplyCombinedFilter(workItems, null, Enumerable.Empty<string>()).ToList();
 
         // Assert
-        Assert.AreEqual(2, result.Count);
+        Assert.HasCount(2, result);
     }
 
     [TestMethod]
@@ -244,7 +252,7 @@ public class WorkItemFilteringServiceTests
         var result = _service.ApplyCombinedFilter(workItems, null, enabledFilters).ToList();
 
         // Assert
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual(1, result[0].TfsId);
     }
 

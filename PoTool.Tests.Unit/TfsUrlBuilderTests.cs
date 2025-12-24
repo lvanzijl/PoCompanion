@@ -177,7 +177,7 @@ public sealed class TfsUrlBuilderTests
         var result = TfsUrlBuilder.BuildWorkItemUrls(organizationUrl, project, workItemIds);
 
         // Assert
-        Assert.AreEqual(0, result.Count);
+        Assert.IsEmpty(result);
     }
 
     [TestMethod]

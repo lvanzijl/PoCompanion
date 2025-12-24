@@ -28,7 +28,7 @@ public class WorkItemInProgressWithoutEffortValidatorTests
         var result = _validator.ValidateWorkItems(items);
 
         // Assert
-        Assert.AreEqual(0, result.Count, "No validation issues expected when effort is provided");
+        Assert.IsEmpty(result, "No validation issues expected when effort is provided");
     }
 
     [TestMethod]
@@ -44,11 +44,13 @@ public class WorkItemInProgressWithoutEffortValidatorTests
         var result = _validator.ValidateWorkItems(items);
 
         // Assert
-        Assert.AreEqual(1, result.Count, "Should have one item with issues");
+        Assert.HasCount(1, result, "Should have one item with issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(1), "Item should have validation issues");
         
         var issues = result[1];
-        Assert.AreEqual(1, issues.Count, "Should have one error");
+        Assert.HasCount(1, issues, "Should have one error");
         Assert.AreEqual("Error", issues[0].Severity);
         Assert.Contains("effort", issues[0].Message, "Message should mention effort");
     }
@@ -66,7 +68,9 @@ public class WorkItemInProgressWithoutEffortValidatorTests
         var result = _validator.ValidateWorkItems(items);
 
         // Assert
-        Assert.AreEqual(1, result.Count, "Should have one item with issues");
+        Assert.HasCount(1, result, "Should have one item with issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(1), "Item should have validation issues");
     }
 
@@ -104,11 +108,21 @@ public class WorkItemInProgressWithoutEffortValidatorTests
         var result = _validator.ValidateWorkItems(items);
 
         // Assert
-        Assert.AreEqual(2, result.Count, "Should have two items with issues");
+        Assert.HasCount(2, result, "Should have two items with issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(2), "Item 2 should have issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(4), "Item 4 should have issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsFalse(result.ContainsKey(1), "Item 1 should not have issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsFalse(result.ContainsKey(3), "Item 3 should not have issues");
+        
+#pragma warning disable MSTEST0037
         Assert.IsFalse(result.ContainsKey(5), "Item 5 should not have issues");
     }
 

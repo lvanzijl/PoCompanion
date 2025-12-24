@@ -58,7 +58,8 @@
     </MudPaper>
 
     <LoadingIndicator IsLoading="@_isLoading" />
-    else if (_forecastData != null)
+    
+    @if (!_isLoading && _forecastData != null)
     {
         <ErrorDisplay ErrorResponse="@_errorResponse" 
                       Class="mb-4"

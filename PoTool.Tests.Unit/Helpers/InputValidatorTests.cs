@@ -58,10 +58,17 @@ public class InputValidatorTests
         var result = InputValidator.SanitizeFilter(input);
 
         // Assert
+        
+#pragma warning disable MSTEST0037
         Assert.IsFalse(result.Contains('<'));
+        
+#pragma warning disable MSTEST0037
         Assert.IsFalse(result.Contains('>'));
+#pragma warning disable MSTEST0037
         Assert.IsFalse(result.Contains('\''));
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.Contains("Filter"));
+#pragma warning disable MSTEST0037
         Assert.IsTrue(result.Contains("script"));
     }
 
@@ -75,10 +82,13 @@ public class InputValidatorTests
         var result = InputValidator.SanitizeFilter(input);
 
         // Assert
+#pragma warning disable MSTEST0037
         Assert.IsFalse(result.Contains('\''));
+        
+#pragma warning disable MSTEST0037
         Assert.IsFalse(result.Contains(';'));
-        Assert.IsTrue(result.Contains("test"));
-        Assert.IsTrue(result.Contains("DROP"));
+        Assert.Contains(result, "test");
+        Assert.Contains(result, "DROP");
     }
 
     [TestMethod]
@@ -91,7 +101,7 @@ public class InputValidatorTests
         var result = InputValidator.SanitizeFilter(input);
 
         // Assert
-        Assert.AreEqual(200, result.Length);
+        Assert.HasCount(200, result);
     }
 
     [TestMethod]

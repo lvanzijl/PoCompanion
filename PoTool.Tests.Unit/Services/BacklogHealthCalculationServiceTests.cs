@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MudBlazor;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Core.Health;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -13,7 +14,8 @@ public class BacklogHealthCalculationServiceTests
     [TestInitialize]
     public void TestInitialize()
     {
-        _service = new BacklogHealthCalculationService();
+        var calculator = new BacklogHealthCalculator();
+        _service = new BacklogHealthCalculationService(calculator);
     }
 
     private BacklogHealthDto CreateHealthDto(
@@ -121,7 +123,7 @@ public class BacklogHealthCalculationServiceTests
         var score = _service.CalculateHealthScore(iteration);
 
         // Assert
-        Assert.IsTrue(score >= 0);
+        Assert.IsGreaterThanOrEqualTo(score, 0);
     }
 
     [TestMethod]
@@ -250,7 +252,7 @@ public class BacklogHealthCalculationServiceTests
         var series = _service.GenerateComparisonChartData(healthData);
 
         // Assert
-        Assert.AreEqual(3, series.Count);
+        Assert.HasCount(3, series);
         Assert.AreEqual("Without Effort", series[0].Name);
         Assert.AreEqual("Parent Issues", series[1].Name);
         Assert.AreEqual("Blocked", series[2].Name);
@@ -293,7 +295,7 @@ public class BacklogHealthCalculationServiceTests
         var labels = _service.GetIterationLabels(healthData);
 
         // Assert
-        Assert.AreEqual(3, labels.Length);
+        Assert.HasCount(3, labels);
         Assert.AreEqual("Sprint 1", labels[0]);
         Assert.AreEqual("Sprint 2", labels[1]);
         Assert.AreEqual("Sprint 3", labels[2]);

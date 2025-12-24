@@ -55,7 +55,7 @@ public class BulkAssignEffortCommandHandlerTests
         Assert.AreEqual(1, result.TotalRequested);
         Assert.AreEqual(1, result.SuccessfulUpdates);
         Assert.AreEqual(0, result.FailedUpdates);
-        Assert.AreEqual(1, result.Results.Count);
+        Assert.HasCount(1, result.Results);
         Assert.IsTrue(result.Results[0].Success);
     }
 
@@ -110,7 +110,7 @@ public class BulkAssignEffortCommandHandlerTests
         Assert.AreEqual(0, result.SuccessfulUpdates);
         Assert.AreEqual(1, result.FailedUpdates);
         Assert.IsFalse(result.Results[0].Success);
-        Assert.IsTrue(result.Results[0].ErrorMessage!.Contains("not found"));
+        Assert.Contains(result.Results[0].ErrorMessage!, "not found");
     }
 
     [TestMethod]
@@ -137,7 +137,7 @@ public class BulkAssignEffortCommandHandlerTests
         Assert.AreEqual(0, result.SuccessfulUpdates);
         Assert.AreEqual(1, result.FailedUpdates);
         Assert.IsFalse(result.Results[0].Success);
-        Assert.IsTrue(result.Results[0].ErrorMessage!.Contains("Invalid effort"));
+        Assert.Contains(result.Results[0].ErrorMessage!, "Invalid effort");
     }
 
     [TestMethod]
@@ -170,7 +170,7 @@ public class BulkAssignEffortCommandHandlerTests
         Assert.AreEqual(2, result.TotalRequested);
         Assert.AreEqual(2, result.SuccessfulUpdates);
         Assert.AreEqual(0, result.FailedUpdates);
-        Assert.AreEqual(2, result.Results.Count);
+        Assert.HasCount(2, result.Results);
     }
 
     [TestMethod]

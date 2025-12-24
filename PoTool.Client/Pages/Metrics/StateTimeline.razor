@@ -52,7 +52,8 @@
     </MudPaper>
 
     <LoadingIndicator IsLoading="@_isLoading" />
-    else if (_timelineData != null)
+    
+    @if (!_isLoading && _timelineData != null)
     {
         <ErrorDisplay ErrorResponse="@_errorResponse" 
                       Class="mb-4"

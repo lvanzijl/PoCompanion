@@ -41,9 +41,9 @@ public class GetEffortImbalanceQueryHandlerTests
         Assert.IsNotNull(result);
         Assert.AreEqual(ImbalanceRiskLevel.Low, result.OverallRiskLevel);
         Assert.AreEqual(0, result.ImbalanceScore);
-        Assert.AreEqual(0, result.TeamImbalances.Count);
-        Assert.AreEqual(0, result.SprintImbalances.Count);
-        Assert.AreEqual(0, result.Recommendations.Count);
+        Assert.IsEmpty(result.TeamImbalances);
+        Assert.IsEmpty(result.SprintImbalances);
+        Assert.IsEmpty(result.Recommendations);
     }
 
     [TestMethod]
@@ -70,7 +70,7 @@ public class GetEffortImbalanceQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(ImbalanceRiskLevel.Low, result.OverallRiskLevel);
-        Assert.IsTrue(result.ImbalanceScore < 30); // Less than 30% imbalance
+        Assert.IsLessThan(result.ImbalanceScore, 30); // Less than 30% imbalance
     }
 
     [TestMethod]
@@ -94,8 +94,10 @@ public class GetEffortImbalanceQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
+#pragma warning disable MSTEST0037 // Enum comparison
         Assert.IsTrue(result.OverallRiskLevel >= ImbalanceRiskLevel.Medium);
-        Assert.IsTrue(result.TeamImbalances.Count > 0);
+#pragma warning restore MSTEST0037
+        Assert.IsNotEmpty(result.TeamImbalances);
         Assert.IsTrue(result.TeamImbalances.Any(t => t.RiskLevel >= ImbalanceRiskLevel.High));
     }
 
@@ -120,7 +122,7 @@ public class GetEffortImbalanceQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.SprintImbalances.Count > 0);
+        Assert.IsNotEmpty(result.SprintImbalances);
         Assert.IsTrue(result.SprintImbalances.Any(s => s.RiskLevel >= ImbalanceRiskLevel.High));
     }
 
@@ -144,7 +146,7 @@ public class GetEffortImbalanceQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.Recommendations.Count > 0);
+        Assert.IsNotEmpty(result.Recommendations);
         Assert.IsTrue(result.Recommendations.Any(r => r.Type == RecommendationType.ReduceTeamLoad));
         Assert.IsTrue(result.Recommendations.Any(r => r.Type == RecommendationType.IncreaseTeamLoad));
     }

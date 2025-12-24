@@ -1,13 +1,22 @@
 using PoTool.Client.ApiClient;
+using PoTool.Core.Health;
 using MudBlazor;
 
 namespace PoTool.Client.Services;
 
 /// <summary>
-/// Service for calculating backlog health scores and trends.
+/// UI service for backlog health visualization.
+/// Business logic is delegated to Core layer.
 /// </summary>
 public class BacklogHealthCalculationService
 {
+    private readonly BacklogHealthCalculator _calculator;
+
+    public BacklogHealthCalculationService(BacklogHealthCalculator calculator)
+    {
+        _calculator = calculator ?? throw new ArgumentNullException(nameof(calculator));
+    }
+
     /// <summary>
     /// Calculates the health score for an iteration based on validation issues.
     /// </summary>
@@ -15,15 +24,13 @@ public class BacklogHealthCalculationService
     /// <returns>Health score from 0 to 100.</returns>
     public int CalculateHealthScore(BacklogHealthDto iteration)
     {
-        if (iteration.TotalWorkItems == 0) return 100;
-
-        var issues = iteration.WorkItemsWithoutEffort +
-                    iteration.WorkItemsInProgressWithoutEffort +
-                    iteration.ParentProgressIssues +
-                    iteration.BlockedItems;
-
-        var issuePercentage = (double)issues / iteration.TotalWorkItems;
-        return (int)Math.Max(0, 100 - (issuePercentage * 100));
+        return _calculator.CalculateHealthScore(
+            iteration.TotalWorkItems,
+            iteration.WorkItemsWithoutEffort,
+            iteration.WorkItemsInProgressWithoutEffort,
+            iteration.ParentProgressIssues,
+            iteration.BlockedItems
+        );
     }
 
     /// <summary>

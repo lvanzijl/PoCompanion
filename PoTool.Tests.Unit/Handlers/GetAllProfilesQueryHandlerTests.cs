@@ -84,7 +84,7 @@ public class GetAllProfilesQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         var profileList = result.ToList();
-        Assert.AreEqual(3, profileList.Count);
+        Assert.HasCount(3, profileList);
         Assert.AreEqual("Profile 1", profileList[0].Name);
         Assert.AreEqual("Profile 2", profileList[1].Name);
         Assert.AreEqual("Profile 3", profileList[2].Name);
@@ -118,9 +118,9 @@ public class GetAllProfilesQueryHandlerTests
         var profile = result.First();
         Assert.AreEqual(100, profile.Id);
         Assert.AreEqual("Complete Profile", profile.Name);
-        Assert.AreEqual(2, profile.AreaPaths.Count);
+        Assert.HasCount(2, profile.AreaPaths);
         Assert.AreEqual("Project\\ProductA", profile.AreaPaths[0]);
         Assert.AreEqual("Complete Team", profile.TeamName);
-        Assert.AreEqual(3, profile.GoalIds.Count);
+        Assert.HasCount(3, profile.GoalIds);
     }
 }

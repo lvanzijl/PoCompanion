@@ -138,7 +138,7 @@ public class GetBacklogHealthQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.ValidationIssues.Count > 0);
+        Assert.IsNotEmpty(result.ValidationIssues);
     }
 
     [TestMethod]

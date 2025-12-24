@@ -81,7 +81,7 @@ public class GetValidationViolationHistoryQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         var historyList = result.ToList();
-        Assert.AreEqual(1, historyList.Count);
+        Assert.HasCount(1, historyList);
         Assert.AreEqual(2, historyList[0].WorkItemId);
         Assert.AreEqual("Epic", historyList[0].WorkItemType);
         Assert.AreEqual("Error", historyList[0].Severity);
@@ -123,9 +123,9 @@ public class GetValidationViolationHistoryQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         var historyList = result.ToList();
-        Assert.AreEqual(1, historyList.Count);
+        Assert.HasCount(1, historyList);
         Assert.AreEqual(1, historyList[0].WorkItemId);
-        Assert.IsTrue(historyList[0].AreaPath.StartsWith("AreaA"));
+        Assert.StartsWith(historyList[0].AreaPath, "AreaA");
     }
 
     [TestMethod]
@@ -161,7 +161,7 @@ public class GetValidationViolationHistoryQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         var historyList = result.ToList();
-        Assert.AreEqual(1, historyList.Count);
+        Assert.HasCount(1, historyList);
         Assert.AreEqual(2, historyList[0].WorkItemId);
     }
 

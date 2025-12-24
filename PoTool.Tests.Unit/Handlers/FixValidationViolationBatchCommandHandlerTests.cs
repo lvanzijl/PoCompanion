@@ -61,7 +61,7 @@ public class FixValidationViolationBatchCommandHandlerTests
         Assert.AreEqual(1, result.TotalAttempted);
         Assert.AreEqual(1, result.SuccessfulFixes);
         Assert.AreEqual(0, result.FailedFixes);
-        Assert.AreEqual(1, result.Results.Count);
+        Assert.HasCount(1, result.Results);
         Assert.IsTrue(result.Results[0].Success);
     }
 
@@ -128,7 +128,7 @@ public class FixValidationViolationBatchCommandHandlerTests
         Assert.AreEqual(0, result.SuccessfulFixes);
         Assert.AreEqual(1, result.FailedFixes);
         Assert.IsFalse(result.Results[0].Success);
-        Assert.IsTrue(result.Results[0].Message.Contains("not found"));
+        Assert.Contains(result.Results[0].Message, "not found");
     }
 
     [TestMethod]
@@ -173,7 +173,7 @@ public class FixValidationViolationBatchCommandHandlerTests
         Assert.AreEqual(2, result.TotalAttempted);
         Assert.AreEqual(2, result.SuccessfulFixes);
         Assert.AreEqual(0, result.FailedFixes);
-        Assert.AreEqual(2, result.Results.Count);
+        Assert.HasCount(2, result.Results);
     }
 
     [TestMethod]
