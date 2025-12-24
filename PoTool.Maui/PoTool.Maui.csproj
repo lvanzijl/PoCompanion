@@ -83,8 +83,13 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
+  <!-- Project References - Only include API for Windows target -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">
     <ProjectReference Include="..\PoTool.Api\PoTool.Api.csproj" />
+  </ItemGroup>
+  
+  <!-- Client project for all platforms -->
+  <ItemGroup>
     <ProjectReference Include="..\PoTool.Client\PoTool.Client.csproj" />
   </ItemGroup>
 

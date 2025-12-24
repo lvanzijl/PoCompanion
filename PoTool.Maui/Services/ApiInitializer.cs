@@ -1,9 +1,11 @@
+#if WINDOWS
 using Microsoft.Extensions.Logging;
 
 namespace PoTool.Maui.Services;
 
 /// <summary>
 /// Helper service to initialize the API and wait for it to be ready.
+/// Only available on Windows platform.
 /// </summary>
 public class ApiInitializer
 {
@@ -68,3 +70,4 @@ public class ApiInitializer
         }
     }
 }
+#endif

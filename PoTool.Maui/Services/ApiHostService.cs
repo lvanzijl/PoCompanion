@@ -1,3 +1,4 @@
+#if WINDOWS
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -10,6 +11,7 @@ namespace PoTool.Maui.Services;
 
 /// <summary>
 /// Service that hosts the ASP.NET Core API in-process within the MAUI application.
+/// Only available on Windows platform.
 /// </summary>
 public class ApiHostService : IDisposable
 {
@@ -128,3 +130,4 @@ public class ApiHostService : IDisposable
         GC.SuppressFinalize(this);
     }
 }
+#endif

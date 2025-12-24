@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Profiles Controller API", ("    As a user\n    I want to manage profiles through the API\n    So that I can org" +
-                "anize work items by area paths and teams"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Profiles Controller API", "    As a user\r\n    I want to manage profiles through the API\r\n    So that I can o" +
+                "rganize work items by area paths and teams", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "ProfilesController.feature"
 #line hidden
@@ -160,8 +160,8 @@ this.ScenarioInitialize(scenarioInfo);
 await this.FeatureBackgroundAsync();
 #line hidden
 #line 15
-    await testRunner.WhenAsync(("I create a profile with name \"Product A Team\" and area paths \"Project\\\\ProductA,P" +
-                        "roject\\\\ProductA\\\\Mobile\""), ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I create a profile with name \"Product A Team\" and area paths \"Project\\\\ProductA,P" +
+                        "roject\\\\ProductA\\\\Mobile\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 16
     await testRunner.ThenAsync("the response should be Created", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -571,8 +571,8 @@ this.ScenarioInitialize(scenarioInfo);
 await this.FeatureBackgroundAsync();
 #line hidden
 #line 82
-    await testRunner.WhenAsync(("I create a profile with name \"Hierarchical Profile\" and area paths \"Project\\\\Prod" +
-                        "uct,Project\\\\Product\\\\Mobile,Project\\\\Product\\\\Web\""), ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I create a profile with name \"Hierarchical Profile\" and area paths \"Project\\\\Prod" +
+                        "uct,Project\\\\Product\\\\Mobile,Project\\\\Product\\\\Web\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 83
     await testRunner.ThenAsync("the response should be Created", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");

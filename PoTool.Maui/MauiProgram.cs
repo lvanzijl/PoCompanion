@@ -5,7 +5,9 @@ using PoTool.Client.ApiClient;
 using PoTool.Client.Handlers;
 using PoTool.Client.Services;
 using PoTool.Core.Contracts;
+#if WINDOWS
 using PoTool.Maui.Services;
+#endif
 
 namespace PoTool.Maui;
 
@@ -29,13 +31,23 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        // Create and register API host service
+        // Configure API base URL based on platform
+        string apiBaseUrl;
+        
+#if WINDOWS
+        // Create and register API host service for Windows
         const int apiPort = 5291;
         var apiHost = new ApiHostService(apiPort, 
             LoggerFactory.Create(config => config.AddConsole()).CreateLogger<ApiHostService>());
         
         builder.Services.AddSingleton(apiHost);
         builder.Services.AddSingleton<ApiInitializer>();
+        apiBaseUrl = apiHost.BaseUrl;
+#else
+        // For mobile platforms, use external API URL
+        // TODO: This should be configured via settings
+        apiBaseUrl = "https://your-api-url.com"; // Replace with actual API URL
+#endif
 
         // Register PAT header handler
         builder.Services.AddTransient<PatHeaderHandler>();
@@ -43,7 +55,7 @@ public static class MauiProgram
         // Configure HttpClient with API base address and PAT header handler
         builder.Services.AddHttpClient("PoToolApi", client =>
         {
-            client.BaseAddress = new Uri(apiHost.BaseUrl);
+            client.BaseAddress = new Uri(apiBaseUrl);
         })
         .AddHttpMessageHandler<PatHeaderHandler>();
 
@@ -58,7 +70,7 @@ public static class MauiProgram
         builder.Services.AddScoped<HubConnection>(sp =>
         {
             return new HubConnectionBuilder()
-                .WithUrl($"{apiHost.BaseUrl}/hubs/workitems")
+                .WithUrl($"{apiBaseUrl}/hubs/workitems")
                 .WithAutomaticReconnect()
                 .Build();
         });
@@ -126,15 +138,18 @@ public static class MauiProgram
 
         var app = builder.Build();
 
-        // Start API during app initialization
+#if WINDOWS
+        // Start API during app initialization (Windows only)
         var initializer = app.Services.GetRequiredService<ApiInitializer>();
         var initTask = Task.Run(async () => await initializer.InitializeAsync());
         initTask.Wait(); // Wait for API to be ready before returning
 
-        if (!apiHost.IsRunning)
+        var apiHostService = app.Services.GetRequiredService<ApiHostService>();
+        if (!apiHostService.IsRunning)
         {
             throw new InvalidOperationException("Failed to start API host. Application cannot start.");
         }
+#endif
 
         return app;
     }
