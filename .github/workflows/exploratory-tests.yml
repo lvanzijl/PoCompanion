@@ -31,7 +31,7 @@ jobs:
         working-directory: PoTool.Tests.AutomatedExploratory
 
       - name: Install Playwright dependencies  
-        run: pwsh PoTool.Tests.AutomatedExploratory/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+        run: pwsh PoTool.Tests.AutomatedExploratory/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
 
       - name: Run exploratory tests
         run: dotnet test --no-build --verbosity normal
