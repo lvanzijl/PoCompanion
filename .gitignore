@@ -77,3 +77,6 @@ temp/
 *.swp
 *~
 *.log
+
+# Publish output directory
+publish/
