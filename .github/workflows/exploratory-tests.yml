@@ -68,3 +68,4 @@ jobs:
           name: exploratory-test-results
           path: PoTool.Tests.AutomatedExploratory/test-results/
           retention-days: 30
+          if-no-files-found: ignore
