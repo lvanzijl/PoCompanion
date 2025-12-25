@@ -66,6 +66,6 @@ jobs:
         if: always()
         with:
           name: exploratory-test-results
-          path: PoTool.Tests.AutomatedExploratory/test-results/
+          path: PoTool.Tests.AutomatedExploratory/bin/Release/net10.0/test-results/
           retention-days: 30
-          if-no-files-found: ignore
+          if-no-files-found: warn
