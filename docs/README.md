@@ -28,33 +28,7 @@ Violating these rules is a design error, not an implementation shortcut.
 3. **[UX_PRINCIPLES.md](UX_PRINCIPLES.md)** - User experience guidelines
 4. **[UI_RULES.md](UI_RULES.md)** - Frontend and component rules
 5. **[PROCESS_RULES.md](PROCESS_RULES.md)** - Development workflow and review standards
-
-### TFS Integration Documentation (New)
-6. **[TFS_ONPREM_INTEGRATION_PLAN.md](TFS_ONPREM_INTEGRATION_PLAN.md)** - Complete technical plan for on-premises TFS integration
-   - Executive summary and current state analysis
-   - REST API vs SDK approach decision
-   - Authentication strategy (PAT + NTLM)
-   - Work Items enhancement plan
-   - Pull Requests implementation guide
-   - Error handling and resilience patterns
-   - 5-phase implementation plan (50-62 hours)
-   - Success metrics and risk mitigation
-
-7. **[TFS_INTEGRATION_EXECUTIVE_SUMMARY.md](TFS_INTEGRATION_EXECUTIVE_SUMMARY.md)** - Stakeholder-friendly summary
-   - Overview and current state
-   - Proposed solution
-   - Implementation phases with effort
-   - Success criteria
-   - Risk assessment
-   - Next steps
-
-8. **[TFS_INTEGRATION_QUICK_REFERENCE.md](TFS_INTEGRATION_QUICK_REFERENCE.md)** - Developer quick reference
-   - API endpoints reference
-   - Authentication examples
-   - Testing patterns
-   - Common tasks and code snippets
-   - Debugging tips
-   - Common issues and solutions
+6. **[TFS_INTEGRATION_RULES.md](TFS_INTEGRATION_RULES.md)** - TFS integration rules
 
 ### Additional Documentation
 9. **[RUNNING_FROM_VISUAL_STUDIO.md](RUNNING_FROM_VISUAL_STUDIO.md)** - Complete guide for running the application from Visual Studio

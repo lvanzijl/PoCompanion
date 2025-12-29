@@ -167,14 +167,14 @@ Frontend MUST NOT trigger implicit TFS mutations.
 
 ## 7. Authentication & secrets
 
-**See comprehensive rules in:** `PAT_STORAGE_BEST_PRACTICES.md`
+- Rule (architecture-level):
+- PAT is client-side only.
+- PAT is never persisted server-side (db/files/cache/logs).
+- API may receive PAT only for immediate use/validation and must not retain it.
 
-Summary:
-- PAT MUST be stored client-side using browser secure storage (localStorage with appropriate security measures)
-- PAT MUST NEVER be persisted on the server/API (not in database, cache, or logs)
-- API receives PAT per request or per session for validation/usage only
-- Server-side storage is for non-sensitive configuration only (URL, Project, settings)
-- Client-side storage is for credentials and session-specific data
+Authority:
+
+- All details (storage mechanism, encryption, lifecycle, XSS mitigations, migration) are defined in PAT_STORAGE_BEST_PRACTICES.md and override any summaries. 
 
 ---
 

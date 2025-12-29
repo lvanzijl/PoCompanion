@@ -28,6 +28,9 @@ You MUST load, understand, and apply all of them before generating any output:
 5. Copilot architecture contract  
    `docs/COPILOT_ARCHITECTURE_CONTRACT.md`
 
+6. PAT storage and credential handling  
+   `docs/PAT_STORAGE_BEST_PRACTICES.md`
+
 If any rule conflicts, is ambiguous, or cannot be satisfied, you MUST stop and ask for clarification.
 
 ---
