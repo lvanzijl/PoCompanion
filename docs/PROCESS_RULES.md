@@ -172,3 +172,43 @@ A change is done only when:
 - A Pull Request that does not fully follow the template MUST be blocked.
 - Reviewers MUST verify that all checklist items are explicitly addressed.
 - Missing or unchecked items are considered review blockers.
+
+---
+
+## 13. Client-side async guardrails (mandatory)
+
+### 13.1 CI enforcement: no sync-over-async in PoTool.Client
+
+The repository MUST include a CI guardrail that prevents reintroduction of blocking-wait patterns in the Blazor WebAssembly client.
+
+- CI MUST scan **only** the `PoTool.Client` directory.
+- CI MUST fail the build if any forbidden sync-over-async patterns are detected.
+
+#### Forbidden patterns (string-based detection is sufficient)
+- `.Result`
+- `.Wait(`
+- `GetAwaiter().GetResult`
+- `AsTask().Result`
+- `AsTask().Wait`
+
+False positives outside `PoTool.Client` are not acceptable.
+
+### 13.2 Pull Request requirements (client-side changes)
+
+For any Pull Request that modifies code under `PoTool.Client`:
+
+- Newly introduced or modified client APIs MUST be async-first.
+- Old synchronous APIs MUST be marked obsolete and MUST NOT be used.
+- At least one real client component MUST demonstrate:
+  - async lifecycle usage
+  - async event handling
+  - end-to-end awaiting of async services
+
+Failure to meet these requirements is a **BLOCKER**.
+
+### 13.3 Review responsibility
+
+Reviewers MUST treat any sync-over-async usage in `PoTool.Client` as:
+- an architectural violation
+- a mandatory fix before approval
+

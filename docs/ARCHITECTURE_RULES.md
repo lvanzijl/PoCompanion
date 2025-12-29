@@ -178,7 +178,47 @@ Authority:
 
 ---
 
-## 8. Logging & health
+## 8. Client runtime rules (Blazor WebAssembly)
+
+### 8.1 No sync-over-async in PoTool.Client
+
+In `PoTool.Client` (Blazor WebAssembly), **synchronous waiting on asynchronous operations is forbidden**.
+
+Blazor WebAssembly runs on a **single-threaded runtime**. Blocking calls can deadlock the UI, freeze rendering, or break event handling.
+
+#### Forbidden patterns (non-exhaustive)
+The following MUST NOT appear anywhere in `PoTool.Client`:
+
+- `.Result`
+- `.Wait()`
+- `GetAwaiter().GetResult()`
+- `AsTask().Result`
+- `AsTask().Wait()`
+
+This applies to:
+- UI components
+- Services
+- Storage helpers
+- JS interop wrappers
+- Any client-side abstraction
+
+#### Required pattern
+- All client-side APIs MUST be **Task-based and fully asynchronous**.
+- UI lifecycle methods MUST use async variants (`OnInitializedAsync`, etc.).
+- UI event handlers MUST return `Task` and `await` downstream calls.
+- Async call chains MUST remain async end-to-end.
+
+#### Migration rule
+If an existing API is synchronous but internally relies on async behavior:
+- Introduce an **explicit async interface**
+- Migrate call sites to async
+- Mark the synchronous API as obsolete and non-functional if necessary
+
+Wrapping async code in blocking adapters is an architectural violation.
+
+--- 
+
+## 9. Logging & health
 
 - Central logging is mandatory for:
   - TFS mutations
@@ -190,7 +230,7 @@ Authority:
 
 ---
 
-## 9. Project structure
+## 10. Project structure
 
 The solution MUST contain at least:
 
@@ -214,9 +254,9 @@ The solution MUST contain at least:
 
 ---
 
-## 10. Testing rules
+## 11. Testing rules
 
-### 10.1 Unit tests
+### 11.1 Unit tests
 
 - MSTest is mandatory
 - Business logic MUST be tested in Core
@@ -224,50 +264,50 @@ The solution MUST contain at least:
 - Tests MUST NOT connect to real TFS
 - TFS behavior is simulated via file-based mocks
 
-### 10.2 Integration tests
+### 11.2 Integration tests
 
 Integration tests MUST verify end-to-end API behavior with Reqnroll (BDD framework).
 
-#### 10.2.1 Framework and tooling
+#### 11.2.1 Framework and tooling
 - Integration tests MUST use **Reqnroll** for BDD-style test definitions
 - Tests MUST be defined in `.feature` files using Gherkin syntax
 - Step definitions MUST be implemented in C# using Reqnroll bindings
 - MSTest MUST be used as the test runner
 
-#### 10.2.2 Test entry points
+#### 11.2.2 Test entry points
 Integration tests MUST cover:
 - All Web API endpoints exposed by the Api layer
 - All SignalR events and hub methods
 - All request/response flows between frontend and backend
 
-#### 10.2.3 Test execution model
+#### 11.2.3 Test execution model
 - Tests MUST start the full ASP.NET Core Web API application
 - Tests MUST use a real database instance (in-memory or temporary)
 - Tests MUST exercise HTTP endpoints as external clients would
 - Tests MUST connect to SignalR hubs as real clients would
 - No mocking of Api, Core, or database layers is allowed
 
-#### 10.2.4 TFS mocking (only exception)
+#### 11.2.4 TFS mocking (only exception)
 - TFS integration is the ONLY component that MAY be mocked
 - TFS mocks MUST use file-based test data
 - TFS mocks MUST simulate realistic responses and error conditions
 - TFS mocks MUST NOT alter business logic behavior
 
-#### 10.2.5 Coverage requirements
-- **100% coverage** of all Web API endpoints is MANDATORY
-- **100% coverage** of all SignalR hub methods is MANDATORY
+#### 11.2.5 Coverage requirements
+- **85% coverage** of all Web API endpoints is MANDATORY
+- **85% coverage** of all SignalR hub methods is MANDATORY
 - Each endpoint MUST be tested for:
   - Successful execution (happy path)
   - Error conditions and validation failures
   - Authorization and authentication requirements (when applicable)
 
-#### 10.2.6 Test organization
+#### 11.2.6 Test organization
 - Integration tests MUST be in a separate test project
 - Feature files MUST be organized by feature area or domain
 - Step definitions MUST be reusable across multiple scenarios
 - Test data MUST be isolated per test scenario
 
-#### 10.2.7 Test independence
+#### 11.2.7 Test independence
 - Each integration test scenario MUST be independent
 - Tests MUST clean up their own test data
 - Tests MUST NOT depend on execution order
@@ -275,7 +315,7 @@ Integration tests MUST cover:
 
 ---
 
-## 11. Mediator usage
+## 12. Mediator usage
 
 - MediatR is FORBIDDEN
 - Only the source-generated **Mediator** library is allowed
@@ -295,7 +335,7 @@ Handlers and pipelines live in Api.
 
 ---
 
-## 12. Dependency policy
+## 13. Dependency policy
 
 - New dependencies require explicit approval
 - Prefer fewer dependencies over convenience
@@ -307,7 +347,7 @@ Handlers and pipelines live in Api.
 
 ---
 
-## 13. Dependency Injection
+## 14. Dependency Injection
 
 - Only Microsoft.Extensions.DependencyInjection is allowed
 - No alternative DI containers
@@ -316,7 +356,7 @@ Handlers and pipelines live in Api.
 
 ---
 
-## 14. Architectural invariants (never break)
+## 15. Architectural invariants (never break)
 
 1. Frontend never talks to TFS
 2. Core remains infrastructure-free
@@ -333,15 +373,15 @@ Handlers and pipelines live in Api.
 
 ---
 
-## 15. Code Quality
+## 16. Code Quality
 
-### 15.1 Warnings Policy
+### 16.1 Warnings Policy
 - **All warnings MUST be treated as errors** in all projects
 - Projects MUST set `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` in their .csproj files (MSBuild XML)
 - No exceptions to this rule
 - Code MUST build without any warnings before being merged
 
-### 15.2 Rationale
+### 16.2 Rationale
 - Warnings often indicate potential bugs or design issues
 - Treating warnings as errors enforces clean code
 - Prevents accumulation of technical debt

@@ -13,22 +13,19 @@ You MUST apply these rules for every response, code generation, refactoring, or 
 This repository is governed by the following binding documents.
 You MUST load, understand, and apply all of them before generating any output:
 
-1. UX principles  
-   `docs/UX_PRINCIPLES.md`
-
-2. UI rules  
+1. UI rules  
    `docs/UI_RULES.md`
 
-3. Architecture conventions  
+2. Architecture conventions  
    `docs/ARCHITECTURE_RULES.md`
 
-4. Process rules  
+3. Process rules  
    `docs/PROCESS_RULES.md`
 
-5. Copilot architecture contract  
+4. Copilot architecture contract  
    `docs/COPILOT_ARCHITECTURE_CONTRACT.md`
 
-6. PAT storage and credential handling  
+5. PAT storage and credential handling  
    `docs/PAT_STORAGE_BEST_PRACTICES.md`
 
 If any rule conflicts, is ambiguous, or cannot be satisfied, you MUST stop and ask for clarification.
