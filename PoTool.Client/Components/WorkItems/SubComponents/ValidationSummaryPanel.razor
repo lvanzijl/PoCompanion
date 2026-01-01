@@ -22,13 +22,12 @@
                 @if (errorCount > 0 && !_isProcessingFixes)
                 {
                     <MudTooltip Text="Analyze and fix validation issues automatically">
-                        <MudButton Variant="Variant.Filled" 
+                        <CompactButton Variant="Variant.Filled" 
                                    Color="Color.Primary" 
                                    StartIcon="@Icons.Material.Filled.AutoFixHigh"
-                                   Size="Size.Small"
                                    OnClick="ShowImpactAnalysisAsync">
                             Fix Issues
-                        </MudButton>
+                        </CompactButton>
                     </MudTooltip>
                 }
                 @if (_isProcessingFixes)
@@ -36,22 +35,19 @@
                     <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
                 }
                 <MudTooltip Text="View help about data requirements">
-                    <MudIconButton Icon="@Icons.Material.Filled.Help" 
+                    <CompactIconButton Icon="@Icons.Material.Filled.Help" 
                                    Color="Color.Info" 
-                                   Size="Size.Small"
                                    Href="/help" />
                 </MudTooltip>
                 @if (IsExpanded)
                 {
-                    <MudIconButton Icon="@Icons.Material.Filled.ExpandLess" 
-                                   OnClick="@(() => IsExpanded = false)" 
-                                   Size="Size.Small" />
+                    <CompactIconButton Icon="@Icons.Material.Filled.ExpandLess" 
+                                   OnClick="@(() => IsExpanded = false)" />
                 }
                 else
                 {
-                    <MudIconButton Icon="@Icons.Material.Filled.ExpandMore" 
-                                   OnClick="@(() => IsExpanded = true)" 
-                                   Size="Size.Small" />
+                    <CompactIconButton Icon="@Icons.Material.Filled.ExpandMore" 
+                                   OnClick="@(() => IsExpanded = true)" />
                 }
             </MudStack>
         </MudStack>
@@ -189,15 +185,14 @@
 
                                         @if (recommendation.RecommendationType == "SetParentsToInProgress" && recommendation.AffectedWorkItemIds.Any())
                                         {
-                                            <MudButton Variant="Variant.Filled" 
+                                            <CompactButton Variant="Variant.Filled" 
                                                        Color="Color.Success" 
-                                                       Size="Size.Small"
                                                        StartIcon="@Icons.Material.Filled.PlayArrow"
                                                        OnClick="@(() => ApplyFixesAsync(recommendation.AffectedWorkItemIds.ToList()))"
                                                        Disabled="@_isProcessingFixes"
                                                        Class="ml-4">
                                                 Apply Fix (@recommendation.AffectedWorkItemIds.Count items)
-                                            </MudButton>
+                                            </CompactButton>
                                         }
                                     }
                                 }

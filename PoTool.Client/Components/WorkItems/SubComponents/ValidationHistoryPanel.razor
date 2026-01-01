@@ -130,7 +130,7 @@
             </MudGrid>
 
             <!-- History Table -->
-            <MudTable Items="@_historyRecords" Dense="true" Hover="true" Striped="true" FixedHeader="true" Height="400px">
+            <CompactTable Items="@_historyRecords" Hover="true" Striped="true" FixedHeader="true" Height="400px">
                 <HeaderContent>
                     <MudTh>Date</MudTh>
                     <MudTh>Work Item</MudTh>
@@ -159,7 +159,7 @@
                     <MudTd DataLabel="Violation">@context.ViolationMessage</MudTd>
                     <MudTd DataLabel="Area Path">@context.AreaPath</MudTd>
                 </RowTemplate>
-            </MudTable>
+            </CompactTable>
         }
         else if (!_isLoading)
         {
