@@ -15,7 +15,7 @@
                     </CardHeaderContent>
                     <CardHeaderActions>
                         @{
-                            var healthScore = await GetHealthScore(iteration);
+                            var healthScore = GetHealthScore(iteration);
                         }
                         @if (healthScore < 70)
                         {
@@ -103,9 +103,24 @@
     [Parameter]
     public List<BacklogHealthDto> Iterations { get; set; } = new();
 
-    private async Task<int> GetHealthScore(BacklogHealthDto iteration)
+    private Dictionary<string, int> _healthScores = new();
+
+    protected override async Task OnParametersSetAsync()
     {
-        return await HealthCalculationService.CalculateHealthScoreAsync(iteration);
+        await base.OnParametersSetAsync();
+        
+        // Pre-calculate health scores for all iterations
+        _healthScores.Clear();
+        foreach (var iteration in Iterations)
+        {
+            var score = await HealthCalculationService.CalculateHealthScoreAsync(iteration);
+            _healthScores[iteration.SprintName] = score;
+        }
+    }
+
+    private int GetHealthScore(BacklogHealthDto iteration)
+    {
+        return _healthScores.GetValueOrDefault(iteration.SprintName, 0);
     }
 
     private Color GetSeverityColor(string severity)

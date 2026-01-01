@@ -191,11 +191,23 @@
             
             // Then filter by goals if configured
             var goalIds = settings.ConfiguredGoalIds.ToList();
-            _workItemsWithValidation = goalIds.Count > 0
-                ? allWorkItems.Where(wi => 
-                    goalIds.Contains(wi.TfsId) || 
-                    FilteringService.IsDescendantOfGoals(wi, goalIds, allWorkItems)).ToList()
-                : allWorkItems;
+            if (goalIds.Count > 0)
+            {
+                var filteredList = new List<WorkItemWithValidationDto>();
+                foreach (var wi in allWorkItems)
+                {
+                    if (goalIds.Contains(wi.TfsId) || 
+                        await FilteringService.IsDescendantOfGoalsAsync(wi, goalIds, allWorkItems))
+                    {
+                        filteredList.Add(wi);
+                    }
+                }
+                _workItemsWithValidation = filteredList;
+            }
+            else
+            {
+                _workItemsWithValidation = allWorkItems;
+            }
 
             await ApplyFilterAsync();
             await UpdateValidationFilterCountsAsync();
@@ -311,18 +323,18 @@
         }
     }
 
-    private void HandleFilterChanged(string filterText)
+    private async Task HandleFilterChanged(string filterText)
     {
         _filterText = filterText;
         await ApplyFilterAsync();
     }
 
-    private void HandleValidationFiltersChanged(List<ValidationFilter> filters)
+    private async Task HandleValidationFiltersChanged(List<ValidationFilter> filters)
     {
         await ApplyFilterAsync();
     }
 
-    private void ApplyFilter()
+    private async Task ApplyFilterAsync()
     {
         // Get enabled filter IDs
         var enabledFilterIds = _validationFilters
@@ -330,7 +342,7 @@
             .Select(f => f.Id);
 
         // Apply combined filtering using service
-        var filteredItems = FilteringService.ApplyCombinedFilter(
+        var filteredItems = await FilteringService.ApplyCombinedFilterAsync(
             _workItemsWithValidation,
             _filterText,
             enabledFilterIds);
