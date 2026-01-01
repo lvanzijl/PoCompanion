@@ -29,9 +29,9 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Validation Enhancements API", "    As a user\r\n    I want to access validation violation history and impact analy" +
-                "sis through the API\r\n    So that I can understand and fix validation issues in m" +
-                "y backlog", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Validation Enhancements API", ("    As a user\n    I want to access validation violation history and impact analys" +
+                "is through the API\n    So that I can understand and fix validation issues in my " +
+                "backlog"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "ValidationEnhancements.feature"
 #line hidden
@@ -283,8 +283,8 @@ this.ScenarioInitialize(scenarioInfo);
 await this.FeatureBackgroundAsync();
 #line hidden
 #line 33
-    await testRunner.WhenAsync("I request validation impact analysis from \"/api/workitems/validation-impact-analy" +
-                        "sis\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync(("I request validation impact analysis from \"/api/workitems/validation-impact-analy" +
+                        "sis\""), ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 34
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");

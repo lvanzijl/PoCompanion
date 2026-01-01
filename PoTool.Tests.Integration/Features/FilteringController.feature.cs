@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Filtering Controller API", "    As a user\r\n    I want to filter work items through the API\r\n    So that I can" +
-                " apply validation and hierarchy filters", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Filtering Controller API", ("    As a user\n    I want to filter work items through the API\n    So that I can a" +
+                "pply validation and hierarchy filters"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "FilteringController.feature"
 #line hidden

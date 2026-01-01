@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "TFS Configuration Management", "    As a user\r\n    I want to configure my TFS connection settings\r\n    So that I " +
-                "can connect to Azure DevOps / TFS", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "TFS Configuration Management", ("    As a user\n    I want to configure my TFS connection settings\n    So that I ca" +
+                "n connect to Azure DevOps / TFS"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "TfsConfiguration.feature"
 #line hidden
