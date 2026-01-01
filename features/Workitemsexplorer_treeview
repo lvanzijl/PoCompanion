@@ -79,8 +79,9 @@ All elements are rendered inside **one cell template**, left to right:
    - Toggles `IsExpanded`
    - Indentation is based on `Depth`
 
-2. **Type Color Block**
-   - Square, 10–12px
+2. **Type Icon Block**
+   - Square, 20px
+   - use an icon fitting to the work item type
    - Slightly rounded corners (2–3px)
    - Color encodes work item type (Bug / Task / Feature / Epic / etc.)
    - This is the **only** type indicator
