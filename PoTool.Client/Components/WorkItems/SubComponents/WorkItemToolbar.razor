@@ -1,7 +1,7 @@
 @using PoTool.Client.Models
 @using PoTool.Client.Services
 @using PoTool.Client.ApiClient
-@using PoTool.Core.Contracts
+@using PoTool.Shared.Contracts
 @inject ExportService ExportService
 @inject ReportService ReportService
 @inject IClipboardService ClipboardService
@@ -354,7 +354,7 @@
             }
 
             var urls = SelectedWorkItems
-                .Select(w => Core.WorkItems.TfsUrlBuilder.BuildWorkItemUrl(config.Url, config.Project, w.TfsId))
+                .Select(w => PoTool.Shared.WorkItems.TfsUrlBuilder.BuildWorkItemUrl(config.Url, config.Project, w.TfsId))
                 .ToList();
             
             var urlsText = string.Join(Environment.NewLine, urls);

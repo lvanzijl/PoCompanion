@@ -59,7 +59,7 @@ public class WorkItemExplorerTests : BunitTestContext
             .ReturnsAsync(new SettingsDto { DataMode = DataMode.Mock, ConfiguredGoalIds = new List<int>() });
 
         _mockApiClient.Setup(x => x.GetApiTfsconfigAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new ApiException("Not found", 204, null, null, null));
+            .ThrowsAsync(new ApiException("Not found", 204, null!, new Dictionary<string, IEnumerable<string>>(), null));
 
         _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync())
             .ReturnsAsync(new List<WorkItemWithValidationDto>());
@@ -122,7 +122,7 @@ public class WorkItemExplorerTests : BunitTestContext
         cut.WaitForAssertion(() =>
         {
             var markup = cut.Markup;
-            Assert.IsFalse(markup.Contains("mud-progress-linear"),
+            Assert.DoesNotContain("mud-progress-linear", markup,
                 "Loading indicator should be gone after data loads");
         }, timeout: TimeSpan.FromSeconds(5));
 

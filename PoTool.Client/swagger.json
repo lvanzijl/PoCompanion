@@ -72,6 +72,166 @@
         }
       }
     },
+    "/api/Filtering/by-validation-with-ancestors": {
+      "post": {
+        "tags": [
+          "Filtering"
+        ],
+        "operationId": "Filtering_FilterByValidationWithAncestors",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FilterByValidationRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterByValidationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Filtering/ids-by-validation-filter": {
+      "post": {
+        "tags": [
+          "Filtering"
+        ],
+        "operationId": "Filtering_GetWorkItemIdsByValidationFilter",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetWorkItemIdsByValidationFilterRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetWorkItemIdsByValidationFilterResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Filtering/count-by-validation-filter": {
+      "post": {
+        "tags": [
+          "Filtering"
+        ],
+        "operationId": "Filtering_CountWorkItemsByValidationFilter",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CountWorkItemsByValidationFilterRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountWorkItemsByValidationFilterResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Filtering/is-descendant-of-goals": {
+      "post": {
+        "tags": [
+          "Filtering"
+        ],
+        "operationId": "Filtering_IsDescendantOfGoals",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IsDescendantOfGoalsRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IsDescendantOfGoalsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/HealthCalculation/calculate-score": {
+      "post": {
+        "tags": [
+          "HealthCalculation"
+        ],
+        "operationId": "HealthCalculation_CalculateHealthScore",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalculateHealthScoreRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculateHealthScoreResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Metrics/sprint": {
       "get": {
         "tags": [
@@ -503,6 +663,99 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EffortConcentrationRiskDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Metrics/effort-estimation-suggestions": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetEffortEstimationSuggestions",
+        "parameters": [
+          {
+            "name": "iterationPath",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "areaPath",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "onlyInProgressItems",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EffortEstimationSuggestionDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Metrics/effort-estimation-quality": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetEffortEstimationQuality",
+        "parameters": [
+          {
+            "name": "areaPath",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "maxIterations",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffortEstimationQualityDto"
                 }
               }
             }
@@ -1138,6 +1391,49 @@
         }
       }
     },
+    "/api/Settings/effort-estimation": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "operationId": "Settings_GetEffortEstimationSettings",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffortEstimationSettingsDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "operationId": "Settings_UpdateEffortEstimationSettings",
+        "requestBody": {
+          "x-name": "settings",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EffortEstimationSettingsDto"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/api/WorkItems": {
       "get": {
         "tags": [
@@ -1664,6 +1960,38 @@
           }
         }
       }
+    },
+    "/api/WorkItems/bulk-assign-effort": {
+      "post": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_BulkAssignEffort",
+        "requestBody": {
+          "x-name": "command",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkAssignEffortCommand"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkEffortAssignmentResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1683,6 +2011,135 @@
           "pat": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "FilterByValidationResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "FilterByValidationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "targetIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "GetWorkItemIdsByValidationFilterResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "GetWorkItemIdsByValidationFilterRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filterId": {
+            "type": "string"
+          }
+        }
+      },
+      "CountWorkItemsByValidationFilterResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "CountWorkItemsByValidationFilterRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filterId": {
+            "type": "string"
+          }
+        }
+      },
+      "IsDescendantOfGoalsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "isDescendant": {
+            "type": "boolean"
+          }
+        }
+      },
+      "IsDescendantOfGoalsRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "goalIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "CalculateHealthScoreResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "healthScore": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "CalculateHealthScoreRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "totalWorkItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemsWithoutEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemsInProgressWithoutEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "parentProgressIssues": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "blockedItems": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -2665,6 +3122,152 @@
           5
         ]
       },
+      "EffortEstimationSuggestionDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemTitle": {
+            "type": "string"
+          },
+          "workItemType": {
+            "type": "string"
+          },
+          "currentEffort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "suggestedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "confidence": {
+            "type": "number",
+            "format": "double"
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "similarWorkItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistoricalEffortExample"
+            }
+          }
+        }
+      },
+      "HistoricalEffortExample": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "effort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "state": {
+            "type": "string"
+          },
+          "similarityScore": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "EffortEstimationQualityDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "averageEstimationAccuracy": {
+            "type": "number",
+            "format": "double"
+          },
+          "totalCompletedWorkItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemsWithEstimates": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "qualityByType": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkItemTypeEstimationQuality"
+            }
+          },
+          "trendOverTime": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EstimationTrend"
+            }
+          }
+        }
+      },
+      "WorkItemTypeEstimationQuality": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemType": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageAccuracy": {
+            "type": "number",
+            "format": "double"
+          },
+          "typicalEffortMin": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "typicalEffortMax": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageEffort": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "EstimationTrend": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "period": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "averageAccuracy": {
+            "type": "number",
+            "format": "double"
+          },
+          "estimatedCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "ProfileDto": {
         "type": "object",
         "additionalProperties": false,
@@ -3192,6 +3795,43 @@
               "type": "integer",
               "format": "int32"
             }
+          }
+        }
+      },
+      "EffortEstimationSettingsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "defaultEffortTask": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "defaultEffortBug": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "defaultEffortUserStory": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "defaultEffortPBI": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "defaultEffortFeature": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "defaultEffortEpic": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "defaultEffortGeneric": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enableProactiveNotifications": {
+            "type": "boolean"
           }
         }
       },
@@ -3804,6 +4444,73 @@
           },
           "justification": {
             "type": "string"
+          }
+        }
+      },
+      "BulkEffortAssignmentResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "totalRequested": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "successfulUpdates": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failedUpdates": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkEffortAssignmentItemResult"
+            }
+          }
+        }
+      },
+      "BulkEffortAssignmentItemResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "BulkAssignEffortCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkEffortAssignmentDto"
+            }
+          }
+        }
+      },
+      "BulkEffortAssignmentDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "effortValue": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       }

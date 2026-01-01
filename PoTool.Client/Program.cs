@@ -7,9 +7,7 @@ using PoTool.Client.ApiClient;
 using PoTool.Client.Handlers;
 using PoTool.Client.Services;
 using PoTool.Client.Storage;
-using PoTool.Core.Contracts;
-using PoTool.Core.Health;
-using PoTool.Core.WorkItems.Filtering;
+using PoTool.Shared.Contracts;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -72,6 +70,18 @@ builder.Services.AddScoped<IPullRequestsClient>(sp =>
     return new PullRequestsClient(httpClient);
 });
 
+builder.Services.AddScoped<IFilteringClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    return new FilteringClient(httpClient);
+});
+
+builder.Services.AddScoped<IHealthCalculationClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    return new HealthCalculationClient(httpClient);
+});
+
 // Register client services
 builder.Services.AddScoped<WorkItemService>();
 builder.Services.AddScoped<PullRequestService>();
@@ -89,11 +99,7 @@ builder.Services.AddScoped<IOnboardingService, OnboardingService>();
 builder.Services.AddScoped<IPreferencesService, BrowserPreferencesService>();
 builder.Services.AddScoped<ISecureStorageService, BrowserSecureStorageService>();
 
-// Register Core business logic services (layer separation)
-builder.Services.AddScoped<BacklogHealthCalculator>();
-builder.Services.AddScoped<WorkItemFilterer>();
-
-// Register business logic services
+// Register business logic services (now using API)
 builder.Services.AddScoped<WorkItemFilteringService>();
 builder.Services.AddScoped<WorkItemSelectionService>();
 builder.Services.AddScoped<PullRequestMetricsService>();

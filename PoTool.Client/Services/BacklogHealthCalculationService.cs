@@ -1,20 +1,19 @@
 using PoTool.Client.ApiClient;
-using PoTool.Core.Health;
 using MudBlazor;
 
 namespace PoTool.Client.Services;
 
 /// <summary>
 /// UI service for backlog health visualization.
-/// Business logic is delegated to Core layer.
+/// Business logic is delegated to API layer via HTTP calls.
 /// </summary>
 public class BacklogHealthCalculationService
 {
-    private readonly BacklogHealthCalculator _calculator;
+    private readonly IHealthCalculationClient _healthCalculationClient;
 
-    public BacklogHealthCalculationService(BacklogHealthCalculator calculator)
+    public BacklogHealthCalculationService(IHealthCalculationClient healthCalculationClient)
     {
-        _calculator = calculator ?? throw new ArgumentNullException(nameof(calculator));
+        _healthCalculationClient = healthCalculationClient ?? throw new ArgumentNullException(nameof(healthCalculationClient));
     }
 
     /// <summary>
@@ -22,15 +21,19 @@ public class BacklogHealthCalculationService
     /// </summary>
     /// <param name="iteration">Iteration health data.</param>
     /// <returns>Health score from 0 to 100.</returns>
-    public int CalculateHealthScore(BacklogHealthDto iteration)
+    public async Task<int> CalculateHealthScoreAsync(BacklogHealthDto iteration)
     {
-        return _calculator.CalculateHealthScore(
-            iteration.TotalWorkItems,
-            iteration.WorkItemsWithoutEffort,
-            iteration.WorkItemsInProgressWithoutEffort,
-            iteration.ParentProgressIssues,
-            iteration.BlockedItems
-        );
+        var request = new ApiClient.CalculateHealthScoreRequest
+        {
+            TotalWorkItems = iteration.TotalWorkItems,
+            WorkItemsWithoutEffort = iteration.WorkItemsWithoutEffort,
+            WorkItemsInProgressWithoutEffort = iteration.WorkItemsInProgressWithoutEffort,
+            ParentProgressIssues = iteration.ParentProgressIssues,
+            BlockedItems = iteration.BlockedItems
+        };
+
+        var response = await _healthCalculationClient.CalculateHealthScoreAsync(request);
+        return response.HealthScore;
     }
 
     /// <summary>

@@ -102,28 +102,28 @@ namespace PoTool.Tests.Integration.Features
 #line 7
     await testRunner.GivenAsync("the application is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-            global::Reqnroll.Table table19 = new global::Reqnroll.Table(new string[] {
+            global::Reqnroll.Table table25 = new global::Reqnroll.Table(new string[] {
                         "PullRequestId",
                         "Title",
                         "Status",
                         "CreatedBy",
                         "CreatedDate",
                         "RepositoryName"});
-            table19.AddRow(new string[] {
+            table25.AddRow(new string[] {
                         "1",
                         "Feature A",
                         "Active",
                         "Alice",
                         "2024-01-15",
                         "MainRepo"});
-            table19.AddRow(new string[] {
+            table25.AddRow(new string[] {
                         "2",
                         "Bug Fix B",
                         "Completed",
                         "Bob",
                         "2024-01-20",
                         "MainRepo"});
-            table19.AddRow(new string[] {
+            table25.AddRow(new string[] {
                         "3",
                         "Refactor C",
                         "Active",
@@ -131,7 +131,7 @@ namespace PoTool.Tests.Integration.Features
                         "2024-01-25",
                         "SecondRepo"});
 #line 8
-    await testRunner.AndAsync("pull requests exist in the database", ((string)(null)), table19, "And ");
+    await testRunner.AndAsync("pull requests exist in the database", ((string)(null)), table25, "And ");
 #line hidden
         }
         
@@ -413,20 +413,20 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table20 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table26 = new global::Reqnroll.Table(new string[] {
                             "IterationPath",
                             "CreatedBy",
                             "FromDate",
                             "ToDate",
                             "Status"});
-                table20.AddRow(new string[] {
+                table26.AddRow(new string[] {
                             "Iteration1",
                             "Alice",
                             "2024-01-01",
                             "2024-12-31",
                             "Active"});
 #line 50
-    await testRunner.WhenAsync("I request filtered pull requests with all parameters", ((string)(null)), table20, "When ");
+    await testRunner.WhenAsync("I request filtered pull requests with all parameters", ((string)(null)), table26, "When ");
 #line hidden
 #line 53
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");

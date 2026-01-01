@@ -75,7 +75,7 @@ public class BacklogHealthTests : BunitTestContext
         // Wait for async initialization
         cut.WaitForAssertion(() =>
         {
-            Assert.IsFalse(cut.Markup.Contains("mud-progress-linear"),
+            Assert.DoesNotContain("mud-progress-linear", cut.Markup,
                 "Loading indicator should be gone after data loads");
         }, timeout: TimeSpan.FromSeconds(5));
 
@@ -99,7 +99,7 @@ public class BacklogHealthTests : BunitTestContext
         // Wait for async initialization
         cut.WaitForAssertion(() =>
         {
-            Assert.IsFalse(cut.Markup.Contains("mud-progress-linear"),
+            Assert.DoesNotContain("mud-progress-linear", cut.Markup,
                 "Loading indicator should be gone after data loads");
         }, timeout: TimeSpan.FromSeconds(5));
 

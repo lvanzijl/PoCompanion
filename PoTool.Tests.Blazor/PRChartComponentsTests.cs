@@ -52,7 +52,7 @@ public class PRChartComponentsTests : BunitTestContext
 
         // Assert
         var charts = cut.FindComponents<MudBlazor.MudChart>();
-        Assert.AreEqual(1, charts.Count, "Should render one chart");
+        Assert.HasCount(1, charts, "Should render one chart");
     }
 
     [TestMethod]
@@ -86,7 +86,7 @@ public class PRChartComponentsTests : BunitTestContext
 
         // Assert
         var charts = cut.FindComponents<MudBlazor.MudChart>();
-        Assert.AreEqual(1, charts.Count, "Should render one chart");
+        Assert.HasCount(1, charts, "Should render one chart");
     }
 
     [TestMethod]
@@ -120,7 +120,7 @@ public class PRChartComponentsTests : BunitTestContext
 
         // Assert
         var charts = cut.FindComponents<MudBlazor.MudChart>();
-        Assert.AreEqual(1, charts.Count, "Should render one chart");
+        Assert.HasCount(1, charts, "Should render one chart");
     }
 
     [TestMethod]

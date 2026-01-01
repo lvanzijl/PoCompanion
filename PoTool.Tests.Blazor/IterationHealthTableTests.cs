@@ -98,7 +98,7 @@ public class IterationHealthTableTests : BunitTestContext
 
         // Assert
         var icons = cut.FindComponents<MudBlazor.MudIcon>();
-        Assert.IsTrue(icons.Count > 0, "Should display health indicator icons");
+        Assert.IsNotEmpty(icons, "Should display health indicator icons");
     }
 
     [TestMethod]
@@ -132,7 +132,7 @@ public class IterationHealthTableTests : BunitTestContext
 
         // Assert
         var cards = cut.FindComponents<MudBlazor.MudCard>();
-        Assert.AreEqual(3, cards.Count, "Should render 3 iteration cards");
+        Assert.HasCount(3, cards, "Should render 3 iteration cards");
     }
 
     // Helper methods to create test data

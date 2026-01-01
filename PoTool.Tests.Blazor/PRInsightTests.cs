@@ -84,7 +84,7 @@ public class PRInsightTests : BunitTestContext
             // After async completes, _isLoading should be false and metrics should be loaded
             // This means the progress bar should be gone
             var markup = cut.Markup;
-            Assert.IsFalse(markup.Contains("mud-progress-linear"), 
+            Assert.DoesNotContain("mud-progress-linear", markup, 
                 "Loading indicator should be gone after data loads");
         }, timeout: TimeSpan.FromSeconds(5));
 

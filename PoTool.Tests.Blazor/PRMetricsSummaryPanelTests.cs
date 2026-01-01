@@ -70,6 +70,6 @@ public class PRMetricsSummaryPanelTests : BunitTestContext
 
         // Assert - Should render 4 MetricSummaryCard components
         var metricCards = cut.FindComponents<Client.Components.Common.MetricSummaryCard>();
-        Assert.AreEqual(4, metricCards.Count, "Should render 4 metric cards");
+        Assert.HasCount(4, metricCards, "Should render 4 metric cards");
     }
 }

@@ -75,7 +75,7 @@ public class BacklogHealthFiltersTests : BunitTestContext
 
         // Assert
         var textFields = cut.FindComponents<MudBlazor.MudTextField<string>>();
-        Assert.AreEqual(1, textFields.Count, "Should have one text field for area path");
+        Assert.HasCount(1, textFields, "Should have one text field for area path");
     }
 
     [TestMethod]
@@ -87,6 +87,6 @@ public class BacklogHealthFiltersTests : BunitTestContext
 
         // Assert
         var numericFields = cut.FindComponents<MudBlazor.MudNumericField<int>>();
-        Assert.AreEqual(1, numericFields.Count, "Should have one numeric field for max iterations");
+        Assert.HasCount(1, numericFields, "Should have one numeric field for max iterations");
     }
 }
