@@ -270,7 +270,7 @@
     private string GetDescendantIssueTooltip(TreeNode node)
     {
         var count = node.InvalidDescendantIds.Count;
-        return $"{count} error{(count != 1 ? "s" : "")}/warning{(count != 1 ? "s" : "")} in descendants";
+        return $"{count} issue{(count != 1 ? "s" : "")} in descendants";
     }
 
     private async Task RevealInvalidItem(TreeNode node)
@@ -311,16 +311,19 @@
 
     private async Task OpenColumnPicker()
     {
+        // Create a clone of the current config to avoid direct modification
+        var configClone = _columnConfigs.Select(c => new ColumnPickerDialog.ColumnConfig 
+            { 
+                Id = c.Id, 
+                Title = c.Title, 
+                IsVisible = c.IsVisible, 
+                Order = c.Order, 
+                IsRequired = c.IsRequired 
+            }).ToList();
+
         var parameters = new DialogParameters
         {
-            { "Columns", _columnConfigs.Select(c => new ColumnPickerDialog.ColumnConfig 
-                { 
-                    Id = c.Id, 
-                    Title = c.Title, 
-                    IsVisible = c.IsVisible, 
-                    Order = c.Order, 
-                    IsRequired = c.IsRequired 
-                }).ToList() }
+            { "Columns", configClone }
         };
 
         var options = new DialogOptions
@@ -335,6 +338,7 @@
 
         if (result != null && !result.Canceled && result.Data is List<ColumnPickerDialog.ColumnConfig> newConfigs)
         {
+            // Apply the changes from the clone back to the original
             _columnConfigs = newConfigs;
             // TODO: Save to persistence
             StateHasChanged();

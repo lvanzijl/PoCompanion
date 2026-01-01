@@ -262,10 +262,17 @@ public class TreeBuilderService : ITreeBuilderService
         // Compute depth/level for all nodes
         ComputeDepth(roots, 0);
 
+        // Build global node map once for efficient lookups
+        var globalNodeMap = new Dictionary<int, TreeNode>();
+        foreach (var root in roots)
+        {
+            CollectNodesIntoMap(root, globalNodeMap);
+        }
+
         // Compute InvalidDescendantIds for all nodes
         foreach (var root in roots)
         {
-            ComputeInvalidDescendantIds(root);
+            ComputeInvalidDescendantIds(root, globalNodeMap);
         }
 
         return roots;
@@ -288,11 +295,12 @@ public class TreeBuilderService : ITreeBuilderService
 
     /// <summary>
     /// Recursively computes InvalidDescendantIds for each node.
-    /// Returns a list of invalid descendant IDs found in the subtree rooted at the given node.
+    /// Returns a list of invalid descendant IDs with their original insertion order.
     /// </summary>
-    private List<int> ComputeInvalidDescendantIds(TreeNode node)
+    private List<(int Id, int Order)> ComputeInvalidDescendantIds(TreeNode node, Dictionary<int, TreeNode> nodeMap)
     {
-        var invalidDescendants = new List<int>();
+        var invalidDescendants = new List<(int Id, int Order)>();
+        int order = 0;
 
         // Process children in order (stable pre-order traversal)
         foreach (var child in node.Children)
@@ -300,24 +308,27 @@ public class TreeBuilderService : ITreeBuilderService
             // Check if child itself has issues
             if (child.SelfErrorCount > 0 || child.SelfWarningCount > 0)
             {
-                invalidDescendants.Add(child.Id);
+                invalidDescendants.Add((child.Id, order++));
             }
 
             // Recursively collect invalid descendants from child's subtree
-            var childInvalidDescendants = ComputeInvalidDescendantIds(child);
-            invalidDescendants.AddRange(childInvalidDescendants);
+            var childInvalidDescendants = ComputeInvalidDescendantIds(child, nodeMap);
+            foreach (var (id, _) in childInvalidDescendants)
+            {
+                invalidDescendants.Add((id, order++));
+            }
         }
 
-        // Sort by depth (closer descendants first), then maintain pre-order
-        // Group by depth level
-        var nodeMap = new Dictionary<int, TreeNode>();
-        CollectNodesIntoMap(node, nodeMap);
-
+        // Sort by depth (closer descendants first), then maintain pre-order using tracked order
         var sortedInvalidDescendants = invalidDescendants
             .Distinct()
-            .Select(id => new { Id = id, Depth = nodeMap.ContainsKey(id) ? nodeMap[id].Level : int.MaxValue })
+            .Select(item => new { 
+                Id = item.Id, 
+                Depth = nodeMap.ContainsKey(item.Id) ? nodeMap[item.Id].Level : int.MaxValue,
+                Order = item.Order
+            })
             .OrderBy(x => x.Depth)
-            .ThenBy(x => invalidDescendants.IndexOf(x.Id)) // Maintain pre-order within same depth
+            .ThenBy(x => x.Order)
             .Select(x => x.Id)
             .ToList();
 

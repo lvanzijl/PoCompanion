@@ -537,8 +537,6 @@
         _selectedWorkItem = _selectionState.PrimarySelectedWorkItem;
     }
 
-    private Dictionary<int, TreeNode> _nodeMap = new();
-
     private async Task HandleRevealInvalidItem(TreeNode node)
     {
         if (!node.HasDescendantIssues || node.InvalidDescendantIds.Count == 0)
@@ -549,10 +547,14 @@
         // Get the first invalid descendant ID
         var targetId = node.InvalidDescendantIds[0];
 
-        // Build a map of all nodes for quick lookup
-        BuildNodeMap();
+        // Build a map of all nodes for quick lookup (local to this operation)
+        var nodeMap = new Dictionary<int, TreeNode>();
+        foreach (var root in _treeRoots)
+        {
+            AddNodeToMap(root, nodeMap);
+        }
 
-        if (!_nodeMap.TryGetValue(targetId, out var targetNode))
+        if (!nodeMap.TryGetValue(targetId, out var targetNode))
         {
             Snackbar.Add("Target node not found", Severity.Warning);
             return;
@@ -564,7 +566,7 @@
         while (current != null)
         {
             pathToTarget.Insert(0, current);
-            if (current.ParentId.HasValue && _nodeMap.TryGetValue(current.ParentId.Value, out var parent))
+            if (current.ParentId.HasValue && nodeMap.TryGetValue(current.ParentId.Value, out var parent))
             {
                 current = parent;
             }
@@ -595,21 +597,12 @@
         Snackbar.Add($"Revealed item: {targetNode.Title}", Severity.Info);
     }
 
-    private void BuildNodeMap()
+    private void AddNodeToMap(TreeNode node, Dictionary<int, TreeNode> map)
     {
-        _nodeMap.Clear();
-        foreach (var root in _treeRoots)
-        {
-            AddNodeToMap(root);
-        }
-    }
-
-    private void AddNodeToMap(TreeNode node)
-    {
-        _nodeMap[node.Id] = node;
+        map[node.Id] = node;
         foreach (var child in node.Children)
         {
-            AddNodeToMap(child);
+            AddNodeToMap(child, map);
         }
     }
 }
