@@ -564,7 +564,7 @@
 
     private Color GetUtilizationColor()
     {
-        if (_distributionData == null || !_distributionData.EffortByIteration.Any()) 
+        if (_distributionData == null || !_distributionData.EffortByIteration.Any())
             return Color.Default;
         
         var avg = _distributionData.EffortByIteration.Average(i => i.UtilizationPercentage);

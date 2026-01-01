@@ -364,7 +364,7 @@ public class EffortDistributionTests : BunitTestContext
         {
             TotalEffort = 0,
             EffortByArea = new List<EffortByAreaPath>(),
-            EffortByIteration = new List<EffortByIteration>(), // Empty collection
+            EffortByIteration = new List<EffortByIteration>(),
             HeatMapData = new List<EffortHeatMapCell>()
         };
 
