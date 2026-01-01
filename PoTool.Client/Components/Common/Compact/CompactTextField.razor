@@ -1,0 +1,57 @@
+@using MudBlazor
+@using System.Linq.Expressions
+@typeparam T
+
+<MudTextField T="T"
+              Value="@Value"
+              ValueChanged="@ValueChanged"
+              Label="@Label"
+              Placeholder="@Placeholder"
+              Required="@Required"
+              HelperText="@HelperText"
+              InputType="@InputType"
+              Lines="@Lines"
+              Margin="Margin.Dense"
+              Variant="@Variant"
+              Disabled="@Disabled"
+              ReadOnly="@ReadOnly"
+              Class="@Class"
+              Style="@Style"
+              For="@For"
+              Validation="@Validation"
+              Immediate="@Immediate"
+              DebounceInterval="@DebounceInterval"
+              OnBlur="@OnBlur"
+              OnAdornmentClick="@OnAdornmentClick"
+              Adornment="@Adornment"
+              AdornmentIcon="@AdornmentIcon"
+              AdornmentColor="@AdornmentColor"
+              IconSize="@IconSize"
+              AdornmentText="@AdornmentText" />
+
+@code {
+    [Parameter] public T? Value { get; set; }
+    [Parameter] public EventCallback<T> ValueChanged { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public string? HelperText { get; set; }
+    [Parameter] public InputType InputType { get; set; } = InputType.Text;
+    [Parameter] public int Lines { get; set; } = 1;
+    [Parameter] public Variant Variant { get; set; } = Variant.Outlined;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool ReadOnly { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public Expression<Func<T>>? For { get; set; }
+    [Parameter] public object? Validation { get; set; }
+    [Parameter] public bool Immediate { get; set; }
+    [Parameter] public double DebounceInterval { get; set; } = 0;
+    [Parameter] public EventCallback<FocusEventArgs> OnBlur { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnAdornmentClick { get; set; }
+    [Parameter] public Adornment Adornment { get; set; } = Adornment.None;
+    [Parameter] public string? AdornmentIcon { get; set; }
+    [Parameter] public Color AdornmentColor { get; set; } = Color.Default;
+    [Parameter] public Size IconSize { get; set; } = Size.Medium;
+    [Parameter] public string? AdornmentText { get; set; }
+}
