@@ -1,0 +1,168 @@
+@using MudBlazor
+
+@* Column picker dialog for TreeGrid *@
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Configure Columns</MudText>
+
+        <MudList T="ColumnConfig" Dense="true">
+            @foreach (var column in Columns)
+            {
+                <MudListItem T="ColumnConfig" Dense="true" Class="column-config-item">
+                    <div class="column-config-row">
+                        <MudCheckBox T="bool" 
+                                     Value="@column.IsVisible" 
+                                     ValueChanged="@((bool val) => OnColumnVisibilityChanged(column, val))"
+                                     Dense="true"
+                                     Disabled="@column.IsRequired" />
+                        <MudText Typo="Typo.body2" Class="flex-grow-1">
+                            @column.Title@(column.IsRequired ? " (Required)" : "")
+                        </MudText>
+                        <div class="column-actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" 
+                                          Size="Size.Small" 
+                                          OnClick="() => MoveColumnUp(column)"
+                                          Disabled="@IsFirstColumn(column)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" 
+                                          Size="Size.Small" 
+                                          OnClick="() => MoveColumnDown(column)"
+                                          Disabled="@IsLastColumn(column)" />
+                        </div>
+                    </div>
+                </MudListItem>
+            }
+        </MudList>
+
+        <MudDivider Class="my-4" />
+
+        <MudButton Variant="Variant.Text" 
+                   Color="Color.Secondary" 
+                   OnClick="ResetToDefault"
+                   StartIcon="@Icons.Material.Filled.Refresh">
+            Reset to Default
+        </MudButton>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public List<ColumnConfig> Columns { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<List<ColumnConfig>> OnSave { get; set; }
+
+    /// <summary>
+    /// Represents configuration for a single column.
+    /// </summary>
+    public class ColumnConfig
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public bool IsVisible { get; set; }
+        public int Order { get; set; }
+        public bool IsRequired { get; set; } // Cannot be hidden
+
+        /// <summary>
+        /// Creates a deep copy of this ColumnConfig.
+        /// </summary>
+        public ColumnConfig Clone()
+        {
+            return new ColumnConfig
+            {
+                Id = this.Id,
+                Title = this.Title,
+                IsVisible = this.IsVisible,
+                Order = this.Order,
+                IsRequired = this.IsRequired
+            };
+        }
+    }
+
+    private void OnColumnVisibilityChanged(ColumnConfig column, bool isVisible)
+    {
+        // Don't allow hiding required columns
+        if (column.IsRequired && !isVisible)
+        {
+            return;
+        }
+
+        column.IsVisible = isVisible;
+    }
+
+    private void MoveColumnUp(ColumnConfig column)
+    {
+        var index = Columns.IndexOf(column);
+        if (index > 0)
+        {
+            Columns.RemoveAt(index);
+            Columns.Insert(index - 1, column);
+            UpdateColumnOrders();
+        }
+    }
+
+    private void MoveColumnDown(ColumnConfig column)
+    {
+        var index = Columns.IndexOf(column);
+        if (index < Columns.Count - 1)
+        {
+            Columns.RemoveAt(index);
+            Columns.Insert(index + 1, column);
+            UpdateColumnOrders();
+        }
+    }
+
+    private bool IsFirstColumn(ColumnConfig column)
+    {
+        return Columns.IndexOf(column) == 0;
+    }
+
+    private bool IsLastColumn(ColumnConfig column)
+    {
+        return Columns.IndexOf(column) == Columns.Count - 1;
+    }
+
+    private void UpdateColumnOrders()
+    {
+        for (int i = 0; i < Columns.Count; i++)
+        {
+            Columns[i].Order = i;
+        }
+    }
+
+    private void ResetToDefault()
+    {
+        // Reset all columns to default state
+        var defaultColumns = GetDefaultColumns();
+        Columns.Clear();
+        Columns.AddRange(defaultColumns);
+    }
+
+    private List<ColumnConfig> GetDefaultColumns()
+    {
+        return new List<ColumnConfig>
+        {
+            new() { Id = "title", Title = "Title", IsVisible = true, Order = 0, IsRequired = true },
+            new() { Id = "id", Title = "ID", IsVisible = true, Order = 1, IsRequired = false },
+            new() { Id = "state", Title = "State", IsVisible = true, Order = 2, IsRequired = false }
+        };
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task Save()
+    {
+        await OnSave.InvokeAsync(Columns);
+        MudDialog.Close(DialogResult.Ok(Columns));
+    }
+}

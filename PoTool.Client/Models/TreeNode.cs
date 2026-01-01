@@ -36,6 +36,11 @@ public class TreeNode
     public List<TreeNode> Children { get; set; } = new();
 
     /// <summary>
+    /// IDs of direct children (for quick access).
+    /// </summary>
+    public List<int> ChildrenIds { get; set; } = new();
+
+    /// <summary>
     /// Whether this node is expanded in the tree view.
     /// </summary>
     public bool IsExpanded { get; set; }
@@ -44,6 +49,11 @@ public class TreeNode
     /// The depth level of this node in the tree (0 for root nodes).
     /// </summary>
     public int Level { get; set; }
+
+    /// <summary>
+    /// Alias for Level to match spec terminology.
+    /// </summary>
+    public int Depth => Level;
 
     /// <summary>
     /// The full work item data as JSON.
@@ -84,4 +94,26 @@ public class TreeNode
     /// Gets whether this node has any validation issues.
     /// </summary>
     public bool HasValidationIssues => ValidationIssues.Any();
+
+    /// <summary>
+    /// Number of errors on this item itself (not descendants).
+    /// </summary>
+    public int SelfErrorCount { get; set; }
+
+    /// <summary>
+    /// Number of warnings on this item itself (not descendants).
+    /// </summary>
+    public int SelfWarningCount { get; set; }
+
+    /// <summary>
+    /// Ordered list of descendant IDs with validation issues.
+    /// Precomputed during tree building for performance.
+    /// Ordered by depth (closer descendants first), then stable pre-order traversal.
+    /// </summary>
+    public List<int> InvalidDescendantIds { get; set; } = new();
+
+    /// <summary>
+    /// Gets whether this node has descendant validation issues.
+    /// </summary>
+    public bool HasDescendantIssues => InvalidDescendantIds.Count > 0;
 }
