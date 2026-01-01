@@ -19,14 +19,13 @@
         else
         {
             <MudForm @ref="_form">
-                <MudSelect T="DataMode" 
+                <CompactSelect T="DataMode" 
                            @bind-Value="_dataMode" 
                            Label="Data Mode" 
-                           Variant="Variant.Outlined"
                            Class="mb-4">
                     <MudSelectItem Value="DataMode.Mock">Mock (Test Data)</MudSelectItem>
                     <MudSelectItem Value="DataMode.Tfs">TFS (Live Data)</MudSelectItem>
-                </MudSelect>
+                </CompactSelect>
 
                 <MudText Typo="Typo.subtitle1" Class="mb-2">Configured Goals</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
@@ -39,14 +38,12 @@
                 }
                 else
                 {
-                    <MudSelect T="WorkItemDto" 
+                    <CompactSelect T="WorkItemDto" 
                                Label="Select Goals" 
                                MultiSelection="true"
                                @bind-SelectedValues="_selectedGoals"
-                               Variant="Variant.Outlined"
                                AnchorOrigin="Origin.BottomCenter"
                                Class="mb-4"
-                               Dense="false"
                                MaxHeight="400">
                         @foreach (var goal in _availableGoals)
                         {
@@ -54,7 +51,7 @@
                                 @goal.Title (ID: @goal.TfsId)
                             </MudSelectItem>
                         }
-                    </MudSelect>
+                    </CompactSelect>
 
                     @if (_selectedGoals != null && _selectedGoals.Any())
                     {
@@ -79,8 +76,8 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Color="Color.Default">Cancel</MudButton>
-        <MudButton OnClick="SaveSettings" Color="Color.Primary" Variant="Variant.Filled" Disabled="_isLoading || _isSaving">
+        <CompactButton OnClick="Cancel" Color="Color.Default">Cancel</CompactButton>
+        <CompactButton OnClick="SaveSettings" Color="Color.Primary" Variant="Variant.Filled" Disabled="_isLoading || _isSaving">
             @if (_isSaving)
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" />
@@ -89,7 +86,7 @@
             {
                 <text>Save</text>
             }
-        </MudButton>
+        </CompactButton>
     </DialogActions>
 </MudDialog>
 

@@ -37,39 +37,31 @@
         else
         {
             <MudForm @ref="_form" @bind-IsValid="_formValid">
-            <MudTextField @bind-Value="_url" 
+            <CompactTextField @bind-Value="_url" 
                          Label="Organization URL" 
                          Placeholder="https://dev.azure.com/yourorg"
                          Required="true"
-                         Variant="Variant.Outlined"
-                         Margin="Margin.Normal"
                          HelperText="The URL of your Azure DevOps organization" />
 
-            <MudTextField @bind-Value="_project" 
+            <CompactTextField @bind-Value="_project" 
                          Label="Project Name" 
                          Placeholder="MyProject"
                          Required="true"
-                         Variant="Variant.Outlined"
-                         Margin="Margin.Normal"
                          HelperText="The name of your project" />
 
-            <MudSelect @bind-Value="_authMode" 
+            <CompactSelect @bind-Value="_authMode" 
                       Label="Authentication Mode" 
-                      Variant="Variant.Outlined"
-                      Margin="Margin.Normal"
                       HelperText="Select authentication method">
                 <MudSelectItem Value="@TfsAuthMode.Pat">Personal Access Token (PAT)</MudSelectItem>
                 <MudSelectItem Value="@TfsAuthMode.Ntlm">NTLM/Windows Authentication</MudSelectItem>
-            </MudSelect>
+            </CompactSelect>
 
             @if (_authMode == TfsAuthMode.Pat)
             {
-                <MudTextField @bind-Value="_pat" 
+                <CompactTextField @bind-Value="_pat" 
                              Label="Personal Access Token (PAT)" 
                              Placeholder="Your PAT"
                              Required="true"
-                             Variant="Variant.Outlined"
-                             Margin="Margin.Normal"
                              InputType="InputType.Password"
                              HelperText="Stored securely on your device (not on server)" />
             }
@@ -91,15 +83,13 @@
                             Max="300"
                             HelperText="HTTP request timeout in seconds (5-300)" />
 
-            <MudTextField @bind-Value="_apiVersion" 
+            <CompactTextField @bind-Value="_apiVersion" 
                          Label="API Version" 
-                         Variant="Variant.Outlined"
-                         Margin="Margin.Normal"
                          ReadOnly="true"
                          HelperText="TFS/Azure DevOps API version (read-only)" />
 
             <MudStack Row="true" Class="mt-4">
-                <MudButton Variant="Variant.Filled" 
+                <CompactButton Variant="Variant.Filled" 
                           Color="Color.Primary" 
                           OnClick="SaveConfig"
                           Disabled="@(!_formValid || _isSaving)"
@@ -113,9 +103,9 @@
                     {
                         <span>Save Configuration</span>
                     }
-                </MudButton>
+                </CompactButton>
 
-                <MudButton Variant="Variant.Filled" 
+                <CompactButton Variant="Variant.Filled" 
                           Color="Color.Secondary" 
                           OnClick="TestConnection"
                           Disabled="@(!_formValid || _isTesting)"
@@ -129,7 +119,7 @@
                     {
                         <span>Test Connection</span>
                     }
-                </MudButton>
+                </CompactButton>
             </MudStack>
         </MudForm>
 

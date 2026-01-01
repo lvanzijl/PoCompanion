@@ -61,37 +61,30 @@
                         </MudStack>
                         
                         <MudForm @ref="_configForm" @bind-IsValid="_configFormValid">
-                            <MudTextField @bind-Value="_url" 
+                            <CompactTextField @bind-Value="_url" 
                                          Label="Organization URL" 
                                          Placeholder="https://dev.azure.com/yourorg"
                                          Required="true"
-                                         Variant="Variant.Outlined"
-                                         Margin="Margin.Dense"
                                          HelperText="The URL of your Azure DevOps organization" />
 
-                            <MudTextField @bind-Value="_project" 
+                            <CompactTextField @bind-Value="_project" 
                                          Label="Project Name" 
                                          Placeholder="MyProject"
                                          Required="true"
-                                         Variant="Variant.Outlined"
-                                         Margin="Margin.Dense"
                                          HelperText="The name of your project" />
 
-                            <MudTextField @bind-Value="_pat" 
+                            <CompactTextField @bind-Value="_pat" 
                                          Label="Personal Access Token (PAT)" 
                                          Placeholder="Your PAT"
                                          Required="true"
-                                         Variant="Variant.Outlined"
-                                         Margin="Margin.Dense"
                                          InputType="InputType.Password"
                                          HelperText="Your PAT will be encrypted at rest" />
 
                             <MudStack Row="true" Spacing="2" Class="mt-2">
-                                <MudButton Variant="Variant.Filled" 
+                                <CompactButton Variant="Variant.Filled" 
                                           Color="Color.Primary" 
                                           OnClick="SaveAndTestConfig"
                                           Disabled="@(!_configFormValid || _isSaving || _isTesting)"
-                                          Size="Size.Small"
                                           StartIcon="@Icons.Material.Filled.Check">
                                     @if (_isSaving || _isTesting)
                                     {
@@ -102,7 +95,7 @@
                                     {
                                         <span>Save & Test Connection</span>
                                     }
-                                </MudButton>
+                                </CompactButton>
                             </MudStack>
                         </MudForm>
 
@@ -137,40 +130,31 @@
                         </MudText>
 
                         <MudForm @ref="_profileForm" @bind-IsValid="_profileFormValid">
-                            <MudTextField @bind-Value="_profileName" 
+                            <CompactTextField @bind-Value="_profileName" 
                                           Label="Profile Name" 
                                           Required="true"
-                                          Variant="Variant.Outlined"
-                                          Margin="Margin.Dense"
                                           HelperText="e.g., 'Product A - Team Alpha'" />
 
-                            <MudTextField @bind-Value="_profileTeamName" 
+                            <CompactTextField @bind-Value="_profileTeamName" 
                                           Label="Team Name" 
                                           Required="true"
-                                          Variant="Variant.Outlined"
-                                          Margin="Margin.Dense"
                                           HelperText="The team you work with" />
 
-                            <MudTextField @bind-Value="_profileAreaPaths" 
+                            <CompactTextField @bind-Value="_profileAreaPaths" 
                                           Label="Area Paths (comma-separated)" 
                                           Required="true"
-                                          Variant="Variant.Outlined"
-                                          Margin="Margin.Dense"
                                           Lines="2"
                                           HelperText="e.g., 'ProjectA\\ProductA, ProjectA\\ProductA\\FeatureX'" />
 
-                            <MudTextField @bind-Value="_profileGoalIds" 
+                            <CompactTextField @bind-Value="_profileGoalIds" 
                                           Label="Goal IDs (comma-separated, optional)" 
-                                          Variant="Variant.Outlined"
-                                          Margin="Margin.Dense"
                                           HelperText="Leave empty for all goals, or specify IDs like '1000,2000'" />
 
                             <MudStack Row="true" Spacing="2" Class="mt-2">
-                                <MudButton Variant="Variant.Filled" 
+                                <CompactButton Variant="Variant.Filled" 
                                           Color="Color.Primary" 
                                           OnClick="SaveProfile"
                                           Disabled="@(!_profileFormValid || _isSavingProfile)"
-                                          Size="Size.Small"
                                           StartIcon="@Icons.Material.Filled.Save">
                                     @if (_isSavingProfile)
                                     {
@@ -181,7 +165,7 @@
                                     {
                                         <span>Save Profile</span>
                                     }
-                                </MudButton>
+                                </CompactButton>
                             </MudStack>
                         </MudForm>
 
@@ -291,7 +275,7 @@
             </MudStack>
         </DialogContent>
         <DialogActions>
-            <MudButton OnClick="Skip" Color="Color.Default">
+            <CompactButton OnClick="Skip" Color="Color.Default">
                 @if (_currentStep == 4)
                 {
                     <text>Skip for Now</text>
@@ -300,24 +284,24 @@
                 {
                     <text>Skip Tour</text>
                 }
-            </MudButton>
+            </CompactButton>
             @if (_currentStep > 0)
             {
-                <MudButton OnClick="Previous" Color="Color.Default" Variant="Variant.Outlined">
+                <CompactButton OnClick="Previous" Color="Color.Default" Variant="Variant.Outlined">
                     Previous
-                </MudButton>
+                </CompactButton>
             }
             @if (_currentStep < 4)
             {
-                <MudButton OnClick="Next" Color="Color.Primary" Variant="Variant.Filled">
+                <CompactButton OnClick="Next" Color="Color.Primary" Variant="Variant.Filled">
                     Next
-                </MudButton>
+                </CompactButton>
             }
             else
             {
-                <MudButton OnClick="Complete" Color="Color.Success" Variant="Variant.Filled">
+                <CompactButton OnClick="Complete" Color="Color.Success" Variant="Variant.Filled">
                     Get Started
-                </MudButton>
+                </CompactButton>
             }
         </DialogActions>
     </MudDialog>
