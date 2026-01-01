@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services;
+using PoTool.Api.Services.MockData;
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Filtering;
@@ -92,7 +93,14 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<IPullRequestRepository, PullRequestRepository>();
 
-        // Register mock data providers
+        // Register new Battleship mock data generation system
+        services.AddSingleton<BattleshipWorkItemGenerator>();
+        services.AddSingleton<BattleshipDependencyGenerator>();
+        services.AddSingleton<BattleshipPullRequestGenerator>();
+        services.AddSingleton<MockDataValidator>();
+        services.AddSingleton<BattleshipMockDataFacade>();
+        
+        // Keep old mock data providers for backward compatibility during migration
         services.AddSingleton<MockDataProvider>();
         services.AddSingleton<MockPullRequestDataProvider>();
 

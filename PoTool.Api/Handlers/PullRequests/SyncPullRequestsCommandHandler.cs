@@ -1,5 +1,5 @@
 using Mediator;
-using PoTool.Api.Services;
+using PoTool.Api.Services.MockData;
 using PoTool.Core.Contracts;
 using PoTool.Core.PullRequests.Commands;
 using PoTool.Core.Settings;
@@ -13,16 +13,16 @@ namespace PoTool.Api.Handlers.PullRequests;
 public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullRequestsCommand, int>
 {
     private readonly IPullRequestRepository _repository;
-    private readonly MockPullRequestDataProvider _mockProvider;
+    private readonly BattleshipMockDataFacade _mockDataFacade;
     private readonly ILogger<SyncPullRequestsCommandHandler> _logger;
 
     public SyncPullRequestsCommandHandler(
         IPullRequestRepository repository,
-        MockPullRequestDataProvider mockProvider,
+        BattleshipMockDataFacade mockDataFacade,
         ILogger<SyncPullRequestsCommandHandler> logger)
     {
         _repository = repository;
-        _mockProvider = mockProvider;
+        _mockDataFacade = mockDataFacade;
         _logger = logger;
     }
 
@@ -32,12 +32,12 @@ public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullReq
     {
         _logger.LogInformation("Starting pull request sync");
 
-        // For now, use mock data
+        // For now, use mock data from new Battleship system
         // In future, check DataMode from settings and use ITfsClient when mode is TFS
-        var pullRequests = _mockProvider.GetMockPullRequests();
-        var iterations = _mockProvider.GetMockIterations();
-        var comments = _mockProvider.GetMockComments();
-        var fileChanges = _mockProvider.GetMockFileChanges();
+        var pullRequests = _mockDataFacade.GetMockPullRequests();
+        var iterations = _mockDataFacade.GetMockIterations();
+        var comments = _mockDataFacade.GetMockComments();
+        var fileChanges = _mockDataFacade.GetMockFileChanges();
 
         // Save to repository
         await _repository.SaveAsync(pullRequests, cancellationToken);
