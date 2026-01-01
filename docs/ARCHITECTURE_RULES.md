@@ -1,242 +1,228 @@
-## ARCHITECTURE_RULES.md
+## Architecture Rules
 
-This document outlines the core architectural rules and patterns that govern the PoCompanion system.
+This document outlines the key architectural rules and patterns used in PoCompanion to ensure consistency, maintainability, and code quality across the project.
 
-## 1. Domain-Driven Design (DDD) Principles
+---
 
-### 1.1 Bounded Contexts
-- Each major feature area represents a bounded context
-- Clear boundaries between contexts with explicit interfaces
-- Shared kernel for common domain concepts
+## 1. Clean Architecture Principles
 
-### 1.2 Entities and Value Objects
-- Entities have unique identifiers and lifecycle
-- Value objects are immutable and defined by their attributes
-- Rich domain models with behavior, not anemic models
+### 1.1 Separation of Concerns
+- The project is organized into distinct layers:
+  - **API**: Entry point for HTTP requests
+  - **Application**: Business logic and use cases
+  - **Domain**: Core business entities and rules
+  - **Infrastructure**: External concerns (database, file system, etc.)
 
-### 1.3 Aggregates
-- Each aggregate has a root entity
-- External references only through the aggregate root
-- Maintain consistency boundaries within aggregates
+### 1.2 Dependency Rule
+- Dependencies must point inward toward the Domain
+- The Domain layer should have no external dependencies
+- The Application layer may reference Domain but not Infrastructure or API
+- The Infrastructure and API layers may reference Application and Domain
 
-## 2. Clean Architecture
+---
 
-### 2.1 Dependency Rule
-- Dependencies point inward: UI → Application → Domain
-- Domain layer has no external dependencies
-- Application layer depends only on Domain
-- Infrastructure implements interfaces defined in Application/Domain
+## 2. CQRS Pattern
 
-### 2.2 Layer Responsibilities
-- **Domain**: Business logic, entities, value objects, domain services
-- **Application**: Use cases, application services, DTOs, interfaces
-- **Infrastructure**: Data access, external services, framework concerns
-- **Presentation**: API controllers, SignalR hubs, UI concerns
+### 2.1 Command and Query Separation
+- **Commands**: Represent actions that change state
+  - Placed in `Application/Features/{Entity}/Commands/`
+  - Must implement `IRequest<Result<T>>` or `IRequest<Result>`
+  - Should have a single responsibility
 
-## 3. CQRS Pattern
+- **Queries**: Represent data retrieval operations
+  - Placed in `Application/Features/{Entity}/Queries/`
+  - Must implement `IRequest<Result<T>>`
+  - Should be read-only
 
-### 3.1 Command-Query Separation
-- Commands change state, return void or minimal confirmation
-- Queries return data, never modify state
-- Clear separation in code structure
+### 2.2 MediatR Integration
+- All commands and queries are handled through MediatR
+- Handlers are registered automatically via assembly scanning
+- Controllers should only orchestrate requests, not contain business logic
 
-### 3.2 MediatR Usage
-- All commands and queries go through MediatR
-- Handlers are independent and testable
-- Cross-cutting concerns via pipeline behaviors
+---
 
-## 4. Repository Pattern
+## 3. Result Pattern
 
-### 4.1 Generic Repository
-- IRepository<T> for common CRUD operations
-- Specific repositories extend for specialized queries
-- Repository interfaces in Domain/Application layer
-- Implementation in Infrastructure layer
+### 3.1 Result Type Usage
+- All service methods must return `Result<T>` or `Result`
+- Success: `Result.Success(value)` or `Result.Success()`
+- Failure: `Result.Failure<T>(error)` or `Result.Failure(error)`
 
-### 4.2 Unit of Work
-- Transaction management at application service level
-- Coordinate multiple repository operations
-- Ensure data consistency across aggregates
+### 3.2 Error Handling
+- Errors should be descriptive and actionable
+- Use the `Error` class to create structured error messages
+- Avoid throwing exceptions for expected business rule violations
 
-## 5. API Design
+---
 
-### 5.1 RESTful Principles
-- Resource-based URLs
-- Proper HTTP verbs (GET, POST, PUT, DELETE)
-- Status codes convey meaning
-- Versioning strategy in place
+## 4. Entity Framework Core
 
-### 5.2 Real-time Communication
-- SignalR for server-to-client updates
-- Hub per feature area
-- Strongly-typed hub interfaces
-- Connection lifecycle management
+### 4.1 DbContext Configuration
+- Entity configurations must be in separate classes implementing `IEntityTypeConfiguration<T>`
+- Configurations should be placed in `Infrastructure/Data/Configurations/`
+- Apply configurations in `OnModelCreating` using `ApplyConfigurationsFromAssembly`
 
-## 6. Data Access
+### 4.2 Repository Pattern
+- Repositories are optional and should only be used when additional abstraction provides value
+- Prefer direct DbContext usage in handlers for simple CRUD operations
+- Complex queries should use EF Core's LINQ capabilities
 
-### 6.1 Entity Framework Core
-- Code-first approach with migrations
-- DbContext per bounded context or aggregate
-- No lazy loading (explicit eager or projection)
-- Query optimization with AsNoTracking for read-only
+---
 
-### 6.2 Database Design
-- Normalized schema
-- Foreign key constraints
-- Appropriate indexes
-- Audit fields (CreatedAt, UpdatedAt, etc.)
+## 5. Validation
 
-## 7. Error Handling
+### 5.1 FluentValidation
+- All commands and queries with input parameters must have validators
+- Validators should be placed alongside their corresponding command/query
+- Validators must inherit from `AbstractValidator<T>`
 
-### 7.1 Exception Strategy
-- Domain exceptions for business rule violations
-- Application exceptions for use case failures
-- Infrastructure exceptions for technical issues
-- Global exception handling middleware
+### 5.2 Validation Pipeline
+- Validation is executed automatically via MediatR pipeline behavior
+- Validation failures return `Result.Failure` with detailed error messages
+- Controllers should not perform validation logic
 
-### 7.2 Validation
-- Input validation at API boundary
-- Business rule validation in domain layer
-- FluentValidation for complex validation rules
-- Return meaningful error messages
+---
 
-## 8. Configuration and Environment
+## 6. API Controllers
 
-### 8.1 Configuration Management
-- appsettings.json for base configuration
-- appsettings.{Environment}.json for environment-specific
-- User secrets for local development
-- Environment variables for production secrets
+### 6.1 Controller Structure
+- Controllers should be thin and delegate to MediatR
+- Use `[ApiController]` attribute for automatic model validation
+- Follow RESTful conventions for endpoint naming
+
+### 6.2 Response Formatting
+- Return appropriate HTTP status codes:
+  - 200 OK for successful queries
+  - 201 Created for successful resource creation
+  - 204 No Content for successful commands with no return value
+  - 400 Bad Request for validation failures
+  - 404 Not Found for missing resources
+  - 500 Internal Server Error for unexpected failures
+
+---
+
+## 7. Dependency Injection
+
+### 7.1 Service Registration
+- Services should be registered in `DependencyInjection.cs` files in each layer
+- Use appropriate lifetimes:
+  - **Transient**: For lightweight, stateless services
+  - **Scoped**: For services tied to a request (e.g., DbContext)
+  - **Singleton**: For stateless services with no dependencies on scoped services
+
+### 7.2 Interface-Based Dependencies
+- Depend on abstractions (interfaces) rather than concrete implementations
+- Place interfaces near their consumers when possible
+
+---
+
+## 8. Development Practices
+
+### 8.1 Testing
+- Unit tests should be isolated and fast
+- Integration tests should verify end-to-end scenarios
+- Use test fixtures to reduce setup duplication
+- Mock external dependencies in unit tests
 
 ### 8.2 HTTP-only Development Rule
 
-**Overview**: The PoCompanion system is configured to use HTTP-only in development environments to avoid certificate complexity and related development friction.
+**Overview**: The PoCompanion system is configured to use HTTP-only during development to simplify the development workflow and avoid common HTTPS-related issues.
 
-**Configuration Locations**:
-1. **appsettings.json** / **appsettings.Development.json**
-   - API base URL: `http://localhost:5291`
-   - All service URLs must use HTTP scheme
+#### Where HTTPS is Disabled
 
-2. **launchSettings.json** (API project)
-   - Configure Kestrel to listen on HTTP only
-   - Application URL: `http://localhost:5291`
-   - Remove or comment out HTTPS URLs
+The following configuration locations explicitly use HTTP instead of HTTPS:
 
-3. **SignalR Hub URLs**
-   - Hub connections use HTTP URLs: `http://localhost:5291/hubs/[hubname]`
-   - Client-side hub connection configuration
+1. **API Base URL** (`appsettings.json`):
+   - `ApiBaseUrl` is set to `http://localhost:5291`
+   - Used by the client to connect to the API
 
-4. **CORS Configuration** (ApiServiceCollectionExtensions.cs)
-   - Allow HTTP origins in development
-   - `WithOrigins("http://localhost:5291")`
-   - Ensure AllowCredentials() for SignalR
+2. **Kestrel Launch Settings** (`launchSettings.json`):
+   - Application URL configured for HTTP only
+   - HTTPS profile removed or disabled
 
-**Re-enabling HTTPS for Production**:
+3. **SignalR Hub URLs**:
+   - Hub connection URLs use HTTP protocol
+   - Auto-derived from the API base URL
 
-When moving to production or if HTTPS is required:
+4. **CORS Configuration** (`ApiServiceCollectionExtensions.cs`, lines 154-164):
+   - CORS policy configured to allow HTTP origins
+   - Development origins use `http://localhost` addresses
 
-1. **Kestrel Configuration**
-   - Update launchSettings.json or Kestrel configuration to enable HTTPS
-   - Configure SSL certificate (self-signed for dev, trusted for production)
+#### How to Re-enable HTTPS
 
-2. **Base Addresses**
-   - Update all `http://` URLs to `https://`
-   - Check appsettings files, client configuration, hub URLs
+If HTTPS is required for development or testing, follow these steps:
 
-3. **CORS Configuration**
-   - Update allowed origins to use HTTPS scheme
-   - Review credential policies for cross-origin requests
+1. **Update Kestrel Configuration** (`launchSettings.json`):
+   - Add or uncomment the HTTPS profile
+   - Configure the HTTPS port (typically 5292 or 7291)
 
-4. **SignalR URLs**
-   - Update hub connection URLs to HTTPS
-   - Verify WebSocket upgrade works over HTTPS
+2. **Change Base Addresses**:
+   - Update `ApiBaseUrl` in `appsettings.json` to use `https://localhost:{port}`
+   - Ensure SSL certificate is trusted locally
 
-5. **Middleware**
-   - Enable `app.UseHttpsRedirection()` in pipeline
-   - Consider HSTS middleware for production
+3. **Update CORS Configuration** (`ApiServiceCollectionExtensions.cs`):
+   - Add HTTPS origins to the CORS policy
+   - Update lines 154-164 to include `https://` URLs
 
-**Rationale**:
-- **Development Benefits**: Eliminates certificate trust issues, mixed content warnings, and CORS complications during local development
-- **Rapid Iteration**: Developers can run the system immediately without certificate setup
-- **Browser Compatibility**: Avoids localhost certificate browser warnings
-- **SignalR Reliability**: HTTP WebSocket connections are simpler to debug
+4. **SignalR URLs Auto-Update**:
+   - SignalR hub URLs will automatically use HTTPS when the base URL is changed
+   - No additional configuration needed
 
-**Important**: Production deployments MUST use HTTPS for security. This HTTP-only configuration is strictly for development environments. Never deploy to production without proper HTTPS/TLS configuration.
+5. **HTTPS Redirection** (`ApiApplicationBuilderExtensions.cs`, lines 136-142):
+   - `UseHttpsRedirection` is already conditionally configured
+   - It will activate automatically in non-development environments
 
-## 9. Testing Strategy
+#### Rationale
 
-### 9.1 Unit Tests
-- Test domain logic in isolation
-- Mock dependencies using interfaces
-- High coverage for business-critical code
-- Fast and independent tests
+The HTTP-only development configuration provides several benefits:
 
-### 9.2 Integration Tests
-- Test API endpoints end-to-end
-- In-memory database for data access tests
-- Test SignalR hub interactions
-- Validate cross-cutting concerns
+- **Avoids Certificate Issues**: No need to generate, trust, or manage self-signed SSL certificates during development
+- **Eliminates Mixed Content Errors**: Prevents browser warnings about mixing HTTP and HTTPS resources
+- **Reduces CORS Complexity**: Simplifies CORS configuration by avoiding protocol mismatches
+- **Simplifies TLS Debugging**: Removes the encryption layer, making it easier to inspect network traffic during development
 
-### 9.3 Test Organization
-- Mirror production code structure
-- Arrange-Act-Assert pattern
-- Descriptive test names
-- One assertion per test (where practical)
+#### Production Requirements
 
-## 10. Code Quality
+**IMPORTANT**: This HTTP-only configuration is strictly for development environments. Production deployments **MUST** use HTTPS to ensure:
 
-### 10.1 Naming Conventions
-- PascalCase for classes, methods, properties
-- camelCase for parameters, local variables
-- Meaningful, descriptive names
-- Avoid abbreviations unless widely known
+- Data encryption in transit
+- Protection against man-in-the-middle attacks
+- Compliance with security best practices
+- Browser security feature compatibility (e.g., secure cookies, service workers)
 
-### 10.2 Code Structure
-- Single Responsibility Principle
-- Small, focused methods and classes
-- Avoid deep nesting (max 3 levels)
-- Keep files under 300 lines when possible
+The application is designed to seamlessly transition to HTTPS in production through environment-specific configuration. The `UseHttpsRedirection` middleware (lines 136-142 in `ApiApplicationBuilderExtensions.cs`) is already set up to enforce HTTPS in non-development environments.
 
-### 10.3 Comments and Documentation
-- XML comments for public APIs
-- Explain "why" not "what" in comments
-- Keep comments up-to-date with code
-- README files for complex subsystems
+---
 
-## 11. Security
+## 9. Code Quality
 
-### 11.1 Authentication & Authorization
-- JWT tokens for API authentication
-- Role-based or claims-based authorization
-- Secure token storage
-- Token expiration and refresh strategy
+### 9.1 Naming Conventions
+- Use PascalCase for public members and types
+- Use camelCase for private fields and local variables
+- Prefix private fields with underscore (`_fieldName`)
+- Use descriptive names that convey intent
 
-### 11.2 Data Protection
-- Sensitive data encryption at rest
-- Secure communication channels (TLS)
-- Input sanitization to prevent injection
-- Principle of least privilege
+### 9.2 Code Reviews
+- All changes should be reviewed before merging
+- Reviews should check for adherence to architecture rules
+- Focus on maintainability, not just functionality
 
-## 12. Performance
+---
 
-### 12.1 Optimization Guidelines
-- Profile before optimizing
-- Cache frequently accessed data
-- Async/await for I/O operations
-- Pagination for large data sets
+## 10. Documentation
 
-### 12.2 SignalR Performance
-- Connection pooling
-- Backplane for scale-out scenarios
-- Message size optimization
-- Connection lifecycle management
+### 10.1 Code Comments
+- Use XML documentation comments for public APIs
+- Avoid obvious comments that restate the code
+- Explain "why" rather than "what" when commenting
 
-## Compliance and Updates
+### 10.2 Architecture Documentation
+- Keep this document up-to-date with architectural changes
+- Document significant design decisions
+- Include rationale for non-obvious choices
 
-This document should be:
-- Reviewed quarterly or when significant architectural decisions are made
-- Updated to reflect new patterns or rule changes
-- Referenced in code reviews to ensure adherence
-- Used for onboarding new team members
+---
 
-**Last Updated**: 2026-01-01
+## Conclusion
+
+Adhering to these architecture rules ensures that PoCompanion remains maintainable, testable, and scalable. As the project evolves, these rules may be updated to reflect new patterns and practices. Always discuss significant deviations from these rules with the team before implementation.
