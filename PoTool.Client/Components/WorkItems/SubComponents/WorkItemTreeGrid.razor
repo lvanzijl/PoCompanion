@@ -1,0 +1,269 @@
+@using PoTool.Client.Models
+@using MudBlazor
+
+@* TreeGrid component using MudDataGrid for TFS-like work item display *@
+
+<div class="tree-grid-container">
+    @if (IsLoading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        <MudText Typo="Typo.body2" Class="mt-2">Loading work items...</MudText>
+    }
+    else if (!TreeRoots.Any())
+    {
+        <div class="empty-state pa-4">
+            <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+            <MudText Typo="Typo.h6" Class="mb-2">No work items found</MudText>
+            <MudText Typo="Typo.body2">Click "Full Sync" to retrieve work items from Azure DevOps, or check your filter settings.</MudText>
+        </div>
+    }
+    else
+    {
+        <MudDataGrid T="FlatNode" 
+                     Items="@GetFlatNodeList()" 
+                     Dense="true"
+                     Hover="true"
+                     Class="tree-grid"
+                     Virtualize="true"
+                     FixedHeader="true"
+                     Height="calc(100vh - 300px)">
+            <Columns>
+                @* Title Column with tree structure *@
+                <TemplateColumn Title="Title" Class="title-column" Sortable="false">
+                    <CellTemplate>
+                        <div class="title-cell" style="padding-left:@(context.Item.Level * 20)px">
+                            @* Expand/Collapse Chevron *@
+                            @if (context.Item.Node.Children.Any())
+                            {
+                                <MudIconButton 
+                                    Icon="@(context.Item.Node.IsExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
+                                    Size="Size.Small" 
+                                    OnClick="() => OnNodeToggled.InvokeAsync(context.Item.Node)"
+                                    Class="expand-button" />
+                            }
+                            else
+                            {
+                                <span class="leaf-spacer"></span>
+                            }
+
+                            @* Type Icon Block *@
+                            <span class="type-icon-block" 
+                                  style="background-color: @context.Item.Node.TypeColor" 
+                                  title="@context.Item.Node.Type">
+                                <MudIcon Icon="@GetIconForType(context.Item.Node.Type)" Size="Size.Small" />
+                            </span>
+
+                            @* Title Text *@
+                            <MudTooltip Text="@context.Item.Node.Title">
+                                <span class="@GetTitleClass(context.Item.Node)" 
+                                      @onclick="() => OnNodeSelected.InvokeAsync(context.Item.Node)">
+                                    @context.Item.Node.Title
+                                </span>
+                            </MudTooltip>
+
+                            @* Self Issue Indicators *@
+                            @if (context.Item.Node.SelfErrorCount > 0 || context.Item.Node.SelfWarningCount > 0)
+                            {
+                                <MudTooltip Text="@GetSelfIssueTooltip(context.Item.Node)">
+                                    <MudIcon Icon="@GetSelfIssueIcon(context.Item.Node)" 
+                                             Size="Size.Small" 
+                                             Color="@GetSelfIssueColor(context.Item.Node)" 
+                                             Class="self-issue-icon" />
+                                </MudTooltip>
+                            }
+
+                            @* Descendant Issue Indicators *@
+                            @if (context.Item.Node.HasDescendantIssues)
+                            {
+                                <MudTooltip Text="@GetDescendantIssueTooltip(context.Item.Node)">
+                                    <MudIcon Icon="@Icons.Material.Filled.Warning" 
+                                             Size="Size.Small" 
+                                             Color="Color.Warning" 
+                                             Class="descendant-issue-icon" />
+                                </MudTooltip>
+                            }
+
+                            @* Kebab Menu *@
+                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" 
+                                     Size="Size.Small" 
+                                     Dense="true"
+                                     Class="kebab-menu">
+                                <MudMenuItem Disabled="@(!context.Item.Node.HasDescendantIssues)"
+                                             OnClick="() => RevealInvalidItem(context.Item.Node)">
+                                    Reveal invalid items
+                                </MudMenuItem>
+                            </MudMenu>
+                        </div>
+                    </CellTemplate>
+                </TemplateColumn>
+
+                @* ID Column *@
+                <PropertyColumn Property="x => x.Node.Id" Title="ID" Class="id-column" />
+
+                @* State Column *@
+                <PropertyColumn Property="x => x.Node.State" Title="State" Class="state-column" />
+            </Columns>
+        </MudDataGrid>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public List<TreeNode> TreeRoots { get; set; } = new();
+
+    [Parameter]
+    public int? SelectedId { get; set; }
+
+    [Parameter]
+    public HashSet<int>? SelectedIds { get; set; }
+
+    [Parameter]
+    public EventCallback<TreeNode> OnNodeToggled { get; set; }
+
+    [Parameter]
+    public EventCallback<TreeNode> OnNodeSelected { get; set; }
+
+    [Parameter]
+    public EventCallback<TreeNode> OnRevealInvalidItem { get; set; }
+
+    /// <summary>
+    /// Represents a flattened node for grid display.
+    /// </summary>
+    public record FlatNode(TreeNode Node, int Level);
+
+    // Memoization for flat list
+    private List<FlatNode>? _cachedFlatList;
+    private int _cachedTreeRootsHashCode;
+
+    /// <summary>
+    /// Gets a flattened list of visible nodes based on expansion state.
+    /// </summary>
+    private List<FlatNode> GetFlatNodeList()
+    {
+        var currentHash = CalculateTreeHash();
+
+        if (_cachedFlatList != null && _cachedTreeRootsHashCode == currentHash)
+        {
+            return _cachedFlatList;
+        }
+
+        var flatList = new List<FlatNode>();
+        foreach (var root in TreeRoots)
+        {
+            AddNodeToFlatList(root, 0, flatList);
+        }
+
+        _cachedFlatList = flatList;
+        _cachedTreeRootsHashCode = currentHash;
+
+        return flatList;
+    }
+
+    private int CalculateTreeHash()
+    {
+        var hash = new HashCode();
+        hash.Add(TreeRoots.Count);
+        foreach (var root in TreeRoots)
+        {
+            AddNodeToHash(root, ref hash);
+        }
+        return hash.ToHashCode();
+    }
+
+    private void AddNodeToHash(TreeNode node, ref HashCode hash)
+    {
+        hash.Add(node.Id);
+        hash.Add(node.IsExpanded);
+        hash.Add(node.Children.Count);
+
+        if (node.IsExpanded)
+        {
+            foreach (var child in node.Children)
+            {
+                AddNodeToHash(child, ref hash);
+            }
+        }
+    }
+
+    private void AddNodeToFlatList(TreeNode node, int level, List<FlatNode> flatList)
+    {
+        flatList.Add(new FlatNode(node, level));
+
+        if (node.IsExpanded && node.Children.Any())
+        {
+            foreach (var child in node.Children)
+            {
+                AddNodeToFlatList(child, level + 1, flatList);
+            }
+        }
+    }
+
+    private string GetIconForType(string type)
+    {
+        return type switch
+        {
+            "Goal" => Icons.Material.Filled.Flag,
+            "Objective" => Icons.Material.Filled.TrackChanges,
+            "Epic" => Icons.Material.Filled.Layers,
+            "Feature" => Icons.Material.Filled.Dashboard,
+            "Product Backlog Item" => Icons.Material.Filled.Assignment,
+            "Bug" => Icons.Material.Filled.BugReport,
+            "Task" => Icons.Material.Filled.CheckCircle,
+            _ => Icons.Material.Filled.Circle
+        };
+    }
+
+    private string GetTitleClass(TreeNode node)
+    {
+        var className = "title-text";
+        if ((SelectedId.HasValue && SelectedId.Value == node.Id) ||
+            (SelectedIds != null && SelectedIds.Contains(node.Id)))
+        {
+            className += " selected";
+        }
+        return className;
+    }
+
+    private string GetSelfIssueTooltip(TreeNode node)
+    {
+        var parts = new List<string>();
+        if (node.SelfErrorCount > 0)
+        {
+            parts.Add($"{node.SelfErrorCount} error{(node.SelfErrorCount != 1 ? "s" : "")}");
+        }
+        if (node.SelfWarningCount > 0)
+        {
+            parts.Add($"{node.SelfWarningCount} warning{(node.SelfWarningCount != 1 ? "s" : "")}");
+        }
+        return $"{string.Join(", ", parts)} (this item)";
+    }
+
+    private string GetSelfIssueIcon(TreeNode node)
+    {
+        return node.SelfErrorCount > 0 ? Icons.Material.Filled.Error : Icons.Material.Filled.Warning;
+    }
+
+    private Color GetSelfIssueColor(TreeNode node)
+    {
+        return node.SelfErrorCount > 0 ? Color.Error : Color.Warning;
+    }
+
+    private string GetDescendantIssueTooltip(TreeNode node)
+    {
+        var count = node.InvalidDescendantIds.Count;
+        return $"{count} error{(count != 1 ? "s" : "")}/warning{(count != 1 ? "s" : "")} in descendants";
+    }
+
+    private async Task RevealInvalidItem(TreeNode node)
+    {
+        if (!node.HasDescendantIssues)
+        {
+            return;
+        }
+
+        await OnRevealInvalidItem.InvokeAsync(node);
+    }
+}

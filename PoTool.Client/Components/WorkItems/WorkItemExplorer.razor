@@ -65,12 +65,13 @@
     </div>
 
     <div class="content" @onkeydown="HandleKeyDown" @onkeydown:preventDefault="true" tabindex="0" role="tree" aria-label="Work item hierarchy tree">
-        <WorkItemTreeView IsLoading="@_isLoading"
+        <WorkItemTreeGrid IsLoading="@_isLoading"
                           TreeRoots="@_treeRoots"
                           SelectedId="@_selectedWorkItem?.TfsId"
                           SelectedIds="@_selectedIds"
                           OnNodeToggled="@HandleNodeToggled"
-                          OnNodeSelected="@HandleNodeSelected" />
+                          OnNodeSelected="@HandleNodeSelected"
+                          OnRevealInvalidItem="@HandleRevealInvalidItem" />
 
         <WorkItemDetailPanel SelectedWorkItem="@_selectedWorkItem" 
                             SelectedWorkItems="@_selectedWorkItems"
@@ -534,5 +535,81 @@
         _selectedWorkItems.Clear();
         _selectedWorkItems.AddRange(_selectionState.SelectedWorkItems);
         _selectedWorkItem = _selectionState.PrimarySelectedWorkItem;
+    }
+
+    private Dictionary<int, TreeNode> _nodeMap = new();
+
+    private async Task HandleRevealInvalidItem(TreeNode node)
+    {
+        if (!node.HasDescendantIssues || node.InvalidDescendantIds.Count == 0)
+        {
+            return;
+        }
+
+        // Get the first invalid descendant ID
+        var targetId = node.InvalidDescendantIds[0];
+
+        // Build a map of all nodes for quick lookup
+        BuildNodeMap();
+
+        if (!_nodeMap.TryGetValue(targetId, out var targetNode))
+        {
+            Snackbar.Add("Target node not found", Severity.Warning);
+            return;
+        }
+
+        // Resolve the path to the target node
+        var pathToTarget = new List<TreeNode>();
+        var current = targetNode;
+        while (current != null)
+        {
+            pathToTarget.Insert(0, current);
+            if (current.ParentId.HasValue && _nodeMap.TryGetValue(current.ParentId.Value, out var parent))
+            {
+                current = parent;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // Expand all nodes along the path
+        foreach (var nodeOnPath in pathToTarget)
+        {
+            if (!nodeOnPath.IsExpanded)
+            {
+                nodeOnPath.IsExpanded = true;
+                _expandedState[nodeOnPath.Id] = true;
+            }
+        }
+
+        // Rebuild the flat list
+        _flatNodeList = SelectionService.BuildFlatNodeList(_treeRoots);
+        await SaveExpandedStateAsync();
+
+        // Trigger state update
+        StateHasChanged();
+
+        // TODO: Scroll to target and highlight (requires JS interop)
+        Snackbar.Add($"Revealed item: {targetNode.Title}", Severity.Info);
+    }
+
+    private void BuildNodeMap()
+    {
+        _nodeMap.Clear();
+        foreach (var root in _treeRoots)
+        {
+            AddNodeToMap(root);
+        }
+    }
+
+    private void AddNodeToMap(TreeNode node)
+    {
+        _nodeMap[node.Id] = node;
+        foreach (var child in node.Children)
+        {
+            AddNodeToMap(child);
+        }
     }
 }
