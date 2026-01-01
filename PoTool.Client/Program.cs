@@ -13,8 +13,11 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// Get API base URL - in Blazor WebAssembly served by ASP.NET Core, this is the same origin
-var apiBaseUrl = builder.HostEnvironment.BaseAddress;
+// Get API base URL from configuration (empty = same origin)
+var apiBaseUrlConfig = builder.Configuration["ApiBaseUrl"];
+var apiBaseUrl = string.IsNullOrEmpty(apiBaseUrlConfig) 
+    ? builder.HostEnvironment.BaseAddress 
+    : apiBaseUrlConfig;
 
 // Register PAT header handler
 builder.Services.AddTransient<PatHeaderHandler>();
@@ -33,8 +36,9 @@ builder.Services.AddScoped(sp =>
 // Register SignalR HubConnection
 builder.Services.AddScoped<HubConnection>(sp =>
 {
+    var hubPath = builder.Configuration["SignalR:HubPath"] ?? "/hubs/workitems";
     return new HubConnectionBuilder()
-        .WithUrl($"{apiBaseUrl}hubs/workitems")
+        .WithUrl($"{apiBaseUrl}{hubPath}")
         .WithAutomaticReconnect()
         .Build();
 });

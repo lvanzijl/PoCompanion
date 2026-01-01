@@ -162,28 +162,28 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table43 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table42 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State"});
-                table43.AddRow(new string[] {
+                table42.AddRow(new string[] {
                             "1000",
                             "Test Goal",
                             "Goal",
                             "Active"});
-                table43.AddRow(new string[] {
+                table42.AddRow(new string[] {
                             "1001",
                             "Test Objective",
                             "Objective",
                             "Active"});
-                table43.AddRow(new string[] {
+                table42.AddRow(new string[] {
                             "1002",
                             "Test Epic",
                             "Epic",
                             "New"});
 #line 16
-    await testRunner.GivenAsync("work items are synced in the database", ((string)(null)), table43, "Given ");
+    await testRunner.GivenAsync("work items are synced in the database", ((string)(null)), table42, "Given ");
 #line hidden
 #line 21
     await testRunner.WhenAsync("I request all work items", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
