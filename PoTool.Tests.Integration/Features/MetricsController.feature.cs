@@ -125,21 +125,21 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table8 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table14 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State",
                             "Effort",
                             "IterationPath"});
-                table8.AddRow(new string[] {
+                table14.AddRow(new string[] {
                             "5000",
                             "Story 1",
                             "Task",
                             "Done",
                             "5",
                             "Project\\2024\\Sprint1"});
-                table8.AddRow(new string[] {
+                table14.AddRow(new string[] {
                             "5001",
                             "Story 2",
                             "Task",
@@ -147,7 +147,7 @@ await this.FeatureBackgroundAsync();
                             "3",
                             "Project\\2024\\Sprint1"});
 #line 10
-    await testRunner.GivenAsync("work items exist for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), table8, "Given ");
+    await testRunner.GivenAsync("work items exist for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), table14, "Given ");
 #line hidden
 #line 14
     await testRunner.WhenAsync("I request sprint metrics for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -245,28 +245,28 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table9 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table15 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State",
                             "Effort",
                             "IterationPath"});
-                table9.AddRow(new string[] {
+                table15.AddRow(new string[] {
                             "6000",
                             "Story 1",
                             "Task",
                             "Done",
                             "5",
                             "Project\\2024\\Sprint1"});
-                table9.AddRow(new string[] {
+                table15.AddRow(new string[] {
                             "6001",
                             "Story 2",
                             "Task",
                             "Done",
                             "3",
                             "Project\\2024\\Sprint2"});
-                table9.AddRow(new string[] {
+                table15.AddRow(new string[] {
                             "6002",
                             "Story 3",
                             "Task",
@@ -274,7 +274,7 @@ await this.FeatureBackgroundAsync();
                             "8",
                             "Project\\2024\\Sprint3"});
 #line 27
-    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table9, "Given ");
+    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table15, "Given ");
 #line hidden
 #line 32
     await testRunner.WhenAsync("I request velocity trend with default parameters", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -431,21 +431,21 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table10 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table16 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State",
                             "Effort",
                             "IterationPath"});
-                table10.AddRow(new string[] {
+                table16.AddRow(new string[] {
                             "7000",
                             "Story 1",
                             "Task",
                             "Done",
                             "5",
                             "Project\\2024\\Sprint1"});
-                table10.AddRow(new string[] {
+                table16.AddRow(new string[] {
                             "7001",
                             "Story 2",
                             "Task",
@@ -453,7 +453,7 @@ await this.FeatureBackgroundAsync();
                             "3",
                             "Project\\2024\\Sprint1"});
 #line 52
-    await testRunner.GivenAsync("work items exist for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), table10, "Given ");
+    await testRunner.GivenAsync("work items exist for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), table16, "Given ");
 #line hidden
 #line 56
     await testRunner.WhenAsync("I request backlog health for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -548,21 +548,21 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table11 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table17 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State",
                             "Effort",
                             "IterationPath"});
-                table11.AddRow(new string[] {
+                table17.AddRow(new string[] {
                             "8000",
                             "Story 1",
                             "Task",
                             "Done",
                             "5",
                             "Project\\2024\\Sprint1"});
-                table11.AddRow(new string[] {
+                table17.AddRow(new string[] {
                             "8001",
                             "Story 2",
                             "Task",
@@ -570,7 +570,7 @@ await this.FeatureBackgroundAsync();
                             "3",
                             "Project\\2024\\Sprint2"});
 #line 68
-    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table11, "Given ");
+    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table17, "Given ");
 #line hidden
 #line 72
     await testRunner.WhenAsync("I request multi-iteration backlog health", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -727,7 +727,7 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table12 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table18 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
@@ -735,7 +735,7 @@ await this.FeatureBackgroundAsync();
                             "Effort",
                             "IterationPath",
                             "AreaPath"});
-                table12.AddRow(new string[] {
+                table18.AddRow(new string[] {
                             "9000",
                             "Story 1",
                             "Task",
@@ -743,7 +743,7 @@ await this.FeatureBackgroundAsync();
                             "5",
                             "Project\\2024\\Sprint1",
                             "Project\\TeamA"});
-                table12.AddRow(new string[] {
+                table18.AddRow(new string[] {
                             "9001",
                             "Story 2",
                             "Task",
@@ -752,7 +752,7 @@ await this.FeatureBackgroundAsync();
                             "Project\\2024\\Sprint1",
                             "Project\\TeamB"});
 #line 92
-    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table12, "Given ");
+    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table18, "Given ");
 #line hidden
 #line 96
     await testRunner.WhenAsync("I request effort distribution", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -972,7 +972,7 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table13 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table19 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
@@ -980,7 +980,7 @@ await this.FeatureBackgroundAsync();
                             "Effort",
                             "IterationPath",
                             "AssignedTo"});
-                table13.AddRow(new string[] {
+                table19.AddRow(new string[] {
                             "10000",
                             "Story 1",
                             "Task",
@@ -988,7 +988,7 @@ await this.FeatureBackgroundAsync();
                             "5",
                             "Project\\2024\\Sprint1",
                             "Alice"});
-                table13.AddRow(new string[] {
+                table19.AddRow(new string[] {
                             "10001",
                             "Story 2",
                             "Task",
@@ -997,7 +997,7 @@ await this.FeatureBackgroundAsync();
                             "Project\\2024\\Sprint1",
                             "Bob"});
 #line 124
-    await testRunner.GivenAsync("work items exist for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), table13, "Given ");
+    await testRunner.GivenAsync("work items exist for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), table19, "Given ");
 #line hidden
 #line 128
     await testRunner.WhenAsync("I request sprint capacity plan for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -1092,14 +1092,14 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table14 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table20 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State",
                             "Effort",
                             "IterationPath"});
-                table14.AddRow(new string[] {
+                table20.AddRow(new string[] {
                             "11000",
                             "Story 1",
                             "Task",
@@ -1107,7 +1107,7 @@ await this.FeatureBackgroundAsync();
                             "5",
                             "Project\\2024\\Sprint1"});
 #line 140
-    await testRunner.GivenAsync("work items exist for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), table14, "Given ");
+    await testRunner.GivenAsync("work items exist for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), table20, "Given ");
 #line hidden
 #line 143
     await testRunner.WhenAsync(("I request sprint capacity plan for iteration \"Project\\2024\\Sprint1\" with defaultC" +
@@ -1173,28 +1173,28 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table15 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table21 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State",
                             "Effort",
                             "IterationPath"});
-                table15.AddRow(new string[] {
+                table21.AddRow(new string[] {
                             "12000",
                             "Story 1",
                             "Task",
                             "Done",
                             "5",
                             "Project\\2024\\Sprint1"});
-                table15.AddRow(new string[] {
+                table21.AddRow(new string[] {
                             "12001",
                             "Story 2",
                             "Task",
                             "Done",
                             "3",
                             "Project\\2024\\Sprint1"});
-                table15.AddRow(new string[] {
+                table21.AddRow(new string[] {
                             "12002",
                             "Story 3",
                             "Task",
@@ -1202,7 +1202,7 @@ await this.FeatureBackgroundAsync();
                             "null",
                             "Project\\2024\\Sprint2"});
 #line 151
-    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table15, "Given ");
+    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table21, "Given ");
 #line hidden
 #line 156
     await testRunner.WhenAsync("I request effort estimation suggestions", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -1238,21 +1238,21 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table16 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table22 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State",
                             "Effort",
                             "IterationPath"});
-                table16.AddRow(new string[] {
+                table22.AddRow(new string[] {
                             "13000",
                             "Story 1",
                             "Task",
                             "In Progress",
                             "null",
                             "Project\\2024\\Sprint1"});
-                table16.AddRow(new string[] {
+                table22.AddRow(new string[] {
                             "13001",
                             "Story 2",
                             "Task",
@@ -1260,7 +1260,7 @@ await this.FeatureBackgroundAsync();
                             "null",
                             "Project\\2024\\Sprint2"});
 #line 161
-    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table16, "Given ");
+    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table22, "Given ");
 #line hidden
 #line 165
     await testRunner.WhenAsync("I request effort estimation suggestions for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -1296,21 +1296,21 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table17 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table23 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State",
                             "Effort",
                             "IterationPath"});
-                table17.AddRow(new string[] {
+                table23.AddRow(new string[] {
                             "14000",
                             "Story 1",
                             "Task",
                             "In Progress",
                             "null",
                             "Project\\2024\\Sprint1"});
-                table17.AddRow(new string[] {
+                table23.AddRow(new string[] {
                             "14001",
                             "Story 2",
                             "Task",
@@ -1318,7 +1318,7 @@ await this.FeatureBackgroundAsync();
                             "null",
                             "Project\\2024\\Sprint1"});
 #line 170
-    await testRunner.GivenAsync("work items exist with mixed states", ((string)(null)), table17, "Given ");
+    await testRunner.GivenAsync("work items exist with mixed states", ((string)(null)), table23, "Given ");
 #line hidden
 #line 174
     await testRunner.WhenAsync("I request effort estimation suggestions with onlyInProgressItems true", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -1351,28 +1351,28 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table18 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table24 = new global::Reqnroll.Table(new string[] {
                             "TfsId",
                             "Title",
                             "Type",
                             "State",
                             "Effort",
                             "IterationPath"});
-                table18.AddRow(new string[] {
+                table24.AddRow(new string[] {
                             "15000",
                             "Story 1",
                             "Task",
                             "Done",
                             "5",
                             "Project\\2024\\Sprint1"});
-                table18.AddRow(new string[] {
+                table24.AddRow(new string[] {
                             "15001",
                             "Story 2",
                             "Task",
                             "Done",
                             "5",
                             "Project\\2024\\Sprint1"});
-                table18.AddRow(new string[] {
+                table24.AddRow(new string[] {
                             "15002",
                             "Story 3",
                             "Task",
@@ -1380,7 +1380,7 @@ await this.FeatureBackgroundAsync();
                             "3",
                             "Project\\2024\\Sprint2"});
 #line 178
-    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table18, "Given ");
+    await testRunner.GivenAsync("work items exist for multiple iterations", ((string)(null)), table24, "Given ");
 #line hidden
 #line 183
     await testRunner.WhenAsync("I request effort estimation quality", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");

@@ -1,5 +1,5 @@
 using Microsoft.JSInterop;
-using PoTool.Core.Contracts;
+using PoTool.Shared.Contracts;
 
 namespace PoTool.Client.Services;
 

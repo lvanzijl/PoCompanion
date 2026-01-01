@@ -6,7 +6,6 @@
 @using PoTool.Client.Components.WorkItems.SubComponents
 @using PoTool.Client.Components.Settings
 @using PoTool.Client.Components.Common
-@using PoTool.Core.Exceptions
 @using MudBlazor
 @inject WorkItemService WorkItemService
 @inject IWorkItemSyncHubService SyncHubService
@@ -192,14 +191,26 @@
             
             // Then filter by goals if configured
             var goalIds = settings.ConfiguredGoalIds.ToList();
-            _workItemsWithValidation = goalIds.Count > 0
-                ? allWorkItems.Where(wi => 
-                    goalIds.Contains(wi.TfsId) || 
-                    FilteringService.IsDescendantOfGoals(wi, goalIds, allWorkItems)).ToList()
-                : allWorkItems;
+            if (goalIds.Count > 0)
+            {
+                var filteredList = new List<WorkItemWithValidationDto>();
+                foreach (var wi in allWorkItems)
+                {
+                    if (goalIds.Contains(wi.TfsId) || 
+                        await FilteringService.IsDescendantOfGoalsAsync(wi, goalIds, allWorkItems))
+                    {
+                        filteredList.Add(wi);
+                    }
+                }
+                _workItemsWithValidation = filteredList;
+            }
+            else
+            {
+                _workItemsWithValidation = allWorkItems;
+            }
 
-            ApplyFilter();
-            UpdateValidationFilterCounts();
+            await ApplyFilterAsync();
+            await UpdateValidationFilterCountsAsync();
             await SaveExpandedStateAsync();
         }
         catch (Exception ex)
@@ -312,18 +323,18 @@
         }
     }
 
-    private void HandleFilterChanged(string filterText)
+    private async Task HandleFilterChanged(string filterText)
     {
         _filterText = filterText;
-        ApplyFilter();
+        await ApplyFilterAsync();
     }
 
-    private void HandleValidationFiltersChanged(List<ValidationFilter> filters)
+    private async Task HandleValidationFiltersChanged(List<ValidationFilter> filters)
     {
-        ApplyFilter();
+        await ApplyFilterAsync();
     }
 
-    private void ApplyFilter()
+    private async Task ApplyFilterAsync()
     {
         // Get enabled filter IDs
         var enabledFilterIds = _validationFilters
@@ -331,7 +342,7 @@
             .Select(f => f.Id);
 
         // Apply combined filtering using service
-        var filteredItems = FilteringService.ApplyCombinedFilter(
+        var filteredItems = await FilteringService.ApplyCombinedFilterAsync(
             _workItemsWithValidation,
             _filterText,
             enabledFilterIds);
@@ -341,11 +352,11 @@
         StateHasChanged();
     }
 
-    private void UpdateValidationFilterCounts()
+    private async Task UpdateValidationFilterCountsAsync()
     {
         foreach (var filter in _validationFilters)
         {
-            filter.Count = FilteringService.CountWorkItemsByValidationFilter(_workItemsWithValidation, filter.Id);
+            filter.Count = await FilteringService.CountWorkItemsByValidationFilterAsync(_workItemsWithValidation, filter.Id);
         }
     }
 
@@ -439,7 +450,7 @@
     {
         _expandedState.Clear();
         await SaveExpandedStateAsync();
-        ApplyFilter();
+        await ApplyFilterAsync();
     }
 
     private async Task OpenSettings()
@@ -480,7 +491,7 @@
 
     private void ShowTfsErrorSnackbar(Exception ex)
     {
-        var severity = ex is TfsRateLimitException ? Severity.Warning : Severity.Error;
+        var severity = ex.Message.Contains("429") || ex.Message.ToLower().Contains("rate limit") ? Severity.Warning : Severity.Error;
         var errorResponse = ErrorMessageService.GetErrorResponse(ex, "TFS operation failed");
         Snackbar.Add(errorResponse.UserMessage, severity);
     }

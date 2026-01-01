@@ -5,6 +5,8 @@ using PoTool.Api.Repositories;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems.Validators;
+using PoTool.Core.WorkItems.Filtering;
+using PoTool.Core.Health;
 
 namespace PoTool.Api.Configuration;
 
@@ -106,6 +108,10 @@ public static class ApiServiceCollectionExtensions
             };
             return new CompositeWorkItemValidator(validators);
         });
+
+        // Register Core business logic services
+        services.AddScoped<WorkItemFilterer>();
+        services.AddScoped<BacklogHealthCalculator>();
 
         // Register TFS configuration and client
         services.AddDataProtection();
