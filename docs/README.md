@@ -30,6 +30,7 @@ Violating these rules is a design error, not an implementation shortcut.
 5. **[PROCESS_RULES.md](PROCESS_RULES.md)** - Development workflow and review standards
 6. **[TFS_INTEGRATION_RULES.md](TFS_INTEGRATION_RULES.md)** - TFS integration rules
 7. **[Fluent_UI_compat_rules.md](Fluent_UI_compat_rules.md)** - Fluent UI Compact rules
+8. **[mock-data-rules.md](mock-data-rules.md)** - Mock data generation rules (MANDATORY for testing and development)
 
 ### Additional Documentation
 7. **[PAT_STORAGE_BEST_PRACTICES.md](PAT_STORAGE_BEST_PRACTICES.md)** - Security best practices for credential storage
