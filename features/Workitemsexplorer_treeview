@@ -1,0 +1,180 @@
+# Feature Specification – TFS-like TreeGrid for Work Items (MudBlazor)
+
+## Goal
+Implement a **TFS / Azure DevOps–style work item list** as a **TreeGrid** using **MudDataGrid**, with clear visual hierarchy, explicit issue signaling, and deterministic navigation to invalid descendant items.
+
+This is **not** a classic TreeView.  
+**Do NOT use `MudTreeView`.**
+
+---
+
+## Technology Constraints
+- UI framework: **MudBlazor**
+- Grid component: **MudDataGrid**
+- Styling: **compact, TFS-like** (no default Mud spacing)
+- Rendering must be deterministic and explicitly specified
+
+---
+
+## High-Level Behavior
+- Each row represents a work item
+- Parent/child relationships are shown via indentation and expand/collapse in the first column
+- Multiple columns are supported
+- Issue indicators distinguish:
+  - issues on the item itself
+  - issues in descendant items
+- A kebab (⋮) action enables auto-expansion and navigation to invalid descendants
+
+---
+
+## Required Data Model
+
+Each work item node **MUST** expose at least:
+
+- `Id`
+- `Title`
+- `State`
+- `Type` (only for color-block mapping)
+- `ParentId` (required to reconstruct paths)
+- `ChildrenIds` (or a `Children` collection)
+- `IsExpanded` (UI state)
+- `Depth` (computed for rendering)
+- `Issues`
+  - `SelfErrorCount`
+  - `SelfWarningCount`
+  - `InvalidDescendantIds` (ordered list of descendant IDs with errors or warnings)
+
+---
+
+## Data Rules
+
+- `InvalidDescendantIds` contains **only descendant item IDs**, never the node itself.
+- `InvalidDescendantIds` is **precomputed during data refresh or caching**, never during render.
+- The order of `InvalidDescendantIds` is **deterministic**:
+  - descendants closer to the current node come first (lower depth)
+  - within the same depth, order follows a stable pre-order traversal
+- Cache `InvalidDescendantIds.Count` and use it for UI checks. Do not recompute.
+
+---
+
+## Grid Structure
+
+### Default Visible Columns
+1. **Title** (tree column)
+2. **ID**
+3. **State**
+
+Other columns may exist but:
+- **Assigned To** is out of scope
+- **Type** is NOT a column (type is visualized via color block)
+
+---
+
+## Title Column – Cell Layout
+
+All elements are rendered inside **one cell template**, left to right:
+
+1. **Expand / Collapse Chevron**
+   - Only shown when the item has children
+   - Toggles `IsExpanded`
+   - Indentation is based on `Depth`
+
+2. **Type Color Block**
+   - Square, 10–12px
+   - Slightly rounded corners (2–3px)
+   - Color encodes work item type (Bug / Task / Feature / Epic / etc.)
+   - This is the **only** type indicator
+
+3. **Title Text**
+   - Single-line
+   - Ellipsis on overflow
+   - Tooltip shows full title
+
+4. **Issue Indicators**
+   - **Self issues**
+     - Error if `SelfErrorCount > 0`
+     - Warning if no errors and `SelfWarningCount > 0`
+     - Tooltip: `X errors, Y warnings (this item)`
+   - **Descendant issues**
+     - Shown if `InvalidDescendantIds.Count > 0`
+     - Visually distinct from self issues
+     - Tooltip: `X errors / warnings in descendants`
+
+5. **Kebab Menu (⋮)**
+   - Always rendered in the Title column, right-aligned
+   - No right-click menus elsewhere
+
+---
+
+## Row Interaction Rules
+- **Single click**: open existing detail view
+- **Multi-select**: required (Ctrl / Shift behavior)
+- No right-click context menu
+- No additional per-row action buttons outside the Title column
+
+---
+
+## Kebab Menu
+
+### Menu Items
+- **Reveal invalid items**
+
+### Enabled State
+- Disabled if `InvalidDescendantIds.Count == 0`
+
+### Reveal Invalid Items – Required Behavior
+1. Select target descendant:
+   - Default: first element of `InvalidDescendantIds`
+   - Optional: cycle through list on repeated invocation
+2. Resolve full ancestor path using `ParentId`
+3. Automatically:
+   - Expand all nodes along the path
+   - Rebuild flattened visible rows
+   - Scroll target row into view
+4. Apply a **temporary highlight** to the target row (≈2–3 seconds)
+
+---
+
+## Tree Rendering Model
+- Maintain a **flattened list of visible rows**
+- Flattening is based on hierarchy and `IsExpanded`
+- Rebuild list on expand/collapse
+- Never compute hierarchy during rendering
+
+---
+
+## Column Picker
+- Button in grid header: **Columns**
+- Popup provides:
+  - Checkbox per column (visible on/off)
+  - Drag-and-drop column reordering
+  - Reset to default
+- Persist configuration per view and per mode (mock vs real)
+
+---
+
+## Visual & UX Rules
+- **Compact density** (TFS-like)
+  - Row height ~28–32px
+  - Minimal padding
+- Sticky header
+- Clear hover and selected states
+- No MudBlazor default card or spacious styling
+
+---
+
+## Explicit Non-Goals
+- Do NOT use `MudTreeView`
+- Do NOT infer spacing, layout, or behavior
+- Do NOT compute descendant issues during render
+- Do NOT add extra kebab actions
+- Do NOT add type icons
+
+---
+
+## Acceptance Criteria
+- Grid visually resembles TFS / Azure DevOps work item list
+- Self vs descendant issues are immediately distinguishable
+- “Reveal invalid items” reliably expands and scrolls to the correct descendant
+- Column visibility and order are configurable and persisted
+- Behavior is deterministic and agent-implementable without assumptions
