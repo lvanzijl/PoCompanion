@@ -356,6 +356,37 @@ public class EffortDistributionTests : BunitTestContext
         Assert.Contains("Effort Distribution Heat Map Guide", cut.Markup);
     }
 
+    [TestMethod]
+    public void EffortDistribution_HandlesEmptyIterations_WithoutException()
+    {
+        // Arrange - Create distribution data with empty iterations collection
+        var distributionData = new EffortDistributionDto
+        {
+            TotalEffort = 0,
+            EffortByArea = new List<EffortByAreaPath>(),
+            EffortByIteration = new List<EffortByIteration>(), // Empty collection
+            HeatMapData = new List<EffortHeatMapCell>()
+        };
+
+        _mockMetricsClient.Setup(x => x.GetEffortDistributionAsync(
+                It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<int?>()))
+            .ReturnsAsync(distributionData);
+
+        // Act - Should not throw InvalidOperationException
+        var cut = RenderEffortDistributionWithMudProvider();
+
+        // Wait for async initialization
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain("mud-progress-linear", cut.Markup);
+        }, timeout: TimeSpan.FromSeconds(5));
+
+        // Assert - Page renders without exception
+        Assert.Contains("Effort Distribution Heat Map", cut.Markup);
+        Assert.Contains("Total Effort", cut.Markup);
+        Assert.Contains("Avg Utilization", cut.Markup);
+    }
+
     // Helper method to create test effort distribution data
     private EffortDistributionDto CreateEffortDistributionData()
     {
