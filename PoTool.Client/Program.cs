@@ -37,8 +37,11 @@ builder.Services.AddScoped(sp =>
 builder.Services.AddScoped<HubConnection>(sp =>
 {
     var hubPath = builder.Configuration["SignalR:HubPath"] ?? "/hubs/workitems";
+    // Ensure proper URL concatenation by using Uri
+    var baseUri = new Uri(apiBaseUrl);
+    var hubUri = new Uri(baseUri, hubPath);
     return new HubConnectionBuilder()
-        .WithUrl($"{apiBaseUrl}{hubPath}")
+        .WithUrl(hubUri.ToString())
         .WithAutomaticReconnect()
         .Build();
 });
