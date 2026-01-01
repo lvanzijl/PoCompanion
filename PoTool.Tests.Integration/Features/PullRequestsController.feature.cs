@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Pull Requests Controller API", "    As a user\r\n    I want to access pull requests through the API\r\n    So that I " +
-                "can view and analyze my code reviews", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Pull Requests Controller API", ("    As a user\n    I want to access pull requests through the API\n    So that I ca" +
+                "n view and analyze my code reviews"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "PullRequestsController.feature"
 #line hidden

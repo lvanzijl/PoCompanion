@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "SignalR WorkItem Hub", "    As a user\r\n    I want real-time updates via SignalR\r\n    So that I can see wo" +
-                "rk item changes immediately", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "SignalR WorkItem Hub", ("    As a user\n    I want real-time updates via SignalR\n    So that I can see work" +
+                " item changes immediately"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "SignalRHub.feature"
 #line hidden

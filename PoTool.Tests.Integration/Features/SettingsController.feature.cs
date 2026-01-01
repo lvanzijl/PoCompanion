@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Settings Controller API", "    As a user\r\n    I want to manage settings through the API\r\n    So that I can c" +
-                "onfigure the application", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Settings Controller API", ("    As a user\n    I want to manage settings through the API\n    So that I can con" +
+                "figure the application"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "SettingsController.feature"
 #line hidden

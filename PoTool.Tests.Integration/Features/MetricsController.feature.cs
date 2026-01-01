@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Metrics Controller API", "    As a user\r\n    I want to access metrics through the API\r\n    So that I can vi" +
-                "ew sprint and velocity data", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Metrics Controller API", ("    As a user\n    I want to access metrics through the API\n    So that I can view" +
+                " sprint and velocity data"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "MetricsController.feature"
 #line hidden
@@ -941,8 +941,8 @@ this.ScenarioInitialize(scenarioInfo);
 await this.FeatureBackgroundAsync();
 #line hidden
 #line 120
-    await testRunner.WhenAsync("I request effort distribution with areaPathFilter \"Project\\TeamA\" maxIterations 8" +
-                        " and defaultCapacity 40", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync(("I request effort distribution with areaPathFilter \"Project\\TeamA\" maxIterations 8" +
+                        " and defaultCapacity 40"), ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 121
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -1110,8 +1110,8 @@ await this.FeatureBackgroundAsync();
     await testRunner.GivenAsync("work items exist for iteration \"Project\\2024\\Sprint1\"", ((string)(null)), table19, "Given ");
 #line hidden
 #line 143
-    await testRunner.WhenAsync("I request sprint capacity plan for iteration \"Project\\2024\\Sprint1\" with defaultC" +
-                        "apacity 50", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync(("I request sprint capacity plan for iteration \"Project\\2024\\Sprint1\" with defaultC" +
+                        "apacity 50"), ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 144
     await testRunner.ThenAsync("the response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -1142,8 +1142,8 @@ this.ScenarioInitialize(scenarioInfo);
 await this.FeatureBackgroundAsync();
 #line hidden
 #line 147
-    await testRunner.WhenAsync("I request sprint capacity plan for iteration \"Project\\2024\\Sprint1\" with defaultC" +
-                        "apacity -10", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync(("I request sprint capacity plan for iteration \"Project\\2024\\Sprint1\" with defaultC" +
+                        "apacity -10"), ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 148
     await testRunner.ThenAsync("the response should be BadRequest", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");

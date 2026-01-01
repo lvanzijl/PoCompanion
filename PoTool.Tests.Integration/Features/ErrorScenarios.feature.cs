@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Error Scenario Handling", "    As a system tester\r\n    I want to ensure the API handles error scenarios corr" +
-                "ectly\r\n    So that clients receive appropriate error responses", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Error Scenario Handling", ("    As a system tester\n    I want to ensure the API handles error scenarios corre" +
+                "ctly\n    So that clients receive appropriate error responses"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "ErrorScenarios.feature"
 #line hidden

@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Work Items Controller API", "    As a user\r\n    I want to access work items through the API\r\n    So that I can" +
-                " view and manage my backlog", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Work Items Controller API", ("    As a user\n    I want to access work items through the API\n    So that I can v" +
+                "iew and manage my backlog"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "WorkItemsController.feature"
 #line hidden

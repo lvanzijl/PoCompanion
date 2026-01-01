@@ -12,6 +12,7 @@ public static class WorkItemTypeHelper
     public const string Epic = "Epic";
     public const string Feature = "Feature";
     public const string Pbi = "Product Backlog Item";
+    public const string Bug = "Bug";
     public const string Task = "Task";
 
     /// <summary>
@@ -24,6 +25,7 @@ public static class WorkItemTypeHelper
         Epic,
         Feature,
         Pbi,
+        Bug,
         Task
     };
 
@@ -39,6 +41,7 @@ public static class WorkItemTypeHelper
             Epic => "#FF9800",       // Orange
             Feature => "#9C27B0",    // Purple
             Pbi => "#2196F3",        // Blue
+            Bug => "#F44336",        // Red
             Task => "#FFEB3B",       // Yellow
             _ => "#757575"           // Grey for unknown
         };
