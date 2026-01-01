@@ -1,388 +1,242 @@
-# Architecture Rules — PO Companion
+## ARCHITECTURE_RULES.md
+
+This document outlines the core architectural rules and patterns that govern the PoCompanion system.
+
+## 1. Domain-Driven Design (DDD) Principles
+
+### 1.1 Bounded Contexts
+- Each major feature area represents a bounded context
+- Clear boundaries between contexts with explicit interfaces
+- Shared kernel for common domain concepts
+
+### 1.2 Entities and Value Objects
+- Entities have unique identifiers and lifecycle
+- Value objects are immutable and defined by their attributes
+- Rich domain models with behavior, not anemic models
+
+### 1.3 Aggregates
+- Each aggregate has a root entity
+- External references only through the aggregate root
+- Maintain consistency boundaries within aggregates
+
+## 2. Clean Architecture
+
+### 2.1 Dependency Rule
+- Dependencies point inward: UI → Application → Domain
+- Domain layer has no external dependencies
+- Application layer depends only on Domain
+- Infrastructure implements interfaces defined in Application/Domain
+
+### 2.2 Layer Responsibilities
+- **Domain**: Business logic, entities, value objects, domain services
+- **Application**: Use cases, application services, DTOs, interfaces
+- **Infrastructure**: Data access, external services, framework concerns
+- **Presentation**: API controllers, SignalR hubs, UI concerns
+
+## 3. CQRS Pattern
+
+### 3.1 Command-Query Separation
+- Commands change state, return void or minimal confirmation
+- Queries return data, never modify state
+- Clear separation in code structure
+
+### 3.2 MediatR Usage
+- All commands and queries go through MediatR
+- Handlers are independent and testable
+- Cross-cutting concerns via pipeline behaviors
+
+## 4. Repository Pattern
+
+### 4.1 Generic Repository
+- IRepository<T> for common CRUD operations
+- Specific repositories extend for specialized queries
+- Repository interfaces in Domain/Application layer
+- Implementation in Infrastructure layer
+
+### 4.2 Unit of Work
+- Transaction management at application service level
+- Coordinate multiple repository operations
+- Ensure data consistency across aggregates
+
+## 5. API Design
+
+### 5.1 RESTful Principles
+- Resource-based URLs
+- Proper HTTP verbs (GET, POST, PUT, DELETE)
+- Status codes convey meaning
+- Versioning strategy in place
 
-This document defines all binding architectural rules for the PO Companion.
-All code, refactorings, generated output, and AI-assisted changes MUST comply with these rules.
-
-Violations are architectural errors, not implementation shortcuts.
-
----
-
-## 1. Architecture overview
-
-The application consists of four strictly separated layers:
-
-1. **Core**
-   - Business logic
-   - Domain models
-   - Interfaces
-
-2. **Api**
-   - ASP.NET Core Web API
-   - SignalR hubs
-   - Infrastructure implementations
-   - Persistence and integrations
-
-3. **Frontend**
-   - Blazor WebAssembly
-   - Razor class library
-   - UI logic and presentation
-   - Communicates only with Api
-
-4. **Hosting**
-   - ASP.NET Core Web API hosts both backend and frontend
-   - Serves Blazor WebAssembly as static files
-   - Single executable deployment
-
-Layer boundaries are absolute.
-
----
-
-## 2. Layer boundaries (hard rules)
-
-### 2.1 Core
-Core MUST NOT reference:
-- ASP.NET Core
-- EF Core
-- SignalR
-- HTTP
-- TFS APIs
-- UI frameworks
-- Configuration systems
-
-Core MUST:
-- Contain all business logic
-- Be fully unit-testable
-- Be infrastructure-agnostic
-
----
-
-### 2.2 Api
-Api:
-- MAY reference Core
-- MAY reference infrastructure and third-party systems
-- MUST expose all functionality via Web API and SignalR
-- MUST be the only layer allowed to access TFS
-
-Api MUST NOT:
-- Contain UI logic
-- Bypass Core business rules
-
----
-
-### 2.3 Frontend
-Frontend:
-- MUST be Blazor WebAssembly (Razor class library)
-- MUST communicate exclusively via:
-  - HTTP Web API
-  - SignalR
-- MUST NOT access TFS directly
-- MUST NOT contain business logic
-
-Frontend MUST NOT:
-- Call backend services directly (even in-process)
-- Store sensitive data locally
-- Depend on backend runtime hosting model
-
----
-
-### 2.4 Hosting
-Hosting:
-- ASP.NET Core Web API serves both API and frontend
-- Frontend is served as static files via Blazor WebAssembly Server hosting
-- Single executable contains all components
-
-Hosting MUST NOT:
-- Allow direct method calls between frontend and backend
-- Bypass API layer for frontend communication
-
----
-
-## 3. Hosting model
-
-### 3.1 Current model
-- Application runs as a single ASP.NET Core executable
-- Backend Web API and frontend are hosted in-process
-- Frontend is Blazor WebAssembly served as static files
-- Communication via HTTP + SignalR
-
-### 3.2 Deployment flexibility
-Backend MUST be able to run without code changes as:
-- Standalone process
-- Windows service
-- Containerized service
-- Cloud-hosted service
-
-Frontend communication remains unchanged regardless of deployment model.
-
----
-
-## 4. Communication rules
-
-- Frontend ↔ Backend communication ONLY via:
-  - HTTP Web API
-  - SignalR
-- Direct method calls across layers are FORBIDDEN
-- No shared runtime objects between layers
-
-SignalR:
-- Used only for backend-to-frontend notifications
-- MUST NOT be used for:
-  - business state synchronization
-  - orchestration
-  - implicit commands
-
----
-
-## 5. Persistence rules
-
-- Local database is non-canonical
-- Stored data is derived and disposable
-- Loss of local data MUST NOT break functionality
-
-Database is used only for:
-- User settings
-- Local caches
-- Internal metadata
-
----
-
-## 6. TFS integration
-
-- TFS access is restricted to Api layer
-- All TFS access MUST go through an interface (e.g. `ITfsClient`)
-- Concrete implementations handle:
-  - Authentication (PAT)
-  - API calls
-  - Result mapping
-
-### 6.1 Mutations
-All TFS mutations MUST:
-- Represent one explicit backend action
-- Have no hidden side effects
-- Be logged with action type and outcome
-
-Frontend MUST NOT trigger implicit TFS mutations.
-
----
-
-## 7. Authentication & secrets
-
-- Rule (architecture-level):
-- PAT is client-side only.
-- PAT is never persisted server-side (db/files/cache/logs).
-- API may receive PAT only for immediate use/validation and must not retain it.
-
-Authority:
-
-- All details (storage mechanism, encryption, lifecycle, XSS mitigations, migration) are defined in PAT_STORAGE_BEST_PRACTICES.md and override any summaries. 
-
----
-
-## 8. Client runtime rules (Blazor WebAssembly)
-
-### 8.1 No sync-over-async in PoTool.Client
-
-In `PoTool.Client` (Blazor WebAssembly), **synchronous waiting on asynchronous operations is forbidden**.
-
-Blazor WebAssembly runs on a **single-threaded runtime**. Blocking calls can deadlock the UI, freeze rendering, or break event handling.
-
-#### Forbidden patterns (non-exhaustive)
-The following MUST NOT appear anywhere in `PoTool.Client`:
-
-- `.Result`
-- `.Wait()`
-- `GetAwaiter().GetResult()`
-- `AsTask().Result`
-- `AsTask().Wait()`
-
-This applies to:
-- UI components
-- Services
-- Storage helpers
-- JS interop wrappers
-- Any client-side abstraction
-
-#### Required pattern
-- All client-side APIs MUST be **Task-based and fully asynchronous**.
-- UI lifecycle methods MUST use async variants (`OnInitializedAsync`, etc.).
-- UI event handlers MUST return `Task` and `await` downstream calls.
-- Async call chains MUST remain async end-to-end.
-
-#### Migration rule
-If an existing API is synchronous but internally relies on async behavior:
-- Introduce an **explicit async interface**
-- Migrate call sites to async
-- Mark the synchronous API as obsolete and non-functional if necessary
-
-Wrapping async code in blocking adapters is an architectural violation.
-
---- 
-
-## 9. Logging & health
-
-- Central logging is mandatory for:
-  - TFS mutations
-  - Backend errors
-  - Significant actions
-- Logs MUST NOT contain sensitive data
-- Backend MUST expose a health endpoint
-- Health endpoint can be used for monitoring and readiness checks
-
----
-
-## 10. Project structure
-
-The solution MUST contain at least:
-
-- **Core**
-  - Domain models
-  - Pure services
-  - Interfaces
-
-- **Api**
-  - Controllers
-  - SignalR hubs
-  - EF Core contexts
-  - Infrastructure implementations
-
-- **Frontend**
-  - Blazor WebAssembly application
-
-- **Tests.Unit**
-  - MSTest unit tests
-  - File-based TFS fakes
-
----
-
-## 11. Testing rules
-
-### 11.1 Unit tests
-
-- MSTest is mandatory
-- Business logic MUST be tested in Core
-- Controllers and UI contain no logic to unit-test
-- Tests MUST NOT connect to real TFS
-- TFS behavior is simulated via file-based mocks
-
-### 11.2 Integration tests
-
-Integration tests MUST verify end-to-end API behavior with Reqnroll (BDD framework).
-
-#### 11.2.1 Framework and tooling
-- Integration tests MUST use **Reqnroll** for BDD-style test definitions
-- Tests MUST be defined in `.feature` files using Gherkin syntax
-- Step definitions MUST be implemented in C# using Reqnroll bindings
-- MSTest MUST be used as the test runner
-
-#### 11.2.2 Test entry points
-Integration tests MUST cover:
-- All Web API endpoints exposed by the Api layer
-- All SignalR events and hub methods
-- All request/response flows between frontend and backend
-
-#### 11.2.3 Test execution model
-- Tests MUST start the full ASP.NET Core Web API application
-- Tests MUST use a real database instance (in-memory or temporary)
-- Tests MUST exercise HTTP endpoints as external clients would
-- Tests MUST connect to SignalR hubs as real clients would
-- No mocking of Api, Core, or database layers is allowed
-
-#### 11.2.4 TFS mocking (only exception)
-- TFS integration is the ONLY component that MAY be mocked
-- TFS mocks MUST use file-based test data
-- TFS mocks MUST simulate realistic responses and error conditions
-- TFS mocks MUST NOT alter business logic behavior
-
-#### 11.2.5 Coverage requirements
-- **85% coverage** of all Web API endpoints is MANDATORY
-- **85% coverage** of all SignalR hub methods is MANDATORY
-- Each endpoint MUST be tested for:
-  - Successful execution (happy path)
-  - Error conditions and validation failures
-  - Authorization and authentication requirements (when applicable)
-
-#### 11.2.6 Test organization
-- Integration tests MUST be in a separate test project
-- Feature files MUST be organized by feature area or domain
-- Step definitions MUST be reusable across multiple scenarios
-- Test data MUST be isolated per test scenario
-
-#### 11.2.7 Test independence
-- Each integration test scenario MUST be independent
-- Tests MUST clean up their own test data
-- Tests MUST NOT depend on execution order
-- Database state MUST be reset between test scenarios
-
----
-
-## 12. Mediator usage
-
-- MediatR is FORBIDDEN
-- Only the source-generated **Mediator** library is allowed
-
-Mediator MAY be used only for:
-- Commands (mutations)
-- Queries (read operations)
-- Pipelines (logging, validation)
-
-Mediator MUST NOT be used for:
-- UI orchestration
-- Navigation
-- Cross-command chaining
-
-Commands and queries live in Core.  
-Handlers and pipelines live in Api.
-
----
-
-## 13. Dependency policy
-
-- New dependencies require explicit approval
-- Prefer fewer dependencies over convenience
-- Each dependency is evaluated on:
-  - Maintenance status
-  - License
-  - Security impact
-  - Overlap with existing packages
-
----
-
-## 14. Dependency Injection
-
-- Only Microsoft.Extensions.DependencyInjection is allowed
-- No alternative DI containers
-- No service locator pattern
-- Constructor injection is mandatory
-
----
-
-## 15. Architectural invariants (never break)
-
-1. Frontend never talks to TFS
-2. Core remains infrastructure-free
-3. Backend is the single integration point
-4. All TFS mutations are explicit and traceable
-5. Views define navigation; features define content only
-6. Backend can be deployed standalone or as a hosted service without code changes
-7. Unit tests never use real TFS
-8. Only approved dependencies are allowed
-9. Microsoft DI is mandatory
-10. Only the source-generated Mediator is allowed
-11. Never manually edit generated code files (*.g.cs)
-12. Warnings are not allowed - all projects MUST treat warnings as errors
-
----
-
-## 16. Code Quality
-
-### 16.1 Warnings Policy
-- **All warnings MUST be treated as errors** in all projects
-- Projects MUST set `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` in their .csproj files (MSBuild XML)
-- No exceptions to this rule
-- Code MUST build without any warnings before being merged
-
-### 16.2 Rationale
-- Warnings often indicate potential bugs or design issues
-- Treating warnings as errors enforces clean code
-- Prevents accumulation of technical debt
-- Ensures consistent code quality across the codebase
+### 5.2 Real-time Communication
+- SignalR for server-to-client updates
+- Hub per feature area
+- Strongly-typed hub interfaces
+- Connection lifecycle management
+
+## 6. Data Access
+
+### 6.1 Entity Framework Core
+- Code-first approach with migrations
+- DbContext per bounded context or aggregate
+- No lazy loading (explicit eager or projection)
+- Query optimization with AsNoTracking for read-only
+
+### 6.2 Database Design
+- Normalized schema
+- Foreign key constraints
+- Appropriate indexes
+- Audit fields (CreatedAt, UpdatedAt, etc.)
+
+## 7. Error Handling
+
+### 7.1 Exception Strategy
+- Domain exceptions for business rule violations
+- Application exceptions for use case failures
+- Infrastructure exceptions for technical issues
+- Global exception handling middleware
+
+### 7.2 Validation
+- Input validation at API boundary
+- Business rule validation in domain layer
+- FluentValidation for complex validation rules
+- Return meaningful error messages
+
+## 8. Configuration and Environment
+
+### 8.1 Configuration Management
+- appsettings.json for base configuration
+- appsettings.{Environment}.json for environment-specific
+- User secrets for local development
+- Environment variables for production secrets
+
+### 8.2 HTTP-only Development Rule
+
+**Overview**: The PoCompanion system is configured to use HTTP-only in development environments to avoid certificate complexity and related development friction.
+
+**Configuration Locations**:
+1. **appsettings.json** / **appsettings.Development.json**
+   - API base URL: `http://localhost:5291`
+   - All service URLs must use HTTP scheme
+
+2. **launchSettings.json** (API project)
+   - Configure Kestrel to listen on HTTP only
+   - Application URL: `http://localhost:5291`
+   - Remove or comment out HTTPS URLs
+
+3. **SignalR Hub URLs**
+   - Hub connections use HTTP URLs: `http://localhost:5291/hubs/[hubname]`
+   - Client-side hub connection configuration
+
+4. **CORS Configuration** (ApiServiceCollectionExtensions.cs)
+   - Allow HTTP origins in development
+   - `WithOrigins("http://localhost:5291")`
+   - Ensure AllowCredentials() for SignalR
+
+**Re-enabling HTTPS for Production**:
+
+When moving to production or if HTTPS is required:
+
+1. **Kestrel Configuration**
+   - Update launchSettings.json or Kestrel configuration to enable HTTPS
+   - Configure SSL certificate (self-signed for dev, trusted for production)
+
+2. **Base Addresses**
+   - Update all `http://` URLs to `https://`
+   - Check appsettings files, client configuration, hub URLs
+
+3. **CORS Configuration**
+   - Update allowed origins to use HTTPS scheme
+   - Review credential policies for cross-origin requests
+
+4. **SignalR URLs**
+   - Update hub connection URLs to HTTPS
+   - Verify WebSocket upgrade works over HTTPS
+
+5. **Middleware**
+   - Enable `app.UseHttpsRedirection()` in pipeline
+   - Consider HSTS middleware for production
+
+**Rationale**:
+- **Development Benefits**: Eliminates certificate trust issues, mixed content warnings, and CORS complications during local development
+- **Rapid Iteration**: Developers can run the system immediately without certificate setup
+- **Browser Compatibility**: Avoids localhost certificate browser warnings
+- **SignalR Reliability**: HTTP WebSocket connections are simpler to debug
+
+**Important**: Production deployments MUST use HTTPS for security. This HTTP-only configuration is strictly for development environments. Never deploy to production without proper HTTPS/TLS configuration.
+
+## 9. Testing Strategy
+
+### 9.1 Unit Tests
+- Test domain logic in isolation
+- Mock dependencies using interfaces
+- High coverage for business-critical code
+- Fast and independent tests
+
+### 9.2 Integration Tests
+- Test API endpoints end-to-end
+- In-memory database for data access tests
+- Test SignalR hub interactions
+- Validate cross-cutting concerns
+
+### 9.3 Test Organization
+- Mirror production code structure
+- Arrange-Act-Assert pattern
+- Descriptive test names
+- One assertion per test (where practical)
+
+## 10. Code Quality
+
+### 10.1 Naming Conventions
+- PascalCase for classes, methods, properties
+- camelCase for parameters, local variables
+- Meaningful, descriptive names
+- Avoid abbreviations unless widely known
+
+### 10.2 Code Structure
+- Single Responsibility Principle
+- Small, focused methods and classes
+- Avoid deep nesting (max 3 levels)
+- Keep files under 300 lines when possible
+
+### 10.3 Comments and Documentation
+- XML comments for public APIs
+- Explain "why" not "what" in comments
+- Keep comments up-to-date with code
+- README files for complex subsystems
+
+## 11. Security
+
+### 11.1 Authentication & Authorization
+- JWT tokens for API authentication
+- Role-based or claims-based authorization
+- Secure token storage
+- Token expiration and refresh strategy
+
+### 11.2 Data Protection
+- Sensitive data encryption at rest
+- Secure communication channels (TLS)
+- Input sanitization to prevent injection
+- Principle of least privilege
+
+## 12. Performance
+
+### 12.1 Optimization Guidelines
+- Profile before optimizing
+- Cache frequently accessed data
+- Async/await for I/O operations
+- Pagination for large data sets
+
+### 12.2 SignalR Performance
+- Connection pooling
+- Backplane for scale-out scenarios
+- Message size optimization
+- Connection lifecycle management
+
+## Compliance and Updates
+
+This document should be:
+- Reviewed quarterly or when significant architectural decisions are made
+- Updated to reflect new patterns or rule changes
+- Referenced in code reviews to ensure adherence
+- Used for onboarding new team members
+
+**Last Updated**: 2026-01-01
