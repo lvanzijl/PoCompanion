@@ -6,7 +6,7 @@
     <DialogContent>
         <MudText Typo="Typo.h6" Class="mb-4">Configure Columns</MudText>
 
-        <MudList T="ColumnConfig" Dense="true">
+        <CompactList T="ColumnConfig">
             @foreach (var column in Columns)
             {
                 <MudListItem T="ColumnConfig" Dense="true" Class="column-config-item">
@@ -20,32 +20,30 @@
                             @column.Title@(column.IsRequired ? " (Required)" : "")
                         </MudText>
                         <div class="column-actions">
-                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" 
-                                          Size="Size.Small" 
+                            <CompactIconButton Icon="@Icons.Material.Filled.ArrowUpward" 
                                           OnClick="() => MoveColumnUp(column)"
                                           Disabled="@IsFirstColumn(column)" />
-                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" 
-                                          Size="Size.Small" 
+                            <CompactIconButton Icon="@Icons.Material.Filled.ArrowDownward" 
                                           OnClick="() => MoveColumnDown(column)"
                                           Disabled="@IsLastColumn(column)" />
                         </div>
                     </div>
                 </MudListItem>
             }
-        </MudList>
+        </CompactList>
 
         <MudDivider Class="my-4" />
 
-        <MudButton Variant="Variant.Text" 
+        <CompactButton Variant="Variant.Text" 
                    Color="Color.Secondary" 
                    OnClick="ResetToDefault"
                    StartIcon="@Icons.Material.Filled.Refresh">
             Reset to Default
-        </MudButton>
+        </CompactButton>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Save</MudButton>
+        <CompactButton OnClick="Cancel">Cancel</CompactButton>
+        <CompactButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Save</CompactButton>
     </DialogActions>
 </MudDialog>
 

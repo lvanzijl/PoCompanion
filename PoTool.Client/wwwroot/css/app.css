@@ -24,6 +24,12 @@
     --spacing-lg: 24px;
     --spacing-xl: 32px;
     
+    /* Fluent UI Compact Density Tokens (4px grid) */
+    --d1: 4px;   /* Internal padding, label gaps */
+    --d2: 8px;   /* Control padding, cell padding */
+    --d3: 12px;  /* Group spacing */
+    --d4: 16px;  /* Section separation */
+    
     /* Typography */
     --font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     --font-size-xs: 0.75rem;

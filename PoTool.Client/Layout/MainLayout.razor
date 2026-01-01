@@ -22,28 +22,28 @@
                 <ProfileSelector @ref="_profileSelector" OnProfileChanged="HandleProfileChanged" />
             </div>
             <div class="d-flex align-items-center">
-                <MudIconButton Icon="@Icons.Material.Filled.Help" 
+                <CompactIconButton Icon="@Icons.Material.Filled.Help" 
                               Color="Color.Inherit" 
                               OnClick="OpenOnboardingWizard" 
-                              title="Getting Started" 
-                              aria-label="Open getting started wizard" />
+                              Title="Getting Started" 
+                              AriaLabel="Open getting started wizard" />
                 <MudTooltip Text="Keyboard Shortcuts (Press ?)">
-                    <MudIconButton Icon="@Icons.Material.Filled.Keyboard" 
+                    <CompactIconButton Icon="@Icons.Material.Filled.Keyboard" 
                                   Color="Color.Inherit" 
                                   OnClick="OpenKeyboardShortcuts" 
-                                  title="Keyboard Shortcuts" 
-                                  aria-label="Open keyboard shortcuts" />
+                                  Title="Keyboard Shortcuts" 
+                                  AriaLabel="Open keyboard shortcuts" />
                 </MudTooltip>
-                <MudIconButton Icon="@Icons.Material.Filled.AccountBox" 
+                <CompactIconButton Icon="@Icons.Material.Filled.AccountBox" 
                               Color="Color.Inherit" 
                               OnClick="OpenProfileManager" 
-                              title="Manage Profiles" 
-                              aria-label="Manage profiles" />
-                <MudIconButton Icon="@Icons.Material.Filled.Settings" 
+                              Title="Manage Profiles" 
+                              AriaLabel="Manage profiles" />
+                <CompactIconButton Icon="@Icons.Material.Filled.Settings" 
                               Color="Color.Inherit" 
                               OnClick="OpenSettings" 
-                              title="Settings" 
-                              aria-label="Open settings" />
+                              Title="Settings" 
+                              AriaLabel="Open settings" />
             </div>
         </div>
 

@@ -80,33 +80,30 @@ else if (SelectedWorkItem != null)
         @* Quick Actions *@
         <div class="quick-actions">
             <MudTooltip Text="Open this work item in Azure DevOps">
-                <MudButton Variant="Variant.Filled" 
+                <CompactButton Variant="Variant.Filled" 
                           Color="Color.Primary" 
                           StartIcon="@Icons.Material.Filled.OpenInNew" 
-                          Size="Size.Small"
                           OnClick="@(() => OpenInAzureDevOps(SelectedWorkItem.TfsId))">
                     Open in Azure DevOps
-                </MudButton>
+                </CompactButton>
             </MudTooltip>
             
             <MudTooltip Text="Copy work item ID to clipboard">
-                <MudButton Variant="Variant.Outlined" 
+                <CompactButton Variant="Variant.Outlined" 
                           Color="Color.Secondary" 
                           StartIcon="@Icons.Material.Filled.ContentCopy" 
-                          Size="Size.Small"
                           OnClick="@(() => CopyIdToClipboard(SelectedWorkItem.TfsId))">
                     Copy ID
-                </MudButton>
+                </CompactButton>
             </MudTooltip>
             
             <MudTooltip Text="Copy work item URL to clipboard">
-                <MudButton Variant="Variant.Outlined" 
+                <CompactButton Variant="Variant.Outlined" 
                           Color="Color.Secondary" 
                           StartIcon="@Icons.Material.Filled.Link" 
-                          Size="Size.Small"
                           OnClick="@(() => CopyUrlToClipboard(SelectedWorkItem.TfsId))">
                     Copy URL
-                </MudButton>
+                </CompactButton>
             </MudTooltip>
         </div>
         

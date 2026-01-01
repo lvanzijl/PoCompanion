@@ -23,7 +23,7 @@
             @if (_profiles != null && _profiles.Any())
             {
                 <MudText Typo="Typo.subtitle1" Class="mb-2">Your Profiles</MudText>
-                <MudList T="string" Dense="true" Class="mb-4">
+                <CompactList T="string" Class="mb-4">
                     @foreach (var profile in _profiles)
                     {
                         <MudListItem T="string">
@@ -35,20 +35,18 @@
                                     </MudText>
                                 </MudStack>
                                 <MudStack Row="true" Spacing="1">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                    <CompactIconButton Icon="@Icons.Material.Filled.Edit" 
                                                    Color="Color.Primary" 
-                                                   Size="Size.Small"
                                                    OnClick="@(() => EditProfile(profile))" />
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                    <CompactIconButton Icon="@Icons.Material.Filled.Delete" 
                                                    Color="Color.Error" 
-                                                   Size="Size.Small"
                                                    OnClick="@(() => DeleteProfile(profile))" />
                                 </MudStack>
                             </MudStack>
                         </MudListItem>
                         <MudDivider />
                     }
-                </MudList>
+                </CompactList>
             }
             else
             {
@@ -63,32 +61,24 @@
             </MudText>
 
             <MudForm @ref="_form">
-                <MudTextField @bind-Value="_profileName" 
+                <CompactTextField @bind-Value="_profileName" 
                               Label="Profile Name" 
                               Required="true"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
                               HelperText="e.g., 'Product A - Team Alpha'" />
 
-                <MudTextField @bind-Value="_teamName" 
+                <CompactTextField @bind-Value="_teamName" 
                               Label="Team Name" 
                               Required="true"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
                               HelperText="The team responsible for these area paths" />
 
-                <MudTextField @bind-Value="_areaPathsInput" 
+                <CompactTextField @bind-Value="_areaPathsInput" 
                               Label="Area Paths (comma-separated)" 
                               Required="true"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
                               Lines="3"
                               HelperText="e.g., 'ProjectA\\ProductA, ProjectA\\ProductA\\FeatureX'" />
 
-                <MudTextField @bind-Value="_goalIdsInput" 
+                <CompactTextField @bind-Value="_goalIdsInput" 
                               Label="Goal IDs (comma-separated, optional)" 
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
                               HelperText="Leave empty for all goals, or specify IDs like '1000,2000'" />
 
                 @if (_errorResponse != null)
@@ -99,7 +89,7 @@
                 }
 
                 <MudStack Row="true" Class="mt-4" Spacing="2">
-                    <MudButton OnClick="SaveProfile" 
+                    <CompactButton OnClick="SaveProfile" 
                                Color="Color.Primary" 
                                Variant="Variant.Filled" 
                                Disabled="_isSaving"
@@ -113,21 +103,21 @@
                         {
                             <span>@(_isEditing ? "Update" : "Create") Profile</span>
                         }
-                    </MudButton>
+                    </CompactButton>
                     @if (_isEditing)
                     {
-                        <MudButton OnClick="CancelEdit" 
+                        <CompactButton OnClick="CancelEdit" 
                                    Color="Color.Default" 
                                    Variant="Variant.Outlined">
                             Cancel
-                        </MudButton>
+                        </CompactButton>
                     }
                 </MudStack>
             </MudForm>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close" Color="Color.Default">Close</MudButton>
+        <CompactButton OnClick="Close" Color="Color.Default">Close</CompactButton>
     </DialogActions>
 </MudDialog>
 
