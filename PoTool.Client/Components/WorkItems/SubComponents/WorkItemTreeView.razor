@@ -1,17 +1,20 @@
 @using PoTool.Client.Models
+@using MudBlazor
 
 @* Tree view container component with virtual scrolling *@
 
 <div class="tree-view">
     @if (IsLoading)
     {
-        <p>Loading work items...</p>
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        <MudText Typo="Typo.body2" Class="mt-2">Loading work items...</MudText>
     }
     else if (!TreeRoots.Any())
     {
         <div class="empty-state pa-4">
-            <p class="mb-2"><strong>No work items found</strong></p>
-            <p>Click "Full Sync" to retrieve work items from Azure DevOps, or check your filter settings.</p>
+            <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+            <MudText Typo="Typo.h6" Class="mb-2">No work items found</MudText>
+            <MudText Typo="Typo.body2">Click "Full Sync" to retrieve work items from Azure DevOps, or check your filter settings.</MudText>
         </div>
     }
     else
@@ -20,41 +23,57 @@
             @* Use MudVirtualize for performance with large datasets *@
             <MudVirtualize Items="@GetFlatNodeList()" Context="node" OverscanCount="10">
                 <div class="virtualized-node" style="padding-left:@(node.Level * 1.25)rem">
-                    <div class="node-row">
+                    <MudPaper Class="node-row" Elevation="0">
                         @if (node.Node.Children.Any())
                         {
-                            <button type="button" 
-                                    class="@GetCaretClass(node.Node)" 
-                                    @onclick="() => OnNodeToggled.InvokeAsync(node.Node)">
-                                <span class="chev">?</span>
-                            </button>
+                            <MudIconButton 
+                                Icon="@(node.Node.IsExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
+                                Size="Size.Small" 
+                                Color="Color.Default"
+                                OnClick="() => OnNodeToggled.InvokeAsync(node.Node)"
+                                Class="caret-button" />
                         }
                         else
                         {
                             <span class="leaf-placeholder"></span>
                         }
 
-                        <span class="type-indicator" style="background-color: @node.Node.TypeColor" title="@node.Node.Type"></span>
+                        <MudIcon Icon="@GetIconForType(node.Node.Type)" 
+                                 Size="Size.Small" 
+                                 Style="@($"color: {node.Node.TypeColor}")" 
+                                 title="@node.Node.Type" />
 
-                        <span class="@GetTypeClass(node.Node)">
+                        <MudChip T="string" 
+                                 Size="Size.Small" 
+                                 Color="@GetChipColor(node.Node.Type)"
+                                 Variant="Variant.Filled"
+                                 Class="type-chip">
                             @GetTypeText(node.Node)
-                        </span>
+                        </MudChip>
 
-                        <div class="title-block">
-                            <span class="@GetTitleClass(node.Node)" @onclick="() => OnNodeSelected.InvokeAsync(node.Node)" @onclick:stopPropagation="true">
+                        <div class="title-block" 
+                             @onclick="() => OnNodeSelected.InvokeAsync(node.Node)" 
+                             @onclick:stopPropagation="true">
+                            <MudText Typo="Typo.body2" 
+                                     Class="@GetTitleClass(node.Node)">
                                 @node.Node.Title
-                            </span>
+                            </MudText>
                         </div>
                         
-                        <span class="status-column">@node.Node.State</span>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="status-chip">
+                            @node.Node.State
+                        </MudChip>
                         
                         @if (node.Node.HasValidationIssues)
                         {
-                            <span class="validation-icon" title="@GetValidationTooltip(node.Node)" role="img" aria-label="@GetValidationAriaLabel(node.Node)">
-                                @node.Node.ValidationIcon
-                            </span>
+                            <MudTooltip Text="@GetValidationTooltip(node.Node)">
+                                <MudIcon Icon="@GetValidationIcon(node.Node)" 
+                                         Size="Size.Small" 
+                                         Color="@GetValidationColor(node.Node)" 
+                                         Class="validation-icon" />
+                            </MudTooltip>
                         }
-                    </div>
+                    </MudPaper>
                 </div>
             </MudVirtualize>
         </ul>
@@ -153,23 +172,50 @@
     
     private bool IsPlaceholder(TreeNode node) => string.IsNullOrEmpty(node.JsonPayload);
     
-    private string GetCaretClass(TreeNode node)
+    private string GetIconForType(string type)
     {
-        return node.IsExpanded ? "caret-button expanded" : "caret-button";
+        return type switch
+        {
+            "Goal" => Icons.Material.Filled.Flag,
+            "Objective" => Icons.Material.Filled.TrackChanges,
+            "Epic" => Icons.Material.Filled.Layers,
+            "Feature" => Icons.Material.Filled.Dashboard,
+            "Product Backlog Item" => Icons.Material.Filled.Assignment,
+            "Bug" => Icons.Material.Filled.BugReport,
+            "Task" => Icons.Material.Filled.CheckCircle,
+            _ => Icons.Material.Filled.Circle
+        };
     }
     
-    private string GetTypeClass(TreeNode node)
+    private Color GetChipColor(string type)
     {
-        if (IsPlaceholder(node))
+        return type switch
         {
-            return "workitem-type placeholder-type";
-        }
-        return $"workitem-type {node.Type}";
+            "Goal" => Color.Success,
+            "Objective" => Color.Info,
+            "Epic" => Color.Warning,
+            "Feature" => Color.Secondary,
+            "Product Backlog Item" => Color.Primary,
+            "Bug" => Color.Error,
+            "Task" => Color.Default,
+            _ => Color.Default
+        };
     }
     
     private string GetTypeText(TreeNode node)
     {
-        return IsPlaceholder(node) ? "(missing)" : node.Type;
+        if (IsPlaceholder(node))
+        {
+            return "(missing)";
+        }
+        
+        // Abbreviate for better display
+        return node.Type switch
+        {
+            "Product Backlog Item" => "PBI",
+            "Objective" => "OBJ",
+            _ => node.Type.ToUpper()
+        };
     }
     
     private string GetTitleClass(TreeNode node)
@@ -186,6 +232,26 @@
     private string GetValidationTooltip(TreeNode node)
     {
         return string.Join("\n", node.ValidationIssues);
+    }
+    
+    private string GetValidationIcon(TreeNode node)
+    {
+        return node.HighestSeverity switch
+        {
+            "Error" => Icons.Material.Filled.Error,
+            "Warning" => Icons.Material.Filled.Warning,
+            _ => Icons.Material.Filled.Info
+        };
+    }
+    
+    private Color GetValidationColor(TreeNode node)
+    {
+        return node.HighestSeverity switch
+        {
+            "Error" => Color.Error,
+            "Warning" => Color.Warning,
+            _ => Color.Info
+        };
     }
     
     private string GetValidationAriaLabel(TreeNode node)
