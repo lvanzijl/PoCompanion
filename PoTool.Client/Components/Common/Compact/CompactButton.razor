@@ -4,20 +4,16 @@
            Color="@Color"
            Size="Size.Small"
            Disabled="@Disabled"
-           DisableElevation="@DisableElevation"
-           DisableRipple="@DisableRipple"
            FullWidth="@FullWidth"
            StartIcon="@StartIcon"
            EndIcon="@EndIcon"
            IconColor="@IconColor"
-           IconSize="@IconSize"
            Class="@Class"
            Style="@Style"
            OnClick="@OnClick"
            ButtonType="@ButtonType"
            Href="@Href"
-           Target="@Target"
-           HtmlTag="@HtmlTag">
+           Target="@Target">
     @ChildContent
 </MudButton>
 
@@ -26,18 +22,14 @@
     [Parameter] public Variant Variant { get; set; } = Variant.Filled;
     [Parameter] public Color Color { get; set; } = Color.Default;
     [Parameter] public bool Disabled { get; set; }
-    [Parameter] public bool DisableElevation { get; set; }
-    [Parameter] public bool DisableRipple { get; set; }
     [Parameter] public bool FullWidth { get; set; }
     [Parameter] public string? StartIcon { get; set; }
     [Parameter] public string? EndIcon { get; set; }
     [Parameter] public Color IconColor { get; set; } = Color.Inherit;
-    [Parameter] public Size IconSize { get; set; } = Size.Medium;
     [Parameter] public string? Class { get; set; }
     [Parameter] public string? Style { get; set; }
     [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
     [Parameter] public ButtonType ButtonType { get; set; } = ButtonType.Button;
     [Parameter] public string? Href { get; set; }
     [Parameter] public string? Target { get; set; }
-    [Parameter] public string? HtmlTag { get; set; }
 }
