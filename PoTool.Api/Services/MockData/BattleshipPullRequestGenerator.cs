@@ -41,7 +41,7 @@ public class BattleshipPullRequestGenerator
             
             var createdDate = now.AddDays(-_random.Next(1, 365));
             var status = GetPrStatus();
-            var completedDate = status == "completed" ? createdDate.AddDays(_random.Next(1, 15)) : null;
+            DateTimeOffset? completedDate = status == "completed" ? createdDate.AddDays(_random.Next(1, 15)) : null;
 
             var title = GetPrTitle(i, repository);
             var sourceBranch = GetBranchName(title);
@@ -80,16 +80,16 @@ public class BattleshipPullRequestGenerator
 
             for (var i = 1; i <= iterationCount; i++)
             {
-                var filesChanged = _random.Next(1, 51);
-                var linesChanged = _random.Next(10, 700);
+                var commitCount = _random.Next(1, 51);
+                var changeCount = _random.Next(10, 700);
 
                 iterations.Add(new PullRequestIterationDto(
                     PullRequestId: pr.Id,
                     IterationNumber: i,
                     CreatedDate: currentDate,
                     UpdatedDate: currentDate.AddHours(_random.Next(1, 48)),
-                    FilesChanged: filesChanged,
-                    LinesChanged: linesChanged
+                    CommitCount: commitCount,
+                    ChangeCount: changeCount
                 ));
 
                 currentDate = currentDate.AddDays(_random.Next(1, 5));
@@ -126,18 +126,18 @@ public class BattleshipPullRequestGenerator
                 var threadId = c + 1;
                 var reviewer = reviewers[_random.Next(reviewers.Length)];
                 var commentText = commentTexts[_random.Next(commentTexts.Length)];
-                var publishedDate = pr.CreatedDate.AddDays(_random.Next(0, 10));
+                var createdCommentDate = pr.CreatedDate.AddDays(_random.Next(0, 10));
                 var isResolved = pr.Status == "completed" && _random.NextDouble() < 0.8;
-                var resolvedDate = isResolved ? publishedDate.AddDays(_random.Next(1, 5)) : (DateTimeOffset?)null;
+                var resolvedDate = isResolved ? createdCommentDate.AddDays(_random.Next(1, 5)) : (DateTimeOffset?)null;
                 var resolvedBy = isResolved ? pr.CreatedBy : null;
 
                 comments.Add(new PullRequestCommentDto(
-                    CommentId: commentId++,
+                    Id: commentId++,
                     PullRequestId: pr.Id,
                     ThreadId: threadId,
                     Author: reviewer,
                     Content: commentText,
-                    PublishedDate: publishedDate,
+                    CreatedDate: createdCommentDate,
                     UpdatedDate: null,
                     IsResolved: isResolved,
                     ResolvedDate: resolvedDate,
@@ -176,6 +176,7 @@ public class BattleshipPullRequestGenerator
                     
                     var linesAdded = changeType == "delete" ? 0 : _random.Next(5, 200);
                     var linesDeleted = changeType == "add" ? 0 : _random.Next(0, 150);
+                    var linesModified = changeType == "edit" ? _random.Next(5, 100) : 0;
 
                     fileChanges.Add(new PullRequestFileChangeDto(
                         PullRequestId: pr.Id,
@@ -184,7 +185,7 @@ public class BattleshipPullRequestGenerator
                         ChangeType: changeType,
                         LinesAdded: linesAdded,
                         LinesDeleted: linesDeleted,
-                        LinesChanged: 0
+                        LinesModified: linesModified
                     ));
                 }
             }

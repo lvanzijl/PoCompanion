@@ -49,7 +49,7 @@ public class BattleshipWorkItemGenerator
         for (var g = 0; g < 10; g++)
         {
             var goalId = idCounter++;
-            var goalState = GetGoalState(g);
+            var goalState = GetGoalState();
             
             items.Add(new WorkItemDto(
                 TfsId: goalId,
