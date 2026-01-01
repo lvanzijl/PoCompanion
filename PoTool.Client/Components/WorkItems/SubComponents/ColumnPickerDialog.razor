@@ -14,8 +14,11 @@
                         <MudCheckBox T="bool" 
                                      Value="@column.IsVisible" 
                                      ValueChanged="@((bool val) => OnColumnVisibilityChanged(column, val))"
-                                     Dense="true" />
-                        <MudText Typo="Typo.body2" Class="flex-grow-1">@column.Title</MudText>
+                                     Dense="true"
+                                     Disabled="@column.IsRequired" />
+                        <MudText Typo="Typo.body2" Class="flex-grow-1">
+                            @column.Title@(column.IsRequired ? " (Required)" : "")
+                        </MudText>
                         <div class="column-actions">
                             <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" 
                                           Size="Size.Small" 
@@ -66,6 +69,21 @@
         public bool IsVisible { get; set; }
         public int Order { get; set; }
         public bool IsRequired { get; set; } // Cannot be hidden
+
+        /// <summary>
+        /// Creates a deep copy of this ColumnConfig.
+        /// </summary>
+        public ColumnConfig Clone()
+        {
+            return new ColumnConfig
+            {
+                Id = this.Id,
+                Title = this.Title,
+                IsVisible = this.IsVisible,
+                Order = this.Order,
+                IsRequired = this.IsRequired
+            };
+        }
     }
 
     private void OnColumnVisibilityChanged(ColumnConfig column, bool isVisible)

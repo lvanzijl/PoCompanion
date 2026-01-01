@@ -320,11 +320,13 @@ public class TreeBuilderService : ITreeBuilderService
         }
 
         // Sort by depth (closer descendants first), then maintain pre-order using tracked order
+        // Note: All IDs should exist in nodeMap since they're collected during tree traversal.
+        // Using int.MaxValue as a fallback for defensive programming, though this should never occur.
         var sortedInvalidDescendants = invalidDescendants
             .Distinct()
             .Select(item => new { 
                 Id = item.Id, 
-                Depth = nodeMap.ContainsKey(item.Id) ? nodeMap[item.Id].Level : int.MaxValue,
+                Depth = nodeMap.TryGetValue(item.Id, out var foundNode) ? foundNode.Level : int.MaxValue,
                 Order = item.Order
             })
             .OrderBy(x => x.Depth)
