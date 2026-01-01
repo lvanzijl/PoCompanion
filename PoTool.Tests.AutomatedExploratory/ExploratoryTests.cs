@@ -1,5 +1,7 @@
 using Microsoft.Playwright;
 
+[assembly: Parallelize(Scope = ExecutionScope.ClassLevel)]
+
 namespace PoTool.Tests.AutomatedExploratory;
 
 [TestClass]

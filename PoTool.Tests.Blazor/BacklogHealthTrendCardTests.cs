@@ -66,7 +66,7 @@ public class BacklogHealthTrendCardTests : BunitTestContext
 
         // Assert
         var icons = cut.FindComponents<MudBlazor.MudIcon>();
-        Assert.IsTrue(icons.Count >= 3, "Should render at least 3 trend icons");
+        Assert.IsGreaterThanOrEqualTo(icons.Count, 3, "Should render at least 3 trend icons");
     }
 
     [TestMethod]

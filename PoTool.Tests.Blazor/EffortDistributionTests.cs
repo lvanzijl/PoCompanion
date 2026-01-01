@@ -54,7 +54,7 @@ public class EffortDistributionTests : BunitTestContext
         // Arrange
         _mockMetricsClient.Setup(x => x.GetEffortDistributionAsync(
                 It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<int?>()))
-            .ReturnsAsync((EffortDistributionDto?)null);
+            .Returns(Task.FromResult<EffortDistributionDto>(null!));
 
         // Act
         var cut = RenderEffortDistributionWithMudProvider();
@@ -62,7 +62,7 @@ public class EffortDistributionTests : BunitTestContext
         // Wait for async initialization
         cut.WaitForAssertion(() =>
         {
-            Assert.IsFalse(cut.Markup.Contains("mud-progress-linear"),
+            Assert.DoesNotContain("mud-progress-linear", cut.Markup,
                 "Loading indicator should be gone after data loads");
         }, timeout: TimeSpan.FromSeconds(5));
 
@@ -87,7 +87,7 @@ public class EffortDistributionTests : BunitTestContext
         // Wait for async initialization
         cut.WaitForAssertion(() =>
         {
-            Assert.IsFalse(cut.Markup.Contains("mud-progress-linear"),
+            Assert.DoesNotContain("mud-progress-linear", cut.Markup,
                 "Loading indicator should be gone after data loads");
         }, timeout: TimeSpan.FromSeconds(5));
 
