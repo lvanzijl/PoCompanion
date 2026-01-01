@@ -1,0 +1,20 @@
+.column-config-item {
+    padding: 4px 8px !important;
+}
+
+.column-config-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.column-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.flex-grow-1 {
+    flex-grow: 1;
+}

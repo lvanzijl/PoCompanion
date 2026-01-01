@@ -1,9 +1,19 @@
 @using PoTool.Client.Models
 @using MudBlazor
+@inject IDialogService DialogService
 
 @* TreeGrid component using MudDataGrid for TFS-like work item display *@
 
 <div class="tree-grid-container">
+    <div class="tree-grid-toolbar">
+        <MudButton Variant="Variant.Text" 
+                   StartIcon="@Icons.Material.Filled.ViewColumn" 
+                   Size="Size.Small"
+                   OnClick="OpenColumnPicker">
+            Columns
+        </MudButton>
+    </div>
+
     @if (IsLoading)
     {
         <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
@@ -98,10 +108,16 @@
                 </TemplateColumn>
 
                 @* ID Column *@
-                <PropertyColumn Property="x => x.Node.Id" Title="ID" Class="id-column" />
+                @if (IsColumnVisible("id"))
+                {
+                    <PropertyColumn Property="x => x.Node.Id" Title="ID" Class="id-column" />
+                }
 
                 @* State Column *@
-                <PropertyColumn Property="x => x.Node.State" Title="State" Class="state-column" />
+                @if (IsColumnVisible("state"))
+                {
+                    <PropertyColumn Property="x => x.Node.State" Title="State" Class="state-column" />
+                }
             </Columns>
         </MudDataGrid>
     }
@@ -265,5 +281,63 @@
         }
 
         await OnRevealInvalidItem.InvokeAsync(node);
+    }
+
+    // Column configuration
+    private List<ColumnPickerDialog.ColumnConfig> _columnConfigs = new();
+
+    protected override void OnInitialized()
+    {
+        InitializeColumnConfigs();
+    }
+
+    private void InitializeColumnConfigs()
+    {
+        _columnConfigs = new List<ColumnPickerDialog.ColumnConfig>
+        {
+            new() { Id = "title", Title = "Title", IsVisible = true, Order = 0, IsRequired = true },
+            new() { Id = "id", Title = "ID", IsVisible = true, Order = 1, IsRequired = false },
+            new() { Id = "state", Title = "State", IsVisible = true, Order = 2, IsRequired = false }
+        };
+
+        // TODO: Load from persistence
+    }
+
+    private bool IsColumnVisible(string columnId)
+    {
+        var column = _columnConfigs.FirstOrDefault(c => c.Id == columnId);
+        return column?.IsVisible ?? false;
+    }
+
+    private async Task OpenColumnPicker()
+    {
+        var parameters = new DialogParameters
+        {
+            { "Columns", _columnConfigs.Select(c => new ColumnPickerDialog.ColumnConfig 
+                { 
+                    Id = c.Id, 
+                    Title = c.Title, 
+                    IsVisible = c.IsVisible, 
+                    Order = c.Order, 
+                    IsRequired = c.IsRequired 
+                }).ToList() }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<ColumnPickerDialog>("Configure Columns", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is List<ColumnPickerDialog.ColumnConfig> newConfigs)
+        {
+            _columnConfigs = newConfigs;
+            // TODO: Save to persistence
+            StateHasChanged();
+        }
     }
 }
