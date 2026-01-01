@@ -28,6 +28,9 @@ You MUST load, understand, and apply all of them before generating any output:
 5. PAT storage and credential handling  
    `docs/PAT_STORAGE_BEST_PRACTICES.md`
 
+6. Fluent UI Compact Rules
+   `docs/Fluent_UI_compat_rules.md`
+
 If any rule conflicts, is ambiguous, or cannot be satisfied, you MUST stop and ask for clarification.
 
 ---

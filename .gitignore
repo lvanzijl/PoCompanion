@@ -85,3 +85,18 @@ temp/
 
 # Publish output directory
 publish/
+/PoTool.Tests.Integration/Features/DependencyGraphController.feature.cs
+/PoTool.Tests.Integration/Features/ErrorScenarios.feature.cs
+/PoTool.Tests.Integration/Features/FilteringController.feature.cs
+/PoTool.Tests.Integration/Features/Health.feature.cs
+/PoTool.Tests.Integration/Features/HealthCalculationController.feature.cs
+/PoTool.Tests.Integration/Features/MetricsController.feature.cs
+/PoTool.Tests.Integration/Features/ProfilesController.feature.cs
+/PoTool.Tests.Integration/Features/PullRequestsController.feature.cs
+/PoTool.Tests.Integration/Features/Settings.feature.cs
+/PoTool.Tests.Integration/Features/SettingsController.feature.cs
+/PoTool.Tests.Integration/Features/SignalRHub.feature.cs
+/PoTool.Tests.Integration/Features/TfsConfiguration.feature.cs
+/PoTool.Tests.Integration/Features/ValidationEnhancements.feature.cs
+/PoTool.Tests.Integration/Features/WorkItems.feature.cs
+/PoTool.Tests.Integration/Features/WorkItemsController.feature.cs
