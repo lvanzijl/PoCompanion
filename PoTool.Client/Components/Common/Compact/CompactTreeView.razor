@@ -1,0 +1,45 @@
+@typeparam T
+@using MudBlazor
+
+<MudTreeView @bind-SelectedValue="SelectedValue"
+             @bind-SelectedValues="SelectedValues"
+             Items="@Items"
+             Dense="true"
+             Hover="@Hover"
+             MultiSelection="@MultiSelection"
+             ExpandOnClick="@ExpandOnClick"
+             CanActivate="@CanActivate"
+             CanHover="@CanHover"
+             CanSelect="@CanSelect"
+             Color="@Color"
+             SelectedValueChanged="@SelectedValueChanged"
+             SelectedValuesChanged="@SelectedValuesChanged"
+             Class="@Class"
+             Style="@Style"
+             ItemTemplate="@ItemTemplate"
+             ServerData="@ServerData">
+    @if (ChildContent != null)
+    {
+        @ChildContent
+    }
+</MudTreeView>
+
+@code {
+    [Parameter] public T? SelectedValue { get; set; }
+    [Parameter] public EventCallback<T> SelectedValueChanged { get; set; }
+    [Parameter] public HashSet<T>? SelectedValues { get; set; }
+    [Parameter] public EventCallback<HashSet<T>> SelectedValuesChanged { get; set; }
+    [Parameter] public HashSet<TreeItemData<T>>? Items { get; set; }
+    [Parameter] public bool Hover { get; set; } = true;
+    [Parameter] public bool MultiSelection { get; set; }
+    [Parameter] public bool ExpandOnClick { get; set; }
+    [Parameter] public bool CanActivate { get; set; } = true;
+    [Parameter] public bool CanHover { get; set; } = true;
+    [Parameter] public bool CanSelect { get; set; } = true;
+    [Parameter] public Color Color { get; set; } = Color.Default;
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public RenderFragment<TreeItemData<T>>? ItemTemplate { get; set; }
+    [Parameter] public Func<TreeItemData<T>, Task<HashSet<TreeItemData<T>>>>? ServerData { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
