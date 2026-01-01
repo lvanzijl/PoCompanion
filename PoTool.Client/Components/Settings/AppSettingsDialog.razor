@@ -20,7 +20,7 @@
         {
             <MudForm @ref="_form">
                 <CompactSelect T="DataMode" 
-                           @bind-Value="_dataMode" 
+                           @bind-value="_dataMode" 
                            Label="Data Mode" 
                            Class="mb-4">
                     <MudSelectItem Value="DataMode.Mock">Mock (Test Data)</MudSelectItem>
@@ -41,7 +41,7 @@
                     <CompactSelect T="WorkItemDto" 
                                Label="Select Goals" 
                                MultiSelection="true"
-                               @bind-SelectedValues="_selectedGoals"
+                               @bind-selectedvalues="_selectedGoals"
                                AnchorOrigin="Origin.BottomCenter"
                                Class="mb-4"
                                MaxHeight="400">

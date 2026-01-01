@@ -1,0 +1,60 @@
+@using MudBlazor
+@typeparam T
+
+<MudTable Items="@Items"
+          Dense="true"
+          Hover="@Hover"
+          Striped="@Striped"
+          FixedHeader="@FixedHeader"
+          Height="@Height"
+          Loading="@Loading"
+          LoadingProgressColor="@LoadingProgressColor"
+          Class="@Class"
+          Style="@Style"
+          SelectedItem="@SelectedItem"
+          SelectedItemChanged="@SelectedItemChanged"
+          SelectedItems="@SelectedItems"
+          SelectedItemsChanged="@SelectedItemsChanged"
+          MultiSelection="@MultiSelection"
+          OnRowClick="@OnRowClick"
+          Breakpoint="@Breakpoint"
+          Elevation="@Elevation"
+          Square="@Square"
+          Filter="@Filter"
+          SortLabel="@SortLabel"
+          Context="context">
+    <HeaderContent>
+        @HeaderContent
+    </HeaderContent>
+    <RowTemplate>
+        @if (RowTemplate != null)
+        {
+            @RowTemplate(context!)
+        }
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Parameter] public RenderFragment? HeaderContent { get; set; }
+    [Parameter] public RenderFragment<T>? RowTemplate { get; set; }
+    [Parameter] public IEnumerable<T>? Items { get; set; }
+    [Parameter] public bool Hover { get; set; }
+    [Parameter] public bool Striped { get; set; }
+    [Parameter] public bool FixedHeader { get; set; }
+    [Parameter] public string? Height { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public Color LoadingProgressColor { get; set; } = Color.Info;
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public T? SelectedItem { get; set; }
+    [Parameter] public EventCallback<T> SelectedItemChanged { get; set; }
+    [Parameter] public HashSet<T?>? SelectedItems { get; set; }
+    [Parameter] public EventCallback<HashSet<T?>> SelectedItemsChanged { get; set; }
+    [Parameter] public bool MultiSelection { get; set; }
+    [Parameter] public EventCallback<TableRowClickEventArgs<T>> OnRowClick { get; set; }
+    [Parameter] public Breakpoint Breakpoint { get; set; } = Breakpoint.Xs;
+    [Parameter] public int Elevation { get; set; } = 1;
+    [Parameter] public bool Square { get; set; }
+    [Parameter] public Func<T?, bool>? Filter { get; set; }
+    [Parameter] public string? SortLabel { get; set; }
+}

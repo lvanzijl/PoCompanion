@@ -61,19 +61,19 @@
                         </MudStack>
                         
                         <MudForm @ref="_configForm" @bind-IsValid="_configFormValid">
-                            <CompactTextField @bind-Value="_url" 
+                            <CompactTextField @bind-value="_url" 
                                          Label="Organization URL" 
                                          Placeholder="https://dev.azure.com/yourorg"
                                          Required="true"
                                          HelperText="The URL of your Azure DevOps organization" />
 
-                            <CompactTextField @bind-Value="_project" 
+                            <CompactTextField @bind-value="_project" 
                                          Label="Project Name" 
                                          Placeholder="MyProject"
                                          Required="true"
                                          HelperText="The name of your project" />
 
-                            <CompactTextField @bind-Value="_pat" 
+                            <CompactTextField @bind-value="_pat" 
                                          Label="Personal Access Token (PAT)" 
                                          Placeholder="Your PAT"
                                          Required="true"
@@ -130,23 +130,23 @@
                         </MudText>
 
                         <MudForm @ref="_profileForm" @bind-IsValid="_profileFormValid">
-                            <CompactTextField @bind-Value="_profileName" 
+                            <CompactTextField @bind-value="_profileName" 
                                           Label="Profile Name" 
                                           Required="true"
                                           HelperText="e.g., 'Product A - Team Alpha'" />
 
-                            <CompactTextField @bind-Value="_profileTeamName" 
+                            <CompactTextField @bind-value="_profileTeamName" 
                                           Label="Team Name" 
                                           Required="true"
                                           HelperText="The team you work with" />
 
-                            <CompactTextField @bind-Value="_profileAreaPaths" 
+                            <CompactTextField @bind-value="_profileAreaPaths" 
                                           Label="Area Paths (comma-separated)" 
                                           Required="true"
                                           Lines="2"
                                           HelperText="e.g., 'ProjectA\\ProductA, ProjectA\\ProductA\\FeatureX'" />
 
-                            <CompactTextField @bind-Value="_profileGoalIds" 
+                            <CompactTextField @bind-value="_profileGoalIds" 
                                           Label="Goal IDs (comma-separated, optional)" 
                                           HelperText="Leave empty for all goals, or specify IDs like '1000,2000'" />
 
