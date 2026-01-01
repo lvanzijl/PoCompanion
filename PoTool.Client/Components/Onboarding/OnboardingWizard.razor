@@ -528,14 +528,14 @@
 
     private async Task Skip()
     {
-        OnboardingService.MarkOnboardingSkipped();
+        await OnboardingService.MarkOnboardingSkippedAsync();
         await OnCompleted.InvokeAsync();
         MudDialog?.Close(DialogResult.Cancel());
     }
 
     private async Task Complete()
     {
-        OnboardingService.MarkOnboardingCompleted();
+        await OnboardingService.MarkOnboardingCompletedAsync();
         await OnCompleted.InvokeAsync();
         MudDialog?.Close(DialogResult.Ok(true));
     }
