@@ -37,19 +37,19 @@
         else
         {
             <MudForm @ref="_form" @bind-IsValid="_formValid">
-            <CompactTextField @bind-value="_url" 
+            <CompactTextField @bind-Value="_url" 
                          Label="Organization URL" 
                          Placeholder="https://dev.azure.com/yourorg"
                          Required="true"
                          HelperText="The URL of your Azure DevOps organization" />
 
-            <CompactTextField @bind-value="_project" 
+            <CompactTextField @bind-Value="_project" 
                          Label="Project Name" 
                          Placeholder="MyProject"
                          Required="true"
                          HelperText="The name of your project" />
 
-            <CompactSelect @bind-value="_authMode" 
+            <CompactSelect @bind-Value="_authMode" 
                       Label="Authentication Mode" 
                       HelperText="Select authentication method">
                 <MudSelectItem Value="@TfsAuthMode.Pat">Personal Access Token (PAT)</MudSelectItem>
@@ -58,7 +58,7 @@
 
             @if (_authMode == TfsAuthMode.Pat)
             {
-                <CompactTextField @bind-value="_pat" 
+                <CompactTextField @bind-Value="_pat" 
                              Label="Personal Access Token (PAT)" 
                              Placeholder="Your PAT"
                              Required="true"
@@ -83,7 +83,7 @@
                             Max="300"
                             HelperText="HTTP request timeout in seconds (5-300)" />
 
-            <CompactTextField @bind-value="_apiVersion" 
+            <CompactTextField @bind-Value="_apiVersion" 
                          Label="API Version" 
                          ReadOnly="true"
                          HelperText="TFS/Azure DevOps API version (read-only)" />

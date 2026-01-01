@@ -61,23 +61,23 @@
             </MudText>
 
             <MudForm @ref="_form">
-                <CompactTextField @bind-value="_profileName" 
+                <CompactTextField @bind-Value="_profileName" 
                               Label="Profile Name" 
                               Required="true"
                               HelperText="e.g., 'Product A - Team Alpha'" />
 
-                <CompactTextField @bind-value="_teamName" 
+                <CompactTextField @bind-Value="_teamName" 
                               Label="Team Name" 
                               Required="true"
                               HelperText="The team responsible for these area paths" />
 
-                <CompactTextField @bind-value="_areaPathsInput" 
+                <CompactTextField @bind-Value="_areaPathsInput" 
                               Label="Area Paths (comma-separated)" 
                               Required="true"
                               Lines="3"
                               HelperText="e.g., 'ProjectA\\ProductA, ProjectA\\ProductA\\FeatureX'" />
 
-                <CompactTextField @bind-value="_goalIdsInput" 
+                <CompactTextField @bind-Value="_goalIdsInput" 
                               Label="Goal IDs (comma-separated, optional)" 
                               HelperText="Leave empty for all goals, or specify IDs like '1000,2000'" />
 
