@@ -209,6 +209,10 @@ public class TreeBuilderService : ITreeBuilderService
             {
                 node.HighestSeverity = "Warning";
             }
+
+            // Populate self error and warning counts
+            node.SelfErrorCount = dto.ValidationIssues.Count(vi => vi.Severity == "Error");
+            node.SelfWarningCount = dto.ValidationIssues.Count(vi => vi.Severity == "Warning");
         }
 
         // Attach children to parents based on ParentTfsId, create placeholders for missing parents
@@ -249,6 +253,88 @@ public class TreeBuilderService : ITreeBuilderService
 
         roots = roots.OrderBy(r => r.Title).ToList();
 
+        // Populate ChildrenIds for all nodes
+        foreach (var node in nodeMap.Values)
+        {
+            node.ChildrenIds = node.Children.Select(c => c.Id).ToList();
+        }
+
+        // Compute depth/level for all nodes
+        ComputeDepth(roots, 0);
+
+        // Compute InvalidDescendantIds for all nodes
+        foreach (var root in roots)
+        {
+            ComputeInvalidDescendantIds(root);
+        }
+
         return roots;
+    }
+
+    /// <summary>
+    /// Recursively computes the depth/level for each node in the tree.
+    /// </summary>
+    private void ComputeDepth(List<TreeNode> nodes, int depth)
+    {
+        foreach (var node in nodes)
+        {
+            node.Level = depth;
+            if (node.Children.Any())
+            {
+                ComputeDepth(node.Children, depth + 1);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Recursively computes InvalidDescendantIds for each node.
+    /// Returns a list of invalid descendant IDs found in the subtree rooted at the given node.
+    /// </summary>
+    private List<int> ComputeInvalidDescendantIds(TreeNode node)
+    {
+        var invalidDescendants = new List<int>();
+
+        // Process children in order (stable pre-order traversal)
+        foreach (var child in node.Children)
+        {
+            // Check if child itself has issues
+            if (child.SelfErrorCount > 0 || child.SelfWarningCount > 0)
+            {
+                invalidDescendants.Add(child.Id);
+            }
+
+            // Recursively collect invalid descendants from child's subtree
+            var childInvalidDescendants = ComputeInvalidDescendantIds(child);
+            invalidDescendants.AddRange(childInvalidDescendants);
+        }
+
+        // Sort by depth (closer descendants first), then maintain pre-order
+        // Group by depth level
+        var nodeMap = new Dictionary<int, TreeNode>();
+        CollectNodesIntoMap(node, nodeMap);
+
+        var sortedInvalidDescendants = invalidDescendants
+            .Distinct()
+            .Select(id => new { Id = id, Depth = nodeMap.ContainsKey(id) ? nodeMap[id].Level : int.MaxValue })
+            .OrderBy(x => x.Depth)
+            .ThenBy(x => invalidDescendants.IndexOf(x.Id)) // Maintain pre-order within same depth
+            .Select(x => x.Id)
+            .ToList();
+
+        node.InvalidDescendantIds = sortedInvalidDescendants;
+
+        return invalidDescendants;
+    }
+
+    /// <summary>
+    /// Collects all nodes in a subtree into a dictionary keyed by ID.
+    /// </summary>
+    private void CollectNodesIntoMap(TreeNode node, Dictionary<int, TreeNode> map)
+    {
+        map[node.Id] = node;
+        foreach (var child in node.Children)
+        {
+            CollectNodesIntoMap(child, map);
+        }
     }
 }
