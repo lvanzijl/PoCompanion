@@ -15,11 +15,11 @@ public class BrowserPreferencesService : IPreferencesService
         _jsRuntime = jsRuntime ?? throw new ArgumentNullException(nameof(jsRuntime));
     }
 
-    public bool GetBool(string key, bool defaultValue)
+    public async Task<bool> GetBoolAsync(string key, bool defaultValue)
     {
         try
         {
-            var value = _jsRuntime.InvokeAsync<string?>("localStorage.getItem", key).AsTask().Result;
+            var value = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", key);
             if (value == null) return defaultValue;
             return bool.TryParse(value, out var result) ? result : defaultValue;
         }
@@ -29,13 +29,13 @@ public class BrowserPreferencesService : IPreferencesService
         }
     }
 
-    public void SetBool(string key, bool value)
+    public async Task SetBoolAsync(string key, bool value)
     {
-        _jsRuntime.InvokeVoidAsync("localStorage.setItem", key, value.ToString()).AsTask().Wait();
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", key, value.ToString());
     }
 
-    public void Remove(string key)
+    public async Task RemoveAsync(string key)
     {
-        _jsRuntime.InvokeVoidAsync("localStorage.removeItem", key).AsTask().Wait();
+        await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", key);
     }
 }

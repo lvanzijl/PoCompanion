@@ -17,104 +17,104 @@ public class OnboardingServiceTests
     }
 
     [TestMethod]
-    public void HasCompletedOnboarding_WhenNotCompleted_ReturnsFalse()
+    public async Task HasCompletedOnboarding_WhenNotCompleted_ReturnsFalse()
     {
         // Act
-        var result = _onboardingService.HasCompletedOnboarding();
+        var result = await _onboardingService.HasCompletedOnboardingAsync();
 
         // Assert
         Assert.IsFalse(result);
     }
 
     [TestMethod]
-    public void HasCompletedOnboarding_WhenCompleted_ReturnsTrue()
+    public async Task HasCompletedOnboarding_WhenCompleted_ReturnsTrue()
     {
         // Arrange
-        _onboardingService.MarkOnboardingCompleted();
+        await _onboardingService.MarkOnboardingCompletedAsync();
 
         // Act
-        var result = _onboardingService.HasCompletedOnboarding();
+        var result = await _onboardingService.HasCompletedOnboardingAsync();
 
         // Assert
         Assert.IsTrue(result);
     }
 
     [TestMethod]
-    public void HasCompletedOnboarding_WhenSkipped_ReturnsTrue()
+    public async Task HasCompletedOnboarding_WhenSkipped_ReturnsTrue()
     {
         // Arrange
-        _onboardingService.MarkOnboardingSkipped();
+        await _onboardingService.MarkOnboardingSkippedAsync();
 
         // Act
-        var result = _onboardingService.HasCompletedOnboarding();
+        var result = await _onboardingService.HasCompletedOnboardingAsync();
 
         // Assert
         Assert.IsTrue(result);
     }
 
     [TestMethod]
-    public void MarkOnboardingCompleted_SetsCompletedFlag()
+    public async Task MarkOnboardingCompleted_SetsCompletedFlag()
     {
         // Act
-        _onboardingService.MarkOnboardingCompleted();
+        await _onboardingService.MarkOnboardingCompletedAsync();
 
         // Assert
-        Assert.IsTrue(_mockPreferences.GetBool("OnboardingCompleted", false));
-        Assert.IsFalse(_mockPreferences.GetBool("OnboardingSkipped", false));
+        Assert.IsTrue(await _mockPreferences.GetBoolAsync("OnboardingCompleted", false));
+        Assert.IsFalse(await _mockPreferences.GetBoolAsync("OnboardingSkipped", false));
     }
 
     [TestMethod]
-    public void MarkOnboardingSkipped_SetsSkippedFlag()
+    public async Task MarkOnboardingSkipped_SetsSkippedFlag()
     {
         // Act
-        _onboardingService.MarkOnboardingSkipped();
+        await _onboardingService.MarkOnboardingSkippedAsync();
 
         // Assert
-        Assert.IsTrue(_mockPreferences.GetBool("OnboardingSkipped", false));
-        Assert.IsFalse(_mockPreferences.GetBool("OnboardingCompleted", false));
+        Assert.IsTrue(await _mockPreferences.GetBoolAsync("OnboardingSkipped", false));
+        Assert.IsFalse(await _mockPreferences.GetBoolAsync("OnboardingCompleted", false));
     }
 
     [TestMethod]
-    public void ResetOnboarding_ClearsAllFlags()
+    public async Task ResetOnboarding_ClearsAllFlags()
     {
         // Arrange
-        _onboardingService.MarkOnboardingCompleted();
+        await _onboardingService.MarkOnboardingCompletedAsync();
 
         // Act
-        _onboardingService.ResetOnboarding();
+        await _onboardingService.ResetOnboardingAsync();
 
         // Assert
-        Assert.IsFalse(_onboardingService.HasCompletedOnboarding());
+        Assert.IsFalse(await _onboardingService.HasCompletedOnboardingAsync());
     }
 
     [TestMethod]
-    public void MarkOnboardingCompleted_AfterSkipped_ClearsSkippedFlag()
+    public async Task MarkOnboardingCompleted_AfterSkipped_ClearsSkippedFlag()
     {
         // Arrange
-        _onboardingService.MarkOnboardingSkipped();
+        await _onboardingService.MarkOnboardingSkippedAsync();
 
         // Act
-        _onboardingService.MarkOnboardingCompleted();
+        await _onboardingService.MarkOnboardingCompletedAsync();
 
         // Assert
-        Assert.IsTrue(_onboardingService.HasCompletedOnboarding());
-        Assert.IsTrue(_mockPreferences.GetBool("OnboardingCompleted", false));
-        Assert.IsFalse(_mockPreferences.GetBool("OnboardingSkipped", false));
+        Assert.IsTrue(await _onboardingService.HasCompletedOnboardingAsync());
+        Assert.IsTrue(await _mockPreferences.GetBoolAsync("OnboardingCompleted", false));
+        Assert.IsFalse(await _mockPreferences.GetBoolAsync("OnboardingSkipped", false));
     }
 
     [TestMethod]
-    public void MarkOnboardingSkipped_AfterCompleted_ClearsCompletedFlag()
+    public async Task MarkOnboardingSkipped_AfterCompleted_ClearsCompletedFlag()
     {
         // Arrange
-        _onboardingService.MarkOnboardingCompleted();
+        await _onboardingService.MarkOnboardingCompletedAsync();
 
         // Act
-        _onboardingService.MarkOnboardingSkipped();
+        await _onboardingService.MarkOnboardingSkippedAsync();
 
         // Assert
-        Assert.IsTrue(_onboardingService.HasCompletedOnboarding());
-        Assert.IsFalse(_mockPreferences.GetBool("OnboardingCompleted", false));
-        Assert.IsTrue(_mockPreferences.GetBool("OnboardingSkipped", false));
+        Assert.IsTrue(await _onboardingService.HasCompletedOnboardingAsync());
+        Assert.IsFalse(await _mockPreferences.GetBoolAsync("OnboardingCompleted", false));
+        Assert.IsTrue(await _mockPreferences.GetBoolAsync("OnboardingSkipped", false));
     }
 
     /// <summary>
@@ -124,19 +124,21 @@ public class OnboardingServiceTests
     {
         private readonly Dictionary<string, bool> _storage = new();
 
-        public bool GetBool(string key, bool defaultValue)
+        public Task<bool> GetBoolAsync(string key, bool defaultValue)
         {
-            return _storage.TryGetValue(key, out var value) ? value : defaultValue;
+            return Task.FromResult(_storage.TryGetValue(key, out var value) ? value : defaultValue);
         }
 
-        public void SetBool(string key, bool value)
+        public Task SetBoolAsync(string key, bool value)
         {
             _storage[key] = value;
+            return Task.CompletedTask;
         }
 
-        public void Remove(string key)
+        public Task RemoveAsync(string key)
         {
             _storage.Remove(key);
+            return Task.CompletedTask;
         }
     }
 }

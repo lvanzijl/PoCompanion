@@ -42,46 +42,46 @@ public class OnboardingWizardTests : BunitTestContext
     }
 
     [TestMethod]
-    public void OnboardingService_HasCompletedOnboarding_InitiallyFalse()
+    public async Task OnboardingService_HasCompletedOnboarding_InitiallyFalse()
     {
         // Arrange
-        _mockOnboardingService.Setup(s => s.HasCompletedOnboarding()).Returns(false);
+        _mockOnboardingService.Setup(s => s.HasCompletedOnboardingAsync()).ReturnsAsync(false);
 
         // Act
-        var result = _mockOnboardingService.Object.HasCompletedOnboarding();
+        var result = await _mockOnboardingService.Object.HasCompletedOnboardingAsync();
 
         // Assert
         Assert.IsFalse(result);
     }
 
     [TestMethod]
-    public void OnboardingService_MarkOnboardingCompleted_CallsService()
+    public async Task OnboardingService_MarkOnboardingCompleted_CallsService()
     {
         // Arrange & Act
-        _mockOnboardingService.Object.MarkOnboardingCompleted();
+        await _mockOnboardingService.Object.MarkOnboardingCompletedAsync();
 
         // Assert
-        _mockOnboardingService.Verify(s => s.MarkOnboardingCompleted(), Times.Once);
+        _mockOnboardingService.Verify(s => s.MarkOnboardingCompletedAsync(), Times.Once);
     }
 
     [TestMethod]
-    public void OnboardingService_MarkOnboardingSkipped_CallsService()
+    public async Task OnboardingService_MarkOnboardingSkipped_CallsService()
     {
         // Arrange & Act
-        _mockOnboardingService.Object.MarkOnboardingSkipped();
+        await _mockOnboardingService.Object.MarkOnboardingSkippedAsync();
 
         // Assert
-        _mockOnboardingService.Verify(s => s.MarkOnboardingSkipped(), Times.Once);
+        _mockOnboardingService.Verify(s => s.MarkOnboardingSkippedAsync(), Times.Once);
     }
 
     [TestMethod]
-    public void OnboardingService_ResetOnboarding_CallsService()
+    public async Task OnboardingService_ResetOnboarding_CallsService()
     {
         // Arrange & Act
-        _mockOnboardingService.Object.ResetOnboarding();
+        await _mockOnboardingService.Object.ResetOnboardingAsync();
 
         // Assert
-        _mockOnboardingService.Verify(s => s.ResetOnboarding(), Times.Once);
+        _mockOnboardingService.Verify(s => s.ResetOnboardingAsync(), Times.Once);
     }
 
     [TestMethod]

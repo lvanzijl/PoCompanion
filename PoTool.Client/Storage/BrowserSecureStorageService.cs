@@ -34,11 +34,11 @@ public class BrowserSecureStorageService : ISecureStorageService
         await _jsRuntime.InvokeVoidAsync("sessionStorage.setItem", key, value);
     }
 
-    public bool Remove(string key)
+    public async Task<bool> RemoveAsync(string key)
     {
         try
         {
-            _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", key).AsTask().Wait();
+            await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", key);
             return true;
         }
         catch
@@ -47,8 +47,8 @@ public class BrowserSecureStorageService : ISecureStorageService
         }
     }
 
-    public void RemoveAll()
+    public async Task RemoveAllAsync()
     {
-        _jsRuntime.InvokeVoidAsync("sessionStorage.clear").AsTask().Wait();
+        await _jsRuntime.InvokeVoidAsync("sessionStorage.clear");
     }
 }

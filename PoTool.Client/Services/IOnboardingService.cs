@@ -8,20 +8,20 @@ public interface IOnboardingService
     /// <summary>
     /// Checks if the user has completed or skipped the onboarding wizard.
     /// </summary>
-    bool HasCompletedOnboarding();
+    Task<bool> HasCompletedOnboardingAsync();
 
     /// <summary>
     /// Marks the onboarding wizard as completed.
     /// </summary>
-    void MarkOnboardingCompleted();
+    Task MarkOnboardingCompletedAsync();
 
     /// <summary>
     /// Marks the onboarding wizard as skipped.
     /// </summary>
-    void MarkOnboardingSkipped();
+    Task MarkOnboardingSkippedAsync();
 
     /// <summary>
     /// Resets the onboarding state, allowing the wizard to be shown again.
     /// </summary>
-    void ResetOnboarding();
+    Task ResetOnboardingAsync();
 }

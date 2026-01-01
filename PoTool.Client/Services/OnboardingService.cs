@@ -19,36 +19,37 @@ public class OnboardingService : IOnboardingService
     /// <summary>
     /// Checks if the user has completed or skipped the onboarding wizard.
     /// </summary>
-    public bool HasCompletedOnboarding()
+    public async Task<bool> HasCompletedOnboardingAsync()
     {
-        return _preferencesService.GetBool(OnboardingCompletedKey, false) || 
-               _preferencesService.GetBool(OnboardingSkippedKey, false);
+        var completed = await _preferencesService.GetBoolAsync(OnboardingCompletedKey, false);
+        var skipped = await _preferencesService.GetBoolAsync(OnboardingSkippedKey, false);
+        return completed || skipped;
     }
 
     /// <summary>
     /// Marks the onboarding wizard as completed.
     /// </summary>
-    public void MarkOnboardingCompleted()
+    public async Task MarkOnboardingCompletedAsync()
     {
-        _preferencesService.SetBool(OnboardingCompletedKey, true);
-        _preferencesService.SetBool(OnboardingSkippedKey, false);
+        await _preferencesService.SetBoolAsync(OnboardingCompletedKey, true);
+        await _preferencesService.SetBoolAsync(OnboardingSkippedKey, false);
     }
 
     /// <summary>
     /// Marks the onboarding wizard as skipped.
     /// </summary>
-    public void MarkOnboardingSkipped()
+    public async Task MarkOnboardingSkippedAsync()
     {
-        _preferencesService.SetBool(OnboardingSkippedKey, true);
-        _preferencesService.SetBool(OnboardingCompletedKey, false);
+        await _preferencesService.SetBoolAsync(OnboardingSkippedKey, true);
+        await _preferencesService.SetBoolAsync(OnboardingCompletedKey, false);
     }
 
     /// <summary>
     /// Resets the onboarding state, allowing the wizard to be shown again.
     /// </summary>
-    public void ResetOnboarding()
+    public async Task ResetOnboardingAsync()
     {
-        _preferencesService.Remove(OnboardingCompletedKey);
-        _preferencesService.Remove(OnboardingSkippedKey);
+        await _preferencesService.RemoveAsync(OnboardingCompletedKey);
+        await _preferencesService.RemoveAsync(OnboardingSkippedKey);
     }
 }

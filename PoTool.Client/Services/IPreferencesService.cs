@@ -10,15 +10,15 @@ public interface IPreferencesService
     /// <summary>
     /// Gets a boolean value from preferences.
     /// </summary>
-    bool GetBool(string key, bool defaultValue);
+    Task<bool> GetBoolAsync(string key, bool defaultValue);
 
     /// <summary>
     /// Sets a boolean value in preferences.
     /// </summary>
-    void SetBool(string key, bool value);
+    Task SetBoolAsync(string key, bool value);
 
     /// <summary>
     /// Removes a key from preferences.
     /// </summary>
-    void Remove(string key);
+    Task RemoveAsync(string key);
 }
