@@ -125,14 +125,14 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table23 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table29 = new global::Reqnroll.Table(new string[] {
                             "DataMode",
                             "ConfiguredGoalIds"});
-                table23.AddRow(new string[] {
+                table29.AddRow(new string[] {
                             "Mock",
                             "1,2,3"});
 #line 10
-    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table23, "Given ");
+    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table29, "Given ");
 #line hidden
 #line 13
     await testRunner.WhenAsync("I request settings from \"/api/settings\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -202,14 +202,14 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table24 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table30 = new global::Reqnroll.Table(new string[] {
                             "DataMode",
                             "ConfiguredGoalIds"});
-                table24.AddRow(new string[] {
+                table30.AddRow(new string[] {
                             "Mock",
                             "1,2,3"});
 #line 23
-    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table24, "Given ");
+    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table30, "Given ");
 #line hidden
 #line 26
     await testRunner.WhenAsync("I update settings with DataMode \"Tfs\" and goal IDs \"4,5,6\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -248,14 +248,14 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table25 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table31 = new global::Reqnroll.Table(new string[] {
                             "DataMode",
                             "ConfiguredGoalIds"});
-                table25.AddRow(new string[] {
+                table31.AddRow(new string[] {
                             "Mock",
                             "1,2,3"});
 #line 32
-    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table25, "Given ");
+    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table31, "Given ");
 #line hidden
 #line 35
     await testRunner.WhenAsync("I update settings with DataMode \"Mock\" and empty goal IDs", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -288,14 +288,14 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table26 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table32 = new global::Reqnroll.Table(new string[] {
                             "DataMode",
                             "ConfiguredGoalIds"});
-                table26.AddRow(new string[] {
+                table32.AddRow(new string[] {
                             "Mock",
                             "1,2,3"});
 #line 39
-    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table26, "Given ");
+    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table32, "Given ");
 #line hidden
 #line 42
     await testRunner.WhenAsync("I update settings with DataMode \"Tfs\" and goal IDs \"1,2,3\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -331,14 +331,14 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table27 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table33 = new global::Reqnroll.Table(new string[] {
                             "DataMode",
                             "ConfiguredGoalIds"});
-                table27.AddRow(new string[] {
+                table33.AddRow(new string[] {
                             "Tfs",
                             "1,2,3"});
 #line 47
-    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table27, "Given ");
+    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table33, "Given ");
 #line hidden
 #line 50
     await testRunner.WhenAsync("I update settings with DataMode \"Mock\" and goal IDs \"1,2,3\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -374,14 +374,14 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table28 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table34 = new global::Reqnroll.Table(new string[] {
                             "DataMode",
                             "ConfiguredGoalIds"});
-                table28.AddRow(new string[] {
+                table34.AddRow(new string[] {
                             "Mock",
                             "1"});
 #line 55
-    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table28, "Given ");
+    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table34, "Given ");
 #line hidden
 #line 58
     await testRunner.WhenAsync("I update settings with DataMode \"Mock\" and goal IDs \"999\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -417,14 +417,14 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table29 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table35 = new global::Reqnroll.Table(new string[] {
                             "DataMode",
                             "ConfiguredGoalIds"});
-                table29.AddRow(new string[] {
+                table35.AddRow(new string[] {
                             "Mock",
                             "1"});
 #line 63
-    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table29, "Given ");
+    await testRunner.GivenAsync("settings exist in the database", ((string)(null)), table35, "Given ");
 #line hidden
 #line 66
     await testRunner.WhenAsync("I update settings with DataMode \"Mock\" and goal IDs \"1,2,3,4,5\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");

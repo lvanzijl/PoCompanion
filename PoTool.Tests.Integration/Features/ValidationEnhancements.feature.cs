@@ -103,7 +103,7 @@ namespace PoTool.Tests.Integration.Features
 #line 7
     await testRunner.GivenAsync("the application is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-            global::Reqnroll.Table table33 = new global::Reqnroll.Table(new string[] {
+            global::Reqnroll.Table table39 = new global::Reqnroll.Table(new string[] {
                         "TfsId",
                         "Title",
                         "Type",
@@ -111,7 +111,7 @@ namespace PoTool.Tests.Integration.Features
                         "ParentTfsId",
                         "AreaPath",
                         "IterationPath"});
-            table33.AddRow(new string[] {
+            table39.AddRow(new string[] {
                         "3000",
                         "Goal A",
                         "Goal",
@@ -119,7 +119,7 @@ namespace PoTool.Tests.Integration.Features
                         "",
                         "TestArea",
                         "TestIteration1"});
-            table33.AddRow(new string[] {
+            table39.AddRow(new string[] {
                         "3001",
                         "Epic A1",
                         "Epic",
@@ -127,7 +127,7 @@ namespace PoTool.Tests.Integration.Features
                         "3000",
                         "TestArea",
                         "TestIteration1"});
-            table33.AddRow(new string[] {
+            table39.AddRow(new string[] {
                         "3002",
                         "Feature A1a",
                         "Feature",
@@ -135,7 +135,7 @@ namespace PoTool.Tests.Integration.Features
                         "3001",
                         "TestArea",
                         "TestIteration1"});
-            table33.AddRow(new string[] {
+            table39.AddRow(new string[] {
                         "3010",
                         "Goal B",
                         "Goal",
@@ -143,7 +143,7 @@ namespace PoTool.Tests.Integration.Features
                         "",
                         "OtherArea",
                         "TestIteration2"});
-            table33.AddRow(new string[] {
+            table39.AddRow(new string[] {
                         "3011",
                         "Epic B1",
                         "Epic",
@@ -152,7 +152,7 @@ namespace PoTool.Tests.Integration.Features
                         "OtherArea",
                         "TestIteration2"});
 #line 8
-    await testRunner.AndAsync("work items exist in the database with validation violations", ((string)(null)), table33, "And ");
+    await testRunner.AndAsync("work items exist in the database with validation violations", ((string)(null)), table39, "And ");
 #line hidden
         }
         
@@ -354,18 +354,18 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table34 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table40 = new global::Reqnroll.Table(new string[] {
                             "WorkItemId",
                             "FixType",
                             "NewState",
                             "Description"});
-                table34.AddRow(new string[] {
+                table40.AddRow(new string[] {
                             "3000",
                             "SetToInProgress",
                             "In Progress",
                             "Set Goal A to In Progress"});
 #line 44
-    await testRunner.GivenAsync("I have fix suggestions for violations", ((string)(null)), table34, "Given ");
+    await testRunner.GivenAsync("I have fix suggestions for violations", ((string)(null)), table40, "Given ");
 #line hidden
 #line 47
     await testRunner.WhenAsync("I send batch fix request to \"/api/workitems/fix-validation-violations\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -404,18 +404,18 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table35 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table41 = new global::Reqnroll.Table(new string[] {
                             "WorkItemId",
                             "FixType",
                             "NewState",
                             "Description"});
-                table35.AddRow(new string[] {
+                table41.AddRow(new string[] {
                             "99999",
                             "SetToInProgress",
                             "In Progress",
                             "Set non-existent to In Progress"});
 #line 53
-    await testRunner.GivenAsync("I have fix suggestions for violations", ((string)(null)), table35, "Given ");
+    await testRunner.GivenAsync("I have fix suggestions for violations", ((string)(null)), table41, "Given ");
 #line hidden
 #line 56
     await testRunner.WhenAsync("I send batch fix request to \"/api/workitems/fix-validation-violations\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -485,23 +485,23 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table36 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table42 = new global::Reqnroll.Table(new string[] {
                             "WorkItemId",
                             "FixType",
                             "NewState",
                             "Description"});
-                table36.AddRow(new string[] {
+                table42.AddRow(new string[] {
                             "3000",
                             "SetToInProgress",
                             "In Progress",
                             "Set Goal A to In Progress"});
-                table36.AddRow(new string[] {
+                table42.AddRow(new string[] {
                             "3010",
                             "SetToInProgress",
                             "In Progress",
                             "Set Goal B to In Progress"});
 #line 66
-    await testRunner.GivenAsync("I have fix suggestions for violations", ((string)(null)), table36, "Given ");
+    await testRunner.GivenAsync("I have fix suggestions for violations", ((string)(null)), table42, "Given ");
 #line hidden
 #line 70
     await testRunner.WhenAsync("I send batch fix request to \"/api/workitems/fix-validation-violations\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
