@@ -53,7 +53,9 @@ public class TfsConfigurationService
     /// </summary>
     public async Task SaveConfigAsync(string url, string project, CancellationToken cancellationToken = default)
     {
-        var existing = await _db.TfsConfigs.FirstOrDefaultAsync(cancellationToken);
+        var existing = await _db.TfsConfigs
+            .OrderByDescending(c => c.UpdatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
         if (existing == null)
         {
             existing = new TfsConfigEntity

@@ -125,20 +125,20 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table9 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table8 = new global::Reqnroll.Table(new string[] {
                             "TotalWorkItems",
                             "WorkItemsWithoutEffort",
                             "WorkItemsInProgressWithoutEffort",
                             "ParentProgressIssues",
                             "BlockedItems"});
-                table9.AddRow(new string[] {
+                table8.AddRow(new string[] {
                             "10",
                             "0",
                             "0",
                             "0",
                             "0"});
 #line 10
-    await testRunner.WhenAsync("I request health score calculation with", ((string)(null)), table9, "When ");
+    await testRunner.WhenAsync("I request health score calculation with", ((string)(null)), table8, "When ");
 #line hidden
 #line 13
     await testRunner.ThenAsync("the health calculation response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -171,20 +171,20 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table10 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table9 = new global::Reqnroll.Table(new string[] {
                             "TotalWorkItems",
                             "WorkItemsWithoutEffort",
                             "WorkItemsInProgressWithoutEffort",
                             "ParentProgressIssues",
                             "BlockedItems"});
-                table10.AddRow(new string[] {
+                table9.AddRow(new string[] {
                             "10",
                             "2",
                             "0",
                             "1",
                             "0"});
 #line 17
-    await testRunner.WhenAsync("I request health score calculation with", ((string)(null)), table10, "When ");
+    await testRunner.WhenAsync("I request health score calculation with", ((string)(null)), table9, "When ");
 #line hidden
 #line 20
     await testRunner.ThenAsync("the health calculation response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -217,20 +217,20 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table11 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table10 = new global::Reqnroll.Table(new string[] {
                             "TotalWorkItems",
                             "WorkItemsWithoutEffort",
                             "WorkItemsInProgressWithoutEffort",
                             "ParentProgressIssues",
                             "BlockedItems"});
-                table11.AddRow(new string[] {
+                table10.AddRow(new string[] {
                             "10",
                             "5",
                             "3",
                             "1",
                             "1"});
 #line 24
-    await testRunner.WhenAsync("I request health score calculation with", ((string)(null)), table11, "When ");
+    await testRunner.WhenAsync("I request health score calculation with", ((string)(null)), table10, "When ");
 #line hidden
 #line 27
     await testRunner.ThenAsync("the health calculation response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -263,20 +263,20 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table12 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table11 = new global::Reqnroll.Table(new string[] {
                             "TotalWorkItems",
                             "WorkItemsWithoutEffort",
                             "WorkItemsInProgressWithoutEffort",
                             "ParentProgressIssues",
                             "BlockedItems"});
-                table12.AddRow(new string[] {
+                table11.AddRow(new string[] {
                             "0",
                             "0",
                             "0",
                             "0",
                             "0"});
 #line 31
-    await testRunner.WhenAsync("I request health score calculation with", ((string)(null)), table12, "When ");
+    await testRunner.WhenAsync("I request health score calculation with", ((string)(null)), table11, "When ");
 #line hidden
 #line 34
     await testRunner.ThenAsync("the health calculation response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -309,20 +309,20 @@ this.ScenarioInitialize(scenarioInfo);
 #line 6
 await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table13 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table12 = new global::Reqnroll.Table(new string[] {
                             "TotalWorkItems",
                             "WorkItemsWithoutEffort",
                             "WorkItemsInProgressWithoutEffort",
                             "ParentProgressIssues",
                             "BlockedItems"});
-                table13.AddRow(new string[] {
+                table12.AddRow(new string[] {
                             "5",
                             "3",
                             "2",
                             "1",
                             "1"});
 #line 38
-    await testRunner.WhenAsync("I request health score calculation with", ((string)(null)), table13, "When ");
+    await testRunner.WhenAsync("I request health score calculation with", ((string)(null)), table12, "When ");
 #line hidden
 #line 41
     await testRunner.ThenAsync("the health calculation response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");

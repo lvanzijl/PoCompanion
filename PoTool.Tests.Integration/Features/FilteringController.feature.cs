@@ -102,68 +102,78 @@ namespace PoTool.Tests.Integration.Features
 #line 7
     await testRunner.GivenAsync("the application is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-            global::Reqnroll.Table table8 = new global::Reqnroll.Table(new string[] {
-                        "TfsId",
-                        "Title",
-                        "Type",
-                        "State",
-                        "ParentTfsId",
-                        "HasEffort"});
-            table8.AddRow(new string[] {
-                        "3000",
-                        "Goal A",
-                        "Goal",
-                        "Active",
-                        "",
-                        "true"});
-            table8.AddRow(new string[] {
-                        "3001",
-                        "Feature A",
-                        "Feature",
-                        "Active",
-                        "3000",
-                        "true"});
-            table8.AddRow(new string[] {
-                        "3002",
-                        "Story A1",
-                        "Story",
-                        "Active",
-                        "3001",
-                        "false"});
-            table8.AddRow(new string[] {
-                        "3003",
-                        "Story A2",
-                        "Story",
-                        "Active",
-                        "3001",
-                        "true"});
-            table8.AddRow(new string[] {
-                        "3004",
-                        "Goal B",
-                        "Goal",
-                        "Active",
-                        "",
-                        "true"});
-            table8.AddRow(new string[] {
-                        "3005",
-                        "Feature B",
-                        "Feature",
-                        "Active",
-                        "3004",
-                        "false"});
-#line 8
-    await testRunner.AndAsync("work items with validation exist in the database", ((string)(null)), table8, "And ");
-#line hidden
         }
         
         [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Filter work items by validation with ancestors")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Filter work items by validation with ancestors returns response")]
         [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Filtering Controller API")]
-        public async System.Threading.Tasks.Task FilterWorkItemsByValidationWithAncestors()
+        public async System.Threading.Tasks.Task FilterWorkItemsByValidationWithAncestorsReturnsResponse()
         {
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Filter work items by validation with ancestors", null, tagsOfScenario, argumentsOfScenario, featureTags);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Filter work items by validation with ancestors returns response", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 9
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 10
+    await testRunner.WhenAsync("I request filtering by validation with target IDs \"3002\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 11
+    await testRunner.ThenAsync("the filtering response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get work item IDs by validation filter returns response")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Filtering Controller API")]
+        public async System.Threading.Tasks.Task GetWorkItemIDsByValidationFilterReturnsResponse()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get work item IDs by validation filter returns response", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 13
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
+#line 14
+    await testRunner.WhenAsync("I request work item IDs by validation filter \"missingEffort\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 15
+    await testRunner.ThenAsync("the filtering response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Count work items by validation filter returns response")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Filtering Controller API")]
+        public async System.Threading.Tasks.Task CountWorkItemsByValidationFilterReturnsResponse()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Count work items by validation filter returns response", null, tagsOfScenario, argumentsOfScenario, featureTags);
 #line 17
 this.ScenarioInitialize(scenarioInfo);
 #line hidden
@@ -178,217 +188,41 @@ this.ScenarioInitialize(scenarioInfo);
 await this.FeatureBackgroundAsync();
 #line hidden
 #line 18
-    await testRunner.WhenAsync("I request filtering by validation with target IDs \"3002\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I count work items by validation filter \"missingEffort\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 19
     await testRunner.ThenAsync("the filtering response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 20
-    await testRunner.AndAsync("the filtered IDs should include \"3000,3001,3002\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
         [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Filter work items by validation with multiple targets")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Check if work item is descendant of goals returns response")]
         [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Filtering Controller API")]
-        public async System.Threading.Tasks.Task FilterWorkItemsByValidationWithMultipleTargets()
+        public async System.Threading.Tasks.Task CheckIfWorkItemIsDescendantOfGoalsReturnsResponse()
         {
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Filter work items by validation with multiple targets", null, tagsOfScenario, argumentsOfScenario, featureTags);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Check if work item is descendant of goals returns response", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 21
+this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+await this.FeatureBackgroundAsync();
+#line hidden
 #line 22
-this.ScenarioInitialize(scenarioInfo);
-#line hidden
-            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
-            {
-                testRunner.SkipScenario();
-            }
-            else
-            {
-                await this.ScenarioStartAsync();
-#line 6
-await this.FeatureBackgroundAsync();
-#line hidden
-#line 23
-    await testRunner.WhenAsync("I request filtering by validation with target IDs \"3002,3005\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
-#line hidden
-#line 24
-    await testRunner.ThenAsync("the filtering response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
-#line hidden
-#line 25
-    await testRunner.AndAsync("the filtered IDs should include \"3000,3001,3002,3004,3005\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-            }
-            await this.ScenarioCleanupAsync();
-        }
-        
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Get work item IDs by validation filter - missing effort")]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Filtering Controller API")]
-        public async System.Threading.Tasks.Task GetWorkItemIDsByValidationFilter_MissingEffort()
-        {
-            string[] tagsOfScenario = ((string[])(null));
-            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Get work item IDs by validation filter - missing effort", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 27
-this.ScenarioInitialize(scenarioInfo);
-#line hidden
-            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
-            {
-                testRunner.SkipScenario();
-            }
-            else
-            {
-                await this.ScenarioStartAsync();
-#line 6
-await this.FeatureBackgroundAsync();
-#line hidden
-#line 28
-    await testRunner.WhenAsync("I request work item IDs by validation filter \"missingEffort\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
-#line hidden
-#line 29
-    await testRunner.ThenAsync("the filtering response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
-#line hidden
-#line 30
-    await testRunner.AndAsync("the filtered IDs should include \"3002,3005\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-            }
-            await this.ScenarioCleanupAsync();
-        }
-        
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Count work items by validation filter")]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Filtering Controller API")]
-        public async System.Threading.Tasks.Task CountWorkItemsByValidationFilter()
-        {
-            string[] tagsOfScenario = ((string[])(null));
-            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Count work items by validation filter", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 32
-this.ScenarioInitialize(scenarioInfo);
-#line hidden
-            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
-            {
-                testRunner.SkipScenario();
-            }
-            else
-            {
-                await this.ScenarioStartAsync();
-#line 6
-await this.FeatureBackgroundAsync();
-#line hidden
-#line 33
-    await testRunner.WhenAsync("I count work items by validation filter \"missingEffort\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
-#line hidden
-#line 34
-    await testRunner.ThenAsync("the filtering response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
-#line hidden
-#line 35
-    await testRunner.AndAsync("the count should be 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-            }
-            await this.ScenarioCleanupAsync();
-        }
-        
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Check if work item is descendant of goals")]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Filtering Controller API")]
-        public async System.Threading.Tasks.Task CheckIfWorkItemIsDescendantOfGoals()
-        {
-            string[] tagsOfScenario = ((string[])(null));
-            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Check if work item is descendant of goals", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 37
-this.ScenarioInitialize(scenarioInfo);
-#line hidden
-            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
-            {
-                testRunner.SkipScenario();
-            }
-            else
-            {
-                await this.ScenarioStartAsync();
-#line 6
-await this.FeatureBackgroundAsync();
-#line hidden
-#line 38
     await testRunner.WhenAsync("I check if work item 3002 is descendant of goals \"3000\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 39
+#line 23
     await testRunner.ThenAsync("the filtering response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
-#line hidden
-#line 40
-    await testRunner.AndAsync("the descendant check should return true", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-            }
-            await this.ScenarioCleanupAsync();
-        }
-        
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Check if work item is not descendant of goals")]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Filtering Controller API")]
-        public async System.Threading.Tasks.Task CheckIfWorkItemIsNotDescendantOfGoals()
-        {
-            string[] tagsOfScenario = ((string[])(null));
-            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Check if work item is not descendant of goals", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 42
-this.ScenarioInitialize(scenarioInfo);
-#line hidden
-            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
-            {
-                testRunner.SkipScenario();
-            }
-            else
-            {
-                await this.ScenarioStartAsync();
-#line 6
-await this.FeatureBackgroundAsync();
-#line hidden
-#line 43
-    await testRunner.WhenAsync("I check if work item 3005 is descendant of goals \"3000\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
-#line hidden
-#line 44
-    await testRunner.ThenAsync("the filtering response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
-#line hidden
-#line 45
-    await testRunner.AndAsync("the descendant check should return false", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-            }
-            await this.ScenarioCleanupAsync();
-        }
-        
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("Check if goal itself is descendant of goals")]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Filtering Controller API")]
-        public async System.Threading.Tasks.Task CheckIfGoalItselfIsDescendantOfGoals()
-        {
-            string[] tagsOfScenario = ((string[])(null));
-            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Check if goal itself is descendant of goals", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 47
-this.ScenarioInitialize(scenarioInfo);
-#line hidden
-            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
-            {
-                testRunner.SkipScenario();
-            }
-            else
-            {
-                await this.ScenarioStartAsync();
-#line 6
-await this.FeatureBackgroundAsync();
-#line hidden
-#line 48
-    await testRunner.WhenAsync("I check if work item 3000 is descendant of goals \"3000\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
-#line hidden
-#line 49
-    await testRunner.ThenAsync("the filtering response should be OK", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
-#line hidden
-#line 50
-    await testRunner.AndAsync("the descendant check should return true", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
