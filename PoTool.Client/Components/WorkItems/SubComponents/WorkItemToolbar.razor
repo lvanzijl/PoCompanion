@@ -354,7 +354,7 @@
             }
 
             var urls = SelectedWorkItems
-                .Select(w => Core.WorkItems.TfsUrlBuilder.BuildWorkItemUrl(config.Url, config.Project, w.TfsId))
+                .Select(w => PoTool.Shared.WorkItems.TfsUrlBuilder.BuildWorkItemUrl(config.Url, config.Project, w.TfsId))
                 .ToList();
             
             var urlsText = string.Join(Environment.NewLine, urls);

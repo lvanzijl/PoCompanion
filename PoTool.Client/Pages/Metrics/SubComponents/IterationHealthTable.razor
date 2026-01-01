@@ -15,7 +15,7 @@
                     </CardHeaderContent>
                     <CardHeaderActions>
                         @{
-                            var healthScore = GetHealthScore(iteration);
+                            var healthScore = await GetHealthScore(iteration);
                         }
                         @if (healthScore < 70)
                         {
@@ -103,9 +103,9 @@
     [Parameter]
     public List<BacklogHealthDto> Iterations { get; set; } = new();
 
-    private int GetHealthScore(BacklogHealthDto iteration)
+    private async Task<int> GetHealthScore(BacklogHealthDto iteration)
     {
-        return HealthCalculationService.CalculateHealthScore(iteration);
+        return await HealthCalculationService.CalculateHealthScoreAsync(iteration);
     }
 
     private Color GetSeverityColor(string severity)

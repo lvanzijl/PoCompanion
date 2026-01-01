@@ -197,8 +197,8 @@
                     FilteringService.IsDescendantOfGoals(wi, goalIds, allWorkItems)).ToList()
                 : allWorkItems;
 
-            ApplyFilter();
-            UpdateValidationFilterCounts();
+            await ApplyFilterAsync();
+            await UpdateValidationFilterCountsAsync();
             await SaveExpandedStateAsync();
         }
         catch (Exception ex)
@@ -314,12 +314,12 @@
     private void HandleFilterChanged(string filterText)
     {
         _filterText = filterText;
-        ApplyFilter();
+        await ApplyFilterAsync();
     }
 
     private void HandleValidationFiltersChanged(List<ValidationFilter> filters)
     {
-        ApplyFilter();
+        await ApplyFilterAsync();
     }
 
     private void ApplyFilter()
@@ -340,11 +340,11 @@
         StateHasChanged();
     }
 
-    private void UpdateValidationFilterCounts()
+    private async Task UpdateValidationFilterCountsAsync()
     {
         foreach (var filter in _validationFilters)
         {
-            filter.Count = FilteringService.CountWorkItemsByValidationFilter(_workItemsWithValidation, filter.Id);
+            filter.Count = await FilteringService.CountWorkItemsByValidationFilterAsync(_workItemsWithValidation, filter.Id);
         }
     }
 
@@ -438,7 +438,7 @@
     {
         _expandedState.Clear();
         await SaveExpandedStateAsync();
-        ApplyFilter();
+        await ApplyFilterAsync();
     }
 
     private async Task OpenSettings()
@@ -479,7 +479,7 @@
 
     private void ShowTfsErrorSnackbar(Exception ex)
     {
-        var severity = ex is TfsRateLimitException ? Severity.Warning : Severity.Error;
+        var severity = ex.Message.Contains("429") || ex.Message.ToLower().Contains("rate limit") ? Severity.Warning : Severity.Error;
         var errorResponse = ErrorMessageService.GetErrorResponse(ex, "TFS operation failed");
         Snackbar.Add(errorResponse.UserMessage, severity);
     }
