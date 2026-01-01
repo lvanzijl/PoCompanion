@@ -213,6 +213,7 @@
         return node.Type switch
         {
             "Product Backlog Item" => "PBI",
+            "Bug" => "BUG",
             "Objective" => "OBJ",
             _ => node.Type.ToUpper()
         };

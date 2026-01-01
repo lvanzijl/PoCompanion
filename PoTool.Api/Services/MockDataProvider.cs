@@ -116,8 +116,8 @@ public class MockDataProvider
                             var itemType = (featureId % 3) switch
                             {
                                 0 => new[] { WorkItemType.Pbi },
-                                1 => new[] { "Bug" },
-                                _ => new[] { WorkItemType.Pbi, "Bug" }
+                                1 => new[] { WorkItemType.Bug },
+                                _ => new[] { WorkItemType.Pbi, WorkItemType.Bug }
                             };
                             
                             foreach (var type in itemType)

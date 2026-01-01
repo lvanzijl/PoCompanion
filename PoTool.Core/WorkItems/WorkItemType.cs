@@ -10,6 +10,7 @@ public static class WorkItemType
     public const string Epic = "Epic";
     public const string Feature = "Feature";
     public const string Pbi = "Product Backlog Item";
+    public const string Bug = "Bug";
     public const string Task = "Task";
 
     /// <summary>
@@ -22,6 +23,7 @@ public static class WorkItemType
         Epic,
         Feature,
         Pbi,
+        Bug,
         Task
     };
 
@@ -37,6 +39,7 @@ public static class WorkItemType
             Epic => "#FF9800",       // Orange
             Feature => "#9C27B0",    // Purple
             Pbi => "#2196F3",        // Blue
+            Bug => "#F44336",        // Red
             Task => "#FFEB3B",       // Yellow
             _ => "#757575"           // Grey for unknown
         };
@@ -54,6 +57,7 @@ public static class WorkItemType
             Epic => 2,
             Feature => 3,
             Pbi => 4,
+            Bug => 4,                // Same level as PBI
             Task => 5,
             _ => -1
         };
