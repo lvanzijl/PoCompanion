@@ -1,22 +1,21 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
-using PoTool.Core.WorkItems.Filtering;
 
 namespace PoTool.Client.Services;
 
 /// <summary>
 /// UI service for filtering work items with validation and text-based criteria.
-/// Business logic is delegated to Core layer.
+/// Business logic is delegated to API layer via HTTP calls.
 /// </summary>
 public class WorkItemFilteringService
 {
     private readonly ITreeBuilderService _treeBuilderService;
-    private readonly WorkItemFilterer _filterer;
+    private readonly IFilteringClient _filteringClient;
 
-    public WorkItemFilteringService(ITreeBuilderService treeBuilderService, WorkItemFilterer filterer)
+    public WorkItemFilteringService(ITreeBuilderService treeBuilderService, IFilteringClient filteringClient)
     {
         _treeBuilderService = treeBuilderService ?? throw new ArgumentNullException(nameof(treeBuilderService));
-        _filterer = filterer ?? throw new ArgumentNullException(nameof(filterer));
+        _filteringClient = filteringClient ?? throw new ArgumentNullException(nameof(filteringClient));
     }
 
     /// <summary>
@@ -25,14 +24,17 @@ public class WorkItemFilteringService
     /// <param name="items">Work items to filter.</param>
     /// <param name="targetIds">IDs of work items with validation issues to include.</param>
     /// <returns>Filtered work items including ancestors.</returns>
-    public IEnumerable<WorkItemWithValidationDto> FilterByValidationWithAncestors(
+    public async Task<IEnumerable<WorkItemWithValidationDto>> FilterByValidationWithAncestorsAsync(
         IEnumerable<WorkItemWithValidationDto> items,
         HashSet<int> targetIds)
     {
-        // Wrap DTOs to match Core interface
-        var wrapped = items.Select(dto => new FilterableWorkItemAdapter(dto));
-        var filtered = _filterer.FilterByValidationWithAncestors(wrapped, targetIds);
-        return filtered.Select(w => w.WorkItem);
+        // Call API to get filtered IDs
+        var request = new ApiClient.FilterByValidationRequest { TargetIds = targetIds };
+        var response = await _filteringClient.FilterByValidationWithAncestorsAsync(request);
+
+        // Return work items matching the filtered IDs
+        var filteredIds = new HashSet<int>(response.WorkItemIds);
+        return items.Where(item => filteredIds.Contains(item.TfsId));
     }
 
     /// <summary>
@@ -41,12 +43,14 @@ public class WorkItemFilteringService
     /// <param name="workItems">Work items to search.</param>
     /// <param name="filterId">Filter identifier (e.g., "parentProgress", "missingEffort").</param>
     /// <returns>IDs of work items matching the filter.</returns>
-    public IEnumerable<int> GetWorkItemIdsByValidationFilter(
+    public async Task<IEnumerable<int>> GetWorkItemIdsByValidationFilterAsync(
         IEnumerable<WorkItemWithValidationDto> workItems,
         string filterId)
     {
-        var wrapped = workItems.Select(dto => new FilterableWorkItemAdapter(dto));
-        return _filterer.GetWorkItemIdsByValidationFilter(wrapped, filterId);
+        // Call API to get work item IDs by filter
+        var request = new ApiClient.GetWorkItemIdsByValidationFilterRequest { FilterId = filterId };
+        var response = await _filteringClient.GetWorkItemIdsByValidationFilterAsync(request);
+        return response.WorkItemIds;
     }
 
     /// <summary>
@@ -55,12 +59,14 @@ public class WorkItemFilteringService
     /// <param name="workItems">Work items to count.</param>
     /// <param name="filterId">Filter identifier.</param>
     /// <returns>Count of matching work items.</returns>
-    public int CountWorkItemsByValidationFilter(
+    public async Task<int> CountWorkItemsByValidationFilterAsync(
         IEnumerable<WorkItemWithValidationDto> workItems,
         string filterId)
     {
-        var wrapped = workItems.Select(dto => new FilterableWorkItemAdapter(dto));
-        return _filterer.CountWorkItemsByValidationFilter(wrapped, filterId);
+        // Call API to count work items by filter
+        var request = new ApiClient.CountWorkItemsByValidationFilterRequest { FilterId = filterId };
+        var response = await _filteringClient.CountWorkItemsByValidationFilterAsync(request);
+        return response.Count;
     }
 
     /// <summary>
@@ -70,7 +76,7 @@ public class WorkItemFilteringService
     /// <param name="textFilter">Optional text filter.</param>
     /// <param name="enabledValidationFilters">List of enabled validation filter IDs.</param>
     /// <returns>Filtered work items with ancestors included.</returns>
-    public IEnumerable<WorkItemWithValidationDto> ApplyCombinedFilter(
+    public async Task<IEnumerable<WorkItemWithValidationDto>> ApplyCombinedFilterAsync(
         IEnumerable<WorkItemWithValidationDto> workItems,
         string? textFilter,
         IEnumerable<string> enabledValidationFilters)
@@ -85,7 +91,7 @@ public class WorkItemFilteringService
 
             foreach (var filterId in validationFilterList)
             {
-                var filterInvalidIds = GetWorkItemIdsByValidationFilter(workItems, filterId);
+                var filterInvalidIds = await GetWorkItemIdsByValidationFilterAsync(workItems, filterId);
                 foreach (var id in filterInvalidIds)
                 {
                     invalidIds.Add(id);
@@ -93,7 +99,7 @@ public class WorkItemFilteringService
             }
 
             // Include invalid items and their ancestors
-            filteredItems = FilterByValidationWithAncestors(filteredItems, invalidIds);
+            filteredItems = await FilterByValidationWithAncestorsAsync(filteredItems, invalidIds);
         }
 
         // Then apply text filter if present
@@ -116,14 +122,19 @@ public class WorkItemFilteringService
     /// <param name="goalIds">List of goal IDs.</param>
     /// <param name="allWorkItems">All work items for lookup.</param>
     /// <returns>True if item is a goal or descendant of a goal.</returns>
-    public bool IsDescendantOfGoals(
+    public async Task<bool> IsDescendantOfGoalsAsync(
         WorkItemWithValidationDto item,
         List<int> goalIds,
         IEnumerable<WorkItemWithValidationDto> allWorkItems)
     {
-        var wrapped = new FilterableWorkItemAdapter(item);
-        var wrappedAll = allWorkItems.Select(wi => new FilterableWorkItemAdapter(wi));
-        return _filterer.IsDescendantOfGoals(wrapped, goalIds, wrappedAll);
+        // Call API to check descendant status
+        var request = new ApiClient.IsDescendantOfGoalsRequest
+        {
+            WorkItemId = item.TfsId,
+            GoalIds = goalIds
+        };
+        var response = await _filteringClient.IsDescendantOfGoalsAsync(request);
+        return response.IsDescendant;
     }
 
     private static WorkItemDto ConvertToWorkItemDto(WorkItemWithValidationDto item)
@@ -141,35 +152,5 @@ public class WorkItemFilteringService
             RetrievedAt = item.RetrievedAt,
             Effort = item.Effort
         };
-    }
-
-    /// <summary>
-    /// Adapter to make API DTOs compatible with Core filtering interfaces.
-    /// </summary>
-    private class FilterableWorkItemAdapter : WorkItemFilterer.IFilterableWorkItem
-    {
-        public WorkItemWithValidationDto WorkItem { get; }
-
-        public FilterableWorkItemAdapter(WorkItemWithValidationDto workItem)
-        {
-            WorkItem = workItem;
-        }
-
-        public int TfsId => WorkItem.TfsId;
-        public int? ParentTfsId => WorkItem.ParentTfsId;
-        public IEnumerable<WorkItemFilterer.IValidationIssue> ValidationIssues => 
-            WorkItem.ValidationIssues.Select(vi => new ValidationIssueAdapter(vi));
-
-        private class ValidationIssueAdapter : WorkItemFilterer.IValidationIssue
-        {
-            private readonly ValidationIssue _issue;
-
-            public ValidationIssueAdapter(ValidationIssue issue)
-            {
-                _issue = issue;
-            }
-
-            public string Message => _issue.Message;
-        }
     }
 }

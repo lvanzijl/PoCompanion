@@ -1,6 +1,5 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
-using CoreWorkItems = PoTool.Core.WorkItems;
 
 namespace PoTool.Client.Services;
 

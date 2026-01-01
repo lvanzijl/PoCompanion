@@ -1,4 +1,3 @@
-using PoTool.Core.Exceptions;
 using System.Net;
 
 namespace PoTool.Client.Services;
@@ -26,45 +25,11 @@ public class ErrorMessageService
             }
         };
 
-        // Map specific TFS exceptions to user-friendly messages
-        if (exception is TfsAuthenticationException authEx)
-        {
-            response.UserMessage = "Authentication failed. Please check your Personal Access Token and ensure it has not expired.";
-            response.Suggestion = "Verify your PAT is correct and has the required permissions in Azure DevOps.";
-            response.TechnicalDetails.StatusCode = authEx.StatusCode;
-        }
-        else if (exception is TfsAuthorizationException authzEx)
-        {
-            response.UserMessage = "Access denied. Please verify you have permission to access this resource.";
-            response.Suggestion = "Check your project permissions in Azure DevOps or contact your administrator.";
-            response.TechnicalDetails.StatusCode = authzEx.StatusCode;
-        }
-        else if (exception is TfsRateLimitException rateLimitEx)
-        {
-            response.UserMessage = "Too many requests. Please wait a moment before trying again.";
-            response.Suggestion = "Azure DevOps has rate limits. Wait a few minutes and try again.";
-            response.TechnicalDetails.StatusCode = rateLimitEx.StatusCode;
-        }
-        else if (exception is TfsResourceNotFoundException notFoundEx)
-        {
-            response.UserMessage = "Resource not found. Please verify your configuration.";
-            response.Suggestion = "Check that your organization URL and project name are correct.";
-            response.TechnicalDetails.StatusCode = notFoundEx.StatusCode;
-        }
-        else if (exception is TfsException tfsEx)
-        {
-            response.UserMessage = tfsEx.StatusCode.HasValue 
-                ? MapHttpStatusToUserMessage(tfsEx.StatusCode.Value) 
-                : "An error occurred while communicating with Azure DevOps.";
-            response.Suggestion = tfsEx.StatusCode.HasValue 
-                ? GetSuggestionForStatusCode(tfsEx.StatusCode.Value) 
-                : "Please try again. If the problem persists, contact support.";
-            response.TechnicalDetails.StatusCode = tfsEx.StatusCode;
-        }
-        else if (exception is HttpRequestException httpEx)
+        // Map HTTP exceptions to user-friendly messages
+        if (exception is HttpRequestException httpEx)
         {
             response.UserMessage = "Network error occurred. Please check your connection.";
-            response.Suggestion = "Verify your internet connection and that the Azure DevOps URL is accessible.";
+            response.Suggestion = "Verify your internet connection and that the API is accessible.";
         }
         else if (exception is TaskCanceledException or OperationCanceledException)
         {
@@ -73,8 +38,19 @@ public class ErrorMessageService
         }
         else
         {
-            response.UserMessage = "An unexpected error occurred.";
-            response.Suggestion = "Please try again. If the problem persists, contact support.";
+            // Try to extract status code from API exceptions
+            var statusCode = TryExtractStatusCode(exception);
+            if (statusCode.HasValue)
+            {
+                response.UserMessage = MapHttpStatusToUserMessage(statusCode.Value);
+                response.Suggestion = GetSuggestionForStatusCode(statusCode.Value);
+                response.TechnicalDetails.StatusCode = statusCode.Value;
+            }
+            else
+            {
+                response.UserMessage = "An unexpected error occurred.";
+                response.Suggestion = "Please try again. If the problem persists, contact support.";
+            }
         }
 
         // Add context if provided
@@ -84,6 +60,35 @@ public class ErrorMessageService
         }
 
         return response;
+    }
+
+    /// <summary>
+    /// Tries to extract HTTP status code from an exception.
+    /// </summary>
+    private int? TryExtractStatusCode(Exception exception)
+    {
+        // Check if it's an API exception with status code in message or properties
+        var message = exception.Message;
+        
+        // Common patterns: "Status: 401" or "401" or "Response status code does not indicate success: 401"
+        if (message.Contains("401") || message.Contains("Unauthorized"))
+            return 401;
+        if (message.Contains("403") || message.Contains("Forbidden"))
+            return 403;
+        if (message.Contains("404") || message.Contains("Not Found"))
+            return 404;
+        if (message.Contains("429") || message.Contains("Too Many Requests"))
+            return 429;
+        if (message.Contains("500") || message.Contains("Internal Server Error"))
+            return 500;
+        if (message.Contains("502") || message.Contains("Bad Gateway"))
+            return 502;
+        if (message.Contains("503") || message.Contains("Service Unavailable"))
+            return 503;
+        if (message.Contains("504") || message.Contains("Gateway Timeout"))
+            return 504;
+
+        return null;
     }
 
     /// <summary>
