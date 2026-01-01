@@ -9,21 +9,84 @@ This document defines the authoritative rules for generating mock data in PO Com
 
 ## Table of Contents
 
-1. [Hierarchy Structure](#hierarchy-structure)
-2. [Team Structure & Area Paths](#team-structure--area-paths)
-3. [Status & State Rules](#status--state-rules)
-4. [Iteration Paths](#iteration-paths)
-5. [Effort Estimation](#effort-estimation)
-6. [Dependencies & Links](#dependencies--links)
-7. [Pull Requests](#pull-requests)
-8. [Data Volume Requirements](#data-volume-requirements)
-9. [Validation Rules](#validation-rules)
+1. [Data Theme](#data-theme)
+2. [Hierarchy Structure](#hierarchy-structure)
+3. [Team Structure & Area Paths](#team-structure--area-paths)
+4. [Status & State Rules](#status--state-rules)
+5. [Iteration Paths](#iteration-paths)
+6. [Effort Estimation](#effort-estimation)
+7. [Dependencies & Links](#dependencies--links)
+8. [Pull Requests](#pull-requests)
+9. [Data Volume Requirements](#data-volume-requirements)
+10. [Validation Rules](#validation-rules)
 
 ---
 
-## 1. Hierarchy Structure
+## 1. Data Theme
 
-### 1.1 Work Item Hierarchy
+### 1.1 Theme Overview
+
+All mock data MUST follow a consistent theme: **Battleship Incident Handling and Damage Control System**
+
+This theme provides a realistic, cohesive context for all work items, making the data more relatable and easier to understand during testing and development.
+
+### 1.2 Domain Context
+
+The mock data represents a software solution for naval vessel incident management, including:
+
+- **Incident Detection**: Fire detection, leakage monitoring, collision alerts
+- **Incident Response**: Emergency protocols, crew notifications, response coordination
+- **Personnel Management**: Crew safety tracking, injury reporting, medical response
+- **Damage Assessment**: Hull integrity monitoring, compartment status, structural damage evaluation
+- **Damage Control**: Repair coordination, resource allocation, priority management
+- **Communication Systems**: Inter-department messaging, command center integration, emergency broadcasts
+- **Reporting & Analytics**: Incident logs, damage reports, performance metrics
+
+### 1.3 Naming Conventions
+
+Work items should use terminology and language consistent with the battleship domain:
+
+**Goals** - Strategic objectives (e.g., "Mission-Critical Incident Response Capability", "Comprehensive Damage Control System")
+
+**Objectives** - Major capabilities (e.g., "Real-Time Fire Detection and Suppression", "Automated Hull Breach Response")
+
+**Epics** - Large features (e.g., "Fire Detection System", "Crew Safety Management", "Damage Control Dashboard")
+
+**Features** - Specific functionalities (e.g., "Smoke Sensor Integration", "Automated Evacuation Alerts", "Hull Pressure Monitoring")
+
+**PBIs** - User stories (e.g., "As a damage control officer, I need to view compartment status in real-time")
+
+**Bugs** - Issues (e.g., "Fire alarm not triggering in engine room", "Crew location tracker showing incorrect positions")
+
+**Tasks** - Implementation work (e.g., "Configure sensor API endpoints", "Create alert notification component")
+
+### 1.4 Example Work Item Titles
+
+**Incident Types to Reference**:
+- Fire incidents (engine room fire, electrical fire, fuel fire)
+- Leakage incidents (hull breach, pipe rupture, coolant leak)
+- Personnel incidents (crew injury, man overboard, medical emergency)
+- Structural damage (collision damage, explosion damage, equipment failure)
+
+**Example Goal**: "Mission-Ready Incident Response Platform"
+
+**Example Objective**: "Rapid Fire Detection and Automated Suppression"
+
+**Example Epic**: "Engine Room Fire Detection System"
+
+**Example Feature**: "Multi-Sensor Fire Detection Network"
+
+**Example PBI**: "As a damage control officer, I need to receive instant alerts when engine room temperature exceeds safe thresholds so I can initiate fire suppression protocols"
+
+**Example Bug**: "Fire suppression system not activating when smoke density reaches critical level"
+
+**Example Task**: "Implement temperature sensor data aggregation service"
+
+---
+
+## 2. Hierarchy Structure
+
+### 2.1 Work Item Hierarchy
 
 Mock data MUST follow this exact hierarchy:
 
@@ -37,7 +100,7 @@ Goals (10)
                       └─→ Tasks (2-5 per PBI/Bug, total ~15,000)
 ```
 
-### 1.2 Quantity Rules
+### 2.2 Quantity Rules
 
 | Work Item Type | Minimum | Target | Maximum |
 |----------------|---------|--------|---------|
@@ -51,7 +114,7 @@ Goals (10)
 
 **Total Work Items**: Minimum 15,815 | Target 19,640 | Maximum 23,455
 
-### 1.3 Parent-Child Relationships
+### 2.3 Parent-Child Relationships
 
 - **Goals**: No parent (top-level)
 - **Objectives**: Must have exactly one Goal parent
@@ -65,9 +128,9 @@ Goals (10)
 
 ---
 
-## 2. Team Structure & Area Paths
+## 3. Team Structure & Area Paths
 
-### 2.1 Team Hierarchy
+### 3.1 Team Hierarchy
 
 Mock data MUST include 10-15 teams organized in the following hierarchy:
 
@@ -78,33 +141,33 @@ Portfolio Level (1 team)
        └─→ Shared Services (1-2 teams)
 ```
 
-### 2.2 Example Team Structure
+### 3.2 Example Team Structure
 
 ```
-PO Companion (Portfolio)
-  ├─→ Core Platform (Program)
-  │    ├─→ Backend Services (Feature Team)
-  │    ├─→ Frontend UI (Feature Team)
-  │    └─→ API Gateway (Feature Team)
-  ├─→ User Experience (Program)
-  │    ├─→ Visualizations (Feature Team)
-  │    ├─→ Dashboards (Feature Team)
-  │    └─→ Reporting (Feature Team)
-  ├─→ Data & Analytics (Program)
-  │    ├─→ ETL Pipeline (Feature Team)
-  │    ├─→ Data Models (Feature Team)
-  │    └─→ ML Services (Feature Team)
+Battleship Systems (Portfolio)
+  ├─→ Incident Detection (Program)
+  │    ├─→ Fire Detection (Feature Team)
+  │    ├─→ Leakage Monitoring (Feature Team)
+  │    └─→ Collision Detection (Feature Team)
+  ├─→ Incident Response (Program)
+  │    ├─→ Emergency Protocols (Feature Team)
+  │    ├─→ Crew Safety (Feature Team)
+  │    └─→ Medical Response (Feature Team)
+  ├─→ Damage Control (Program)
+  │    ├─→ Hull Integrity (Feature Team)
+  │    ├─→ Repair Coordination (Feature Team)
+  │    └─→ Resource Management (Feature Team)
   └─→ Shared Services
-       ├─→ Infrastructure (Shared Services Team)
-       └─→ DevOps (Shared Services Team)
+       ├─→ Communication Systems (Shared Services Team)
+       └─→ DevOps & Infrastructure (Shared Services Team)
 ```
 
-### 2.3 Area Path Rules (CRITICAL)
+### 3.3 Area Path Rules (CRITICAL)
 
 **Rule 1: Epic Determines Ownership**
 - Epics are assigned to feature teams
 - The Epic's area path determines the owning team
-- Example: `\PO Companion\Core Platform\Backend Services`
+- Example: `\Battleship Systems\Incident Detection\Fire Detection`
 
 **Rule 2: Inheritance Below Epic (MANDATORY)**
 - Features MUST inherit the area path from their parent Epic
@@ -124,12 +187,12 @@ PO Companion (Portfolio)
 
 Example:
 ```
-\PO Companion\Core Platform\Backend Services
-\PO Companion\User Experience\Dashboards
-\PO Companion\Shared Services\Infrastructure
+\Battleship Systems\Incident Detection\Fire Detection
+\Battleship Systems\Incident Response\Crew Safety
+\Battleship Systems\Shared Services\Communication Systems
 ```
 
-### 2.4 Area Path Distribution
+### 3.4 Area Path Distribution
 
 | Level           | Area Path Assignment              |
 |-----------------|-----------------------------------|
@@ -141,7 +204,7 @@ Example:
 | Bugs            | Inherit from Feature (MANDATORY)  |
 | Tasks           | Inherit from parent (MANDATORY)   |
 
-### 2.5 Validation Rules
+### 3.5 Validation Rules
 
 Mock data generators MUST validate:
 1. Every Epic has a valid feature team area path
@@ -152,9 +215,9 @@ Mock data generators MUST validate:
 
 ---
 
-## 3. Status & State Rules
+## 4. Status & State Rules
 
-### 3.1 Valid States by Work Item Type
+### 4.1 Valid States by Work Item Type
 
 | Type      | Valid States                                          |
 |-----------|-------------------------------------------------------|
@@ -166,7 +229,7 @@ Mock data generators MUST validate:
 | Bug       | New, Approved, Committed, Done, Removed               |
 | Task      | To Do, In Progress, Done, Removed                     |
 
-### 3.2 State Distribution (Realistic)
+### 4.2 State Distribution (Realistic)
 
 Target distribution for active work items:
 
@@ -178,7 +241,7 @@ Target distribution for active work items:
 | Closed         | 5-10%      | Completed and accepted               |
 | Removed        | 1-2%       | Cancelled or removed                 |
 
-### 3.3 Invalid States for Testing (10-15% of items)
+### 4.3 Invalid States for Testing (10-15% of items)
 
 Mock data MUST include intentionally invalid states to test detection features:
 
@@ -189,7 +252,7 @@ Mock data MUST include intentionally invalid states to test detection features:
 
 **Target**: 10-15% of work items should have intentionally invalid or suspicious states
 
-### 3.4 State Consistency Rules
+### 4.4 State Consistency Rules
 
 - **Closed Epics**: Should have all Features closed or removed
 - **Closed Features**: Should have all PBIs/Bugs closed or removed
@@ -200,9 +263,9 @@ Mock data MUST include intentionally invalid states to test detection features:
 
 ---
 
-## 4. Iteration Paths
+## 5. Iteration Paths
 
-### 4.1 Sprint Structure
+### 5.1 Sprint Structure
 
 Mock data MUST include:
 - **1 Backlog** (no sprint)
@@ -210,7 +273,7 @@ Mock data MUST include:
 
 Example:
 ```
-\PO Companion
+\Battleship Systems
   ├─→ Backlog
   ├─→ Sprint 1 (2025-01-01 to 2025-01-14)
   ├─→ Sprint 2 (2025-01-15 to 2025-01-28)
@@ -223,13 +286,13 @@ Example:
   └─→ Sprint 9 (2025-04-23 to 2025-05-06)
 ```
 
-### 4.2 Sprint Duration
+### 5.2 Sprint Duration
 
 - **Standard**: 2 weeks (10 business days)
 - **Allowed**: 1-4 weeks
 - **Recommended**: Consistent duration across all sprints
 
-### 4.3 Iteration Path Assignment
+### 5.3 Iteration Path Assignment
 
 | Work Item Type | Iteration Path Assignment                  |
 |----------------|--------------------------------------------|
@@ -241,7 +304,7 @@ Example:
 | Bug            | Backlog or specific sprint                 |
 | Task           | Same as parent PBI/Bug                     |
 
-### 4.4 Distribution Across Sprints
+### 5.4 Distribution Across Sprints
 
 **Backlog**: 60% of PBIs and Bugs
 - These items are not yet scheduled for any sprint
@@ -259,7 +322,7 @@ Example:
 - Mostly New or Approved states
 - Placeholder assignments
 
-### 4.5 Sprint Capacity and Velocity
+### 5.5 Sprint Capacity and Velocity
 
 Each sprint should have:
 - **Total Effort**: 80-150 story points (across all teams)
@@ -268,9 +331,9 @@ Each sprint should have:
 
 ---
 
-## 5. Effort Estimation
+## 6. Effort Estimation
 
-### 5.1 Estimation Scale
+### 6.1 Estimation Scale
 
 Use **Fibonacci sequence** for story points:
 
@@ -278,7 +341,7 @@ Use **Fibonacci sequence** for story points:
 1, 2, 3, 5, 8, 13, 21
 ```
 
-### 5.2 Estimation by Work Item Type
+### 6.2 Estimation by Work Item Type
 
 | Type      | Estimation Method      | Typical Range |
 |-----------|------------------------|---------------|
@@ -290,7 +353,7 @@ Use **Fibonacci sequence** for story points:
 | Bug       | Story points           | 1-8           |
 | Task      | Hours (optional)       | 0-16 hours    |
 
-### 5.3 Estimation Distribution
+### 6.3 Estimation Distribution
 
 **PBIs**:
 - 1 point: 20%
@@ -308,7 +371,7 @@ Use **Fibonacci sequence** for story points:
 - 5 points: 15%
 - 8 points: 5%
 
-### 5.4 Unestimated Items
+### 6.4 Unestimated Items
 
 **Rule**: 20-30% of backlog items should be unestimated
 - New items not yet groomed
@@ -320,7 +383,7 @@ Use **Fibonacci sequence** for story points:
 - Sprint items: 0-5% unestimated (should be estimated before sprint)
 - Active items: 0% unestimated (must be estimated)
 
-### 5.5 Estimation Accuracy
+### 6.5 Estimation Accuracy
 
 For realism, include:
 - **Under-estimated items**: 10-15% of completed items (actual effort > estimate)
@@ -329,9 +392,9 @@ For realism, include:
 
 ---
 
-## 6. Dependencies & Links
+## 7. Dependencies & Links
 
-### 6.1 Dependency Types
+### 7.1 Dependency Types
 
 Mock data MUST include these link types:
 
@@ -344,7 +407,7 @@ Mock data MUST include these link types:
 | Parent-Child      | Hierarchy (already covered)           | N/A        |
 | Tested By         | Test cases linked to PBIs             | 2%         |
 
-### 6.2 Dependency Volume
+### 7.2 Dependency Volume
 
 **Minimum Requirements**:
 - **10-15% of work items** should have at least one dependency link
@@ -358,7 +421,7 @@ Mock data MUST include these link types:
 - Bugs: 5-10% have dependencies
 - Tasks: 1-5% have dependencies
 
-### 6.3 Cross-Team Dependencies (CRITICAL)
+### 7.3 Cross-Team Dependencies (CRITICAL)
 
 **Rule**: 30-40% of all dependencies MUST cross team boundaries
 
@@ -369,9 +432,9 @@ This means:
 
 **Example**:
 ```
-PBI-1234 (Backend Services team)
-  └─→ Predecessor: PBI-987 (Frontend UI team)
-  └─→ Successor: PBI-2456 (API Gateway team)
+PBI-1234 (Crew Safety team)
+  └─→ Predecessor: PBI-987 (Hull Integrity team)
+  └─→ Successor: PBI-2456 (Communication Systems team)
 ```
 
 **Purpose**: 
@@ -379,7 +442,7 @@ PBI-1234 (Backend Services team)
 - Tests dependency visualization across teams
 - Highlights integration points
 
-### 6.4 Dependency Patterns
+### 7.4 Dependency Patterns
 
 **Vertical Dependencies** (30%):
 - Within same team
@@ -389,12 +452,12 @@ PBI-1234 (Backend Services team)
 **Horizontal Dependencies** (40%):
 - Across teams
 - Across Epics
-- Example: Backend API must be ready before Frontend UI
+- Example: Fire Detection API must be ready before Damage Control Dashboard can display alerts
 
 **External Dependencies** (10%):
 - Dependencies on external systems
 - Dependencies on third-party libraries
-- Dependencies on other projects
+- Dependencies on naval equipment manufacturers or sensor suppliers
 
 **Circular Dependencies** (5%, for testing):
 - A depends on B, B depends on C, C depends on A
@@ -405,7 +468,7 @@ PBI-1234 (Backend Services team)
 - Links to removed work items
 - Should be detected as invalid
 
-### 6.5 Blocked Items
+### 7.5 Blocked Items
 
 **Rule**: 3-5% of active work items should be marked as "Blocked"
 
@@ -420,7 +483,7 @@ PBI-1234 (Backend Services team)
 - Tasks: "In Progress" but blocked
 - Should have "Blocked" tag or reason field
 
-### 6.6 Invalid Dependencies for Testing
+### 7.6 Invalid Dependencies for Testing
 
 Include these intentionally invalid scenarios (5-10% of dependencies):
 
@@ -434,15 +497,15 @@ Include these intentionally invalid scenarios (5-10% of dependencies):
 
 ---
 
-## 7. Pull Requests
+## 8. Pull Requests
 
-### 7.1 Volume Requirements
+### 8.1 Volume Requirements
 
 Mock data MUST include **at least 100 pull requests** with full metadata.
 
 **Target**: 100-200 PRs
 
-### 7.2 PR Metadata (Full)
+### 8.2 PR Metadata (Full)
 
 Each PR MUST include:
 
@@ -465,7 +528,7 @@ Each PR MUST include:
 | Merge Status         | Yes      | Succeeded, Conflicts, Pending         |
 | Merge Commit ID      | Optional | abc123def456 (if merged)              |
 
-### 7.3 PR Status Distribution
+### 8.3 PR Status Distribution
 
 | Status      | Percentage | Description                         |
 |-------------|------------|-------------------------------------|
@@ -473,7 +536,7 @@ Each PR MUST include:
 | Completed   | 70-75%     | Merged and closed                   |
 | Abandoned   | 5-10%      | Closed without merging              |
 
-### 7.4 Review Metadata
+### 8.4 Review Metadata
 
 Each PR should have 1-5 reviewers with:
 
@@ -490,7 +553,7 @@ Each PR should have 1-5 reviewers with:
 - Waiting for author: 10-15%
 - Rejected: 3-5%
 
-### 7.5 Comment Threads
+### 8.5 Comment Threads
 
 Each PR should have 0-20 comment threads:
 
@@ -508,7 +571,7 @@ Each PR should have 0-20 comment threads:
 - 6-10 comments: 20%
 - 11-20 comments: 10%
 
-### 7.6 Code Changes
+### 8.6 Code Changes
 
 Each PR should include:
 
@@ -525,7 +588,7 @@ Each PR should include:
 - Large PRs (201-500 lines): 20%
 - Very Large PRs (500+ lines): 5%
 
-### 7.7 Work Item Links
+### 8.7 Work Item Links
 
 **Rule**: 70-80% of PRs should be linked to at least one work item
 
@@ -541,7 +604,7 @@ Each PR should include:
 - Features: 8%
 - Tasks: 2%
 
-### 7.8 Labels
+### 8.8 Labels
 
 Common labels to include:
 - `bug-fix` (30% of PRs)
@@ -554,9 +617,9 @@ Common labels to include:
 
 ---
 
-## 8. Data Volume Requirements
+## 9. Data Volume Requirements
 
-### 8.1 Minimum Viable Dataset
+### 9.1 Minimum Viable Dataset
 
 | Entity               | Minimum  | Target   | Maximum  |
 |----------------------|----------|----------|----------|
@@ -570,7 +633,7 @@ Common labels to include:
 | PR Reviews           | 200      | 400      | 600      |
 | PR Comments          | 300      | 800      | 1,500    |
 
-### 8.2 Performance Testing Dataset
+### 9.2 Performance Testing Dataset
 
 For performance and scale testing:
 
@@ -581,7 +644,7 @@ For performance and scale testing:
 | Dependency Links     | 50,000+                 |
 | Pull Requests        | 500+                    |
 
-### 8.3 Data Generation Time
+### 9.3 Data Generation Time
 
 Targets for mock data generation:
 
@@ -591,9 +654,9 @@ Targets for mock data generation:
 
 ---
 
-## 9. Validation Rules
+## 10. Validation Rules
 
-### 9.1 Mandatory Validations
+### 10.1 Mandatory Validations
 
 Mock data generators MUST validate:
 
@@ -632,7 +695,7 @@ Mock data generators MUST validate:
    - Valid status values
    - Work item links reference valid items
 
-### 9.2 Data Quality Metrics
+### 10.2 Data Quality Metrics
 
 Track these quality metrics:
 
@@ -648,7 +711,7 @@ Track these quality metrics:
 
 *Note: 10-15% intentional violations for testing
 
-### 9.3 Validation Reports
+### 10.3 Validation Reports
 
 Mock data generators MUST produce validation reports showing:
 
@@ -663,9 +726,9 @@ Mock data generators MUST produce validation reports showing:
 
 ---
 
-## 10. Implementation Guidelines
+## 11. Implementation Guidelines
 
-### 10.1 Data Generation Strategy
+### 11.1 Data Generation Strategy
 
 **Recommended Approach**:
 
@@ -696,7 +759,7 @@ Mock data generators MUST produce validation reports showing:
    - Generate validation report
    - Fix critical issues
 
-### 10.2 Randomization Guidelines
+### 11.2 Randomization Guidelines
 
 Use controlled randomization:
 
@@ -705,7 +768,7 @@ Use controlled randomization:
 - **Realistic**: Use realistic names, dates, and descriptions
 - **Varied**: Ensure good variety in data
 
-### 10.3 Performance Considerations
+### 11.3 Performance Considerations
 
 - **Lazy generation**: Generate data on-demand when possible
 - **Caching**: Cache generated data for reuse
@@ -714,62 +777,62 @@ Use controlled randomization:
 
 ---
 
-## 11. Examples
+## 12. Examples
 
-### 11.1 Example Epic with Children
+### 12.1 Example Epic with Children
 
 ```
-Epic-101: "User Authentication System"
-  Area Path: \PO Companion\Core Platform\Backend Services
+Epic-101: "Engine Room Fire Detection System"
+  Area Path: \Battleship Systems\Incident Detection\Fire Detection
   State: Active
   Iteration: Backlog
   
-  └─→ Feature-201: "OAuth2 Integration"
-      Area Path: \PO Companion\Core Platform\Backend Services (inherited)
+  └─→ Feature-201: "Multi-Sensor Temperature Monitoring"
+      Area Path: \Battleship Systems\Incident Detection\Fire Detection (inherited)
       State: Active
       Iteration: Sprint 3
       
-      └─→ PBI-301: "Implement OAuth2 provider"
-          Area Path: \PO Companion\Core Platform\Backend Services (inherited)
+      └─→ PBI-301: "Implement real-time temperature sensor data aggregation"
+          Area Path: \Battleship Systems\Incident Detection\Fire Detection (inherited)
           State: Committed
           Iteration: Sprint 3
           Effort: 5
           Dependencies:
-            - Predecessor: PBI-205 (API Gateway team) [Cross-team]
+            - Predecessor: PBI-205 "Configure sensor network infrastructure" (Communication Systems team) [Cross-team]
           
-          └─→ Task-401: "Setup OAuth2 library"
-              Area Path: \PO Companion\Core Platform\Backend Services (inherited)
+          └─→ Task-401: "Create temperature sensor API endpoints"
+              Area Path: \Battleship Systems\Incident Detection\Fire Detection (inherited)
               State: Done
               Iteration: Sprint 3
               Remaining Work: 0 hours
 ```
 
-### 11.2 Example Cross-Team Dependency
+### 12.2 Example Cross-Team Dependency
 
 ```
-PBI-1234: "Display user profile in UI"
-  Area Path: \PO Companion\User Experience\Frontend UI
-  Team: Frontend UI
+PBI-1234: "Display crew evacuation routes on damage control dashboard"
+  Area Path: \Battleship Systems\Incident Response\Crew Safety
+  Team: Crew Safety
   Dependencies:
-    - Predecessor: PBI-987 "Create user profile API endpoint"
-      Area Path: \PO Companion\Core Platform\Backend Services
-      Team: Backend Services [Cross-team dependency]
+    - Predecessor: PBI-987 "Create compartment status API for real-time hull integrity data"
+      Area Path: \Battleship Systems\Damage Control\Hull Integrity
+      Team: Hull Integrity [Cross-team dependency]
 ```
 
-### 11.3 Example Pull Request
+### 12.3 Example Pull Request
 
 ```
-PR-1001: "Add user authentication middleware"
+PR-1001: "Add fire suppression system activation middleware"
   Status: Completed
   Created: 2025-01-15T10:30:00Z
   Creator: john.doe@example.com
-  Source Branch: feature/auth-middleware
+  Source Branch: feature/fire-suppression-activation
   Target Branch: main
-  Repository: PO-Companion-Backend
+  Repository: Battleship-Incident-Backend
   
   Work Items:
-    - PBI-301 (Implement OAuth2 provider)
-    - PBI-302 (Add authentication middleware)
+    - PBI-301 (Implement real-time temperature sensor data aggregation)
+    - PBI-302 (Add automated fire suppression trigger logic)
   
   Reviewers:
     - jane.smith@example.com (Approved, 2025-01-16T14:20:00Z)
@@ -782,13 +845,13 @@ PR-1001: "Add user authentication middleware"
     Net Change: +167
   
   Comments:
-    - Thread 1 (Resolved): "Please add unit tests"
-    - Thread 2 (Resolved): "Consider extracting this to a helper method"
-    - Thread 3 (Active): "Documentation needed for this API"
+    - Thread 1 (Resolved): "Please add unit tests for suppression activation logic"
+    - Thread 2 (Resolved): "Consider extracting sensor threshold validation to a helper method"
+    - Thread 3 (Active): "Documentation needed for emergency override API"
   
   Labels:
     - feature
-    - security
+    - safety-critical
     - needs-testing
   
   Merge Status: Succeeded
@@ -798,9 +861,9 @@ PR-1001: "Add user authentication middleware"
 
 ---
 
-## 12. Compliance and Enforcement
+## 13. Compliance and Enforcement
 
-### 12.1 Mandatory Compliance
+### 13.1 Mandatory Compliance
 
 These rules are **MANDATORY** for:
 - All mock data generators
@@ -808,7 +871,7 @@ These rules are **MANDATORY** for:
 - All development data scripts
 - All data generation tools
 
-### 12.2 Review Requirements
+### 13.2 Review Requirements
 
 Mock data generation code MUST be reviewed for:
 - Compliance with all rules in this document
@@ -818,7 +881,7 @@ Mock data generation code MUST be reviewed for:
 - Adequate cross-team dependencies
 - Sufficient data volume
 
-### 12.3 Updates and Maintenance
+### 13.3 Updates and Maintenance
 
 This document MUST be updated when:
 - New work item types are added
@@ -829,7 +892,7 @@ This document MUST be updated when:
 
 ---
 
-## 13. Summary of Critical Rules
+## 14. Summary of Critical Rules
 
 1. **Hierarchy**: 10 Goals → 30 Objectives → 100 Epics → 500 Features → 3,000 PBIs + 1,000 Bugs → 15,000 Tasks
 2. **Area Paths**: Epic determines team ownership; all descendants MUST inherit the same area path
