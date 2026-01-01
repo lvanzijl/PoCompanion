@@ -1,19 +1,24 @@
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.AspNetCore.SignalR.Client;
+using MudBlazor.Services;
+using PoTool.Client;
+using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
-using PoTool.Shared.Interfaces;
+using PoTool.Client.Storage;
+using PoTool.Shared.Contracts;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
+builder.RootComponents.Add<App>("#app");
+builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// Get API base URL from configuration or environment
-var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? builder.HostEnvironment.BaseAddress;
+// Get API base URL from configuration (empty = same origin)
+var apiBaseUrlConfig = builder.Configuration["ApiBaseUrl"];
+var apiBaseUrl = string.IsNullOrEmpty(apiBaseUrlConfig) 
+    ? builder.HostEnvironment.BaseAddress 
+    : apiBaseUrlConfig;
 
-// Ensure the API base URL ends with a slash
-if (!apiBaseUrl.EndsWith("/"))
-{
-    apiBaseUrl += "/";
-}
-
-// Configure HttpClient with API base address (no handler - WASM compatible)
+// Configure HttpClient with API base address (WASM-compatible, no HttpMessageHandler)
 builder.Services.AddScoped(sp =>
 {
     var client = new HttpClient
@@ -23,59 +28,54 @@ builder.Services.AddScoped(sp =>
     return client;
 });
 
-// Register services
-builder.Services.AddScoped<ICharacterClient>(sp =>
+// Register SignalR HubConnection
+builder.Services.AddScoped<HubConnection>(sp =>
 {
-    var httpClient = sp.GetRequiredService<HttpClient>();
-    return new CharacterClient(httpClient);
+    var hubPath = builder.Configuration["SignalR:HubPath"] ?? "/hubs/workitems";
+    // Ensure proper URL concatenation by using Uri
+    var baseUri = new Uri(apiBaseUrl);
+    var hubUri = new Uri(baseUri, hubPath);
+    return new HubConnectionBuilder()
+        .WithUrl(hubUri.ToString())
+        .WithAutomaticReconnect()
+        .Build();
 });
 
-builder.Services.AddScoped<IItemClient>(sp =>
+// Register NSwag-generated API clients
+builder.Services.AddScoped<IClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new ItemClient(httpClient);
+    return new PoTool.Client.ApiClient.Client(httpClient);
 });
 
-builder.Services.AddScoped<ISkillTreeClient>(sp =>
+builder.Services.AddScoped<IWorkItemsClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new SkillTreeClient(httpClient);
+    return new WorkItemsClient(httpClient);
 });
 
-builder.Services.AddScoped<IPassiveTreeClient>(sp =>
+builder.Services.AddScoped<ISettingsClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new PassiveTreeClient(httpClient);
+    return new SettingsClient(httpClient);
 });
 
-builder.Services.AddScoped<IBuildClient>(sp =>
+builder.Services.AddScoped<IProfilesClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new BuildClient(httpClient);
+    return new ProfilesClient(httpClient);
 });
 
-builder.Services.AddScoped<IEquipmentClient>(sp =>
+builder.Services.AddScoped<IPullRequestsClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new EquipmentClient(httpClient);
+    return new PullRequestsClient(httpClient);
 });
 
-builder.Services.AddScoped<IGemClient>(sp =>
+builder.Services.AddScoped<IFilteringClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new GemClient(httpClient);
-});
-
-builder.Services.AddScoped<IFlaskClient>(sp =>
-{
-    var httpClient = sp.GetRequiredService<HttpClient>();
-    return new FlaskClient(httpClient);
-});
-
-builder.Services.AddScoped<IDefenseClient>(sp =>
-{
-    var httpClient = sp.GetRequiredService<HttpClient>();
-    return new DefenseClient(httpClient);
+    return new FilteringClient(httpClient);
 });
 
 builder.Services.AddScoped<IHealthCalculationClient>(sp =>
@@ -89,5 +89,37 @@ builder.Services.AddScoped<IMetricsClient>(sp =>
     var httpClient = sp.GetRequiredService<HttpClient>();
     return new MetricsClient(httpClient);
 });
+
+// Register client services
+builder.Services.AddScoped<WorkItemService>();
+builder.Services.AddScoped<PullRequestService>();
+builder.Services.AddScoped<IWorkItemSyncHubService, WorkItemSyncHubService>();
+builder.Services.AddScoped<ITreeBuilderService, TreeBuilderService>();
+builder.Services.AddScoped<ICorrelationIdService, CorrelationIdService>();
+builder.Services.AddScoped<SettingsService>();
+builder.Services.AddScoped<ProfileService>();
+builder.Services.AddScoped<TfsConfigService>();
+builder.Services.AddScoped<ModeIsolatedStateService>();
+builder.Services.AddScoped<ErrorMessageService>();
+builder.Services.AddScoped<IOnboardingService, OnboardingService>();
+
+// Register browser-based storage services
+builder.Services.AddScoped<IPreferencesService, BrowserPreferencesService>();
+builder.Services.AddScoped<ISecureStorageService, BrowserSecureStorageService>();
+
+// Register business logic services (now using API)
+builder.Services.AddScoped<WorkItemFilteringService>();
+builder.Services.AddScoped<WorkItemSelectionService>();
+builder.Services.AddScoped<PullRequestMetricsService>();
+builder.Services.AddScoped<BacklogHealthCalculationService>();
+
+// Register clipboard, export and report services
+builder.Services.AddScoped<IClipboardService, ClipboardService>();
+builder.Services.AddScoped<ExportService>();
+builder.Services.AddScoped<ReportService>();
+builder.Services.AddScoped<BrowserNavigationService>();
+
+// Add MudBlazor services
+builder.Services.AddMudServices();
 
 await builder.Build().RunAsync();
