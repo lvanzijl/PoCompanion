@@ -1,6 +1,7 @@
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
+using PoTool.Api.Services.MockData;
 using Microsoft.Extensions.Logging;
 
 namespace PoTool.Api.Services;
@@ -11,17 +12,14 @@ namespace PoTool.Api.Services;
 /// </summary>
 public class MockTfsClient : ITfsClient
 {
-    private readonly MockDataProvider _workItemDataProvider;
-    private readonly MockPullRequestDataProvider _pullRequestDataProvider;
+    private readonly BattleshipMockDataFacade _mockDataFacade;
     private readonly ILogger<MockTfsClient> _logger;
 
     public MockTfsClient(
-        MockDataProvider workItemDataProvider,
-        MockPullRequestDataProvider pullRequestDataProvider,
+        BattleshipMockDataFacade mockDataFacade,
         ILogger<MockTfsClient> logger)
     {
-        _workItemDataProvider = workItemDataProvider;
-        _pullRequestDataProvider = pullRequestDataProvider;
+        _mockDataFacade = mockDataFacade;
         _logger = logger;
     }
 
@@ -40,8 +38,8 @@ public class MockTfsClient : ITfsClient
     {
         _logger.LogInformation("Mock TFS client: GetWorkItemsAsync called for areaPath={AreaPath}, since={Since}", areaPath, since);
         
-        // Get all mock work items from the provider
-        var allWorkItems = _workItemDataProvider.GetMockHierarchy();
+        // Get all mock work items from the new Battleship system
+        var allWorkItems = _mockDataFacade.GetMockHierarchy();
         
         // Filter by area path (simple contains check for mock purposes)
         var filtered = allWorkItems.Where(wi => wi.AreaPath.Contains(areaPath, StringComparison.OrdinalIgnoreCase));
@@ -66,8 +64,8 @@ public class MockTfsClient : ITfsClient
     {
         _logger.LogInformation("Mock TFS client: GetPullRequestsAsync called for repository={Repository}", repositoryName);
         
-        // Get all mock pull requests from the provider
-        var allPullRequests = _pullRequestDataProvider.GetMockPullRequests();
+        // Get all mock pull requests from the new Battleship system
+        var allPullRequests = _mockDataFacade.GetMockPullRequests();
         
         var filtered = allPullRequests.AsEnumerable();
 
@@ -99,7 +97,7 @@ public class MockTfsClient : ITfsClient
     {
         _logger.LogInformation("Mock TFS client: GetPullRequestIterationsAsync called for PR {PullRequestId}", pullRequestId);
         
-        var allIterations = _pullRequestDataProvider.GetMockIterations();
+        var allIterations = _mockDataFacade.GetMockIterations();
         var filtered = allIterations.Where(i => i.PullRequestId == pullRequestId);
         
         var result = filtered.ToList();
@@ -114,7 +112,7 @@ public class MockTfsClient : ITfsClient
     {
         _logger.LogInformation("Mock TFS client: GetPullRequestCommentsAsync called for PR {PullRequestId}", pullRequestId);
         
-        var allComments = _pullRequestDataProvider.GetMockComments();
+        var allComments = _mockDataFacade.GetMockComments();
         var filtered = allComments.Where(c => c.PullRequestId == pullRequestId);
         
         var result = filtered.ToList();
@@ -131,7 +129,7 @@ public class MockTfsClient : ITfsClient
         _logger.LogInformation("Mock TFS client: GetPullRequestFileChangesAsync called for PR {PullRequestId}, iteration {IterationId}", 
             pullRequestId, iterationId);
         
-        var allFileChanges = _pullRequestDataProvider.GetMockFileChanges();
+        var allFileChanges = _mockDataFacade.GetMockFileChanges();
         var filtered = allFileChanges.Where(fc => fc.PullRequestId == pullRequestId && fc.IterationId == iterationId);
         
         var result = filtered.ToList();
@@ -145,13 +143,13 @@ public class MockTfsClient : ITfsClient
     {
         _logger.LogInformation("Mock TFS client: GetWorkItemRevisionsAsync called for work item {WorkItemId}", workItemId);
         
-        // Return sample revision history
+        // Return sample revision history - simplified mock data
         var mockRevisions = new List<WorkItemRevisionDto>
         {
             new WorkItemRevisionDto(
                 RevisionNumber: 1,
                 WorkItemId: workItemId,
-                ChangedBy: "Mock User",
+                ChangedBy: "system.user@battleship.mil",
                 ChangedDate: DateTimeOffset.UtcNow.AddDays(-10),
                 FieldChanges: new Dictionary<string, WorkItemFieldChange>
                 {
@@ -163,12 +161,12 @@ public class MockTfsClient : ITfsClient
             new WorkItemRevisionDto(
                 RevisionNumber: 2,
                 WorkItemId: workItemId,
-                ChangedBy: "Mock User 2",
+                ChangedBy: "alice.johnson@battleship.mil",
                 ChangedDate: DateTimeOffset.UtcNow.AddDays(-5),
                 FieldChanges: new Dictionary<string, WorkItemFieldChange>
                 {
                     ["System.State"] = new WorkItemFieldChange("System.State", "New", "Active"),
-                    ["System.AssignedTo"] = new WorkItemFieldChange("System.AssignedTo", null, "Mock User 2")
+                    ["System.AssignedTo"] = new WorkItemFieldChange("System.AssignedTo", null, "alice.johnson@battleship.mil")
                 },
                 Comment: "Started work on this item"
             )
@@ -184,7 +182,7 @@ public class MockTfsClient : ITfsClient
             workItemId, newState);
         
         // Mock implementation always succeeds for valid state values
-        var validStates = new[] { "New", "Active", "In Progress", "Resolved", "Closed", "Done", "Removed" };
+        var validStates = new[] { "New", "Active", "In Progress", "Resolved", "Closed", "Done", "Removed", "Proposed", "Completed", "Approved", "Committed", "To Do" };
         var isValidState = validStates.Contains(newState, StringComparer.OrdinalIgnoreCase);
         
         if (!isValidState)
