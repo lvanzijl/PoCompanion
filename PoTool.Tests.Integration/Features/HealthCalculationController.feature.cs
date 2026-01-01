@@ -29,8 +29,8 @@ namespace PoTool.Tests.Integration.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Health Calculation Controller API", ("    As a user\n    I want to calculate backlog health scores through the API\n    S" +
-                "o that I can assess iteration health"), global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en"), "Features", "Health Calculation Controller API", "    As a user\r\n    I want to calculate backlog health scores through the API\r\n   " +
+                " So that I can assess iteration health", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
 #line 1 "HealthCalculationController.feature"
 #line hidden
