@@ -2,13 +2,15 @@
 
 <MudPaper Elevation="2" Class="pa-4 mb-4">
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-        <MudTextField @bind-Value="AreaPathFilter" 
+        <MudTextField Value="@AreaPathFilter" 
+                     ValueChanged="@((string? value) => AreaPathFilterChanged.InvokeAsync(value))"
                      Label="Area Path Filter" 
                      Variant="Variant.Outlined"
                      Adornment="Adornment.End"
                      AdornmentIcon="@Icons.Material.Filled.FilterAlt"
                      HelperText="Filter work items by area path" />
-        <MudNumericField @bind-Value="MaxIterations" 
+        <MudNumericField Value="@MaxIterations" 
+                        ValueChanged="@((int value) => MaxIterationsChanged.InvokeAsync(value))"
                         Label="Max Iterations" 
                         Variant="Variant.Outlined"
                         Min="1" Max="100"
@@ -23,25 +25,11 @@
 </MudPaper>
 
 @code {
-    private string? _areaPathFilter;
-    private int _maxIterations = 5;
-    
     /// <summary>
     /// Area path filter value
     /// </summary>
     [Parameter]
-    public string? AreaPathFilter 
-    { 
-        get => _areaPathFilter; 
-        set
-        {
-            if (_areaPathFilter != value)
-            {
-                _areaPathFilter = value;
-                AreaPathFilterChanged.InvokeAsync(value);
-            }
-        }
-    }
+    public string? AreaPathFilter { get; set; }
     
     [Parameter]
     public EventCallback<string?> AreaPathFilterChanged { get; set; }
@@ -50,18 +38,7 @@
     /// Maximum number of iterations to analyze
     /// </summary>
     [Parameter]
-    public int MaxIterations 
-    { 
-        get => _maxIterations; 
-        set
-        {
-            if (_maxIterations != value)
-            {
-                _maxIterations = value;
-                MaxIterationsChanged.InvokeAsync(value);
-            }
-        }
-    }
+    public int MaxIterations { get; set; } = 5;
     
     [Parameter]
     public EventCallback<int> MaxIterationsChanged { get; set; }
