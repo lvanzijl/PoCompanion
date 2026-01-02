@@ -5,6 +5,7 @@
 @using PoTool.Client.Validators
 @using PoTool.Client.Helpers
 @inject ProfileService ProfileService
+@inject WorkItemService WorkItemService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject ErrorMessageService ErrorMessageService
@@ -71,15 +72,67 @@
                               Required="true"
                               HelperText="The team responsible for these area paths" />
 
-                <CompactTextField @bind-Value="_areaPathsInput" 
-                              Label="Area Paths (comma-separated)" 
-                              Required="true"
-                              Lines="3"
-                              HelperText="e.g., 'ProjectA\\ProductA, ProjectA\\ProductA\\FeatureX'" />
+                <MudAutocomplete T="string"
+                                 @bind-Value="_currentAreaPath"
+                                 Label="Area Paths"
+                                 SearchFunc="@SearchAreaPaths"
+                                 Variant="Variant.Outlined"
+                                 Dense="true"
+                                 Clearable="true"
+                                 ResetValueOnEmptyText="false"
+                                 AdornmentIcon="@Icons.Material.Filled.FolderOpen"
+                                 AdornmentColor="Color.Primary"
+                                 HelperText="Type to search and select area paths"
+                                 OnAdornmentClick="@AddAreaPath"
+                                 Class="mt-2" />
+                
+                @if (_selectedAreaPaths.Any())
+                {
+                    <MudChipSet T="string" Class="mt-2">
+                        @foreach (var path in _selectedAreaPaths)
+                        {
+                            <MudChip T="string" Text="@path" OnClose="@(() => RemoveAreaPath(path))" />
+                        }
+                    </MudChipSet>
+                }
 
-                <CompactTextField @bind-Value="_goalIdsInput" 
-                              Label="Goal IDs (comma-separated, optional)" 
-                              HelperText="Leave empty for all goals, or specify IDs like '1000,2000'" />
+                <MudSelect T="int"
+                           @bind-Value="_currentGoalId"
+                           Label="Goals (Optional)"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Clearable="true"
+                           AnchorOrigin="Origin.BottomCenter"
+                           AdornmentIcon="@Icons.Material.Filled.Flag"
+                           AdornmentColor="Color.Primary"
+                           HelperText="Select goal IDs to filter work items"
+                           Class="mt-2">
+                    @foreach (var goal in _availableGoals)
+                    {
+                        <MudSelectItem T="int" Value="@goal.TfsId">@goal.Title (ID: @goal.TfsId)</MudSelectItem>
+                    }
+                </MudSelect>
+                
+                <MudButton Size="Size.Small" 
+                          Variant="Variant.Text" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.Add"
+                          OnClick="AddGoalId"
+                          Disabled="@(_currentGoalId == 0)"
+                          Class="mt-1">
+                    Add Goal
+                </MudButton>
+                
+                @if (_selectedGoalIds.Any())
+                {
+                    <MudChipSet T="string" Class="mt-2">
+                        @foreach (var goalId in _selectedGoalIds)
+                        {
+                            var goalTitle = _availableGoals.FirstOrDefault(g => g.TfsId == goalId)?.Title ?? $"Goal {goalId}";
+                            <MudChip T="string" Text="@($"{goalTitle} (ID: {goalId})")" OnClose="@(() => RemoveGoalId(goalId))" />
+                        }
+                    </MudChipSet>
+                }
 
                 @if (_errorResponse != null)
                 {
@@ -128,6 +181,9 @@
     private MudForm _form = null!;
 
     private IEnumerable<ProfileDto> _profiles = Enumerable.Empty<ProfileDto>();
+    private List<string> _allAreaPaths = new();
+    private List<WorkItemDto> _availableGoals = new();
+    
     private bool _isLoading = true;
     private bool _isSaving = false;
     private bool _isEditing = false;
@@ -135,14 +191,19 @@
 
     private string _profileName = string.Empty;
     private string _teamName = string.Empty;
-    private string _areaPathsInput = string.Empty;
-    private string _goalIdsInput = string.Empty;
+    private string _currentAreaPath = string.Empty;
+    private int _currentGoalId = 0;
+    
+    private HashSet<string> _selectedAreaPaths = new();
+    private HashSet<int> _selectedGoalIds = new();
 
     private ErrorResponse? _errorResponse;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadProfiles();
+        await LoadAreaPaths();
+        await LoadGoals();
     }
 
     private async Task LoadProfiles()
@@ -163,14 +224,82 @@
         }
     }
 
+    private async Task LoadAreaPaths()
+    {
+        try
+        {
+            var areaPaths = await WorkItemService.GetDistinctAreaPathsAsync();
+            _allAreaPaths = areaPaths.ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading area paths: {ex.Message}");
+        }
+    }
+
+    private async Task LoadGoals()
+    {
+        try
+        {
+            var goals = await WorkItemService.GetAllGoalsAsync();
+            _availableGoals = goals.ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading goals: {ex.Message}");
+        }
+    }
+
+    private async Task<IEnumerable<string>> SearchAreaPaths(string value, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return _allAreaPaths;
+
+        return _allAreaPaths
+            .Where(ap => ap.Contains(value, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private void AddAreaPath()
+    {
+        if (!string.IsNullOrWhiteSpace(_currentAreaPath) && !_selectedAreaPaths.Contains(_currentAreaPath))
+        {
+            _selectedAreaPaths.Add(_currentAreaPath);
+            _currentAreaPath = string.Empty;
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveAreaPath(string path)
+    {
+        _selectedAreaPaths.Remove(path);
+        StateHasChanged();
+    }
+
+    private void AddGoalId()
+    {
+        if (_currentGoalId > 0 && !_selectedGoalIds.Contains(_currentGoalId))
+        {
+            _selectedGoalIds.Add(_currentGoalId);
+            _currentGoalId = 0;
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveGoalId(int goalId)
+    {
+        _selectedGoalIds.Remove(goalId);
+        StateHasChanged();
+    }
+
     private void EditProfile(ProfileDto profile)
     {
         _isEditing = true;
         _editingProfileId = profile.Id;
         _profileName = profile.Name;
         _teamName = profile.TeamName;
-        _areaPathsInput = string.Join(", ", profile.AreaPaths);
-        _goalIdsInput = string.Join(", ", profile.GoalIds);
+        _selectedAreaPaths = new HashSet<string>(profile.AreaPaths);
+        _selectedGoalIds = new HashSet<int>(profile.GoalIds);
     }
 
     private async Task DeleteProfile(ProfileDto profile)
@@ -208,13 +337,19 @@
             return;
         }
 
+        if (!_selectedAreaPaths.Any())
+        {
+            Snackbar.Add("Please add at least one area path", Severity.Warning);
+            return;
+        }
+
         try
         {
             _isSaving = true;
             ClearError();
 
-            var areaPaths = InputParsingHelper.ParseCommaSeparatedStrings(_areaPathsInput);
-            var goalIds = InputParsingHelper.ParseCommaSeparatedInts(_goalIdsInput);
+            var areaPaths = _selectedAreaPaths.ToList();
+            var goalIds = _selectedGoalIds.ToList();
 
             if (_isEditing && _editingProfileId.HasValue)
             {
@@ -260,8 +395,10 @@
         _editingProfileId = null;
         _profileName = string.Empty;
         _teamName = string.Empty;
-        _areaPathsInput = string.Empty;
-        _goalIdsInput = string.Empty;
+        _currentAreaPath = string.Empty;
+        _currentGoalId = 0;
+        _selectedAreaPaths.Clear();
+        _selectedGoalIds.Clear();
         _form?.ResetValidation();
     }
 

@@ -1,17 +1,28 @@
+@using PoTool.Client.Services
+@inject WorkItemService WorkItemService
+
 @* Filter controls for backlog health analysis *@
 
 <MudPaper Elevation="2" Class="pa-4 mb-4">
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-        <MudTextField @bind-Value="AreaPathFilter" 
-                     Label="Area Path Filter" 
-                     Variant="Variant.Outlined"
-                     Adornment="Adornment.End"
-                     AdornmentIcon="@Icons.Material.Filled.FilterAlt"
-                     HelperText="Filter work items by area path" />
-        <MudNumericField @bind-Value="MaxIterations" 
+        <MudAutocomplete T="string" 
+                        Value="@AreaPathFilter" 
+                        ValueChanged="@((string? value) => AreaPathFilterChanged.InvokeAsync(value))"
+                        Label="Area Path Filter" 
+                        Variant="Variant.Outlined"
+                        SearchFunc="@SearchAreaPaths"
+                        Clearable="true"
+                        Dense="true"
+                        ResetValueOnEmptyText="true"
+                        CoerceText="false"
+                        AdornmentIcon="@Icons.Material.Filled.FilterAlt"
+                        AdornmentColor="Color.Primary"
+                        HelperText="Filter work items by area path" />
+        <MudNumericField Value="@MaxIterations" 
+                        ValueChanged="@((int value) => MaxIterationsChanged.InvokeAsync(value))"
                         Label="Max Iterations" 
                         Variant="Variant.Outlined"
-                        Min="1" Max="20"
+                        Min="1" Max="100"
                         HelperText="Number of iterations to analyze" />
         <MudButton Variant="Variant.Filled" 
                   Color="Color.Primary" 
@@ -23,23 +34,56 @@
 </MudPaper>
 
 @code {
+    private List<string> _allAreaPaths = new();
+    
     /// <summary>
     /// Area path filter value
     /// </summary>
     [Parameter]
     public string? AreaPathFilter { get; set; }
+    
+    [Parameter]
+    public EventCallback<string?> AreaPathFilterChanged { get; set; }
 
     /// <summary>
     /// Maximum number of iterations to analyze
     /// </summary>
     [Parameter]
     public int MaxIterations { get; set; } = 5;
+    
+    [Parameter]
+    public EventCallback<int> MaxIterationsChanged { get; set; }
 
     /// <summary>
     /// Callback invoked when Refresh button is clicked
     /// </summary>
     [Parameter]
     public EventCallback OnRefresh { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var areaPaths = await WorkItemService.GetDistinctAreaPathsAsync();
+            _allAreaPaths = areaPaths.ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading area paths: {ex.Message}");
+        }
+    }
+
+    private async Task<IEnumerable<string>> SearchAreaPaths(string value, CancellationToken token)
+    {
+        // If no search value, return all
+        if (string.IsNullOrWhiteSpace(value))
+            return _allAreaPaths;
+
+        // Filter area paths that contain the search value (case-insensitive)
+        return _allAreaPaths
+            .Where(ap => ap.Contains(value, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
 
     private async Task HandleRefresh()
     {

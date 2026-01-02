@@ -75,5 +75,18 @@ public class WorkItemService
     {
         return await _client.GetWorkItemRevisionsAsync(workItemId);
     }
+
+    /// <summary>
+    /// Gets all distinct area paths from cached work items.
+    /// </summary>
+    public async Task<IEnumerable<string>> GetDistinctAreaPathsAsync()
+    {
+        var allWorkItems = await _client.GetAllAsync();
+        return allWorkItems
+            .Select(wi => wi.AreaPath)
+            .Distinct()
+            .OrderBy(ap => ap)
+            .ToList();
+    }
 }
 

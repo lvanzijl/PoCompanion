@@ -70,7 +70,7 @@
                           SelectedId="@_selectedWorkItem?.TfsId"
                           SelectedIds="@_selectedIds"
                           OnNodeToggled="@HandleNodeToggled"
-                          OnNodeSelected="@HandleNodeSelected"
+                          OnNodeSelectedWithModifiers="@HandleNodeSelectedWithModifiers"
                           OnRevealInvalidItem="@HandleRevealInvalidItem" />
 
         <WorkItemDetailPanel SelectedWorkItem="@_selectedWorkItem" 
@@ -363,14 +363,19 @@
         StateHasChanged();
     }
 
-    private void HandleNodeSelected(TreeNode node)
+    private void HandleNodeSelected(TreeNode node, bool ctrlKey = false, bool shiftKey = false)
     {
-        // Use selection service
-        _selectionState = SelectionService.ToggleNodeSelection(node, _selectionState);
+        // Use selection service with modifier keys
+        _selectionState = SelectionService.ToggleNodeSelection(node, _selectionState, ctrlKey, shiftKey);
         
         // Sync local state with service state
         SyncSelectionStateToLocal();
         _selectedValidationIssues = node.ValidationIssues;
+    }
+    
+    private void HandleNodeSelectedWithModifiers((TreeNode Node, bool CtrlKey, bool ShiftKey) args)
+    {
+        HandleNodeSelected(args.Node, args.CtrlKey, args.ShiftKey);
     }
 
     private List<string> GetValidationIssuesForNode(int? tfsId)

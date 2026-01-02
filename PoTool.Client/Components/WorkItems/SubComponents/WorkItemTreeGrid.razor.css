@@ -38,6 +38,7 @@
     gap: 4px;
     height: 100%;
     position: relative;
+    width: 100%;
 }
 
 /* Expand button */
@@ -53,6 +54,7 @@
     display: inline-block;
     width: 20px;
     height: 20px;
+    flex-shrink: 0;
 }
 
 /* Type icon block - 20px square with rounded corners */
@@ -80,6 +82,7 @@
     cursor: pointer;
     font-size: 0.875rem;
     line-height: 1.2;
+    min-width: 0; /* Allow flex item to shrink below content size */
 }
 
 .title-text:hover {
@@ -87,6 +90,32 @@
 }
 
 .title-text.selected {
+    font-weight: 600;
+    color: var(--mud-palette-primary);
+}
+
+/* Ensure MudTooltip wrapper doesn't prevent text truncation */
+.title-cell > .mud-tooltip-root {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.title-cell > .mud-tooltip-root > span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    font-size: 0.875rem;
+    line-height: 1.2;
+}
+
+.title-cell > .mud-tooltip-root > span:hover {
+    text-decoration: underline;
+}
+
+.title-cell > .mud-tooltip-root > span.selected {
     font-weight: 600;
     color: var(--mud-palette-primary);
 }
@@ -111,6 +140,7 @@
 .kebab-menu {
     margin-left: auto;
     flex-shrink: 0;
+    padding-left: 8px;
 }
 
 .kebab-menu button {
@@ -135,9 +165,19 @@
     background-color: rgba(255, 255, 255, 0.04) !important;
 }
 
-/* Selected row state */
+/* Selected row state - make it more prominent */
 .tree-grid .mud-table-row.mud-selected-row {
-    background-color: rgba(var(--mud-palette-primary-rgb), 0.1) !important;
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.15) !important;
+    border-left: 3px solid var(--mud-palette-primary);
+}
+
+/* Multi-selected rows should also be highlighted */
+.title-cell > .mud-tooltip-root > span.selected {
+    font-weight: 600;
+    color: var(--mud-palette-primary);
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
+    padding: 2px 4px;
+    border-radius: 3px;
 }
 
 /* Sticky header */

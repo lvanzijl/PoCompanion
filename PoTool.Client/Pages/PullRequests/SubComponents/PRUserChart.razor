@@ -4,13 +4,22 @@
 
 <MudPaper Elevation="1" Class="pa-4">
     <MudText Typo="Typo.h6" GutterBottom="true">PRs by User</MudText>
-    <MudChart ChartType="ChartType.Bar" 
-              Width="100%" 
-              Height="400px"
-              InputData="@UserData" 
-              InputLabels="@UserLabels"
-              ChartOptions="@ChartOptions">
-    </MudChart>
+    @if (UserData.Length == 0)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
+            No pull request data available. Sync pull requests to see user statistics.
+        </MudAlert>
+    }
+    else
+    {
+        <MudChart ChartType="ChartType.Bar" 
+                  Width="100%" 
+                  Height="400px"
+                  InputData="@UserData" 
+                  InputLabels="@UserLabels"
+                  ChartOptions="@ChartOptions">
+        </MudChart>
+    }
 </MudPaper>
 
 @code {

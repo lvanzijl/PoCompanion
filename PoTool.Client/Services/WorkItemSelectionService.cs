@@ -24,8 +24,10 @@ public class WorkItemSelectionService
     /// </summary>
     /// <param name="node">Node to toggle.</param>
     /// <param name="currentState">Current selection state.</param>
+    /// <param name="ctrlKey">Whether Ctrl key is pressed (for multi-select toggle).</param>
+    /// <param name="shiftKey">Whether Shift key is pressed (for range select).</param>
     /// <returns>Updated selection state.</returns>
-    public SelectionState ToggleNodeSelection(TreeNode node, SelectionState currentState)
+    public SelectionState ToggleNodeSelection(TreeNode node, SelectionState currentState, bool ctrlKey = false, bool shiftKey = false)
     {
         if (string.IsNullOrEmpty(node.JsonPayload))
             return currentState;
@@ -34,34 +36,71 @@ public class WorkItemSelectionService
         if (workItem == null)
             return currentState;
 
-        var newState = new SelectionState
+        // If neither Ctrl nor Shift is pressed, do single selection (clear others)
+        if (!ctrlKey && !shiftKey)
         {
-            SelectedIds = new HashSet<int>(currentState.SelectedIds),
-            SelectedWorkItems = new List<WorkItemDto>(currentState.SelectedWorkItems)
-        };
-
-        // Toggle selection: if already selected, remove from multi-selection
-        if (newState.SelectedIds.Contains(node.Id))
-        {
-            newState.SelectedIds.Remove(node.Id);
-            newState.SelectedWorkItems.RemoveAll(w => w.TfsId == node.Id);
-
-            // Update single selection to first remaining item or null
-            newState.PrimarySelectedWorkItem = newState.SelectedWorkItems.FirstOrDefault();
-        }
-        else
-        {
-            newState.SelectedIds.Add(node.Id);
-            if (!newState.SelectedWorkItems.Any(w => w.TfsId == node.Id))
+            var newState = new SelectionState
             {
-                newState.SelectedWorkItems.Add(workItem);
+                SelectedIds = new HashSet<int> { node.Id },
+                SelectedWorkItems = new List<WorkItemDto> { workItem },
+                PrimarySelectedWorkItem = workItem
+            };
+            return newState;
+        }
+
+        // Ctrl key: toggle individual selection (add/remove from multi-selection)
+        if (ctrlKey && !shiftKey)
+        {
+            var newState = new SelectionState
+            {
+                SelectedIds = new HashSet<int>(currentState.SelectedIds),
+                SelectedWorkItems = new List<WorkItemDto>(currentState.SelectedWorkItems)
+            };
+
+            // Toggle selection: if already selected, remove; otherwise add
+            if (newState.SelectedIds.Contains(node.Id))
+            {
+                newState.SelectedIds.Remove(node.Id);
+                newState.SelectedWorkItems.RemoveAll(w => w.TfsId == node.Id);
+                newState.PrimarySelectedWorkItem = newState.SelectedWorkItems.FirstOrDefault();
+            }
+            else
+            {
+                newState.SelectedIds.Add(node.Id);
+                if (!newState.SelectedWorkItems.Any(w => w.TfsId == node.Id))
+                {
+                    newState.SelectedWorkItems.Add(workItem);
+                }
+                newState.PrimarySelectedWorkItem = workItem;
             }
 
-            // Update single selection to last clicked item
-            newState.PrimarySelectedWorkItem = workItem;
+            return newState;
         }
 
-        return newState;
+        // Shift key: range selection (select from last selected to current)
+        // For now, just add to selection without range logic (would need flat list context)
+        if (shiftKey)
+        {
+            var newState = new SelectionState
+            {
+                SelectedIds = new HashSet<int>(currentState.SelectedIds),
+                SelectedWorkItems = new List<WorkItemDto>(currentState.SelectedWorkItems)
+            };
+
+            if (!newState.SelectedIds.Contains(node.Id))
+            {
+                newState.SelectedIds.Add(node.Id);
+                if (!newState.SelectedWorkItems.Any(w => w.TfsId == node.Id))
+                {
+                    newState.SelectedWorkItems.Add(workItem);
+                }
+            }
+            newState.PrimarySelectedWorkItem = workItem;
+
+            return newState;
+        }
+
+        return currentState;
     }
 
     /// <summary>

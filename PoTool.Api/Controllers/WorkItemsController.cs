@@ -44,6 +44,24 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets all distinct area paths from cached work items.
+    /// </summary>
+    [HttpGet("area-paths")]
+    public async Task<ActionResult<IEnumerable<string>>> GetDistinctAreaPaths(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var areaPaths = await _mediator.Send(new GetDistinctAreaPathsQuery(), cancellationToken);
+            return Ok(areaPaths);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving distinct area paths");
+            return StatusCode(500, "Error retrieving distinct area paths");
+        }
+    }
+
+    /// <summary>
     /// Gets all cached work items with validation results.
     /// </summary>
     [HttpGet("validated")]

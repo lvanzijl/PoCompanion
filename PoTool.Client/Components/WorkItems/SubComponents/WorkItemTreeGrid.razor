@@ -66,7 +66,8 @@
                             @* Title Text *@
                             <MudTooltip Text="@context.Item.Node.Title">
                                 <span class="@GetTitleClass(context.Item.Node)" 
-                                      @onclick="() => OnNodeSelected.InvokeAsync(context.Item.Node)">
+                                      @onclick="(e) => HandleNodeClick(context.Item.Node, e)"
+                                      @onclick:stopPropagation="false">
                                     @context.Item.Node.Title
                                 </span>
                             </MudTooltip>
@@ -140,10 +141,25 @@
     public EventCallback<TreeNode> OnNodeToggled { get; set; }
 
     [Parameter]
+    public EventCallback<(TreeNode Node, bool CtrlKey, bool ShiftKey)> OnNodeSelectedWithModifiers { get; set; }
+
+    [Parameter]
     public EventCallback<TreeNode> OnNodeSelected { get; set; }
 
     [Parameter]
     public EventCallback<TreeNode> OnRevealInvalidItem { get; set; }
+    
+    private async Task HandleNodeClick(TreeNode node, MouseEventArgs e)
+    {
+        if (OnNodeSelectedWithModifiers.HasDelegate)
+        {
+            await OnNodeSelectedWithModifiers.InvokeAsync((node, e.CtrlKey, e.ShiftKey));
+        }
+        else
+        {
+            await OnNodeSelected.InvokeAsync(node);
+        }
+    }
 
     /// <summary>
     /// Represents a flattened node for grid display.

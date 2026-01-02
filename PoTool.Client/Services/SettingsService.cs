@@ -54,7 +54,7 @@ public class SettingsService
             return settings;
         }
 
-        // Create default settings
-        return await UpdateSettingsAsync(DataMode.Mock, new List<int> { 1000, 2000 }, cancellationToken);
+        // Create default settings - use first two mock goals (1000, 1001)
+        return await UpdateSettingsAsync(DataMode.Mock, new List<int> { 1000, 1001 }, cancellationToken);
     }
 }
