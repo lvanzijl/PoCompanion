@@ -4,6 +4,7 @@
 @using PoTool.Client.Services
 @using static PoTool.Client.Components.Common.PageHelp
 @inject IMetricsClient MetricsClient
+@inject WorkItemService WorkItemService
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 
@@ -69,12 +70,18 @@
         <!-- Filters -->
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudTextField @bind-Value="_areaPathFilter" 
-                              Label="Area Path Filter" 
-                              Variant="Variant.Outlined"
-                              Adornment="Adornment.End"
-                              AdornmentIcon="@Icons.Material.Filled.FilterAlt"
-                              HelperText="Filter by area path" />
+                <MudAutocomplete T="string" 
+                                @bind-Value="_areaPathFilter" 
+                                Label="Area Path Filter" 
+                                Variant="Variant.Outlined"
+                                SearchFunc="@SearchAreaPaths"
+                                Clearable="true"
+                                Dense="true"
+                                ResetValueOnEmptyText="true"
+                                CoerceText="false"
+                                AdornmentIcon="@Icons.Material.Filled.FilterAlt"
+                                AdornmentColor="Color.Primary"
+                                HelperText="Filter by area path" />
                 <MudNumericField @bind-Value="_maxIterations" 
                                  Label="Max Iterations" 
                                  Variant="Variant.Outlined"
@@ -456,6 +463,7 @@
     private int _maxIterations = 10;
     private int? _defaultCapacity = 40;
     private double _imbalanceThreshold = 0.3;
+    private List<string> _allAreaPaths = new();
 
     private ChartOptions _chartOptions = new()
     {
@@ -466,7 +474,30 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Load area paths for autocomplete
+        try
+        {
+            var areaPaths = await WorkItemService.GetDistinctAreaPathsAsync();
+            _allAreaPaths = areaPaths.ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading area paths: {ex.Message}");
+        }
+        
         await LoadData();
+    }
+
+    private async Task<IEnumerable<string>> SearchAreaPaths(string value, CancellationToken token)
+    {
+        // If no search value, return all
+        if (string.IsNullOrWhiteSpace(value))
+            return _allAreaPaths;
+
+        // Filter area paths that contain the search value (case-insensitive)
+        return _allAreaPaths
+            .Where(ap => ap.Contains(value, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     private async Task LoadData()
