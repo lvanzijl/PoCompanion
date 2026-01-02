@@ -159,9 +159,13 @@
             _allMetrics = metrics.ToList();
             _metrics = _allMetrics;
             InvalidateCache();
+            
+            // Log for debugging
+            Console.WriteLine($"[PRInsight] Loaded {_metrics.Count} PR metrics");
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[PRInsight] Error loading pull request metrics: {ex.Message}");
             ShowError(ex, "Error loading pull request metrics");
         }
         finally

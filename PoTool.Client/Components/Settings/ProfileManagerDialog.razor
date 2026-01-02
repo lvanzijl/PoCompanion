@@ -76,7 +76,7 @@
                                Label="Area Paths"
                                @bind-SelectedValues="_selectedAreaPaths"
                                MultiSelection="true"
-                               HelperText="Select one or more area paths"
+                               HelperText="Click to open and select multiple area paths using checkboxes"
                                Required="true"
                                Class="mt-2">
                     @foreach (var areaPath in _allAreaPaths)
@@ -89,7 +89,7 @@
                                Label="Goals (Optional)"
                                @bind-SelectedValues="_selectedGoalIds"
                                MultiSelection="true"
-                               HelperText="Select one or more goal IDs to filter work items"
+                               HelperText="Click to open and select multiple goals using checkboxes"
                                Class="mt-2">
                     @foreach (var goal in _availableGoals)
                     {

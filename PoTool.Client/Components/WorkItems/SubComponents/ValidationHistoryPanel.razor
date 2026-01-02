@@ -1,5 +1,8 @@
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Services
+@using PoTool.Client.Components.Common
 @inject IWorkItemsClient WorkItemsClient
+@inject WorkItemService WorkItemService
 @inject ISnackbar Snackbar
 
 @* Validation History Panel - shows historical violations trend *@
@@ -13,12 +16,23 @@
         <MudStack Row="true" Spacing="2">
             <MudButton Variant="Variant.Filled" 
                        Color="Color.Primary" 
-                       StartIcon="@Icons.Material.Filled.Refresh"
+                       StartIcon="@Icons.Material.Filled.FilterList"
                        Size="Size.Small"
                        OnClick="LoadHistoryAsync"
                        Disabled="@_isLoading">
-                Refresh
+                Apply Filters
             </MudButton>
+            @if (_selectedAreaPaths.Any() || _startDate.HasValue || _endDate.HasValue)
+            {
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Clear"
+                           Size="Size.Small"
+                           OnClick="ClearFilters"
+                           Disabled="@_isLoading">
+                    Clear
+                </MudButton>
+            }
             @if (IsExpanded)
             {
                 <MudIconButton Icon="@Icons.Material.Filled.ExpandLess" 
@@ -39,25 +53,35 @@
         <!-- Filters -->
         <MudGrid Class="mb-3">
             <MudItem xs="12" sm="6" md="4">
-                <MudTextField @bind-Value="_areaPathFilter" 
-                              Label="Area Path Filter" 
-                              Variant="Variant.Outlined"
-                              Clearable="true"
-                              Immediate="true"
-                              DebounceInterval="500"
-                              OnDebounceIntervalElapsed="LoadHistoryAsync" />
+                <CompactSelect T="string"
+                               Label="Area Path Filter"
+                               @bind-SelectedValues="_selectedAreaPaths"
+                               MultiSelection="true"
+                               Clearable="true"
+                               HelperText="Select one or more area paths to filter"
+                               Class="mt-2">
+                    @if (_availableAreaPaths != null)
+                    {
+                        @foreach (var areaPath in _availableAreaPaths)
+                        {
+                            <MudSelectItem T="string" Value="@areaPath">@areaPath</MudSelectItem>
+                        }
+                    }
+                </CompactSelect>
             </MudItem>
             <MudItem xs="12" sm="6" md="4">
                 <MudDatePicker @bind-Date="_startDate" 
                                Label="Start Date" 
                                Variant="Variant.Outlined"
-                               Clearable="true" />
+                               Clearable="true"
+                               Margin="Margin.Dense" />
             </MudItem>
             <MudItem xs="12" sm="6" md="4">
                 <MudDatePicker @bind-Date="_endDate" 
                                Label="End Date" 
                                Variant="Variant.Outlined"
-                               Clearable="true" />
+                               Clearable="true"
+                               Margin="Margin.Dense" />
             </MudItem>
         </MudGrid>
 
@@ -177,16 +201,32 @@
     private bool IsExpanded { get; set; }
     private bool _isLoading;
     private ICollection<ValidationViolationHistoryDto>? _historyRecords;
-    private string? _areaPathFilter;
+    private IEnumerable<string> _selectedAreaPaths = new List<string>();
+    private List<string>? _availableAreaPaths;
     private DateTime? _startDate;
     private DateTime? _endDate;
 
     protected override async Task OnInitializedAsync()
     {
         IsExpanded = InitiallyExpanded;
+        await LoadAvailableAreaPathsAsync();
         if (IsExpanded)
         {
             await LoadHistoryAsync();
+        }
+    }
+
+    private async Task LoadAvailableAreaPathsAsync()
+    {
+        try
+        {
+            var areaPaths = await WorkItemService.GetDistinctAreaPathsAsync();
+            _availableAreaPaths = areaPaths.ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading area paths: {ex.Message}");
+            _availableAreaPaths = new List<string>();
         }
     }
 
@@ -204,8 +244,13 @@
                 ? new DateTimeOffset(_endDate.Value, TimeSpan.Zero) 
                 : null;
 
+            // Convert selected area paths to comma-separated string for API
+            string? areaPathFilter = _selectedAreaPaths.Any() 
+                ? string.Join(",", _selectedAreaPaths) 
+                : null;
+
             _historyRecords = await WorkItemsClient.GetValidationHistoryAsync(
-                _areaPathFilter, 
+                areaPathFilter, 
                 startDateOffset, 
                 endDateOffset, 
                 null);
@@ -224,5 +269,14 @@
             _isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task ClearFilters()
+    {
+        _selectedAreaPaths = new List<string>();
+        _startDate = null;
+        _endDate = null;
+        StateHasChanged();
+        await LoadHistoryAsync();
     }
 }
