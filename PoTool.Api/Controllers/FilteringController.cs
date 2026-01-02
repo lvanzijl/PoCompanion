@@ -185,11 +185,14 @@ public class FilteringController : ControllerBase
             // Wrap all work items for filtering
             var wrappedAll = allWorkItems.Select(wi => new FilterableWorkItemAdapter(wi)).ToList();
 
+            // Convert goal IDs to HashSet for O(1) lookup performance
+            var goalIdsSet = new HashSet<int>(request.GoalIds);
+
             // Filter to include only goals and their descendants
             var filteredIds = new HashSet<int>();
             foreach (var workItem in wrappedAll)
             {
-                if (request.GoalIds.Contains(workItem.TfsId) || 
+                if (goalIdsSet.Contains(workItem.TfsId) || 
                     _filterer.IsDescendantOfGoals(workItem, request.GoalIds, wrappedAll))
                 {
                     filteredIds.Add(workItem.TfsId);
