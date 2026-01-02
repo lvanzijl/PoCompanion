@@ -11,38 +11,40 @@ namespace PoTool.Api.Repositories;
 public class DevWorkItemRepository : IWorkItemRepository
 {
     private readonly BattleshipMockDataFacade _mockDataFacade;
-    private List<WorkItemDto> _items;
 
     public DevWorkItemRepository(BattleshipMockDataFacade mockDataFacade)
     {
         _mockDataFacade = mockDataFacade;
-        _items = _mockDataFacade.GetMockHierarchy();
     }
 
     public Task<IEnumerable<WorkItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        // Always get fresh data from mock facade to ensure latest generated data
-        _items = _mockDataFacade.GetMockHierarchy();
-        return Task.FromResult(_items.AsEnumerable());
+        // Get mock data from facade - the facade handles caching internally
+        var items = _mockDataFacade.GetMockHierarchy();
+        return Task.FromResult(items.AsEnumerable());
     }
 
     public Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter, CancellationToken cancellationToken = default)
     {
+        var items = _mockDataFacade.GetMockHierarchy();
+        
         if (string.IsNullOrWhiteSpace(filter))
-            return Task.FromResult(_items.AsEnumerable());
+            return Task.FromResult(items.AsEnumerable());
 
         var f = filter.Trim();
-        var result = _items.Where(w => w.Title.Contains(f, StringComparison.OrdinalIgnoreCase));
+        var result = items.Where(w => w.Title.Contains(f, StringComparison.OrdinalIgnoreCase));
         return Task.FromResult(result);
     }
 
     public Task<IEnumerable<WorkItemDto>> GetByAreaPathsAsync(List<string> areaPaths, CancellationToken cancellationToken = default)
     {
+        var items = _mockDataFacade.GetMockHierarchy();
+        
         if (areaPaths == null || areaPaths.Count == 0)
-            return Task.FromResult(_items.AsEnumerable());
+            return Task.FromResult(items.AsEnumerable());
 
         // Filter using hierarchical area path matching
-        var filtered = _items.Where(item => 
+        var filtered = items.Where(item => 
             areaPaths.Any(profilePath => 
                 item.AreaPath.Equals(profilePath, StringComparison.OrdinalIgnoreCase) ||
                 item.AreaPath.StartsWith(profilePath + "\\", StringComparison.OrdinalIgnoreCase)));
@@ -52,16 +54,16 @@ public class DevWorkItemRepository : IWorkItemRepository
 
     public Task<WorkItemDto?> GetByTfsIdAsync(int tfsId, CancellationToken cancellationToken = default)
     {
-        var item = _items.FirstOrDefault(w => w.TfsId == tfsId);
+        var items = _mockDataFacade.GetMockHierarchy();
+        var item = items.FirstOrDefault(w => w.TfsId == tfsId);
         return Task.FromResult(item);
     }
 
     public Task ReplaceAllAsync(IEnumerable<WorkItemDto> workItems, CancellationToken cancellationToken = default)
     {
-        // For dev repository, just replace the in-memory list
-        // Note: This shouldn't typically be used in dev mode since we use generated mock data
-        _items.Clear();
-        _items.AddRange(workItems);
+        // For dev repository with mock data, this operation is not meaningful
+        // The mock data is always regenerated from the facade
+        // In a real scenario, this would persist to a database
         return Task.CompletedTask;
     }
 }
