@@ -194,16 +194,9 @@
             var goalIds = settings.ConfiguredGoalIds.ToList();
             if (goalIds.Count > 0)
             {
-                var filteredList = new List<WorkItemWithValidationDto>();
-                foreach (var wi in allWorkItems)
-                {
-                    if (goalIds.Contains(wi.TfsId) || 
-                        await FilteringService.IsDescendantOfGoalsAsync(wi, goalIds, allWorkItems))
-                    {
-                        filteredList.Add(wi);
-                    }
-                }
-                _workItemsWithValidation = filteredList;
+                // Use batch filtering - makes a single API call instead of N calls
+                var filteredIds = await FilteringService.FilterByGoalsAsync(goalIds);
+                _workItemsWithValidation = allWorkItems.Where(wi => filteredIds.Contains(wi.TfsId)).ToList();
             }
             else
             {

@@ -137,6 +137,20 @@ public class WorkItemFilteringService
         return response.IsDescendant;
     }
 
+    /// <summary>
+    /// Filters work items to include only goals and their descendants in a single batch operation.
+    /// This is more efficient than calling IsDescendantOfGoalsAsync for each work item individually.
+    /// </summary>
+    /// <param name="goalIds">List of goal IDs to filter by.</param>
+    /// <returns>Set of work item IDs that are goals or descendants of goals.</returns>
+    public async Task<HashSet<int>> FilterByGoalsAsync(List<int> goalIds)
+    {
+        // Call API to get filtered IDs in a single batch operation
+        var request = new ApiClient.FilterByGoalsRequest { GoalIds = goalIds };
+        var response = await _filteringClient.FilterByGoalsAsync(request);
+        return new HashSet<int>(response.WorkItemIds);
+    }
+
     private static WorkItemDto ConvertToWorkItemDto(WorkItemWithValidationDto item)
     {
         return new WorkItemDto

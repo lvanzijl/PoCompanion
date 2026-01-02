@@ -166,6 +166,52 @@ public class FilteringController : ControllerBase
     }
 
     /// <summary>
+    /// Filters work items to include only goals and their descendants in a single batch operation.
+    /// This is more efficient than calling is-descendant-of-goals for each work item individually.
+    /// </summary>
+    /// <param name="request">Request containing goal IDs to filter by.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>List of work item IDs that are goals or descendants of goals.</returns>
+    [HttpPost("filter-by-goals")]
+    public async Task<ActionResult<FilterByGoalsResponse>> FilterByGoals(
+        [FromBody] FilterByGoalsRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Get all work items with validation
+            var allWorkItems = await _mediator.Send(new GetAllWorkItemsWithValidationQuery(), cancellationToken);
+
+            // Wrap all work items for filtering
+            var wrappedAll = allWorkItems.Select(wi => new FilterableWorkItemAdapter(wi)).ToList();
+
+            // Convert goal IDs to HashSet for O(1) lookup performance
+            var goalIdsSet = new HashSet<int>(request.GoalIds);
+
+            // Filter to include only goals and their descendants
+            var filteredIds = new HashSet<int>();
+            foreach (var workItem in wrappedAll)
+            {
+                if (goalIdsSet.Contains(workItem.TfsId) || 
+                    _filterer.IsDescendantOfGoals(workItem, request.GoalIds, wrappedAll))
+                {
+                    filteredIds.Add(workItem.TfsId);
+                }
+            }
+
+            return Ok(new FilterByGoalsResponse
+            {
+                WorkItemIds = filteredIds.ToList()
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error filtering work items by goals");
+            return StatusCode(500, "Error filtering work items by goals");
+        }
+    }
+
+    /// <summary>
     /// Adapter to make API DTOs compatible with Core filtering interfaces.
     /// </summary>
     private class FilterableWorkItemAdapter : WorkItemFilterer.IFilterableWorkItem

@@ -94,6 +94,28 @@ public class IsDescendantOfGoalsResponse
 }
 
 /// <summary>
+/// Request to filter work items by goals in a batch operation.
+/// </summary>
+public class FilterByGoalsRequest
+{
+    /// <summary>
+    /// List of goal IDs to filter by.
+    /// </summary>
+    public required List<int> GoalIds { get; set; }
+}
+
+/// <summary>
+/// Response containing work item IDs that are goals or descendants of goals.
+/// </summary>
+public class FilterByGoalsResponse
+{
+    /// <summary>
+    /// IDs of work items that are goals or descendants of goals.
+    /// </summary>
+    public required List<int> WorkItemIds { get; set; }
+}
+
+/// <summary>
 /// Request to apply combined text and validation filters.
 /// </summary>
 public class ApplyCombinedFilterRequest
