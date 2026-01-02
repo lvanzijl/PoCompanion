@@ -2,8 +2,10 @@ using Microsoft.JSInterop;
 using Moq;
 using PoTool.Core.WorkItems;
 using PoTool.Api.Repositories;
+using PoTool.Api.Services.MockData;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -13,12 +15,29 @@ namespace PoTool.Tests.Unit;
 [TestClass]
 public class WorkItemExplorerTests
 {
+    private BattleshipMockDataFacade CreateMockDataFacade()
+    {
+        var workItemGenerator = new BattleshipWorkItemGenerator();
+        var dependencyGenerator = new BattleshipDependencyGenerator();
+        var pullRequestGenerator = new BattleshipPullRequestGenerator();
+        var validator = new MockDataValidator();
+        var logger = Mock.Of<ILogger<BattleshipMockDataFacade>>();
+        
+        return new BattleshipMockDataFacade(
+            workItemGenerator,
+            dependencyGenerator,
+            pullRequestGenerator,
+            validator,
+            logger);
+    }
+
     [TestMethod]
     public async Task ExpandedState_Persistence_LocalStorage_SavedAndLoaded()
     {
         // This unit test checks the logic of serialization/deserialization of expanded state
         // Note: Full JSInterop testing is better done with bUnit tests
-        var repo = new DevWorkItemRepository();
+        var facade = CreateMockDataFacade();
+        var repo = new DevWorkItemRepository(facade);
         var items = (await repo.GetAllAsync()).ToList();
 
         // Simulate expanded state
@@ -43,7 +62,8 @@ public class WorkItemExplorerTests
     [TestMethod]
     public async Task Filter_Includes_Ancestors_For_Match()
     {
-        var repo = new DevWorkItemRepository();
+        var facade = CreateMockDataFacade();
+        var repo = new DevWorkItemRepository(facade);
         var items = (await repo.GetAllAsync()).ToList();
 
         // pick a deep item (a Task) and filter by part of its title
