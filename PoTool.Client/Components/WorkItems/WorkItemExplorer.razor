@@ -189,20 +189,26 @@
 
             // Load hierarchy with validation - get all first
             var allWorkItems = (await WorkItemService.GetAllWithValidationAsync()).ToList();
+            Console.WriteLine($"[WorkItemExplorer] Loaded {allWorkItems.Count} total work items");
             
             // Then filter by goals if configured
             var goalIds = settings.ConfiguredGoalIds.ToList();
+            Console.WriteLine($"[WorkItemExplorer] Configured goal IDs: {string.Join(", ", goalIds)}");
+            
             if (goalIds.Count > 0)
             {
                 // Use batch filtering - makes a single API call instead of N calls
                 var filteredIds = await FilteringService.FilterByGoalsAsync(goalIds);
+                Console.WriteLine($"[WorkItemExplorer] Filtered to {filteredIds.Count} work items by goals");
                 _workItemsWithValidation = allWorkItems.Where(wi => filteredIds.Contains(wi.TfsId)).ToList();
             }
             else
             {
+                Console.WriteLine($"[WorkItemExplorer] No goals configured, showing all work items");
                 _workItemsWithValidation = allWorkItems;
             }
 
+            Console.WriteLine($"[WorkItemExplorer] Final work item count: {_workItemsWithValidation.Count}");
             await ApplyFilterAsync();
             await UpdateValidationFilterCountsAsync();
             await SaveExpandedStateAsync();
@@ -210,6 +216,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"[WorkItemExplorer] Error loading work items: {ex.Message}");
+            Console.WriteLine($"[WorkItemExplorer] Stack trace: {ex.StackTrace}");
         }
         finally
         {
