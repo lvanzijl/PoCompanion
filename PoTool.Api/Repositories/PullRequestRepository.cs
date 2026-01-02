@@ -126,7 +126,7 @@ public class PullRequestRepository : IPullRequestRepository
         var entities = await _context.PullRequestComments
             .AsNoTracking()
             .Where(c => c.PullRequestId == pullRequestId)
-            .OrderBy(c => c.CreatedDate)
+            .OrderBy(c => c.CreatedDate.Ticks)
             .ToListAsync(cancellationToken);
 
         return entities.Select(MapToCommentDto);
