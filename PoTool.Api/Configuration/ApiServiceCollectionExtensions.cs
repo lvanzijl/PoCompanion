@@ -93,16 +93,12 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<IPullRequestRepository, PullRequestRepository>();
 
-        // Register new Battleship mock data generation system
+        // Register Battleship mock data generation system
         services.AddSingleton<BattleshipWorkItemGenerator>();
         services.AddSingleton<BattleshipDependencyGenerator>();
         services.AddSingleton<BattleshipPullRequestGenerator>();
         services.AddSingleton<MockDataValidator>();
         services.AddSingleton<BattleshipMockDataFacade>();
-        
-        // Keep old mock data providers for backward compatibility during migration
-        services.AddSingleton<MockDataProvider>();
-        services.AddSingleton<MockPullRequestDataProvider>();
 
         // Register validators
         services.AddScoped<WorkItemParentProgressValidator>();
