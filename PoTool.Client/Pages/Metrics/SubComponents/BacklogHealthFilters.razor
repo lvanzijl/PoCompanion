@@ -11,7 +11,7 @@
         <MudNumericField @bind-Value="MaxIterations" 
                         Label="Max Iterations" 
                         Variant="Variant.Outlined"
-                        Min="1" Max="20"
+                        Min="1" Max="100"
                         HelperText="Number of iterations to analyze" />
         <MudButton Variant="Variant.Filled" 
                   Color="Color.Primary" 
@@ -23,17 +23,48 @@
 </MudPaper>
 
 @code {
+    private string? _areaPathFilter;
+    private int _maxIterations = 5;
+    
     /// <summary>
     /// Area path filter value
     /// </summary>
     [Parameter]
-    public string? AreaPathFilter { get; set; }
+    public string? AreaPathFilter 
+    { 
+        get => _areaPathFilter; 
+        set
+        {
+            if (_areaPathFilter != value)
+            {
+                _areaPathFilter = value;
+                AreaPathFilterChanged.InvokeAsync(value);
+            }
+        }
+    }
+    
+    [Parameter]
+    public EventCallback<string?> AreaPathFilterChanged { get; set; }
 
     /// <summary>
     /// Maximum number of iterations to analyze
     /// </summary>
     [Parameter]
-    public int MaxIterations { get; set; } = 5;
+    public int MaxIterations 
+    { 
+        get => _maxIterations; 
+        set
+        {
+            if (_maxIterations != value)
+            {
+                _maxIterations = value;
+                MaxIterationsChanged.InvokeAsync(value);
+            }
+        }
+    }
+    
+    [Parameter]
+    public EventCallback<int> MaxIterationsChanged { get; set; }
 
     /// <summary>
     /// Callback invoked when Refresh button is clicked

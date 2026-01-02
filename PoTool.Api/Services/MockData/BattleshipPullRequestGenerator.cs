@@ -37,7 +37,7 @@ public class BattleshipPullRequestGenerator
             var repository = repositories[_random.Next(repositories.Length)];
             var developer = developers[_random.Next(developers.Length)];
             var quarter = quarters[i / 40]; // Distribute across quarters
-            var sprint = _random.Next(1, 11);
+            var sprint = _random.Next(1, 101); // Sprints 1-100
             
             var createdDate = now.AddDays(-_random.Next(1, 365));
             var status = GetPrStatus();

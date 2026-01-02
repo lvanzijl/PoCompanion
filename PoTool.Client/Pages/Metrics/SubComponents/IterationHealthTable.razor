@@ -78,12 +78,15 @@
                     {
                         <MudDivider Class="my-3" />
                         <MudText Typo="Typo.subtitle2" Class="mb-2">Validation Issues</MudText>
-                        <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                        <MudStack Spacing="1">
                             @foreach (var issue in iteration.ValidationIssues)
                             {
-                                <MudBadge Color="@GetSeverityColor(issue.ValidationType)" Content="@issue.Count" Overlap="true">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                     <MudText Typo="Typo.caption">@issue.ValidationType</MudText>
-                                </MudBadge>
+                                    <MudChip T="string" Size="Size.Small" Color="@GetSeverityColor(issue.ValidationType)">
+                                        @issue.Count
+                                    </MudChip>
+                                </MudStack>
                             }
                         </MudStack>
                     }

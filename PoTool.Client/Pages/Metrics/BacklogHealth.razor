@@ -51,8 +51,8 @@
                                BlockerTrend="@_healthData.Trend.BlockerTrend" />
 
         <!-- Filters -->
-        <BacklogHealthFilters AreaPathFilter="@_areaPathFilter"
-                             MaxIterations="@_maxIterations"
+        <BacklogHealthFilters @bind-AreaPathFilter="@_areaPathFilter"
+                             @bind-MaxIterations="@_maxIterations"
                              OnRefresh="@LoadData" />
 
         <!-- Iteration Health Cards -->

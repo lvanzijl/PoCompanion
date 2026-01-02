@@ -379,7 +379,7 @@ public class BattleshipWorkItemGenerator
         if (_random.NextDouble() < 0.6) // 60% in backlog
             return "\\Battleship Systems\\Backlog";
         
-        var sprint = _random.Next(1, 11); // Sprints 1-10
+        var sprint = _random.Next(1, 101); // Sprints 1-100
         return $"\\Battleship Systems\\2025\\{quarter}\\Sprint {sprint}";
     }
 
@@ -388,12 +388,16 @@ public class BattleshipWorkItemGenerator
         var rand = _random.NextDouble();
         if (rand < 0.60) // 60% in backlog
             return "\\Battleship Systems\\Backlog";
-        if (rand < 0.80) // 20% in sprints 1-3 (past/current)
-            return $"\\Battleship Systems\\2025\\{quarter}\\Sprint {_random.Next(1, 4)}";
-        if (rand < 0.95) // 15% in sprints 4-6 (near-term)
-            return $"\\Battleship Systems\\2025\\{quarter}\\Sprint {_random.Next(4, 7)}";
-        // 5% in sprints 7+ (future)
-        return $"\\Battleship Systems\\2025\\{quarter}\\Sprint {_random.Next(7, 11)}";
+        if (rand < 0.70) // 10% in sprints 1-10 (recent past)
+            return $"\\Battleship Systems\\2025\\{quarter}\\Sprint {_random.Next(1, 11)}";
+        if (rand < 0.80) // 10% in sprints 11-30 (past)
+            return $"\\Battleship Systems\\2025\\{quarter}\\Sprint {_random.Next(11, 31)}";
+        if (rand < 0.90) // 10% in sprints 31-60 (mid-range)
+            return $"\\Battleship Systems\\2025\\{quarter}\\Sprint {_random.Next(31, 61)}";
+        if (rand < 0.95) // 5% in sprints 61-80 (future)
+            return $"\\Battleship Systems\\2025\\{quarter}\\Sprint {_random.Next(61, 81)}";
+        // 5% in sprints 81-100 (far future)
+        return $"\\Battleship Systems\\2025\\{quarter}\\Sprint {_random.Next(81, 101)}";
     }
 
     private int? GetFibonacciEffort()
