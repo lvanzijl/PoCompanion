@@ -8,7 +8,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5291"
+      "url": "http://localhost:5000"
     }
   ],
   "paths": {
@@ -193,6 +193,38 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/IsDescendantOfGoalsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Filtering/filter-by-goals": {
+      "post": {
+        "tags": [
+          "Filtering"
+        ],
+        "operationId": "Filtering_FilterByGoals",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FilterByGoalsRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterByGoalsResponse"
                 }
               }
             }
@@ -1457,6 +1489,29 @@
         }
       }
     },
+    "/api/WorkItems/area-paths": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetDistinctAreaPaths",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/WorkItems/validated": {
       "get": {
         "tags": [
@@ -2098,6 +2153,32 @@
             "type": "integer",
             "format": "int32"
           },
+          "goalIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "FilterByGoalsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "FilterByGoalsRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
           "goalIds": {
             "type": "array",
             "items": {

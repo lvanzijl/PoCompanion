@@ -181,7 +181,7 @@ public class PullRequestsController : ControllerBase
         try
         {
             var count = await _mediator.Send(new SyncPullRequestsCommand(), cancellationToken);
-            return Ok(new { SyncedCount = count });
+            return Ok(count);
         }
         catch (Exception ex)
         {
