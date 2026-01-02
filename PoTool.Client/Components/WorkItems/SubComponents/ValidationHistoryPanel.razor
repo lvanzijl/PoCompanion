@@ -16,12 +16,23 @@
         <MudStack Row="true" Spacing="2">
             <MudButton Variant="Variant.Filled" 
                        Color="Color.Primary" 
-                       StartIcon="@Icons.Material.Filled.Refresh"
+                       StartIcon="@Icons.Material.Filled.FilterList"
                        Size="Size.Small"
                        OnClick="LoadHistoryAsync"
                        Disabled="@_isLoading">
-                Refresh
+                Apply Filters
             </MudButton>
+            @if (_selectedAreaPaths.Any() || _startDate.HasValue || _endDate.HasValue)
+            {
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Clear"
+                           Size="Size.Small"
+                           OnClick="ClearFilters"
+                           Disabled="@_isLoading">
+                    Clear
+                </MudButton>
+            }
             @if (IsExpanded)
             {
                 <MudIconButton Icon="@Icons.Material.Filled.ExpandLess" 
@@ -73,22 +84,6 @@
                                Margin="Margin.Dense" />
             </MudItem>
         </MudGrid>
-        
-        <MudStack Row="true" Class="mb-3" Spacing="2">
-            <CompactButton OnClick="LoadHistoryAsync" 
-                       Color="Color.Primary" 
-                       Variant="Variant.Filled"
-                       Disabled="_isLoading"
-                       StartIcon="@Icons.Material.Filled.FilterList">
-                Apply Filters
-            </CompactButton>
-            <CompactButton OnClick="ClearFilters" 
-                       Color="Color.Default" 
-                       Variant="Variant.Outlined"
-                       Disabled="_isLoading">
-                Clear Filters
-            </CompactButton>
-        </MudStack>
 
         <MudDivider Class="my-3" />
 
@@ -281,6 +276,7 @@
         _selectedAreaPaths = new List<string>();
         _startDate = null;
         _endDate = null;
+        StateHasChanged();
         await LoadHistoryAsync();
     }
 }

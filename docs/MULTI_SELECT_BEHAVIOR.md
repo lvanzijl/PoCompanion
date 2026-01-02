@@ -83,7 +83,19 @@ The `CompactSelect` component wraps `MudSelect` with compact defaults:
 ```csharp
 private IEnumerable<string> _selectedAreaPaths = new List<string>();
 private List<string> _availableAreaPaths = new();
+
+// When clearing selections programmatically, call StateHasChanged() to ensure UI updates
+private void ClearSelections()
+{
+    _selectedAreaPaths = new List<string>();
+    StateHasChanged(); // Ensures the UI reflects the change
+}
 ```
+
+### Important Notes
+- When modifying `_selectedAreaPaths` directly (not through user interaction), call `StateHasChanged()` to ensure the UI updates
+- The `@bind-SelectedValues` directive handles UI updates automatically for user interactions
+- Direct assignment bypasses the normal change detection mechanism
 
 ## References
 - [MudBlazor Select Documentation](https://mudblazor.com/components/select)
