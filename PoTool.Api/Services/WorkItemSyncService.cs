@@ -65,17 +65,9 @@ public class WorkItemSyncService : BackgroundService
             }
             else
             {
-                // No ITfsClient available (development scenario). If repository is DevWorkItemRepository regenerate dummy data.
-                _logger.LogInformation("No ITfsClient registered; using repository contents or regenerating dev data as fallback for sync");
-
-                if (repository is DevWorkItemRepository devRepo)
-                {
-                    workItems = devRepo.GenerateDummyWorkItems();
-                }
-                else
-                {
-                    workItems = await repository.GetAllAsync(cancellationToken);
-                }
+                // No ITfsClient available (development scenario). Use repository contents.
+                _logger.LogInformation("No ITfsClient registered; using repository contents for sync");
+                workItems = await repository.GetAllAsync(cancellationToken);
             }
 
             await repository.ReplaceAllAsync(workItems, cancellationToken);
