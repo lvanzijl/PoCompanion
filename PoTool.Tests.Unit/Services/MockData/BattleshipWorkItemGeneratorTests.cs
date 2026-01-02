@@ -22,7 +22,7 @@ public class BattleshipWorkItemGeneratorTests
         var goals = workItems.Where(w => w.Type == WorkItemType.Goal).ToList();
 
         // Assert
-        Assert.AreEqual(10, goals.Count, "Should generate exactly 10 Goals");
+        Assert.HasCount(10, goals, "Should generate exactly 10 Goals");
     }
 
     [TestMethod]
@@ -115,7 +115,7 @@ public class BattleshipWorkItemGeneratorTests
         var goalsWithTheme = goals.Count(g =>
             battleshipKeywords.Any(keyword => g.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase)));
 
-        Assert.IsTrue(goalsWithTheme >= goals.Count * 0.8,
+        Assert.IsGreaterThanOrEqualTo(goalsWithTheme, goals.Count * 0.8,
             $"At least 80% of goals should use Battleship theme. Found {goalsWithTheme}/{goals.Count}");
     }
 
@@ -153,7 +153,7 @@ public class BattleshipWorkItemGeneratorTests
             .ToList();
 
         // Assert
-        Assert.AreEqual(0, orphanedItems.Count,
+        Assert.IsEmpty(orphanedItems,
             $"All non-Goal items must have valid parent references. Found {orphanedItems.Count} orphaned items.");
     }
 
@@ -200,7 +200,7 @@ public class BattleshipWorkItemGeneratorTests
         var elapsed = (DateTime.UtcNow - startTime).TotalSeconds;
 
         // Assert - generation should complete in under 30 seconds
-        Assert.IsTrue(elapsed < 30,
+        Assert.IsLessThan(elapsed, 30,
             $"Generation should complete in under 30 seconds. Took {elapsed:F2} seconds.");
     }
 

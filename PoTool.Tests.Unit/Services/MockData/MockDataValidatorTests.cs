@@ -161,7 +161,7 @@ public class MockDataValidatorTests
         _validator.ValidateDependencies(allDependencies, workItems, report);
 
         // Assert
-        Assert.IsTrue(report.OrphanedDependencyCount > 0,
+        Assert.IsGreaterThan(report.OrphanedDependencyCount, 0,
             "Should detect orphaned dependencies (intentionally created for testing)");
     }
 
@@ -179,7 +179,7 @@ public class MockDataValidatorTests
         // Assert
         Assert.IsTrue(report.PullRequestVolumeValid,
             $"PR volume should be at least 100. Found {report.TotalPullRequests}");
-        Assert.IsTrue(report.TotalPullRequests >= 100,
+        Assert.IsGreaterThanOrEqualTo(report.TotalPullRequests, 100,
             $"Should generate at least 100 PRs. Found {report.TotalPullRequests}");
     }
 
@@ -245,9 +245,9 @@ public class MockDataValidatorTests
 
         // Assert
         Assert.IsNotNull(summary);
-        Assert.IsTrue(summary.Contains("Mock Data Validation Report"));
-        Assert.IsTrue(summary.Contains("Work Items:"));
-        Assert.IsTrue(summary.Contains("Data Quality:"));
+        Assert.Contains("Mock Data Validation Report", summary);
+        Assert.Contains("Work Items:", summary);
+        Assert.Contains("Data Quality:", summary); 
     }
 
     [TestMethod]
