@@ -13,7 +13,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.1" PrivateAssets="all" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.1" />
     <PackageReference Include="MudBlazor" Version="8.0.0" />
-    <PackageReference Include="NSwag.MSBuild" Version="14.2.0">
+    <PackageReference Include="NSwag.MSBuild" Version="14.6.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
@@ -25,10 +25,12 @@
 
   <!-- NSwag client generation -->
   <Target Name="NSwag" BeforeTargets="CoreCompile" Condition="'$(Configuration)' == 'Debug' OR '$(GenerateApiClient)' == 'true'">
-    <Exec Command="$(NSwagExe_Net90) run nswag.json /variables:InputSwaggerFile=swagger.json" ConsoleToMSBuild="true" ContinueOnError="true">
+    <Message Text="Starting NSwag client generation with Net100 runtime..." Importance="high" />
+    <Exec Command="$(NSwagExe_Net100) run nswag.json /variables:InputSwaggerFile=swagger.json" ConsoleToMSBuild="true" ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="NSwagExitCode" />
     </Exec>
-    <Message Text="NSwag code generation completed" Importance="high" Condition="'$(NSwagExitCode)' == '0'" />
+    <Message Text="NSwag generation completed with exit code: $(NSwagExitCode)" Importance="high" />
+    <Error Text="NSwag client generation failed! Check output above for details." Condition="'$(NSwagExitCode)' != '0'" />
   </Target>
 
 </Project>
