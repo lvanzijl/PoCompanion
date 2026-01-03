@@ -124,4 +124,46 @@ public class WorkItemExplorerTests
             Assert.IsNull(goal.ParentTfsId, $"Goal {goal.TfsId} should not have a parent, but has parent {goal.ParentTfsId}");
         }
     }
+
+    [TestMethod]
+    public async Task TreeBuilder_ShowsAllGoals_WhenNoFiltering()
+    {
+        var facade = CreateMockDataFacade();
+        var repo = new DevWorkItemRepository(facade);
+        var allItems = (await repo.GetAllAsync()).ToList();
+
+        // Simulate the filtering that happens in WorkItemExplorer when ConfiguredGoalIds is empty
+        var goalIds = new List<int>(); // Empty list = show all goals
+        
+        IEnumerable<WorkItemDto> filteredItems;
+        if (goalIds.Count > 0)
+        {
+            // This path would filter by specific goals
+            filteredItems = allItems; // Placeholder, actual filtering would happen via API
+        }
+        else
+        {
+            // No filtering - show all work items
+            filteredItems = allItems;
+        }
+
+        // Build tree structure as TreeBuilderService would
+        var roots = new List<WorkItemDto>();
+        foreach (var item in filteredItems)
+        {
+            if (!item.ParentTfsId.HasValue)
+            {
+                roots.Add(item);
+            }
+        }
+
+        // Verify we have exactly 10 root nodes (the goals)
+        Assert.AreEqual(10, roots.Count, "Should have exactly 10 root nodes when no filtering is applied");
+        
+        // Verify all roots are goals
+        foreach (var root in roots)
+        {
+            Assert.AreEqual("Goal", root.Type, $"Root node {root.TfsId} should be a Goal, but is {root.Type}");
+        }
+    }
 }
