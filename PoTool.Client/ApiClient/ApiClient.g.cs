@@ -79,7 +79,7 @@ namespace PoTool.Client.ApiClient
         public Client(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5000";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
@@ -634,7 +634,7 @@ namespace PoTool.Client.ApiClient
         public FilteringClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5000";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
@@ -1218,7 +1218,7 @@ namespace PoTool.Client.ApiClient
         public HealthCalculationClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5000";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
@@ -1547,7 +1547,7 @@ namespace PoTool.Client.ApiClient
         public MetricsClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5000";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
@@ -2806,7 +2806,7 @@ namespace PoTool.Client.ApiClient
         public ProfilesClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5000";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
@@ -3640,7 +3640,7 @@ namespace PoTool.Client.ApiClient
         public PullRequestsClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5000";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
@@ -4566,7 +4566,7 @@ namespace PoTool.Client.ApiClient
         public SettingsClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5000";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
@@ -5155,7 +5155,7 @@ namespace PoTool.Client.ApiClient
         public WorkItemsClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5000";
+            BaseUrl = "http://localhost:5291";
             _httpClient = httpClient;
             Initialize();
         }
