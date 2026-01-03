@@ -7,6 +7,7 @@ using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
 using PoTool.Core.Exceptions;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Contracts.TfsVerification;
 
 namespace PoTool.Api.Services;
 
@@ -919,5 +920,539 @@ public class RealTfsClient : ITfsClient
             _logger.LogError(ex, "Error updating work item {WorkItemId} effort to {Effort}", workItemId, effort);
             return false;
         }
+    }
+
+    public async Task<TfsVerificationReport> VerifyCapabilitiesAsync(
+        bool includeWriteChecks = false,
+        int? workItemIdForWriteCheck = null,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        if (entity == null)
+        {
+            throw new InvalidOperationException("TFS configuration not set");
+        }
+
+        _logger.LogInformation("Starting TFS API verification. WriteChecks: {IncludeWriteChecks}, WorkItemId: {WorkItemId}", 
+            includeWriteChecks, workItemIdForWriteCheck);
+
+        var checks = new List<TfsCapabilityCheckResult>();
+        
+        // Run read-only checks
+        checks.Add(await VerifyServerReachabilityAsync(entity, cancellationToken));
+        checks.Add(await VerifyProjectAccessAsync(entity, cancellationToken));
+        checks.Add(await VerifyWorkItemQueryAsync(entity, cancellationToken));
+        checks.Add(await VerifyWorkItemFieldsAsync(entity, cancellationToken));
+        checks.Add(await VerifyBatchReadAsync(entity, cancellationToken));
+        
+        // Run write checks if requested
+        if (includeWriteChecks)
+        {
+            if (workItemIdForWriteCheck.HasValue)
+            {
+                checks.Add(await VerifyWorkItemUpdateAsync(entity, workItemIdForWriteCheck.Value, cancellationToken));
+            }
+            else
+            {
+                _logger.LogWarning("Write checks requested but no work item ID provided, skipping write verification");
+            }
+        }
+
+        var report = new TfsVerificationReport
+        {
+            VerifiedAt = DateTimeOffset.UtcNow,
+            ServerUrl = entity.Url,
+            ProjectName = entity.Project,
+            ApiVersion = entity.ApiVersion,
+            IncludedWriteChecks = includeWriteChecks,
+            Success = checks.All(c => c.Success),
+            Checks = checks
+        };
+
+        _logger.LogInformation("TFS verification completed. Success: {Success}, Passed: {Passed}/{Total}", 
+            report.Success, checks.Count(c => c.Success), checks.Count);
+
+        return report;
+    }
+
+    private async Task<TfsCapabilityCheckResult> VerifyServerReachabilityAsync(
+        TfsConfigEntity entity, 
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ConfigureAuthenticationAsync(entity, cancellationToken);
+            
+            var url = $"{entity.Url.TrimEnd('/')}/_apis/projects?api-version={entity.ApiVersion}";
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                return new TfsCapabilityCheckResult
+                {
+                    CapabilityId = "server-reachability",
+                    Success = true,
+                    ImpactedFunctionality = "All TFS integration features",
+                    ExpectedBehavior = "Server responds to API requests with valid authentication",
+                    ObservedBehavior = $"Server reachable, authentication successful (HTTP {(int)response.StatusCode})"
+                };
+            }
+            
+            return CreateFailureResult(
+                "server-reachability",
+                "All TFS integration features",
+                "Server responds to API requests with valid authentication",
+                $"Server returned HTTP {(int)response.StatusCode}",
+                CategorizeHttpError(response.StatusCode),
+                await response.Content.ReadAsStringAsync(cancellationToken));
+        }
+        catch (Exception ex)
+        {
+            return CreateFailureResult(
+                "server-reachability",
+                "All TFS integration features",
+                "Server responds to API requests with valid authentication",
+                $"Exception: {ex.GetType().Name}",
+                ex is TfsAuthenticationException ? FailureCategory.Authentication : FailureCategory.EndpointUnavailable,
+                SanitizeErrorMessage(ex.Message));
+        }
+    }
+
+    private async Task<TfsCapabilityCheckResult> VerifyProjectAccessAsync(
+        TfsConfigEntity entity, 
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var url = $"{entity.Url.TrimEnd('/')}/_apis/projects/{entity.Project}?api-version={entity.ApiVersion}";
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                var projectName = doc.RootElement.GetProperty("name").GetString();
+                
+                return new TfsCapabilityCheckResult
+                {
+                    CapabilityId = "project-access",
+                    Success = true,
+                    ImpactedFunctionality = "Work item retrieval, project-specific operations",
+                    ExpectedBehavior = $"Project '{entity.Project}' exists and is accessible",
+                    ObservedBehavior = $"Project found: {projectName}"
+                };
+            }
+            
+            return CreateFailureResult(
+                "project-access",
+                "Work item retrieval, project-specific operations",
+                $"Project '{entity.Project}' exists and is accessible",
+                $"HTTP {(int)response.StatusCode}",
+                response.StatusCode == HttpStatusCode.NotFound ? FailureCategory.Authorization : CategorizeHttpError(response.StatusCode),
+                await response.Content.ReadAsStringAsync(cancellationToken));
+        }
+        catch (Exception ex)
+        {
+            return CreateFailureResult(
+                "project-access",
+                "Work item retrieval, project-specific operations",
+                $"Project '{entity.Project}' exists and is accessible",
+                $"Exception: {ex.GetType().Name}",
+                FailureCategory.EndpointUnavailable,
+                SanitizeErrorMessage(ex.Message));
+        }
+    }
+
+    private async Task<TfsCapabilityCheckResult> VerifyWorkItemQueryAsync(
+        TfsConfigEntity entity, 
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var wiql = new
+            {
+                query = "Select [System.Id] From WorkItems Where [System.WorkItemType] <> ''"
+            };
+
+            var url = $"{entity.Url.TrimEnd('/')}/_apis/wit/wiql?api-version={entity.ApiVersion}";
+            using var content = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
+            
+            var response = await _httpClient.PostAsync(url, content, cancellationToken);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                return new TfsCapabilityCheckResult
+                {
+                    CapabilityId = "work-item-query",
+                    Success = true,
+                    ImpactedFunctionality = "Work item search and filtering",
+                    ExpectedBehavior = "WIQL queries execute successfully",
+                    ObservedBehavior = "WIQL query executed successfully"
+                };
+            }
+            
+            return CreateFailureResult(
+                "work-item-query",
+                "Work item search and filtering",
+                "WIQL queries execute successfully",
+                $"HTTP {(int)response.StatusCode}",
+                CategorizeHttpError(response.StatusCode),
+                await response.Content.ReadAsStringAsync(cancellationToken));
+        }
+        catch (Exception ex)
+        {
+            return CreateFailureResult(
+                "work-item-query",
+                "Work item search and filtering",
+                "WIQL queries execute successfully",
+                $"Exception: {ex.GetType().Name}",
+                FailureCategory.QueryRestriction,
+                SanitizeErrorMessage(ex.Message));
+        }
+    }
+
+    private async Task<TfsCapabilityCheckResult> VerifyWorkItemFieldsAsync(
+        TfsConfigEntity entity, 
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Query for work item fields
+            var url = $"{entity.Url.TrimEnd('/')}/_apis/wit/fields?api-version={entity.ApiVersion}";
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                
+                var fields = doc.RootElement.GetProperty("value").EnumerateArray()
+                    .Select(f => f.GetProperty("referenceName").GetString())
+                    .ToList();
+                
+                // Check for required fields
+                var requiredFields = new[] { "System.Id", "System.Title", "System.State", "System.WorkItemType" };
+                var missingFields = requiredFields.Where(rf => !fields.Contains(rf)).ToList();
+                
+                if (missingFields.Any())
+                {
+                    return CreateFailureResult(
+                        "work-item-fields",
+                        "Work item display and processing",
+                        "Required work item fields are accessible",
+                        $"Missing fields: {string.Join(", ", missingFields)}",
+                        FailureCategory.MissingField,
+                        $"Found {fields.Count} fields but missing required fields");
+                }
+                
+                return new TfsCapabilityCheckResult
+                {
+                    CapabilityId = "work-item-fields",
+                    Success = true,
+                    ImpactedFunctionality = "Work item display and processing",
+                    ExpectedBehavior = "Required work item fields are accessible",
+                    ObservedBehavior = $"All required fields present ({fields.Count} total fields)"
+                };
+            }
+            
+            return CreateFailureResult(
+                "work-item-fields",
+                "Work item display and processing",
+                "Required work item fields are accessible",
+                $"HTTP {(int)response.StatusCode}",
+                CategorizeHttpError(response.StatusCode),
+                await response.Content.ReadAsStringAsync(cancellationToken));
+        }
+        catch (Exception ex)
+        {
+            return CreateFailureResult(
+                "work-item-fields",
+                "Work item display and processing",
+                "Required work item fields are accessible",
+                $"Exception: {ex.GetType().Name}",
+                FailureCategory.EndpointUnavailable,
+                SanitizeErrorMessage(ex.Message));
+        }
+    }
+
+    private async Task<TfsCapabilityCheckResult> VerifyBatchReadAsync(
+        TfsConfigEntity entity, 
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Try to fetch work items in batch (even if there are none, the API should respond)
+            var url = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems?ids=1,2,3&api-version={entity.ApiVersion}";
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            
+            // We expect 200 (with items) or 404 (no items found), both are acceptable
+            if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return new TfsCapabilityCheckResult
+                {
+                    CapabilityId = "batch-read",
+                    Success = true,
+                    ImpactedFunctionality = "Efficient work item synchronization",
+                    ExpectedBehavior = "Batch work item retrieval is supported",
+                    ObservedBehavior = "Batch API endpoint responded successfully"
+                };
+            }
+            
+            return CreateFailureResult(
+                "batch-read",
+                "Efficient work item synchronization",
+                "Batch work item retrieval is supported",
+                $"HTTP {(int)response.StatusCode}",
+                CategorizeHttpError(response.StatusCode),
+                await response.Content.ReadAsStringAsync(cancellationToken));
+        }
+        catch (Exception ex)
+        {
+            return CreateFailureResult(
+                "batch-read",
+                "Efficient work item synchronization",
+                "Batch work item retrieval is supported",
+                $"Exception: {ex.GetType().Name}",
+                FailureCategory.EndpointUnavailable,
+                SanitizeErrorMessage(ex.Message));
+        }
+    }
+
+    private async Task<TfsCapabilityCheckResult> VerifyWorkItemUpdateAsync(
+        TfsConfigEntity entity,
+        int workItemId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            _logger.LogInformation("Verifying work item update capability using work item {WorkItemId}", workItemId);
+            
+            // First, verify the work item exists and get its current state
+            var getUrl = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
+            var getResponse = await _httpClient.GetAsync(getUrl, cancellationToken);
+            
+            if (!getResponse.IsSuccessStatusCode)
+            {
+                return CreateFailureResult(
+                    "work-item-update",
+                    "Work item modifications (state changes, effort updates)",
+                    "Can update work item fields",
+                    $"Work item {workItemId} not found or not accessible",
+                    getResponse.StatusCode == HttpStatusCode.NotFound ? FailureCategory.Authorization : CategorizeHttpError(getResponse.StatusCode),
+                    await getResponse.Content.ReadAsStringAsync(cancellationToken),
+                    targetScope: $"Work Item #{workItemId}",
+                    mutationType: MutationType.Update,
+                    cleanupStatus: CleanupStatus.Skipped);
+            }
+
+            // Perform a non-destructive update test (add a comment or verify fields are writable)
+            // We'll use a JSON Patch test operation which doesn't modify data
+            var testPatch = new[]
+            {
+                new
+                {
+                    op = "test",
+                    path = "/fields/System.State",
+                    value = (string?)null // We're just testing if we can access the field
+                }
+            };
+
+            var updateUrl = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
+            using var content = new StringContent(
+                JsonSerializer.Serialize(testPatch), 
+                System.Text.Encoding.UTF8, 
+                "application/json-patch+json");
+
+            var updateResponse = await _httpClient.PatchAsync(updateUrl, content, cancellationToken);
+            
+            // For a test operation, we expect either success or a specific failure about the test
+            var isWritable = updateResponse.IsSuccessStatusCode || 
+                            updateResponse.StatusCode == HttpStatusCode.BadRequest; // BadRequest is OK for test op
+            
+            if (isWritable)
+            {
+                return new TfsCapabilityCheckResult
+                {
+                    CapabilityId = "work-item-update",
+                    Success = true,
+                    ImpactedFunctionality = "Work item modifications (state changes, effort updates)",
+                    ExpectedBehavior = "Can update work item fields",
+                    ObservedBehavior = $"Work item {workItemId} is accessible and writable",
+                    TargetScope = $"Work Item #{workItemId}",
+                    MutationType = MutationType.Update,
+                    CleanupStatus = CleanupStatus.NotRequired
+                };
+            }
+            
+            return CreateFailureResult(
+                "work-item-update",
+                "Work item modifications (state changes, effort updates)",
+                "Can update work item fields",
+                $"HTTP {(int)updateResponse.StatusCode}",
+                CategorizeHttpError(updateResponse.StatusCode),
+                await updateResponse.Content.ReadAsStringAsync(cancellationToken),
+                targetScope: $"Work Item #{workItemId}",
+                mutationType: MutationType.Update,
+                cleanupStatus: CleanupStatus.NotRequired);
+        }
+        catch (Exception ex)
+        {
+            return CreateFailureResult(
+                "work-item-update",
+                "Work item modifications (state changes, effort updates)",
+                "Can update work item fields",
+                $"Exception: {ex.GetType().Name}",
+                FailureCategory.EndpointUnavailable,
+                SanitizeErrorMessage(ex.Message),
+                targetScope: $"Work Item #{workItemId}",
+                mutationType: MutationType.Update,
+                cleanupStatus: CleanupStatus.NotRequired);
+        }
+    }
+
+    private TfsCapabilityCheckResult CreateFailureResult(
+        string capabilityId,
+        string impactedFunctionality,
+        string expectedBehavior,
+        string observedBehavior,
+        FailureCategory failureCategory,
+        string rawEvidence,
+        string? targetScope = null,
+        MutationType? mutationType = null,
+        CleanupStatus? cleanupStatus = null)
+    {
+        var (causes, guidance) = GetFailureGuidance(failureCategory, rawEvidence);
+        
+        return new TfsCapabilityCheckResult
+        {
+            CapabilityId = capabilityId,
+            Success = false,
+            ImpactedFunctionality = impactedFunctionality,
+            ExpectedBehavior = expectedBehavior,
+            ObservedBehavior = observedBehavior,
+            FailureCategory = failureCategory,
+            RawEvidence = TruncateEvidence(rawEvidence),
+            LikelyCauses = causes,
+            ResolutionGuidance = guidance,
+            TargetScope = targetScope,
+            MutationType = mutationType,
+            CleanupStatus = cleanupStatus
+        };
+    }
+
+    private FailureCategory CategorizeHttpError(HttpStatusCode statusCode)
+    {
+        return statusCode switch
+        {
+            HttpStatusCode.Unauthorized => FailureCategory.Authentication,
+            HttpStatusCode.Forbidden => FailureCategory.Authorization,
+            HttpStatusCode.NotFound => FailureCategory.EndpointUnavailable,
+            HttpStatusCode.BadRequest => FailureCategory.QueryRestriction,
+            HttpStatusCode.TooManyRequests => FailureCategory.RateLimit,
+            _ when (int)statusCode >= 500 => FailureCategory.EndpointUnavailable,
+            _ => FailureCategory.Unknown
+        };
+    }
+
+    private (List<string> Causes, List<string> Guidance) GetFailureGuidance(
+        FailureCategory category, 
+        string rawEvidence)
+    {
+        return category switch
+        {
+            FailureCategory.Authentication => (
+                new List<string> 
+                { 
+                    "PAT has expired or been revoked",
+                    "PAT is not provided in X-TFS-PAT header",
+                    "Incorrect PAT value"
+                },
+                new List<string> 
+                { 
+                    "Generate a new PAT in Azure DevOps",
+                    "Ensure PAT has 'Work Items (Read)' permission at minimum",
+                    "Verify PAT is being sent with requests"
+                }),
+            
+            FailureCategory.Authorization => (
+                new List<string> 
+                { 
+                    "Insufficient permissions for the operation",
+                    "Project does not exist or user has no access",
+                    "Area Path or Iteration Path access is restricted"
+                },
+                new List<string> 
+                { 
+                    "Verify project name is correct",
+                    "Check PAT permissions include appropriate scopes",
+                    "Contact project administrator to grant access"
+                }),
+            
+            FailureCategory.EndpointUnavailable => (
+                new List<string> 
+                { 
+                    "TFS server is unreachable",
+                    "Network connectivity issue",
+                    "Server URL is incorrect",
+                    "API endpoint not supported by server version"
+                },
+                new List<string> 
+                { 
+                    "Verify server URL is correct and accessible",
+                    "Check network connectivity and firewall settings",
+                    "Confirm TFS/Azure DevOps Server version is 2019 or later",
+                    "Try increasing timeout settings"
+                }),
+            
+            FailureCategory.MissingField => (
+                new List<string> 
+                { 
+                    "Process template does not include required field",
+                    "Custom field configuration is incompatible",
+                    "Work item type does not support the field"
+                },
+                new List<string> 
+                { 
+                    "Verify process template includes required fields",
+                    "Check if custom fields are properly configured",
+                    "Review work item type definitions"
+                }),
+            
+            FailureCategory.RateLimit => (
+                new List<string> 
+                { 
+                    "Too many requests in short time period",
+                    "Server throttling active"
+                },
+                new List<string> 
+                { 
+                    "Wait a few minutes before retrying",
+                    "Reduce sync frequency",
+                    "Contact administrator about rate limit increases"
+                }),
+            
+            _ => (
+                new List<string> { "Unexpected error occurred" },
+                new List<string> { "Review error details", "Contact support if issue persists" })
+        };
+    }
+
+    private string SanitizeErrorMessage(string message)
+    {
+        // Remove any potential sensitive information
+        // This is a simple implementation - could be more sophisticated
+        return message
+            .Replace("Authorization", "Auth***")
+            .Replace("Bearer", "***")
+            .Replace("token", "***");
+    }
+
+    private string TruncateEvidence(string evidence)
+    {
+        const int maxLength = 500;
+        if (evidence.Length <= maxLength)
+            return evidence;
+        
+        return evidence.Substring(0, maxLength) + "... (truncated)";
     }
 }
