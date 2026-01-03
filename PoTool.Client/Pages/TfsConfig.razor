@@ -1,6 +1,7 @@
 @page "/tfsconfig"
 @using PoTool.Client.Services
 @using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
 @using static PoTool.Client.Components.Common.PageHelp
 @inject TfsConfigService TfsConfigService
 @inject ErrorMessageService ErrorMessageService
@@ -317,7 +318,7 @@
     private DateTimeOffset? _lastValidated;
 
     // Verification report
-    private TfsVerificationReportDto? _verificationReport;
+    private TfsVerificationReport? _verificationReport;
 
     // Error display
     private ErrorResponse? _errorResponse;
