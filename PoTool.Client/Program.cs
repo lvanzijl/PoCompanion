@@ -42,52 +42,69 @@ builder.Services.AddScoped<HubConnection>(sp =>
 });
 
 // Register NSwag-generated API clients
+// Note: Generated clients have a default BaseUrl, but we override it with the configured apiBaseUrl
 builder.Services.AddScoped<IClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new PoTool.Client.ApiClient.Client(httpClient);
+    var client = new PoTool.Client.ApiClient.Client(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
 });
 
 builder.Services.AddScoped<IWorkItemsClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new WorkItemsClient(httpClient);
+    var client = new WorkItemsClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
 });
 
 builder.Services.AddScoped<ISettingsClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new SettingsClient(httpClient);
+    var client = new SettingsClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
 });
 
 builder.Services.AddScoped<IProfilesClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new ProfilesClient(httpClient);
+    var client = new ProfilesClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
 });
 
 builder.Services.AddScoped<IPullRequestsClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new PullRequestsClient(httpClient);
+    var client = new PullRequestsClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
 });
 
 builder.Services.AddScoped<IFilteringClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new FilteringClient(httpClient);
+    var client = new FilteringClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
 });
 
 builder.Services.AddScoped<IHealthCalculationClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new HealthCalculationClient(httpClient);
+    var client = new HealthCalculationClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
 });
 
 builder.Services.AddScoped<IMetricsClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    return new MetricsClient(httpClient);
+    var client = new MetricsClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
 });
 
 // Register client services
