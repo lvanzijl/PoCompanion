@@ -96,4 +96,32 @@ public class WorkItemExplorerTests
         // Ensure that at least the task and its parent chain are included
         Assert.IsTrue(toInclude.Any());
     }
+
+    [TestMethod]
+    public async Task AllGoals_AreRootNodes()
+    {
+        var facade = CreateMockDataFacade();
+        var repo = new DevWorkItemRepository(facade);
+        var items = (await repo.GetAllAsync()).ToList();
+
+        // Get all goals
+        var goals = items.Where(i => i.Type == "Goal").ToList();
+        
+        // Print debug info
+        System.Console.WriteLine($"Total work items: {items.Count}");
+        System.Console.WriteLine($"Total goals: {goals.Count}");
+        foreach (var goal in goals.OrderBy(g => g.TfsId))
+        {
+            System.Console.WriteLine($"  Goal {goal.TfsId}: {goal.Title}, Parent: {goal.ParentTfsId?.ToString() ?? "null"}");
+        }
+
+        // Verify we have exactly 10 goals
+        Assert.AreEqual(10, goals.Count, "Should have exactly 10 goals");
+        
+        // Verify all goals are root nodes (no parent)
+        foreach (var goal in goals)
+        {
+            Assert.IsNull(goal.ParentTfsId, $"Goal {goal.TfsId} should not have a parent, but has parent {goal.ParentTfsId}");
+        }
+    }
 }
