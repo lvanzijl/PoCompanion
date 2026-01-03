@@ -410,6 +410,22 @@ public class MockTfsClient : ITfsClient
                 ImpactedFunctionality = "Work item retrieval, project-specific operations",
                 ExpectedBehavior = "Project exists and is accessible",
                 ObservedBehavior = "Mock project accessible"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "work-item-revisions",
+                Success = true,
+                ImpactedFunctionality = "Work item history and change tracking",
+                ExpectedBehavior = "Work item revision history API is accessible",
+                ObservedBehavior = "Mock revision history endpoint accessible"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "pull-requests",
+                Success = true,
+                ImpactedFunctionality = "Pull request retrieval and analysis",
+                ExpectedBehavior = "Git repositories and pull request API are accessible",
+                ObservedBehavior = "Mock Git repositories API accessible"
             }
         };
 

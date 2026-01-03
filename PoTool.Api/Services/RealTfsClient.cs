@@ -944,6 +944,8 @@ public class RealTfsClient : ITfsClient
         checks.Add(await VerifyWorkItemQueryAsync(entity, cancellationToken));
         checks.Add(await VerifyWorkItemFieldsAsync(entity, cancellationToken));
         checks.Add(await VerifyBatchReadAsync(entity, cancellationToken));
+        checks.Add(await VerifyWorkItemRevisionsAsync(entity, cancellationToken));
+        checks.Add(await VerifyPullRequestsAsync(entity, cancellationToken));
         
         // Run write checks if requested
         if (includeWriteChecks)
@@ -1212,6 +1214,102 @@ public class RealTfsClient : ITfsClient
                 "batch-read",
                 "Efficient work item synchronization",
                 "Batch work item retrieval is supported",
+                $"Exception: {ex.GetType().Name}",
+                FailureCategory.EndpointUnavailable,
+                SanitizeErrorMessage(ex.Message));
+        }
+    }
+
+    private async Task<TfsCapabilityCheckResult> VerifyWorkItemRevisionsAsync(
+        TfsConfigEntity entity,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Try to get revision history capabilities by checking the revisions endpoint
+            // We'll use work item ID 1 as a test (most TFS instances have at least one work item)
+            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/1/revisions?api-version={entity.ApiVersion}";
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            
+            // We expect either 200 (work item exists with revisions) or 404 (work item doesn't exist)
+            // Both indicate the API endpoint is available
+            if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return new TfsCapabilityCheckResult
+                {
+                    CapabilityId = "work-item-revisions",
+                    Success = true,
+                    ImpactedFunctionality = "Work item history and change tracking",
+                    ExpectedBehavior = "Work item revision history API is accessible",
+                    ObservedBehavior = "Revision history endpoint responded successfully"
+                };
+            }
+            
+            return CreateFailureResult(
+                "work-item-revisions",
+                "Work item history and change tracking",
+                "Work item revision history API is accessible",
+                $"HTTP {(int)response.StatusCode}",
+                CategorizeHttpError(response.StatusCode),
+                await response.Content.ReadAsStringAsync(cancellationToken));
+        }
+        catch (Exception ex)
+        {
+            return CreateFailureResult(
+                "work-item-revisions",
+                "Work item history and change tracking",
+                "Work item revision history API is accessible",
+                $"Exception: {ex.GetType().Name}",
+                FailureCategory.EndpointUnavailable,
+                SanitizeErrorMessage(ex.Message));
+        }
+    }
+
+    private async Task<TfsCapabilityCheckResult> VerifyPullRequestsAsync(
+        TfsConfigEntity entity,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Try to get repositories to verify Git/PR API access
+            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/git/repositories?api-version={entity.ApiVersion}";
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                
+                var repoCount = 0;
+                if (doc.RootElement.TryGetProperty("value", out var repos))
+                {
+                    repoCount = repos.GetArrayLength();
+                }
+                
+                return new TfsCapabilityCheckResult
+                {
+                    CapabilityId = "pull-requests",
+                    Success = true,
+                    ImpactedFunctionality = "Pull request retrieval and analysis",
+                    ExpectedBehavior = "Git repositories and pull request API are accessible",
+                    ObservedBehavior = $"Git repositories API accessible ({repoCount} repositories found)"
+                };
+            }
+            
+            return CreateFailureResult(
+                "pull-requests",
+                "Pull request retrieval and analysis",
+                "Git repositories and pull request API are accessible",
+                $"HTTP {(int)response.StatusCode}",
+                CategorizeHttpError(response.StatusCode),
+                await response.Content.ReadAsStringAsync(cancellationToken));
+        }
+        catch (Exception ex)
+        {
+            return CreateFailureResult(
+                "pull-requests",
+                "Pull request retrieval and analysis",
+                "Git repositories and pull request API are accessible",
                 $"Exception: {ex.GetType().Name}",
                 FailureCategory.EndpointUnavailable,
                 SanitizeErrorMessage(ex.Message));

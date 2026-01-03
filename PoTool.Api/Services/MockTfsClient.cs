@@ -263,6 +263,22 @@ public class MockTfsClient : ITfsClient
                 ImpactedFunctionality = "Efficient work item synchronization",
                 ExpectedBehavior = "Batch work item retrieval is supported",
                 ObservedBehavior = "Mock batch API endpoint simulated successfully"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "work-item-revisions",
+                Success = true,
+                ImpactedFunctionality = "Work item history and change tracking",
+                ExpectedBehavior = "Work item revision history API is accessible",
+                ObservedBehavior = "Mock revision history endpoint accessible"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "pull-requests",
+                Success = true,
+                ImpactedFunctionality = "Pull request retrieval and analysis",
+                ExpectedBehavior = "Git repositories and pull request API are accessible",
+                ObservedBehavior = "Mock Git repositories API accessible (5 repositories)"
             }
         };
 
