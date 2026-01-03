@@ -179,6 +179,16 @@ public static class ApiApplicationBuilderExtensions
             return ok ? Results.Ok() : Results.StatusCode(500);
         });
 
+        app.MapPost("/api/tfsverify", async (ITfsClient client, TfsVerifyRequest req, CancellationToken ct) =>
+        {
+            var report = await client.VerifyCapabilitiesAsync(
+                req.IncludeWriteChecks, 
+                req.WorkItemIdForWriteCheck, 
+                ct);
+            return Results.Ok(report);
+        })
+        .Produces<Core.Contracts.TfsVerification.TfsVerificationReport>(StatusCodes.Status200OK);
+
         app.MapPost("/api/workitems/sync", async (IMediator mediator, CancellationToken ct) =>
         {
             await mediator.Send(new PoTool.Core.WorkItems.Commands.SyncWorkItemsCommand("DefaultAreaPath"), ct);
@@ -196,3 +206,8 @@ public static class ApiApplicationBuilderExtensions
 /// Request model for TFS configuration endpoint.
 /// </summary>
 public record TfsConfigRequest(string? Url, string? Project, string? Pat);
+
+/// <summary>
+/// Request model for TFS API verification endpoint.
+/// </summary>
+public record TfsVerifyRequest(bool IncludeWriteChecks, int? WorkItemIdForWriteCheck);
