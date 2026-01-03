@@ -160,7 +160,9 @@ public static class ApiServiceCollectionExtensions
                     policy.WithOrigins(
                             "https://localhost:5001",
                             "http://localhost:5000",
-                            "http://localhost:5291"  // Allow API self-reference for Swagger UI
+                            "http://localhost:5291",  // Allow API self-reference for Swagger UI
+                            "http://localhost:5292",  // Blazor WebAssembly dev server
+                            "https://localhost:7215"  // Blazor WebAssembly HTTPS dev server
                         )
                         .AllowAnyHeader()
                         .AllowAnyMethod()
