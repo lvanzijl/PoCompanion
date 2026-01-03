@@ -326,6 +326,5 @@ Before considering this change complete, verify:
 
 This document supersedes any previous rules regarding PAT storage in:
 - `docs/ARCHITECTURE_RULES.md` (Section 7)
-- `docs/TFS_ONPREM_INTEGRATION_PLAN.md` (Authentication section)
 
 All code MUST comply with the rules defined in this document.

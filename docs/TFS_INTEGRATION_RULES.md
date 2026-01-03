@@ -121,7 +121,129 @@ Any deviation requires an explicit, documented exception.
 
 ---
 
-## 9. Error Handling and Resilience
+## 9. Verify TFS API – diagnostic and write-verification rules
+
+### 9.1 Purpose
+
+The Verify TFS API MUST provide a **clear, exhaustive diagnostic report** that:
+
+- is readable and understandable by humans
+- contains sufficient technical detail to fix TFS integration issues
+- explicitly shows **which tool functionality will not work** as a result of each failure
+
+The report is a first-class artefact and part of the product.
+
+---
+
+### 9.2 Configuration-view integration (mandatory)
+
+The Verify TFS API is an **integral part of the TFS Configuration View**.
+
+Rules:
+- Verify TFS API MUST NOT exist as a standalone feature.
+- It MUST be accessible from the same view used to configure:
+  - TFS base URL
+  - project / collection
+  - authentication
+- Verification MUST use the current (even unsaved) configuration values, identical to “Test Connection”.
+
+---
+
+### 9.3 Diagnostic content per failed capability
+
+For every failed verification check, the report MUST include:
+
+- **CapabilityId**  
+  Stable identifier mapping 1:1 to a concrete TFS capability.
+
+- **ImpactedFunctionality**  
+  Explicit description of which user-visible functionality will not work or will be degraded.
+
+- **ExpectedBehavior**  
+  What the tool assumes the TFS server can do.
+
+- **ObservedBehavior**  
+  What actually happened during verification.
+
+- **FailureCategory** (enum)  
+  One of:
+  - Authentication  
+  - Authorization  
+  - EndpointUnavailable  
+  - UnsupportedApiVersion  
+  - MissingField  
+  - InvalidProcessTemplate  
+  - QueryRestriction  
+  - PayloadShapeMismatch  
+  - RateLimit  
+  - Unknown
+
+- **RawEvidence (sanitized)**  
+  - HTTP status code  
+  - TFS error code if present  
+  - truncated response or error message  
+  - request intent (no URLs, headers, or secrets)
+
+- **LikelyCauses**  
+  Ordered list of plausible causes.
+
+- **ResolutionGuidance**  
+  Concrete steps to restore compatibility.
+
+---
+
+### 9.4 Write-operation verification (safeguards)
+
+Write operations MUST be verified without risking production data.
+
+Rules:
+
+- Write-related verification MUST be implemented as **separate, explicitly labeled checks**.
+- Write checks MUST NOT run as part of the default verification.
+- Write checks MUST require explicit user opt-in.
+
+User-controlled scope:
+- The user MUST be able to provide a specific **Work Item ID** to be used for non-destructive update checks, **or**
+- explicitly allow creation of temporary verification artefacts.
+
+Safety constraints:
+- The tool MUST NOT auto-select or guess production work items.
+- Temporary artefacts MUST use a deterministic prefix (e.g. `VERIFY-*`).
+- User-created artefacts MUST NEVER be deleted.
+- Cleanup MUST be attempted and reported.
+
+---
+
+### 9.5 Additional diagnostics for write checks
+
+For each write verification check, the report MUST additionally include:
+
+- **TargetScope**  
+  Description of which work item(s) were affected.
+
+- **MutationType**  
+  Create / Update / Link / Close / Other.
+
+- **CleanupStatus**  
+  CleanedUp / NotRequired / Failed / Skipped.
+
+This information MUST be visible before raw technical evidence.
+
+---
+
+### 9.6 Determinism, safety, and enforcement
+
+- Output MUST be deterministic across runs given the same server state.
+- Reports MUST NOT include secrets or credentials.
+- If a feature introduces or changes TFS write behavior and:
+  - no corresponding write verification exists, or
+  - write verification is unsafe or implicit
+
+then the feature is incomplete and MUST NOT be merged.
+
+---
+
+## 10. Error Handling and Resilience
 
 1. All TFS calls MUST include explicit error handling and categorization.
 2. Errors MUST distinguish between:
@@ -135,7 +257,7 @@ Any deviation requires an explicit, documented exception.
 
 ---
 
-## 10. Caching and Consistency
+## 11. Caching and Consistency
 
 1. Caching is allowed but never authoritative.
 2. Cached TFS data MUST have clear invalidation rules.
@@ -144,7 +266,7 @@ Any deviation requires an explicit, documented exception.
 
 ---
 
-## 11. Performance Constraints
+## 12. Performance Constraints
 
 1. Integration performance MUST degrade predictably.
 2. No single TFS call may block the UI thread or critical workflows.
@@ -153,7 +275,7 @@ Any deviation requires an explicit, documented exception.
 
 ---
 
-## 12. Observability and Diagnostics
+## 13. Observability and Diagnostics
 
 1. All TFS interactions MUST be observable.
 2. Logs MUST include:
@@ -165,7 +287,7 @@ Any deviation requires an explicit, documented exception.
 
 ---
 
-## 13. Testing Rules
+## 14. Testing Rules
 
 1. TFS integration code MUST be testable without a live TFS instance.
 2. Tests MUST include contract, error-path, and boundary tests.
@@ -174,7 +296,7 @@ Any deviation requires an explicit, documented exception.
 
 ---
 
-## 14. Versioning and Evolution
+## 15. Versioning and Evolution
 
 1. API behavior changes between server versions MUST be assumed.
 2. Version-specific logic MUST be isolated, explicit, and documented.
@@ -182,7 +304,7 @@ Any deviation requires an explicit, documented exception.
 
 ---
 
-## 15. Prohibited Practices
+## 16. Prohibited Practices
 
 The following are forbidden:
 
@@ -194,7 +316,7 @@ The following are forbidden:
 
 ---
 
-## 16. Relationship to Other Documents
+## 17. Relationship to Other Documents
 
 - This document is authoritative for TFS integration rules
 - Roadmaps, plans, and summaries are non-authoritative
