@@ -1,6 +1,7 @@
 @page "/tfsconfig"
 @using PoTool.Client.Services
 @using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
 @using static PoTool.Client.Components.Common.PageHelp
 @inject TfsConfigService TfsConfigService
 @inject ErrorMessageService ErrorMessageService
@@ -120,12 +121,157 @@
                         <span>Test Connection</span>
                     }
                 </CompactButton>
+
+                <CompactButton Variant="Variant.Filled" 
+                          Color="Color.Info" 
+                          OnClick="VerifyTfsApi"
+                          Disabled="@(!_formValid || _isVerifying)"
+                          StartIcon="@Icons.Material.Filled.Verified">
+                    @if (_isVerifying)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Verifying...</span>
+                    }
+                    else
+                    {
+                        <span>Verify TFS API</span>
+                    }
+                </CompactButton>
             </MudStack>
+
+            @* Optional write verification controls *@
+            <MudExpansionPanels Class="mt-3" Elevation="0">
+                <MudExpansionPanel Text="Advanced Verification Options" Dense="true">
+                    <MudCheckBox @bind-Value="_includeWriteChecks" 
+                                Label="Include write capability checks"
+                                Color="Color.Primary"
+                                Class="mb-2">
+                        Verify write operations (requires work item ID)
+                    </MudCheckBox>
+
+                    @if (_includeWriteChecks)
+                    {
+                        <CompactTextField @bind-Value="_writeCheckWorkItemId" 
+                                     Label="Work Item ID for Write Check" 
+                                     Placeholder="e.g., 1234"
+                                     HelperText="Provide an existing work item ID for safe write verification" />
+                    }
+                </MudExpansionPanel>
+            </MudExpansionPanels>
         </MudForm>
 
         <ErrorDisplay ErrorResponse="@_errorResponse" 
                       Class="mt-4"
                       OnDismiss="ClearError" />
+
+        @* Verification Report Display *@
+        @if (_verificationReport != null)
+        {
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.h6" Class="mb-2">TFS API Verification Report</MudText>
+            <MudPaper Elevation="1" Class="pa-3 mb-3">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.body2">
+                        <strong>Verified:</strong> @_verificationReport.VerifiedAt.ToLocalTime().ToString("g")
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                        <strong>Server:</strong> @_verificationReport.ServerUrl
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                        <strong>Project:</strong> @_verificationReport.ProjectName
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                        <strong>Summary:</strong> @_verificationReport.Summary
+                    </MudText>
+                    
+                    @if (_verificationReport.Success)
+                    {
+                        <MudAlert Severity="Severity.Success" Dense="true" Class="mt-2">
+                            All capability checks passed! The TFS API is fully functional.
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                            Some capability checks failed. Review the details below.
+                        </MudAlert>
+                    }
+                </MudStack>
+            </MudPaper>
+
+            @* Individual Check Results *@
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Capability Checks</MudText>
+            @foreach (var check in _verificationReport.Checks)
+            {
+                <MudCard Class="mb-2" Elevation="1">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                @if (check.Success)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
+                                }
+                                <MudText Typo="Typo.subtitle2">@check.CapabilityId</MudText>
+                            </MudStack>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudText Typo="Typo.body2" Class="mb-1">
+                            <strong>Impacted Functionality:</strong> @check.ImpactedFunctionality
+                        </MudText>
+                        <MudText Typo="Typo.body2" Class="mb-1">
+                            <strong>Expected:</strong> @check.ExpectedBehavior
+                        </MudText>
+                        @if (!string.IsNullOrEmpty(check.ObservedBehavior))
+                        {
+                            <MudText Typo="Typo.body2" Class="mb-1">
+                                <strong>Observed:</strong> @check.ObservedBehavior
+                            </MudText>
+                        }
+                        
+                        @if (!check.Success)
+                        {
+                            @if (check.LikelyCauses?.Any() == true)
+                            {
+                                <MudText Typo="Typo.body2" Class="mt-2 mb-1"><strong>Likely Causes:</strong></MudText>
+                                <MudList T="string" Dense="true">
+                                    @foreach (var cause in check.LikelyCauses)
+                                    {
+                                        <MudListItem T="string" Icon="@Icons.Material.Filled.FiberManualRecord" IconSize="Size.Small">
+                                            @cause
+                                        </MudListItem>
+                                    }
+                                </MudList>
+                            }
+                            
+                            @if (check.ResolutionGuidance?.Any() == true)
+                            {
+                                <MudText Typo="Typo.body2" Class="mt-2 mb-1"><strong>Resolution Steps:</strong></MudText>
+                                <MudList T="string" Dense="true">
+                                    @foreach (var step in check.ResolutionGuidance)
+                                    {
+                                        <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowRight" IconSize="Size.Small">
+                                            @step
+                                        </MudListItem>
+                                    }
+                                </MudList>
+                            }
+                        }
+
+                        @if (!string.IsNullOrEmpty(check.TargetScope))
+                        {
+                            <MudText Typo="Typo.caption" Class="mt-2">
+                                <strong>Target:</strong> @check.TargetScope
+                            </MudText>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            }
+        }
 
         @if (!string.IsNullOrEmpty(_currentUrl))
         {
@@ -152,6 +298,7 @@
     private bool _formValid;
     private bool _isSaving;
     private bool _isTesting;
+    private bool _isVerifying;
     private bool _isLoading = true;
 
     private string _url = string.Empty;
@@ -162,9 +309,16 @@
     private int _timeoutSeconds = 30;
     private string _apiVersion = "7.0";
 
+    // Write verification options
+    private bool _includeWriteChecks = false;
+    private string _writeCheckWorkItemId = string.Empty;
+
     private string _currentUrl = string.Empty;
     private string _currentProject = string.Empty;
     private DateTimeOffset? _lastValidated;
+
+    // Verification report
+    private TfsVerificationReport? _verificationReport;
 
     // Error display
     private ErrorResponse? _errorResponse;
@@ -268,6 +422,77 @@
         finally
         {
             _isTesting = false;
+        }
+    }
+
+    private async Task VerifyTfsApi()
+    {
+        if (!_formValid) return;
+
+        _isVerifying = true;
+        ClearError();
+        _verificationReport = null; // Clear previous report
+        
+        try
+        {
+            // First save the config
+            await TfsConfigService.SaveConfigAsync(_url, _project, _pat, _authMode, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
+
+            // Parse work item ID if provided
+            int? workItemId = null;
+            if (_includeWriteChecks && !string.IsNullOrWhiteSpace(_writeCheckWorkItemId))
+            {
+                if (int.TryParse(_writeCheckWorkItemId, out var parsedId))
+                {
+                    workItemId = parsedId;
+                }
+                else
+                {
+                    _errorResponse = new ErrorResponse
+                    {
+                        UserMessage = "Invalid Work Item ID",
+                        Suggestion = "Please enter a valid numeric work item ID for write verification."
+                    };
+                    StateHasChanged();
+                    return;
+                }
+            }
+
+            // Run verification
+            _verificationReport = await TfsConfigService.VerifyTfsApiAsync(_includeWriteChecks, workItemId);
+
+            if (_verificationReport != null)
+            {
+                if (_verificationReport.Success)
+                {
+                    Snackbar.Add("TFS API verification completed successfully!", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add($"TFS API verification completed with {_verificationReport.Checks.Count(c => !c.Success)} failures", Severity.Warning);
+                }
+                
+                _currentUrl = _url;
+                _currentProject = _project;
+                _pat = string.Empty; // Clear PAT after verification
+            }
+            else
+            {
+                _errorResponse = new ErrorResponse
+                {
+                    UserMessage = "TFS API verification failed.",
+                    Suggestion = "Please check your configuration and try again."
+                };
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex, "Error verifying TFS API");
+        }
+        finally
+        {
+            _isVerifying = false;
         }
     }
 

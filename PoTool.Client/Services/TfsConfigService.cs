@@ -1,4 +1,6 @@
 using PoTool.Client.ApiClient;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace PoTool.Client.Services;
 
@@ -10,12 +12,14 @@ public class TfsConfigService
 {
     private readonly IClient _apiClient;
     private readonly ISecureStorageService _secureStorage;
+    private readonly HttpClient _httpClient;
     private const string PatStorageKey = "tfs_pat";
 
-    public TfsConfigService(IClient apiClient, ISecureStorageService secureStorage)
+    public TfsConfigService(IClient apiClient, ISecureStorageService secureStorage, HttpClient httpClient)
     {
         _apiClient = apiClient;
         _secureStorage = secureStorage;
+        _httpClient = httpClient;
     }
 
     /// <summary>
@@ -131,7 +135,54 @@ public class TfsConfigService
             return false;
         }
     }
+
+    /// <summary>
+    /// Verifies TFS API capabilities by running diagnostic checks.
+    /// </summary>
+    /// <param name="includeWriteChecks">Whether to include write capability checks.</param>
+    /// <param name="workItemIdForWriteCheck">Optional work item ID to use for write checks.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Complete verification report with check results.</returns>
+    public virtual async Task<TfsVerificationReport?> VerifyTfsApiAsync(
+        bool includeWriteChecks = false,
+        int? workItemIdForWriteCheck = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Get PAT from secure storage
+            var pat = await GetPatAsync();
+            if (string.IsNullOrEmpty(pat))
+            {
+                throw new InvalidOperationException("PAT is required for TFS API verification");
+            }
+
+            // Add PAT header to HttpClient for this request
+            _httpClient.DefaultRequestHeaders.Remove("X-TFS-PAT");
+            _httpClient.DefaultRequestHeaders.Add("X-TFS-PAT", pat);
+
+            // Use the generated API client
+            var request = new TfsVerifyRequest
+            {
+                IncludeWriteChecks = includeWriteChecks,
+                WorkItemIdForWriteCheck = workItemIdForWriteCheck
+            };
+
+            var report = await _apiClient.PostApiTfsverifyAsync(request, cancellationToken);
+            
+            return report;
+        }
+        catch (ApiException)
+        {
+            return null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 }
+
 
 /// <summary>
 /// DTO for TFS configuration.

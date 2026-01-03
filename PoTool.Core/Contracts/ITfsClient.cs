@@ -1,5 +1,6 @@
 using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
+using PoTool.Core.Contracts.TfsVerification;
 
 namespace PoTool.Core.Contracts;
 
@@ -117,5 +118,17 @@ public interface ITfsClient
     Task<bool> UpdateWorkItemEffortAsync(
         int workItemId,
         int effort,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verifies TFS API capabilities by running diagnostic checks.
+    /// </summary>
+    /// <param name="includeWriteChecks">Whether to include write capability checks.</param>
+    /// <param name="workItemIdForWriteCheck">Optional work item ID to use for write checks (user-provided).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Complete verification report with check results.</returns>
+    Task<TfsVerificationReport> VerifyCapabilitiesAsync(
+        bool includeWriteChecks = false,
+        int? workItemIdForWriteCheck = null,
         CancellationToken cancellationToken = default);
 }

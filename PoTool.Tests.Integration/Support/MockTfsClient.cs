@@ -1,6 +1,7 @@
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
+using PoTool.Core.Contracts.TfsVerification;
 
 namespace PoTool.Tests.Integration.Support;
 
@@ -384,5 +385,76 @@ public class MockTfsClient : ITfsClient
         // Return true regardless of whether work item is in our mock list
         // The handler will check the database repository, not our internal list
         return Task.FromResult(true);
+    }
+
+    public Task<TfsVerificationReport> VerifyCapabilitiesAsync(
+        bool includeWriteChecks = false,
+        int? workItemIdForWriteCheck = null,
+        CancellationToken cancellationToken = default)
+    {
+        // Mock implementation for integration tests - always return success
+        var checks = new List<TfsCapabilityCheckResult>
+        {
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "server-reachability",
+                Success = true,
+                ImpactedFunctionality = "All TFS integration features",
+                ExpectedBehavior = "Server responds to API requests with valid authentication",
+                ObservedBehavior = "Mock server reachable, authentication successful"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "project-access",
+                Success = true,
+                ImpactedFunctionality = "Work item retrieval, project-specific operations",
+                ExpectedBehavior = "Project exists and is accessible",
+                ObservedBehavior = "Mock project accessible"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "work-item-revisions",
+                Success = true,
+                ImpactedFunctionality = "Work item history and change tracking",
+                ExpectedBehavior = "Work item revision history API is accessible",
+                ObservedBehavior = "Mock revision history endpoint accessible"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "pull-requests",
+                Success = true,
+                ImpactedFunctionality = "Pull request retrieval and analysis",
+                ExpectedBehavior = "Git repositories and pull request API are accessible",
+                ObservedBehavior = "Mock Git repositories API accessible"
+            }
+        };
+
+        if (includeWriteChecks && workItemIdForWriteCheck.HasValue)
+        {
+            checks.Add(new TfsCapabilityCheckResult
+            {
+                CapabilityId = "work-item-update",
+                Success = true,
+                ImpactedFunctionality = "Work item modifications",
+                ExpectedBehavior = "Can update work item fields",
+                ObservedBehavior = $"Mock work item {workItemIdForWriteCheck.Value} is writable",
+                TargetScope = $"Work Item #{workItemIdForWriteCheck.Value}",
+                MutationType = MutationType.Update,
+                CleanupStatus = CleanupStatus.NotRequired
+            });
+        }
+
+        var report = new TfsVerificationReport
+        {
+            VerifiedAt = DateTimeOffset.UtcNow,
+            ServerUrl = "https://mock-tfs-test.example.com",
+            ProjectName = "TestProject",
+            ApiVersion = "7.0",
+            IncludedWriteChecks = includeWriteChecks,
+            Success = true,
+            Checks = checks
+        };
+
+        return Task.FromResult(report);
     }
 }

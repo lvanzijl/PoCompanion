@@ -3,6 +3,7 @@ using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
 using PoTool.Api.Services.MockData;
 using Microsoft.Extensions.Logging;
+using PoTool.Core.Contracts.TfsVerification;
 
 namespace PoTool.Api.Services;
 
@@ -211,5 +212,103 @@ public class MockTfsClient : ITfsClient
         _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} effort to {Effort}", 
             workItemId, effort);
         return Task.FromResult(true);
+    }
+
+    public Task<TfsVerificationReport> VerifyCapabilitiesAsync(
+        bool includeWriteChecks = false,
+        int? workItemIdForWriteCheck = null,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: VerifyCapabilitiesAsync called. WriteChecks: {IncludeWriteChecks}", 
+            includeWriteChecks);
+
+        var checks = new List<TfsCapabilityCheckResult>
+        {
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "server-reachability",
+                Success = true,
+                ImpactedFunctionality = "All TFS integration features",
+                ExpectedBehavior = "Server responds to API requests with valid authentication",
+                ObservedBehavior = "Mock server reachable, authentication successful"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "project-access",
+                Success = true,
+                ImpactedFunctionality = "Work item retrieval, project-specific operations",
+                ExpectedBehavior = "Project exists and is accessible",
+                ObservedBehavior = "Mock project 'Battleship' accessible"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "work-item-query",
+                Success = true,
+                ImpactedFunctionality = "Work item search and filtering",
+                ExpectedBehavior = "WIQL queries execute successfully",
+                ObservedBehavior = "Mock WIQL query executed successfully"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "work-item-fields",
+                Success = true,
+                ImpactedFunctionality = "Work item display and processing",
+                ExpectedBehavior = "Required work item fields are accessible",
+                ObservedBehavior = "All required fields present in mock data"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "batch-read",
+                Success = true,
+                ImpactedFunctionality = "Efficient work item synchronization",
+                ExpectedBehavior = "Batch work item retrieval is supported",
+                ObservedBehavior = "Mock batch API endpoint simulated successfully"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "work-item-revisions",
+                Success = true,
+                ImpactedFunctionality = "Work item history and change tracking",
+                ExpectedBehavior = "Work item revision history API is accessible",
+                ObservedBehavior = "Mock revision history endpoint accessible"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "pull-requests",
+                Success = true,
+                ImpactedFunctionality = "Pull request retrieval and analysis",
+                ExpectedBehavior = "Git repositories and pull request API are accessible",
+                ObservedBehavior = "Mock Git repositories API accessible (5 repositories)"
+            }
+        };
+
+        if (includeWriteChecks && workItemIdForWriteCheck.HasValue)
+        {
+            checks.Add(new TfsCapabilityCheckResult
+            {
+                CapabilityId = "work-item-update",
+                Success = true,
+                ImpactedFunctionality = "Work item modifications (state changes, effort updates)",
+                ExpectedBehavior = "Can update work item fields",
+                ObservedBehavior = $"Mock work item {workItemIdForWriteCheck.Value} is writable",
+                TargetScope = $"Work Item #{workItemIdForWriteCheck.Value}",
+                MutationType = MutationType.Update,
+                CleanupStatus = CleanupStatus.NotRequired
+            });
+        }
+
+        var report = new TfsVerificationReport
+        {
+            VerifiedAt = DateTimeOffset.UtcNow,
+            ServerUrl = "https://mock-tfs.example.com",
+            ProjectName = "Battleship",
+            ApiVersion = "7.0",
+            IncludedWriteChecks = includeWriteChecks,
+            Success = true,
+            Checks = checks
+        };
+
+        _logger.LogInformation("Mock TFS client: Verification completed successfully ({Count} checks)", checks.Count);
+        return Task.FromResult(report);
     }
 }
