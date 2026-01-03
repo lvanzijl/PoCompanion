@@ -106,14 +106,6 @@ public class WorkItemExplorerTests
 
         // Get all goals
         var goals = items.Where(i => i.Type == "Goal").ToList();
-        
-        // Print debug info
-        System.Console.WriteLine($"Total work items: {items.Count}");
-        System.Console.WriteLine($"Total goals: {goals.Count}");
-        foreach (var goal in goals.OrderBy(g => g.TfsId))
-        {
-            System.Console.WriteLine($"  Goal {goal.TfsId}: {goal.Title}, Parent: {goal.ParentTfsId?.ToString() ?? "null"}");
-        }
 
         // Verify we have exactly 10 goals
         Assert.AreEqual(10, goals.Count, "Should have exactly 10 goals");
@@ -132,30 +124,12 @@ public class WorkItemExplorerTests
         var repo = new DevWorkItemRepository(facade);
         var allItems = (await repo.GetAllAsync()).ToList();
 
-        // Simulate the filtering that happens in WorkItemExplorer when ConfiguredGoalIds is empty
-        var goalIds = new List<int>(); // Empty list = show all goals
-        
-        IEnumerable<WorkItemDto> filteredItems;
-        if (goalIds.Count > 0)
-        {
-            // This path would filter by specific goals
-            filteredItems = allItems; // Placeholder, actual filtering would happen via API
-        }
-        else
-        {
-            // No filtering - show all work items
-            filteredItems = allItems;
-        }
+        // Simulate the behavior when ConfiguredGoalIds is empty (no filtering)
+        // In the actual WorkItemExplorer, this would skip the FilterByGoalsAsync call
+        var filteredItems = allItems;
 
-        // Build tree structure as TreeBuilderService would
-        var roots = new List<WorkItemDto>();
-        foreach (var item in filteredItems)
-        {
-            if (!item.ParentTfsId.HasValue)
-            {
-                roots.Add(item);
-            }
-        }
+        // Build tree structure - count root nodes (items without parents)
+        var roots = filteredItems.Where(item => !item.ParentTfsId.HasValue).ToList();
 
         // Verify we have exactly 10 root nodes (the goals)
         Assert.AreEqual(10, roots.Count, "Should have exactly 10 root nodes when no filtering is applied");
