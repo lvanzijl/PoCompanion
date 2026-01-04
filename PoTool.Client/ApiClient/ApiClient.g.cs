@@ -88,7 +88,7 @@ namespace PoTool.Client.ApiClient
         public Client(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5291";
+            BaseUrl = "http://127.0.0.1:5293";
             _httpClient = httpClient;
             Initialize();
         }
@@ -746,7 +746,7 @@ namespace PoTool.Client.ApiClient
         public FilteringClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5291";
+            BaseUrl = "http://127.0.0.1:5293";
             _httpClient = httpClient;
             Initialize();
         }
@@ -1350,7 +1350,7 @@ namespace PoTool.Client.ApiClient
         public HealthCalculationClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5291";
+            BaseUrl = "http://127.0.0.1:5293";
             _httpClient = httpClient;
             Initialize();
         }
@@ -1699,7 +1699,7 @@ namespace PoTool.Client.ApiClient
         public MetricsClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5291";
+            BaseUrl = "http://127.0.0.1:5293";
             _httpClient = httpClient;
             Initialize();
         }
@@ -2978,7 +2978,7 @@ namespace PoTool.Client.ApiClient
         public ProfilesClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5291";
+            BaseUrl = "http://127.0.0.1:5293";
             _httpClient = httpClient;
             Initialize();
         }
@@ -3832,7 +3832,7 @@ namespace PoTool.Client.ApiClient
         public PullRequestsClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5291";
+            BaseUrl = "http://127.0.0.1:5293";
             _httpClient = httpClient;
             Initialize();
         }
@@ -4778,7 +4778,7 @@ namespace PoTool.Client.ApiClient
         public SettingsClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5291";
+            BaseUrl = "http://127.0.0.1:5293";
             _httpClient = httpClient;
             Initialize();
         }
@@ -5387,7 +5387,7 @@ namespace PoTool.Client.ApiClient
         public WorkItemsClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5291";
+            BaseUrl = "http://127.0.0.1:5293";
             _httpClient = httpClient;
             Initialize();
         }
@@ -6819,6 +6819,18 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("pat")]
         public string? Pat { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("authMode")]
+        public int AuthMode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("useDefaultCredentials")]
+        public bool UseDefaultCredentials { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("timeoutSeconds")]
+        public int TimeoutSeconds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("apiVersion")]
+        public string? ApiVersion { get; set; } = default!;
 
     }
 

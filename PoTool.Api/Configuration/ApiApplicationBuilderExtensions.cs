@@ -159,12 +159,15 @@ public static class ApiApplicationBuilderExtensions
         app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow }));
 
         // Add minimal endpoints to manage TFS config from client
-        app.MapGet("/api/tfsconfig", async (TfsConfigurationService svc) =>
+        app.MapGet("/api/tfsconfig", async Task<IResult> (TfsConfigurationService svc) =>
         {
             var cfg = await svc.GetConfigAsync();
             if (cfg == null) return Results.NoContent();
-            return Results.Ok(cfg);
-        });
+            return TypedResults.Ok(cfg);
+        })
+        .Produces<TfsConfig>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status204NoContent)
+        .WithName("GetTfsConfig");
 
         app.MapPost("/api/tfsconfig", async (TfsConfigurationService svc, TfsConfigRequest req) =>
         {
