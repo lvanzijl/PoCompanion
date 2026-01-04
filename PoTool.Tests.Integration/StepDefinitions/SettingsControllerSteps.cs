@@ -31,15 +31,16 @@ public class SettingsControllerSteps
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
 
-        var row = table.Rows[0];
-        var dataMode = Enum.Parse<DataMode>(row["DataMode"]);
-        var goalIdsStr = row["ConfiguredGoalIds"];
+        // OBSOLETE: DataMode and ConfiguredGoalIds removed
+        // var row = table.Rows[0];
+        // var dataMode = Enum.Parse<DataMode>(row["DataMode"]);
+        // var goalIdsStr = row["ConfiguredGoalIds"];
 
         var settings = new SettingsEntity
         {
             Id = 1,
-            DataMode = dataMode,
-            ConfiguredGoalIds = goalIdsStr,
+            // DataMode = dataMode,
+            // ConfiguredGoalIds = goalIdsStr,
             LastModified = DateTimeOffset.UtcNow
         };
 
@@ -101,35 +102,39 @@ public class SettingsControllerSteps
     [Then(@"the settings should have DataMode ""(.*)""")]
     public void ThenTheSettingsShouldHaveDataMode(string dataMode)
     {
-        Assert.IsNotNull(_settings);
-        Assert.AreEqual(Enum.Parse<DataMode>(dataMode), _settings.DataMode);
+        // OBSOLETE: DataMode removed
+        // Assert.IsNotNull(_settings);
+        // Assert.AreEqual(Enum.Parse<DataMode>(dataMode), _settings.DataMode);
     }
 
     [Then(@"the settings should have goal IDs ""(.*)""")]
     public void ThenTheSettingsShouldHaveGoalIDs(string goalIds)
     {
-        Assert.IsNotNull(_settings);
-        var expectedIds = goalIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(int.Parse)
-            .ToList();
-        CollectionAssert.AreEqual(expectedIds, _settings.ConfiguredGoalIds);
+        // OBSOLETE: ConfiguredGoalIds removed
+        // Assert.IsNotNull(_settings);
+        // var expectedIds = goalIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+        //     .Select(int.Parse)
+        //     .ToList();
+        // CollectionAssert.AreEqual(expectedIds, _settings.ConfiguredGoalIds);
     }
 
     [Then(@"the updated settings should have DataMode ""(.*)""")]
     public void ThenTheUpdatedSettingsShouldHaveDataMode(string dataMode)
     {
-        Assert.IsNotNull(_settings);
-        Assert.AreEqual(Enum.Parse<DataMode>(dataMode), _settings.DataMode);
+        // OBSOLETE: DataMode removed
+        // Assert.IsNotNull(_settings);
+        // Assert.AreEqual(Enum.Parse<DataMode>(dataMode), _settings.DataMode);
     }
 
     [Then(@"the updated settings should have goal IDs ""(.*)""")]
     public void ThenTheUpdatedSettingsShouldHaveGoalIDs(string goalIds)
     {
-        Assert.IsNotNull(_settings);
-        var expectedIds = goalIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(int.Parse)
-            .ToList();
-        CollectionAssert.AreEqual(expectedIds, _settings.ConfiguredGoalIds);
+        // OBSOLETE: ConfiguredGoalIds removed
+        // Assert.IsNotNull(_settings);
+        // var expectedIds = goalIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+        //     .Select(int.Parse)
+        //     .ToList();
+        // CollectionAssert.AreEqual(expectedIds, _settings.ConfiguredGoalIds);
     }
 
     // HTTP response status validation is handled by CommonSteps.ThenTheResponseShouldBe
