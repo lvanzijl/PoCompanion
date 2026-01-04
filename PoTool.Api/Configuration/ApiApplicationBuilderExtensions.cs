@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Hubs;
 using PoTool.Api.Middleware;
 using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 
@@ -162,14 +163,20 @@ public static class ApiApplicationBuilderExtensions
         {
             var cfg = await svc.GetConfigAsync();
             if (cfg == null) return Results.NoContent();
-            return Results.Ok(new { cfg.Url, cfg.Project });
+            return Results.Ok(cfg);
         });
 
         app.MapPost("/api/tfsconfig", async (TfsConfigurationService svc, TfsConfigRequest req) =>
         {
             // Note: PAT is no longer stored on server - it's stored client-side
             // See docs/PAT_STORAGE_BEST_PRACTICES.md
-            await svc.SaveConfigAsync(req.Url ?? string.Empty, req.Project ?? string.Empty);
+            await svc.SaveConfigAsync(
+                req.Url ?? string.Empty, 
+                req.Project ?? string.Empty, 
+                (TfsAuthMode)req.AuthMode, 
+                req.UseDefaultCredentials, 
+                req.TimeoutSeconds, 
+                req.ApiVersion ?? "7.0");
             return Results.Ok();
         });
 
@@ -205,7 +212,14 @@ public static class ApiApplicationBuilderExtensions
 /// <summary>
 /// Request model for TFS configuration endpoint.
 /// </summary>
-public record TfsConfigRequest(string? Url, string? Project, string? Pat);
+public record TfsConfigRequest(
+    string? Url, 
+    string? Project, 
+    string? Pat, 
+    int AuthMode = 0, 
+    bool UseDefaultCredentials = false, 
+    int TimeoutSeconds = 30, 
+    string? ApiVersion = "7.0");
 
 /// <summary>
 /// Request model for TFS API verification endpoint.

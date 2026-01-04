@@ -9,6 +9,11 @@ public sealed class TfsConfig
 {
     public string Url { get; set; } = string.Empty;
     public string Project { get; set; } = string.Empty;
+    public TfsAuthMode AuthMode { get; set; } = TfsAuthMode.Pat;
+    public bool UseDefaultCredentials { get; set; } = false;
+    public int TimeoutSeconds { get; set; } = 30;
+    public string ApiVersion { get; set; } = "7.0";
+    public DateTimeOffset? LastValidated { get; set; }
     // NOTE: PAT is not included in server-side config
     // PAT is stored client-side using MAUI SecureStorage
     // See docs/PAT_STORAGE_BEST_PRACTICES.md
@@ -43,15 +48,27 @@ public class TfsConfigurationService
         return new TfsConfig
         {
             Url = entity.Url,
-            Project = entity.Project
+            Project = entity.Project,
+            AuthMode = entity.AuthMode,
+            UseDefaultCredentials = entity.UseDefaultCredentials,
+            TimeoutSeconds = entity.TimeoutSeconds,
+            ApiVersion = entity.ApiVersion,
+            LastValidated = entity.LastValidated
         };
     }
 
     /// <summary>
-    /// Saves non-sensitive TFS configuration (URL, Project).
+    /// Saves TFS configuration (non-sensitive fields).
     /// PAT is NOT stored by this service - it should be stored client-side.
     /// </summary>
-    public async Task SaveConfigAsync(string url, string project, CancellationToken cancellationToken = default)
+    public async Task SaveConfigAsync(
+        string url, 
+        string project, 
+        TfsAuthMode authMode = TfsAuthMode.Pat,
+        bool useDefaultCredentials = false,
+        int timeoutSeconds = 30,
+        string apiVersion = "7.0",
+        CancellationToken cancellationToken = default)
     {
         var existing = await _db.TfsConfigs
             .OrderByDescending(c => c.UpdatedAt)
@@ -62,6 +79,10 @@ public class TfsConfigurationService
             {
                 Url = url ?? string.Empty,
                 Project = project ?? string.Empty,
+                AuthMode = authMode,
+                UseDefaultCredentials = useDefaultCredentials,
+                TimeoutSeconds = timeoutSeconds,
+                ApiVersion = apiVersion ?? "7.0",
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -72,12 +93,16 @@ public class TfsConfigurationService
         {
             existing.Url = url ?? string.Empty;
             existing.Project = project ?? string.Empty;
+            existing.AuthMode = authMode;
+            existing.UseDefaultCredentials = useDefaultCredentials;
+            existing.TimeoutSeconds = timeoutSeconds;
+            existing.ApiVersion = apiVersion ?? "7.0";
             existing.UpdatedAt = DateTimeOffset.UtcNow;
             _db.TfsConfigs.Update(existing);
         }
 
         await _db.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("TFS configuration saved/updated for Url={Url}", url);
+        _logger.LogInformation("TFS configuration saved/updated for Url={Url}, AuthMode={AuthMode}", url, authMode);
     }
 
     public async Task<TfsConfigEntity?> GetConfigEntityAsync(CancellationToken cancellationToken = default)
