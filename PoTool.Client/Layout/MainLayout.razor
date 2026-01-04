@@ -4,6 +4,7 @@
 @using PoTool.Client.Services
 @inject IOnboardingService OnboardingService
 @inject IDialogService DialogService
+@inject NavigationManager NavigationManager
 @inherits LayoutComponentBase
 
 <MudThemeProvider Theme="_darkTheme" IsDarkMode="true" />
@@ -126,8 +127,8 @@
 
     private void HandleProfileChanged()
     {
-        // Refresh the current page when profile changes
-        StateHasChanged();
+        // Refresh the current page when profile changes by forcing navigation
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
     }
 
     private async Task HandleGlobalKeyDown(KeyboardEventArgs e)

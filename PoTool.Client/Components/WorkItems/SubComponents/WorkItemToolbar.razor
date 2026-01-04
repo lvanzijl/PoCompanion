@@ -16,36 +16,54 @@
     <div class="header">
         <h1>Work Item Explorer</h1>
         <div class="header-actions">
-            <button class="btn-settings" @onclick="OnSettingsClicked">
-                <span>⚙️ Settings</span>
-            </button>
             <MudTooltip Text="Downloads all work items from Azure DevOps. Use when syncing for the first time or after major changes." 
                         Placement="Placement.Bottom">
-                <button class="btn-sync" @onclick="OnSyncClicked" disabled="@IsSyncing">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           OnClick="OnSyncClicked" 
+                           Disabled="@IsSyncing"
+                           StartIcon="@Icons.Material.Filled.Sync"
+                           Size="Size.Small">
                     @if (IsSyncing)
                     {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                         <span>Syncing...</span>
                     }
                     else
                     {
                         <span>Full Sync</span>
                     }
-                </button>
+                </MudButton>
             </MudTooltip>
             <MudTooltip Text="Downloads only changes since last sync (faster). Use for regular updates." 
                         Placement="Placement.Bottom">
-                <button class="btn-sync" @onclick="OnIncrementalSyncClicked" disabled="@IsSyncing">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Secondary" 
+                           OnClick="OnIncrementalSyncClicked" 
+                           Disabled="@IsSyncing"
+                           StartIcon="@Icons.Material.Filled.SyncAlt"
+                           Size="Size.Small">
                     @if (IsSyncing)
                     {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                         <span>Syncing...</span>
                     }
                     else
                     {
                         <span>Incremental Sync</span>
                     }
-                </button>
+                </MudButton>
             </MudTooltip>
-            <button class="btn-clear" @onclick="OnClearStateClicked">Clear tree state</button>
+            <MudTooltip Text="Clears the expanded/collapsed state of all tree nodes"
+                        Placement="Placement.Bottom">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Default" 
+                           OnClick="OnClearStateClicked"
+                           StartIcon="@Icons.Material.Filled.Clear"
+                           Size="Size.Small">
+                    Clear Tree State
+                </MudButton>
+            </MudTooltip>
         </div>
     </div>
 
@@ -205,9 +223,6 @@
     public EventCallback<List<ValidationFilter>> OnValidationFiltersChanged { get; set; }
 
     [Parameter]
-    public EventCallback OnSettingsRequested { get; set; }
-
-    [Parameter]
     public int SelectedCount { get; set; }
 
     [Parameter]
@@ -243,11 +258,6 @@
     private async Task OnIncrementalSyncClicked()
     {
         await OnIncrementalSyncRequested.InvokeAsync();
-    }
-
-    private async Task OnSettingsClicked()
-    {
-        await OnSettingsRequested.InvokeAsync();
     }
 
     private async Task OnClearStateClicked()

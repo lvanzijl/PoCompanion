@@ -4,7 +4,6 @@
 @using PoTool.Client.Models
 @using PoTool.Client.Configuration
 @using PoTool.Client.Components.WorkItems.SubComponents
-@using PoTool.Client.Components.Settings
 @using PoTool.Client.Components.Common
 @using MudBlazor
 @inject WorkItemService WorkItemService
@@ -12,9 +11,8 @@
 @inject ITreeBuilderService TreeBuilderService
 @inject WorkItemFilteringService FilteringService
 @inject WorkItemSelectionService SelectionService
-@inject SettingsService SettingsService
+@inject ProfileService ProfileService
 @inject TfsConfigService TfsConfigService
-@inject ModeIsolatedStateService StateService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 @inject IDialogService DialogService
@@ -40,7 +38,6 @@
                      OnClearState="@ClearExpandedState"
                      OnFilterChanged="@HandleFilterChanged"
                      OnValidationFiltersChanged="@HandleValidationFiltersChanged"
-                     OnSettingsRequested="@OpenSettings"
                      OnSelectAll="@SelectAllItems"
                      OnClearSelection="@ClearSelection" />
 
@@ -183,20 +180,19 @@
         _isLoading = true;
         try
         {
-            // Get current settings to determine which Goals to load
-            var settings = await SettingsService.GetOrCreateDefaultSettingsAsync();
-            StateService.SetMode(settings.DataMode);
+            // Get active profile to determine which goals to load
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
 
             // Load hierarchy with validation - get all first
             var allWorkItems = (await WorkItemService.GetAllWithValidationAsync()).ToList();
             Console.WriteLine($"[WorkItemExplorer] Loaded {allWorkItems.Count} total work items");
             
-            // Then filter by goals if configured
-            var goalIds = settings.ConfiguredGoalIds.ToList();
-            Console.WriteLine($"[WorkItemExplorer] Configured goal IDs: {string.Join(", ", goalIds)}");
-            
-            if (goalIds.Count > 0)
+            // Then filter by profile goals if configured
+            if (activeProfile != null && activeProfile.GoalIds.Any())
             {
+                var goalIds = activeProfile.GoalIds.ToList();
+                Console.WriteLine($"[WorkItemExplorer] Active profile goal IDs: {string.Join(", ", goalIds)}");
+                
                 // Use batch filtering - makes a single API call instead of N calls
                 var filteredIds = await FilteringService.FilterByGoalsAsync(goalIds);
                 Console.WriteLine($"[WorkItemExplorer] Filtered to {filteredIds.Count} work items by goals");
@@ -204,7 +200,7 @@
             }
             else
             {
-                Console.WriteLine($"[WorkItemExplorer] No goals configured, showing all work items");
+                Console.WriteLine($"[WorkItemExplorer] No active profile or goals configured, showing all work items");
                 _workItemsWithValidation = allWorkItems;
             }
 
@@ -439,17 +435,39 @@
 
     private async Task LoadExpandedStateAsync()
     {
-        _expandedState.Clear();
-        var loadedState = await StateService.LoadExpandedStateAsync();
-        foreach (var kv in loadedState)
+        try
         {
-            _expandedState[kv.Key] = kv.Value;
+            _expandedState.Clear();
+            var stateJson = await JS.InvokeAsync<string?>("localStorage.getItem", "workitem-expanded-state");
+            if (!string.IsNullOrEmpty(stateJson))
+            {
+                var loadedState = System.Text.Json.JsonSerializer.Deserialize<Dictionary<int, bool>>(stateJson);
+                if (loadedState != null)
+                {
+                    foreach (var kv in loadedState)
+                    {
+                        _expandedState[kv.Key] = kv.Value;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WorkItemExplorer] Error loading expanded state: {ex.Message}");
         }
     }
 
     private async Task SaveExpandedStateAsync()
     {
-        await StateService.SaveExpandedStateAsync(_expandedState);
+        try
+        {
+            var stateJson = System.Text.Json.JsonSerializer.Serialize(_expandedState);
+            await JS.InvokeVoidAsync("localStorage.setItem", "workitem-expanded-state", stateJson);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WorkItemExplorer] Error saving expanded state: {ex.Message}");
+        }
     }
 
     private async Task ClearExpandedState()
@@ -457,29 +475,6 @@
         _expandedState.Clear();
         await SaveExpandedStateAsync();
         await ApplyFilterAsync();
-    }
-
-    private async Task OpenSettings()
-    {
-        var parameters = new DialogParameters
-        {
-            { "OnSettingsSaved", EventCallback.Factory.Create(this, HandleSettingsSaved) }
-        };
-
-        var options = new DialogOptions
-        {
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
-
-        await DialogService.ShowAsync<AppSettingsDialog>("Settings", parameters, options);
-    }
-
-    private async Task HandleSettingsSaved()
-    {
-        // Reload work items after settings change
-        await LoadWorkItems();
     }
 
     private async Task HandleFixesApplied()
