@@ -70,9 +70,10 @@ public class TfsConfigurationService
         string apiVersion = "7.0",
         CancellationToken cancellationToken = default)
     {
-        var existing = await _db.TfsConfigs
-            .OrderByDescending(c => c.UpdatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+        // Use ToListAsync then LINQ to Objects for DateTimeOffset ordering (SQLite compatibility)
+        var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
+        var existing = entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
+        
         if (existing == null)
         {
             existing = new TfsConfigEntity
