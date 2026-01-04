@@ -13,6 +13,9 @@ namespace PoTool.Api.Migrations
             // Remove ProtectedPat column from TfsConfigs table if it exists
             // This migration fixes databases that were created from earlier migrations
             // that included ProtectedPat but missed the RemoveProtectedPatFromTfsConfig migration
+            
+            // Note: suppressTransaction is required because SQLite doesn't support transactions
+            // for DDL operations that involve table recreation (CREATE TABLE, DROP TABLE, ALTER TABLE RENAME)
             migrationBuilder.Sql(@"
                 CREATE TABLE IF NOT EXISTS TfsConfigs_New (
                     Id INTEGER NOT NULL CONSTRAINT PK_TfsConfigs PRIMARY KEY AUTOINCREMENT,
