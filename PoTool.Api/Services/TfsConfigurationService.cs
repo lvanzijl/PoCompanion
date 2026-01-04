@@ -53,28 +53,27 @@ public class TfsConfigurationService
     /// </summary>
     public async Task SaveConfigAsync(string url, string project, CancellationToken cancellationToken = default)
     {
-        var existing = await _db.TfsConfigs
-            .OrderByDescending(c => c.UpdatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
-        if (existing == null)
-        {
-            existing = new TfsConfigEntity
-            {
-                Url = url ?? string.Empty,
-                Project = project ?? string.Empty,
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow
-            };
+      var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
+      var existing = entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
+      if (existing == null)
+      {
+         existing = new TfsConfigEntity
+         {
+               Url = url ?? string.Empty,
+               Project = project ?? string.Empty,
+               CreatedAt = DateTimeOffset.UtcNow,
+               UpdatedAt = DateTimeOffset.UtcNow
+         };
 
-            await _db.TfsConfigs.AddAsync(existing, cancellationToken);
-        }
-        else
-        {
-            existing.Url = url ?? string.Empty;
-            existing.Project = project ?? string.Empty;
-            existing.UpdatedAt = DateTimeOffset.UtcNow;
-            _db.TfsConfigs.Update(existing);
-        }
+         await _db.TfsConfigs.AddAsync(existing, cancellationToken);
+      }
+      else
+      {
+         existing.Url = url ?? string.Empty;
+         existing.Project = project ?? string.Empty;
+         existing.UpdatedAt = DateTimeOffset.UtcNow;
+         _db.TfsConfigs.Update(existing);
+      }
 
         await _db.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("TFS configuration saved/updated for Url={Url}", url);
