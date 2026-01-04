@@ -29,16 +29,19 @@ public class TfsConfigService
     {
         try
         {
-            await _apiClient.GetApiTfsconfigAsync(cancellationToken);
-            // The API returns 204 NoContent when config doesn't exist, which causes an exception
-            // For now, return a placeholder - this needs API to return proper response
-            return null;
+            // Use HttpClient directly since the generated client doesn't return the response
+            var response = await _httpClient.GetAsync("/api/tfsconfig", cancellationToken);
+            
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                return null;
+            }
+            
+            response.EnsureSuccessStatusCode();
+            var config = await response.Content.ReadFromJsonAsync<TfsConfigDto>(cancellationToken: cancellationToken);
+            return config;
         }
-        catch (ApiException ex) when (ex.StatusCode == 204)
-        {
-            return null;
-        }
-        catch (ApiException)
+        catch (HttpRequestException)
         {
             return null;
         }
@@ -62,7 +65,11 @@ public class TfsConfigService
         {
             Url = url,
             Project = project,
-            Pat = null // PAT is never sent to server for storage
+            Pat = null, // PAT is never sent to server for storage
+            AuthMode = (int)authMode,
+            UseDefaultCredentials = useDefaultCredentials,
+            TimeoutSeconds = timeoutSeconds,
+            ApiVersion = apiVersion
         };
         
         await _apiClient.PostApiTfsconfigAsync(request, cancellationToken);
