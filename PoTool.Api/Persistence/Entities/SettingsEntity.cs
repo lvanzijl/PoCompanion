@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using PoTool.Core.Settings;
 
 namespace PoTool.Api.Persistence.Entities;
 
@@ -15,20 +14,8 @@ public class SettingsEntity
     public int Id { get; set; }
 
     /// <summary>
-    /// The active data mode (Mock or TFS).
-    /// </summary>
-    [Required]
-    public DataMode DataMode { get; set; }
-
-    /// <summary>
-    /// Comma-separated list of configured Goal IDs.
-    /// </summary>
-    [MaxLength(1000)]
-    public string ConfiguredGoalIds { get; set; } = string.Empty;
-
-    /// <summary>
     /// The ID of the currently active profile.
-    /// Nullable to support legacy data where profiles don't exist yet.
+    /// Nullable to support cases where no profile is selected.
     /// </summary>
     public int? ActiveProfileId { get; set; }
 
