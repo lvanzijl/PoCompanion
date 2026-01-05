@@ -13,13 +13,13 @@ namespace PoTool.Api.Handlers.WorkItems;
 public class GetGoalHierarchyQueryHandler : IQueryHandler<GetGoalHierarchyQuery, IEnumerable<WorkItemDto>>
 {
     private readonly IWorkItemRepository _workItemRepository;
-    private readonly BattleshipMockDataFacade _mockDataFacade;
+    private readonly BattleshipMockDataFacade? _mockDataFacade;
     private readonly bool _useMockClient;
 
     public GetGoalHierarchyQueryHandler(
         IWorkItemRepository workItemRepository,
-        BattleshipMockDataFacade mockDataFacade,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        BattleshipMockDataFacade? mockDataFacade = null)
     {
         _workItemRepository = workItemRepository;
         _mockDataFacade = mockDataFacade;
@@ -28,7 +28,7 @@ public class GetGoalHierarchyQueryHandler : IQueryHandler<GetGoalHierarchyQuery,
 
     public async ValueTask<IEnumerable<WorkItemDto>> Handle(GetGoalHierarchyQuery query, CancellationToken cancellationToken)
     {
-        if (_useMockClient)
+        if (_useMockClient && _mockDataFacade != null)
         {
             // Return mock data for specified goal IDs using new Battleship system
             return _mockDataFacade.GetMockHierarchyForGoals(query.GoalIds);
