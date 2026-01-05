@@ -11,4 +11,8 @@
     <PackageReference Include="Mediator.Abstractions" Version="2.1.7" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\PoTool.Shared\PoTool.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

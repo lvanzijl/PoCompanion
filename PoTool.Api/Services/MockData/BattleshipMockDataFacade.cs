@@ -875,4 +875,32 @@ public class BattleshipMockDataFacade : ITfsClient
         _logger.LogInformation("Mock TFS client: Bulk fetched revisions for {Count} work items in 1 call", idsList.Count);
         return Task.FromResult<IDictionary<int, IEnumerable<WorkItemRevisionDto>>>(results);
     }
+
+    public Task<WorkItemCreateResult> CreateWorkItemAsync(
+        WorkItemCreateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: CreateWorkItemAsync called for type={WorkItemType}, title={Title}",
+            request.WorkItemType, request.Title);
+
+        // Generate a mock work item ID
+        var mockId = new Random().Next(100000, 999999);
+
+        return Task.FromResult(new WorkItemCreateResult
+        {
+            Success = true,
+            WorkItemId = mockId
+        });
+    }
+
+    public Task<bool> UpdateWorkItemParentAsync(
+        int workItemId,
+        int newParentId,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemParentAsync called for workItemId={WorkItemId}, newParentId={NewParentId}",
+            workItemId, newParentId);
+
+        return Task.FromResult(true);
+    }
 }

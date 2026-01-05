@@ -183,4 +183,92 @@ public interface ITfsClient
     Task<IDictionary<int, IEnumerable<WorkItemRevisionDto>>> GetWorkItemRevisionsBatchAsync(
         IEnumerable<int> workItemIds,
         CancellationToken cancellationToken = default);
+
+    // ============================================
+    // WORK ITEM CREATION
+    // ============================================
+
+    /// <summary>
+    /// Creates a new work item in TFS/Azure DevOps.
+    /// </summary>
+    /// <param name="request">The work item creation request containing type, title, and optional fields.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Result containing the created work item ID or error information.</returns>
+    Task<WorkItemCreateResult> CreateWorkItemAsync(
+        WorkItemCreateRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates the parent link of a work item in TFS/Azure DevOps.
+    /// </summary>
+    /// <param name="workItemId">The work item ID to update.</param>
+    /// <param name="newParentId">The new parent work item ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if successful, false otherwise.</returns>
+    Task<bool> UpdateWorkItemParentAsync(
+        int workItemId,
+        int newParentId,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Request for creating a new work item.
+/// </summary>
+public record WorkItemCreateRequest
+{
+    /// <summary>
+    /// Work item type (e.g., "Epic", "Feature", "User Story").
+    /// </summary>
+    public required string WorkItemType { get; init; }
+
+    /// <summary>
+    /// The title for the new work item.
+    /// </summary>
+    public required string Title { get; init; }
+
+    /// <summary>
+    /// Optional parent work item ID.
+    /// </summary>
+    public int? ParentId { get; init; }
+
+    /// <summary>
+    /// Optional effort value.
+    /// </summary>
+    public int? Effort { get; init; }
+
+    /// <summary>
+    /// Optional area path. If not specified, uses default from configuration.
+    /// </summary>
+    public string? AreaPath { get; init; }
+
+    /// <summary>
+    /// Optional iteration path.
+    /// </summary>
+    public string? IterationPath { get; init; }
+
+    /// <summary>
+    /// Optional description.
+    /// </summary>
+    public string? Description { get; init; }
+}
+
+/// <summary>
+/// Result of a work item creation operation.
+/// </summary>
+public record WorkItemCreateResult
+{
+    /// <summary>
+    /// Whether the operation was successful.
+    /// </summary>
+    public bool Success { get; init; }
+
+    /// <summary>
+    /// The created work item ID if successful.
+    /// </summary>
+    public int? WorkItemId { get; init; }
+
+    /// <summary>
+    /// Error message if the operation failed.
+    /// </summary>
+    public string? ErrorMessage { get; init; }
 }
