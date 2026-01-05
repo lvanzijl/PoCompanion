@@ -1634,48 +1634,58 @@ public class RealTfsClient : ITfsClient
         var allComments = new List<PullRequestCommentDto>();
         var allFileChanges = new List<PullRequestFileChangeDto>();
 
-        // Step 2: For each repository, fetch all PR details
-        // This is still N calls but grouped by repo - Azure DevOps doesn't have a true bulk API
-        // However, we can parallelize these calls for better performance
-        var fetchTasks = new List<Task>();
+        // Step 2: For each PR, fetch iterations and comments in parallel
+        // Azure DevOps doesn't have a true bulk API, but we can parallelize the calls
+        var prTasks = new List<Task<(List<PullRequestIterationDto> Iterations, List<PullRequestCommentDto> Comments, int PrId, string Repo)>>();
 
         foreach (var repoGroup in prsByRepo)
         {
             var repo = repoGroup.Key;
             foreach (var pr in repoGroup)
             {
-                // Fetch iterations, comments in parallel for each PR
-                fetchTasks.Add(Task.Run(async () =>
-                {
-                    var iterations = await GetPullRequestIterationsAsync(pr.Id, repo, cancellationToken);
-                    Interlocked.Increment(ref tfsCallCount);
-                    lock (allIterations)
-                    {
-                        allIterations.AddRange(iterations);
-                    }
-
-                    var comments = await GetPullRequestCommentsAsync(pr.Id, repo, cancellationToken);
-                    Interlocked.Increment(ref tfsCallCount);
-                    lock (allComments)
-                    {
-                        allComments.AddRange(comments);
-                    }
-
-                    // For file changes, we need to fetch per iteration
-                    foreach (var iteration in iterations)
-                    {
-                        var fileChanges = await GetPullRequestFileChangesAsync(pr.Id, repo, iteration.IterationNumber, cancellationToken);
-                        Interlocked.Increment(ref tfsCallCount);
-                        lock (allFileChanges)
-                        {
-                            allFileChanges.AddRange(fileChanges);
-                        }
-                    }
-                }, cancellationToken));
+                // Fetch iterations and comments in parallel for each PR (no Task.Run needed for async I/O)
+                prTasks.Add(FetchPrDetailsAsync(pr.Id, repo, cancellationToken));
             }
         }
 
-        await Task.WhenAll(fetchTasks);
+        var prResults = await Task.WhenAll(prTasks);
+        
+        // Aggregate results and count calls
+        foreach (var prResult in prResults)
+        {
+            Interlocked.Add(ref tfsCallCount, 2); // 1 for iterations, 1 for comments
+            lock (allIterations)
+            {
+                allIterations.AddRange(prResult.Iterations);
+            }
+            lock (allComments)
+            {
+                allComments.AddRange(prResult.Comments);
+            }
+        }
+
+        // Step 3: Fetch file changes for all iterations in parallel
+        var fileChangeTasks = new List<Task<IEnumerable<PullRequestFileChangeDto>>>();
+        foreach (var prResult in prResults)
+        {
+            var repo = prResult.Repo;
+            var prId = prResult.PrId;
+            foreach (var iteration in prResult.Iterations)
+            {
+                fileChangeTasks.Add(GetPullRequestFileChangesAsync(prId, repo, iteration.IterationNumber, cancellationToken));
+            }
+        }
+
+        var fileChangeResults = await Task.WhenAll(fileChangeTasks);
+        tfsCallCount += fileChangeResults.Length;
+        
+        foreach (var fileChanges in fileChangeResults)
+        {
+            lock (allFileChanges)
+            {
+                allFileChanges.AddRange(fileChanges);
+            }
+        }
 
         var elapsed = DateTimeOffset.UtcNow - startTime;
         _logger.LogInformation(
@@ -1690,6 +1700,21 @@ public class RealTfsClient : ITfsClient
             FileChanges: allFileChanges,
             TfsCallCount: tfsCallCount
         );
+    }
+
+    /// <summary>
+    /// Helper method to fetch PR details (iterations and comments) in parallel.
+    /// </summary>
+    private async Task<(List<PullRequestIterationDto> Iterations, List<PullRequestCommentDto> Comments, int PrId, string Repo)> FetchPrDetailsAsync(
+        int prId, string repo, CancellationToken cancellationToken)
+    {
+        // Fetch iterations and comments concurrently
+        var iterationsTask = GetPullRequestIterationsAsync(prId, repo, cancellationToken);
+        var commentsTask = GetPullRequestCommentsAsync(prId, repo, cancellationToken);
+        
+        await Task.WhenAll(iterationsTask, commentsTask);
+        
+        return (iterationsTask.Result.ToList(), commentsTask.Result.ToList(), prId, repo);
     }
 
     /// <summary>
