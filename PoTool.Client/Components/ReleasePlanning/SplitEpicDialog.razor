@@ -1,0 +1,214 @@
+@using PoTool.Shared.ReleasePlanning
+@using PoTool.Client.Services
+@inject ReleasePlanningService ReleasePlanningService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.CallSplit" Class="mr-2" />
+            Split Epic
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+            <MudText Typo="Typo.body2" Class="mt-2">Loading Features...</MudText>
+        }
+        else if (_features.Count == 0)
+        {
+            <MudAlert Severity="Severity.Warning">
+                This Epic has no Features. An Epic must have at least two Features to be split.
+            </MudAlert>
+        }
+        else if (_features.Count == 1)
+        {
+            <MudAlert Severity="Severity.Warning">
+                This Epic has only one Feature. An Epic must have at least two Features to be split.
+            </MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.body2">
+                    Split <strong>@EpicTitle</strong> into two Epics by selecting which Features to move to the new Epic.
+                </MudText>
+
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    <MudText Typo="Typo.body2">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />
+                        This operation will create a new Epic in TFS and reassign the selected Features.
+                    </MudText>
+                </MudAlert>
+
+                <!-- Title for new Epic -->
+                <MudTextField @bind-Value="_extractedEpicTitle"
+                              Label="New Epic Title"
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              Placeholder="Enter title for the new Epic"
+                              HelperText="The title of the Epic that will be created with the selected Features" />
+
+                <!-- Feature Selection -->
+                <MudText Typo="Typo.subtitle2" Class="mt-2">Select Features for New Epic</MudText>
+                
+                <MudPaper Class="pa-2" Elevation="0" Style="max-height: 300px; overflow-y: auto; border: 1px solid var(--mud-palette-lines-default);">
+                    @foreach (var feature in _features)
+                    {
+                        var isSelected = _selectedFeatureIds.Contains(feature.FeatureId);
+                        <MudCheckBox T="bool" 
+                                     Value="@isSelected"
+                                     ValueChanged="@((bool val) => ToggleFeature(feature.FeatureId, val))"
+                                     Dense="true"
+                                     Class="mb-1">
+                            <div class="d-flex align-center gap-2">
+                                <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 280px;">
+                                    @feature.Title
+                                </MudText>
+                                @if (feature.Effort.HasValue)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">
+                                        @feature.Effort pts
+                                    </MudChip>
+                                }
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">
+                                    @feature.State
+                                </MudChip>
+                            </div>
+                        </MudCheckBox>
+                    }
+                </MudPaper>
+
+                <!-- Summary -->
+                @if (_selectedFeatureIds.Count > 0)
+                {
+                    <MudAlert Severity="Severity.Success" Dense="true">
+                        <MudText Typo="Typo.body2">
+                            <strong>@_selectedFeatureIds.Count</strong> Feature(s) selected for the new Epic.
+                            <strong>@(_features.Count - _selectedFeatureIds.Count)</strong> Feature(s) will remain in the original Epic.
+                        </MudText>
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">
+                        <MudText Typo="Typo.body2">
+                            Select at least one Feature to move to the new Epic.
+                        </MudText>
+                    </MudAlert>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="SplitAsync" 
+                   Variant="Variant.Filled" 
+                   Color="Color.Primary"
+                   Disabled="@(!CanSplit())"
+                   StartIcon="@(_isSplitting ? Icons.Material.Filled.HourglassTop : Icons.Material.Filled.CallSplit)">
+            @(_isSplitting ? "Splitting..." : "Split Epic")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public int EpicId { get; set; }
+
+    [Parameter]
+    public string EpicTitle { get; set; } = string.Empty;
+
+    private List<EpicFeatureDto> _features = new();
+    private HashSet<int> _selectedFeatureIds = new();
+    private string _extractedEpicTitle = string.Empty;
+    private bool _isLoading = true;
+    private bool _isSplitting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFeaturesAsync();
+    }
+
+    private async Task LoadFeaturesAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var features = await ReleasePlanningService.GetEpicFeaturesAsync(EpicId);
+            _features = features?.ToList() ?? new List<EpicFeatureDto>();
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleFeature(int featureId, bool isSelected)
+    {
+        if (isSelected)
+        {
+            _selectedFeatureIds.Add(featureId);
+        }
+        else
+        {
+            _selectedFeatureIds.Remove(featureId);
+        }
+    }
+
+    private bool CanSplit()
+    {
+        return !_isLoading 
+               && !_isSplitting 
+               && _features.Count >= 2 
+               && _selectedFeatureIds.Count > 0 
+               && _selectedFeatureIds.Count < _features.Count
+               && !string.IsNullOrWhiteSpace(_extractedEpicTitle);
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private async Task SplitAsync()
+    {
+        if (!CanSplit())
+            return;
+
+        _isSplitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await ReleasePlanningService.SplitEpicAsync(
+                EpicId,
+                _extractedEpicTitle,
+                _selectedFeatureIds.ToList());
+
+            if (result != null)
+            {
+                MudDialog?.Close(DialogResult.Ok(result));
+            }
+            else
+            {
+                MudDialog?.Close(DialogResult.Ok(new EpicSplitResultDto
+                {
+                    Success = false,
+                    ErrorMessage = "Failed to split Epic. Please try again.",
+                    OriginalEpicId = EpicId
+                }));
+            }
+        }
+        finally
+        {
+            _isSplitting = false;
+        }
+    }
+}

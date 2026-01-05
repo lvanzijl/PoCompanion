@@ -438,6 +438,58 @@ public class ReleasePlanningController : ControllerBase
 
     #endregion
 
+    #region Epic Split
+
+    /// <summary>
+    /// Gets the Features for an Epic (for split dialog).
+    /// </summary>
+    [HttpGet("epics/{epicId:int}/features")]
+    public async Task<ActionResult<IReadOnlyList<EpicFeatureDto>>> GetEpicFeatures(
+        int epicId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var features = await _mediator.Send(new GetEpicFeaturesQuery(epicId), cancellationToken);
+            return Ok(features);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving Features for Epic {EpicId}", epicId);
+            return StatusCode(500, "Error retrieving Epic Features");
+        }
+    }
+
+    /// <summary>
+    /// Splits an Epic into two Epics.
+    /// </summary>
+    [HttpPost("epics/{epicId:int}/split")]
+    public async Task<ActionResult<EpicSplitResultDto>> SplitEpic(
+        int epicId,
+        [FromBody] SplitEpicRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var command = new SplitEpicCommand(epicId, request.ExtractedEpicTitle, request.FeatureIdsForExtractedEpic);
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error splitting Epic {EpicId}", epicId);
+            return StatusCode(500, "Error splitting Epic");
+        }
+    }
+
+    #endregion
+
     #region Export
 
     /// <summary>
@@ -663,3 +715,8 @@ public record UpdateMilestoneLineRequest(string Label, double VerticalPosition, 
 /// Request model for updating an Iteration Line.
 /// </summary>
 public record UpdateIterationLineRequest(string Label, double VerticalPosition);
+
+/// <summary>
+/// Request model for splitting an Epic.
+/// </summary>
+public record SplitEpicRequest(string ExtractedEpicTitle, IReadOnlyList<int> FeatureIdsForExtractedEpic);

@@ -1,48 +1,72 @@
 @using PoTool.Shared.ReleasePlanning
 
-<MudPaper Class="epic-card pa-2" 
-          Elevation="2" 
-          Style="@GetCardStyle()"
-          draggable="true"
-          @ondragstart="@HandleDragStart">
-    <div class="d-flex flex-column">
-        <div class="d-flex justify-space-between align-center">
-            <MudText Typo="Typo.body2" Class="font-weight-bold text-truncate" Style="max-width: 150px;">
-                @Placement.EpicTitle
-            </MudText>
+<div class="epic-card-container" style="position: relative;">
+    <MudPaper Class="epic-card pa-2" 
+              Elevation="2" 
+              Style="@GetCardStyle()"
+              draggable="true"
+              @ondragstart="@HandleDragStart">
+        <div class="d-flex flex-column">
+            <div class="d-flex justify-space-between align-center">
+                <MudText Typo="Typo.body2" Class="font-weight-bold text-truncate" Style="max-width: 120px;">
+                    @Placement.EpicTitle
+                </MudText>
+                
+                <div class="d-flex align-center gap-1">
+                    <!-- Validation Indicator - always visible per spec -->
+                    @if (Placement.ValidationIndicator != ValidationIndicator.None)
+                    {
+                        <MudIcon Icon="@GetValidationIcon()" 
+                                 Color="@GetValidationColor()"
+                                 Size="Size.Small" />
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                                 Color="Color.Success"
+                                 Size="Size.Small" />
+                    }
+
+                    <!-- Context Menu -->
+                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" 
+                             Size="Size.Small" 
+                             Dense="true"
+                             AnchorOrigin="Origin.BottomRight"
+                             TransformOrigin="Origin.TopRight">
+                        <MudMenuItem OnClick="@HandleSplitEpic">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.CallSplit" Size="Size.Small" />
+                                <span>Split Epic</span>
+                            </div>
+                        </MudMenuItem>
+                        <MudMenuItem OnClick="@HandleViewDetails">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" />
+                                <span>View Details</span>
+                            </div>
+                        </MudMenuItem>
+                    </MudMenu>
+                </div>
+            </div>
             
-            <!-- Validation Indicator - always visible per spec -->
-            @if (Placement.ValidationIndicator != ValidationIndicator.None)
-            {
-                <MudIcon Icon="@GetValidationIcon()" 
-                         Color="@GetValidationColor()"
-                         Size="Size.Small" />
-            }
-            else
-            {
-                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
-                         Color="Color.Success"
-                         Size="Size.Small" />
-            }
-        </div>
-        
-        <div class="d-flex gap-2 mt-1">
-            @if (Placement.Effort.HasValue)
-            {
-                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">
-                    @Placement.Effort pts
+            <div class="d-flex gap-2 mt-1">
+                @if (Placement.Effort.HasValue)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">
+                        @Placement.Effort pts
+                    </MudChip>
+                }
+                
+                <MudChip T="string" 
+                         Size="Size.Small" 
+                         Color="@GetStateColor()" 
+                         Variant="Variant.Text">
+                    @Placement.State
                 </MudChip>
-            }
-            
-            <MudChip T="string" 
-                     Size="Size.Small" 
-                     Color="@GetStateColor()" 
-                     Variant="Variant.Text">
-                @Placement.State
-            </MudChip>
+            </div>
         </div>
-    </div>
-</MudPaper>
+    </MudPaper>
+</div>
 
 @code {
     [Parameter]
@@ -53,6 +77,12 @@
 
     [Parameter]
     public EventCallback<EpicContextMenuEventArgs> OnContextMenu { get; set; }
+
+    [Parameter]
+    public EventCallback<EpicSplitEventArgs> OnSplitRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<EpicViewDetailsEventArgs> OnViewDetailsRequested { get; set; }
 
     private string GetCardStyle()
     {
@@ -101,5 +131,24 @@
     private void HandleDragStart()
     {
         // Drag state management handled by parent
+    }
+
+    private async Task HandleSplitEpic()
+    {
+        await OnSplitRequested.InvokeAsync(new EpicSplitEventArgs
+        {
+            PlacementId = Placement.Id,
+            EpicId = Placement.EpicId,
+            EpicTitle = Placement.EpicTitle
+        });
+    }
+
+    private async Task HandleViewDetails()
+    {
+        await OnViewDetailsRequested.InvokeAsync(new EpicViewDetailsEventArgs
+        {
+            PlacementId = Placement.Id,
+            EpicId = Placement.EpicId
+        });
     }
 }

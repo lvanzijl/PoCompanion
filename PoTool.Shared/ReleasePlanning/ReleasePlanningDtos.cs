@@ -185,3 +185,14 @@ public sealed record EpicSplitResultDto
     public int? OriginalEpicNewEffort { get; init; }
     public int? ExtractedEpicEffort { get; init; }
 }
+
+/// <summary>
+/// Represents a Feature belonging to an Epic (for split dialog).
+/// </summary>
+public sealed record EpicFeatureDto
+{
+    public int FeatureId { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public int? Effort { get; init; }
+    public string State { get; init; } = string.Empty;
+}

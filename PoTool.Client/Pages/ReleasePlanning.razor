@@ -7,6 +7,7 @@
 @inject ReleasePlanningService ReleasePlanningService
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <PageTitle>Release Planning Board - PO Companion</PageTitle>
 
@@ -101,7 +102,18 @@
     private async Task HandleRefreshValidation()
     {
         var result = await ReleasePlanningService.RefreshValidationAsync();
-        // TODO: Show snackbar with result
+        
+        if (result?.Success == true)
+        {
+            Snackbar.Add($"Validation refreshed: {result.ErrorCount} errors, {result.WarningCount} warnings", 
+                result.ErrorCount > 0 ? Severity.Warning : Severity.Success);
+            _board = await ReleasePlanningService.GetBoardAsync();
+            StateHasChanged();
+        }
+        else
+        {
+            Snackbar.Add($"Failed to refresh validation: {result?.ErrorMessage ?? "Unknown error"}", Severity.Error);
+        }
     }
 
     private async Task HandleAddLane()
@@ -131,11 +143,15 @@
 
             if (createResult?.Success == true)
             {
+                Snackbar.Add("Lane added successfully", Severity.Success);
                 // Reload the board to reflect the new lane
                 _board = await ReleasePlanningService.GetBoardAsync();
                 StateHasChanged();
             }
-            // TODO: Show error snackbar if creation failed
+            else
+            {
+                Snackbar.Add($"Failed to add lane: {createResult?.ErrorMessage ?? "Unknown error"}", Severity.Error);
+            }
         }
     }
 
@@ -166,11 +182,15 @@
 
             if (createResult?.Success == true)
             {
+                Snackbar.Add("Milestone line added successfully", Severity.Success);
                 // Reload the board to reflect the new milestone line
                 _board = await ReleasePlanningService.GetBoardAsync();
                 StateHasChanged();
             }
-            // TODO: Show error snackbar if creation failed
+            else
+            {
+                Snackbar.Add($"Failed to add milestone line: {createResult?.ErrorMessage ?? "Unknown error"}", Severity.Error);
+            }
         }
     }
 
@@ -200,11 +220,15 @@
 
             if (createResult?.Success == true)
             {
+                Snackbar.Add("Iteration line added successfully", Severity.Success);
                 // Reload the board to reflect the new iteration line
                 _board = await ReleasePlanningService.GetBoardAsync();
                 StateHasChanged();
             }
-            // TODO: Show error snackbar if creation failed
+            else
+            {
+                Snackbar.Add($"Failed to add iteration line: {createResult?.ErrorMessage ?? "Unknown error"}", Severity.Error);
+            }
         }
     }
 
