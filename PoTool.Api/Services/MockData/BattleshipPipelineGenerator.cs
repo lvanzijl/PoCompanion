@@ -6,6 +6,14 @@ namespace PoTool.Api.Services.MockData;
 /// <summary>
 /// Generates mock pipeline data for the Battleship Incident Handling system.
 /// Creates realistic build and release pipelines with varied run histories.
+/// 
+/// DEMO DATA DESIGN:
+/// - Includes pipelines with different health states for demonstration:
+///   * Currently failing pipelines (consecutive failures) - shows alerting
+///   * Flaky pipelines (high failure rate) - shows health issues  
+///   * Stable pipelines (high success rate) - shows healthy state
+///   * Recently active pipelines - shows real-time activity
+///   * Varied durations - demonstrates duration charts
 /// </summary>
 public class BattleshipPipelineGenerator
 {
@@ -13,34 +21,47 @@ public class BattleshipPipelineGenerator
     private readonly Random _random;
 
     // Pipeline names themed around the Battleship system
+    // Organized by health status for demonstration purposes
     private static readonly string[] BuildPipelineNames = new[]
     {
-        "Battleship.Core.CI",
+        // STABLE PIPELINES (low failure rate ~3-5%)
+        "Battleship.Core.CI",                    // Very stable, critical path
+        "Battleship.API.Gateway.CI",             // Well-tested API
+        "Battleship.ReportingDashboard.CI",      // Stable UI builds
+        
+        // NORMAL PIPELINES (moderate failure rate ~8-10%)
         "Battleship.IncidentDetection.CI",
         "Battleship.DamageControl.CI",
         "Battleship.CrewSafety.CI",
         "Battleship.HullIntegrity.CI",
-        "Battleship.FireSuppression.CI",
-        "Battleship.CommunicationSystems.CI",
-        "Battleship.SensorNetwork.CI",
         "Battleship.AlertManagement.CI",
-        "Battleship.ReportingDashboard.CI",
-        "Battleship.Mobile.Android.CI",
-        "Battleship.Mobile.iOS.CI",
-        "Battleship.API.Gateway.CI",
-        "Battleship.Database.Migrations.CI",
-        "Battleship.Infrastructure.CI"
+        
+        // FLAKY PIPELINES (high failure rate ~15-25%)
+        "Battleship.Mobile.Android.CI",          // Flaky mobile builds
+        "Battleship.Mobile.iOS.CI",              // Flaky iOS builds
+        "Battleship.SensorNetwork.CI",           // Hardware integration issues
+        
+        // PROBLEMATIC PIPELINES (currently broken, consecutive failures)
+        "Battleship.FireSuppression.CI",         // Currently failing!
+        "Battleship.CommunicationSystems.CI",    // Infrastructure issues
+        "Battleship.Database.Migrations.CI",     // Schema conflicts
+        "Battleship.Infrastructure.CI"           // Config problems
     };
 
     private static readonly string[] ReleasePipelineNames = new[]
     {
+        // STABLE RELEASES
         "Battleship.Core.Release",
-        "Battleship.IncidentDetection.Deploy",
-        "Battleship.DamageControl.Deploy",
-        "Battleship.Production.Release",
-        "Battleship.Staging.Deploy",
         "Battleship.QA.Deploy",
-        "Battleship.Integration.Deploy"
+        
+        // NORMAL RELEASES  
+        "Battleship.IncidentDetection.Deploy",
+        "Battleship.Staging.Deploy",
+        
+        // PROBLEMATIC RELEASES
+        "Battleship.DamageControl.Deploy",       // Deployment issues
+        "Battleship.Production.Release",         // Approval bottlenecks
+        "Battleship.Integration.Deploy"          // Environment issues
     };
 
     private static readonly string[] Branches = new[]
@@ -116,6 +137,10 @@ public class BattleshipPipelineGenerator
 
     /// <summary>
     /// Generates pipeline runs for all pipelines with realistic patterns.
+    /// Creates demo-friendly data with:
+    /// - Recent runs (within last few hours) for active pipelines
+    /// - Consecutive failures for problematic pipelines
+    /// - Varied success/failure patterns across pipeline types
     /// </summary>
     public List<PipelineRunDto> GenerateRuns(List<PipelineDto> pipelines, int runsPerPipeline = 50)
     {
@@ -127,32 +152,51 @@ public class BattleshipPipelineGenerator
         {
             // Determine pipeline characteristics
             var failureRate = GetPipelineFailureRate(pipeline.Name);
-            var avgDuration = GetPipelineAverageDuration(pipeline.Type);
+            var avgDuration = GetPipelineAverageDuration(pipeline.Type, pipeline.Name);
             var durationVariance = avgDuration.TotalMinutes * 0.3; // 30% variance
 
             var runCount = _random.Next(runsPerPipeline - 10, runsPerPipeline + 10);
-            var consecutiveFailures = 0;
+            
+            // For problematic pipelines, force consecutive failures at the end (most recent runs)
+            var forceFailuresForLastN = GetForcedConsecutiveFailures(pipeline.Name);
 
             for (int i = 0; i < runCount; i++)
             {
-                var startTime = DateTimeOffset.UtcNow.AddDays(-_random.Next(1, 90)).AddHours(-_random.Next(0, 24));
-                var duration = TimeSpan.FromMinutes(avgDuration.TotalMinutes + (_random.NextDouble() - 0.5) * durationVariance * 2);
-                if (duration < TimeSpan.FromMinutes(1)) duration = TimeSpan.FromMinutes(1);
-
-                var result = DetermineRunResult(failureRate, consecutiveFailures);
-                
-                if (result == PipelineRunResult.Failed)
+                // Generate start times - ensure some very recent runs
+                DateTimeOffset startTime;
+                if (i < 3)
                 {
-                    consecutiveFailures++;
+                    // First 3 runs are very recent (within last 24 hours) for demo
+                    startTime = DateTimeOffset.UtcNow.AddHours(-_random.Next(1, 24));
+                }
+                else if (i < 10)
+                {
+                    // Next 7 runs within last week
+                    startTime = DateTimeOffset.UtcNow.AddDays(-_random.Next(1, 7)).AddHours(-_random.Next(0, 24));
                 }
                 else
                 {
-                    consecutiveFailures = 0;
+                    // Rest spread over last 90 days
+                    startTime = DateTimeOffset.UtcNow.AddDays(-_random.Next(7, 90)).AddHours(-_random.Next(0, 24));
+                }
+                
+                var duration = TimeSpan.FromMinutes(avgDuration.TotalMinutes + (_random.NextDouble() - 0.5) * durationVariance * 2);
+                if (duration < TimeSpan.FromMinutes(1)) duration = TimeSpan.FromMinutes(1);
+
+                // Force failures for the most recent N runs of problematic pipelines
+                PipelineRunResult result;
+                if (i < forceFailuresForLastN)
+                {
+                    result = PipelineRunResult.Failed;
+                }
+                else
+                {
+                    result = DetermineRunResult(failureRate, 0);
                 }
 
                 var trigger = DetermineTrigger(pipeline.Type);
                 var finishTime = result == PipelineRunResult.Canceled 
-                    ? startTime.Add(TimeSpan.FromMinutes(_random.Next(1, (int)duration.TotalMinutes)))
+                    ? startTime.Add(TimeSpan.FromMinutes(_random.Next(1, Math.Max(2, (int)duration.TotalMinutes))))
                     : startTime.Add(duration);
 
                 runs.Add(new PipelineRunDto(
@@ -181,25 +225,99 @@ public class BattleshipPipelineGenerator
 
     private double GetPipelineFailureRate(string pipelineName)
     {
-        // Some pipelines are more stable than others
-        if (pipelineName.Contains("Infrastructure") || pipelineName.Contains("Database"))
-            return 0.15; // Higher failure rate for infrastructure
-        if (pipelineName.Contains("Mobile"))
-            return 0.12; // Mobile builds can be flaky
-        if (pipelineName.Contains("Integration"))
-            return 0.10; // Integration tests sometimes fail
+        // PROBLEMATIC PIPELINES - Currently broken with high failure rates
+        if (pipelineName.Contains("FireSuppression"))
+            return 0.85; // Critical! Almost always failing - demonstrates urgent issue
+        if (pipelineName.Contains("Database.Migrations"))
+            return 0.70; // Schema conflicts causing frequent failures
+        if (pipelineName.Contains("Infrastructure"))
+            return 0.55; // Config problems causing many failures
+        if (pipelineName.Contains("CommunicationSystems"))
+            return 0.45; // Network issues
+        if (pipelineName.Contains("DamageControl.Deploy"))
+            return 0.40; // Deployment environment issues
+        if (pipelineName.Contains("Integration.Deploy"))
+            return 0.35; // Integration test failures
+            
+        // FLAKY PIPELINES - Intermittent issues
+        if (pipelineName.Contains("Mobile.Android"))
+            return 0.25; // Android emulator flakiness
+        if (pipelineName.Contains("Mobile.iOS"))
+            return 0.22; // iOS simulator issues
+        if (pipelineName.Contains("SensorNetwork"))
+            return 0.20; // Hardware timing issues
+        if (pipelineName.Contains("Production.Release"))
+            return 0.18; // Approval bottlenecks
+            
+        // NORMAL PIPELINES - Acceptable failure rate
+        if (pipelineName.Contains("IncidentDetection") || pipelineName.Contains("DamageControl.CI"))
+            return 0.10;
+        if (pipelineName.Contains("CrewSafety") || pipelineName.Contains("HullIntegrity"))
+            return 0.08;
+        if (pipelineName.Contains("AlertManagement") || pipelineName.Contains("Staging"))
+            return 0.07;
+            
+        // STABLE PIPELINES - Very low failure rate
         if (pipelineName.Contains("Core"))
-            return 0.05; // Core is well-tested
-        return 0.08; // Default failure rate
+            return 0.03; // Core is rock solid
+        if (pipelineName.Contains("API.Gateway"))
+            return 0.04; // Well-tested API
+        if (pipelineName.Contains("ReportingDashboard"))
+            return 0.05; // Stable UI
+        if (pipelineName.Contains("QA.Deploy"))
+            return 0.05; // QA environment is stable
+            
+        return 0.08; // Default moderate failure rate
     }
 
-    private TimeSpan GetPipelineAverageDuration(PipelineType type)
+    /// <summary>
+    /// Returns how many consecutive failures to force for the most recent runs.
+    /// This ensures demo-friendly data where problematic pipelines clearly show issues.
+    /// </summary>
+    private int GetForcedConsecutiveFailures(string pipelineName)
     {
+        // Critical issues - many consecutive failures
+        if (pipelineName.Contains("FireSuppression"))
+            return 8; // 8 consecutive failures - urgent!
+        if (pipelineName.Contains("Database.Migrations"))
+            return 5; // 5 consecutive failures
+        if (pipelineName.Contains("Infrastructure"))
+            return 4; // 4 consecutive failures
+        if (pipelineName.Contains("CommunicationSystems"))
+            return 3; // 3 consecutive failures
+            
+        // Moderate issues
+        if (pipelineName.Contains("DamageControl.Deploy"))
+            return 2;
+        if (pipelineName.Contains("Integration.Deploy"))
+            return 2;
+            
+        return 0; // No forced failures
+    }
+
+    private TimeSpan GetPipelineAverageDuration(PipelineType type, string pipelineName)
+    {
+        // Give specific pipelines characteristic durations for demo variety
+        if (pipelineName.Contains("Core"))
+            return TimeSpan.FromMinutes(3); // Fast, well-optimized
+        if (pipelineName.Contains("API.Gateway"))
+            return TimeSpan.FromMinutes(5); // Quick API tests
+        if (pipelineName.Contains("Mobile"))
+            return TimeSpan.FromMinutes(35); // Slow mobile builds
+        if (pipelineName.Contains("Database"))
+            return TimeSpan.FromMinutes(25); // Migration scripts take time
+        if (pipelineName.Contains("Infrastructure"))
+            return TimeSpan.FromMinutes(45); // Infrastructure provisioning
+        if (pipelineName.Contains("Production.Release"))
+            return TimeSpan.FromMinutes(60); // Full production deployment
+        if (pipelineName.Contains("Integration"))
+            return TimeSpan.FromMinutes(40); // Integration tests
+            
         return type switch
         {
-            PipelineType.Build => TimeSpan.FromMinutes(_random.Next(5, 25)),
-            PipelineType.Release => TimeSpan.FromMinutes(_random.Next(15, 45)),
-            _ => TimeSpan.FromMinutes(10)
+            PipelineType.Build => TimeSpan.FromMinutes(_random.Next(8, 20)),
+            PipelineType.Release => TimeSpan.FromMinutes(_random.Next(15, 35)),
+            _ => TimeSpan.FromMinutes(12)
         };
     }
 
