@@ -131,4 +131,56 @@ public interface ITfsClient
         bool includeWriteChecks = false,
         int? workItemIdForWriteCheck = null,
         CancellationToken cancellationToken = default);
+
+    // ============================================
+    // BULK METHODS - Prevent N+1 query patterns
+    // ============================================
+
+    /// <summary>
+    /// Retrieves pull requests with their related details (iterations, comments, file changes) in a single batch.
+    /// This prevents the N+1 pattern of fetching each PR's details in separate calls.
+    /// </summary>
+    /// <param name="repositoryName">Optional repository name to filter by.</param>
+    /// <param name="fromDate">Optional start date for filtering pull requests.</param>
+    /// <param name="toDate">Optional end date for filtering pull requests.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Complete pull request sync result with all related data.</returns>
+    Task<PullRequestSyncResult> GetPullRequestsWithDetailsAsync(
+        string? repositoryName = null,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates effort (story points) for multiple work items in a single batch operation.
+    /// This prevents the N+1 pattern of updating each work item's effort in separate calls.
+    /// </summary>
+    /// <param name="updates">Collection of work item ID to effort value mappings.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Result containing success/failure for each work item update.</returns>
+    Task<BulkUpdateResult> UpdateWorkItemsEffortAsync(
+        IEnumerable<WorkItemEffortUpdate> updates,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates state for multiple work items in a single batch operation.
+    /// This prevents the N+1 pattern of updating each work item's state in separate calls.
+    /// </summary>
+    /// <param name="updates">Collection of work item ID to new state mappings.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Result containing success/failure for each work item update.</returns>
+    Task<BulkUpdateResult> UpdateWorkItemsStateAsync(
+        IEnumerable<WorkItemStateUpdate> updates,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves revision history for multiple work items in a single batch operation.
+    /// This prevents the N+1 pattern of fetching each work item's revisions in separate calls.
+    /// </summary>
+    /// <param name="workItemIds">Collection of work item IDs to get revisions for.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Dictionary mapping work item IDs to their revision history.</returns>
+    Task<IDictionary<int, IEnumerable<WorkItemRevisionDto>>> GetWorkItemRevisionsBatchAsync(
+        IEnumerable<int> workItemIds,
+        CancellationToken cancellationToken = default);
 }

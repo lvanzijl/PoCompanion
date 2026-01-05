@@ -311,4 +311,51 @@ public class MockTfsClient : ITfsClient
         _logger.LogInformation("Mock TFS client: Verification completed successfully ({Count} checks)", checks.Count);
         return Task.FromResult(report);
     }
+
+    // ============================================
+    // BULK METHODS - Prevent N+1 query patterns
+    // Delegates to BattleshipMockDataFacade for implementation.
+    // ============================================
+
+    /// <summary>
+    /// Returns all PR data in a single call. Delegates to BattleshipMockDataFacade.
+    /// </summary>
+    public Task<PullRequestSyncResult> GetPullRequestsWithDetailsAsync(
+        string? repositoryName = null,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null,
+        CancellationToken cancellationToken = default)
+    {
+        return _mockDataFacade.GetPullRequestsWithDetailsAsync(repositoryName, fromDate, toDate, cancellationToken);
+    }
+
+    /// <summary>
+    /// Updates effort for multiple work items in a single batch call.
+    /// </summary>
+    public Task<BulkUpdateResult> UpdateWorkItemsEffortAsync(
+        IEnumerable<WorkItemEffortUpdate> updates,
+        CancellationToken cancellationToken = default)
+    {
+        return _mockDataFacade.UpdateWorkItemsEffortAsync(updates, cancellationToken);
+    }
+
+    /// <summary>
+    /// Updates state for multiple work items in a single batch call.
+    /// </summary>
+    public Task<BulkUpdateResult> UpdateWorkItemsStateAsync(
+        IEnumerable<WorkItemStateUpdate> updates,
+        CancellationToken cancellationToken = default)
+    {
+        return _mockDataFacade.UpdateWorkItemsStateAsync(updates, cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets revision history for multiple work items in a single batch call.
+    /// </summary>
+    public Task<IDictionary<int, IEnumerable<WorkItemRevisionDto>>> GetWorkItemRevisionsBatchAsync(
+        IEnumerable<int> workItemIds,
+        CancellationToken cancellationToken = default)
+    {
+        return _mockDataFacade.GetWorkItemRevisionsBatchAsync(workItemIds, cancellationToken);
+    }
 }

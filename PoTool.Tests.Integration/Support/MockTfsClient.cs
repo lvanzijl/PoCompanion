@@ -457,4 +457,156 @@ public class MockTfsClient : ITfsClient
 
         return Task.FromResult(report);
     }
+
+    // ============================================
+    // BULK METHODS - Prevent N+1 query patterns
+    // ============================================
+
+    public Task<PullRequestSyncResult> GetPullRequestsWithDetailsAsync(
+        string? repositoryName = null,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null,
+        CancellationToken cancellationToken = default)
+    {
+        var filtered = _mockPullRequests.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(repositoryName))
+        {
+            filtered = filtered.Where(pr => pr.RepositoryName == repositoryName);
+        }
+
+        if (fromDate.HasValue)
+        {
+            filtered = filtered.Where(pr => pr.CreatedDate >= fromDate.Value);
+        }
+
+        if (toDate.HasValue)
+        {
+            filtered = filtered.Where(pr => pr.CreatedDate <= toDate.Value);
+        }
+
+        var prs = filtered.ToList();
+        var prIds = prs.Select(p => p.Id).ToHashSet();
+
+        var iterations = _mockIterations.Where(i => prIds.Contains(i.PullRequestId)).ToList();
+        var comments = _mockComments.Where(c => prIds.Contains(c.PullRequestId)).ToList();
+        var fileChanges = _mockFileChanges.Where(fc => prIds.Contains(fc.PullRequestId)).ToList();
+
+        return Task.FromResult(new PullRequestSyncResult(
+            PullRequests: prs,
+            Iterations: iterations,
+            Comments: comments,
+            FileChanges: fileChanges,
+            TfsCallCount: 1
+        ));
+    }
+
+    public Task<BulkUpdateResult> UpdateWorkItemsEffortAsync(
+        IEnumerable<WorkItemEffortUpdate> updates,
+        CancellationToken cancellationToken = default)
+    {
+        var updatesList = updates.ToList();
+        var results = new List<BulkUpdateItemResult>();
+        var successCount = 0;
+        var failedCount = 0;
+
+        foreach (var update in updatesList)
+        {
+            if (update.EffortValue < 0)
+            {
+                results.Add(new BulkUpdateItemResult(update.WorkItemId, false, "Invalid effort value"));
+                failedCount++;
+            }
+            else
+            {
+                var workItem = _mockWorkItems.FirstOrDefault(wi => wi.TfsId == update.WorkItemId);
+                if (workItem != null)
+                {
+                    _mockWorkItems.Remove(workItem);
+                    _mockWorkItems.Add(workItem with { Effort = update.EffortValue });
+                }
+                results.Add(new BulkUpdateItemResult(update.WorkItemId, true));
+                successCount++;
+            }
+        }
+
+        return Task.FromResult(new BulkUpdateResult(
+            TotalRequested: updatesList.Count,
+            SuccessfulUpdates: successCount,
+            FailedUpdates: failedCount,
+            Results: results,
+            TfsCallCount: 1
+        ));
+    }
+
+    public Task<BulkUpdateResult> UpdateWorkItemsStateAsync(
+        IEnumerable<WorkItemStateUpdate> updates,
+        CancellationToken cancellationToken = default)
+    {
+        var updatesList = updates.ToList();
+        var results = new List<BulkUpdateItemResult>();
+        var successCount = 0;
+        var failedCount = 0;
+
+        var validStates = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "New", "Active", "In Progress", "Resolved", "Closed", "Done", "Removed"
+        };
+
+        foreach (var update in updatesList)
+        {
+            if (!validStates.Contains(update.NewState))
+            {
+                results.Add(new BulkUpdateItemResult(update.WorkItemId, false, "Invalid state"));
+                failedCount++;
+            }
+            else
+            {
+                var workItem = _mockWorkItems.FirstOrDefault(wi => wi.TfsId == update.WorkItemId);
+                if (workItem != null)
+                {
+                    _mockWorkItems.Remove(workItem);
+                    _mockWorkItems.Add(workItem with { State = update.NewState });
+                }
+                results.Add(new BulkUpdateItemResult(update.WorkItemId, true));
+                successCount++;
+            }
+        }
+
+        return Task.FromResult(new BulkUpdateResult(
+            TotalRequested: updatesList.Count,
+            SuccessfulUpdates: successCount,
+            FailedUpdates: failedCount,
+            Results: results,
+            TfsCallCount: 1
+        ));
+    }
+
+    public Task<IDictionary<int, IEnumerable<WorkItemRevisionDto>>> GetWorkItemRevisionsBatchAsync(
+        IEnumerable<int> workItemIds,
+        CancellationToken cancellationToken = default)
+    {
+        var results = new Dictionary<int, IEnumerable<WorkItemRevisionDto>>();
+
+        foreach (var workItemId in workItemIds)
+        {
+            var revisions = new List<WorkItemRevisionDto>
+            {
+                new WorkItemRevisionDto(
+                    RevisionNumber: 1,
+                    WorkItemId: workItemId,
+                    ChangedBy: "Test User",
+                    ChangedDate: DateTimeOffset.UtcNow.AddDays(-10),
+                    FieldChanges: new Dictionary<string, WorkItemFieldChange>
+                    {
+                        ["System.State"] = new WorkItemFieldChange("System.State", null, "New")
+                    },
+                    Comment: "Created"
+                )
+            };
+            results[workItemId] = revisions;
+        }
+
+        return Task.FromResult<IDictionary<int, IEnumerable<WorkItemRevisionDto>>>(results);
+    }
 }

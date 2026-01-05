@@ -8,6 +8,7 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// <summary>
 /// Handler for FixValidationViolationBatchCommand.
 /// Applies automated fixes to validation violations by updating work item states in TFS.
+/// Uses bulk update method to prevent N+1 query pattern.
 /// </summary>
 public sealed class FixValidationViolationBatchCommandHandler 
     : ICommandHandler<FixValidationViolationBatchCommand, FixValidationViolationResultDto>
@@ -32,67 +33,64 @@ public sealed class FixValidationViolationBatchCommandHandler
     {
         _logger.LogInformation("Handling FixValidationViolationBatchCommand with {Count} fixes", command.Fixes.Count);
 
-        var results = new List<FixResult>();
-        var successCount = 0;
-        var failureCount = 0;
+        var validUpdates = new List<WorkItemStateUpdate>();
+        var validationResults = new List<FixResult>();
+        var validationFailureCount = 0;
 
+        // Step 1: Validate all fixes first
         foreach (var fix in command.Fixes)
         {
-            try
+            _logger.LogDebug("Validating fix for work item {WorkItemId}: {FixType} - Set state to {NewState}",
+                fix.WorkItemId, fix.FixType, fix.NewState);
+
+            // Validate the work item exists locally
+            var workItem = await _repository.GetByTfsIdAsync(fix.WorkItemId, cancellationToken);
+            if (workItem == null)
             {
-                _logger.LogDebug("Attempting fix for work item {WorkItemId}: {FixType} - Set state to {NewState}",
-                    fix.WorkItemId, fix.FixType, fix.NewState);
-
-                // Validate the work item exists locally
-                var workItem = await _repository.GetByTfsIdAsync(fix.WorkItemId, cancellationToken);
-                if (workItem == null)
-                {
-                    var errorMsg = $"Work item {fix.WorkItemId} not found in local cache";
-                    _logger.LogWarning(errorMsg);
-                    results.Add(new FixResult(fix.WorkItemId, false, errorMsg));
-                    failureCount++;
-                    continue;
-                }
-
-                // Apply fix to TFS
-                var success = await _tfsClient.UpdateWorkItemStateAsync(
-                    fix.WorkItemId,
-                    fix.NewState,
-                    cancellationToken);
-
-                if (success)
-                {
-                    var successMsg = $"Successfully updated work item {fix.WorkItemId} to state '{fix.NewState}'";
-                    _logger.LogInformation(successMsg);
-                    results.Add(new FixResult(fix.WorkItemId, true, successMsg));
-                    successCount++;
-                }
-                else
-                {
-                    var errorMsg = $"Failed to update work item {fix.WorkItemId} - TFS update returned false";
-                    _logger.LogWarning(errorMsg);
-                    results.Add(new FixResult(fix.WorkItemId, false, errorMsg));
-                    failureCount++;
-                }
+                var errorMsg = $"Work item {fix.WorkItemId} not found in local cache";
+                _logger.LogWarning(errorMsg);
+                validationResults.Add(new FixResult(fix.WorkItemId, false, errorMsg));
+                validationFailureCount++;
+                continue;
             }
-            catch (Exception ex)
-            {
-                var errorMsg = $"Exception updating work item {fix.WorkItemId}: {ex.Message}";
-                _logger.LogError(ex, "Error applying fix for work item {WorkItemId}", fix.WorkItemId);
-                results.Add(new FixResult(fix.WorkItemId, false, errorMsg));
-                failureCount++;
-            }
+
+            // Add to valid updates list for bulk processing
+            validUpdates.Add(new WorkItemStateUpdate(fix.WorkItemId, fix.NewState));
         }
+
+        // Step 2: Use bulk method to update all valid work items in a single call.
+        // This prevents the N+1 pattern where we would call UpdateWorkItemStateAsync
+        // for each work item individually.
+        var bulkResult = await _tfsClient.UpdateWorkItemsStateAsync(validUpdates, cancellationToken);
+
+        // Log performance instrumentation showing call reduction
+        _logger.LogInformation(
+            "Bulk state update completed with {TfsCallCount} TFS call(s) for {Count} work items",
+            bulkResult.TfsCallCount,
+            validUpdates.Count);
+
+        // Combine validation failures with TFS update results
+        var allResults = new List<FixResult>(validationResults);
+        foreach (var updateResult in bulkResult.Results)
+        {
+            var successMsg = updateResult.Success 
+                ? $"Successfully updated work item {updateResult.WorkItemId}"
+                : updateResult.ErrorMessage ?? $"Failed to update work item {updateResult.WorkItemId}";
+            allResults.Add(new FixResult(updateResult.WorkItemId, updateResult.Success, successMsg));
+        }
+
+        var totalSuccess = bulkResult.SuccessfulUpdates;
+        var totalFailure = validationFailureCount + bulkResult.FailedUpdates;
 
         var result = new FixValidationViolationResultDto(
             TotalAttempted: command.Fixes.Count,
-            SuccessfulFixes: successCount,
-            FailedFixes: failureCount,
-            Results: results
+            SuccessfulFixes: totalSuccess,
+            FailedFixes: totalFailure,
+            Results: allResults
         );
 
         _logger.LogInformation("Batch fix complete: {Success} successful, {Failed} failed out of {Total}",
-            successCount, failureCount, command.Fixes.Count);
+            totalSuccess, totalFailure, command.Fixes.Count);
 
         return result;
     }
