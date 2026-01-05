@@ -91,11 +91,10 @@ public class RealTfsClient : ITfsClient
     public async Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, DateTimeOffset? since, CancellationToken cancellationToken = default)
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
-        if (entity == null)
-            throw new InvalidOperationException("TFS configuration not set");
+        ValidateTfsConfiguration(entity);
 
         // Apply timeout from configuration (Phase 4)
-        _httpClient.Timeout = TimeSpan.FromSeconds(entity.TimeoutSeconds);
+        _httpClient.Timeout = TimeSpan.FromSeconds(entity!.TimeoutSeconds);
 
         await ConfigureAuthenticationAsync(entity, cancellationToken);
 
@@ -215,11 +214,10 @@ public class RealTfsClient : ITfsClient
         CancellationToken cancellationToken = default)
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
-        if (entity == null)
-            throw new InvalidOperationException("TFS configuration not set");
+        ValidateTfsConfiguration(entity);
 
         // Phase 4: Apply timeout from configuration
-        _httpClient.Timeout = TimeSpan.FromSeconds(entity.TimeoutSeconds);
+        _httpClient.Timeout = TimeSpan.FromSeconds(entity!.TimeoutSeconds);
 
         await ConfigureAuthenticationAsync(entity, cancellationToken);
 
@@ -318,14 +316,14 @@ public class RealTfsClient : ITfsClient
         CancellationToken cancellationToken = default)
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
-        if (entity == null)
-            throw new InvalidOperationException("TFS configuration not set");
+        ValidateTfsConfiguration(entity);
+        var config = entity!; // Non-null after validation
 
-        await ConfigureAuthenticationAsync(entity, cancellationToken);
+        await ConfigureAuthenticationAsync(config, cancellationToken);
 
         return await ExecuteWithRetryAsync(async () =>
         {
-            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/iterations?api-version={entity.ApiVersion}";
+            var url = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/iterations?api-version={config.ApiVersion}";
             
             var response = await _httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
@@ -378,14 +376,14 @@ public class RealTfsClient : ITfsClient
         CancellationToken cancellationToken = default)
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
-        if (entity == null)
-            throw new InvalidOperationException("TFS configuration not set");
+        ValidateTfsConfiguration(entity);
+        var config = entity!; // Non-null after validation
 
-        await ConfigureAuthenticationAsync(entity, cancellationToken);
+        await ConfigureAuthenticationAsync(config, cancellationToken);
 
         return await ExecuteWithRetryAsync(async () =>
         {
-            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/threads?api-version={entity.ApiVersion}";
+            var url = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/threads?api-version={config.ApiVersion}";
             
             var response = await _httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
@@ -460,14 +458,14 @@ public class RealTfsClient : ITfsClient
         CancellationToken cancellationToken = default)
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
-        if (entity == null)
-            throw new InvalidOperationException("TFS configuration not set");
+        ValidateTfsConfiguration(entity);
+        var config = entity!; // Non-null after validation
 
-        await ConfigureAuthenticationAsync(entity, cancellationToken);
+        await ConfigureAuthenticationAsync(config, cancellationToken);
 
         return await ExecuteWithRetryAsync(async () =>
         {
-            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/iterations/{iterationId}/changes?api-version={entity.ApiVersion}";
+            var url = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/iterations/{iterationId}/changes?api-version={config.ApiVersion}";
             
             var response = await _httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
@@ -518,15 +516,15 @@ public class RealTfsClient : ITfsClient
         CancellationToken cancellationToken = default)
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
-        if (entity == null)
-            throw new InvalidOperationException("TFS configuration not set");
+        ValidateTfsConfiguration(entity);
+        var config = entity!; // Non-null after validation
 
-        await ConfigureAuthenticationAsync(entity, cancellationToken);
+        await ConfigureAuthenticationAsync(config, cancellationToken);
 
         return await ExecuteWithRetryAsync(async () =>
         {
             // Get work item with all revisions using the revisions expand parameter
-            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/{workItemId}/revisions?api-version={entity.ApiVersion}";
+            var url = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/wit/workitems/{workItemId}/revisions?api-version={config.ApiVersion}";
             
             var response = await _httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
@@ -928,10 +926,7 @@ public class RealTfsClient : ITfsClient
         CancellationToken cancellationToken = default)
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
-        if (entity == null)
-        {
-            throw new InvalidOperationException("TFS configuration not set");
-        }
+        ValidateTfsConfiguration(entity);
 
         _logger.LogInformation("Starting TFS API verification. WriteChecks: {IncludeWriteChecks}, WorkItemId: {WorkItemId}", 
             includeWriteChecks, workItemIdForWriteCheck);
@@ -939,20 +934,20 @@ public class RealTfsClient : ITfsClient
         var checks = new List<TfsCapabilityCheckResult>();
         
         // Run read-only checks
-        checks.Add(await VerifyServerReachabilityAsync(entity, cancellationToken));
-        checks.Add(await VerifyProjectAccessAsync(entity, cancellationToken));
-        checks.Add(await VerifyWorkItemQueryAsync(entity, cancellationToken));
-        checks.Add(await VerifyWorkItemFieldsAsync(entity, cancellationToken));
-        checks.Add(await VerifyBatchReadAsync(entity, cancellationToken));
-        checks.Add(await VerifyWorkItemRevisionsAsync(entity, cancellationToken));
-        checks.Add(await VerifyPullRequestsAsync(entity, cancellationToken));
+        checks.Add(await VerifyServerReachabilityAsync(entity!, cancellationToken));
+        checks.Add(await VerifyProjectAccessAsync(entity!, cancellationToken));
+        checks.Add(await VerifyWorkItemQueryAsync(entity!, cancellationToken));
+        checks.Add(await VerifyWorkItemFieldsAsync(entity!, cancellationToken));
+        checks.Add(await VerifyBatchReadAsync(entity!, cancellationToken));
+        checks.Add(await VerifyWorkItemRevisionsAsync(entity!, cancellationToken));
+        checks.Add(await VerifyPullRequestsAsync(entity!, cancellationToken));
         
         // Run write checks if requested
         if (includeWriteChecks)
         {
             if (workItemIdForWriteCheck.HasValue)
             {
-                checks.Add(await VerifyWorkItemUpdateAsync(entity, workItemIdForWriteCheck.Value, cancellationToken));
+                checks.Add(await VerifyWorkItemUpdateAsync(entity!, workItemIdForWriteCheck.Value, cancellationToken));
             }
             else
             {
@@ -963,7 +958,7 @@ public class RealTfsClient : ITfsClient
         var report = new TfsVerificationReport
         {
             VerifiedAt = DateTimeOffset.UtcNow,
-            ServerUrl = entity.Url,
+            ServerUrl = entity!.Url,
             ProjectName = entity.Project,
             ApiVersion = entity.ApiVersion,
             IncludedWriteChecks = includeWriteChecks,
@@ -1552,5 +1547,46 @@ public class RealTfsClient : ITfsClient
             return evidence;
         
         return evidence.Substring(0, maxLength) + "... (truncated)";
+    }
+
+    /// <summary>
+    /// Validates that TFS configuration is complete and throws TfsConfigurationException if not.
+    /// This method is called when UseMockClient is false (TFS mode) to ensure that the
+    /// real TFS data source can be used.
+    /// </summary>
+    private void ValidateTfsConfiguration(TfsConfigEntity? entity)
+    {
+        if (entity == null)
+        {
+            _logger.LogError("TFS data source is enabled but TFS configuration is not set. " +
+                "Configure TFS settings via the API or use mock data source.");
+            throw new TfsConfigurationException(
+                "TFS data source is enabled but TFS configuration is not set. " +
+                "Please configure TFS settings (URL, Project) before using the application, " +
+                "or switch to mock data source by setting TfsIntegration:UseMockClient to true.",
+                new[] { "Url", "Project" });
+        }
+
+        var missingFields = new List<string>();
+        
+        if (string.IsNullOrWhiteSpace(entity.Url))
+        {
+            missingFields.Add("Url");
+        }
+        
+        if (string.IsNullOrWhiteSpace(entity.Project))
+        {
+            missingFields.Add("Project");
+        }
+
+        if (missingFields.Count > 0)
+        {
+            _logger.LogError("TFS configuration is incomplete. Missing fields: {MissingFields}", 
+                string.Join(", ", missingFields));
+            throw new TfsConfigurationException(
+                $"TFS configuration is incomplete. Missing required fields: {string.Join(", ", missingFields)}. " +
+                "Please configure all TFS settings before using the application.",
+                missingFields);
+        }
     }
 }
