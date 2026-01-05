@@ -112,6 +112,7 @@ public static class ApiServiceCollectionExtensions
             services.AddSingleton<BattleshipWorkItemGenerator>();
             services.AddSingleton<BattleshipDependencyGenerator>();
             services.AddSingleton<BattleshipPullRequestGenerator>();
+            services.AddSingleton<BattleshipPipelineGenerator>();
             services.AddSingleton<MockDataValidator>();
             services.AddSingleton<BattleshipMockDataFacade>();
         }

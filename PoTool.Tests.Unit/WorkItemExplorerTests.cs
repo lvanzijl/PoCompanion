@@ -20,6 +20,8 @@ public class WorkItemExplorerTests
         var workItemGenerator = new BattleshipWorkItemGenerator();
         var dependencyGenerator = new BattleshipDependencyGenerator();
         var pullRequestGenerator = new BattleshipPullRequestGenerator();
+        var pipelineGeneratorLogger = Mock.Of<ILogger<BattleshipPipelineGenerator>>();
+        var pipelineGenerator = new BattleshipPipelineGenerator(pipelineGeneratorLogger);
         var validator = new MockDataValidator();
         var logger = Mock.Of<ILogger<BattleshipMockDataFacade>>();
         
@@ -27,6 +29,7 @@ public class WorkItemExplorerTests
             workItemGenerator,
             dependencyGenerator,
             pullRequestGenerator,
+            pipelineGenerator,
             validator,
             logger);
     }
