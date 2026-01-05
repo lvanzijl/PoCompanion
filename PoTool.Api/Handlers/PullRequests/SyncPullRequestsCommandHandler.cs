@@ -61,8 +61,11 @@ public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullReq
             var pullRequests = (await _tfsClient.GetPullRequestsAsync(cancellationToken: cancellationToken)).ToList();
             
             // For each PR, fetch its iterations, comments, and file changes
-            var allIterations = new List<Core.PullRequests.PullRequestIterationDto>();
-            var allComments = new List<Core.PullRequests.PullRequestCommentDto>();
+            // Initialize with estimated capacity to reduce allocations
+            var estimatedIterations = pullRequests.Count * 3; // Average ~3 iterations per PR
+            var estimatedComments = pullRequests.Count * 5; // Average ~5 comments per PR
+            var allIterations = new List<Core.PullRequests.PullRequestIterationDto>(estimatedIterations);
+            var allComments = new List<Core.PullRequests.PullRequestCommentDto>(estimatedComments);
             var allFileChanges = new List<Core.PullRequests.PullRequestFileChangeDto>();
 
             foreach (var pr in pullRequests)
