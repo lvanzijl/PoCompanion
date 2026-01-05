@@ -52,7 +52,7 @@
 
             <CompactSelect T="TfsAuthMode"
                       Value="@_authMode" 
-                      ValueChanged="@((TfsAuthMode value) => { _authMode = value; StateHasChanged(); })"
+                      ValueChanged="@OnAuthModeChanged"
                       Label="Authentication Mode" 
                       HelperText="Select authentication method">
                 <MudSelectItem Value="@TfsAuthMode.Pat">Personal Access Token (PAT)</MudSelectItem>
@@ -328,6 +328,12 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadCurrentConfig();
+    }
+
+    private void OnAuthModeChanged(TfsAuthMode value)
+    {
+        _authMode = value;
+        StateHasChanged();
     }
 
     private async Task LoadCurrentConfig()

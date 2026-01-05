@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 
 namespace PoTool.Tests.Unit;
@@ -200,7 +201,7 @@ public class TfsConfigurationServiceTests
         // Arrange
         const string url = "https://tfs.mycompany.com";
         const string project = "MyProject";
-        const PoTool.Api.Persistence.Entities.TfsAuthMode authMode = PoTool.Api.Persistence.Entities.TfsAuthMode.Ntlm;
+        const TfsAuthMode authMode = TfsAuthMode.Ntlm;
 
         // Act
         await _service.SaveConfigAsync(url, project, authMode);
@@ -215,15 +216,15 @@ public class TfsConfigurationServiceTests
     public async Task SaveConfigAsync_SwitchingFromPatToNtlm_UpdatesAuthMode()
     {
         // Arrange - First save with PAT mode
-        await _service.SaveConfigAsync("https://dev.azure.com/org", "Project", PoTool.Api.Persistence.Entities.TfsAuthMode.Pat);
+        await _service.SaveConfigAsync("https://dev.azure.com/org", "Project", TfsAuthMode.Pat);
         
         // Act - Update to NTLM mode
-        await _service.SaveConfigAsync("https://tfs.mycompany.com", "Project", PoTool.Api.Persistence.Entities.TfsAuthMode.Ntlm);
+        await _service.SaveConfigAsync("https://tfs.mycompany.com", "Project", TfsAuthMode.Ntlm);
 
         // Assert
         var config = await _service.GetConfigAsync();
         Assert.IsNotNull(config);
-        Assert.AreEqual(PoTool.Api.Persistence.Entities.TfsAuthMode.Ntlm, config.AuthMode, "AuthMode should be updated to NTLM");
+        Assert.AreEqual(TfsAuthMode.Ntlm, config.AuthMode, "AuthMode should be updated to NTLM");
     }
 
     [TestMethod]
@@ -232,7 +233,7 @@ public class TfsConfigurationServiceTests
         // Arrange
         const string url = "https://tfs.mycompany.com";
         const string project = "MyProject";
-        const PoTool.Api.Persistence.Entities.TfsAuthMode authMode = PoTool.Api.Persistence.Entities.TfsAuthMode.Ntlm;
+        const TfsAuthMode authMode = TfsAuthMode.Ntlm;
         const bool useDefaultCredentials = true;
 
         // Act
