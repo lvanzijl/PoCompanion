@@ -50,7 +50,9 @@
                          Required="true"
                          HelperText="The name of your project" />
 
-            <CompactSelect @bind-Value="_authMode" 
+            <CompactSelect T="TfsAuthMode"
+                      Value="@_authMode" 
+                      ValueChanged="@((TfsAuthMode value) => { _authMode = value; StateHasChanged(); })"
                       Label="Authentication Mode" 
                       HelperText="Select authentication method">
                 <MudSelectItem Value="@TfsAuthMode.Pat">Personal Access Token (PAT)</MudSelectItem>

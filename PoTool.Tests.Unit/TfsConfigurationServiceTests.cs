@@ -193,4 +193,55 @@ public class TfsConfigurationServiceTests
         Assert.AreEqual("updated-url", updatedEntity.Url);
         Assert.AreEqual("updated-project", updatedEntity.Project);
     }
+
+    [TestMethod]
+    public async Task SaveConfigAsync_WithNtlmAuthMode_PersistsAuthMode()
+    {
+        // Arrange
+        const string url = "https://tfs.mycompany.com";
+        const string project = "MyProject";
+        const PoTool.Api.Persistence.Entities.TfsAuthMode authMode = PoTool.Api.Persistence.Entities.TfsAuthMode.Ntlm;
+
+        // Act
+        await _service.SaveConfigAsync(url, project, authMode);
+
+        // Assert
+        var config = await _service.GetConfigAsync();
+        Assert.IsNotNull(config);
+        Assert.AreEqual(authMode, config.AuthMode, "AuthMode should be persisted as NTLM");
+    }
+
+    [TestMethod]
+    public async Task SaveConfigAsync_SwitchingFromPatToNtlm_UpdatesAuthMode()
+    {
+        // Arrange - First save with PAT mode
+        await _service.SaveConfigAsync("https://dev.azure.com/org", "Project", PoTool.Api.Persistence.Entities.TfsAuthMode.Pat);
+        
+        // Act - Update to NTLM mode
+        await _service.SaveConfigAsync("https://tfs.mycompany.com", "Project", PoTool.Api.Persistence.Entities.TfsAuthMode.Ntlm);
+
+        // Assert
+        var config = await _service.GetConfigAsync();
+        Assert.IsNotNull(config);
+        Assert.AreEqual(PoTool.Api.Persistence.Entities.TfsAuthMode.Ntlm, config.AuthMode, "AuthMode should be updated to NTLM");
+    }
+
+    [TestMethod]
+    public async Task SaveConfigAsync_WithNtlmAndUseDefaultCredentials_PersistsBothSettings()
+    {
+        // Arrange
+        const string url = "https://tfs.mycompany.com";
+        const string project = "MyProject";
+        const PoTool.Api.Persistence.Entities.TfsAuthMode authMode = PoTool.Api.Persistence.Entities.TfsAuthMode.Ntlm;
+        const bool useDefaultCredentials = true;
+
+        // Act
+        await _service.SaveConfigAsync(url, project, authMode, useDefaultCredentials);
+
+        // Assert
+        var config = await _service.GetConfigAsync();
+        Assert.IsNotNull(config);
+        Assert.AreEqual(authMode, config.AuthMode, "AuthMode should be NTLM");
+        Assert.AreEqual(useDefaultCredentials, config.UseDefaultCredentials, "UseDefaultCredentials should be true");
+    }
 }
