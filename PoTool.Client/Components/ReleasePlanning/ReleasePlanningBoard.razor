@@ -138,7 +138,7 @@
                         }
 
                         <!-- Preview Line during drag -->
-                        @if (_draggingLineId != null && _draggingTargetPosition != null && Math.Abs(_draggingTargetPosition.Value - (currentRow + 0.5)) < 0.1)
+                        @if (_draggingLineId != null && _draggingTargetPosition != null && Math.Abs(_draggingTargetPosition.Value - (currentRow + 0.5)) < POSITION_TOLERANCE)
                         {
                             <div class="@(_draggingIsMilestone ? "milestone-line-preview" : "iteration-line-preview")">
                                 <MudDivider DividerType="DividerType.FullWidth" 
@@ -184,6 +184,9 @@
     private MilestoneType _draggingMilestoneType;
     private double _draggingOriginalPosition;
     private double? _draggingTargetPosition;
+
+    // Constants for drag behavior
+    private const double POSITION_TOLERANCE = 0.1;
 
     protected override async Task OnInitializedAsync()
     {
@@ -362,7 +365,7 @@
         }
 
         // Don't update if dropped at original position
-        if (Math.Abs(_draggingTargetPosition.Value - _draggingOriginalPosition) < 0.1)
+        if (Math.Abs(_draggingTargetPosition.Value - _draggingOriginalPosition) < POSITION_TOLERANCE)
         {
             ResetLineDragState();
             return;
@@ -426,27 +429,27 @@
     /// </summary>
     private string GetEpicPreviewClass(EpicPlacementDto placement, int rowIndex)
     {
+        // Early return if not dragging
         if (_draggingLineId == null || _draggingTargetPosition == null)
         {
             return string.Empty;
         }
 
         var epicPosition = rowIndex + 0.5; // Middle of the row
-        var originalLinePosition = _draggingOriginalPosition;
-        var targetLinePosition = _draggingTargetPosition.Value;
+        
+        // Early return if line movement is negligible
+        if (Math.Abs(_draggingTargetPosition.Value - _draggingOriginalPosition) < POSITION_TOLERANCE)
+        {
+            return string.Empty;
+        }
 
         // Determine if the epic's inclusion/exclusion state would change
         // Epic is "before" the line if its position is less than the line position
-        bool wasBeforeLine = epicPosition < originalLinePosition;
-        bool wouldBeBeforeLine = epicPosition < targetLinePosition;
+        bool wasBeforeLine = epicPosition < _draggingOriginalPosition;
+        bool wouldBeBeforeLine = epicPosition < _draggingTargetPosition.Value;
 
         // If the epic's relationship to the line changes, apply preview styling
-        if (wasBeforeLine != wouldBeBeforeLine)
-        {
-            return "epic-preview-affected";
-        }
-
-        return string.Empty;
+        return (wasBeforeLine != wouldBeBeforeLine) ? "epic-preview-affected" : string.Empty;
     }
 
     #endregion

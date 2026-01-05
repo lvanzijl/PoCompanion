@@ -1,5 +1,8 @@
 .release-planning-board {
     min-height: 400px;
+    /* Animation durations */
+    --animation-duration-pulse: 1s;
+    --animation-duration-highlight: 0.6s;
 }
 
 .board-container {
@@ -100,7 +103,7 @@
     position: relative;
     padding: 4px 0;
     opacity: 0.7;
-    animation: pulse-preview 1s ease-in-out infinite;
+    animation: pulse-preview var(--animation-duration-pulse, 1s) ease-in-out infinite;
 }
 
 @keyframes pulse-preview {
@@ -123,7 +126,7 @@
 /* Epic preview styling - highlights epics that would be affected by line movement */
 .epic-preview-affected {
     position: relative;
-    animation: highlight-affected 0.6s ease-in-out;
+    animation: highlight-affected var(--animation-duration-highlight, 0.6s) ease-in-out;
     outline: 2px dashed var(--mud-palette-warning);
     outline-offset: 2px;
     border-radius: 4px;
