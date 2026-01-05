@@ -129,6 +129,7 @@ builder.Services.AddScoped<WorkItemFilteringService>();
 builder.Services.AddScoped<WorkItemSelectionService>();
 builder.Services.AddScoped<PullRequestMetricsService>();
 builder.Services.AddScoped<BacklogHealthCalculationService>();
+builder.Services.AddScoped<ReleasePlanningService>();
 
 // Register clipboard, export and report services
 builder.Services.AddScoped<IClipboardService, ClipboardService>();

@@ -100,6 +100,10 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<ISettingsRepository, SettingsRepository>();
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<IPullRequestRepository, PullRequestRepository>();
+        services.AddScoped<IReleasePlanningRepository, ReleasePlanningRepository>();
+
+        // Register Release Planning services
+        services.AddScoped<ConnectorDerivationService>();
 
         // Register Battleship mock data generation system only when mock client is enabled
         // When TFS mode is selected (UseMockClient=false), mock data services should not be registered

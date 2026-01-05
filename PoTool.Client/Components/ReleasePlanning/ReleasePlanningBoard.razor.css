@@ -1,0 +1,76 @@
+.release-planning-board {
+    min-height: 400px;
+}
+
+.board-container {
+    overflow-x: auto;
+}
+
+.lane-headers {
+    background-color: var(--mud-palette-surface);
+    border-bottom: 2px solid var(--mud-palette-lines-default);
+}
+
+.lane-header {
+    min-width: 200px;
+    text-align: center;
+    border-right: 1px solid var(--mud-palette-lines-default);
+}
+
+.lane-header:last-child {
+    border-right: none;
+}
+
+.board-grid {
+    position: relative;
+}
+
+.row-container {
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.lane-row {
+    min-width: 200px;
+    min-height: 70px;
+}
+
+.lane-row:last-child {
+    border-right: none;
+}
+
+/* Milestone Lines - visually dominant */
+.milestone-line {
+    position: relative;
+    padding: 4px 0;
+}
+
+.milestone-line-divider {
+    border-color: var(--mud-palette-primary) !important;
+    border-width: 2px !important;
+}
+
+.milestone-line .line-label {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Iteration Lines - visually secondary */
+.iteration-line {
+    position: relative;
+    padding: 4px 0;
+}
+
+.iteration-line-divider {
+    border-color: var(--mud-palette-secondary) !important;
+    border-width: 1px !important;
+    border-style: dashed !important;
+}
+
+.iteration-line .line-label {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+}

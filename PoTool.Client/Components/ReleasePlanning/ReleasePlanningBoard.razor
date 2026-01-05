@@ -1,0 +1,230 @@
+@using PoTool.Shared.ReleasePlanning
+@using PoTool.Client.Services
+@inject ReleasePlanningService ReleasePlanningService
+@inject ILogger<ReleasePlanningBoard> Logger
+
+<MudPaper Class="release-planning-board pa-4" Elevation="0">
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        <MudText Typo="Typo.body2" Class="mt-2">Loading Release Planning Board...</MudText>
+    }
+    else if (_board == null)
+    {
+        <MudAlert Severity="Severity.Warning">
+            Unable to load the Release Planning Board. Please try again.
+        </MudAlert>
+    }
+    else
+    {
+        <!-- Unplanned Epics Source List -->
+        <UnplannedEpicsList 
+            Epics="_unplannedEpics"
+            OnEpicDrop="@HandleEpicDrop" />
+
+        <!-- Board Container -->
+        <MudPaper Class="board-container mt-4" Elevation="1">
+            @if (_board.Lanes.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Class="ma-4">
+                    No Lanes configured. Add Objectives to the board to get started.
+                </MudAlert>
+            }
+            else
+            {
+                <!-- Lane Headers -->
+                <div class="lane-headers d-flex">
+                    @foreach (var lane in _board.Lanes)
+                    {
+                        <div class="lane-header flex-grow-1 pa-2">
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">
+                                @lane.ObjectiveTitle
+                            </MudText>
+                        </div>
+                    }
+                </div>
+
+                <!-- Row Grid with Lanes -->
+                <div class="board-grid">
+                    @for (int row = 0; row <= _board.MaxRowIndex; row++)
+                    {
+                        var currentRow = row;
+                        var linesAtPosition = GetLinesAtPosition(currentRow + 0.5);
+                        <div class="row-container d-flex" style="min-height: 80px;">
+                            @foreach (var lane in _board.Lanes)
+                            {
+                                var lanePlacements = _board.Placements
+                                    .Where(p => p.LaneId == lane.Id && p.RowIndex == currentRow)
+                                    .OrderBy(p => p.OrderInRow)
+                                    .ToList();
+
+                                <div class="lane-row flex-grow-1 pa-1"
+                                     style="border-right: 1px solid var(--mud-palette-lines-default);">
+                                    <div class="d-flex flex-wrap gap-2">
+                                        @foreach (var placement in lanePlacements)
+                                        {
+                                            <EpicCard 
+                                                Placement="@placement"
+                                                OnMove="@HandleEpicMove"
+                                                OnContextMenu="@HandleEpicContextMenu" />
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Horizontal Lines between rows -->
+                        @foreach (var line in linesAtPosition.MilestoneLines)
+                        {
+                            <div class="milestone-line">
+                                <MudDivider DividerType="DividerType.FullWidth" 
+                                            Class="milestone-line-divider" />
+                                <MudChip T="string" 
+                                         Size="Size.Small" 
+                                         Color="Color.Primary"
+                                         Class="line-label">
+                                    @line.Label
+                                </MudChip>
+                            </div>
+                        }
+                        @foreach (var line in linesAtPosition.IterationLines)
+                        {
+                            <div class="iteration-line">
+                                <MudDivider DividerType="DividerType.FullWidth" 
+                                            Class="iteration-line-divider" 
+                                            Style="border-style: dashed;" />
+                                <MudChip T="string" 
+                                         Size="Size.Small" 
+                                         Color="Color.Secondary"
+                                         Variant="Variant.Outlined"
+                                         Class="line-label">
+                                    @line.Label
+                                </MudChip>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        </MudPaper>
+
+        <!-- Add Row Button -->
+        <div class="mt-2">
+            <MudButton StartIcon="@Icons.Material.Filled.Add"
+                       Size="Size.Small"
+                       Variant="Variant.Text"
+                       OnClick="@HandleAddRow">
+                Add Row
+            </MudButton>
+        </div>
+    }
+</MudPaper>
+
+@code {
+    private ReleasePlanningBoardDto? _board;
+    private IReadOnlyList<UnplannedEpicDto>? _unplannedEpics;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBoardAsync();
+    }
+
+    private async Task LoadBoardAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            _board = await ReleasePlanningService.GetBoardAsync();
+            _unplannedEpics = await ReleasePlanningService.GetUnplannedEpicsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading Release Planning Board");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleEpicDrop(EpicDropEventArgs args)
+    {
+        if (_board == null) return;
+
+        // Find the lane for this Objective
+        var lane = _board.Lanes.FirstOrDefault(l => l.ObjectiveId == args.ObjectiveId);
+        if (lane == null)
+        {
+            // Create the lane if it doesn't exist
+            var result = await ReleasePlanningService.CreateLaneAsync(args.ObjectiveId, _board.Lanes.Count);
+            if (result?.Success != true)
+            {
+                Logger.LogError("Failed to create lane for Objective {ObjectiveId}", args.ObjectiveId);
+                return;
+            }
+            await LoadBoardAsync();
+            lane = _board?.Lanes.FirstOrDefault(l => l.ObjectiveId == args.ObjectiveId);
+            if (lane == null) return;
+        }
+
+        // Create the placement
+        var placementResult = await ReleasePlanningService.CreatePlacementAsync(
+            args.EpicId, 
+            lane.Id, 
+            args.RowIndex, 
+            0);
+
+        if (placementResult?.Success == true)
+        {
+            await LoadBoardAsync();
+        }
+        else
+        {
+            Logger.LogError("Failed to create placement for Epic {EpicId}", args.EpicId);
+        }
+    }
+
+    private async Task HandleEpicMove(EpicMoveEventArgs args)
+    {
+        var result = await ReleasePlanningService.MoveEpicAsync(
+            args.PlacementId, 
+            args.NewRowIndex, 
+            args.NewOrderInRow);
+
+        if (result?.Success == true)
+        {
+            await LoadBoardAsync();
+        }
+    }
+
+    private void HandleEpicContextMenu(EpicContextMenuEventArgs args)
+    {
+        // TODO: Implement context menu with Epic Split option
+        Logger.LogDebug("Context menu requested for Epic {EpicId}", args.EpicId);
+    }
+
+    private Task HandleAddRow()
+    {
+        // Rows are created implicitly when Epics are placed
+        // This button can be used to add a new empty row
+        return Task.CompletedTask;
+    }
+
+    private (IEnumerable<MilestoneLineDto> MilestoneLines, IEnumerable<IterationLineDto> IterationLines) GetLinesAtPosition(double position)
+    {
+        if (_board == null)
+        {
+            return (Enumerable.Empty<MilestoneLineDto>(), Enumerable.Empty<IterationLineDto>());
+        }
+
+        var milestoneLines = _board.MilestoneLines
+            .Where(l => Math.Abs(l.VerticalPosition - position) < 0.5);
+        var iterationLines = _board.IterationLines
+            .Where(l => Math.Abs(l.VerticalPosition - position) < 0.5);
+
+        return (milestoneLines, iterationLines);
+    }
+}

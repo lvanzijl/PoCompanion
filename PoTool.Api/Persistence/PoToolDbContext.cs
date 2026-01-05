@@ -60,6 +60,31 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<EffortEstimationSettingsEntity> EffortEstimationSettings => Set<EffortEstimationSettingsEntity>();
 
+    /// <summary>
+    /// Release Planning Board lanes (Objectives).
+    /// </summary>
+    public DbSet<LaneEntity> Lanes => Set<LaneEntity>();
+
+    /// <summary>
+    /// Release Planning Board Epic placements.
+    /// </summary>
+    public DbSet<EpicPlacementEntity> EpicPlacements => Set<EpicPlacementEntity>();
+
+    /// <summary>
+    /// Release Planning Board milestone lines.
+    /// </summary>
+    public DbSet<MilestoneLineEntity> MilestoneLines => Set<MilestoneLineEntity>();
+
+    /// <summary>
+    /// Release Planning Board iteration lines.
+    /// </summary>
+    public DbSet<IterationLineEntity> IterationLines => Set<IterationLineEntity>();
+
+    /// <summary>
+    /// Cached validation results for Release Planning Board Epics.
+    /// </summary>
+    public DbSet<CachedValidationResultEntity> CachedValidationResults => Set<CachedValidationResultEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -131,6 +156,42 @@ public class PoToolDbContext : DbContext
         modelBuilder.Entity<EffortEstimationSettingsEntity>(entity =>
         {
             // EffortEstimationSettings entity configuration (Id is primary key by convention)
+        });
+
+        // Release Planning Board entities
+        modelBuilder.Entity<LaneEntity>(entity =>
+        {
+            entity.HasIndex(e => e.ObjectiveId)
+                .IsUnique();
+            
+            entity.HasMany(e => e.Placements)
+                .WithOne(p => p.Lane)
+                .HasForeignKey(p => p.LaneId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EpicPlacementEntity>(entity =>
+        {
+            entity.HasIndex(e => e.EpicId)
+                .IsUnique();
+            
+            entity.HasIndex(e => new { e.LaneId, e.RowIndex, e.OrderInRow });
+        });
+
+        modelBuilder.Entity<MilestoneLineEntity>(entity =>
+        {
+            entity.Property(e => e.Label).HasMaxLength(200).IsRequired();
+        });
+
+        modelBuilder.Entity<IterationLineEntity>(entity =>
+        {
+            entity.Property(e => e.Label).HasMaxLength(200).IsRequired();
+        });
+
+        modelBuilder.Entity<CachedValidationResultEntity>(entity =>
+        {
+            entity.HasIndex(e => e.EpicId)
+                .IsUnique();
         });
     }
 }

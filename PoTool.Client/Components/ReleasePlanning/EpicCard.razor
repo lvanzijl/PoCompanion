@@ -1,0 +1,105 @@
+@using PoTool.Shared.ReleasePlanning
+
+<MudPaper Class="epic-card pa-2" 
+          Elevation="2" 
+          Style="@GetCardStyle()"
+          draggable="true"
+          @ondragstart="@HandleDragStart">
+    <div class="d-flex flex-column">
+        <div class="d-flex justify-space-between align-center">
+            <MudText Typo="Typo.body2" Class="font-weight-bold text-truncate" Style="max-width: 150px;">
+                @Placement.EpicTitle
+            </MudText>
+            
+            <!-- Validation Indicator - always visible per spec -->
+            @if (Placement.ValidationIndicator != ValidationIndicator.None)
+            {
+                <MudIcon Icon="@GetValidationIcon()" 
+                         Color="@GetValidationColor()"
+                         Size="Size.Small" />
+            }
+            else
+            {
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                         Color="Color.Success"
+                         Size="Size.Small" />
+            }
+        </div>
+        
+        <div class="d-flex gap-2 mt-1">
+            @if (Placement.Effort.HasValue)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">
+                    @Placement.Effort pts
+                </MudChip>
+            }
+            
+            <MudChip T="string" 
+                     Size="Size.Small" 
+                     Color="@GetStateColor()" 
+                     Variant="Variant.Text">
+                @Placement.State
+            </MudChip>
+        </div>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public required EpicPlacementDto Placement { get; set; }
+
+    [Parameter]
+    public EventCallback<EpicMoveEventArgs> OnMove { get; set; }
+
+    [Parameter]
+    public EventCallback<EpicContextMenuEventArgs> OnContextMenu { get; set; }
+
+    private string GetCardStyle()
+    {
+        var borderColor = Placement.ValidationIndicator switch
+        {
+            ValidationIndicator.Error => "var(--mud-palette-error)",
+            ValidationIndicator.Warning => "var(--mud-palette-warning)",
+            _ => "var(--mud-palette-primary)"
+        };
+
+        return $"border-left: 4px solid {borderColor}; min-width: 180px; cursor: grab;";
+    }
+
+    private string GetValidationIcon()
+    {
+        return Placement.ValidationIndicator switch
+        {
+            ValidationIndicator.Error => Icons.Material.Filled.Error,
+            ValidationIndicator.Warning => Icons.Material.Filled.Warning,
+            _ => Icons.Material.Filled.CheckCircle
+        };
+    }
+
+    private Color GetValidationColor()
+    {
+        return Placement.ValidationIndicator switch
+        {
+            ValidationIndicator.Error => Color.Error,
+            ValidationIndicator.Warning => Color.Warning,
+            _ => Color.Success
+        };
+    }
+
+    private Color GetStateColor()
+    {
+        return Placement.State.ToLowerInvariant() switch
+        {
+            "active" => Color.Primary,
+            "new" => Color.Default,
+            "resolved" or "closed" or "done" => Color.Success,
+            "removed" => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+
+    private void HandleDragStart()
+    {
+        // Drag state management handled by parent
+    }
+}
