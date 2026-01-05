@@ -126,17 +126,19 @@
 /* Epic preview styling - highlights epics that would be affected by line movement */
 .epic-preview-affected {
     position: relative;
-    animation: highlight-affected var(--animation-duration-highlight, 0.6s) ease-in-out;
+    animation: highlight-affected var(--animation-duration-highlight, 0.6s) ease-in-out infinite alternate;
     outline: 2px dashed var(--mud-palette-warning);
     outline-offset: 2px;
     border-radius: 4px;
 }
 
 @keyframes highlight-affected {
-    0%, 100% {
+    0% {
         transform: scale(1);
+        outline-color: var(--mud-palette-warning);
     }
-    50% {
+    100% {
         transform: scale(1.02);
+        outline-color: var(--mud-palette-warning-darken);
     }
 }

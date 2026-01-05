@@ -138,7 +138,7 @@
                         }
 
                         <!-- Preview Line during drag -->
-                        @if (_draggingLineId != null && _draggingTargetPosition != null && Math.Abs(_draggingTargetPosition.Value - (currentRow + 0.5)) < POSITION_TOLERANCE)
+                        @if (IsPreviewLineAtPosition(currentRow + 0.5))
                         {
                             <div class="@(_draggingIsMilestone ? "milestone-line-preview" : "iteration-line-preview")">
                                 <MudDivider DividerType="DividerType.FullWidth" 
@@ -421,6 +421,16 @@
         _draggingOriginalPosition = 0;
         _draggingTargetPosition = null;
         StateHasChanged(); // Clear preview
+    }
+
+    /// <summary>
+    /// Determines if the preview line should be shown at the given position.
+    /// </summary>
+    private bool IsPreviewLineAtPosition(double position)
+    {
+        return _draggingLineId != null 
+            && _draggingTargetPosition != null 
+            && Math.Abs(_draggingTargetPosition.Value - position) < POSITION_TOLERANCE;
     }
 
     /// <summary>
