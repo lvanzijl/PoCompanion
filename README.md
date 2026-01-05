@@ -11,7 +11,6 @@ This solution follows a three-layer architecture as defined in `docs/ARCHITECTUR
 - **PoTool.Core** - Domain models, DTOs, and interfaces (infrastructure-free)
 - **PoTool.Api** - ASP.NET Core Web API with EF Core persistence and SignalR
 - **PoTool.Client** - Blazor Hybrid frontend (Razor class library)
-- **PoTool.Maui** - MAUI Hybrid shell application (Windows/macOS/Android/iOS)
 - **PoTool.Tests.Unit** - MSTest unit tests
 - **PoTool.Tests.Integration** - Reqnroll integration tests
 - **PoTool.Tests.Blazor** - bUnit Blazor component tests
@@ -40,10 +39,6 @@ This solution follows a three-layer architecture as defined in `docs/ARCHITECTUR
 - .NET 10 SDK
 - Visual Studio 2022 (version 17.8 or later) or VS Code
 - ASP.NET and web development workload (for Visual Studio)
-
-### Running from Visual Studio
-
-📖 **[Complete Visual Studio Instructions](docs/RUNNING_FROM_VISUAL_STUDIO.md)**
 
 Quick start:
 1. Open `PoTool.sln` in Visual Studio 2022
