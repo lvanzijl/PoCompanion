@@ -1875,4 +1875,210 @@ public class RealTfsClient : ITfsClient
 
         return results;
     }
+
+    // ============================================
+    // WORK ITEM CREATION
+    // ============================================
+
+    public async Task<WorkItemCreateResult> CreateWorkItemAsync(
+        WorkItemCreateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Creating {WorkItemType} work item with title '{Title}'",
+                request.WorkItemType, request.Title);
+
+            var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+            if (entity == null)
+            {
+                _logger.LogWarning("No TFS configuration found for creating work item");
+                return new WorkItemCreateResult
+                {
+                    Success = false,
+                    ErrorMessage = "TFS configuration not found"
+                };
+            }
+
+            var pat = _patAccessor.GetPat();
+            if (string.IsNullOrEmpty(pat))
+            {
+                _logger.LogWarning("No PAT found for creating work item");
+                return new WorkItemCreateResult
+                {
+                    Success = false,
+                    ErrorMessage = "PAT not configured"
+                };
+            }
+
+            await ConfigureAuthenticationAsync(entity, cancellationToken);
+
+            // Build JSON Patch document for work item creation
+            // Note: AreaPath must be provided in the request since it's not stored in TfsConfigEntity
+            var patchOperations = new List<object>
+            {
+                new { op = "add", path = "/fields/System.Title", value = request.Title }
+            };
+
+            if (!string.IsNullOrEmpty(request.AreaPath))
+            {
+                patchOperations.Add(new { op = "add", path = "/fields/System.AreaPath", value = request.AreaPath });
+            }
+
+            if (!string.IsNullOrEmpty(request.IterationPath))
+            {
+                patchOperations.Add(new { op = "add", path = "/fields/System.IterationPath", value = request.IterationPath });
+            }
+
+            if (request.Effort.HasValue)
+            {
+                patchOperations.Add(new { op = "add", path = $"/fields/{TfsFieldEffort}", value = request.Effort.Value });
+            }
+
+            if (!string.IsNullOrEmpty(request.Description))
+            {
+                patchOperations.Add(new { op = "add", path = "/fields/System.Description", value = request.Description });
+            }
+
+            // Add parent link if specified
+            if (request.ParentId.HasValue)
+            {
+                patchOperations.Add(new
+                {
+                    op = "add",
+                    path = "/relations/-",
+                    value = new
+                    {
+                        rel = "System.LinkTypes.Hierarchy-Reverse",
+                        url = $"{entity.Url.TrimEnd('/')}/_apis/wit/workItems/{request.ParentId.Value}"
+                    }
+                });
+            }
+
+            // URL encode the work item type for the API call
+            var encodedType = Uri.EscapeDataString(request.WorkItemType);
+            var createUrl = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/${encodedType}?api-version={entity.ApiVersion}";
+
+            using var content = new StringContent(
+                JsonSerializer.Serialize(patchOperations),
+                System.Text.Encoding.UTF8,
+                "application/json-patch+json");
+
+            _logger.LogDebug("Sending POST request to create work item at {Url}", createUrl);
+
+            var response = await _httpClient.PostAsync(createUrl, content, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                var jsonDoc = JsonDocument.Parse(responseBody);
+                var workItemId = jsonDoc.RootElement.GetProperty("id").GetInt32();
+
+                _logger.LogInformation("Successfully created work item {WorkItemId} of type {WorkItemType}",
+                    workItemId, request.WorkItemType);
+
+                return new WorkItemCreateResult
+                {
+                    Success = true,
+                    WorkItemId = workItemId
+                };
+            }
+            else
+            {
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Failed to create work item. Status: {StatusCode}, Response: {Response}",
+                    response.StatusCode, responseBody);
+
+                return new WorkItemCreateResult
+                {
+                    Success = false,
+                    ErrorMessage = $"TFS API returned {response.StatusCode}: {responseBody}"
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating work item of type {WorkItemType}", request.WorkItemType);
+            return new WorkItemCreateResult
+            {
+                Success = false,
+                ErrorMessage = $"Error creating work item: {ex.Message}"
+            };
+        }
+    }
+
+    public async Task<bool> UpdateWorkItemParentAsync(
+        int workItemId,
+        int newParentId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Updating work item {WorkItemId} parent to {NewParentId}",
+                workItemId, newParentId);
+
+            var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+            if (entity == null)
+            {
+                _logger.LogWarning("No TFS configuration found for updating work item parent");
+                return false;
+            }
+
+            var pat = _patAccessor.GetPat();
+            if (string.IsNullOrEmpty(pat))
+            {
+                _logger.LogWarning("No PAT found for updating work item parent");
+                return false;
+            }
+
+            await ConfigureAuthenticationAsync(entity, cancellationToken);
+
+            // Build JSON Patch document to add parent link
+            // First, we need to remove existing parent links, then add the new one
+            var patchOperations = new object[]
+            {
+                new
+                {
+                    op = "add",
+                    path = "/relations/-",
+                    value = new
+                    {
+                        rel = "System.LinkTypes.Hierarchy-Reverse",
+                        url = $"{entity.Url.TrimEnd('/')}/_apis/wit/workItems/{newParentId}"
+                    }
+                }
+            };
+
+            var updateUrl = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
+
+            using var content = new StringContent(
+                JsonSerializer.Serialize(patchOperations),
+                System.Text.Encoding.UTF8,
+                "application/json-patch+json");
+
+            _logger.LogDebug("Sending PATCH request to update work item {WorkItemId} parent", workItemId);
+
+            var response = await _httpClient.PatchAsync(updateUrl, content, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully updated work item {WorkItemId} parent to {NewParentId}",
+                    workItemId, newParentId);
+                return true;
+            }
+            else
+            {
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Failed to update work item {WorkItemId} parent. Status: {StatusCode}, Response: {Response}",
+                    workItemId, response.StatusCode, responseBody);
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating work item {WorkItemId} parent to {NewParentId}",
+                workItemId, newParentId);
+            return false;
+        }
+    }
 }

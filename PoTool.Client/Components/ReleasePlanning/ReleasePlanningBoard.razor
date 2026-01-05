@@ -44,8 +44,18 @@
                     }
                 </div>
 
-                <!-- Row Grid with Lanes -->
-                <div class="board-grid">
+                <!-- Row Grid with Lanes and Connectors -->
+                <div class="board-grid" style="position: relative;">
+                    <!-- SVG Connector Layer -->
+                    <ConnectorRenderer 
+                        Connectors="_board.Connectors"
+                        Placements="_board.Placements"
+                        Lanes="_board.Lanes"
+                        RowHeight="80"
+                        CardWidth="180"
+                        CardHeight="60"
+                        LaneWidth="200" />
+                    
                     @for (int row = 0; row <= _board.MaxRowIndex; row++)
                     {
                         var currentRow = row;

@@ -306,4 +306,27 @@ public class ReleasePlanningService
     }
 
     #endregion
+
+    #region Export Operations
+
+    /// <summary>
+    /// Exports the Release Planning Board.
+    /// </summary>
+    public async Task<ExportResultDto?> ExportBoardAsync(
+        ExportOptionsDto options,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/releaseplanning/export", options, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<ExportResultDto>(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting Release Planning Board");
+            return null;
+        }
+    }
+
+    #endregion
 }

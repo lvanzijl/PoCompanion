@@ -109,8 +109,6 @@ public sealed class SplitEpicCommandHandler : ICommandHandler<SplitEpicCommand, 
                 extractedFeatureIds);
 
             // 6. Create the new Epic in TFS
-            // Note: This is a placeholder - actual TFS creation would use the TFS client
-            // The TFS client interface would need to support creating work items
             _logger.LogInformation(
                 "Epic split requested: Original Epic {OriginalId} ({OriginalTitle}) -> Extracted Epic ({ExtractedTitle}). " +
                 "Features to move: {FeatureCount}. Effort distribution: {OriginalEffort}/{ExtractedEffort}",
@@ -121,18 +119,75 @@ public sealed class SplitEpicCommandHandler : ICommandHandler<SplitEpicCommand, 
                 originalEffort,
                 extractedEffort);
 
-            // For now, return a "not implemented" result since TFS creation is not yet implemented
-            // In a full implementation, we would:
-            // 1. Create the new Epic in TFS with the same parent Objective
-            // 2. Update the Features to point to the new Epic
-            // 3. Update effort values on both Epics
-            // 4. Sync the changes back to the local database
+            // Create the new Epic in TFS with the same parent Objective
+            var createResult = await _tfsClient.CreateWorkItemAsync(new WorkItemCreateRequest
+            {
+                WorkItemType = "Epic",
+                Title = command.ExtractedEpicTitle,
+                ParentId = originalEpic.ParentTfsId,
+                Effort = extractedEffort,
+                AreaPath = originalEpic.AreaPath,
+                IterationPath = originalEpic.IterationPath
+            }, cancellationToken);
+
+            if (!createResult.Success)
+            {
+                _logger.LogError("Failed to create extracted Epic in TFS: {Error}", createResult.ErrorMessage);
+                return new EpicSplitResultDto
+                {
+                    Success = false,
+                    ErrorMessage = $"Failed to create extracted Epic in TFS: {createResult.ErrorMessage}",
+                    OriginalEpicId = command.OriginalEpicId,
+                    OriginalEpicNewEffort = originalEffort,
+                    ExtractedEpicEffort = extractedEffort
+                };
+            }
+
+            var extractedEpicId = createResult.WorkItemId!.Value;
+            _logger.LogInformation("Created extracted Epic {ExtractedEpicId} in TFS", extractedEpicId);
+
+            // Move Features to the new Epic
+            var moveFailures = new List<int>();
+            foreach (var featureId in command.FeatureIdsForExtractedEpic)
+            {
+                var moveResult = await _tfsClient.UpdateWorkItemParentAsync(featureId, extractedEpicId, cancellationToken);
+                if (!moveResult)
+                {
+                    _logger.LogWarning("Failed to move Feature {FeatureId} to extracted Epic {ExtractedEpicId}", 
+                        featureId, extractedEpicId);
+                    moveFailures.Add(featureId);
+                }
+            }
+
+            // Update effort on the original Epic
+            if (originalEffort != originalEpic.Effort)
+            {
+                var effortUpdateResult = await _tfsClient.UpdateWorkItemEffortAsync(
+                    command.OriginalEpicId, originalEffort, cancellationToken);
+                if (!effortUpdateResult)
+                {
+                    _logger.LogWarning("Failed to update effort on original Epic {OriginalEpicId}", command.OriginalEpicId);
+                }
+            }
+
+            if (moveFailures.Count > 0)
+            {
+                return new EpicSplitResultDto
+                {
+                    Success = true, // Partial success
+                    ErrorMessage = $"Epic created but {moveFailures.Count} Features failed to move: {string.Join(", ", moveFailures)}",
+                    OriginalEpicId = command.OriginalEpicId,
+                    ExtractedEpicId = extractedEpicId,
+                    OriginalEpicNewEffort = originalEffort,
+                    ExtractedEpicEffort = extractedEffort
+                };
+            }
 
             return new EpicSplitResultDto
             {
-                Success = false,
-                ErrorMessage = "Epic split is not yet available. This feature requires TFS write access which is coming in a future update. The requested split has been validated successfully.",
+                Success = true,
                 OriginalEpicId = command.OriginalEpicId,
+                ExtractedEpicId = extractedEpicId,
                 OriginalEpicNewEffort = originalEffort,
                 ExtractedEpicEffort = extractedEffort
             };

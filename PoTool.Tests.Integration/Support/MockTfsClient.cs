@@ -609,4 +609,26 @@ public class MockTfsClient : ITfsClient
 
         return Task.FromResult<IDictionary<int, IEnumerable<WorkItemRevisionDto>>>(results);
     }
+
+    public Task<WorkItemCreateResult> CreateWorkItemAsync(
+        WorkItemCreateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        // Generate a mock work item ID
+        var mockId = new Random().Next(100000, 999999);
+
+        return Task.FromResult(new WorkItemCreateResult
+        {
+            Success = true,
+            WorkItemId = mockId
+        });
+    }
+
+    public Task<bool> UpdateWorkItemParentAsync(
+        int workItemId,
+        int newParentId,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(true);
+    }
 }

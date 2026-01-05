@@ -1,0 +1,142 @@
+@using PoTool.Shared.ReleasePlanning
+
+<svg class="connector-layer" 
+     width="100%" 
+     height="@(_totalHeight)px"
+     style="position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible;">
+    
+    @foreach (var connector in Connectors)
+    {
+        var sourcePlacement = GetPlacement(connector.SourcePlacementId);
+        var targetPlacement = GetPlacement(connector.TargetPlacementId);
+        
+        if (sourcePlacement != null && targetPlacement != null)
+        {
+            var sourcePos = GetPlacementPosition(sourcePlacement);
+            var targetPos = GetPlacementPosition(targetPlacement);
+            
+            <g class="connector @GetConnectorClass(connector.Type)">
+                @RenderConnectorPath(connector.Type, sourcePos, targetPos)
+            </g>
+        }
+    }
+</svg>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ConnectorDto> Connectors { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<EpicPlacementDto> Placements { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<LaneDto> Lanes { get; set; } = [];
+
+    [Parameter]
+    public int RowHeight { get; set; } = 80;
+
+    [Parameter]
+    public int CardWidth { get; set; } = 180;
+
+    [Parameter]
+    public int CardHeight { get; set; } = 60;
+
+    [Parameter]
+    public int LaneWidth { get; set; } = 200;
+
+    private int _totalHeight => (GetMaxRowIndex() + 1) * RowHeight + 50;
+
+    private int GetMaxRowIndex()
+    {
+        return Placements.Count > 0 ? Placements.Max(p => p.RowIndex) : 0;
+    }
+
+    private EpicPlacementDto? GetPlacement(int placementId)
+    {
+        return Placements.FirstOrDefault(p => p.Id == placementId);
+    }
+
+    private (int X, int Y) GetPlacementPosition(EpicPlacementDto placement)
+    {
+        // Find lane index
+        var laneIndex = Lanes.ToList().FindIndex(l => l.Id == placement.LaneId);
+        if (laneIndex < 0) laneIndex = 0;
+
+        // Calculate center position of the card
+        var x = (laneIndex * LaneWidth) + (LaneWidth / 2);
+        var y = (placement.RowIndex * RowHeight) + (CardHeight / 2);
+
+        // Offset for multiple cards in the same row
+        var sameLaneSameRow = Placements
+            .Where(p => p.LaneId == placement.LaneId && p.RowIndex == placement.RowIndex)
+            .OrderBy(p => p.OrderInRow)
+            .ToList();
+
+        var cardIndex = sameLaneSameRow.FindIndex(p => p.Id == placement.Id);
+        var totalCards = sameLaneSameRow.Count;
+
+        if (totalCards > 1)
+        {
+            var cardSpacing = CardWidth + 10;
+            var totalWidth = totalCards * cardSpacing - 10;
+            var startX = x - (totalWidth / 2) + (cardSpacing / 2);
+            x = startX + (cardIndex * cardSpacing);
+        }
+
+        return (x, y);
+    }
+
+    private string GetConnectorClass(ConnectorType type)
+    {
+        return type switch
+        {
+            ConnectorType.Direct => "connector-direct",
+            ConnectorType.Split => "connector-split",
+            ConnectorType.Merge => "connector-merge",
+            ConnectorType.Parallel => "connector-parallel",
+            _ => "connector-direct"
+        };
+    }
+
+    private RenderFragment RenderConnectorPath(ConnectorType type, (int X, int Y) source, (int X, int Y) target) => __builder =>
+    {
+        var startY = source.Y + (CardHeight / 2);
+        var endY = target.Y - (CardHeight / 2);
+        var midY = (startY + endY) / 2;
+
+        var strokeColor = type switch
+        {
+            ConnectorType.Split => "var(--mud-palette-info)",
+            ConnectorType.Merge => "var(--mud-palette-success)",
+            ConnectorType.Parallel => "var(--mud-palette-secondary)",
+            _ => "var(--mud-palette-primary)"
+        };
+
+        var strokeWidth = type == ConnectorType.Direct ? 2 : 1.5;
+
+        if (source.X == target.X)
+        {
+            // Straight vertical line
+            <line x1="@source.X" y1="@startY" 
+                  x2="@target.X" y2="@endY"
+                  stroke="@strokeColor" 
+                  stroke-width="@strokeWidth"
+                  fill="none" />
+        }
+        else
+        {
+            // Curved path using cubic bezier
+            var d = $"M {source.X} {startY} C {source.X} {midY}, {target.X} {midY}, {target.X} {endY}";
+            
+            <path d="@d"
+                  stroke="@strokeColor"
+                  stroke-width="@strokeWidth"
+                  fill="none" />
+        }
+
+        // Add arrow head at the end
+        var arrowSize = 6;
+        <polygon points="@($"{target.X},{endY} {target.X - arrowSize},{endY - arrowSize * 1.5} {target.X + arrowSize},{endY - arrowSize * 1.5}")"
+                 fill="@strokeColor" />
+    };
+}

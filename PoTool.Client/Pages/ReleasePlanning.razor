@@ -2,9 +2,11 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.ReleasePlanning
 @using PoTool.Client.Services
+@using PoTool.Shared.ReleasePlanning
 @using static PoTool.Client.Components.Common.PageHelp
 @inject ReleasePlanningService ReleasePlanningService
 @inject NavigationManager Navigation
+@inject IDialogService DialogService
 
 <PageTitle>Release Planning Board - PO Companion</PageTitle>
 
@@ -79,6 +81,8 @@
 </MudContainer>
 
 @code {
+    private ReleasePlanningBoardDto? _board;
+
     private List<string> _bestPractices = new()
     {
         "Drag Epics from the Unplanned list to place them on the board",
@@ -88,6 +92,11 @@
         "Validation indicators show data quality issues that need attention",
         "Export the board as PNG or PDF for stakeholder communication"
     };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _board = await ReleasePlanningService.GetBoardAsync();
+    }
 
     private async Task HandleRefreshValidation()
     {
@@ -110,8 +119,19 @@
         // TODO: Open dialog to create iteration line
     }
 
-    private void HandleExport()
+    private async Task HandleExport()
     {
-        // TODO: Open export dialog
+        var parameters = new DialogParameters<ExportDialog>
+        {
+            { x => x.Board, _board }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<ExportDialog>("Export", parameters, options);
     }
 }

@@ -1,0 +1,192 @@
+@using PoTool.Shared.ReleasePlanning
+@using PoTool.Client.Services
+@inject ReleasePlanningService ReleasePlanningService
+@inject IJSRuntime JSRuntime
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" />
+            Export Release Planning Board
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <!-- Format Selection -->
+            <MudSelect T="ExportFormat" 
+                       @bind-Value="_options.Format" 
+                       Label="Export Format"
+                       Variant="Variant.Outlined">
+                <MudSelectItem Value="ExportFormat.Png">PNG Image</MudSelectItem>
+                <MudSelectItem Value="ExportFormat.Pdf">PDF Document</MudSelectItem>
+            </MudSelect>
+
+            <!-- Paper Size -->
+            <MudSelect T="PaperSize" 
+                       @bind-Value="_options.PaperSize" 
+                       Label="Paper Size"
+                       Variant="Variant.Outlined">
+                <MudSelectItem Value="PaperSize.A4">A4</MudSelectItem>
+                <MudSelectItem Value="PaperSize.A3">A3</MudSelectItem>
+            </MudSelect>
+
+            <!-- Layout Mode -->
+            <MudSelect T="ExportLayout" 
+                       @bind-Value="_options.Layout" 
+                       Label="Layout"
+                       Variant="Variant.Outlined">
+                <MudSelectItem Value="ExportLayout.FitToPage">Fit to Page</MudSelectItem>
+                <MudSelectItem Value="ExportLayout.MultiPage">Multi-Page</MudSelectItem>
+            </MudSelect>
+
+            <!-- Title -->
+            <MudTextField @bind-Value="_title" 
+                          Label="Export Title"
+                          Variant="Variant.Outlined" />
+
+            <!-- Include Options -->
+            <MudStack Row="true" Spacing="2">
+                <MudCheckBox T="bool" 
+                             @bind-Value="_includeMilestones" 
+                             Label="Include Milestone Lines" />
+                <MudCheckBox T="bool" 
+                             @bind-Value="_includeIterations" 
+                             Label="Include Iteration Lines" />
+            </MudStack>
+
+            <!-- Preview Info -->
+            @if (_isPreviewLoading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    <MudText Typo="Typo.body2">
+                        Estimated pages: @_estimatedPages | 
+                        Orientation: Landscape | 
+                        @(_options.PaperSize == PaperSize.A4 ? "210 × 297 mm" : "297 × 420 mm")
+                    </MudText>
+                </MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Export" 
+                   Variant="Variant.Filled" 
+                   Color="Color.Primary"
+                   Disabled="_isExporting"
+                   StartIcon="@(_isExporting ? Icons.Material.Filled.HourglassTop : Icons.Material.Filled.Download)">
+            @(_isExporting ? "Exporting..." : "Export")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public ReleasePlanningBoardDto? Board { get; set; }
+
+    private ExportOptionsRecord _options = new();
+    private string _title = "Release Planning Board";
+    private bool _includeMilestones = true;
+    private bool _includeIterations = true;
+    private bool _isExporting;
+#pragma warning disable CS0649 // Field is never assigned to
+    private bool _isPreviewLoading; // Reserved for future async preview functionality
+#pragma warning restore CS0649
+    private int _estimatedPages = 1;
+
+    protected override void OnInitialized()
+    {
+        CalculateEstimatedPages();
+    }
+
+    private void CalculateEstimatedPages()
+    {
+        if (Board == null)
+        {
+            _estimatedPages = 1;
+            return;
+        }
+
+        // Simple estimation based on lanes and rows
+        var laneCount = Board.Lanes.Count;
+        var rowCount = Board.MaxRowIndex + 1;
+
+        if (_options.Layout == ExportLayout.FitToPage)
+        {
+            _estimatedPages = 1;
+        }
+        else
+        {
+            // Estimate based on content
+            var maxLanesPerPage = _options.PaperSize == PaperSize.A3 ? 6 : 4;
+            var maxRowsPerPage = _options.PaperSize == PaperSize.A3 ? 12 : 8;
+
+            var horizontalPages = (int)Math.Ceiling((double)laneCount / maxLanesPerPage);
+            var verticalPages = (int)Math.Ceiling((double)rowCount / maxRowsPerPage);
+
+            _estimatedPages = horizontalPages * verticalPages;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private async Task Export()
+    {
+        _isExporting = true;
+        StateHasChanged();
+
+        try
+        {
+            var options = new ExportOptionsDto
+            {
+                Format = _options.Format,
+                PaperSize = _options.PaperSize,
+                Layout = _options.Layout,
+                Title = _title,
+                IncludeMilestoneLines = _includeMilestones,
+                IncludeIterationLines = _includeIterations
+            };
+
+            var result = await ReleasePlanningService.ExportBoardAsync(options);
+
+            if (result?.Success == true && !string.IsNullOrEmpty(result.FileContentBase64))
+            {
+                // Trigger file download via JavaScript interop
+                await DownloadFileAsync(result.FileContentBase64, result.FileName ?? "export", result.ContentType ?? "application/octet-stream");
+                MudDialog?.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                // Show error - for now just log
+                Console.WriteLine($"Export failed: {result?.ErrorMessage}");
+            }
+        }
+        finally
+        {
+            _isExporting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DownloadFileAsync(string base64Content, string fileName, string contentType)
+    {
+        await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", base64Content, fileName, contentType);
+    }
+
+    // Local record to handle two-way binding since ExportOptionsDto is immutable
+    private class ExportOptionsRecord
+    {
+        public ExportFormat Format { get; set; } = ExportFormat.Png;
+        public PaperSize PaperSize { get; set; } = PaperSize.A4;
+        public ExportLayout Layout { get; set; } = ExportLayout.FitToPage;
+    }
+}
