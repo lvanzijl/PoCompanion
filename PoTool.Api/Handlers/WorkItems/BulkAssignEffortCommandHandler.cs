@@ -8,6 +8,7 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// <summary>
 /// Handler for BulkAssignEffortCommand.
 /// Assigns effort estimates to multiple work items in batch via TFS updates.
+/// Uses bulk update method to prevent N+1 query pattern.
 /// </summary>
 public sealed class BulkAssignEffortCommandHandler 
     : ICommandHandler<BulkAssignEffortCommand, BulkEffortAssignmentResultDto>
@@ -32,77 +33,72 @@ public sealed class BulkAssignEffortCommandHandler
     {
         _logger.LogInformation("Handling BulkAssignEffortCommand with {Count} assignments", command.Assignments.Count);
 
-        var results = new List<BulkEffortAssignmentItemResult>();
-        var successCount = 0;
-        var failureCount = 0;
+        var validUpdates = new List<WorkItemEffortUpdate>();
+        var validationResults = new List<BulkEffortAssignmentItemResult>();
+        var validationFailureCount = 0;
 
+        // Step 1: Validate all assignments first
         foreach (var assignment in command.Assignments)
         {
-            try
+            // Validate the work item exists locally
+            var workItem = await _repository.GetByTfsIdAsync(assignment.WorkItemId, cancellationToken);
+            if (workItem == null)
             {
-                _logger.LogDebug("Attempting to assign effort {Effort} to work item {WorkItemId}",
-                    assignment.EffortValue, assignment.WorkItemId);
-
-                // Validate the work item exists locally
-                var workItem = await _repository.GetByTfsIdAsync(assignment.WorkItemId, cancellationToken);
-                if (workItem == null)
-                {
-                    var errorMsg = $"Work item {assignment.WorkItemId} not found in local cache";
-                    _logger.LogWarning(errorMsg);
-                    results.Add(new BulkEffortAssignmentItemResult(assignment.WorkItemId, false, errorMsg));
-                    failureCount++;
-                    continue;
-                }
-
-                // Validate effort value
-                if (assignment.EffortValue < 0)
-                {
-                    var errorMsg = $"Invalid effort value {assignment.EffortValue} (must be >= 0)";
-                    _logger.LogWarning(errorMsg);
-                    results.Add(new BulkEffortAssignmentItemResult(assignment.WorkItemId, false, errorMsg));
-                    failureCount++;
-                    continue;
-                }
-
-                // Apply effort update to TFS
-                var success = await _tfsClient.UpdateWorkItemEffortAsync(
-                    assignment.WorkItemId,
-                    assignment.EffortValue,
-                    cancellationToken);
-
-                if (success)
-                {
-                    _logger.LogInformation("Successfully updated work item {WorkItemId} effort to {Effort}", 
-                        assignment.WorkItemId, assignment.EffortValue);
-                    results.Add(new BulkEffortAssignmentItemResult(assignment.WorkItemId, true));
-                    successCount++;
-                }
-                else
-                {
-                    var errorMsg = $"Failed to update work item {assignment.WorkItemId} - TFS update returned false";
-                    _logger.LogWarning(errorMsg);
-                    results.Add(new BulkEffortAssignmentItemResult(assignment.WorkItemId, false, errorMsg));
-                    failureCount++;
-                }
+                var errorMsg = $"Work item {assignment.WorkItemId} not found in local cache";
+                _logger.LogWarning(errorMsg);
+                validationResults.Add(new BulkEffortAssignmentItemResult(assignment.WorkItemId, false, errorMsg));
+                validationFailureCount++;
+                continue;
             }
-            catch (Exception ex)
+
+            // Validate effort value
+            if (assignment.EffortValue < 0)
             {
-                var errorMsg = $"Exception updating work item {assignment.WorkItemId}: {ex.Message}";
-                _logger.LogError(ex, "Error assigning effort for work item {WorkItemId}", assignment.WorkItemId);
-                results.Add(new BulkEffortAssignmentItemResult(assignment.WorkItemId, false, errorMsg));
-                failureCount++;
+                var errorMsg = $"Invalid effort value {assignment.EffortValue} (must be >= 0)";
+                _logger.LogWarning(errorMsg);
+                validationResults.Add(new BulkEffortAssignmentItemResult(assignment.WorkItemId, false, errorMsg));
+                validationFailureCount++;
+                continue;
             }
+
+            // Add to valid updates list for bulk processing
+            validUpdates.Add(new WorkItemEffortUpdate(assignment.WorkItemId, assignment.EffortValue));
         }
+
+        // Step 2: Use bulk method to update all valid work items in a single call.
+        // This prevents the N+1 pattern where we would call UpdateWorkItemEffortAsync
+        // for each work item individually.
+        var bulkResult = await _tfsClient.UpdateWorkItemsEffortAsync(validUpdates, cancellationToken);
+
+        // Log performance instrumentation showing call reduction
+        _logger.LogInformation(
+            "Bulk effort update completed with {TfsCallCount} TFS call(s) for {Count} work items",
+            bulkResult.TfsCallCount,
+            validUpdates.Count);
+
+        // Combine validation failures with TFS update results
+        var allResults = new List<BulkEffortAssignmentItemResult>(validationResults);
+        foreach (var updateResult in bulkResult.Results)
+        {
+            allResults.Add(new BulkEffortAssignmentItemResult(
+                updateResult.WorkItemId,
+                updateResult.Success,
+                updateResult.ErrorMessage
+            ));
+        }
+
+        var totalSuccess = bulkResult.SuccessfulUpdates;
+        var totalFailure = validationFailureCount + bulkResult.FailedUpdates;
 
         var result = new BulkEffortAssignmentResultDto(
             TotalRequested: command.Assignments.Count,
-            SuccessfulUpdates: successCount,
-            FailedUpdates: failureCount,
-            Results: results
+            SuccessfulUpdates: totalSuccess,
+            FailedUpdates: totalFailure,
+            Results: allResults
         );
 
         _logger.LogInformation("Bulk effort assignment complete: {Success} successful, {Failed} failed out of {Total}",
-            successCount, failureCount, command.Assignments.Count);
+            totalSuccess, totalFailure, command.Assignments.Count);
 
         return result;
     }
