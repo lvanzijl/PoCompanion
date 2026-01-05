@@ -1,0 +1,121 @@
+using Mediator;
+using PoTool.Core.Contracts;
+using PoTool.Core.Pipelines;
+using PoTool.Core.Pipelines.Queries;
+
+namespace PoTool.Api.Handlers.Pipelines;
+
+/// <summary>
+/// Handler for GetPipelineMetricsQuery.
+/// Calculates and returns aggregated metrics for all pipelines.
+/// </summary>
+public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMetricsQuery, IEnumerable<PipelineMetricsDto>>
+{
+    private readonly IPipelineRepository _repository;
+
+    public GetPipelineMetricsQueryHandler(IPipelineRepository repository)
+    {
+        _repository = repository;
+    }
+
+    public async ValueTask<IEnumerable<PipelineMetricsDto>> Handle(
+        GetPipelineMetricsQuery query,
+        CancellationToken cancellationToken)
+    {
+        var pipelines = await _repository.GetAllAsync(cancellationToken);
+        var allRuns = await _repository.GetAllRunsAsync(cancellationToken);
+
+        var runsByPipeline = allRuns.GroupBy(r => r.PipelineId).ToDictionary(g => g.Key, g => g.ToList());
+
+        var metrics = new List<PipelineMetricsDto>();
+
+        foreach (var pipeline in pipelines)
+        {
+            if (!runsByPipeline.TryGetValue(pipeline.Id, out var runs) || runs.Count == 0)
+            {
+                metrics.Add(new PipelineMetricsDto(
+                    PipelineId: pipeline.Id,
+                    PipelineName: pipeline.Name,
+                    Type: pipeline.Type,
+                    TotalRuns: 0,
+                    SuccessfulRuns: 0,
+                    FailedRuns: 0,
+                    PartiallySucceededRuns: 0,
+                    CanceledRuns: 0,
+                    FailureRate: 0,
+                    AverageDuration: null,
+                    MinDuration: null,
+                    MaxDuration: null,
+                    DurationVariance: null,
+                    LastRunResult: null,
+                    LastRunTime: null,
+                    ConsecutiveFailures: 0
+                ));
+                continue;
+            }
+
+            var successfulRuns = runs.Count(r => r.Result == PipelineRunResult.Succeeded);
+            var failedRuns = runs.Count(r => r.Result == PipelineRunResult.Failed);
+            var partiallySucceededRuns = runs.Count(r => r.Result == PipelineRunResult.PartiallySucceeded);
+            var canceledRuns = runs.Count(r => r.Result == PipelineRunResult.Canceled);
+            var failureRate = runs.Count > 0 ? (double)failedRuns / runs.Count : 0;
+
+            var durations = runs.Where(r => r.Duration.HasValue).Select(r => r.Duration!.Value).ToList();
+            TimeSpan? avgDuration = null;
+            TimeSpan? minDuration = null;
+            TimeSpan? maxDuration = null;
+            double? durationVariance = null;
+
+            if (durations.Count > 0)
+            {
+                avgDuration = TimeSpan.FromTicks((long)durations.Average(d => d.Ticks));
+                minDuration = durations.Min();
+                maxDuration = durations.Max();
+                
+                if (durations.Count > 1)
+                {
+                    var avgTicks = durations.Average(d => d.Ticks);
+                    durationVariance = durations.Sum(d => Math.Pow(d.Ticks - avgTicks, 2)) / (durations.Count - 1);
+                }
+            }
+
+            var orderedRuns = runs.OrderByDescending(r => r.StartTime).ToList();
+            var lastRun = orderedRuns.FirstOrDefault();
+
+            // Count consecutive failures
+            var consecutiveFailures = 0;
+            foreach (var run in orderedRuns)
+            {
+                if (run.Result == PipelineRunResult.Failed)
+                {
+                    consecutiveFailures++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            metrics.Add(new PipelineMetricsDto(
+                PipelineId: pipeline.Id,
+                PipelineName: pipeline.Name,
+                Type: pipeline.Type,
+                TotalRuns: runs.Count,
+                SuccessfulRuns: successfulRuns,
+                FailedRuns: failedRuns,
+                PartiallySucceededRuns: partiallySucceededRuns,
+                CanceledRuns: canceledRuns,
+                FailureRate: failureRate,
+                AverageDuration: avgDuration,
+                MinDuration: minDuration,
+                MaxDuration: maxDuration,
+                DurationVariance: durationVariance,
+                LastRunResult: lastRun?.Result,
+                LastRunTime: lastRun?.StartTime,
+                ConsecutiveFailures: consecutiveFailures
+            ));
+        }
+
+        return metrics;
+    }
+}

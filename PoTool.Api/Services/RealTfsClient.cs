@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
+using PoTool.Core.Pipelines;
 using PoTool.Core.Exceptions;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts.TfsVerification;
@@ -24,6 +25,9 @@ public class RealTfsClient : ITfsClient
     private readonly PatAccessor _patAccessor;
     private readonly ILogger<RealTfsClient> _logger;
     private const int MaxRetries = 3;
+
+    // ID offset for release pipelines/runs to avoid collision with build IDs
+    private const int ReleaseIdOffset = 100000;
 
     // TFS field paths
     private const string TfsFieldEffort = "Microsoft.VSTS.Scheduling.Effort";
@@ -2080,5 +2084,370 @@ public class RealTfsClient : ITfsClient
                 workItemId, newParentId);
             return false;
         }
+    }
+
+    // ============================================
+    // PIPELINE METHODS
+    // ============================================
+
+    public async Task<IEnumerable<PipelineDto>> GetPipelinesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+        var config = entity!;
+
+        await ConfigureAuthenticationAsync(config, cancellationToken);
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            // Get build definitions
+            var buildUrl = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/build/definitions?api-version={config.ApiVersion}";
+            var buildResponse = await _httpClient.GetAsync(buildUrl, cancellationToken);
+            
+            var pipelines = new List<PipelineDto>();
+
+            if (buildResponse.IsSuccessStatusCode)
+            {
+                using var stream = await buildResponse.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                if (doc.RootElement.TryGetProperty("value", out var valueArray))
+                {
+                    foreach (var def in valueArray.EnumerateArray())
+                    {
+                        var id = def.GetProperty("id").GetInt32();
+                        var name = def.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                        var path = def.TryGetProperty("path", out var p) ? p.GetString() : null;
+
+                        pipelines.Add(new PipelineDto(
+                            Id: id,
+                            Name: name,
+                            Type: PipelineType.Build,
+                            Path: path,
+                            RetrievedAt: DateTimeOffset.UtcNow
+                        ));
+                    }
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Failed to get build definitions: {StatusCode}", buildResponse.StatusCode);
+            }
+
+            // Try to get release definitions (may not be available in all TFS versions)
+            try
+            {
+                var releaseUrl = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/release/definitions?api-version={config.ApiVersion}";
+                var releaseResponse = await _httpClient.GetAsync(releaseUrl, cancellationToken);
+
+                if (releaseResponse.IsSuccessStatusCode)
+                {
+                    using var stream = await releaseResponse.Content.ReadAsStreamAsync(cancellationToken);
+                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                    if (doc.RootElement.TryGetProperty("value", out var valueArray))
+                    {
+                        foreach (var def in valueArray.EnumerateArray())
+                        {
+                            var id = def.GetProperty("id").GetInt32();
+                            var name = def.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                            var path = def.TryGetProperty("path", out var p) ? p.GetString() : null;
+
+                            // Offset release IDs to avoid collision with build IDs
+                            pipelines.Add(new PipelineDto(
+                                Id: id + ReleaseIdOffset,
+                                Name: name,
+                                Type: PipelineType.Release,
+                                Path: path,
+                                RetrievedAt: DateTimeOffset.UtcNow
+                            ));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Release definitions API not available, skipping release pipelines");
+            }
+
+            _logger.LogInformation("Retrieved {Count} pipeline definitions", pipelines.Count);
+            return pipelines;
+        }, cancellationToken);
+    }
+
+    public async Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
+        int pipelineId,
+        int top = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+        var config = entity!;
+
+        await ConfigureAuthenticationAsync(config, cancellationToken);
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            var runs = new List<PipelineRunDto>();
+            var isRelease = pipelineId >= ReleaseIdOffset;
+            var actualId = isRelease ? pipelineId - ReleaseIdOffset : pipelineId;
+
+            if (isRelease)
+            {
+                // Get release deployments
+                var url = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/release/releases?definitionId={actualId}&$top={top}&api-version={config.ApiVersion}";
+                var response = await _httpClient.GetAsync(url, cancellationToken);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                    if (doc.RootElement.TryGetProperty("value", out var valueArray))
+                    {
+                        foreach (var run in valueArray.EnumerateArray())
+                        {
+                            runs.Add(ParseReleaseRun(run, pipelineId));
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Get build runs
+                var url = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/build/builds?definitions={pipelineId}&$top={top}&api-version={config.ApiVersion}";
+                var response = await _httpClient.GetAsync(url, cancellationToken);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                    if (doc.RootElement.TryGetProperty("value", out var valueArray))
+                    {
+                        foreach (var run in valueArray.EnumerateArray())
+                        {
+                            runs.Add(ParseBuildRun(run, pipelineId));
+                        }
+                    }
+                }
+            }
+
+            _logger.LogInformation("Retrieved {Count} runs for pipeline {PipelineId}", runs.Count, pipelineId);
+            return runs;
+        }, cancellationToken);
+    }
+
+    public async Task<PipelineSyncResult> GetPipelinesWithRunsAsync(
+        int runsPerPipeline = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var startTime = DateTimeOffset.UtcNow;
+        var tfsCallCount = 0;
+
+        _logger.LogInformation("Starting bulk pipeline fetch with runs");
+
+        // Step 1: Get all pipelines
+        var pipelines = (await GetPipelinesAsync(cancellationToken)).ToList();
+        tfsCallCount++;
+
+        if (pipelines.Count == 0)
+        {
+            return new PipelineSyncResult(
+                Pipelines: pipelines,
+                Runs: new List<PipelineRunDto>(),
+                TfsCallCount: tfsCallCount,
+                SyncedAt: DateTimeOffset.UtcNow
+            );
+        }
+
+        // Step 2: Fetch runs for each pipeline in parallel
+        var allRuns = new List<PipelineRunDto>();
+        var lockObj = new object();
+
+        var fetchTasks = pipelines.Select(async pipeline =>
+        {
+            var runs = await GetPipelineRunsAsync(pipeline.Id, runsPerPipeline, cancellationToken);
+            Interlocked.Increment(ref tfsCallCount);
+            
+            lock (lockObj)
+            {
+                allRuns.AddRange(runs);
+            }
+        });
+
+        await Task.WhenAll(fetchTasks);
+
+        var elapsed = DateTimeOffset.UtcNow - startTime;
+        _logger.LogInformation(
+            "Bulk pipeline fetch completed: {PipelineCount} pipelines, {RunCount} runs in {ElapsedMs}ms ({CallCount} TFS calls)",
+            pipelines.Count, allRuns.Count, elapsed.TotalMilliseconds, tfsCallCount);
+
+        return new PipelineSyncResult(
+            Pipelines: pipelines,
+            Runs: allRuns,
+            TfsCallCount: tfsCallCount,
+            SyncedAt: DateTimeOffset.UtcNow
+        );
+    }
+
+    private PipelineRunDto ParseBuildRun(JsonElement run, int pipelineId)
+    {
+        var runId = run.GetProperty("id").GetInt32();
+        var pipelineName = "";
+        if (run.TryGetProperty("definition", out var def))
+        {
+            pipelineName = def.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+        }
+
+        DateTimeOffset? startTime = null;
+        if (run.TryGetProperty("startTime", out var st) && st.ValueKind != JsonValueKind.Null)
+        {
+            startTime = st.GetDateTimeOffset();
+        }
+
+        DateTimeOffset? finishTime = null;
+        if (run.TryGetProperty("finishTime", out var ft) && ft.ValueKind != JsonValueKind.Null)
+        {
+            finishTime = ft.GetDateTimeOffset();
+        }
+
+        var duration = (startTime.HasValue && finishTime.HasValue) 
+            ? (TimeSpan?)(finishTime.Value - startTime.Value) 
+            : null;
+
+        var resultStr = run.TryGetProperty("result", out var r) ? r.GetString() ?? "" : "";
+        var result = ParseBuildResult(resultStr);
+
+        var reasonStr = run.TryGetProperty("reason", out var reason) ? reason.GetString() ?? "" : "";
+        var trigger = ParseBuildTrigger(reasonStr);
+
+        var branch = run.TryGetProperty("sourceBranch", out var b) ? b.GetString() : null;
+        
+        var requestedFor = "";
+        if (run.TryGetProperty("requestedFor", out var req))
+        {
+            requestedFor = req.TryGetProperty("displayName", out var dn) ? dn.GetString() ?? "" : "";
+        }
+
+        return new PipelineRunDto(
+            RunId: runId,
+            PipelineId: pipelineId,
+            PipelineName: pipelineName,
+            StartTime: startTime,
+            FinishTime: finishTime,
+            Duration: duration,
+            Result: result,
+            Trigger: trigger,
+            TriggerInfo: reasonStr,
+            Branch: branch,
+            RequestedFor: requestedFor,
+            RetrievedAt: DateTimeOffset.UtcNow
+        );
+    }
+
+    private PipelineRunDto ParseReleaseRun(JsonElement run, int pipelineId)
+    {
+        var runId = run.GetProperty("id").GetInt32();
+        var pipelineName = "";
+        if (run.TryGetProperty("releaseDefinition", out var def))
+        {
+            pipelineName = def.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+        }
+
+        DateTimeOffset? startTime = null;
+        if (run.TryGetProperty("createdOn", out var st))
+        {
+            startTime = st.GetDateTimeOffset();
+        }
+
+        DateTimeOffset? finishTime = null;
+        if (run.TryGetProperty("modifiedOn", out var ft))
+        {
+            finishTime = ft.GetDateTimeOffset();
+        }
+
+        var duration = (startTime.HasValue && finishTime.HasValue) 
+            ? (TimeSpan?)(finishTime.Value - startTime.Value) 
+            : null;
+
+        var statusStr = run.TryGetProperty("status", out var s) ? s.GetString() ?? "" : "";
+        var result = ParseReleaseResult(statusStr);
+
+        var reasonStr = run.TryGetProperty("reason", out var reason) ? reason.GetString() ?? "" : "";
+        var trigger = ParseReleaseTrigger(reasonStr);
+
+        var requestedFor = "";
+        if (run.TryGetProperty("createdBy", out var req))
+        {
+            requestedFor = req.TryGetProperty("displayName", out var dn) ? dn.GetString() ?? "" : "";
+        }
+
+        return new PipelineRunDto(
+            RunId: runId + ReleaseIdOffset, // Offset to avoid collision
+            PipelineId: pipelineId,
+            PipelineName: pipelineName,
+            StartTime: startTime,
+            FinishTime: finishTime,
+            Duration: duration,
+            Result: result,
+            Trigger: trigger,
+            TriggerInfo: reasonStr,
+            Branch: null,
+            RequestedFor: requestedFor,
+            RetrievedAt: DateTimeOffset.UtcNow
+        );
+    }
+
+    private static PipelineRunResult ParseBuildResult(string result)
+    {
+        return result.ToLowerInvariant() switch
+        {
+            "succeeded" => PipelineRunResult.Succeeded,
+            "failed" => PipelineRunResult.Failed,
+            "partiallysucceeded" => PipelineRunResult.PartiallySucceeded,
+            "canceled" => PipelineRunResult.Canceled,
+            "none" => PipelineRunResult.None,
+            _ => PipelineRunResult.Unknown
+        };
+    }
+
+    private static PipelineRunResult ParseReleaseResult(string status)
+    {
+        return status.ToLowerInvariant() switch
+        {
+            "succeeded" or "active" => PipelineRunResult.Succeeded,
+            "failed" or "rejected" => PipelineRunResult.Failed,
+            "abandoned" or "canceled" => PipelineRunResult.Canceled,
+            "undefined" or "draft" => PipelineRunResult.None,
+            _ => PipelineRunResult.Unknown
+        };
+    }
+
+    private static PipelineRunTrigger ParseBuildTrigger(string reason)
+    {
+        return reason.ToLowerInvariant() switch
+        {
+            "manual" or "userCreated" => PipelineRunTrigger.Manual,
+            "individualCI" or "batchedCI" => PipelineRunTrigger.ContinuousIntegration,
+            "schedule" => PipelineRunTrigger.Schedule,
+            "pullRequest" => PipelineRunTrigger.PullRequest,
+            "buildCompletion" => PipelineRunTrigger.BuildCompletion,
+            "resourceTrigger" => PipelineRunTrigger.ResourceTrigger,
+            _ => PipelineRunTrigger.Unknown
+        };
+    }
+
+    private static PipelineRunTrigger ParseReleaseTrigger(string reason)
+    {
+        return reason.ToLowerInvariant() switch
+        {
+            "manual" => PipelineRunTrigger.Manual,
+            "continuousIntegration" => PipelineRunTrigger.ContinuousIntegration,
+            "schedule" => PipelineRunTrigger.Schedule,
+            "pullRequest" => PipelineRunTrigger.PullRequest,
+            _ => PipelineRunTrigger.Unknown
+        };
     }
 }

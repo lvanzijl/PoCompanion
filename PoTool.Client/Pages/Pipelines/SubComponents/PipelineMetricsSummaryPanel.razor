@@ -1,0 +1,80 @@
+@using PoTool.Client.ApiClient
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Total Pipelines</MudText>
+            <MudText Typo="Typo.h4">@TotalPipelines</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Avg Success Rate</MudText>
+            <MudText Typo="Typo.h4" Color="@GetSuccessRateColor(AverageSuccessRate)">@($"{AverageSuccessRate:P0}")</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Avg Build Duration</MudText>
+            <MudText Typo="Typo.h4">@FormatDuration(AverageDuration)</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Failing Pipelines</MudText>
+            <MudText Typo="Typo.h4" Color="@(FailingPipelines > 0 ? Color.Error : Color.Success)">@FailingPipelines</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter]
+    public IEnumerable<PipelineMetricsDto> Metrics { get; set; } = Array.Empty<PipelineMetricsDto>();
+
+    private int TotalPipelines => Metrics.Count();
+    
+    private double AverageSuccessRate
+    {
+        get
+        {
+            var metricsWithRuns = Metrics.Where(m => m.TotalRuns > 0).ToList();
+            if (!metricsWithRuns.Any()) return 0;
+            return metricsWithRuns.Average(m => 1 - m.FailureRate);
+        }
+    }
+
+    private TimeSpan AverageDuration
+    {
+        get
+        {
+            var durations = Metrics
+                .Where(m => m.AverageDuration.HasValue)
+                .Select(m => m.AverageDuration!.Value)
+                .ToList();
+            
+            if (!durations.Any()) return TimeSpan.Zero;
+            return TimeSpan.FromTicks((long)durations.Average(d => d.Ticks));
+        }
+    }
+
+    private int FailingPipelines => Metrics.Count(m => m.ConsecutiveFailures > 0);
+
+    private Color GetSuccessRateColor(double rate)
+    {
+        return rate switch
+        {
+            >= 0.9 => Color.Success,
+            >= 0.7 => Color.Warning,
+            _ => Color.Error
+        };
+    }
+
+    private string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalMinutes < 1)
+            return $"{duration.Seconds}s";
+        if (duration.TotalHours < 1)
+            return $"{duration.Minutes}m {duration.Seconds}s";
+        return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+    }
+}

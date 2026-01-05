@@ -1,0 +1,45 @@
+@using PoTool.Client.ApiClient
+
+<MudPaper Elevation="2" Class="pa-4">
+    <MudText Typo="Typo.h6" GutterBottom="true">Pipeline Success Rates</MudText>
+    <MudChart ChartType="ChartType.Bar"
+              ChartSeries="@_series"
+              XAxisLabels="@_labels"
+              Width="100%"
+              Height="300px"
+              ChartOptions="@_chartOptions" />
+</MudPaper>
+
+@code {
+    [Parameter]
+    public IEnumerable<PipelineMetricsDto> Metrics { get; set; } = Array.Empty<PipelineMetricsDto>();
+
+    private List<ChartSeries> _series = new();
+    private string[] _labels = Array.Empty<string>();
+    private ChartOptions _chartOptions = new() { YAxisTicks = 5, MaxNumYAxisTicks = 10, YAxisFormat = "P0" };
+
+    protected override void OnParametersSet()
+    {
+        var metricsWithRuns = Metrics.Where(m => m.TotalRuns > 0).Take(10).ToList();
+        
+        _labels = metricsWithRuns.Select(m => TruncateName(m.PipelineName)).ToArray();
+        
+        _series = new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Success Rate",
+                Data = metricsWithRuns.Select(m => (1 - m.FailureRate) * 100).ToArray()
+            }
+        };
+    }
+
+    private const int MaxNameDisplayLength = 20;
+    private const int TruncatedNameLength = 17;
+
+    private string TruncateName(string name)
+    {
+        if (name.Length <= MaxNameDisplayLength) return name;
+        return name.Substring(0, TruncatedNameLength) + "...";
+    }
+}

@@ -1,0 +1,257 @@
+@page "/pipeline-insights"
+@using PoTool.Client.Services
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Pages.Pipelines.SubComponents
+@using static PoTool.Client.Components.Common.PageHelp
+@inject PipelineService PipelineService
+@inject ErrorMessageService ErrorMessageService
+@inject ISnackbar Snackbar
+
+<PageTitle>Pipeline Insights</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    
+    <!-- Context-Aware Help -->
+    <PageHelp Title="Pipeline Insights Guide"
+              Description="The Pipeline Insights Dashboard provides visibility into your build and release pipeline health. Track success rates, build durations, and identify failing pipelines to improve your CI/CD process."
+              Class="mb-4"
+              DataRequirements="@_dataRequirements"
+              BestPractices="@_bestPractices"
+              CommonIssues="@_commonIssues">
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
+            <strong>Pipeline Data:</strong> Sync pipelines from Azure DevOps to view build and release metrics. Data is cached locally for fast access.
+        </MudAlert>
+    </PageHelp>
+    
+    <MudText Typo="Typo.h4" GutterBottom="true">
+        <MudIcon Icon="@Icons.Material.Filled.Engineering" Class="mr-2" /> Pipeline Insights
+    </MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+        Build and release pipeline metrics and analytics
+    </MudText>
+
+    <LoadingIndicator IsLoading="@_isLoading" />
+    
+    @if (!_isLoading && !_metrics.Any())
+    {
+        <EmptyStateDisplay Title="No Pipeline Data Available"
+                          Message="There are no pipelines to display. Click the 'Sync Pipelines' button below to fetch pipeline data from Azure DevOps.">
+            <MudFab Color="Color.Primary" 
+                    StartIcon="@Icons.Material.Filled.Sync" 
+                    Label="Sync Pipelines" 
+                    Class="mt-4"
+                    OnClick="@SyncPipelines"
+                    Disabled="@_isSyncing" />
+        </EmptyStateDisplay>
+    }
+    else if (!_isLoading)
+    {
+        <ErrorDisplay ErrorResponse="@_errorResponse" 
+                      Class="mb-4"
+                      OnDismiss="ClearError" />
+        
+        <!-- Top Metrics Cards -->
+        <PipelineMetricsSummaryPanel Metrics="@_metrics" />
+
+        <!-- Tabs for different views -->
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+            <MudTabPanel Text="Overview" Icon="@Icons.Material.Filled.Dashboard">
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <PipelineSuccessRateChart Metrics="@_metrics" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <PipelineDurationChart Metrics="@_metrics" />
+                    </MudItem>
+                </MudGrid>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Pipeline Health" Icon="@Icons.Material.Filled.HealthAndSafety">
+                <PipelineHealthTable Metrics="@_metrics" />
+            </MudTabPanel>
+
+            <MudTabPanel Text="Details" Icon="@Icons.Material.Filled.List">
+                <MudDataGrid Items="@_metrics" 
+                             Filterable="true" 
+                             SortMode="SortMode.Multiple"
+                             Dense="true"
+                             Hover="true">
+                    <Columns>
+                        <PropertyColumn Property="x => x.PipelineName" Title="Pipeline" />
+                        <PropertyColumn Property="x => x.Type" Title="Type">
+                            <CellTemplate>
+                                <MudChip Color="@GetTypeColor(context.Item.Type)" Size="Size.Small">
+                                    @context.Item.Type
+                                </MudChip>
+                            </CellTemplate>
+                        </PropertyColumn>
+                        <PropertyColumn Property="x => x.TotalRuns" Title="Total Runs" />
+                        <PropertyColumn Property="x => x.SuccessfulRuns" Title="Successful" />
+                        <PropertyColumn Property="x => x.FailedRuns" Title="Failed" />
+                        <PropertyColumn Property="x => x.FailureRate" Title="Failure Rate" Format="P1" />
+                        <PropertyColumn Property="x => x.AverageDuration" Title="Avg Duration" Format="hh\:mm\:ss" />
+                        <PropertyColumn Property="x => x.LastRunResult" Title="Last Result">
+                            <CellTemplate>
+                                <MudChip Color="@GetResultColor(context.Item.LastRunResult)" Size="Size.Small">
+                                    @(context.Item.LastRunResult?.ToString() ?? "N/A")
+                                </MudChip>
+                            </CellTemplate>
+                        </PropertyColumn>
+                        <PropertyColumn Property="x => x.ConsecutiveFailures" Title="Consecutive Failures">
+                            <CellTemplate>
+                                @if (context.Item.ConsecutiveFailures > 0)
+                                {
+                                    <MudChip Color="Color.Error" Size="Size.Small">@context.Item.ConsecutiveFailures</MudChip>
+                                }
+                                else
+                                {
+                                    <MudText>0</MudText>
+                                }
+                            </CellTemplate>
+                        </PropertyColumn>
+                    </Columns>
+                </MudDataGrid>
+            </MudTabPanel>
+        </MudTabs>
+
+        <!-- Sync Button -->
+        <MudFab Color="Color.Primary" 
+                StartIcon="@Icons.Material.Filled.Sync" 
+                Label="Sync Pipelines" 
+                Class="mt-4"
+                OnClick="@SyncPipelines"
+                Disabled="@_isSyncing" />
+    }
+</MudContainer>
+
+@code {
+    private List<PipelineMetricsDto> _metrics = new();
+    private bool _isLoading = true;
+    private bool _isSyncing = false;
+    private ErrorResponse? _errorResponse;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        try
+        {
+            ClearError();
+            var metrics = await PipelineService.GetMetricsAsync();
+            _metrics = metrics.ToList();
+            
+            Console.WriteLine($"[PipelineInsights] Loaded {_metrics.Count} pipeline metrics");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PipelineInsights] Error loading pipeline metrics: {ex.Message}");
+            ShowError(ex, "Error loading pipeline metrics");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SyncPipelines()
+    {
+        _isSyncing = true;
+        try
+        {
+            ClearError();
+            var result = await PipelineService.SyncAsync();
+            Snackbar.Add($"Synced {result.Pipelines.Count} pipelines and {result.Runs.Count} runs successfully", Severity.Success);
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex, "Error syncing pipelines");
+        }
+        finally
+        {
+            _isSyncing = false;
+        }
+    }
+
+    private void ShowError(Exception ex, string context)
+    {
+        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+
+    private Color GetTypeColor(PipelineType type)
+    {
+        return type switch
+        {
+            PipelineType.Build => Color.Info,
+            PipelineType.Release => Color.Success,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetResultColor(PipelineRunResult? result)
+    {
+        return result switch
+        {
+            PipelineRunResult.Succeeded => Color.Success,
+            PipelineRunResult.Failed => Color.Error,
+            PipelineRunResult.PartiallySucceeded => Color.Warning,
+            PipelineRunResult.Canceled => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private List<DataRequirement> _dataRequirements = new()
+    {
+        new DataRequirement 
+        { 
+            Field = "Pipeline Definitions", 
+            Description = "Azure DevOps automatically tracks build and release pipeline definitions",
+            IsRequired = true 
+        },
+        new DataRequirement 
+        { 
+            Field = "Pipeline Runs", 
+            Description = "Historical run data including duration, result, and trigger type",
+            IsRequired = true 
+        }
+    };
+
+    private List<string> _bestPractices = new()
+    {
+        "Keep failure rates below 10% for healthy pipelines",
+        "Aim for build times under 15 minutes for fast feedback",
+        "Investigate pipelines with 3+ consecutive failures immediately",
+        "Monitor duration trends to catch performance regressions",
+        "Use separate pipelines for CI and release deployments"
+    };
+
+    private List<CommonIssue> _commonIssues = new()
+    {
+        new CommonIssue 
+        { 
+            Problem = "No pipeline data showing after sync",
+            Solution = "Ensure you have build/release pipelines in your Azure DevOps project and that your PAT has permissions to read them."
+        },
+        new CommonIssue 
+        { 
+            Problem = "High failure rate (>20%)",
+            Solution = "Review failing tests, check for flaky tests, ensure infrastructure stability, and add retry logic for transient failures."
+        },
+        new CommonIssue 
+        { 
+            Problem = "Long build durations (>30 minutes)",
+            Solution = "Optimize build steps, use caching, parallelize tasks, and consider incremental builds."
+        }
+    };
+}

@@ -1,6 +1,7 @@
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
+using PoTool.Core.Pipelines;
 using PoTool.Core.Contracts.TfsVerification;
 
 namespace PoTool.Tests.Integration.Support;
@@ -630,5 +631,80 @@ public class MockTfsClient : ITfsClient
         CancellationToken cancellationToken = default)
     {
         return Task.FromResult(true);
+    }
+
+    // ============================================
+    // PIPELINE METHODS
+    // ============================================
+
+    public Task<IEnumerable<PipelineDto>> GetPipelinesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var pipelines = new List<PipelineDto>
+        {
+            new PipelineDto(1, "TestBuild.CI", PipelineType.Build, "\\Test", DateTimeOffset.UtcNow),
+            new PipelineDto(2, "TestRelease.Deploy", PipelineType.Release, "\\Test", DateTimeOffset.UtcNow)
+        };
+        return Task.FromResult<IEnumerable<PipelineDto>>(pipelines);
+    }
+
+    public Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
+        int pipelineId,
+        int top = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var runs = new List<PipelineRunDto>
+        {
+            new PipelineRunDto(
+                RunId: 1000,
+                PipelineId: pipelineId,
+                PipelineName: "TestBuild.CI",
+                StartTime: DateTimeOffset.UtcNow.AddHours(-2),
+                FinishTime: DateTimeOffset.UtcNow.AddHours(-1),
+                Duration: TimeSpan.FromHours(1),
+                Result: PipelineRunResult.Succeeded,
+                Trigger: PipelineRunTrigger.ContinuousIntegration,
+                TriggerInfo: "Triggered by push",
+                Branch: "main",
+                RequestedFor: "test.user@test.com",
+                RetrievedAt: DateTimeOffset.UtcNow
+            )
+        };
+        return Task.FromResult<IEnumerable<PipelineRunDto>>(runs);
+    }
+
+    public Task<PipelineSyncResult> GetPipelinesWithRunsAsync(
+        int runsPerPipeline = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var pipelines = new List<PipelineDto>
+        {
+            new PipelineDto(1, "TestBuild.CI", PipelineType.Build, "\\Test", DateTimeOffset.UtcNow)
+        };
+
+        var runs = new List<PipelineRunDto>
+        {
+            new PipelineRunDto(
+                RunId: 1000,
+                PipelineId: 1,
+                PipelineName: "TestBuild.CI",
+                StartTime: DateTimeOffset.UtcNow.AddHours(-2),
+                FinishTime: DateTimeOffset.UtcNow.AddHours(-1),
+                Duration: TimeSpan.FromHours(1),
+                Result: PipelineRunResult.Succeeded,
+                Trigger: PipelineRunTrigger.ContinuousIntegration,
+                TriggerInfo: "Triggered by push",
+                Branch: "main",
+                RequestedFor: "test.user@test.com",
+                RetrievedAt: DateTimeOffset.UtcNow
+            )
+        };
+
+        return Task.FromResult(new PipelineSyncResult(
+            Pipelines: pipelines,
+            Runs: runs,
+            TfsCallCount: 1,
+            SyncedAt: DateTimeOffset.UtcNow
+        ));
     }
 }

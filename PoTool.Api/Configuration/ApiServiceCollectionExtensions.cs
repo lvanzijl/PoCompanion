@@ -101,6 +101,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<IPullRequestRepository, PullRequestRepository>();
         services.AddScoped<IReleasePlanningRepository, ReleasePlanningRepository>();
+        services.AddSingleton<IPipelineRepository, Repositories.PipelineRepository>();
 
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();
@@ -112,6 +113,7 @@ public static class ApiServiceCollectionExtensions
             services.AddSingleton<BattleshipWorkItemGenerator>();
             services.AddSingleton<BattleshipDependencyGenerator>();
             services.AddSingleton<BattleshipPullRequestGenerator>();
+            services.AddSingleton<BattleshipPipelineGenerator>();
             services.AddSingleton<MockDataValidator>();
             services.AddSingleton<BattleshipMockDataFacade>();
         }

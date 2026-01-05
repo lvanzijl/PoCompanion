@@ -1,5 +1,6 @@
 using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
+using PoTool.Core.Pipelines;
 using PoTool.Core.Contracts;
 using PoTool.Core.Contracts.TfsVerification;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,7 @@ public class BattleshipMockDataFacade : ITfsClient
     private readonly BattleshipWorkItemGenerator _workItemGenerator;
     private readonly BattleshipDependencyGenerator _dependencyGenerator;
     private readonly BattleshipPullRequestGenerator _pullRequestGenerator;
+    private readonly BattleshipPipelineGenerator _pipelineGenerator;
     private readonly MockDataValidator _validator;
     private readonly ILogger<BattleshipMockDataFacade> _logger;
 
@@ -30,6 +32,8 @@ public class BattleshipMockDataFacade : ITfsClient
     private List<PullRequestCommentDto>? _cachedComments;
     private List<PullRequestFileChangeDto>? _cachedFileChanges;
     private List<PrWorkItemLink>? _cachedPrWorkItemLinks;
+    private List<PipelineDto>? _cachedPipelines;
+    private List<PipelineRunDto>? _cachedPipelineRuns;
     private ValidationReport? _cachedValidationReport;
     private readonly object _cacheLock = new object();
 
@@ -37,12 +41,14 @@ public class BattleshipMockDataFacade : ITfsClient
         BattleshipWorkItemGenerator workItemGenerator,
         BattleshipDependencyGenerator dependencyGenerator,
         BattleshipPullRequestGenerator pullRequestGenerator,
+        BattleshipPipelineGenerator pipelineGenerator,
         MockDataValidator validator,
         ILogger<BattleshipMockDataFacade> logger)
     {
         _workItemGenerator = workItemGenerator;
         _dependencyGenerator = dependencyGenerator;
         _pullRequestGenerator = pullRequestGenerator;
+        _pipelineGenerator = pipelineGenerator;
         _validator = validator;
         _logger = logger;
     }
@@ -297,6 +303,63 @@ public class BattleshipMockDataFacade : ITfsClient
     }
 
     /// <summary>
+    /// Gets all mock pipelines (with caching)
+    /// </summary>
+    public List<PipelineDto> GetMockPipelines()
+    {
+        if (_cachedPipelines != null)
+            return _cachedPipelines;
+
+        lock (_cacheLock)
+        {
+            if (_cachedPipelines != null)
+                return _cachedPipelines;
+
+            _logger.LogInformation("Generating mock pipelines...");
+            var startTime = DateTimeOffset.UtcNow;
+
+            _cachedPipelines = _pipelineGenerator.GeneratePipelines();
+
+            var elapsed = (DateTimeOffset.UtcNow - startTime).TotalSeconds;
+            _logger.LogInformation(
+                "Generated {Count} pipelines in {Elapsed:F2} seconds",
+                _cachedPipelines.Count,
+                elapsed);
+
+            return _cachedPipelines;
+        }
+    }
+
+    /// <summary>
+    /// Gets all mock pipeline runs (with caching)
+    /// </summary>
+    public List<PipelineRunDto> GetMockPipelineRuns()
+    {
+        if (_cachedPipelineRuns != null)
+            return _cachedPipelineRuns;
+
+        lock (_cacheLock)
+        {
+            if (_cachedPipelineRuns != null)
+                return _cachedPipelineRuns;
+
+            _logger.LogInformation("Generating mock pipeline runs...");
+            var startTime = DateTimeOffset.UtcNow;
+
+            var pipelines = GetMockPipelines();
+            _cachedPipelineRuns = _pipelineGenerator.GenerateRuns(pipelines);
+
+            var elapsed = (DateTimeOffset.UtcNow - startTime).TotalSeconds;
+            _logger.LogInformation(
+                "Generated {Count} pipeline runs in {Elapsed:F2} seconds",
+                _cachedPipelineRuns.Count,
+                elapsed);
+
+            return _cachedPipelineRuns;
+        }
+    }
+
+    /// <summary>
     /// Invalidates the cache and forces regeneration on next access
     /// </summary>
     public void InvalidateCache()
@@ -311,6 +374,8 @@ public class BattleshipMockDataFacade : ITfsClient
             _cachedComments = null;
             _cachedFileChanges = null;
             _cachedPrWorkItemLinks = null;
+            _cachedPipelines = null;
+            _cachedPipelineRuns = null;
             _cachedValidationReport = null;
         }
     }
@@ -330,6 +395,8 @@ public class BattleshipMockDataFacade : ITfsClient
         GetMockComments();
         GetMockFileChanges();
         GetMockPrWorkItemLinks();
+        GetMockPipelines();
+        GetMockPipelineRuns();
         ValidateData();
 
         var elapsed = (DateTimeOffset.UtcNow - overallStartTime).TotalSeconds;
@@ -902,5 +969,69 @@ public class BattleshipMockDataFacade : ITfsClient
             workItemId, newParentId);
 
         return Task.FromResult(true);
+    }
+
+    // ============================================
+    // PIPELINE METHODS
+    // ============================================
+
+    public Task<IEnumerable<PipelineDto>> GetPipelinesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: GetPipelinesAsync called");
+        
+        var pipelines = GetMockPipelines();
+        _logger.LogInformation("Mock TFS client: Returning {Count} pipelines", pipelines.Count);
+        
+        return Task.FromResult<IEnumerable<PipelineDto>>(pipelines);
+    }
+
+    public Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
+        int pipelineId,
+        int top = 100,
+        CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: GetPipelineRunsAsync called for pipeline {PipelineId}", pipelineId);
+        
+        var allRuns = GetMockPipelineRuns();
+        var filtered = allRuns.Where(r => r.PipelineId == pipelineId).Take(top);
+        
+        var result = filtered.ToList();
+        _logger.LogInformation("Mock TFS client: Returning {Count} pipeline runs", result.Count);
+        return Task.FromResult<IEnumerable<PipelineRunDto>>(result);
+    }
+
+    public Task<PipelineSyncResult> GetPipelinesWithRunsAsync(
+        int runsPerPipeline = 50,
+        CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: GetPipelinesWithRunsAsync called (efficient bulk method)");
+
+        var pipelines = GetMockPipelines();
+        var allRuns = GetMockPipelineRuns();
+
+        // Limit runs per pipeline
+        var pipelineIds = pipelines.Select(p => p.Id).ToHashSet();
+        var runs = allRuns
+            .Where(r => pipelineIds.Contains(r.PipelineId))
+            .GroupBy(r => r.PipelineId)
+            .SelectMany(g => g.Take(runsPerPipeline))
+            .ToList();
+
+        var result = new PipelineSyncResult(
+            Pipelines: pipelines,
+            Runs: runs,
+            TfsCallCount: 1,
+            SyncedAt: DateTimeOffset.UtcNow
+        );
+
+        _logger.LogInformation(
+            "Mock TFS client: Bulk fetched {PipelineCount} pipelines, {RunCount} runs in 1 call",
+            pipelines.Count, runs.Count);
+
+        return Task.FromResult(result);
     }
 }

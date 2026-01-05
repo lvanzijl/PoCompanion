@@ -1,5 +1,6 @@
 using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
+using PoTool.Core.Pipelines;
 using PoTool.Core.Contracts.TfsVerification;
 
 namespace PoTool.Core.Contracts;
@@ -208,6 +209,40 @@ public interface ITfsClient
     Task<bool> UpdateWorkItemParentAsync(
         int workItemId,
         int newParentId,
+        CancellationToken cancellationToken = default);
+
+    // ============================================
+    // PIPELINE METHODS
+    // ============================================
+
+    /// <summary>
+    /// Retrieves pipeline definitions from TFS/Azure DevOps.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of pipeline DTOs.</returns>
+    Task<IEnumerable<PipelineDto>> GetPipelinesAsync(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves pipeline runs for a specific pipeline.
+    /// </summary>
+    /// <param name="pipelineId">The pipeline ID.</param>
+    /// <param name="top">Maximum number of runs to retrieve.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of pipeline run DTOs.</returns>
+    Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
+        int pipelineId,
+        int top = 100,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves all pipelines with their runs in a single batch operation.
+    /// </summary>
+    /// <param name="runsPerPipeline">Maximum number of runs to retrieve per pipeline.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Complete pipeline sync result with all related data.</returns>
+    Task<PipelineSyncResult> GetPipelinesWithRunsAsync(
+        int runsPerPipeline = 50,
         CancellationToken cancellationToken = default);
 }
 

@@ -4,6 +4,7 @@ using Moq;
 using MudBlazor;
 using MudBlazor.Services;
 using PoTool.Client.Services;
+using PoTool.Client.ApiClient;
 
 namespace PoTool.Tests.Blazor;
 

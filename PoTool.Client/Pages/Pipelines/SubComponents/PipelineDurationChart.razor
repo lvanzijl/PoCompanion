@@ -1,0 +1,48 @@
+@using PoTool.Client.ApiClient
+
+<MudPaper Elevation="2" Class="pa-4">
+    <MudText Typo="Typo.h6" GutterBottom="true">Average Build Duration (minutes)</MudText>
+    <MudChart ChartType="ChartType.Bar"
+              ChartSeries="@_series"
+              XAxisLabels="@_labels"
+              Width="100%"
+              Height="300px"
+              ChartOptions="@_chartOptions" />
+</MudPaper>
+
+@code {
+    [Parameter]
+    public IEnumerable<PipelineMetricsDto> Metrics { get; set; } = Array.Empty<PipelineMetricsDto>();
+
+    private List<ChartSeries> _series = new();
+    private string[] _labels = Array.Empty<string>();
+    private ChartOptions _chartOptions = new() { YAxisTicks = 5, MaxNumYAxisTicks = 10 };
+
+    protected override void OnParametersSet()
+    {
+        var metricsWithDuration = Metrics
+            .Where(m => m.AverageDuration.HasValue && m.AverageDuration.Value.TotalMinutes > 0)
+            .Take(10)
+            .ToList();
+        
+        _labels = metricsWithDuration.Select(m => TruncateName(m.PipelineName)).ToArray();
+        
+        _series = new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Duration (min)",
+                Data = metricsWithDuration.Select(m => m.AverageDuration!.Value.TotalMinutes).ToArray()
+            }
+        };
+    }
+
+    private const int MaxNameDisplayLength = 20;
+    private const int TruncatedNameLength = 17;
+
+    private string TruncateName(string name)
+    {
+        if (name.Length <= MaxNameDisplayLength) return name;
+        return name.Substring(0, TruncatedNameLength) + "...";
+    }
+}

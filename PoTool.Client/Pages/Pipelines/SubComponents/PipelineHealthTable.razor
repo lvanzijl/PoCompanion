@@ -1,0 +1,139 @@
+@using PoTool.Client.ApiClient
+
+<MudPaper Elevation="2" Class="pa-4">
+    <MudText Typo="Typo.h6" GutterBottom="true">Pipeline Health Overview</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+        Pipelines sorted by health status (failing first)
+    </MudText>
+    
+    <MudSimpleTable Dense="true" Hover="true">
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Pipeline</th>
+                <th>Type</th>
+                <th>Success Rate</th>
+                <th>Consecutive Failures</th>
+                <th>Last Run</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var metric in SortedMetrics)
+            {
+                <tr>
+                    <td>
+                        <MudIcon Icon="@GetHealthIcon(metric)" 
+                                 Color="@GetHealthColor(metric)" 
+                                 Size="Size.Small" />
+                    </td>
+                    <td>@metric.PipelineName</td>
+                    <td>
+                        <MudChip T="string" Color="@GetTypeColor(metric.Type)" Size="Size.Small">
+                            @metric.Type
+                        </MudChip>
+                    </td>
+                    <td>
+                        <MudProgressLinear Color="@GetSuccessRateColor(metric)" 
+                                           Value="@((1 - metric.FailureRate) * 100)" 
+                                           Class="my-2" 
+                                           Rounded="true" />
+                        <MudText Typo="Typo.caption">@($"{(1 - metric.FailureRate):P0}")</MudText>
+                    </td>
+                    <td>
+                        @if (metric.ConsecutiveFailures > 0)
+                        {
+                            <MudChip T="string" Color="Color.Error" Size="Size.Small">@metric.ConsecutiveFailures</MudChip>
+                        }
+                        else
+                        {
+                            <MudText Color="Color.Success">0</MudText>
+                        }
+                    </td>
+                    <td>
+                        @if (metric.LastRunTime.HasValue)
+                        {
+                            <MudChip T="string" Color="@GetResultColor(metric.LastRunResult)" Size="Size.Small">
+                                @(metric.LastRunResult?.ToString() ?? "Unknown")
+                            </MudChip>
+                            <MudText Typo="Typo.caption" Class="ml-2">
+                                @FormatTimeAgo(metric.LastRunTime.Value)
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudText Color="Color.Secondary">No runs</MudText>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </MudSimpleTable>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public IEnumerable<PipelineMetricsDto> Metrics { get; set; } = Array.Empty<PipelineMetricsDto>();
+
+    private IEnumerable<PipelineMetricsDto> SortedMetrics => Metrics
+        .OrderByDescending(m => m.ConsecutiveFailures)
+        .ThenByDescending(m => m.FailureRate)
+        .ThenByDescending(m => m.TotalRuns);
+
+    private string GetHealthIcon(PipelineMetricsDto metric)
+    {
+        if (metric.ConsecutiveFailures >= 3) return Icons.Material.Filled.Error;
+        if (metric.ConsecutiveFailures > 0) return Icons.Material.Filled.Warning;
+        if (metric.FailureRate > 0.2) return Icons.Material.Filled.Warning;
+        return Icons.Material.Filled.CheckCircle;
+    }
+
+    private Color GetHealthColor(PipelineMetricsDto metric)
+    {
+        if (metric.ConsecutiveFailures >= 3) return Color.Error;
+        if (metric.ConsecutiveFailures > 0) return Color.Warning;
+        if (metric.FailureRate > 0.2) return Color.Warning;
+        return Color.Success;
+    }
+
+    private Color GetTypeColor(PipelineType type)
+    {
+        return type switch
+        {
+            PipelineType.Build => Color.Info,
+            PipelineType.Release => Color.Success,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetSuccessRateColor(PipelineMetricsDto metric)
+    {
+        var successRate = 1 - metric.FailureRate;
+        return successRate switch
+        {
+            >= 0.9 => Color.Success,
+            >= 0.7 => Color.Warning,
+            _ => Color.Error
+        };
+    }
+
+    private Color GetResultColor(PipelineRunResult? result)
+    {
+        return result switch
+        {
+            PipelineRunResult.Succeeded => Color.Success,
+            PipelineRunResult.Failed => Color.Error,
+            PipelineRunResult.PartiallySucceeded => Color.Warning,
+            PipelineRunResult.Canceled => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private string FormatTimeAgo(DateTimeOffset time)
+    {
+        var diff = DateTimeOffset.UtcNow - time;
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        return time.ToString("MMM d");
+    }
+}

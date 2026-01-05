@@ -1,6 +1,7 @@
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
+using PoTool.Core.Pipelines;
 using PoTool.Api.Services.MockData;
 using Microsoft.Extensions.Logging;
 using PoTool.Core.Contracts.TfsVerification;
@@ -385,5 +386,30 @@ public class MockTfsClient : ITfsClient
             workItemId, newParentId);
 
         return Task.FromResult(true);
+    }
+
+    // ============================================
+    // PIPELINE METHODS - Delegate to BattleshipMockDataFacade
+    // ============================================
+
+    public Task<IEnumerable<PipelineDto>> GetPipelinesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return _mockDataFacade.GetPipelinesAsync(cancellationToken);
+    }
+
+    public Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
+        int pipelineId,
+        int top = 100,
+        CancellationToken cancellationToken = default)
+    {
+        return _mockDataFacade.GetPipelineRunsAsync(pipelineId, top, cancellationToken);
+    }
+
+    public Task<PipelineSyncResult> GetPipelinesWithRunsAsync(
+        int runsPerPipeline = 50,
+        CancellationToken cancellationToken = default)
+    {
+        return _mockDataFacade.GetPipelinesWithRunsAsync(runsPerPipeline, cancellationToken);
     }
 }
