@@ -112,7 +112,7 @@
                         {
                             <div class="iteration-line draggable-line"
                                  draggable="true"
-                                 @ondragstart="@(e => HandleLineStartDrag(line.Id, false, line.Label, MilestoneType.Custom, line.VerticalPosition))"
+                                 @ondragstart="@(e => HandleLineStartDrag(line.Id, false, line.Label, default, line.VerticalPosition))"
                                  @ondragover:preventDefault
                                  @ondragover="@(e => HandleLineDragOver(e, currentRow + 0.5))"
                                  @ondrop="@(async e => await HandleLineDrop(line.Id, false))">
@@ -386,7 +386,7 @@
         _draggingLineId = null;
         _draggingIsMilestone = false;
         _draggingLineLabel = string.Empty;
-        _draggingMilestoneType = MilestoneType.Release;
+        _draggingMilestoneType = default;
         _draggingOriginalPosition = 0;
         _draggingTargetPosition = null;
     }
