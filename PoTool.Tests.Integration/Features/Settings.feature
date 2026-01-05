@@ -10,7 +10,10 @@ Scenario: Get settings when none exist
     When I request the application settings
     Then the response should be NotFound
 
-Scenario: Update settings
+# The following scenarios are obsolete as DataMode and ConfiguredGoalIds have been removed
+# Settings now only contain ActiveProfileId which is managed through ProfilesController
+@ignore
+Scenario: Update settings (OBSOLETE - DataMode removed)
     Given I have settings to update
         | Field              | Value |
         | DataMode           | Mock  |
@@ -19,14 +22,16 @@ Scenario: Update settings
     Then the response should be OK
     And the settings should be updated successfully
 
-Scenario: Get saved settings
+@ignore
+Scenario: Get saved settings (OBSOLETE - DataMode removed)
     Given I have updated the settings with DataMode "Mock" and GoalIds "1000,2000"
     When I request the application settings
     Then the response should be OK
     And the returned settings should have DataMode "Mock"
     And the returned settings should have 2 goal IDs
 
-Scenario: Update settings with multiple goal IDs
+@ignore
+Scenario: Update settings with multiple goal IDs (OBSOLETE - ConfiguredGoalIds removed)
     Given I have settings to update
         | Field              | Value      |
         | DataMode           | Tfs        |

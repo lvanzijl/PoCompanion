@@ -33,8 +33,8 @@ public class ProfileFilterServiceTests
         // Arrange
         var settings = new SettingsDto(
             Id: 1,
-            DataMode: DataMode.Tfs,
-            ConfiguredGoalIds: new List<int>(),
+            // DataMode: DataMode.Tfs, // OBSOLETE
+            // ConfiguredGoalIds: new List<int>(), // OBSOLETE
             ActiveProfileId: null,
             LastModified: DateTimeOffset.UtcNow
         );
@@ -55,8 +55,8 @@ public class ProfileFilterServiceTests
         // Arrange
         var settings = new SettingsDto(
             Id: 1,
-            DataMode: DataMode.Tfs,
-            ConfiguredGoalIds: new List<int>(),
+            // DataMode: DataMode.Tfs, // OBSOLETE
+            // ConfiguredGoalIds: new List<int>(), // OBSOLETE
             ActiveProfileId: 10,
             LastModified: DateTimeOffset.UtcNow
         );
@@ -92,8 +92,8 @@ public class ProfileFilterServiceTests
         // Arrange
         var settings = new SettingsDto(
             Id: 1,
-            DataMode: DataMode.Tfs,
-            ConfiguredGoalIds: new List<int>(),
+            // DataMode: DataMode.Tfs, // OBSOLETE
+            // ConfiguredGoalIds: new List<int>(), // OBSOLETE
             ActiveProfileId: 999,
             LastModified: DateTimeOffset.UtcNow
         );
@@ -116,8 +116,8 @@ public class ProfileFilterServiceTests
         // Arrange
         var settings = new SettingsDto(
             Id: 1,
-            DataMode: DataMode.Tfs,
-            ConfiguredGoalIds: new List<int>(),
+            // DataMode: DataMode.Tfs, // OBSOLETE
+            // ConfiguredGoalIds: new List<int>(), // OBSOLETE
             ActiveProfileId: 10,
             LastModified: DateTimeOffset.UtcNow
         );

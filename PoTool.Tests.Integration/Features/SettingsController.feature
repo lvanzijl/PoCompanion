@@ -6,7 +6,10 @@ Feature: Settings Controller API
 Background:
     Given the application is running
 
-Scenario: Get settings when settings exist
+# All scenarios below are obsolete as DataMode and ConfiguredGoalIds have been removed from Settings
+# Settings now only contain ActiveProfileId which is managed through ProfilesController (/api/profiles/active)
+@ignore
+Scenario: Get settings when settings exist (OBSOLETE)
     Given settings exist in the database
         | DataMode | ConfiguredGoalIds |
         | Mock     | 1,2,3             |
@@ -19,7 +22,8 @@ Scenario: Get settings when no settings exist
     When I request settings from "/api/settings"
     Then the response should be NotFound
 
-Scenario: Update settings with valid data
+@ignore
+Scenario: Update settings with valid data (OBSOLETE)
     Given settings exist in the database
         | DataMode | ConfiguredGoalIds |
         | Mock     | 1,2,3             |
@@ -28,14 +32,16 @@ Scenario: Update settings with valid data
     And the updated settings should have DataMode "Tfs"
     And the updated settings should have goal IDs "4,5,6"
 
-Scenario: Update settings with empty goal IDs
+@ignore
+Scenario: Update settings with empty goal IDs (OBSOLETE)
     Given settings exist in the database
         | DataMode | ConfiguredGoalIds |
         | Mock     | 1,2,3             |
     When I update settings with DataMode "Mock" and empty goal IDs
     Then the response should be OK
 
-Scenario: Update settings to Tfs mode
+@ignore
+Scenario: Update settings to Tfs mode (OBSOLETE)
     Given settings exist in the database
         | DataMode | ConfiguredGoalIds |
         | Mock     | 1,2,3             |
@@ -43,7 +49,8 @@ Scenario: Update settings to Tfs mode
     Then the response should be OK
     And the updated settings should have DataMode "Tfs"
 
-Scenario: Update settings to Mock mode
+@ignore
+Scenario: Update settings to Mock mode (OBSOLETE)
     Given settings exist in the database
         | DataMode | ConfiguredGoalIds |
         | Tfs      | 1,2,3             |
@@ -51,7 +58,8 @@ Scenario: Update settings to Mock mode
     Then the response should be OK
     And the updated settings should have DataMode "Mock"
 
-Scenario: Update settings with single goal ID
+@ignore
+Scenario: Update settings with single goal ID (OBSOLETE)
     Given settings exist in the database
         | DataMode | ConfiguredGoalIds |
         | Mock     | 1                 |
@@ -59,7 +67,8 @@ Scenario: Update settings with single goal ID
     Then the response should be OK
     And the updated settings should have goal IDs "999"
 
-Scenario: Update settings with multiple goal IDs
+@ignore
+Scenario: Update settings with multiple goal IDs (OBSOLETE)
     Given settings exist in the database
         | DataMode | ConfiguredGoalIds |
         | Mock     | 1                 |

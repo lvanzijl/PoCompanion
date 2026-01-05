@@ -1,7 +1,7 @@
 using Mediator;
+using Microsoft.Extensions.Configuration;
 using PoTool.Api.Services.MockData;
 using PoTool.Core.Contracts;
-using PoTool.Core.Settings;
 using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 
@@ -12,25 +12,23 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// </summary>
 public class GetGoalHierarchyQueryHandler : IQueryHandler<GetGoalHierarchyQuery, IEnumerable<WorkItemDto>>
 {
-    private readonly ISettingsRepository _settingsRepository;
     private readonly IWorkItemRepository _workItemRepository;
     private readonly BattleshipMockDataFacade _mockDataFacade;
+    private readonly bool _useMockClient;
 
     public GetGoalHierarchyQueryHandler(
-        ISettingsRepository settingsRepository,
         IWorkItemRepository workItemRepository,
-        BattleshipMockDataFacade mockDataFacade)
+        BattleshipMockDataFacade mockDataFacade,
+        IConfiguration configuration)
     {
-        _settingsRepository = settingsRepository;
         _workItemRepository = workItemRepository;
         _mockDataFacade = mockDataFacade;
+        _useMockClient = configuration.GetValue<bool>("TfsIntegration:UseMockClient", false);
     }
 
     public async ValueTask<IEnumerable<WorkItemDto>> Handle(GetGoalHierarchyQuery query, CancellationToken cancellationToken)
     {
-        var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
-        
-        if (settings == null || settings.DataMode == DataMode.Mock)
+        if (_useMockClient)
         {
             // Return mock data for specified goal IDs using new Battleship system
             return _mockDataFacade.GetMockHierarchyForGoals(query.GoalIds);

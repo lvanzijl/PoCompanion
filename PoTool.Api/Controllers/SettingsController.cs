@@ -39,21 +39,6 @@ public class SettingsController : ControllerBase
     }
 
     /// <summary>
-    /// Updates the settings.
-    /// </summary>
-    [HttpPut]
-    [ProducesResponseType(typeof(SettingsDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<SettingsDto>> UpdateSettings(
-        [FromBody] UpdateSettingsRequest request,
-        CancellationToken cancellationToken)
-    {
-        var command = new UpdateSettingsCommand(request.DataMode, request.ConfiguredGoalIds);
-        var result = await _mediator.Send(command, cancellationToken);
-
-        return Ok(result);
-    }
-
-    /// <summary>
     /// Gets effort estimation settings.
     /// </summary>
     [HttpGet("effort-estimation")]
@@ -78,11 +63,3 @@ public class SettingsController : ControllerBase
         return Ok();
     }
 }
-
-/// <summary>
-/// Request model for updating settings.
-/// </summary>
-public record UpdateSettingsRequest(
-    DataMode DataMode,
-    List<int> ConfiguredGoalIds
-);

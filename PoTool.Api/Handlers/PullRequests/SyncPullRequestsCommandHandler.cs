@@ -2,7 +2,6 @@ using Mediator;
 using PoTool.Api.Services.MockData;
 using PoTool.Core.Contracts;
 using PoTool.Core.PullRequests.Commands;
-using PoTool.Core.Settings;
 
 namespace PoTool.Api.Handlers.PullRequests;
 
@@ -33,7 +32,7 @@ public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullReq
         _logger.LogInformation("Starting pull request sync");
 
         // For now, use mock data from new Battleship system
-        // In future, check DataMode from settings and use ITfsClient when mode is TFS
+        // In future, check TfsIntegration:UseMockClient from configuration and use ITfsClient when not using mock
         var pullRequests = _mockDataFacade.GetMockPullRequests();
         var iterations = _mockDataFacade.GetMockIterations();
         var comments = _mockDataFacade.GetMockComments();
