@@ -1,0 +1,127 @@
+@using PoTool.Shared.ReleasePlanning
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Timeline" Class="mr-2" />
+            Add Milestone Line
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.body2">
+                Milestone lines mark major release boundaries on the planning board.
+            </MudText>
+
+            <!-- Label -->
+            <MudTextField @bind-Value="_label" 
+                          Label="Milestone Label"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          Placeholder="e.g., Release 1.0, PI Planning" />
+
+            <!-- Type -->
+            <MudSelect T="MilestoneType" 
+                       @bind-Value="_type" 
+                       Label="Milestone Type"
+                       Variant="Variant.Outlined">
+                <MudSelectItem Value="MilestoneType.Release">Release</MudSelectItem>
+                <MudSelectItem Value="MilestoneType.Deadline">Deadline</MudSelectItem>
+                <MudSelectItem Value="MilestoneType.Custom">Custom</MudSelectItem>
+            </MudSelect>
+
+            <!-- Position -->
+            <MudNumericField @bind-Value="_verticalPosition" 
+                             Label="Vertical Position"
+                             Variant="Variant.Outlined"
+                             Required="true"
+                             Step="0.5"
+                             Min="0"
+                             HideSpinButtons="false"
+                             HelperText="Position between rows (e.g., 0.5 places line between row 0 and 1)" />
+
+            @if (_verticalPosition >= 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    <MudText Typo="Typo.body2">
+                        The milestone line will appear @GetPositionDescription()
+                    </MudText>
+                </MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Add" 
+                   Variant="Variant.Filled" 
+                   Color="Color.Primary"
+                   Disabled="@(string.IsNullOrWhiteSpace(_label) || _verticalPosition < 0 || _isAdding)"
+                   StartIcon="@(_isAdding ? Icons.Material.Filled.HourglassTop : Icons.Material.Filled.Add)">
+            @(_isAdding ? "Adding..." : "Add Milestone")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public int MaxRowIndex { get; set; } = 0;
+
+    private string _label = string.Empty;
+    private MilestoneType _type = MilestoneType.Release;
+    private double _verticalPosition = 0.5;
+    private bool _isAdding;
+
+    protected override void OnInitialized()
+    {
+        // Default to position between first and second row, or at 0.5 if board is empty
+        _verticalPosition = MaxRowIndex >= 1 ? MaxRowIndex + 0.5 : 0.5;
+    }
+
+    private string GetPositionDescription()
+    {
+        var wholePart = Math.Floor(_verticalPosition);
+        var fractionalPart = _verticalPosition - wholePart;
+
+        if (Math.Abs(fractionalPart - 0.5) < 0.01)
+        {
+            return $"between row {(int)wholePart} and row {(int)wholePart + 1}";
+        }
+        else if (fractionalPart < 0.01)
+        {
+            return $"at the top of row {(int)wholePart}";
+        }
+        else
+        {
+            return $"near row {(int)Math.Round(_verticalPosition)}";
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private async Task Add()
+    {
+        if (string.IsNullOrWhiteSpace(_label) || _verticalPosition < 0)
+            return;
+
+        _isAdding = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = new MilestoneLineData(_label, _verticalPosition, _type);
+            MudDialog?.Close(DialogResult.Ok(result));
+        }
+        finally
+        {
+            _isAdding = false;
+        }
+    }
+
+    public record MilestoneLineData(string Label, double VerticalPosition, MilestoneType Type);
+}
