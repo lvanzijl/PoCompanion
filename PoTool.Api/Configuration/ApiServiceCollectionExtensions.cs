@@ -79,26 +79,38 @@ public static class ApiServiceCollectionExtensions
             }
         }
 
-        // Register repositories
-        if (isDevelopment)
+        // Read the data source configuration setting
+        // This single setting controls whether mock data or TFS data is used
+        var useMockClient = configuration.GetValue<bool>("TfsIntegration:UseMockClient", false);
+
+        // Register repositories based on data source configuration
+        // When UseMockClient is false (TFS mode), always use the real WorkItemRepository
+        // regardless of environment to ensure mock data is never used
+        if (useMockClient && isDevelopment)
         {
-            // Use in-memory dev repository to allow frontend development without TFS or DB
+            // Use in-memory dev repository with mock data only when explicitly configured
+            // and in development mode
             services.AddSingleton<IWorkItemRepository, DevWorkItemRepository>();
         }
         else
         {
+            // Use real database-backed repository for TFS mode or production
             services.AddScoped<IWorkItemRepository, WorkItemRepository>();
         }
         services.AddScoped<ISettingsRepository, SettingsRepository>();
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<IPullRequestRepository, PullRequestRepository>();
 
-        // Register Battleship mock data generation system
-        services.AddSingleton<BattleshipWorkItemGenerator>();
-        services.AddSingleton<BattleshipDependencyGenerator>();
-        services.AddSingleton<BattleshipPullRequestGenerator>();
-        services.AddSingleton<MockDataValidator>();
-        services.AddSingleton<BattleshipMockDataFacade>();
+        // Register Battleship mock data generation system only when mock client is enabled
+        // When TFS mode is selected (UseMockClient=false), mock data services should not be registered
+        if (useMockClient)
+        {
+            services.AddSingleton<BattleshipWorkItemGenerator>();
+            services.AddSingleton<BattleshipDependencyGenerator>();
+            services.AddSingleton<BattleshipPullRequestGenerator>();
+            services.AddSingleton<MockDataValidator>();
+            services.AddSingleton<BattleshipMockDataFacade>();
+        }
 
         // Register validators
         services.AddScoped<WorkItemParentProgressValidator>();
@@ -127,9 +139,7 @@ public static class ApiServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddScoped<PatAccessor>();
         
-        // Register TFS client based on configuration
-        var useMockClient = configuration.GetValue<bool>("TfsIntegration:UseMockClient", false);
-        
+        // Register TFS client based on configuration (useMockClient already read above)
         if (useMockClient)
         {
             // Use mock TFS client with predefined test data
