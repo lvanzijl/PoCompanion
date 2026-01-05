@@ -25,6 +25,11 @@ public class TfsConfigService
     /// <summary>
     /// Gets the current TFS configuration (without PAT).
     /// </summary>
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     public virtual async Task<TfsConfigDto?> GetConfigAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -38,7 +43,7 @@ public class TfsConfigService
             }
             
             response.EnsureSuccessStatusCode();
-            var config = await response.Content.ReadFromJsonAsync<TfsConfigDto>(cancellationToken: cancellationToken);
+            var config = await response.Content.ReadFromJsonAsync<TfsConfigDto>(_jsonOptions, cancellationToken);
             return config;
         }
         catch (HttpRequestException)
