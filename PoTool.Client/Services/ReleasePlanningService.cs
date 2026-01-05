@@ -329,4 +329,72 @@ public class ReleasePlanningService
     }
 
     #endregion
+
+    #region Epic Split Operations
+
+    /// <summary>
+    /// Gets all Features for a specific Epic (for split dialog).
+    /// </summary>
+    public async Task<IReadOnlyList<EpicFeatureDto>?> GetEpicFeaturesAsync(
+        int epicId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<List<EpicFeatureDto>>(
+                $"api/releaseplanning/epics/{epicId}/features",
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving Features for Epic {EpicId}", epicId);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Splits an Epic into two Epics.
+    /// </summary>
+    public async Task<EpicSplitResultDto?> SplitEpicAsync(
+        int epicId,
+        string extractedEpicTitle,
+        IReadOnlyList<int> featureIdsForExtractedEpic,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = new SplitEpicRequest(extractedEpicTitle, featureIdsForExtractedEpic);
+            var response = await _httpClient.PostAsJsonAsync(
+                $"api/releaseplanning/epics/{epicId}/split",
+                request,
+                cancellationToken);
+            
+            // Try to deserialize the result even for non-success status (e.g., 400 BadRequest returns EpicSplitResultDto)
+            var result = await response.Content.ReadFromJsonAsync<EpicSplitResultDto>(cancellationToken);
+            
+            // If we got a result, return it (it will have Success=false for failures)
+            if (result != null)
+            {
+                return result;
+            }
+            
+            // If deserialization failed but response was successful, something is wrong
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Successfully split Epic {EpicId} but response deserialization failed", epicId);
+            }
+            
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error splitting Epic {EpicId}", epicId);
+            return null;
+        }
+    }
+
+    #endregion
 }
+
+// Client-side request DTO for Epic Split
+public record SplitEpicRequest(string ExtractedEpicTitle, IReadOnlyList<int> FeatureIdsForExtractedEpic);

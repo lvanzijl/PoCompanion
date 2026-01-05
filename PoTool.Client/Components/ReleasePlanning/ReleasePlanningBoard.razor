@@ -2,6 +2,9 @@
 @using PoTool.Client.Services
 @inject ReleasePlanningService ReleasePlanningService
 @inject ILogger<ReleasePlanningBoard> Logger
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
 
 <MudPaper Class="release-planning-board pa-4" Elevation="0">
     @if (_isLoading)
@@ -76,7 +79,9 @@
                                             <EpicCard 
                                                 Placement="@placement"
                                                 OnMove="@HandleEpicMove"
-                                                OnContextMenu="@HandleEpicContextMenu" />
+                                                OnContextMenu="@HandleEpicContextMenu"
+                                                OnSplitRequested="@HandleEpicSplit"
+                                                OnViewDetailsRequested="@HandleViewDetails" />
                                         }
                                     </div>
                                 </div>
@@ -175,6 +180,7 @@
             if (result?.Success != true)
             {
                 Logger.LogError("Failed to create lane for Objective {ObjectiveId}", args.ObjectiveId);
+                Snackbar.Add("Failed to create lane for Objective", Severity.Error);
                 return;
             }
             await LoadBoardAsync();
@@ -191,11 +197,13 @@
 
         if (placementResult?.Success == true)
         {
+            Snackbar.Add("Epic placed on board", Severity.Success);
             await LoadBoardAsync();
         }
         else
         {
             Logger.LogError("Failed to create placement for Epic {EpicId}", args.EpicId);
+            Snackbar.Add("Failed to place Epic on board", Severity.Error);
         }
     }
 
@@ -208,14 +216,56 @@
 
         if (result?.Success == true)
         {
+            Snackbar.Add("Epic moved successfully", Severity.Success);
             await LoadBoardAsync();
+        }
+        else
+        {
+            Snackbar.Add("Failed to move Epic", Severity.Error);
         }
     }
 
     private void HandleEpicContextMenu(EpicContextMenuEventArgs args)
     {
-        // TODO: Implement context menu with Epic Split option
+        // Context menu actions are now handled by dedicated event handlers
         Logger.LogDebug("Context menu requested for Epic {EpicId}", args.EpicId);
+    }
+
+    private async Task HandleEpicSplit(EpicSplitEventArgs args)
+    {
+        var parameters = new DialogParameters<SplitEpicDialog>
+        {
+            { x => x.EpicId, args.EpicId },
+            { x => x.EpicTitle, args.EpicTitle }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<SplitEpicDialog>("Split Epic", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: EpicSplitResultDto splitResult })
+        {
+            if (splitResult.Success)
+            {
+                Snackbar.Add($"Epic split successfully! New Epic ID: {splitResult.ExtractedEpicId}", Severity.Success);
+                await LoadBoardAsync();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to split Epic: {splitResult.ErrorMessage}", Severity.Error);
+            }
+        }
+    }
+
+    private void HandleViewDetails(EpicViewDetailsEventArgs args)
+    {
+        // Navigate to Work Item Explorer with the Epic selected
+        Navigation.NavigateTo($"/workitems?selected={args.EpicId}");
     }
 
     private (IEnumerable<MilestoneLineDto> MilestoneLines, IEnumerable<IterationLineDto> IterationLines) GetLinesAtPosition(double position)

@@ -57,3 +57,40 @@ public class EpicContextMenuEventArgs
     /// </summary>
     public int EpicId { get; set; }
 }
+
+/// <summary>
+/// Event args for when an Epic split is requested.
+/// </summary>
+public class EpicSplitEventArgs
+{
+    /// <summary>
+    /// The placement ID.
+    /// </summary>
+    public int PlacementId { get; set; }
+
+    /// <summary>
+    /// The Epic TFS ID.
+    /// </summary>
+    public int EpicId { get; set; }
+
+    /// <summary>
+    /// The Epic title.
+    /// </summary>
+    public string EpicTitle { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Event args for when Epic details view is requested.
+/// </summary>
+public class EpicViewDetailsEventArgs
+{
+    /// <summary>
+    /// The placement ID.
+    /// </summary>
+    public int PlacementId { get; set; }
+
+    /// <summary>
+    /// The Epic TFS ID.
+    /// </summary>
+    public int EpicId { get; set; }
+}
