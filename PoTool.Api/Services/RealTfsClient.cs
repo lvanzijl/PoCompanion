@@ -927,6 +927,7 @@ public class RealTfsClient : ITfsClient
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
         ValidateTfsConfiguration(entity);
+        var config = entity!; // Non-null after validation
 
         _logger.LogInformation("Starting TFS API verification. WriteChecks: {IncludeWriteChecks}, WorkItemId: {WorkItemId}", 
             includeWriteChecks, workItemIdForWriteCheck);
@@ -934,20 +935,20 @@ public class RealTfsClient : ITfsClient
         var checks = new List<TfsCapabilityCheckResult>();
         
         // Run read-only checks
-        checks.Add(await VerifyServerReachabilityAsync(entity!, cancellationToken));
-        checks.Add(await VerifyProjectAccessAsync(entity!, cancellationToken));
-        checks.Add(await VerifyWorkItemQueryAsync(entity!, cancellationToken));
-        checks.Add(await VerifyWorkItemFieldsAsync(entity!, cancellationToken));
-        checks.Add(await VerifyBatchReadAsync(entity!, cancellationToken));
-        checks.Add(await VerifyWorkItemRevisionsAsync(entity!, cancellationToken));
-        checks.Add(await VerifyPullRequestsAsync(entity!, cancellationToken));
+        checks.Add(await VerifyServerReachabilityAsync(config, cancellationToken));
+        checks.Add(await VerifyProjectAccessAsync(config, cancellationToken));
+        checks.Add(await VerifyWorkItemQueryAsync(config, cancellationToken));
+        checks.Add(await VerifyWorkItemFieldsAsync(config, cancellationToken));
+        checks.Add(await VerifyBatchReadAsync(config, cancellationToken));
+        checks.Add(await VerifyWorkItemRevisionsAsync(config, cancellationToken));
+        checks.Add(await VerifyPullRequestsAsync(config, cancellationToken));
         
         // Run write checks if requested
         if (includeWriteChecks)
         {
             if (workItemIdForWriteCheck.HasValue)
             {
-                checks.Add(await VerifyWorkItemUpdateAsync(entity!, workItemIdForWriteCheck.Value, cancellationToken));
+                checks.Add(await VerifyWorkItemUpdateAsync(config, workItemIdForWriteCheck.Value, cancellationToken));
             }
             else
             {
@@ -958,9 +959,9 @@ public class RealTfsClient : ITfsClient
         var report = new TfsVerificationReport
         {
             VerifiedAt = DateTimeOffset.UtcNow,
-            ServerUrl = entity!.Url,
-            ProjectName = entity.Project,
-            ApiVersion = entity.ApiVersion,
+            ServerUrl = config.Url,
+            ProjectName = config.Project,
+            ApiVersion = config.ApiVersion,
             IncludedWriteChecks = includeWriteChecks,
             Success = checks.All(c => c.Success),
             Checks = checks
