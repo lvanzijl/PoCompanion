@@ -101,6 +101,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<IPullRequestRepository, PullRequestRepository>();
         services.AddScoped<IReleasePlanningRepository, ReleasePlanningRepository>();
+        services.AddSingleton<IPipelineRepository, Repositories.PipelineRepository>();
 
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();
