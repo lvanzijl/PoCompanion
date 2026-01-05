@@ -14,6 +14,12 @@ public class TfsConfigService
     private readonly ISecureStorageService _secureStorage;
     private readonly HttpClient _httpClient;
     private const string PatStorageKey = "tfs_pat";
+    
+    // JSON options for case-insensitive deserialization of API responses (camelCase to PascalCase)
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     public TfsConfigService(IClient apiClient, ISecureStorageService secureStorage, HttpClient httpClient)
     {
@@ -38,7 +44,7 @@ public class TfsConfigService
             }
             
             response.EnsureSuccessStatusCode();
-            var config = await response.Content.ReadFromJsonAsync<TfsConfigDto>(cancellationToken: cancellationToken);
+            var config = await response.Content.ReadFromJsonAsync<TfsConfigDto>(_jsonOptions, cancellationToken);
             return config;
         }
         catch (HttpRequestException)
