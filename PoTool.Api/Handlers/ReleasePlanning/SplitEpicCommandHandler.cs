@@ -131,7 +131,7 @@ public sealed class SplitEpicCommandHandler : ICommandHandler<SplitEpicCommand, 
             return new EpicSplitResultDto
             {
                 Success = false,
-                ErrorMessage = "Epic split TFS creation is not yet implemented. The split operation has been validated and logged.",
+                ErrorMessage = "Epic split is not yet available. This feature requires TFS write access which is coming in a future update. The requested split has been validated successfully.",
                 OriginalEpicId = command.OriginalEpicId,
                 OriginalEpicNewEffort = originalEffort,
                 ExtractedEpicEffort = extractedEffort
