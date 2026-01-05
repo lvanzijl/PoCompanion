@@ -76,12 +76,15 @@
                                     <div class="d-flex flex-wrap gap-2">
                                         @foreach (var placement in lanePlacements)
                                         {
-                                            <EpicCard 
-                                                Placement="@placement"
-                                                OnMove="@HandleEpicMove"
-                                                OnContextMenu="@HandleEpicContextMenu"
-                                                OnSplitRequested="@HandleEpicSplit"
-                                                OnViewDetailsRequested="@HandleViewDetails" />
+                                            var epicClass = GetEpicPreviewClass(placement, currentRow);
+                                            <div class="@epicClass">
+                                                <EpicCard 
+                                                    Placement="@placement"
+                                                    OnMove="@HandleEpicMove"
+                                                    OnContextMenu="@HandleEpicContextMenu"
+                                                    OnSplitRequested="@HandleEpicSplit"
+                                                    OnViewDetailsRequested="@HandleViewDetails" />
+                                            </div>
                                         }
                                     </div>
                                 </div>
@@ -91,7 +94,9 @@
                         <!-- Horizontal Lines between rows -->
                         @foreach (var line in linesAtPosition.MilestoneLines)
                         {
-                            <div class="milestone-line draggable-line"
+                            var isBeingDragged = _draggingLineId == line.Id;
+                            var lineClass = isBeingDragged ? "milestone-line draggable-line line-being-dragged" : "milestone-line draggable-line";
+                            <div class="@lineClass"
                                  draggable="true"
                                  @ondragstart="@(e => HandleLineStartDrag(line.Id, true, line.Label, line.Type, line.VerticalPosition))"
                                  @ondragover:preventDefault
@@ -110,7 +115,9 @@
                         }
                         @foreach (var line in linesAtPosition.IterationLines)
                         {
-                            <div class="iteration-line draggable-line"
+                            var isBeingDragged = _draggingLineId == line.Id;
+                            var lineClass = isBeingDragged ? "iteration-line draggable-line line-being-dragged" : "iteration-line draggable-line";
+                            <div class="@lineClass"
                                  draggable="true"
                                  @ondragstart="@(e => HandleLineStartDrag(line.Id, false, line.Label, default, line.VerticalPosition))"
                                  @ondragover:preventDefault
@@ -126,6 +133,23 @@
                                          Icon="@Icons.Material.Filled.DragHandle"
                                          Class="line-label">
                                     @line.Label
+                                </MudChip>
+                            </div>
+                        }
+
+                        <!-- Preview Line during drag -->
+                        @if (_draggingLineId != null && _draggingTargetPosition != null && Math.Abs(_draggingTargetPosition.Value - (currentRow + 0.5)) < 0.1)
+                        {
+                            <div class="@(_draggingIsMilestone ? "milestone-line-preview" : "iteration-line-preview")">
+                                <MudDivider DividerType="DividerType.FullWidth" 
+                                            Class="@(_draggingIsMilestone ? "milestone-line-divider" : "iteration-line-divider")"
+                                            Style="@(_draggingIsMilestone ? "" : "border-style: dashed;")" />
+                                <MudChip T="string" 
+                                         Size="Size.Small" 
+                                         Color="@(_draggingIsMilestone ? Color.Primary : Color.Secondary)"
+                                         Variant="@(_draggingIsMilestone ? Variant.Filled : Variant.Outlined)"
+                                         Class="line-label">
+                                    @_draggingLineLabel (Preview)
                                 </MudChip>
                             </div>
                         }
@@ -322,7 +346,11 @@
         if (_draggingLineId == null) return;
         
         // Update target position for visual feedback
-        _draggingTargetPosition = rowPosition;
+        if (_draggingTargetPosition != rowPosition)
+        {
+            _draggingTargetPosition = rowPosition;
+            StateHasChanged(); // Trigger re-render to show preview
+        }
     }
 
     private async Task HandleLineDrop(int lineId, bool isMilestone)
@@ -389,6 +417,36 @@
         _draggingMilestoneType = default;
         _draggingOriginalPosition = 0;
         _draggingTargetPosition = null;
+        StateHasChanged(); // Clear preview
+    }
+
+    /// <summary>
+    /// Determines the CSS class for an Epic card based on the line drag preview.
+    /// Epics that would be affected by the line movement get a visual indicator.
+    /// </summary>
+    private string GetEpicPreviewClass(EpicPlacementDto placement, int rowIndex)
+    {
+        if (_draggingLineId == null || _draggingTargetPosition == null)
+        {
+            return string.Empty;
+        }
+
+        var epicPosition = rowIndex + 0.5; // Middle of the row
+        var originalLinePosition = _draggingOriginalPosition;
+        var targetLinePosition = _draggingTargetPosition.Value;
+
+        // Determine if the epic's inclusion/exclusion state would change
+        // Epic is "before" the line if its position is less than the line position
+        bool wasBeforeLine = epicPosition < originalLinePosition;
+        bool wouldBeBeforeLine = epicPosition < targetLinePosition;
+
+        // If the epic's relationship to the line changes, apply preview styling
+        if (wasBeforeLine != wouldBeBeforeLine)
+        {
+            return "epic-preview-affected";
+        }
+
+        return string.Empty;
     }
 
     #endregion

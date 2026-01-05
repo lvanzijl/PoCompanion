@@ -129,14 +129,16 @@ Database entities and migrations:
 - ✅ Line labels shown in chips
 - ✅ **Line dragging implemented** (Spec 13.3: "Draggable vertically")
 - ✅ **Visual drag affordance** (drag handle icon and cursor feedback)
+- ✅ **Preview during drag implemented** (Spec 13.3: "All Epics shift to preview inclusion/exclusion")
+- ✅ Preview line shown at target position during drag with pulsing animation
+- ✅ Affected Epic cards highlighted with dashed outline and subtle animation
 - ✅ Backend update on drop with snackbar feedback
 
 **Missing:**
-- ❌ **Preview during drag not implemented** (Spec 13.3: "All Epics shift to preview inclusion/exclusion")
 - ❌ Line deletion UI not exposed (backend exists)
 - ❌ Line editing UI not exposed (backend exists)
 
-**Notes:** Lines can now be created and repositioned via drag and drop. Advanced preview features not yet implemented.
+**Notes:** Lines can now be created and repositioned via drag and drop with full preview functionality showing affected Epics.
 
 #### 8. Drag & Drop for Epics
 **Status: 60% Complete** (Spec section 7)
@@ -267,7 +269,7 @@ Database entities and migrations:
 | 12.1-12.4 | Validation Indicators | ✅ | ✅ | Complete |
 | 12.5 | Validation Drill-Through | ❌ | ❌ | Not implemented |
 | 13.1-13.2 | Horizontal Lines | ✅ | ✅ | Complete |
-| 13.3 | Line Dragging | ✅ | ✅ | Complete (basic) |
+| 13.3 | Line Dragging | ✅ | ✅ | Complete (with preview) |
 | 13.4 | Line Differentiation | N/A | ✅ | Complete |
 | 14 | Export | ✅ | ✅ | Complete |
 
@@ -290,7 +292,7 @@ Database entities and migrations:
 3. ~~**Milestone/Iteration Line Repositioning** (Medium Impact)~~ **IMPLEMENTED**
    - ✅ Lines can now be dragged vertically to reposition
    - ✅ Backend update on drop with snackbar feedback
-   - ⚠️ Advanced preview during drag not yet implemented
+   - ✅ Advanced preview during drag implemented (shows line at target position, highlights affected Epics)
 
 4. **Validation Drill-Through** (Medium Impact)
    - Indicators shown but not actionable
@@ -352,6 +354,10 @@ Database entities and migrations:
    - Made milestone and iteration lines draggable with visual affordances (drag handle icon, cursor feedback)
    - Implemented drag handlers to update line positions
    - Added snackbar feedback for successful/failed line repositioning
+   - **Implemented advanced drag preview** showing line at target position with pulsing animation
+   - **Epic cards affected by line movement highlighted** with dashed outline and subtle animation
+   - Original dragged line shown semi-transparent during drag
+   - Preview updates in real-time as line is dragged over different positions
    - Updated RELEASE_PLANNING_FEATURE_STATUS.md to reflect implementation
 
 ### Medium Priority (Future PR)
@@ -361,11 +367,7 @@ Database entities and migrations:
    - Prevent cross-lane dragging
    - Update connectors in real-time
 
-6. **Implement Advanced Line Drag Preview**
-   - Show preview during line drag
-   - Update Epic positions visually during drag to show inclusion/exclusion
-
-7. **Create Objective Modal**
+6. **Create Objective Modal**
    - Implement modal dialog component
    - Show all Epics for selected Objective
    - Highlight planned vs unplanned
