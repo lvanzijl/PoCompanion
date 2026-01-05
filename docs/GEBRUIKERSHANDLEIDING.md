@@ -1,7 +1,7 @@
 # PO Companion - Gebruikershandleiding
 
-**Versie:** 1.0  
-**Datum:** December 2024
+**Versie:** 2.0  
+**Datum:** Januari 2025
 
 ---
 
@@ -14,12 +14,28 @@
    - [TFS/Azure DevOps Configuratie](#tfsazure-devops-configuratie)
    - [Profielbeheer](#profielbeheer)
    - [Work Item Explorer](#work-item-explorer)
+     - TreeGrid Weergave Modus
+     - Column Picker
+     - Validatie Historie Panel
+     - Work Item Historie Timeline
    - [PR Insights Dashboard](#pr-insights-dashboard)
    - [Velocity Dashboard](#velocity-dashboard)
+   - [Backlog Health Dashboard](#backlog-health-dashboard)
+   - [Dependency Graph Visualization](#dependency-graph-visualization)
+   - [Epic Forecast](#epic-forecast)
+   - [State Timeline Analysis](#state-timeline-analysis)
+   - [Effort Distribution Heat Map](#effort-distribution-heat-map)
    - [Help & Datavereisten](#help--datavereisten)
-4. [Toetsenbordsneltoetsen](#toetsenbordsneltoetsen)
-5. [Problemen oplossen](#problemen-oplossen)
-6. [Veelgestelde vragen](#veelgestelde-vragen)
+4. [Geavanceerde Functies](#geavanceerde-functies)
+   - [Instellingen Modal](#instellingen-modal)
+   - [Onboarding Wizard](#onboarding-wizard)
+   - [Contextgevoelige Help](#contextgevoelige-help)
+   - [Keyboard Shortcuts Dialog](#keyboard-shortcuts-dialog)
+   - [Error Handling en Recovery](#error-handling-en-recovery)
+   - [Responsive Design](#responsive-design)
+5. [Toetsenbordsneltoetsen](#toetsenbordsneltoetsen)
+6. [Problemen oplossen](#problemen-oplossen)
+7. [Veelgestelde vragen](#veelgestelde-vragen)
 
 ---
 
@@ -526,12 +542,128 @@ Het detail paneel toont uitgebreide informatie over het geselecteerde work item:
 └────────────────────────────────────────────────────┘
 ```
 
+**TreeGrid Weergave Modus:**
+
+Naast de boomstructuur, heeft Work Item Explorer ook een TreeGrid modus met aanpasbare kolommen:
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════╗
+║  Work Item Explorer - Grid View                       [⚙️ Configure Columns]      ║
+╠═══════════════════════════════════════════════════════════════════════════════════╣
+║ Title                      │ Type    │ State       │ Effort │ Iteration    │ Area ║
+║────────────────────────────┼─────────┼─────────────┼────────┼──────────────┼──────║
+║ ▼ E-Commerce Platform      │ Epic    │ In Progress │  150   │ Sprint 10-12 │ Web  ║
+║   ├─ User Authentication   │ Feature │ In Progress │   50   │ Sprint 10    │ Web  ║
+║   │   ├─ Login Page ⚠️      │ PBI     │ New         │    8   │ Sprint 10    │ Web  ║
+║   │   └─ Password Reset    │ PBI     │ Done        │    5   │ Sprint 9     │ Web  ║
+║   └─ Shopping Cart         │ Feature │ New         │   40   │ Sprint 11    │ Web  ║
+╚═══════════════════════════════════════════════════════════════════════════════════╝
+```
+
+**Column Picker:**
+- **Toegang:** Klik op het ⚙️ icoontje in de toolbar
+- **Functies:**
+  - ✓ Toon/verberg kolommen met checkboxes
+  - ✓ Wijzig kolom volgorde met pijltjes (↑ ↓)
+  - ✓ Verplichte kolommen (Title, Type) kunnen niet verborgen worden
+  - ✓ Reset naar standaard configuratie
+- **Beschikbare kolommen:**
+  - Title (Verplicht)
+  - Type (Verplicht)
+  - State
+  - Effort/Story Points
+  - Iteration Path
+  - Area Path
+  - Assigned To
+  - Priority
+  - Tags
+
+**Validatie Historie Panel:**
+
+Bekijk de trend van validatieproblemen over tijd:
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════╗
+║  Validation History                                            [📅 Filter Period] ║
+╠═══════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                    ║
+║  ┌─ Validation Trend (Last 30 Days) ─────────────────────────────────────────┐  ║
+║  │                                                                             │  ║
+║  │  Issues                                                                     │  ║
+║  │   30 │                          •                                          │  ║
+║  │   25 │                     •                                               │  ║
+║  │   20 │           •    •              •                                     │  ║
+║  │   15 │      •                             •         •                      │  ║
+║  │   10 │  •                                      •         •    •            │  ║
+║  │    5 │                                                            •         │  ║
+║  │    0 └───────────────────────────────────────────────────────────────     │  ║
+║  │      Dec 1   Dec 5   Dec 10  Dec 15  Dec 20  Dec 25  Dec 30              │  ║
+║  │                                                                             │  ║
+║  │  📊 Trend: Improving - 70% reduction in issues over last month            │  ║
+║  └─────────────────────────────────────────────────────────────────────────────┘  ║
+║                                                                                    ║
+║  ┌─ Issue Breakdown ──────────────────────────────────────────────────────────┐  ║
+║  │  Issue Type             │ Current │ Week Ago │ Trend                       │  ║
+║  │ ────────────────────────┼─────────┼──────────┼─────────                   │  ║
+║  │  Missing Effort         │    5    │    12    │ 📉 Improving               │  ║
+║  │  Parent Progress        │    3    │     8    │ 📉 Improving               │  ║
+║  │  Missing Iteration      │    2    │     5    │ 📉 Improving               │  ║
+║  └─────────────────────────────────────────────────────────────────────────────┘  ║
+╚═══════════════════════════════════════════════════════════════════════════════════╝
+```
+
+**Gebruik:**
+- Volg de vooruitgang van data quality verbeteringen
+- Identificeer terugkerende problemen
+- Monitor impact van team training op validatie naleving
+- Filter op area paths en datumbereik voor specifieke analyse
+
+**Work Item Historie Timeline:**
+
+Bekijk de volledige levenscyclus van een work item met visuele timeline:
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════╗
+║  Work Item History Timeline - [PBI] Login Page (#12345)                          ║
+╠═══════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                    ║
+║  ┌─ Timeline View ─────────────────────────────────────────────────────────────┐  ║
+║  │                                                                              │  ║
+║  │  Created        Effort Added    State Changed    Assigned      Completed    │  ║
+║  │     ●──────2d──────●──────5d──────●──────3d──────●──────8d──────●          │  ║
+║  │  Dec 1          Dec 3           Dec 8           Dec 11        Dec 19        │  ║
+║  │  John Doe       John Doe        Jane Smith      Jane Smith    Jane Smith    │  ║
+║  │                                                                              │  ║
+║  └──────────────────────────────────────────────────────────────────────────────┘  ║
+║                                                                                    ║
+║  ┌─ Change History ────────────────────────────────────────────────────────────┐  ║
+║  │  Date      │ User        │ Field        │ Old Value  │ New Value           │  ║
+║  │ ───────────┼─────────────┼──────────────┼────────────┼─────────────────    │  ║
+║  │  Dec 19    │ Jane Smith  │ State        │ Active     │ Done                │  ║
+║  │  Dec 11    │ Jane Smith  │ Assigned To  │ (empty)    │ Jane Smith          │  ║
+║  │  Dec 8     │ Jane Smith  │ State        │ New        │ Active              │  ║
+║  │  Dec 3     │ John Doe    │ Effort       │ (empty)    │ 8 SP                │  ║
+║  │  Dec 1     │ John Doe    │ Created      │ -          │ New                 │  ║
+║  └──────────────────────────────────────────────────────────────────────────────┘  ║
+╚═══════════════════════════════════════════════════════════════════════════════════╝
+```
+
+**Functies:**
+- Volledige audit trail van alle wijzigingen
+- Visuele timeline voor snelle overzicht
+- Zie wie wat wanneer heeft gewijzigd
+- Identificeer vertragingen tussen statuswisselingen
+- Exporteer historie voor rapportage
+
 **Tips:**
 - ✓ Gebruik filters om specifieke issues snel te vinden
 - ✓ Klik op validatie iconen voor details
 - ✓ Gebruik keyboard shortcuts voor snelle navigatie
 - ✓ Clear State om alle uitklapstatus te resetten
 - ✓ Multi-select met Ctrl+klik voor bulk operaties
+- ✓ Schakel tussen Tree en Grid view voor verschillende perspectieven
+- ✓ Pas kolommen aan in Grid view voor jouw workflow
+- ✓ Gebruik Validation History om vooruitgang te tracken
 
 ---
 
@@ -2315,6 +2447,253 @@ A: PAT Vernieuwen:
 
 ---
 
+## Geavanceerde Functies
+
+### Instellingen Modal
+
+Toegang via het ⚙️ icoon in de bovenste navigatiebalk. De Settings Modal biedt snelle toegang tot belangrijke configuratie opties:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║                  Settings                                     ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  ┌─ Display Preferences ─────────────────────────────────┐  ║
+║  │                                                         │  ║
+║  │  [✓] Enable Dark Mode                                  │  ║
+║  │  [✓] Show Validation Icons in Tree                     │  ║
+║  │  [✓] Auto-expand selected nodes                        │  ║
+║  │  [ ] Compact mode                                      │  ║
+║  │                                                         │  ║
+║  └─────────────────────────────────────────────────────────┘  ║
+║                                                               ║
+║  ┌─ Data Sync Preferences ────────────────────────────────┐  ║
+║  │                                                         │  ║
+║  │  Auto-sync interval: [⬜ Disabled] ▼                    │  ║
+║  │  Default sync mode:  [⬜ Incremental] ▼                 │  ║
+║  │  Cache duration:     [⬜ 24 hours] ▼                    │  ║
+║  │                                                         │  ║
+║  └─────────────────────────────────────────────────────────┘  ║
+║                                                               ║
+║  ┌─ Notification Settings ────────────────────────────────┐  ║
+║  │                                                         │  ║
+║  │  [✓] Show sync completion notifications                │  ║
+║  │  [✓] Show validation warnings                          │  ║
+║  │  [ ] Show info messages                                │  ║
+║  │                                                         │  ║
+║  └─────────────────────────────────────────────────────────┘  ║
+║                                                               ║
+║  [💾 Save Settings]  [↻ Reset to Defaults]                   ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Belangrijke instellingen:**
+
+1. **Display Preferences:**
+   - Dark mode voor betere leesbaarheid in donkere omgevingen
+   - Validatie iconen tonen/verbergen in tree view
+   - Auto-expand voor geselecteerde nodes
+   - Compact mode voor meer data op scherm
+
+2. **Data Sync:**
+   - Auto-sync interval instellen (disabled, elk uur, elke 4 uur, etc.)
+   - Standaard sync modus (Full vs Incremental)
+   - Cache duur configureren
+
+3. **Notificaties:**
+   - Bepaal welke meldingen je wilt zien
+   - Verminder ruis door info messages uit te schakelen
+
+### Onboarding Wizard
+
+Bij eerste gebruik wordt de Onboarding Wizard automatisch getoond:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  Welcome to PO Companion!                    Step 1 of 4      ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  👋 Welcome!                                                  ║
+║                                                               ║
+║  PO Companion is your Azure DevOps work item management      ║
+║  companion, designed to help Product Owners:                  ║
+║                                                               ║
+║  ✓ View and manage work items in hierarchical structure      ║
+║  ✓ Validate work item relationships and identify issues      ║
+║  ✓ Track pull request metrics and iteration patterns         ║
+║  ✓ Sync with Azure DevOps in real-time                       ║
+║                                                               ║
+║  Let's get you started in just a few simple steps!           ║
+║                                                               ║
+║  [Next →]                                                     ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Wizard Stappen:**
+
+1. **Stap 1: Welkom**
+   - Overzicht van PO Companion mogelijkheden
+   - Uitleg wat je kunt verwachten
+
+2. **Stap 2: TFS Configuratie**
+   - Organization URL invoeren
+   - Project naam invoeren
+   - PAT invoeren en testen
+   - Validatie van verbinding
+
+3. **Stap 3: Profiel Aanmaken**
+   - Eerste profiel opzetten
+   - Area paths selecteren
+   - Team naam invoeren
+   - Goals kiezen (optioneel)
+
+4. **Stap 4: Klaar!**
+   - Samenvatting van configuratie
+   - Snelle links naar hoofdfuncties
+   - Tips voor aan de slag
+
+**Wizard opnieuw starten:**
+- Beschikbaar via Help → "Show Onboarding"
+- Of via Settings → "Reset Onboarding Status"
+
+### Contextgevoelige Help
+
+Elke pagina heeft een help panel met relevante informatie:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ℹ️ Page Help                                    [Expand ▼]   ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  About This Page:                                             ║
+║  This dashboard shows velocity metrics for sprint planning.  ║
+║  Track team performance and forecast future capacity.         ║
+║                                                               ║
+║  Best Practices:                                              ║
+║  • Use 3-sprint average for most accurate forecasts          ║
+║  • Ensure all completed items have effort estimates          ║
+║  • Review velocity trends monthly in retrospectives          ║
+║                                                               ║
+║  Quick Actions:                                               ║
+║  [📊 View Detailed Help]  [❓ Report Issue]                   ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Functies:**
+- Context-specifieke uitleg per pagina
+- Best practices voor elke feature
+- Quick actions voor veelvoorkomende taken
+- Inklapbaar om schermruimte te besparen
+
+### Keyboard Shortcuts Dialog
+
+Toegang via `Ctrl + /` of via Help menu:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║            Keyboard Shortcuts Reference                       ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Global Shortcuts:                                            ║
+║  ┌───────────────┬──────────────────────────────────────┐   ║
+║  │ Ctrl + /      │ Show this shortcuts dialog           │   ║
+║  │ Ctrl + ,      │ Open settings                        │   ║
+║  │ Ctrl + K      │ Global search (coming soon)          │   ║
+║  │ Esc           │ Close dialogs / Clear selection      │   ║
+║  └───────────────┴──────────────────────────────────────┘   ║
+║                                                               ║
+║  Navigation:                                                  ║
+║  ┌───────────────┬──────────────────────────────────────┐   ║
+║  │ Alt + 1       │ Go to Home                           │   ║
+║  │ Alt + 2       │ Go to Work Items                     │   ║
+║  │ Alt + 3       │ Go to PR Insights                    │   ║
+║  │ Alt + 4       │ Go to Velocity Dashboard             │   ║
+║  │ Alt + 5       │ Go to Configuration                  │   ║
+║  └───────────────┴──────────────────────────────────────┘   ║
+║                                                               ║
+║  Work Items Page:                                             ║
+║  ┌───────────────┬──────────────────────────────────────┐   ║
+║  │ ↑ / ↓         │ Navigate up/down                     │   ║
+║  │ → / ←         │ Expand/Collapse node                 │   ║
+║  │ Enter/Space   │ Toggle expand                        │   ║
+║  │ Ctrl + A      │ Select all                           │   ║
+║  │ Ctrl + F      │ Focus search box                     │   ║
+║  │ F5            │ Refresh/Sync                         │   ║
+║  │ /             │ Quick filter                         │   ║
+║  └───────────────┴──────────────────────────────────────┘   ║
+║                                                               ║
+║  [Print]  [Close]                                             ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Tips voor efficiënt werken:**
+- Leer de Alt + nummer shortcuts voor snelle navigatie
+- Gebruik Ctrl + F in Work Items voor snel zoeken
+- F5 voor snelle refresh van data
+- Esc om dialogen te sluiten of selecties te wissen
+
+### Error Handling en Recovery
+
+PO Companion heeft robuuste error handling:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ⚠️ Connection Error                                          ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Could not connect to Azure DevOps                            ║
+║                                                               ║
+║  Details:                                                     ║
+║  The server returned status code 401 (Unauthorized)           ║
+║                                                               ║
+║  Possible causes:                                             ║
+║  • PAT has expired or is invalid                             ║
+║  • Insufficient permissions on PAT                           ║
+║  • Organization URL is incorrect                             ║
+║                                                               ║
+║  Suggestions:                                                 ║
+║  1. Check your PAT in Azure DevOps Settings                  ║
+║  2. Verify PAT has "Work Items (Read)" permission            ║
+║  3. Test connection in Configuration page                    ║
+║                                                               ║
+║  [Go to Configuration]  [Retry]  [Dismiss]                   ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Error Recovery Functies:**
+- Duidelijke error messages met context
+- Suggesties voor oplossingen
+- Quick actions om direct naar fix te gaan
+- Automatische retry met exponential backoff voor tijdelijke fouten
+- Offline modus: bekijk cached data bij connectieproblemen
+
+### Responsive Design
+
+PO Companion past zich aan verschillende schermgroottes aan:
+
+**Desktop (>1200px):**
+- Volledige sidebar navigatie
+- Multi-column layouts
+- Alle features zichtbaar
+
+**Tablet (768px - 1200px):**
+- Collapsible sidebar
+- Optimized column widths
+- Touch-friendly controls
+
+**Mobile (<768px):**
+- Hamburger menu
+- Single column layouts
+- Swipe gestures voor navigatie
+- Bottom navigation bar
+
+---
+
 ## Snelle Referentie
 
 ### Workflow Diagram
@@ -2462,7 +2841,7 @@ Iconen:
 
 **Einde van de Gebruikershandleiding**
 
-*Versie 1.0 - December 2024*  
+*Versie 2.0 - Januari 2025*  
 *PO Companion - Azure DevOps Management Tool*
 
 Voor de nieuwste updates en informatie, bezoek de project repository.
@@ -2476,6 +2855,7 @@ Voor nieuwe gebruikers, volg deze checklist:
 ```
 □ Installeer PO Companion
 □ Start de applicatie
+□ Doorloop de Onboarding Wizard (optioneel maar aanbevolen)
 □ Ga naar Configuration pagina
 □ Vul Organization URL in
 □ Vul Project Name in
@@ -2483,6 +2863,7 @@ Voor nieuwe gebruikers, volg deze checklist:
 □ Vul PAT in (of gebruik NTLM)
 □ Test de verbinding
 □ Save configuratie
+□ Maak een profiel aan (indien gewenst voor filtering)
 □ Ga naar Work Items pagina
 □ Klik op Full Sync
 □ Wacht op synchronisatie
@@ -2490,6 +2871,8 @@ Voor nieuwe gebruikers, volg deze checklist:
 □ Check validation issues
 □ View PR Insights
 □ Check Velocity Dashboard
+□ Probeer de verschillende view modes (Tree vs Grid)
+□ Pas column configuratie aan naar jouw voorkeur
 ```
 
 **Gefeliciteerd! U bent klaar om PO Companion te gebruiken.**
