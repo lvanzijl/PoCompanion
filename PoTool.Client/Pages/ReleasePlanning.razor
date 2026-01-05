@@ -104,19 +104,108 @@
         // TODO: Show snackbar with result
     }
 
-    private void HandleAddLane()
+    private async Task HandleAddLane()
     {
-        // TODO: Open dialog to select Objective
+        if (_board == null) return;
+
+        var existingObjectiveIds = _board.Lanes.Select(l => l.ObjectiveId).ToList();
+
+        var parameters = new DialogParameters<AddLaneDialog>
+        {
+            { x => x.ExistingObjectiveIds, existingObjectiveIds }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddLaneDialog>("Add Lane", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: int objectiveId })
+        {
+            var displayOrder = _board.Lanes.Count;
+            var createResult = await ReleasePlanningService.CreateLaneAsync(objectiveId, displayOrder);
+
+            if (createResult?.Success == true)
+            {
+                // Reload the board to reflect the new lane
+                _board = await ReleasePlanningService.GetBoardAsync();
+                StateHasChanged();
+            }
+            // TODO: Show error snackbar if creation failed
+        }
     }
 
-    private void HandleAddMilestone()
+    private async Task HandleAddMilestone()
     {
-        // TODO: Open dialog to create milestone line
+        if (_board == null) return;
+
+        var parameters = new DialogParameters<AddMilestoneLineDialog>
+        {
+            { x => x.MaxRowIndex, _board.MaxRowIndex }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddMilestoneLineDialog>("Add Milestone Line", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: AddMilestoneLineDialog.MilestoneLineData data })
+        {
+            var createResult = await ReleasePlanningService.CreateMilestoneLineAsync(
+                data.Label, 
+                data.VerticalPosition, 
+                data.Type);
+
+            if (createResult?.Success == true)
+            {
+                // Reload the board to reflect the new milestone line
+                _board = await ReleasePlanningService.GetBoardAsync();
+                StateHasChanged();
+            }
+            // TODO: Show error snackbar if creation failed
+        }
     }
 
-    private void HandleAddIteration()
+    private async Task HandleAddIteration()
     {
-        // TODO: Open dialog to create iteration line
+        if (_board == null) return;
+
+        var parameters = new DialogParameters<AddIterationLineDialog>
+        {
+            { x => x.MaxRowIndex, _board.MaxRowIndex }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddIterationLineDialog>("Add Iteration Line", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: AddIterationLineDialog.IterationLineData data })
+        {
+            var createResult = await ReleasePlanningService.CreateIterationLineAsync(
+                data.Label, 
+                data.VerticalPosition);
+
+            if (createResult?.Success == true)
+            {
+                // Reload the board to reflect the new iteration line
+                _board = await ReleasePlanningService.GetBoardAsync();
+                StateHasChanged();
+            }
+            // TODO: Show error snackbar if creation failed
+        }
     }
 
     private async Task HandleExport()

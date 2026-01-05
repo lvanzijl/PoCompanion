@@ -119,12 +119,14 @@
 
         <!-- Add Row Button -->
         <div class="mt-2">
-            <MudButton StartIcon="@Icons.Material.Filled.Add"
-                       Size="Size.Small"
-                       Variant="Variant.Text"
-                       OnClick="@HandleAddRow">
-                Add Row
-            </MudButton>
+            <MudTooltip Text="Rows are automatically created when you place Epics on the board">
+                <MudButton StartIcon="@Icons.Material.Filled.Add"
+                           Size="Size.Small"
+                           Variant="Variant.Text"
+                           Disabled="true">
+                    Add Row
+                </MudButton>
+            </MudTooltip>
         </div>
     }
 </MudPaper>
@@ -214,13 +216,6 @@
     {
         // TODO: Implement context menu with Epic Split option
         Logger.LogDebug("Context menu requested for Epic {EpicId}", args.EpicId);
-    }
-
-    private Task HandleAddRow()
-    {
-        // Rows are created implicitly when Epics are placed
-        // This button can be used to add a new empty row
-        return Task.CompletedTask;
     }
 
     private (IEnumerable<MilestoneLineDto> MilestoneLines, IEnumerable<IterationLineDto> IterationLines) GetLinesAtPosition(double position)
