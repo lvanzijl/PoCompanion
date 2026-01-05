@@ -56,9 +56,9 @@ public class WorkItemExplorerTests : BunitTestContext
         _mockSyncHubService.Setup(x => x.IsConnected).Returns(true);
 
         _mockSettingsClient.Setup(x => x.GetSettingsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SettingsDto { DataMode = DataMode.Mock, ConfiguredGoalIds = new List<int>() });
+            .ReturnsAsync(new SettingsDto { Id = 1, ActiveProfileId = null, LastModified = DateTimeOffset.UtcNow });
 
-        _mockApiClient.Setup(x => x.GetApiTfsconfigAsync(It.IsAny<CancellationToken>()))
+        _mockApiClient.Setup(x => x.GetTfsConfigAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new ApiException("Not found", 204, null!, new Dictionary<string, IEnumerable<string>>(), null));
 
         _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync())

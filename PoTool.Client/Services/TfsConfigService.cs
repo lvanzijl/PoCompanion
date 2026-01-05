@@ -210,19 +210,3 @@ public class TfsConfigDto
     public string ApiVersion { get; set; } = "7.0";
     public DateTimeOffset? LastValidated { get; set; }
 }
-
-/// <summary>
-/// Authentication mode for TFS/Azure DevOps.
-/// </summary>
-public enum TfsAuthMode
-{
-    /// <summary>
-    /// Personal Access Token authentication.
-    /// </summary>
-    Pat = 0,
-    
-    /// <summary>
-    /// NTLM/Windows authentication (on-premises TFS only).
-    /// </summary>
-    Ntlm = 1
-}
