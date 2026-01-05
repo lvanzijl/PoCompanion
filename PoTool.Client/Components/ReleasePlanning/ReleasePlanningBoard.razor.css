@@ -74,3 +74,17 @@
     top: 50%;
     transform: translateY(-50%);
 }
+
+/* Draggable lines styling */
+.draggable-line {
+    cursor: grab;
+    transition: opacity 0.2s ease;
+}
+
+.draggable-line:hover {
+    opacity: 0.8;
+}
+
+.draggable-line:active {
+    cursor: grabbing;
+}

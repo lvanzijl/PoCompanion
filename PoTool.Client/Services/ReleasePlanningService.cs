@@ -8,7 +8,9 @@ public record CreateLaneCommand(int ObjectiveId, int DisplayOrder);
 public record CreateEpicPlacementCommand(int EpicId, int LaneId, int RowIndex, int OrderInRow);
 public record ReorderEpicsInRowCommand(int LaneId, int RowIndex, IReadOnlyList<int> PlacementIdsInOrder);
 public record CreateMilestoneLineCommand(string Label, double VerticalPosition, MilestoneType Type);
+public record UpdateMilestoneLineRequest(string Label, double VerticalPosition, MilestoneType Type);
 public record CreateIterationLineCommand(string Label, double VerticalPosition);
+public record UpdateIterationLineRequest(string Label, double VerticalPosition);
 public record MoveEpicRequest(int NewRowIndex, int NewOrderInRow);
 
 /// <summary>
@@ -226,6 +228,29 @@ public class ReleasePlanningService
     }
 
     /// <summary>
+    /// Updates a Milestone Line.
+    /// </summary>
+    public async Task<LineOperationResultDto?> UpdateMilestoneLineAsync(
+        int lineId,
+        string label,
+        double verticalPosition,
+        MilestoneType type,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = new UpdateMilestoneLineRequest(label, verticalPosition, type);
+            var response = await _httpClient.PutAsJsonAsync($"api/releaseplanning/milestone-lines/{lineId}", request, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<LineOperationResultDto>(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating Milestone Line {LineId}", lineId);
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Deletes a Milestone Line.
     /// </summary>
     public async Task<LineOperationResultDto?> DeleteMilestoneLineAsync(
@@ -261,6 +286,28 @@ public class ReleasePlanningService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating Iteration Line");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Updates an Iteration Line.
+    /// </summary>
+    public async Task<LineOperationResultDto?> UpdateIterationLineAsync(
+        int lineId,
+        string label,
+        double verticalPosition,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = new UpdateIterationLineRequest(label, verticalPosition);
+            var response = await _httpClient.PutAsJsonAsync($"api/releaseplanning/iteration-lines/{lineId}", request, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<LineOperationResultDto>(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating Iteration Line {LineId}", lineId);
             return null;
         }
     }

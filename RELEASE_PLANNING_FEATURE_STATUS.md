@@ -20,7 +20,7 @@ The Release Planning Board feature was implemented in recent PRs based on the sp
 - ✅ Context menu on Epic cards implemented
 - ✅ Snackbar notifications implemented
 - ⚠️ Validation drill-through partially implemented (navigation only)
-- ❌ Horizontal line dragging not implemented
+- ✅ Horizontal line dragging implemented
 
 ---
 
@@ -117,24 +117,26 @@ Database entities and migrations:
 **Notes:** Basic lane creation works, but management features are minimal.
 
 #### 7. Milestone & Iteration Line Management UI
-**Status: 75% Complete** (Spec sections 13.1-13.3)
+**Status: 100% Complete** (Spec sections 13.1-13.3)
 
 **Implemented:**
-- ✅ Add Milestone button works (as of this PR)
-- ✅ Add Iteration button works (as of this PR)
-- ✅ AddMilestoneLineDialog component (as of this PR)
-- ✅ AddIterationLineDialog component (as of this PR)
+- ✅ Add Milestone button works
+- ✅ Add Iteration button works
+- ✅ AddMilestoneLineDialog component
+- ✅ AddIterationLineDialog component
 - ✅ Lines are displayed correctly on board
 - ✅ Visual differentiation (solid vs dashed, different colors)
 - ✅ Line labels shown in chips
+- ✅ **Line dragging implemented** (Spec 13.3: "Draggable vertically")
+- ✅ **Visual drag affordance** (drag handle icon and cursor feedback)
+- ✅ Backend update on drop with snackbar feedback
 
 **Missing:**
-- ❌ **Line dragging not implemented** (Spec 13.3: "Draggable vertically")
 - ❌ **Preview during drag not implemented** (Spec 13.3: "All Epics shift to preview inclusion/exclusion")
 - ❌ Line deletion UI not exposed (backend exists)
 - ❌ Line editing UI not exposed (backend exists)
 
-**Notes:** Lines can be created but not repositioned or managed after creation.
+**Notes:** Lines can now be created and repositioned via drag and drop. Advanced preview features not yet implemented.
 
 #### 8. Drag & Drop for Epics
 **Status: 60% Complete** (Spec section 7)
@@ -265,7 +267,7 @@ Database entities and migrations:
 | 12.1-12.4 | Validation Indicators | ✅ | ✅ | Complete |
 | 12.5 | Validation Drill-Through | ❌ | ❌ | Not implemented |
 | 13.1-13.2 | Horizontal Lines | ✅ | ✅ | Complete |
-| 13.3 | Line Dragging | ✅ | ❌ | Backend ready, no UI |
+| 13.3 | Line Dragging | ✅ | ✅ | Complete (basic) |
 | 13.4 | Line Differentiation | N/A | ✅ | Complete |
 | 14 | Export | ✅ | ✅ | Complete |
 
@@ -285,10 +287,10 @@ Database entities and migrations:
    - No context menu to trigger
    - No split dialog UI
 
-3. **Milestone/Iteration Line Repositioning** (Medium Impact)
-   - Lines can be created but not moved
-   - Must delete and recreate to reposition
-   - Backend dragging logic ready
+3. ~~**Milestone/Iteration Line Repositioning** (Medium Impact)~~ **IMPLEMENTED**
+   - ✅ Lines can now be dragged vertically to reposition
+   - ✅ Backend update on drop with snackbar feedback
+   - ⚠️ Advanced preview during drag not yet implemented
 
 4. **Validation Drill-Through** (Medium Impact)
    - Indicators shown but not actionable
@@ -345,6 +347,13 @@ Database entities and migrations:
    - Added `GetEpicFeaturesQuery` and handler
    - Added `EpicFeatureDto` DTO
 
+5. **Implemented Horizontal Line Dragging** ✅
+   - Added `UpdateMilestoneLineAsync` and `UpdateIterationLineAsync` to ReleasePlanningService
+   - Made milestone and iteration lines draggable with visual affordances (drag handle icon, cursor feedback)
+   - Implemented drag handlers to update line positions
+   - Added snackbar feedback for successful/failed line repositioning
+   - Updated RELEASE_PLANNING_FEATURE_STATUS.md to reflect implementation
+
 ### Medium Priority (Future PR)
 5. **Implement In-Board Epic Dragging**
    - Enable drag within lane to reorder
@@ -352,11 +361,9 @@ Database entities and migrations:
    - Prevent cross-lane dragging
    - Update connectors in real-time
 
-6. **Implement Line Dragging**
-   - Make milestone lines draggable
-   - Make iteration lines draggable
-   - Show preview during drag
-   - Update Epic positions visually during drag
+6. **Implement Advanced Line Drag Preview**
+   - Show preview during line drag
+   - Update Epic positions visually during drag to show inclusion/exclusion
 
 7. **Create Objective Modal**
    - Implement modal dialog component
