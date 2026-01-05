@@ -26,6 +26,9 @@ public class RealTfsClient : ITfsClient
     private readonly ILogger<RealTfsClient> _logger;
     private const int MaxRetries = 3;
 
+    // ID offset for release pipelines/runs to avoid collision with build IDs
+    private const int ReleaseIdOffset = 100000;
+
     // TFS field paths
     private const string TfsFieldEffort = "Microsoft.VSTS.Scheduling.Effort";
     private const string TfsFieldState = "System.State";
@@ -2153,7 +2156,7 @@ public class RealTfsClient : ITfsClient
 
                             // Offset release IDs to avoid collision with build IDs
                             pipelines.Add(new PipelineDto(
-                                Id: id + 100000,
+                                Id: id + ReleaseIdOffset,
                                 Name: name,
                                 Type: PipelineType.Release,
                                 Path: path,
@@ -2187,8 +2190,8 @@ public class RealTfsClient : ITfsClient
         return await ExecuteWithRetryAsync(async () =>
         {
             var runs = new List<PipelineRunDto>();
-            var isRelease = pipelineId >= 100000;
-            var actualId = isRelease ? pipelineId - 100000 : pipelineId;
+            var isRelease = pipelineId >= ReleaseIdOffset;
+            var actualId = isRelease ? pipelineId - ReleaseIdOffset : pipelineId;
 
             if (isRelease)
             {
@@ -2382,7 +2385,7 @@ public class RealTfsClient : ITfsClient
         }
 
         return new PipelineRunDto(
-            RunId: runId + 100000, // Offset to avoid collision
+            RunId: runId + ReleaseIdOffset, // Offset to avoid collision
             PipelineId: pipelineId,
             PipelineName: pipelineName,
             StartTime: startTime,

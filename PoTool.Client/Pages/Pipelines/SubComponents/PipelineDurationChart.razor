@@ -37,9 +37,12 @@
         };
     }
 
+    private const int MaxNameDisplayLength = 20;
+    private const int TruncatedNameLength = 17;
+
     private string TruncateName(string name)
     {
-        if (name.Length <= 20) return name;
-        return name.Substring(0, 17) + "...";
+        if (name.Length <= MaxNameDisplayLength) return name;
+        return name.Substring(0, TruncatedNameLength) + "...";
     }
 }
