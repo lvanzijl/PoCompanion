@@ -693,7 +693,21 @@ public class RealTfsClient : ITfsClient
             
             _logger.LogDebug("Configured PAT authentication for TFS request");
         }
-        // NTLM is configured via HttpClientHandler, so no additional configuration needed here
+        else if (entity.AuthMode == TfsAuthMode.Ntlm)
+        {
+            // Clear any Authorization header that might have been set by previous PAT requests
+            // NTLM authentication is handled by the HttpClientHandler, not by headers
+            _httpClient.DefaultRequestHeaders.Authorization = null;
+            
+            _logger.LogDebug("Configured NTLM authentication for TFS request (cleared Authorization header)");
+        }
+        else
+        {
+            throw new TfsAuthenticationException(
+                $"Unsupported authentication mode: {entity.AuthMode}. " +
+                "Only PAT and NTLM modes are supported.", 
+                (string?)null);
+        }
     }
 
     private async Task<List<(string Name, string Id)>> GetRepositoriesAsync(
