@@ -56,6 +56,9 @@ public class RealTfsClient : ITfsClient
     /// For PAT mode: No default Windows credentials (avoids conflicts)
     /// For NTLM mode: Uses default Windows credentials
     /// </summary>
+    /// <param name="entity">TFS configuration entity containing auth mode and timeout settings.</param>
+    /// <returns>Configured HttpClient for the specified auth mode.</returns>
+    /// <exception cref="TfsAuthenticationException">Thrown when PAT is required but not provided, or auth mode is unsupported.</exception>
     private HttpClient GetAuthenticatedHttpClient(TfsConfigEntity entity)
     {
         HttpClient client;
@@ -96,7 +99,7 @@ public class RealTfsClient : ITfsClient
                 (string?)null);
         }
         
-        // Configure timeout from entity
+        // Configure timeout from entity (per-request since timeout can be changed in configuration)
         client.Timeout = TimeSpan.FromSeconds(entity.TimeoutSeconds);
         
         return client;

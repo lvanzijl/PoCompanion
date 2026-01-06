@@ -174,8 +174,13 @@ public static class ApiServiceCollectionExtensions
                     MaxAutomaticRedirections = 5
                 });
             
-            // Also register a default HttpClient for backward compatibility (legacy methods)
-            // This one has NO default credentials to avoid conflicts
+            // Also register a default HttpClient for backward compatibility
+            // Used by methods not yet refactored to use GetAuthenticatedHttpClient():
+            // GetPullRequestsAsync, GetPullRequestIterationsAsync, GetPullRequestCommentsAsync,
+            // GetPullRequestFileChangesAsync, GetWorkItemRevisionsAsync, UpdateWorkItemStateAsync, 
+            // UpdateWorkItemParentAsync, GetPipelinesAsync, GetPipelineRunsAsync, CreateWorkItemAsync,
+            // and various helper/verification methods
+            // This handler has NO default credentials to avoid PAT/NTLM conflicts
             services.AddHttpClient<ITfsClient, RealTfsClient>()
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
                 {
