@@ -154,12 +154,31 @@ public static class ApiServiceCollectionExtensions
         else
         {
             // Use real TFS client that connects to Azure DevOps/TFS
-            // Configure HttpClient with NTLM support by default (PAT can be added via headers)
-            services.AddHttpClient<ITfsClient, RealTfsClient>()
+            // Register named HttpClients for different authentication modes to avoid conflicts
+            
+            // PAT authentication client - NO default Windows credentials
+            services.AddHttpClient("TfsClient.PAT")
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
+                    AllowAutoRedirect = true,
+                    MaxAutomaticRedirections = 5
+                });
+            
+            // NTLM authentication client - WITH default Windows credentials
+            services.AddHttpClient("TfsClient.NTLM")
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
                 {
                     UseDefaultCredentials = true,
                     Credentials = System.Net.CredentialCache.DefaultNetworkCredentials,
+                    AllowAutoRedirect = true,
+                    MaxAutomaticRedirections = 5
+                });
+            
+            // Also register a default HttpClient for backward compatibility (legacy methods)
+            // This one has NO default credentials to avoid conflicts
+            services.AddHttpClient<ITfsClient, RealTfsClient>()
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
                     AllowAutoRedirect = true,
                     MaxAutomaticRedirections = 5
                 });

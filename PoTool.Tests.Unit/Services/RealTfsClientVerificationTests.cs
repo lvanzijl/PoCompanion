@@ -44,8 +44,13 @@ public class RealTfsClientVerificationTests
 
         _mockPatAccessor.Setup(x => x.GetPat()).Returns("test-pat");
 
+        // Create mock IHttpClientFactory
+        var mockFactory = new Mock<IHttpClientFactory>();
+        mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
+
         _sut = new RealTfsClient(
             _httpClient,
+            mockFactory.Object,
             _mockConfigService.Object,
             _mockAuthProvider.Object,
             _mockPatAccessor.Object,
