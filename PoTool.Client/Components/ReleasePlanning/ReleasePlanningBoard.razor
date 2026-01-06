@@ -76,12 +76,15 @@
                                     <div class="d-flex flex-wrap gap-2">
                                         @foreach (var placement in lanePlacements)
                                         {
-                                            <EpicCard 
-                                                Placement="@placement"
-                                                OnMove="@HandleEpicMove"
-                                                OnContextMenu="@HandleEpicContextMenu"
-                                                OnSplitRequested="@HandleEpicSplit"
-                                                OnViewDetailsRequested="@HandleViewDetails" />
+                                            var epicClass = GetEpicPreviewClass(placement, currentRow);
+                                            <div class="@epicClass">
+                                                <EpicCard 
+                                                    Placement="@placement"
+                                                    OnMove="@HandleEpicMove"
+                                                    OnContextMenu="@HandleEpicContextMenu"
+                                                    OnSplitRequested="@HandleEpicSplit"
+                                                    OnViewDetailsRequested="@HandleViewDetails" />
+                                            </div>
                                         }
                                     </div>
                                 </div>
@@ -91,12 +94,20 @@
                         <!-- Horizontal Lines between rows -->
                         @foreach (var line in linesAtPosition.MilestoneLines)
                         {
-                            <div class="milestone-line">
+                            var isBeingDragged = _draggingLineId == line.Id;
+                            var lineClass = isBeingDragged ? "milestone-line draggable-line line-being-dragged" : "milestone-line draggable-line";
+                            <div class="@lineClass"
+                                 draggable="true"
+                                 @ondragstart="@(e => HandleLineStartDrag(line.Id, true, line.Label, line.Type, line.VerticalPosition))"
+                                 @ondragover:preventDefault
+                                 @ondragover="@(e => HandleLineDragOver(e, currentRow + 0.5))"
+                                 @ondrop="@(async e => await HandleLineDrop(line.Id, true))">
                                 <MudDivider DividerType="DividerType.FullWidth" 
                                             Class="milestone-line-divider" />
                                 <MudChip T="string" 
                                          Size="Size.Small" 
                                          Color="Color.Primary"
+                                         Icon="@Icons.Material.Filled.DragHandle"
                                          Class="line-label">
                                     @line.Label
                                 </MudChip>
@@ -104,7 +115,14 @@
                         }
                         @foreach (var line in linesAtPosition.IterationLines)
                         {
-                            <div class="iteration-line">
+                            var isBeingDragged = _draggingLineId == line.Id;
+                            var lineClass = isBeingDragged ? "iteration-line draggable-line line-being-dragged" : "iteration-line draggable-line";
+                            <div class="@lineClass"
+                                 draggable="true"
+                                 @ondragstart="@(e => HandleLineStartDrag(line.Id, false, line.Label, default, line.VerticalPosition))"
+                                 @ondragover:preventDefault
+                                 @ondragover="@(e => HandleLineDragOver(e, currentRow + 0.5))"
+                                 @ondrop="@(async e => await HandleLineDrop(line.Id, false))">
                                 <MudDivider DividerType="DividerType.FullWidth" 
                                             Class="iteration-line-divider" 
                                             Style="border-style: dashed;" />
@@ -112,8 +130,26 @@
                                          Size="Size.Small" 
                                          Color="Color.Secondary"
                                          Variant="Variant.Outlined"
+                                         Icon="@Icons.Material.Filled.DragHandle"
                                          Class="line-label">
                                     @line.Label
+                                </MudChip>
+                            </div>
+                        }
+
+                        <!-- Preview Line during drag -->
+                        @if (IsPreviewLineAtPosition(currentRow + 0.5))
+                        {
+                            <div class="@(_draggingIsMilestone ? "milestone-line-preview" : "iteration-line-preview")">
+                                <MudDivider DividerType="DividerType.FullWidth" 
+                                            Class="@(_draggingIsMilestone ? "milestone-line-divider" : "iteration-line-divider")"
+                                            Style="@(_draggingIsMilestone ? "" : "border-style: dashed;")" />
+                                <MudChip T="string" 
+                                         Size="Size.Small" 
+                                         Color="@(_draggingIsMilestone ? Color.Primary : Color.Secondary)"
+                                         Variant="@(_draggingIsMilestone ? Variant.Filled : Variant.Outlined)"
+                                         Class="line-label">
+                                    @_draggingLineLabel (Preview)
                                 </MudChip>
                             </div>
                         }
@@ -140,6 +176,17 @@
     private ReleasePlanningBoardDto? _board;
     private IReadOnlyList<UnplannedEpicDto>? _unplannedEpics;
     private bool _isLoading = true;
+
+    // Line dragging state
+    private int? _draggingLineId;
+    private bool _draggingIsMilestone;
+    private string _draggingLineLabel = string.Empty;
+    private MilestoneType _draggingMilestoneType;
+    private double _draggingOriginalPosition;
+    private double? _draggingTargetPosition;
+
+    // Constants for drag behavior
+    private const double POSITION_TOLERANCE = 0.1;
 
     protected override async Task OnInitializedAsync()
     {
@@ -282,4 +329,138 @@
 
         return (milestoneLines, iterationLines);
     }
+
+    #region Line Dragging
+
+    private void HandleLineStartDrag(int lineId, bool isMilestone, string label, MilestoneType type, double verticalPosition)
+    {
+        _draggingLineId = lineId;
+        _draggingIsMilestone = isMilestone;
+        _draggingLineLabel = label;
+        _draggingMilestoneType = type;
+        _draggingOriginalPosition = verticalPosition;
+        _draggingTargetPosition = null;
+        Logger.LogDebug("Started dragging {LineType} line {LineId} from position {Position}", 
+            isMilestone ? "milestone" : "iteration", lineId, verticalPosition);
+    }
+
+    private void HandleLineDragOver(DragEventArgs e, double rowPosition)
+    {
+        if (_draggingLineId == null) return;
+        
+        // Update target position for visual feedback
+        if (_draggingTargetPosition != rowPosition)
+        {
+            _draggingTargetPosition = rowPosition;
+            StateHasChanged(); // Trigger re-render to show preview
+        }
+    }
+
+    private async Task HandleLineDrop(int lineId, bool isMilestone)
+    {
+        if (_draggingLineId == null || _draggingTargetPosition == null)
+        {
+            ResetLineDragState();
+            return;
+        }
+
+        // Don't update if dropped at original position
+        if (Math.Abs(_draggingTargetPosition.Value - _draggingOriginalPosition) < POSITION_TOLERANCE)
+        {
+            ResetLineDragState();
+            return;
+        }
+
+        try
+        {
+            LineOperationResultDto? result = null;
+
+            if (_draggingIsMilestone)
+            {
+                result = await ReleasePlanningService.UpdateMilestoneLineAsync(
+                    _draggingLineId.Value,
+                    _draggingLineLabel,
+                    _draggingTargetPosition.Value,
+                    _draggingMilestoneType);
+            }
+            else
+            {
+                result = await ReleasePlanningService.UpdateIterationLineAsync(
+                    _draggingLineId.Value,
+                    _draggingLineLabel,
+                    _draggingTargetPosition.Value);
+            }
+
+            if (result?.Success == true)
+            {
+                Snackbar.Add($"{(_draggingIsMilestone ? "Milestone" : "Iteration")} line repositioned successfully", Severity.Success);
+                await LoadBoardAsync();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to reposition {(_draggingIsMilestone ? "milestone" : "iteration")} line", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error repositioning line {LineId}", _draggingLineId);
+            Snackbar.Add("Error repositioning line", Severity.Error);
+        }
+        finally
+        {
+            ResetLineDragState();
+        }
+    }
+
+    private void ResetLineDragState()
+    {
+        _draggingLineId = null;
+        _draggingIsMilestone = false;
+        _draggingLineLabel = string.Empty;
+        _draggingMilestoneType = default;
+        _draggingOriginalPosition = 0;
+        _draggingTargetPosition = null;
+        StateHasChanged(); // Clear preview
+    }
+
+    /// <summary>
+    /// Determines if the preview line should be shown at the given position.
+    /// </summary>
+    private bool IsPreviewLineAtPosition(double position)
+    {
+        return _draggingLineId != null 
+            && _draggingTargetPosition != null 
+            && Math.Abs(_draggingTargetPosition.Value - position) < POSITION_TOLERANCE;
+    }
+
+    /// <summary>
+    /// Determines the CSS class for an Epic card based on the line drag preview.
+    /// Epics that would be affected by the line movement get a visual indicator.
+    /// </summary>
+    private string GetEpicPreviewClass(EpicPlacementDto placement, int rowIndex)
+    {
+        // Early return if not dragging
+        if (_draggingLineId == null || _draggingTargetPosition == null)
+        {
+            return string.Empty;
+        }
+
+        var epicPosition = rowIndex + 0.5; // Middle of the row
+        
+        // Early return if line movement is negligible
+        if (Math.Abs(_draggingTargetPosition.Value - _draggingOriginalPosition) < POSITION_TOLERANCE)
+        {
+            return string.Empty;
+        }
+
+        // Determine if the epic's inclusion/exclusion state would change
+        // Epic is "before" the line if its position is less than the line position
+        bool wasBeforeLine = epicPosition < _draggingOriginalPosition;
+        bool wouldBeBeforeLine = epicPosition < _draggingTargetPosition.Value;
+
+        // If the epic's relationship to the line changes, apply preview styling
+        return (wasBeforeLine != wouldBeBeforeLine) ? "epic-preview-affected" : string.Empty;
+    }
+
+    #endregion
 }

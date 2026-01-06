@@ -1,5 +1,8 @@
 .release-planning-board {
     min-height: 400px;
+    /* Animation durations */
+    --animation-duration-pulse: 1s;
+    --animation-duration-highlight: 0.6s;
 }
 
 .board-container {
@@ -73,4 +76,69 @@
     left: 8px;
     top: 50%;
     transform: translateY(-50%);
+}
+
+/* Draggable lines styling */
+.draggable-line {
+    cursor: grab;
+    transition: opacity 0.2s ease;
+}
+
+.draggable-line:hover {
+    opacity: 0.8;
+}
+
+.draggable-line:active {
+    cursor: grabbing;
+}
+
+/* Line being dragged - semi-transparent */
+.line-being-dragged {
+    opacity: 0.4;
+}
+
+/* Preview line during drag */
+.milestone-line-preview,
+.iteration-line-preview {
+    position: relative;
+    padding: 4px 0;
+    opacity: 0.7;
+    animation: pulse-preview var(--animation-duration-pulse, 1s) ease-in-out infinite;
+}
+
+@keyframes pulse-preview {
+    0%, 100% {
+        opacity: 0.7;
+    }
+    50% {
+        opacity: 0.9;
+    }
+}
+
+.milestone-line-preview .line-label,
+.iteration-line-preview .line-label {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Epic preview styling - highlights epics that would be affected by line movement */
+.epic-preview-affected {
+    position: relative;
+    animation: highlight-affected var(--animation-duration-highlight, 0.6s) ease-in-out infinite alternate;
+    outline: 2px dashed var(--mud-palette-warning);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+@keyframes highlight-affected {
+    0% {
+        transform: scale(1);
+        outline-color: var(--mud-palette-warning);
+    }
+    100% {
+        transform: scale(1.02);
+        outline-color: var(--mud-palette-warning-darken);
+    }
 }
