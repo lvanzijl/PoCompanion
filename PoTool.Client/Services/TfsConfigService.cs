@@ -116,26 +116,39 @@ public class TfsConfigService
             else
             {
                 // Try to read error details from response
+                string errorMessage = $"Connection test failed with HTTP {(int)response.StatusCode} ({response.StatusCode})";
+                string? detailsText = null;
+                
                 try
                 {
                     var errorJson = await response.Content.ReadAsStringAsync(cancellationToken);
                     if (!string.IsNullOrWhiteSpace(errorJson))
                     {
                         var errorDetails = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(errorJson, _jsonOptions);
-                        if (errorDetails != null && errorDetails.TryGetValue("details", out var details))
+                        if (errorDetails != null)
                         {
-                            var detailsText = details.GetString() ?? "Unable to parse error details from server response";
-                            throw new InvalidOperationException($"Connection test failed: {detailsText}");
+                            // Try to get message first, then details
+                            if (errorDetails.TryGetValue("message", out var message))
+                            {
+                                errorMessage = message.GetString() ?? errorMessage;
+                            }
+                            if (errorDetails.TryGetValue("details", out var details))
+                            {
+                                detailsText = details.GetString();
+                            }
                         }
                     }
                 }
                 catch (JsonException)
                 {
-                    // Failed to parse error response, will return false below
-                    // Note: Detailed logging would require ILogger injection
+                    // Failed to parse error response, use generic message with status code
                 }
                 
-                return false;
+                // Always throw an exception with details so the UI can display them
+                var fullMessage = detailsText != null 
+                    ? $"{errorMessage}. {detailsText}" 
+                    : errorMessage;
+                throw new InvalidOperationException(fullMessage);
             }
         }
         catch (ApiException ex)
