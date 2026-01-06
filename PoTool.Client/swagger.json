@@ -2795,6 +2795,10 @@
             "type": "string",
             "nullable": true
           },
+          "defaultAreaPath": {
+            "type": "string",
+            "nullable": true
+          },
           "pat": {
             "type": "string",
             "nullable": true

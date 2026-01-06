@@ -232,10 +232,10 @@ public class TfsConfigurationServiceTests
     public async Task SaveConfigAsync_SwitchingFromPatToNtlm_UpdatesAuthMode()
     {
         // Arrange - First save with PAT mode
-        await _service.SaveConfigAsync("https://dev.azure.com/org", "Project", TfsAuthMode.Pat);
+        await _service.SaveConfigAsync("https://dev.azure.com/org", "Project", "TestProject\\Team", TfsAuthMode.Pat);
         
         // Act - Update to NTLM mode
-        await _service.SaveConfigAsync("https://tfs.mycompany.com", "Project", TfsAuthMode.Ntlm);
+        await _service.SaveConfigAsync("https://tfs.mycompany.com", "Project", "TestProject\\Team", TfsAuthMode.Ntlm);
 
         // Assert
         var config = await _service.GetConfigAsync();

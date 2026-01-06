@@ -9006,6 +9006,9 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("project")]
         public string? Project { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("defaultAreaPath")]
+        public string? DefaultAreaPath { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("pat")]
         public string? Pat { get; set; } = default!;
 

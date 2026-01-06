@@ -61,6 +61,7 @@ public class TfsConfigPageTests : BunitTestContext
             It.IsAny<string>(), 
             It.IsAny<string>(), 
             It.IsAny<string>(), 
+            It.IsAny<string>(), 
             It.IsAny<TfsAuthMode>(), 
             It.IsAny<bool>(), 
             It.IsAny<int>(), 
@@ -71,7 +72,8 @@ public class TfsConfigPageTests : BunitTestContext
         // Act - Verify SaveConfigAsync can be mocked
         await _mockTfsConfigService.Object.SaveConfigAsync(
             "https://dev.azure.com/test", 
-            "TestProject", 
+            "TestProject",
+            "TestProject\\Team",
             "testpat", 
             TfsAuthMode.Pat, 
             false, 
@@ -80,6 +82,7 @@ public class TfsConfigPageTests : BunitTestContext
 
         // Assert - Verify mock was called
         _mockTfsConfigService.Verify(s => s.SaveConfigAsync(
+            It.IsAny<string>(), 
             It.IsAny<string>(), 
             It.IsAny<string>(), 
             It.IsAny<string>(), 
