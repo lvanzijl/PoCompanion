@@ -9,7 +9,7 @@ public sealed class TfsConfig
 {
     public string Url { get; set; } = string.Empty;
     public string Project { get; set; } = string.Empty;
-    public TfsAuthMode AuthMode { get; set; } = TfsAuthMode.Pat;
+    public TfsAuthMode AuthMode { get; set; } = TfsAuthMode.Ntlm;
     public bool UseDefaultCredentials { get; set; } = false;
     public int TimeoutSeconds { get; set; } = 30;
     public string ApiVersion { get; set; } = "7.0";
@@ -64,7 +64,7 @@ public class TfsConfigurationService
     public async Task SaveConfigAsync(
         string url, 
         string project, 
-        TfsAuthMode authMode = TfsAuthMode.Pat,
+        TfsAuthMode authMode = TfsAuthMode.Ntlm,
         bool useDefaultCredentials = false,
         int timeoutSeconds = 30,
         string apiVersion = "7.0",

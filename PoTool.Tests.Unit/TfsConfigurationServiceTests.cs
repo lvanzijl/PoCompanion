@@ -213,6 +213,22 @@ public class TfsConfigurationServiceTests
     }
 
     [TestMethod]
+    public async Task SaveConfigAsync_WithoutAuthModeParameter_UsesNtlmAsDefault()
+    {
+        // Arrange
+        const string url = "https://tfs.mycompany.com";
+        const string project = "MyProject";
+
+        // Act - Call SaveConfigAsync without specifying AuthMode (should default to NTLM)
+        await _service.SaveConfigAsync(url, project);
+
+        // Assert
+        var config = await _service.GetConfigAsync();
+        Assert.IsNotNull(config);
+        Assert.AreEqual(TfsAuthMode.Ntlm, config.AuthMode, "AuthMode should default to NTLM when not specified");
+    }
+
+    [TestMethod]
     public async Task SaveConfigAsync_SwitchingFromPatToNtlm_UpdatesAuthMode()
     {
         // Arrange - First save with PAT mode

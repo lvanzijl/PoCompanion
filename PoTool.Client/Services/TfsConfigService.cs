@@ -57,7 +57,7 @@ public class TfsConfigService
     /// Saves the TFS configuration.
     /// PAT is stored client-side in secure storage, other config is sent to API.
     /// </summary>
-    public virtual async Task SaveConfigAsync(string url, string project, string pat, TfsAuthMode authMode = TfsAuthMode.Pat, 
+    public virtual async Task SaveConfigAsync(string url, string project, string pat, TfsAuthMode authMode = TfsAuthMode.Ntlm, 
         bool useDefaultCredentials = false, int timeoutSeconds = 30, string apiVersion = "7.0", CancellationToken cancellationToken = default)
     {
         // Store PAT in secure storage (client-side only)
@@ -204,7 +204,7 @@ public class TfsConfigDto
 {
     public string? Url { get; set; }
     public string? Project { get; set; }
-    public TfsAuthMode AuthMode { get; set; } = TfsAuthMode.Pat;
+    public TfsAuthMode AuthMode { get; set; } = TfsAuthMode.Ntlm;
     public bool UseDefaultCredentials { get; set; }
     public int TimeoutSeconds { get; set; } = 30;
     public string ApiVersion { get; set; } = "7.0";

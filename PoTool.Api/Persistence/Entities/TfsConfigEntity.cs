@@ -37,7 +37,7 @@ public class TfsConfigEntity
     /// <summary>
     /// Authentication mode (PAT or NTLM).
     /// </summary>
-    public TfsAuthMode AuthMode { get; set; } = TfsAuthMode.Pat;
+    public TfsAuthMode AuthMode { get; set; } = TfsAuthMode.Ntlm;
 
     /// <summary>
     /// Use default Windows credentials (for NTLM mode).
