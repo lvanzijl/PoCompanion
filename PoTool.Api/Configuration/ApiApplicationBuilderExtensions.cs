@@ -183,10 +183,40 @@ public static class ApiApplicationBuilderExtensions
             return Results.Ok();
         });
 
-        app.MapGet("/api/tfsvalidate", async (ITfsClient client) =>
+        app.MapGet("/api/tfsvalidate", async (ITfsClient client, ILogger<Program> logger) =>
         {
-            var ok = await client.ValidateConnectionAsync();
-            return ok ? Results.Ok() : Results.StatusCode(500);
+            try
+            {
+                var ok = await client.ValidateConnectionAsync();
+                if (ok)
+                {
+                    return Results.Ok(new { success = true, message = "Connection validated successfully" });
+                }
+                else
+                {
+                    // Validation failed - return detailed error
+                    logger.LogWarning("TFS validation endpoint: Connection test failed (returned false)");
+                    return Results.Json(
+                        new { 
+                            success = false, 
+                            message = "Connection test failed", 
+                            details = "The TFS server did not respond successfully. Check the logs for more details about HTTP status codes and error responses." 
+                        }, 
+                        statusCode: 500);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "TFS validation endpoint: Exception during connection test");
+                return Results.Json(
+                    new { 
+                        success = false, 
+                        message = "Connection test failed with exception", 
+                        details = ex.Message,
+                        exceptionType = ex.GetType().Name
+                    }, 
+                    statusCode: 500);
+            }
         });
 
         app.MapPost("/api/tfsverify", async (ITfsClient client, TfsVerifyRequest req, CancellationToken ct) =>

@@ -99,19 +99,48 @@ public class TfsConfigService
             // If no PAT provided, try to get from secure storage
             pat ??= await GetPatAsync();
 
-            if (string.IsNullOrEmpty(pat))
+            // Add PAT header if available (for PAT auth mode)
+            if (!string.IsNullOrEmpty(pat))
             {
-                return false;
+                _httpClient.DefaultRequestHeaders.Remove("X-TFS-PAT");
+                _httpClient.DefaultRequestHeaders.Add("X-TFS-PAT", pat);
             }
 
-            // TODO: Update API to accept PAT for validation
-            // For now, use existing endpoint
-            await _apiClient.GetApiTfsvalidateAsync(cancellationToken);
-            return true;
+            // Call the validation endpoint
+            var response = await _httpClient.GetAsync("/api/tfsvalidate", cancellationToken);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+            else
+            {
+                // Try to read error details from response
+                try
+                {
+                    var errorJson = await response.Content.ReadAsStringAsync(cancellationToken);
+                    var errorDetails = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(errorJson, _jsonOptions);
+                    if (errorDetails != null && errorDetails.TryGetValue("details", out var details))
+                    {
+                        var detailsText = details.GetString();
+                        throw new InvalidOperationException($"Connection test failed: {detailsText}");
+                    }
+                }
+                catch (JsonException)
+                {
+                    // Ignore JSON parsing errors
+                }
+                
+                return false;
+            }
         }
-        catch (ApiException)
+        catch (ApiException ex)
         {
-            return false;
+            throw new InvalidOperationException($"Connection test failed: {ex.Message}", ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new InvalidOperationException($"Connection test failed: Unable to reach server. {ex.Message}", ex);
         }
     }
 
