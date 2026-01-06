@@ -415,7 +415,7 @@
             // First save the config
             await TfsConfigService.SaveConfigAsync(_url, _project, _pat, _authMode, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
 
-            // Then test the connection
+            // Then test the connection (throws on failure with detailed error information)
             var isValid = await TfsConfigService.ValidateConnectionAsync();
 
             if (isValid)
@@ -426,9 +426,6 @@
                 _pat = string.Empty; // Clear PAT after successful test
                 await LoadCurrentConfig(); // Reload to get updated LastValidated
             }
-            // Note: If ValidateConnectionAsync returns false without throwing, it means
-            // the exception was swallowed. We should never reach here if ValidateConnectionAsync
-            // is implemented correctly to throw on failure with details.
         }
         catch (Exception ex)
         {

@@ -145,7 +145,7 @@ public class TfsConfigService
                 }
                 
                 // Always throw an exception with details so the UI can display them
-                var fullMessage = detailsText != null 
+                var fullMessage = !string.IsNullOrWhiteSpace(detailsText) 
                     ? $"{errorMessage}. {detailsText}" 
                     : errorMessage;
                 throw new InvalidOperationException(fullMessage);
