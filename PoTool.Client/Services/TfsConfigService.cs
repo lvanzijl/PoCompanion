@@ -124,7 +124,7 @@ public class TfsConfigService
                         var errorDetails = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(errorJson, _jsonOptions);
                         if (errorDetails != null && errorDetails.TryGetValue("details", out var details))
                         {
-                            var detailsText = details.GetString() ?? "Unknown error";
+                            var detailsText = details.GetString() ?? "Unable to parse error details from server response";
                             throw new InvalidOperationException($"Connection test failed: {detailsText}");
                         }
                     }
@@ -203,19 +203,21 @@ public class TfsConfigService
                 throw new InvalidOperationException("PAT is required for TFS API verification");
             }
 
-            // Add PAT header to HttpClient for this request
-            _httpClient.DefaultRequestHeaders.Remove("X-TFS-PAT");
-            _httpClient.DefaultRequestHeaders.Add("X-TFS-PAT", pat);
-
-            // Use the generated API client
-            var request = new TfsVerifyRequest
+            // Use direct HttpClient call with request-specific headers for thread safety
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/api/tfsverify")
             {
-                IncludeWriteChecks = includeWriteChecks,
-                WorkItemIdForWriteCheck = workItemIdForWriteCheck
+                Content = JsonContent.Create(new TfsVerifyRequest
+                {
+                    IncludeWriteChecks = includeWriteChecks,
+                    WorkItemIdForWriteCheck = workItemIdForWriteCheck
+                })
             };
+            requestMessage.Headers.Add("X-TFS-PAT", pat);
 
-            var report = await _apiClient.PostApiTfsverifyAsync(request, cancellationToken);
+            var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
+            response.EnsureSuccessStatusCode();
             
+            var report = await response.Content.ReadFromJsonAsync<TfsVerificationReport>(_jsonOptions, cancellationToken);
             return report;
         }
         catch (ApiException)
