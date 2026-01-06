@@ -53,11 +53,11 @@ public class TfsConfigurationServiceSqliteTests
     {
         // Arrange - Create multiple configs with different timestamps
         // Note: PAT parameter removed from SaveConfigAsync
-        await _service.SaveConfigAsync("url1", "project1");
+        await _service.SaveConfigAsync("url1", "project1", "TestProject\\Team");
         await Task.Delay(100); // Ensure different timestamps
-        await _service.SaveConfigAsync("url2", "project2");
+        await _service.SaveConfigAsync("url2", "project2", "TestProject\\Team");
         await Task.Delay(100);
-        await _service.SaveConfigAsync("url3", "project3");
+        await _service.SaveConfigAsync("url3", "project3", "TestProject\\Team");
 
         // Act - This would fail with the old code (OrderBy DateTimeOffset in SQL)
         var config = await _service.GetConfigAsync();
@@ -72,9 +72,9 @@ public class TfsConfigurationServiceSqliteTests
     public async Task GetConfigEntityAsync_WithSqlite_OrdersByUpdatedAtCorrectly()
     {
         // Arrange - Create multiple configs
-        await _service.SaveConfigAsync("url1", "project1");
+        await _service.SaveConfigAsync("url1", "project1", "TestProject\\Team");
         await Task.Delay(100);
-        await _service.SaveConfigAsync("url2", "project2");
+        await _service.SaveConfigAsync("url2", "project2", "TestProject\\Team");
 
         // Act - This would fail with the old code
         var entity = await _service.GetConfigEntityAsync();
@@ -88,7 +88,7 @@ public class TfsConfigurationServiceSqliteTests
     public async Task GetConfigAsync_WithSingleConfig_ReturnsConfig()
     {
         // Arrange
-        await _service.SaveConfigAsync("https://dev.azure.com/test", "TestProject");
+        await _service.SaveConfigAsync("https://dev.azure.com/test", "TestProject", "TestProject\\Team");
 
         // Act
         var config = await _service.GetConfigAsync();

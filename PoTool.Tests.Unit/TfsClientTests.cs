@@ -272,7 +272,9 @@ public class TfsClientTests
         // Arrange - Note: PAT parameter removed
         await _configService.SaveConfigAsync(
             "https://dev.azure.com/testorg",
-            "TestProject");
+            "TestProject",
+            "TestProject\\Team",
+            TfsAuthMode.Pat);
 
 
         var wiqlResponse = new { workItems = new[] { new { id = 100 } } };
