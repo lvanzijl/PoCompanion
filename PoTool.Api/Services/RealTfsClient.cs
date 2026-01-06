@@ -86,17 +86,17 @@ public class RealTfsClient : ITfsClient
         }
         catch (TfsAuthenticationException ex)
         {
-            _logger.LogError(ex, "Authentication failed during TFS connection validation: {Message}", ex.Message);
+            _logger.LogError(ex, "Authentication failed during TFS connection validation");
             return false;
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "HTTP request failed during TFS connection validation: {Message}", ex.Message);
+            _logger.LogError(ex, "HTTP request failed during TFS connection validation");
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error during TFS connection validation: {Message}", ex.Message);
+            _logger.LogError(ex, "Unexpected error during TFS connection validation");
             return false;
         }
     }

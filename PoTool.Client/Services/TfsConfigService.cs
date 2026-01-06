@@ -99,15 +99,15 @@ public class TfsConfigService
             // If no PAT provided, try to get from secure storage
             pat ??= await GetPatAsync();
 
-            // Add PAT header if available (for PAT auth mode)
+            // Create request with PAT header if available (for PAT auth mode)
+            var request = new HttpRequestMessage(HttpMethod.Get, "/api/tfsvalidate");
             if (!string.IsNullOrEmpty(pat))
             {
-                _httpClient.DefaultRequestHeaders.Remove("X-TFS-PAT");
-                _httpClient.DefaultRequestHeaders.Add("X-TFS-PAT", pat);
+                request.Headers.Add("X-TFS-PAT", pat);
             }
 
             // Call the validation endpoint
-            var response = await _httpClient.GetAsync("/api/tfsvalidate", cancellationToken);
+            var response = await _httpClient.SendAsync(request, cancellationToken);
             
             if (response.IsSuccessStatusCode)
             {
@@ -126,9 +126,10 @@ public class TfsConfigService
                         throw new InvalidOperationException($"Connection test failed: {detailsText}");
                     }
                 }
-                catch (JsonException)
+                catch (JsonException ex)
                 {
-                    // Ignore JSON parsing errors
+                    // Log JSON parsing failure for debugging
+                    System.Diagnostics.Debug.WriteLine($"Failed to parse error response: {ex.Message}");
                 }
                 
                 return false;
