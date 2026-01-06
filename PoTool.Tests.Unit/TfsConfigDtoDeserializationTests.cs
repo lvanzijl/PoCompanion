@@ -68,7 +68,7 @@ public class TfsConfigDtoDeserializationTests
     }
 
     [TestMethod]
-    public void Deserialize_WithoutCaseInsensitiveOption_DefaultsToPatIncorrectly()
+    public void Deserialize_WithoutCaseInsensitiveOption_DefaultsToNtlm()
     {
         // Arrange - JSON with camelCase property names (as returned by API)
         // Without PropertyNameCaseInsensitive = true, authMode won't match AuthMode
@@ -86,11 +86,12 @@ public class TfsConfigDtoDeserializationTests
         // Act - Deserialize without case-insensitive option (default behavior)
         var config = JsonSerializer.Deserialize<TfsConfigDto>(json);
 
-        // Assert - Without case-insensitive matching, AuthMode defaults to Pat (0)
+        // Assert - Without case-insensitive matching, AuthMode defaults to Ntlm (1)
         Assert.IsNotNull(config);
-        // This demonstrates the bug: authMode (camelCase) doesn't match AuthMode (PascalCase)
-        Assert.AreEqual(TfsAuthMode.Pat, config.AuthMode, 
-            "Without case-insensitive option, AuthMode defaults to Pat because 'authMode' doesn't match 'AuthMode'");
+        // This demonstrates that authMode (camelCase) doesn't match AuthMode (PascalCase),
+        // so it falls back to the default value, which is now NTLM
+        Assert.AreEqual(TfsAuthMode.Ntlm, config.AuthMode, 
+            "Without case-insensitive option, AuthMode defaults to Ntlm because 'authMode' doesn't match 'AuthMode'");
     }
 
     [TestMethod]
