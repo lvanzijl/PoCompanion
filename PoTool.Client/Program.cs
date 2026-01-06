@@ -107,6 +107,14 @@ builder.Services.AddScoped<IMetricsClient>(sp =>
     return client;
 });
 
+builder.Services.AddScoped<IPipelinesClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new PipelinesClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
 // Register client services
 builder.Services.AddScoped<WorkItemService>();
 builder.Services.AddScoped<PullRequestService>();
