@@ -119,17 +119,20 @@ public class TfsConfigService
                 try
                 {
                     var errorJson = await response.Content.ReadAsStringAsync(cancellationToken);
-                    var errorDetails = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(errorJson, _jsonOptions);
-                    if (errorDetails != null && errorDetails.TryGetValue("details", out var details))
+                    if (!string.IsNullOrWhiteSpace(errorJson))
                     {
-                        var detailsText = details.GetString();
-                        throw new InvalidOperationException($"Connection test failed: {detailsText}");
+                        var errorDetails = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(errorJson, _jsonOptions);
+                        if (errorDetails != null && errorDetails.TryGetValue("details", out var details))
+                        {
+                            var detailsText = details.GetString() ?? "Unknown error";
+                            throw new InvalidOperationException($"Connection test failed: {detailsText}");
+                        }
                     }
                 }
-                catch (JsonException ex)
+                catch (JsonException)
                 {
-                    // Log JSON parsing failure for debugging
-                    System.Diagnostics.Debug.WriteLine($"Failed to parse error response: {ex.Message}");
+                    // Failed to parse error response, will return false below
+                    // Note: Detailed logging would require ILogger injection
                 }
                 
                 return false;
