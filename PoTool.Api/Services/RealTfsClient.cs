@@ -701,6 +701,13 @@ public class RealTfsClient : ITfsClient
             
             _logger.LogDebug("Configured NTLM authentication for TFS request (cleared Authorization header)");
         }
+        else
+        {
+            throw new TfsAuthenticationException(
+                $"Unsupported authentication mode: {entity.AuthMode}. " +
+                "Only PAT and NTLM modes are supported.", 
+                (string?)null);
+        }
     }
 
     private async Task<List<(string Name, string Id)>> GetRepositoriesAsync(
