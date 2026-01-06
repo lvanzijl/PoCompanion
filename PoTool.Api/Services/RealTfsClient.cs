@@ -61,6 +61,8 @@ public class RealTfsClient : ITfsClient
             await ConfigureAuthenticationAsync(entity, cancellationToken);
             
             var url = $"{entity.Url.TrimEnd('/')}/_apis/projects?api-version={entity.ApiVersion}";
+            _logger.LogInformation("Validating TFS connection: GET {Url} (AuthMode: {AuthMode})", url, entity.AuthMode);
+            
             var resp = await _httpClient.GetAsync(url, cancellationToken);
             
             _logger.LogInformation("Validation GET {Url} returned {StatusCode}", url, resp.StatusCode);
@@ -70,19 +72,31 @@ public class RealTfsClient : ITfsClient
                 // Update last validated timestamp
                 entity.LastValidated = DateTimeOffset.UtcNow;
                 await _configService.SaveConfigEntityAsync(entity, cancellationToken);
+                _logger.LogInformation("TFS connection validation successful");
                 return true;
             }
-            
-            return false;
+            else
+            {
+                // Log detailed error information
+                var errorBody = await resp.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError("TFS connection validation failed: HTTP {StatusCode}, Response: {ErrorBody}", 
+                    resp.StatusCode, errorBody);
+                return false;
+            }
         }
         catch (TfsAuthenticationException ex)
         {
             _logger.LogError(ex, "Authentication failed during TFS connection validation");
             return false;
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed during TFS connection validation");
+            return false;
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating TFS connection");
+            _logger.LogError(ex, "Unexpected error during TFS connection validation");
             return false;
         }
     }

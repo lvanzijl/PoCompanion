@@ -99,19 +99,52 @@ public class TfsConfigService
             // If no PAT provided, try to get from secure storage
             pat ??= await GetPatAsync();
 
-            if (string.IsNullOrEmpty(pat))
+            // Create request with PAT header if available (for PAT auth mode)
+            var request = new HttpRequestMessage(HttpMethod.Get, "/api/tfsvalidate");
+            if (!string.IsNullOrEmpty(pat))
             {
-                return false;
+                request.Headers.Add("X-TFS-PAT", pat);
             }
 
-            // TODO: Update API to accept PAT for validation
-            // For now, use existing endpoint
-            await _apiClient.GetApiTfsvalidateAsync(cancellationToken);
-            return true;
+            // Call the validation endpoint
+            var response = await _httpClient.SendAsync(request, cancellationToken);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+            else
+            {
+                // Try to read error details from response
+                try
+                {
+                    var errorJson = await response.Content.ReadAsStringAsync(cancellationToken);
+                    if (!string.IsNullOrWhiteSpace(errorJson))
+                    {
+                        var errorDetails = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(errorJson, _jsonOptions);
+                        if (errorDetails != null && errorDetails.TryGetValue("details", out var details))
+                        {
+                            var detailsText = details.GetString() ?? "Unable to parse error details from server response";
+                            throw new InvalidOperationException($"Connection test failed: {detailsText}");
+                        }
+                    }
+                }
+                catch (JsonException)
+                {
+                    // Failed to parse error response, will return false below
+                    // Note: Detailed logging would require ILogger injection
+                }
+                
+                return false;
+            }
         }
-        catch (ApiException)
+        catch (ApiException ex)
         {
-            return false;
+            throw new InvalidOperationException($"Connection test failed: {ex.Message}", ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new InvalidOperationException($"Connection test failed: Unable to reach server. {ex.Message}", ex);
         }
     }
 
@@ -170,19 +203,21 @@ public class TfsConfigService
                 throw new InvalidOperationException("PAT is required for TFS API verification");
             }
 
-            // Add PAT header to HttpClient for this request
-            _httpClient.DefaultRequestHeaders.Remove("X-TFS-PAT");
-            _httpClient.DefaultRequestHeaders.Add("X-TFS-PAT", pat);
-
-            // Use the generated API client
-            var request = new TfsVerifyRequest
+            // Use direct HttpClient call with request-specific headers for thread safety
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/api/tfsverify")
             {
-                IncludeWriteChecks = includeWriteChecks,
-                WorkItemIdForWriteCheck = workItemIdForWriteCheck
+                Content = JsonContent.Create(new TfsVerifyRequest
+                {
+                    IncludeWriteChecks = includeWriteChecks,
+                    WorkItemIdForWriteCheck = workItemIdForWriteCheck
+                })
             };
+            requestMessage.Headers.Add("X-TFS-PAT", pat);
 
-            var report = await _apiClient.PostApiTfsverifyAsync(request, cancellationToken);
+            var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
+            response.EnsureSuccessStatusCode();
             
+            var report = await response.Content.ReadFromJsonAsync<TfsVerificationReport>(_jsonOptions, cancellationToken);
             return report;
         }
         catch (ApiException)
