@@ -73,6 +73,12 @@
                                          Required="true"
                                          HelperText="The name of your project" />
 
+                            <CompactTextField @bind-Value="_defaultAreaPath" 
+                                         Label="Default Area Path" 
+                                         Placeholder="e.g., MyProject\Team A"
+                                         Required="true"
+                                         HelperText="The area path used for work item queries" />
+
                             <CompactTextField @bind-Value="_pat" 
                                          Label="Personal Access Token (PAT)" 
                                          Placeholder="Your PAT"
@@ -324,6 +330,7 @@
     private bool _isTesting;
     private string _url = string.Empty;
     private string _project = string.Empty;
+    private string _defaultAreaPath = string.Empty;
     private string _pat = string.Empty;
     private ConnectionTestResult? _connectionTestResult;
     private ErrorResponse? _configErrorResponse;
@@ -415,7 +422,7 @@
         try
         {
             // Save configuration
-            await TfsConfigService.SaveConfigAsync(_url, _project, _pat);
+            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath, _pat);
             
             // Test connection
             _isSaving = false;

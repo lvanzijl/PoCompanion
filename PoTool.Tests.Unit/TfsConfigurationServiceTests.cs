@@ -50,7 +50,7 @@ public class TfsConfigurationServiceTests
         const string project = "MyProject";
 
         // Act - Note: PAT parameter removed from SaveConfigAsync
-        await _service.SaveConfigAsync(url, project);
+        await _service.SaveConfigAsync(url, project, "TestProject\\Team");
 
         // Assert
         var savedEntity = await _context.TfsConfigs.FirstOrDefaultAsync();
@@ -66,13 +66,13 @@ public class TfsConfigurationServiceTests
         // Arrange
         const string originalUrl = "https://dev.azure.com/org1";
         const string originalProject = "Project1";
-        await _service.SaveConfigAsync(originalUrl, originalProject);
+        await _service.SaveConfigAsync(originalUrl, originalProject, "TestProject\\Team");
 
         const string newUrl = "https://dev.azure.com/org2";
         const string newProject = "Project2";
 
         // Act
-        await _service.SaveConfigAsync(newUrl, newProject);
+        await _service.SaveConfigAsync(newUrl, newProject, "TestProject\\Team");
 
         // Assert
         var configs = await _context.TfsConfigs.ToListAsync();
@@ -89,7 +89,7 @@ public class TfsConfigurationServiceTests
         // Arrange
         const string url = "https://dev.azure.com/myorg";
         const string project = "MyProject";
-        await _service.SaveConfigAsync(url, project);
+        await _service.SaveConfigAsync(url, project, "TestProject\\Team");
 
         // Act
         var config = await _service.GetConfigAsync();
@@ -119,7 +119,7 @@ public class TfsConfigurationServiceTests
         const string project = "";
 
         // Act
-        await _service.SaveConfigAsync(url, project);
+        await _service.SaveConfigAsync(url, project, "TestProject\\Team");
 
         // Assert
         var entity = await _service.GetConfigEntityAsync();
@@ -136,7 +136,7 @@ public class TfsConfigurationServiceTests
         const string project = "Project-Name_123";
 
         // Act
-        await _service.SaveConfigAsync(url, project);
+        await _service.SaveConfigAsync(url, project, "TestProject\\Team");
 
         // Assert
         var entity = await _service.GetConfigEntityAsync();
@@ -149,9 +149,9 @@ public class TfsConfigurationServiceTests
     public async Task GetConfigEntityAsync_ReturnsLatestConfig_WhenMultipleExist()
     {
         // Arrange
-        await _service.SaveConfigAsync("url1", "project1");
+        await _service.SaveConfigAsync("url1", "project1", "TestProject\\Team");
         await Task.Delay(50); // Ensure different timestamps
-        await _service.SaveConfigAsync("url2", "project2");
+        await _service.SaveConfigAsync("url2", "project2", "TestProject\\Team");
 
         // Act
         var entity = await _service.GetConfigEntityAsync();
@@ -165,7 +165,7 @@ public class TfsConfigurationServiceTests
     public async Task SaveConfigAsync_NullValues_SavesEmptyStrings()
     {
         // Act
-        await _service.SaveConfigAsync(null!, null!);
+        await _service.SaveConfigAsync(null!, null!, "TestProject\\Team");
 
         // Assert
         var entity = await _service.GetConfigEntityAsync();
@@ -178,7 +178,7 @@ public class TfsConfigurationServiceTests
     public async Task SaveConfigEntityAsync_UpdatesEntity()
     {
         // Arrange
-        await _service.SaveConfigAsync("url", "project");
+        await _service.SaveConfigAsync("url", "project", "TestProject\\Team");
         var entity = await _service.GetConfigEntityAsync();
         Assert.IsNotNull(entity);
         
@@ -204,7 +204,7 @@ public class TfsConfigurationServiceTests
         const TfsAuthMode authMode = TfsAuthMode.Ntlm;
 
         // Act
-        await _service.SaveConfigAsync(url, project, authMode);
+        await _service.SaveConfigAsync(url, project, "TestProject\\Team", authMode);
 
         // Assert
         var config = await _service.GetConfigAsync();
@@ -220,7 +220,7 @@ public class TfsConfigurationServiceTests
         const string project = "MyProject";
 
         // Act - Call SaveConfigAsync without specifying AuthMode (should default to NTLM)
-        await _service.SaveConfigAsync(url, project);
+        await _service.SaveConfigAsync(url, project, "TestProject\\Team");
 
         // Assert
         var config = await _service.GetConfigAsync();
@@ -232,10 +232,10 @@ public class TfsConfigurationServiceTests
     public async Task SaveConfigAsync_SwitchingFromPatToNtlm_UpdatesAuthMode()
     {
         // Arrange - First save with PAT mode
-        await _service.SaveConfigAsync("https://dev.azure.com/org", "Project", TfsAuthMode.Pat);
+        await _service.SaveConfigAsync("https://dev.azure.com/org", "Project", "TestProject\\Team", TfsAuthMode.Pat);
         
         // Act - Update to NTLM mode
-        await _service.SaveConfigAsync("https://tfs.mycompany.com", "Project", TfsAuthMode.Ntlm);
+        await _service.SaveConfigAsync("https://tfs.mycompany.com", "Project", "TestProject\\Team", TfsAuthMode.Ntlm);
 
         // Assert
         var config = await _service.GetConfigAsync();
@@ -253,7 +253,7 @@ public class TfsConfigurationServiceTests
         const bool useDefaultCredentials = true;
 
         // Act
-        await _service.SaveConfigAsync(url, project, authMode, useDefaultCredentials);
+        await _service.SaveConfigAsync(url, project, "TestProject\\Team", authMode, useDefaultCredentials);
 
         // Assert
         var config = await _service.GetConfigAsync();

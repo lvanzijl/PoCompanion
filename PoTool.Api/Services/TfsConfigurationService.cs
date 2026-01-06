@@ -9,6 +9,7 @@ public sealed class TfsConfig
 {
     public string Url { get; set; } = string.Empty;
     public string Project { get; set; } = string.Empty;
+    public string DefaultAreaPath { get; set; } = string.Empty;
     public TfsAuthMode AuthMode { get; set; } = TfsAuthMode.Ntlm;
     public bool UseDefaultCredentials { get; set; } = false;
     public int TimeoutSeconds { get; set; } = 30;
@@ -49,6 +50,7 @@ public class TfsConfigurationService
         {
             Url = entity.Url,
             Project = entity.Project,
+            DefaultAreaPath = entity.DefaultAreaPath,
             AuthMode = entity.AuthMode,
             UseDefaultCredentials = entity.UseDefaultCredentials,
             TimeoutSeconds = entity.TimeoutSeconds,
@@ -63,7 +65,8 @@ public class TfsConfigurationService
     /// </summary>
     public async Task SaveConfigAsync(
         string url, 
-        string project, 
+        string project,
+        string defaultAreaPath,
         TfsAuthMode authMode = TfsAuthMode.Ntlm,
         bool useDefaultCredentials = false,
         int timeoutSeconds = 30,
@@ -80,6 +83,7 @@ public class TfsConfigurationService
             {
                 Url = url ?? string.Empty,
                 Project = project ?? string.Empty,
+                DefaultAreaPath = defaultAreaPath ?? string.Empty,
                 AuthMode = authMode,
                 UseDefaultCredentials = useDefaultCredentials,
                 TimeoutSeconds = timeoutSeconds,
@@ -94,6 +98,7 @@ public class TfsConfigurationService
         {
             existing.Url = url ?? string.Empty;
             existing.Project = project ?? string.Empty;
+            existing.DefaultAreaPath = defaultAreaPath ?? string.Empty;
             existing.AuthMode = authMode;
             existing.UseDefaultCredentials = useDefaultCredentials;
             existing.TimeoutSeconds = timeoutSeconds;

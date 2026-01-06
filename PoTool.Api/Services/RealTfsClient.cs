@@ -1655,9 +1655,9 @@ public class RealTfsClient : ITfsClient
                 "Configure TFS settings via the API or use mock data source.");
             throw new TfsConfigurationException(
                 "TFS data source is enabled but TFS configuration is not set. " +
-                "Please configure TFS settings (URL, Project) before using the application, " +
+                "Please configure TFS settings (URL, Project, DefaultAreaPath) before using the application, " +
                 "or switch to mock data source by setting TfsIntegration:UseMockClient to true.",
-                new[] { "Url", "Project" });
+                new[] { "Url", "Project", "DefaultAreaPath" });
         }
 
         var missingFields = new List<string>();
@@ -1670,6 +1670,11 @@ public class RealTfsClient : ITfsClient
         if (string.IsNullOrWhiteSpace(entity.Project))
         {
             missingFields.Add("Project");
+        }
+        
+        if (string.IsNullOrWhiteSpace(entity.DefaultAreaPath))
+        {
+            missingFields.Add("DefaultAreaPath");
         }
 
         if (missingFields.Count > 0)

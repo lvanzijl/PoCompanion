@@ -56,6 +56,14 @@ public class TfsConfigEntity
     public string ApiVersion { get; set; } = "7.0";
 
     /// <summary>
+    /// Default Area Path for work item queries.
+    /// This is the AreaPath used in WIQL queries (e.g., "ProjectName\Team A").
+    /// Required field - must be configured before sync operations.
+    /// </summary>
+    [MaxLength(512)]
+    public string DefaultAreaPath { get; set; } = string.Empty;
+
+    /// <summary>
     /// Last time the connection was validated successfully.
     /// </summary>
     public DateTimeOffset? LastValidated { get; set; }

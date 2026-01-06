@@ -176,6 +176,7 @@ public static class ApiApplicationBuilderExtensions
             await svc.SaveConfigAsync(
                 req.Url ?? string.Empty, 
                 req.Project ?? string.Empty, 
+                req.DefaultAreaPath ?? string.Empty,
                 (TfsAuthMode)req.AuthMode, 
                 req.UseDefaultCredentials, 
                 req.TimeoutSeconds, 
@@ -229,9 +230,15 @@ public static class ApiApplicationBuilderExtensions
         })
         .Produces<Core.Contracts.TfsVerification.TfsVerificationReport>(StatusCodes.Status200OK);
 
-        app.MapPost("/api/workitems/sync", async (IMediator mediator, CancellationToken ct) =>
+        app.MapPost("/api/workitems/sync", async (IMediator mediator, TfsConfigurationService configService, CancellationToken ct) =>
         {
-            await mediator.Send(new PoTool.Core.WorkItems.Commands.SyncWorkItemsCommand("DefaultAreaPath"), ct);
+            var config = await configService.GetConfigAsync(ct);
+            if (config == null || string.IsNullOrWhiteSpace(config.DefaultAreaPath))
+            {
+                return Results.BadRequest(new { error = "Default Area Path is not configured. Configure this in TFS settings." });
+            }
+            
+            await mediator.Send(new PoTool.Core.WorkItems.Commands.SyncWorkItemsCommand(config.DefaultAreaPath), ct);
             return Results.Ok();
         });
 
@@ -247,7 +254,8 @@ public static class ApiApplicationBuilderExtensions
 /// </summary>
 public record TfsConfigRequest(
     string? Url, 
-    string? Project, 
+    string? Project,
+    string? DefaultAreaPath,
     string? Pat, 
     int AuthMode = 0, 
     bool UseDefaultCredentials = false, 
