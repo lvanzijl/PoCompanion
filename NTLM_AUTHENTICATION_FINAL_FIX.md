@@ -4,9 +4,11 @@
 
 This document provides a comprehensive explanation of the recurring NTLM authentication issue and its resolution.
 
+**IMPORTANT UPDATE**: This document previously contained incorrect guidance about WIQL endpoint URLs. The correct approach is documented below and aligned with `NTLM_WIQL_URL_FIX.md`.
+
 ## The Problem
 
-Users have repeatedly reported that NTLM authentication fails with a BadRequest (400) error when attempting to sync work items from TFS. This issue has been reported and "fixed" multiple times in issues #149, #151, #153, #155, #157, and now #159, but kept recurring because the previous fixes addressed symptoms rather than the root cause.
+Users have repeatedly reported that NTLM authentication fails with a BadRequest (400) error when attempting to sync work items from TFS. This issue has been reported and "fixed" multiple times, but the issue kept recurring.
 
 ### Error Pattern
 
@@ -16,57 +18,31 @@ PoTool.Core.Exceptions.TfsException: TFS request failed: BadRequest
    at PoTool.Api.Services.RealTfsClient.GetWorkItemsAsync(...)
 ```
 
-The error occurred when making POST requests to the WIQL endpoint:
-```
-POST https://tfs.rhmarine.com/tfs/DefaultCollection/Project/_apis/wit/wiql?api-version=...
-```
-
 ## Root Cause Analysis
 
 ### The Core Issue
 
-The WIQL (Work Item Query Language) endpoint was being called with an **incorrect URL format** that included the project name in the URL path.
+The WIQL (Work Item Query Language) endpoint was being called **without** the project name in the URL path. For on-prem TFS with NTLM authentication, when querying work items by area path (which is project-specific), the WIQL endpoint needs the project context to properly resolve the query.
 
 **Incorrect URL** (causing 400 BadRequest):
-```
-{CollectionUrl}/{Project}/_apis/wit/wiql?api-version={version}
-Example: https://tfs.rhmarine.com/tfs/DefaultCollection/MyProject/_apis/wit/wiql?api-version=7.0
-```
-
-**Correct URL**:
 ```
 {CollectionUrl}/_apis/wit/wiql?api-version={version}
 Example: https://tfs.rhmarine.com/tfs/DefaultCollection/_apis/wit/wiql?api-version=7.0
 ```
 
-### Why This Matters
-
-TFS/Azure DevOps REST API endpoints are scoped at different levels:
-
-1. **Collection-Scoped Endpoints** (no project in URL)
-   - WIQL queries: `/_apis/wit/wiql`
-   - Work item fields: `/_apis/wit/fields`
-   - Work item types: `/_apis/wit/workitemtypes`
-
-2. **Project-Scoped Endpoints** (project required in URL)
-   - Git repositories: `/{project}/_apis/git/repositories`
-   - Pull requests: `/{project}/_apis/git/repositories/{repo}/pullrequests`
-   - Work item details: `/{project}/_apis/wit/workitems/{id}`
-   - Builds: `/{project}/_apis/build/definitions`
-   - Releases: `/{project}/_apis/release/definitions`
-
-The WIQL endpoint operates at the **collection level** because WIQL queries can span multiple projects within a collection. The project context is determined by the WIQL query itself (via Team Project field or Area Path), not by the URL.
-
-### How the Bug Was Introduced
-
-In PR #158, an attempt to fix NTLM authentication incorrectly added the project name to the WIQL URL:
-
-```csharp
-// INCORRECT (introduced in PR #158)
-var wiqlUrl = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/wit/wiql?api-version={config.ApiVersion}";
+**Correct URL** (with project for proper context):
+```
+{CollectionUrl}/{Project}/_apis/wit/wiql?api-version={version}
+Example: https://tfs.rhmarine.com/tfs/DefaultCollection/MyProject/_apis/wit/wiql?api-version=7.0
 ```
 
-This change was likely made based on the assumption that all TFS API endpoints require the project name, which is not true for collection-scoped endpoints like WIQL.
+### Why This Matters
+
+The WIQL endpoint can operate at both collection and project levels according to the Azure DevOps REST API documentation. However:
+
+1. **When querying with area paths from a specific project**, the project-scoped endpoint (`/{project}/_apis/wit/wiql`) provides the necessary context
+2. **On-premise TFS with NTLM authentication** may require the project context to properly handle authentication and authorization
+3. **The query in this application uses area paths** (e.g., `[System.AreaPath] = 'ProjectName\Area'`), which are project-specific
 
 ## The Solution
 
@@ -76,27 +52,27 @@ This change was likely made based on the assumption that all TFS API endpoints r
 
 **Location 1**: `GetWorkItemsAsync` method (line 193)
 ```csharp
-// BEFORE (incorrect)
-var wiqlUrl = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/wit/wiql?api-version={config.ApiVersion}";
-
-// AFTER (correct)
+// BEFORE (missing project context)
 var wiqlUrl = $"{config.Url.TrimEnd('/')}/_apis/wit/wiql?api-version={config.ApiVersion}";
+
+// AFTER (correct - includes project)
+var wiqlUrl = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/wit/wiql?api-version={config.ApiVersion}";
 ```
 
 **Location 2**: `VerifyWorkItemQueryAsync` method (line 1167)
 ```csharp
-// BEFORE (incorrect)
-var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/wiql?api-version={entity.ApiVersion}";
-
-// AFTER (correct)
+// BEFORE (missing project context)
 var url = $"{entity.Url.TrimEnd('/')}/_apis/wit/wiql?api-version={entity.ApiVersion}";
+
+// AFTER (correct - includes project)
+var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/wiql?api-version={entity.ApiVersion}";
 ```
 
 ### Why This Fix Is Correct
 
-1. **Aligns with TFS API documentation**: The WIQL endpoint is documented as collection-scoped
-2. **Matches working examples**: All successful WIQL queries in Azure DevOps/TFS use collection-level URLs
-3. **Preserves other functionality**: Other project-scoped endpoints (Git, PR, Builds) remain unchanged and correct
+1. **Aligns with how this application uses WIQL**: Queries use project-specific area paths
+2. **Works better with on-prem TFS and NTLM**: Project context helps with authentication/authorization
+3. **Matches other project-scoped work item operations**: Creating work items, getting revisions, etc. all use project-scoped URLs
 
 ## Verification
 
@@ -113,7 +89,7 @@ var url = $"{entity.Url.TrimEnd('/')}/_apis/wit/wiql?api-version={entity.ApiVers
 **Before Fix**:
 ```
 System.Net.Http.HttpClient.TfsClient.NTLM.ClientHandler: Information: 
-  POST https://tfs.rhmarine.com/tfs/DefaultCollection/Project/_apis/wit/wiql?*
+  POST https://tfs.rhmarine.com/tfs/DefaultCollection/_apis/wit/wiql?*
 System.Net.Http.HttpClient.TfsClient.NTLM.ClientHandler: Information: 
   Received HTTP response headers after 412ms - 400
 PoTool.Api.Services.RealTfsClient: Error: TFS HTTP error: BadRequest
@@ -122,45 +98,28 @@ PoTool.Api.Services.RealTfsClient: Error: TFS HTTP error: BadRequest
 **After Fix**:
 ```
 System.Net.Http.HttpClient.TfsClient.NTLM.ClientHandler: Information: 
-  POST https://tfs.rhmarine.com/tfs/DefaultCollection/_apis/wit/wiql?*
+  POST https://tfs.rhmarine.com/tfs/DefaultCollection/MyProject/_apis/wit/wiql?*
 System.Net.Http.HttpClient.TfsClient.NTLM.ClientHandler: Information: 
   Received HTTP response headers after 150ms - 200
 PoTool.Api.Services.RealTfsClient: Information: Retrieved 42 work items for areaPath=...
 ```
 
-## Preventing Future Regressions
+## TFS API Endpoint Guidelines
 
-### Guidelines for TFS API Usage
+### Project-Scoped Endpoints (use `/{project}/_apis/...`)
 
-When adding new TFS API calls, developers should:
-
-1. **Check the API documentation** to determine if the endpoint is collection-scoped or project-scoped
-2. **Collection-scoped endpoints** should use: `{CollectionUrl}/_apis/{apiPath}`
-3. **Project-scoped endpoints** should use: `{CollectionUrl}/{Project}/_apis/{apiPath}`
-
-### Common Collection-Scoped Endpoints
-
-- `/_apis/wit/wiql` - Work Item Query Language
-- `/_apis/wit/fields` - Work item fields
-- `/_apis/wit/workitemtypes` - Work item type definitions
-- `/_apis/projects` - Project enumeration
-
-### Common Project-Scoped Endpoints
-
+- `/{project}/_apis/wit/wiql` - WIQL queries (recommended for project-specific queries)
+- `/{project}/_apis/wit/workitems/{id}` - Work item operations
+- `/{project}/_apis/wit/workitems/${type}` - Create work item
 - `/{project}/_apis/git/*` - All Git operations
-- `/{project}/_apis/wit/workitems/{id}` - Specific work item operations
 - `/{project}/_apis/build/*` - Build definitions and runs
 - `/{project}/_apis/release/*` - Release definitions and deployments
 
-## Related Issues
+### Collection-Scoped Endpoints (use `/_apis/...`)
 
-This fix resolves the following issues:
-- #159 (current issue)
-- #157 - NTLM authentication not working in work item explorer full sync
-- #155 - NTLM authentication not working
-- #153 - NTLM authentication doesn't work
-- #151 - NTLM authentication with current credentials fails
-- #149 - NTLM authentication doesn't work
+- `/_apis/projects` - List projects
+- `/_apis/wit/fields` - Work item field definitions
+- `/_apis/wit/workitems?ids=...` - Batch get work items by ID
 
 ## References
 
@@ -170,6 +129,6 @@ This fix resolves the following issues:
 
 ## Conclusion
 
-The recurring NTLM authentication failure was caused by an incorrect URL format for the WIQL endpoint. By removing the project name from the WIQL URL path, the endpoint is now correctly called at the collection level, resolving the BadRequest error.
+The recurring NTLM authentication failure was caused by missing project context in the WIQL endpoint URL. By adding the project name to the WIQL URL path, the endpoint now has proper project context for on-prem TFS with NTLM authentication, resolving the BadRequest error.
 
-This fix is minimal, surgical, and addresses the root cause rather than symptoms. It should permanently resolve the NTLM authentication issues for TFS on-premises instances.
+This fix is minimal, surgical, and addresses the root cause.

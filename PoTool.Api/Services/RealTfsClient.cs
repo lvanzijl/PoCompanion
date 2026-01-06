@@ -190,7 +190,7 @@ public class RealTfsClient : ITfsClient
                 query = $"Select [System.Id], [System.WorkItemType], [System.Title], [System.State] From WorkItems Where [System.AreaPath] = '{EscapeWiql(areaPath)}'{dateFilter}"
             };
 
-            var wiqlUrl = $"{config.Url.TrimEnd('/')}/_apis/wit/wiql?api-version={config.ApiVersion}";
+            var wiqlUrl = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/wit/wiql?api-version={config.ApiVersion}";
             using var content = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
 
             // Phase 4: Enhanced logging
@@ -1164,7 +1164,7 @@ public class RealTfsClient : ITfsClient
                 query = "Select [System.Id] From WorkItems Where [System.WorkItemType] <> ''"
             };
 
-            var url = $"{entity.Url.TrimEnd('/')}/_apis/wit/wiql?api-version={entity.ApiVersion}";
+            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/wiql?api-version={entity.ApiVersion}";
             using var content = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
             
             var response = await _httpClient.PostAsync(url, content, cancellationToken);
