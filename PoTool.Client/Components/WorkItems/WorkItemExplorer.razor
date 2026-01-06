@@ -299,7 +299,7 @@
 
             try
             {
-                await SyncHubService.RequestSyncAsync(AppSettings.DefaultAreaPath);
+                await SyncHubService.RequestSyncAsync("");  // Parameter is deprecated - hub uses configured DefaultAreaPath
                 await Task.Delay(AppSettings.SyncDelayMilliseconds);
                 await LoadWorkItems();
                 await LoadLastSyncTimeAsync();

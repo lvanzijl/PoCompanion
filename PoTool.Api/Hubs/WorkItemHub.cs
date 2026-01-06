@@ -9,13 +9,16 @@ namespace PoTool.Api.Hubs;
 public class WorkItemHub : Hub
 {
     private readonly WorkItemSyncService _syncService;
+    private readonly TfsConfigurationService _configService;
     private readonly ILogger<WorkItemHub> _logger;
 
     public WorkItemHub(
         WorkItemSyncService syncService,
+        TfsConfigurationService configService,
         ILogger<WorkItemHub> logger)
     {
         _syncService = syncService;
+        _configService = configService;
         _logger = logger;
     }
 
@@ -38,14 +41,26 @@ public class WorkItemHub : Hub
     }
 
     /// <summary>
-    /// Triggers a sync of work items from TFS.
+    /// Triggers a sync of work items from TFS using the configured Default Area Path.
+    /// The areaPath parameter is deprecated and ignored - configuration value is always used.
     /// </summary>
     public async Task RequestSync(string areaPath)
     {
-        _logger.LogInformation("Sync requested by client {ConnectionId} for area path: {AreaPath}",
-            Context.ConnectionId, areaPath);
+        _logger.LogInformation("Sync requested by client {ConnectionId}", Context.ConnectionId);
 
-        await _syncService.TriggerSyncAsync(areaPath);
+        // Read DefaultAreaPath from configuration (ignore the provided parameter)
+        var config = await _configService.GetConfigAsync();
+        var configuredAreaPath = config?.DefaultAreaPath;
+        
+        if (string.IsNullOrWhiteSpace(configuredAreaPath))
+        {
+            _logger.LogError("Sync requested but Default Area Path is not configured");
+            await Clients.Caller.SendAsync("SyncStatus", new { Status = "Failed", Message = "Default Area Path is not configured. Configure this in TFS settings." });
+            return;
+        }
+
+        _logger.LogInformation("Using configured area path: {AreaPath}", configuredAreaPath);
+        await _syncService.TriggerSyncAsync(configuredAreaPath);
     }
 
     /// <summary>

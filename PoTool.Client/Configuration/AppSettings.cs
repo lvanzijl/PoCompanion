@@ -6,11 +6,6 @@ namespace PoTool.Client.Configuration;
 public class AppSettings
 {
     /// <summary>
-    /// The default area path for TFS/Azure DevOps work item queries.
-    /// </summary>
-    public const string DefaultAreaPath = "DefaultAreaPath";
-
-    /// <summary>
     /// The local storage key for saving expanded tree node state.
     /// </summary>
     public const string TreeExpandedStateKey = "workitem-tree-expanded";
