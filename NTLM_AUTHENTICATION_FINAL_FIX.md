@@ -8,7 +8,7 @@ This document provides a comprehensive explanation of the recurring NTLM authent
 
 ## The Problem
 
-Users have repeatedly reported that NTLM authentication fails with a BadRequest (400) error when attempting to sync work items from TFS. This issue has been reported and "fixed" multiple times but kept recurring.
+Users have repeatedly reported that NTLM authentication fails with a BadRequest (400) error when attempting to sync work items from TFS. This issue has been reported and "fixed" multiple times, but the issue kept recurring.
 
 ### Error Pattern
 
@@ -41,7 +41,7 @@ Example: https://tfs.rhmarine.com/tfs/DefaultCollection/MyProject/_apis/wit/wiql
 The WIQL endpoint can operate at both collection and project levels according to the Azure DevOps REST API documentation. However:
 
 1. **When querying with area paths from a specific project**, the project-scoped endpoint (`/{project}/_apis/wit/wiql`) provides the necessary context
-2. **On-prem TFS with NTLM authentication** may require the project context to properly handle authentication and authorization
+2. **On-premise TFS with NTLM authentication** may require the project context to properly handle authentication and authorization
 3. **The query in this application uses area paths** (e.g., `[System.AreaPath] = 'ProjectName\Area'`), which are project-specific
 
 ## The Solution
