@@ -201,6 +201,11 @@
         if (status == "Completed")
         {
             _ = LoadWorkItems();
+            Snackbar.Add(message, Severity.Success);
+        }
+        else if (status == "Failed")
+        {
+            Snackbar.Add(message, Severity.Error);
         }
 
         StateHasChanged();
