@@ -100,28 +100,32 @@ app.MapGet("/api/tfsvalidate", async (ITfsClient client, ILogger<Program> logger
 ### 4. Client-Side Error Handling
 
 Modified `TfsConfigService.ValidateConnectionAsync()` to:
-- Send `X-TFS-PAT` header when PAT is available (for PAT auth mode)
+- Use `HttpRequestMessage` for thread-safe header management
 - Parse error details from API responses
 - Throw detailed exceptions with error messages
 
 ```csharp
+// Create request with PAT header if available (for PAT auth mode)
+var request = new HttpRequestMessage(HttpMethod.Get, "/api/tfsvalidate");
 if (!string.IsNullOrEmpty(pat))
 {
-    _httpClient.DefaultRequestHeaders.Remove("X-TFS-PAT");
-    _httpClient.DefaultRequestHeaders.Add("X-TFS-PAT", pat);
+    request.Headers.Add("X-TFS-PAT", pat);
 }
 
-var response = await _httpClient.GetAsync("/api/tfsvalidate", cancellationToken);
+var response = await _httpClient.SendAsync(request, cancellationToken);
 
 if (!response.IsSuccessStatusCode)
 {
     // Try to read error details from response
     var errorJson = await response.Content.ReadAsStringAsync(cancellationToken);
-    var errorDetails = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(errorJson, _jsonOptions);
-    if (errorDetails != null && errorDetails.TryGetValue("details", out var details))
+    if (!string.IsNullOrWhiteSpace(errorJson))
     {
-        var detailsText = details.GetString();
-        throw new InvalidOperationException($"Connection test failed: {detailsText}");
+        var errorDetails = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(errorJson, _jsonOptions);
+        if (errorDetails != null && errorDetails.TryGetValue("details", out var details))
+        {
+            var detailsText = details.GetString() ?? "Unable to parse error details from server response";
+            throw new InvalidOperationException($"Connection test failed: {detailsText}");
+        }
     }
 }
 ```
