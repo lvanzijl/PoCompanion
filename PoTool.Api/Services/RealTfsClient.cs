@@ -216,7 +216,7 @@ public class RealTfsClient : ITfsClient
 
             // Batch get work items - use $expand=All to get all fields including System.Parent
             var idsQuery = string.Join(',', ids);
-            var itemsUrl = $"{config.Url.TrimEnd('/')}/_apis/wit/workitems?ids={idsQuery}&$expand=All&api-version={config.ApiVersion}";
+            var itemsUrl = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/wit/workitems?ids={idsQuery}&$expand=All&api-version={config.ApiVersion}";
             var itemsResponse = await httpClient.GetAsync(itemsUrl, cancellationToken);
             await HandleHttpErrorsAsync(itemsResponse, cancellationToken);
 
@@ -921,7 +921,7 @@ public class RealTfsClient : ITfsClient
                 }
             };
 
-            var updateUrl = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
+            var updateUrl = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
             using var content = new StringContent(
                 JsonSerializer.Serialize(patchDocument), 
                 System.Text.Encoding.UTF8, 
@@ -982,7 +982,7 @@ public class RealTfsClient : ITfsClient
                 }
             };
 
-            var updateUrl = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
+            var updateUrl = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
             using var content = new StringContent(
                 JsonSerializer.Serialize(patchDocument), 
                 System.Text.Encoding.UTF8, 
@@ -1272,7 +1272,7 @@ public class RealTfsClient : ITfsClient
         try
         {
             // Try to fetch work items in batch (even if there are none, the API should respond)
-            var url = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems?ids=1,2,3&api-version={entity.ApiVersion}";
+            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems?ids=1,2,3&api-version={entity.ApiVersion}";
             var response = await _httpClient.GetAsync(url, cancellationToken);
             
             // We expect 200 (with items) or 404 (no items found), both are acceptable
@@ -1414,7 +1414,7 @@ public class RealTfsClient : ITfsClient
             _logger.LogInformation("Verifying work item update capability using work item {WorkItemId}", workItemId);
             
             // First, verify the work item exists and get its current state
-            var getUrl = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
+            var getUrl = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
             var getResponse = await _httpClient.GetAsync(getUrl, cancellationToken);
             
             if (!getResponse.IsSuccessStatusCode)
@@ -1443,7 +1443,7 @@ public class RealTfsClient : ITfsClient
                 }
             };
 
-            var updateUrl = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
+            var updateUrl = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
             using var content = new StringContent(
                 JsonSerializer.Serialize(testPatch), 
                 System.Text.Encoding.UTF8, 
@@ -2146,7 +2146,7 @@ public class RealTfsClient : ITfsClient
                 }
             };
 
-            var updateUrl = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
+            var updateUrl = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
 
             using var content = new StringContent(
                 JsonSerializer.Serialize(patchOperations),
