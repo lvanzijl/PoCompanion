@@ -76,6 +76,14 @@
                             Class="mb-2">
                     Use current Windows user credentials for authentication
                 </MudCheckBox>
+
+                @if (!_useDefaultCredentials)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                        <strong>Note:</strong> Specific NTLM credentials are not yet supported in this version.
+                        Please use default Windows credentials or switch to PAT authentication mode.
+                    </MudAlert>
+                }
             }
 
             <MudNumericField @bind-Value="_timeoutSeconds" 
@@ -363,6 +371,11 @@
         finally
         {
             _isLoading = false;
+            // Trigger form validation after loading to enable buttons if form is valid
+            if (_form != null)
+            {
+                await _form.Validate();
+            }
         }
     }
 
@@ -402,7 +415,7 @@
             // First save the config
             await TfsConfigService.SaveConfigAsync(_url, _project, _pat, _authMode, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
 
-            // Then test the connection
+            // Then test the connection (throws on failure with detailed error information)
             var isValid = await TfsConfigService.ValidateConnectionAsync();
 
             if (isValid)
@@ -413,19 +426,10 @@
                 _pat = string.Empty; // Clear PAT after successful test
                 await LoadCurrentConfig(); // Reload to get updated LastValidated
             }
-            else
-            {
-                _errorResponse = new ErrorResponse
-                {
-                    UserMessage = "Connection test failed.",
-                    Suggestion = "Please check your credentials and network connectivity."
-                };
-                StateHasChanged();
-            }
         }
         catch (Exception ex)
         {
-            ShowError(ex, "Error testing connection");
+            ShowError(ex, "Connection test failed");
         }
         finally
         {
