@@ -49,7 +49,11 @@ public class TfsClientTests
         var mockPatAccessor = new Mock<PatAccessor>(Mock.Of<IHttpContextAccessor>());
         mockPatAccessor.Setup(p => p.GetPat()).Returns((string?)null);
         
-        _client = new RealTfsClient(_httpClient, _configService, _authProvider, mockPatAccessor.Object, _loggerMock.Object);
+        // Create mock IHttpClientFactory
+        var mockFactory = new Mock<IHttpClientFactory>();
+        mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
+        
+        _client = new RealTfsClient(_httpClient, mockFactory.Object, _configService, _authProvider, mockPatAccessor.Object, _loggerMock.Object);
     }
 
     [TestCleanup]

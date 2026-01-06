@@ -20,6 +20,7 @@ namespace PoTool.Api.Services;
 public class RealTfsClient : ITfsClient
 {
     private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly TfsConfigurationService _configService;
     private readonly TfsAuthenticationProvider _authProvider;
     private readonly PatAccessor _patAccessor;
@@ -34,17 +35,74 @@ public class RealTfsClient : ITfsClient
     private const string TfsFieldState = "System.State";
 
     public RealTfsClient(
-        HttpClient httpClient, 
+        HttpClient httpClient,
+        IHttpClientFactory httpClientFactory,
         TfsConfigurationService configService, 
         TfsAuthenticationProvider authProvider,
         PatAccessor patAccessor,
         ILogger<RealTfsClient> logger)
     {
         _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _configService = configService;
         _authProvider = authProvider;
         _patAccessor = patAccessor;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Gets an HttpClient properly configured for the current authentication mode.
+    /// Uses named HttpClients from IHttpClientFactory to ensure correct handler configuration.
+    /// For PAT mode: No default Windows credentials (avoids conflicts)
+    /// For NTLM mode: Uses default Windows credentials
+    /// </summary>
+    /// <param name="entity">TFS configuration entity containing auth mode and timeout settings.</param>
+    /// <returns>Configured HttpClient for the specified auth mode.</returns>
+    /// <exception cref="TfsAuthenticationException">Thrown when PAT is required but not provided, or auth mode is unsupported.</exception>
+    private HttpClient GetAuthenticatedHttpClient(TfsConfigEntity entity)
+    {
+        HttpClient client;
+        
+        if (entity.AuthMode == TfsAuthMode.Pat)
+        {
+            // Get PAT-configured client (no default credentials in handler)
+            client = _httpClientFactory.CreateClient("TfsClient.PAT");
+            
+            // Get PAT from current request context (provided via X-TFS-PAT header)
+            var pat = _patAccessor.GetPat();
+            
+            if (string.IsNullOrEmpty(pat))
+            {
+                throw new TfsAuthenticationException(
+                    "PAT must be provided via X-TFS-PAT header. " +
+                    "PAT is stored client-side for security. See docs/PAT_STORAGE_BEST_PRACTICES.md", 
+                    (string?)null);
+            }
+
+            // Configure PAT authentication via Authorization header
+            _authProvider.ConfigurePatAuthentication(client, pat);
+            
+            _logger.LogDebug("Using PAT-authenticated HttpClient for TFS request");
+        }
+        else if (entity.AuthMode == TfsAuthMode.Ntlm)
+        {
+            // Get NTLM-configured client (with UseDefaultCredentials=true in handler)
+            client = _httpClientFactory.CreateClient("TfsClient.NTLM");
+            
+            _logger.LogDebug("Using NTLM-authenticated HttpClient for TFS request");
+        }
+        else
+        {
+            throw new TfsAuthenticationException(
+                $"Unsupported authentication mode: {entity.AuthMode}. " +
+                "Only PAT and NTLM modes are supported.", 
+                (string?)null);
+        }
+        
+        // Configure timeout from entity (per-request since timeout can be changed in configuration)
+        client.Timeout = TimeSpan.FromSeconds(entity.TimeoutSeconds);
+        
+        return client;
     }
 
     public async Task<bool> ValidateConnectionAsync(CancellationToken cancellationToken = default)
@@ -58,12 +116,13 @@ public class RealTfsClient : ITfsClient
 
         try
         {
-            await ConfigureAuthenticationAsync(entity, cancellationToken);
+            // Use auth-mode-specific HttpClient to avoid credential conflicts
+            var httpClient = GetAuthenticatedHttpClient(entity);
             
             var url = $"{entity.Url.TrimEnd('/')}/_apis/projects?api-version={entity.ApiVersion}";
             _logger.LogInformation("Validating TFS connection: GET {Url} (AuthMode: {AuthMode})", url, entity.AuthMode);
             
-            var resp = await _httpClient.GetAsync(url, cancellationToken);
+            var resp = await httpClient.GetAsync(url, cancellationToken);
             
             _logger.LogInformation("Validation GET {Url} returned {StatusCode}", url, resp.StatusCode);
             
@@ -110,11 +169,12 @@ public class RealTfsClient : ITfsClient
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
         ValidateTfsConfiguration(entity);
+        
+        // Null assertion after validation - entity is guaranteed non-null here
+        var config = entity!;
 
-        // Apply timeout from configuration (Phase 4)
-        _httpClient.Timeout = TimeSpan.FromSeconds(entity!.TimeoutSeconds);
-
-        await ConfigureAuthenticationAsync(entity, cancellationToken);
+        // Get auth-mode-specific HttpClient to avoid credential conflicts
+        var httpClient = GetAuthenticatedHttpClient(config);
 
         var startTime = DateTimeOffset.UtcNow; // Phase 4: Performance metrics
 
@@ -130,13 +190,13 @@ public class RealTfsClient : ITfsClient
                 query = $"Select [System.Id], [System.WorkItemType], [System.Title], [System.State] From WorkItems Where [System.AreaPath] = '{EscapeWiql(areaPath)}'{dateFilter}"
             };
 
-            var wiqlUrl = $"{entity.Url.TrimEnd('/')}/_apis/wit/wiql?api-version={entity.ApiVersion}";
+            var wiqlUrl = $"{config.Url.TrimEnd('/')}/_apis/wit/wiql?api-version={config.ApiVersion}";
             using var content = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
 
             // Phase 4: Enhanced logging
             _logger.LogDebug("Executing WIQL query: {Query}", wiql.query);
             
-            var wiqlResponse = await _httpClient.PostAsync(wiqlUrl, content, cancellationToken);
+            var wiqlResponse = await httpClient.PostAsync(wiqlUrl, content, cancellationToken);
             await HandleHttpErrorsAsync(wiqlResponse, cancellationToken);
 
             using var stream = await wiqlResponse.Content.ReadAsStreamAsync(cancellationToken);
@@ -156,8 +216,8 @@ public class RealTfsClient : ITfsClient
 
             // Batch get work items - use $expand=All to get all fields including System.Parent
             var idsQuery = string.Join(',', ids);
-            var itemsUrl = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems?ids={idsQuery}&$expand=All&api-version={entity.ApiVersion}";
-            var itemsResponse = await _httpClient.GetAsync(itemsUrl, cancellationToken);
+            var itemsUrl = $"{config.Url.TrimEnd('/')}/_apis/wit/workitems?ids={idsQuery}&$expand=All&api-version={config.ApiVersion}";
+            var itemsResponse = await httpClient.GetAsync(itemsUrl, cancellationToken);
             await HandleHttpErrorsAsync(itemsResponse, cancellationToken);
 
             using var itemsStream = await itemsResponse.Content.ReadAsStreamAsync(cancellationToken);
