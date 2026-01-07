@@ -280,47 +280,123 @@ public class RealTfsClient : ITfsClient
                 return Enumerable.Empty<WorkItemDto>();
             }
 
-            _logger.LogDebug("Found {Count} work item IDs, fetching details", ids.Length);
+            _logger.LogDebug("Found {Count} work item IDs, fetching details using two-phase retrieval", ids.Length);
 
-            // Use Work Items Batch API to avoid 414 Request-URI Too Long errors
-            // Split IDs into batches and use POST _apis/wit/workitemsbatch
-            var results = new List<WorkItemDto>();
+            // TFS Server 2022 doesn't allow combining $expand=relations with fields= parameter
+            // Implement two-phase retrieval:
+            // Phase 1: Fetch relations only (no fields parameter)
+            // Phase 2: Fetch fields only (no expand parameter)
+            // Then merge by work item ID
+            
             var totalBatches = (int)Math.Ceiling((double)ids.Length / WorkItemBatchSize);
-
-            _logger.LogInformation("Fetching {TotalIds} work items in {BatchCount} batches of {BatchSize}", 
+            _logger.LogInformation("Fetching {TotalIds} work items in {BatchCount} batches of {BatchSize} (two-phase retrieval)", 
                 ids.Length, totalBatches, WorkItemBatchSize);
+
+            // Phase 1: Fetch relations to get parent IDs
+            var relationsMap = new Dictionary<int, int?>();
+            var relationsPresent = 0;
+            var reverseLinksPresent = 0;
+            var parentIdsExtracted = 0;
+
+            for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++)
+            {
+                var batchIds = ids.Skip(batchIndex * WorkItemBatchSize).Take(WorkItemBatchSize).ToArray();
+                
+                _logger.LogDebug("Phase 1 (relations): Processing batch {BatchIndex}/{TotalBatches} with {IdCount} IDs", 
+                    batchIndex + 1, totalBatches, batchIds.Length);
+
+                var relationsRequest = new WorkItemBatchRequest
+                {
+                    ids = batchIds,
+                    @expand = "relations" // Only expand relations, no fields
+                };
+
+                var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
+                using var relationsContent = new StringContent(
+                    JsonSerializer.Serialize(relationsRequest), 
+                    System.Text.Encoding.UTF8, 
+                    "application/json");
+
+                var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
+                await HandleHttpErrorsAsync(relationsResponse, cancellationToken);
+
+                using var relationsStream = await relationsResponse.Content.ReadAsStreamAsync(cancellationToken);
+                using var relationsDoc = await JsonDocument.ParseAsync(relationsStream, cancellationToken: cancellationToken);
+
+                // Extract parent IDs from relations
+                foreach (var item in relationsDoc.RootElement.GetProperty("value").EnumerateArray())
+                {
+                    var id = item.GetProperty("id").GetInt32();
+                    
+                    // Check if relations are present
+                    if (item.TryGetProperty("relations", out var relations) && relations.ValueKind == JsonValueKind.Array)
+                    {
+                        relationsPresent++;
+                        
+                        // Count reverse hierarchy links
+                        foreach (var rel in relations.EnumerateArray())
+                        {
+                            if (rel.TryGetProperty("rel", out var relType))
+                            {
+                                var relTypeStr = relType.GetString();
+                                if (string.Equals(relTypeStr, "System.LinkTypes.Hierarchy-Reverse", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    reverseLinksPresent++;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    var parentId = ExtractParentIdFromRelations(item);
+                    relationsMap[id] = parentId;
+                    
+                    if (parentId.HasValue)
+                    {
+                        parentIdsExtracted++;
+                    }
+                }
+
+                _logger.LogDebug(
+                    "Phase 1 batch {BatchIndex}/{TotalBatches} completed: {IdCount} IDs, HTTP {StatusCode}",
+                    batchIndex + 1, totalBatches, batchIds.Length, (int)relationsResponse.StatusCode);
+            }
+
+            _logger.LogInformation(
+                "Phase 1 complete: Relations present: {RelationsCount}, Reverse links: {ReverseLinksCount}, Parent IDs extracted: {ParentIdsCount}",
+                relationsPresent, reverseLinksPresent, parentIdsExtracted);
+
+            // Phase 2: Fetch fields for all work items
+            var results = new List<WorkItemDto>();
 
             for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++)
             {
                 var batchStartTime = DateTimeOffset.UtcNow;
                 var batchIds = ids.Skip(batchIndex * WorkItemBatchSize).Take(WorkItemBatchSize).ToArray();
                 
-                _logger.LogDebug("Processing batch {BatchIndex}/{TotalBatches} with {IdCount} IDs", 
+                _logger.LogDebug("Phase 2 (fields): Processing batch {BatchIndex}/{TotalBatches} with {IdCount} IDs", 
                     batchIndex + 1, totalBatches, batchIds.Length);
 
-                // Build request body for Work Items Batch API
-                var batchRequest = new WorkItemBatchRequest
+                var fieldsRequest = new WorkItemBatchRequest
                 {
                     ids = batchIds,
-                    fields = RequiredWorkItemFields,
-                    @expand = "relations" // Get parent link (requirement #4)
+                    fields = RequiredWorkItemFields // Only fetch fields, no expand
                 };
 
-                // Work Items Batch API is collection-scoped (work item IDs are unique across collection)
                 var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
-                using var batchContent = new StringContent(
-                    JsonSerializer.Serialize(batchRequest), 
+                using var fieldsContent = new StringContent(
+                    JsonSerializer.Serialize(fieldsRequest), 
                     System.Text.Encoding.UTF8, 
                     "application/json");
 
-                var batchResponse = await httpClient.PostAsync(batchUrl, batchContent, cancellationToken);
-                await HandleHttpErrorsAsync(batchResponse, cancellationToken);
+                var fieldsResponse = await httpClient.PostAsync(batchUrl, fieldsContent, cancellationToken);
+                await HandleHttpErrorsAsync(fieldsResponse, cancellationToken);
 
-                using var batchStream = await batchResponse.Content.ReadAsStreamAsync(cancellationToken);
-                using var batchDoc = await JsonDocument.ParseAsync(batchStream, cancellationToken: cancellationToken);
+                using var fieldsStream = await fieldsResponse.Content.ReadAsStreamAsync(cancellationToken);
+                using var fieldsDoc = await JsonDocument.ParseAsync(fieldsStream, cancellationToken: cancellationToken);
 
-                // Process work items from batch response
-                foreach (var item in batchDoc.RootElement.GetProperty("value").EnumerateArray())
+                // Process work items and merge with relations data
+                foreach (var item in fieldsDoc.RootElement.GetProperty("value").EnumerateArray())
                 {
                     var id = item.GetProperty("id").GetInt32();
                     var fields = item.GetProperty("fields");
@@ -330,9 +406,8 @@ public class RealTfsClient : ITfsClient
                     var area = fields.TryGetProperty("System.AreaPath", out var a) ? a.GetString() ?? "" : "";
                     var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
                     
-                    // Extract parent work item ID from relations (requirement #4)
-                    // Parent relationship is stored in relations with rel == "System.LinkTypes.Hierarchy-Reverse"
-                    int? parentId = ExtractParentIdFromRelations(item);
+                    // Get parent ID from relations map (populated in Phase 1)
+                    var parentId = relationsMap.TryGetValue(id, out var pid) ? pid : null;
 
                     // Extract effort field with robust parsing (requirement #5)
                     // Handle int, double, and string values safely
@@ -354,14 +429,17 @@ public class RealTfsClient : ITfsClient
 
                 var batchElapsed = DateTimeOffset.UtcNow - batchStartTime;
                 _logger.LogInformation(
-                    "Batch {BatchIndex}/{TotalBatches} completed: {IdCount} IDs fetched, HTTP {StatusCode}, {ElapsedMs}ms",
-                    batchIndex + 1, totalBatches, batchIds.Length, (int)batchResponse.StatusCode, batchElapsed.TotalMilliseconds);
+                    "Phase 2 batch {BatchIndex}/{TotalBatches} completed: {IdCount} IDs fetched, HTTP {StatusCode}, {ElapsedMs}ms",
+                    batchIndex + 1, totalBatches, batchIds.Length, (int)fieldsResponse.StatusCode, batchElapsed.TotalMilliseconds);
             }
 
-            // Phase 4: Performance metrics
+            // Performance metrics and summary
             var elapsed = DateTimeOffset.UtcNow - startTime;
-            _logger.LogInformation("Retrieved {Count} work items for areaPath={AreaPath}, since={Since} in {ElapsedMs}ms", 
-                results.Count, areaPath, since, elapsed.TotalMilliseconds);
+            _logger.LogInformation(
+                "Retrieved {Count} work items for areaPath={AreaPath}, since={Since} in {ElapsedMs}ms. " +
+                "Hierarchy stats: Relations={RelationsCount}, ReverseLinks={ReverseLinksCount}, ParentIDs={ParentIdsCount}",
+                results.Count, areaPath, since, elapsed.TotalMilliseconds,
+                relationsPresent, reverseLinksPresent, parentIdsExtracted);
             
             return results;
         }, cancellationToken);
@@ -384,7 +462,8 @@ public class RealTfsClient : ITfsClient
                 continue;
             
             var relType = rel.GetString();
-            if (relType != "System.LinkTypes.Hierarchy-Reverse")
+            // Case-insensitive match for relation type
+            if (!string.Equals(relType, "System.LinkTypes.Hierarchy-Reverse", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             if (!relation.TryGetProperty("url", out var urlProp))
@@ -394,8 +473,10 @@ public class RealTfsClient : ITfsClient
             if (string.IsNullOrEmpty(url))
                 continue;
 
-            // Extract work item ID from the last segment of the URL
-            var segments = url.Split('/');
+            // Robust URL parsing: strip querystring and trim trailing slash
+            // Example URL: https://dev.azure.com/org/project/_apis/wit/workItems/123?api-version=7.0
+            var urlWithoutQuery = url.Split('?')[0].TrimEnd('/');
+            var segments = urlWithoutQuery.Split('/');
             if (segments.Length > 0 && int.TryParse(segments[^1], out var parsedId))
             {
                 return parsedId;
@@ -1454,34 +1535,35 @@ public class RealTfsClient : ITfsClient
             }
 
             // Step 2: Fetch work items with relations to verify hierarchy resolution
-            // Use Work Items Batch API (POST) instead of GET to avoid potential 414 errors
-            var batchRequest = new WorkItemBatchRequest
+            // Use two-phase retrieval to avoid TFS Server 2022 limitation
+            // Phase 1: Fetch relations only (no fields)
+            var relationsRequest = new WorkItemBatchRequest
             {
                 ids = workItemIds,
                 @expand = "relations"
             };
 
             var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
-            using var batchContent = new StringContent(
-                JsonSerializer.Serialize(batchRequest), 
+            using var relationsContent = new StringContent(
+                JsonSerializer.Serialize(relationsRequest), 
                 System.Text.Encoding.UTF8, 
                 "application/json");
 
-            var itemsResponse = await httpClient.PostAsync(batchUrl, batchContent, cancellationToken);
+            var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
 
-            if (!itemsResponse.IsSuccessStatusCode)
+            if (!relationsResponse.IsSuccessStatusCode)
             {
                 return CreateFailureResult(
                     "work-item-hierarchy",
                     "Work item hierarchy display (Goal → Task chain)",
                     "Work item relationships can be resolved",
-                    $"Batch work item fetch failed: HTTP {(int)itemsResponse.StatusCode}",
-                    CategorizeHttpError(itemsResponse.StatusCode),
-                    await itemsResponse.Content.ReadAsStringAsync(cancellationToken));
+                    $"Batch work item fetch (relations) failed: HTTP {(int)relationsResponse.StatusCode}",
+                    CategorizeHttpError(relationsResponse.StatusCode),
+                    await relationsResponse.Content.ReadAsStringAsync(cancellationToken));
             }
 
-            using var itemsStream = await itemsResponse.Content.ReadAsStreamAsync(cancellationToken);
-            using var itemsDoc = await JsonDocument.ParseAsync(itemsStream, cancellationToken: cancellationToken);
+            using var relationsStream = await relationsResponse.Content.ReadAsStreamAsync(cancellationToken);
+            using var relationsDoc = await JsonDocument.ParseAsync(relationsStream, cancellationToken: cancellationToken);
 
             // Step 3: Verify hierarchy resolution - check for parent relationships
             var itemsWithParent = 0;
@@ -1489,7 +1571,7 @@ public class RealTfsClient : ITfsClient
             var maxDepthFound = 0;
             var workItemsWithRelations = new Dictionary<int, int?>(); // id -> parentId
 
-            foreach (var item in itemsDoc.RootElement.GetProperty("value").EnumerateArray())
+            foreach (var item in relationsDoc.RootElement.GetProperty("value").EnumerateArray())
             {
                 totalItems++;
                 var itemId = item.GetProperty("id").GetInt32();
