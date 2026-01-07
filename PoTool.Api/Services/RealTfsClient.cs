@@ -32,7 +32,21 @@ public class RealTfsClient : ITfsClient
 
     // TFS field paths
     private const string TfsFieldEffort = "Microsoft.VSTS.Scheduling.Effort";
+    private const string TfsFieldStoryPoints = "Microsoft.VSTS.Scheduling.StoryPoints";
     private const string TfsFieldState = "System.State";
+
+    // Required work item fields for queries
+    private static readonly string[] RequiredWorkItemFields = new[]
+    {
+        "System.Id",
+        "System.WorkItemType",
+        "System.Title",
+        "System.State",
+        "System.AreaPath",
+        "System.IterationPath",
+        TfsFieldEffort,
+        TfsFieldStoryPoints
+    };
 
     public RealTfsClient(
         HttpClient httpClient,
@@ -105,6 +119,39 @@ public class RealTfsClient : ITfsClient
         return client;
     }
 
+    /// <summary>
+    /// Builds a collection-scoped URL (no project in path).
+    /// Use for: _apis/projects, _apis/wit/fields, _apis/wit/workitems?ids=...
+    /// </summary>
+    /// <param name="config">TFS configuration entity.</param>
+    /// <param name="relativePath">Path relative to collection root (e.g., "_apis/projects").</param>
+    /// <returns>Full URL including api-version.</returns>
+    private static string CollectionUrl(TfsConfigEntity config, string relativePath)
+    {
+        // Ensure relativePath doesn't start with /
+        var path = relativePath.TrimStart('/');
+        var separator = path.Contains('?') ? "&" : "?";
+        return $"{config.Url.TrimEnd('/')}/{path}{separator}api-version={config.ApiVersion}";
+    }
+
+    /// <summary>
+    /// Builds a project-scoped URL (project in path).
+    /// Use for: WIQL, Git repositories, pull requests, build/release pipelines.
+    /// Project name is URL-encoded to support spaces.
+    /// </summary>
+    /// <param name="config">TFS configuration entity.</param>
+    /// <param name="relativePath">Path relative to project (e.g., "_apis/wit/wiql").</param>
+    /// <returns>Full URL including api-version.</returns>
+    private static string ProjectUrl(TfsConfigEntity config, string relativePath)
+    {
+        // URL-encode project name to support spaces and special characters
+        var encodedProject = Uri.EscapeDataString(config.Project);
+        // Ensure relativePath doesn't start with /
+        var path = relativePath.TrimStart('/');
+        var separator = path.Contains('?') ? "&" : "?";
+        return $"{config.Url.TrimEnd('/')}/{encodedProject}/{path}{separator}api-version={config.ApiVersion}";
+    }
+
     public async Task<bool> ValidateConnectionAsync(CancellationToken cancellationToken = default)
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
@@ -119,29 +166,55 @@ public class RealTfsClient : ITfsClient
             // Use auth-mode-specific HttpClient to avoid credential conflicts
             var httpClient = GetAuthenticatedHttpClient(entity);
             
-            var url = $"{entity.Url.TrimEnd('/')}/_apis/projects?api-version={entity.ApiVersion}";
-            _logger.LogInformation("Validating TFS connection: GET {Url} (AuthMode: {AuthMode})", url, entity.AuthMode);
+            // Step 1: Validate server connectivity using collection-scoped projects endpoint
+            var projectsUrl = CollectionUrl(entity, "_apis/projects");
+            _logger.LogInformation("Validating TFS connection: GET {Url} (AuthMode: {AuthMode})", projectsUrl, entity.AuthMode);
             
-            var resp = await httpClient.GetAsync(url, cancellationToken);
+            var resp = await httpClient.GetAsync(projectsUrl, cancellationToken);
             
-            _logger.LogInformation("Validation GET {Url} returned {StatusCode}", url, resp.StatusCode);
+            _logger.LogInformation("Validation GET {Url} returned {StatusCode}", projectsUrl, resp.StatusCode);
             
-            if (resp.IsSuccessStatusCode)
+            if (!resp.IsSuccessStatusCode)
             {
-                // Update last validated timestamp
-                entity.LastValidated = DateTimeOffset.UtcNow;
-                await _configService.SaveConfigEntityAsync(entity, cancellationToken);
-                _logger.LogInformation("TFS connection validation successful");
-                return true;
-            }
-            else
-            {
-                // Log detailed error information
                 var errorBody = await resp.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogError("TFS connection validation failed: HTTP {StatusCode}, Response: {ErrorBody}", 
                     resp.StatusCode, errorBody);
                 return false;
             }
+
+            // Step 2: Validate that the configured project exists (requirement #6)
+            var encodedProject = Uri.EscapeDataString(entity.Project);
+            var projectUrl = CollectionUrl(entity, $"_apis/projects/{encodedProject}");
+            _logger.LogInformation("Validating project access: GET {Url}", projectUrl);
+            
+            var projectResp = await httpClient.GetAsync(projectUrl, cancellationToken);
+            
+            if (!projectResp.IsSuccessStatusCode)
+            {
+                if (projectResp.StatusCode == HttpStatusCode.NotFound)
+                {
+                    _logger.LogError("Project '{Project}' does not exist or is not accessible", entity.Project);
+                }
+                else
+                {
+                    var errorBody = await projectResp.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogError("Project validation failed: HTTP {StatusCode}, Response: {ErrorBody}", 
+                        projectResp.StatusCode, errorBody);
+                }
+                return false;
+            }
+
+            // Store confirmed project info from response
+            using var stream = await projectResp.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var confirmedProjectName = doc.RootElement.GetProperty("name").GetString();
+            _logger.LogInformation("Project validated: {ProjectName}", confirmedProjectName);
+
+            // Update last validated timestamp
+            entity.LastValidated = DateTimeOffset.UtcNow;
+            await _configService.SaveConfigEntityAsync(entity, cancellationToken);
+            _logger.LogInformation("TFS connection validation successful");
+            return true;
         }
         catch (TfsAuthenticationException ex)
         {
@@ -181,16 +254,20 @@ public class RealTfsClient : ITfsClient
         return await ExecuteWithRetryAsync(async () =>
         {
             // Build WIQL query with optional date filter for incremental sync (Phase 3)
+            // Use UNDER operator for area path to support deeper hierarchies (requirement #3)
+            // Note: WIQL Select only needs System.Id since we fetch full work items in a separate batch call
+            // with all RequiredWorkItemFields. The other fields here are for debugging/logging purposes.
             var dateFilter = since.HasValue 
                 ? $" AND [System.ChangedDate] >= '{since.Value:yyyy-MM-ddTHH:mm:ssZ}'" 
                 : "";
 
             var wiql = new
             {
-                query = $"Select [System.Id], [System.WorkItemType], [System.Title], [System.State] From WorkItems Where [System.AreaPath] = '{EscapeWiql(areaPath)}'{dateFilter}"
+                query = $"Select [System.Id] From WorkItems Where [System.AreaPath] UNDER '{EscapeWiql(areaPath)}'{dateFilter}"
             };
 
-            var wiqlUrl = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/wit/wiql?api-version={config.ApiVersion}";
+            // WIQL is project-scoped (requirement #1)
+            var wiqlUrl = ProjectUrl(config, "_apis/wit/wiql");
             using var content = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
 
             // Phase 4: Enhanced logging
@@ -214,10 +291,12 @@ public class RealTfsClient : ITfsClient
 
             _logger.LogDebug("Found {Count} work item IDs, fetching details", ids.Length);
 
-            // Batch get work items - use $expand=All to get all fields including System.Parent
-            // Note: Batch GET does not require project in path (work item IDs are unique across collection)
+            // Batch get work items - use $expand=relations to get parent link (requirement #4)
+            // Use fields= parameter for explicit field list (requirement #5)
+            // Note: Batch GET is collection-scoped (work item IDs are unique across collection)
             var idsQuery = string.Join(',', ids);
-            var itemsUrl = $"{config.Url.TrimEnd('/')}/_apis/wit/workitems?ids={idsQuery}&$expand=All&api-version={config.ApiVersion}";
+            var fieldsQuery = string.Join(',', RequiredWorkItemFields);
+            var itemsUrl = CollectionUrl(config, $"_apis/wit/workitems?ids={idsQuery}&fields={Uri.EscapeDataString(fieldsQuery)}&$expand=relations");
             var itemsResponse = await httpClient.GetAsync(itemsUrl, cancellationToken);
             await HandleHttpErrorsAsync(itemsResponse, cancellationToken);
 
@@ -236,31 +315,13 @@ public class RealTfsClient : ITfsClient
                 var area = fields.TryGetProperty("System.AreaPath", out var a) ? a.GetString() ?? "" : "";
                 var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
                 
-                // Extract parent work item ID if present
-                int? parentId = null;
-                if (fields.TryGetProperty("System.Parent", out var parent) && parent.ValueKind == JsonValueKind.String)
-                {
-                    var parentUrl = parent.GetString();
-                    if (!string.IsNullOrEmpty(parentUrl))
-                    {
-                        var segments = parentUrl.Split('/');
-                        if (segments.Length > 0 && int.TryParse(segments[^1], out var parsedId))
-                        {
-                            parentId = parsedId;
-                        }
-                    }
-                }
+                // Extract parent work item ID from relations (requirement #4)
+                // Parent relationship is stored in relations with rel == "System.LinkTypes.Hierarchy-Reverse"
+                int? parentId = ExtractParentIdFromRelations(item);
 
-                // Phase 3: Extract effort field (common custom fields: Microsoft.VSTS.Scheduling.Effort, Microsoft.VSTS.Scheduling.StoryPoints)
-                int? effort = null;
-                if (fields.TryGetProperty("Microsoft.VSTS.Scheduling.Effort", out var effortField) && effortField.ValueKind == JsonValueKind.Number)
-                {
-                    effort = effortField.GetInt32();
-                }
-                else if (fields.TryGetProperty("Microsoft.VSTS.Scheduling.StoryPoints", out var storyPoints) && storyPoints.ValueKind == JsonValueKind.Number)
-                {
-                    effort = (int)storyPoints.GetDouble(); // Story points might be decimal
-                }
+                // Extract effort field with robust parsing (requirement #5)
+                // Handle int, double, and string values safely
+                int? effort = ParseEffortField(fields);
 
                 results.Add(new WorkItemDto(
                     TfsId: id,
@@ -285,6 +346,100 @@ public class RealTfsClient : ITfsClient
         }, cancellationToken);
     }
 
+    /// <summary>
+    /// Extracts the parent work item ID from the relations array.
+    /// Parent relationship is stored with rel == "System.LinkTypes.Hierarchy-Reverse".
+    /// </summary>
+    private static int? ExtractParentIdFromRelations(JsonElement item)
+    {
+        if (!item.TryGetProperty("relations", out var relations) || relations.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        foreach (var relation in relations.EnumerateArray())
+        {
+            if (!relation.TryGetProperty("rel", out var rel))
+                continue;
+            
+            var relType = rel.GetString();
+            if (relType != "System.LinkTypes.Hierarchy-Reverse")
+                continue;
+
+            if (!relation.TryGetProperty("url", out var urlProp))
+                continue;
+
+            var url = urlProp.GetString();
+            if (string.IsNullOrEmpty(url))
+                continue;
+
+            // Extract work item ID from the last segment of the URL
+            var segments = url.Split('/');
+            if (segments.Length > 0 && int.TryParse(segments[^1], out var parsedId))
+            {
+                return parsedId;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Parses effort from work item fields with robust type handling.
+    /// Handles int, double, and string values safely (requirement #5).
+    /// </summary>
+    private static int? ParseEffortField(JsonElement fields)
+    {
+        // Try Microsoft.VSTS.Scheduling.Effort first
+        if (fields.TryGetProperty(TfsFieldEffort, out var effortField))
+        {
+            var parsed = ParseNumericValue(effortField);
+            if (parsed.HasValue)
+                return parsed;
+        }
+
+        // Fall back to Microsoft.VSTS.Scheduling.StoryPoints
+        if (fields.TryGetProperty(TfsFieldStoryPoints, out var storyPoints))
+        {
+            return ParseNumericValue(storyPoints);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Parses a JSON element as a numeric value, handling int, double, and string types.
+    /// </summary>
+    private static int? ParseNumericValue(JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Number:
+                // TryGetInt32 handles integer values
+                if (element.TryGetInt32(out var intValue))
+                    return intValue;
+                // Fall back to double for decimal values
+                if (element.TryGetDouble(out var doubleValue))
+                    return (int)Math.Round(doubleValue);
+                break;
+
+            case JsonValueKind.String:
+                var strValue = element.GetString();
+                if (!string.IsNullOrEmpty(strValue))
+                {
+                    // Try parsing as int first
+                    if (int.TryParse(strValue, out var parsedInt))
+                        return parsedInt;
+                    // Try parsing as double and round
+                    if (double.TryParse(strValue, out var parsedDouble))
+                        return (int)Math.Round(parsedDouble);
+                }
+                break;
+        }
+
+        return null;
+    }
+
     // Pull Request methods - Phase 2 implementation with Phase 4 enhancements
     public async Task<IEnumerable<PullRequestDto>> GetPullRequestsAsync(
         string? repositoryName = null,
@@ -294,18 +449,17 @@ public class RealTfsClient : ITfsClient
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
         ValidateTfsConfiguration(entity);
+        var config = entity!;
 
-        // Phase 4: Apply timeout from configuration
-        _httpClient.Timeout = TimeSpan.FromSeconds(entity!.TimeoutSeconds);
-
-        await ConfigureAuthenticationAsync(entity, cancellationToken);
+        // Use auth-mode-specific HttpClient (requirement #2)
+        var httpClient = GetAuthenticatedHttpClient(config);
 
         var startTime = DateTimeOffset.UtcNow; // Phase 4: Performance metrics
 
         return await ExecuteWithRetryAsync(async () =>
         {
             // Get all repositories or specific one
-            var repositories = await GetRepositoriesAsync(entity, repositoryName, cancellationToken);
+            var repositories = await GetRepositoriesInternalAsync(config, httpClient, repositoryName, cancellationToken);
             var allPRs = new List<PullRequestDto>();
 
             _logger.LogDebug("Querying {RepoCount} repositories for pull requests", repositories.Count);
@@ -329,11 +483,13 @@ public class RealTfsClient : ITfsClient
                     queryParams.Add($"searchCriteria.maxTime={toDate.Value:yyyy-MM-ddTHH:mm:ssZ}");
                 }
 
-                var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/git/repositories/{repo.Name}/pullrequests?{string.Join("&", queryParams)}&api-version={entity.ApiVersion}";
+                // Git PRs are project-scoped (requirement #1)
+                var encodedRepoName = Uri.EscapeDataString(repo.Name);
+                var url = ProjectUrl(config, $"_apis/git/repositories/{encodedRepoName}/pullrequests?{string.Join("&", queryParams)}");
                 
                 _logger.LogDebug("Fetching PRs from repository {Repository}", repo.Name);
                 
-                var response = await _httpClient.GetAsync(url, cancellationToken);
+                var response = await httpClient.GetAsync(url, cancellationToken);
                 await HandleHttpErrorsAsync(response, cancellationToken);
 
                 using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -362,7 +518,7 @@ public class RealTfsClient : ITfsClient
                         : null;
 
                     // Determine iteration path from work items or use default
-                    var iterationPath = entity.Project; // Default to project name
+                    var iterationPath = config.Project; // Default to project name
 
                     allPRs.Add(new PullRequestDto(
                         Id: prId,
@@ -398,13 +554,16 @@ public class RealTfsClient : ITfsClient
         ValidateTfsConfiguration(entity);
         var config = entity!; // Non-null after validation
 
-        await ConfigureAuthenticationAsync(config, cancellationToken);
+        // Use auth-mode-specific HttpClient (requirement #2)
+        var httpClient = GetAuthenticatedHttpClient(config);
 
         return await ExecuteWithRetryAsync(async () =>
         {
-            var url = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/iterations?api-version={config.ApiVersion}";
+            // Git PRs are project-scoped (requirement #1)
+            var encodedRepoName = Uri.EscapeDataString(repositoryName);
+            var url = ProjectUrl(config, $"_apis/git/repositories/{encodedRepoName}/pullrequests/{pullRequestId}/iterations");
             
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -458,13 +617,16 @@ public class RealTfsClient : ITfsClient
         ValidateTfsConfiguration(entity);
         var config = entity!; // Non-null after validation
 
-        await ConfigureAuthenticationAsync(config, cancellationToken);
+        // Use auth-mode-specific HttpClient (requirement #2)
+        var httpClient = GetAuthenticatedHttpClient(config);
 
         return await ExecuteWithRetryAsync(async () =>
         {
-            var url = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/threads?api-version={config.ApiVersion}";
+            // Git PRs are project-scoped (requirement #1)
+            var encodedRepoName = Uri.EscapeDataString(repositoryName);
+            var url = ProjectUrl(config, $"_apis/git/repositories/{encodedRepoName}/pullrequests/{pullRequestId}/threads");
             
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -540,13 +702,16 @@ public class RealTfsClient : ITfsClient
         ValidateTfsConfiguration(entity);
         var config = entity!; // Non-null after validation
 
-        await ConfigureAuthenticationAsync(config, cancellationToken);
+        // Use auth-mode-specific HttpClient (requirement #2)
+        var httpClient = GetAuthenticatedHttpClient(config);
 
         return await ExecuteWithRetryAsync(async () =>
         {
-            var url = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/iterations/{iterationId}/changes?api-version={config.ApiVersion}";
+            // Git PRs are project-scoped (requirement #1)
+            var encodedRepoName = Uri.EscapeDataString(repositoryName);
+            var url = ProjectUrl(config, $"_apis/git/repositories/{encodedRepoName}/pullrequests/{pullRequestId}/iterations/{iterationId}/changes");
             
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -598,14 +763,15 @@ public class RealTfsClient : ITfsClient
         ValidateTfsConfiguration(entity);
         var config = entity!; // Non-null after validation
 
-        await ConfigureAuthenticationAsync(config, cancellationToken);
+        // Use auth-mode-specific HttpClient (requirement #2)
+        var httpClient = GetAuthenticatedHttpClient(config);
 
         return await ExecuteWithRetryAsync(async () =>
         {
-            // Get work item with all revisions using the revisions expand parameter
-            var url = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/wit/workitems/{workItemId}/revisions?api-version={config.ApiVersion}";
+            // Work item revisions are collection-scoped (work item IDs are unique across collection)
+            var url = CollectionUrl(config, $"_apis/wit/workitems/{workItemId}/revisions");
             
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -734,45 +900,31 @@ public class RealTfsClient : ITfsClient
         };
     }
 
-    private async Task ConfigureAuthenticationAsync(TfsConfigEntity entity, CancellationToken cancellationToken)
+    /// <summary>
+    /// DEPRECATED: This method is kept for backward compatibility but is no longer used.
+    /// All TFS calls now use GetAuthenticatedHttpClient() which creates properly configured
+    /// HttpClient instances from IHttpClientFactory.
+    /// 
+    /// The old approach of mutating _httpClient state was problematic because:
+    /// - NTLM authentication must be handled in HttpClientHandler, not headers
+    /// - Mixing PAT headers with NTLM handlers causes conflicts
+    /// - The same HttpClient instance shouldn't be reused across auth modes
+    /// </summary>
+    [Obsolete("Use GetAuthenticatedHttpClient() instead. This method is kept only for backward compatibility.")]
+    private Task ConfigureAuthenticationAsync(TfsConfigEntity entity, CancellationToken cancellationToken)
     {
-        if (entity.AuthMode == TfsAuthMode.Pat)
-        {
-            // Get PAT from current request context (provided via X-TFS-PAT header)
-            var pat = _patAccessor.GetPat();
-            
-            if (string.IsNullOrEmpty(pat))
-            {
-                throw new TfsAuthenticationException(
-                    "PAT must be provided via X-TFS-PAT header. " +
-                    "PAT is stored client-side for security. See docs/PAT_STORAGE_BEST_PRACTICES.md", 
-                    (string?)null);
-            }
-
-            // Configure HTTP client with PAT authentication
-            _authProvider.ConfigurePatAuthentication(_httpClient, pat);
-            
-            _logger.LogDebug("Configured PAT authentication for TFS request");
-        }
-        else if (entity.AuthMode == TfsAuthMode.Ntlm)
-        {
-            // Clear any Authorization header that might have been set by previous PAT requests
-            // NTLM authentication is handled by the HttpClientHandler, not by headers
-            _httpClient.DefaultRequestHeaders.Authorization = null;
-            
-            _logger.LogDebug("Configured NTLM authentication for TFS request (cleared Authorization header)");
-        }
-        else
-        {
-            throw new TfsAuthenticationException(
-                $"Unsupported authentication mode: {entity.AuthMode}. " +
-                "Only PAT and NTLM modes are supported.", 
-                (string?)null);
-        }
+        // This method is no longer called but kept for backward compatibility
+        _logger.LogWarning("ConfigureAuthenticationAsync is deprecated. Use GetAuthenticatedHttpClient() instead.");
+        return Task.CompletedTask;
     }
 
-    private async Task<List<(string Name, string Id)>> GetRepositoriesAsync(
-        TfsConfigEntity entity, 
+    /// <summary>
+    /// Gets repositories in the project using the provided authenticated HttpClient.
+    /// Git repositories are project-scoped.
+    /// </summary>
+    private async Task<List<(string Name, string Id)>> GetRepositoriesInternalAsync(
+        TfsConfigEntity config, 
+        HttpClient httpClient,
         string? repositoryName, 
         CancellationToken cancellationToken)
     {
@@ -782,9 +934,9 @@ public class RealTfsClient : ITfsClient
             return new List<(string Name, string Id)> { (repositoryName, repositoryName) };
         }
 
-        // Otherwise, get all repositories in the project
-        var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/git/repositories?api-version={entity.ApiVersion}";
-        var response = await _httpClient.GetAsync(url, cancellationToken);
+        // Git repositories are project-scoped (requirement #1)
+        var url = ProjectUrl(config, "_apis/git/repositories");
+        var response = await httpClient.GetAsync(url, cancellationToken);
         await HandleHttpErrorsAsync(response, cancellationToken);
 
         using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -806,8 +958,18 @@ public class RealTfsClient : ITfsClient
             }
         }
 
-        _logger.LogInformation("Found {Count} repositories in project {Project}", repositories.Count, entity.Project);
+        _logger.LogInformation("Found {Count} repositories in project {Project}", repositories.Count, config.Project);
         return repositories;
+    }
+
+    // Legacy method kept for backward compatibility - forwards to internal implementation
+    private async Task<List<(string Name, string Id)>> GetRepositoriesAsync(
+        TfsConfigEntity entity, 
+        string? repositoryName, 
+        CancellationToken cancellationToken)
+    {
+        var httpClient = GetAuthenticatedHttpClient(entity);
+        return await GetRepositoriesInternalAsync(entity, httpClient, repositoryName, cancellationToken);
     }
 
     private async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken, int maxRetries = MaxRetries)
@@ -904,12 +1066,8 @@ public class RealTfsClient : ITfsClient
                 return false;
             }
 
-            var pat = _patAccessor.GetPat();
-            if (string.IsNullOrEmpty(pat))
-            {
-                _logger.LogWarning("No PAT found for updating work item");
-                return false;
-            }
+            // Use auth-mode-specific HttpClient (requirement #2)
+            var httpClient = GetAuthenticatedHttpClient(entity);
 
             // Build JSON Patch document
             var patchDocument = new[]
@@ -922,7 +1080,8 @@ public class RealTfsClient : ITfsClient
                 }
             };
 
-            var updateUrl = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
+            // Work item PATCH is collection-scoped (work item IDs are unique across collection)
+            var updateUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}");
             using var content = new StringContent(
                 JsonSerializer.Serialize(patchDocument), 
                 System.Text.Encoding.UTF8, 
@@ -930,7 +1089,7 @@ public class RealTfsClient : ITfsClient
 
             _logger.LogDebug("Sending PATCH request to update work item {WorkItemId}", workItemId);
             
-            var response = await _httpClient.PatchAsync(updateUrl, content, cancellationToken);
+            var response = await httpClient.PatchAsync(updateUrl, content, cancellationToken);
             
             if (response.IsSuccessStatusCode)
             {
@@ -965,12 +1124,8 @@ public class RealTfsClient : ITfsClient
                 return false;
             }
 
-            var pat = _patAccessor.GetPat();
-            if (string.IsNullOrEmpty(pat))
-            {
-                _logger.LogWarning("No PAT found for updating work item effort");
-                return false;
-            }
+            // Use auth-mode-specific HttpClient (requirement #2)
+            var httpClient = GetAuthenticatedHttpClient(entity);
 
             // Build JSON Patch document for effort (Microsoft.VSTS.Scheduling.Effort)
             var patchDocument = new[]
@@ -983,7 +1138,8 @@ public class RealTfsClient : ITfsClient
                 }
             };
 
-            var updateUrl = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
+            // Work item PATCH is collection-scoped (work item IDs are unique across collection)
+            var updateUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}");
             using var content = new StringContent(
                 JsonSerializer.Serialize(patchDocument), 
                 System.Text.Encoding.UTF8, 
@@ -991,7 +1147,7 @@ public class RealTfsClient : ITfsClient
 
             _logger.LogDebug("Sending PATCH request to update work item {WorkItemId} effort", workItemId);
             
-            var response = await _httpClient.PatchAsync(updateUrl, content, cancellationToken);
+            var response = await httpClient.PatchAsync(updateUrl, content, cancellationToken);
             
             if (response.IsSuccessStatusCode)
             {
@@ -1067,15 +1223,17 @@ public class RealTfsClient : ITfsClient
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyServerReachabilityAsync(
-        TfsConfigEntity entity, 
+        TfsConfigEntity config, 
         CancellationToken cancellationToken)
     {
         try
         {
-            await ConfigureAuthenticationAsync(entity, cancellationToken);
+            // Use auth-mode-specific HttpClient (requirement #2, #8)
+            var httpClient = GetAuthenticatedHttpClient(config);
             
-            var url = $"{entity.Url.TrimEnd('/')}/_apis/projects?api-version={entity.ApiVersion}";
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            // Collection-scoped endpoint for server reachability
+            var url = CollectionUrl(config, "_apis/projects");
+            var response = await httpClient.GetAsync(url, cancellationToken);
             
             if (response.IsSuccessStatusCode)
             {
@@ -1110,13 +1268,18 @@ public class RealTfsClient : ITfsClient
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyProjectAccessAsync(
-        TfsConfigEntity entity, 
+        TfsConfigEntity config, 
         CancellationToken cancellationToken)
     {
         try
         {
-            var url = $"{entity.Url.TrimEnd('/')}/_apis/projects/{entity.Project}?api-version={entity.ApiVersion}";
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            // Use auth-mode-specific HttpClient (requirement #2, #8)
+            var httpClient = GetAuthenticatedHttpClient(config);
+            
+            // Project access check is collection-scoped with project name in path
+            var encodedProject = Uri.EscapeDataString(config.Project);
+            var url = CollectionUrl(config, $"_apis/projects/{encodedProject}");
+            var response = await httpClient.GetAsync(url, cancellationToken);
             
             if (response.IsSuccessStatusCode)
             {
@@ -1129,7 +1292,7 @@ public class RealTfsClient : ITfsClient
                     CapabilityId = "project-access",
                     Success = true,
                     ImpactedFunctionality = "Work item retrieval, project-specific operations",
-                    ExpectedBehavior = $"Project '{entity.Project}' exists and is accessible",
+                    ExpectedBehavior = $"Project '{config.Project}' exists and is accessible",
                     ObservedBehavior = $"Project found: {projectName}"
                 };
             }
@@ -1137,7 +1300,7 @@ public class RealTfsClient : ITfsClient
             return CreateFailureResult(
                 "project-access",
                 "Work item retrieval, project-specific operations",
-                $"Project '{entity.Project}' exists and is accessible",
+                $"Project '{config.Project}' exists and is accessible",
                 $"HTTP {(int)response.StatusCode}",
                 response.StatusCode == HttpStatusCode.NotFound ? FailureCategory.Authorization : CategorizeHttpError(response.StatusCode),
                 await response.Content.ReadAsStringAsync(cancellationToken));
@@ -1147,7 +1310,7 @@ public class RealTfsClient : ITfsClient
             return CreateFailureResult(
                 "project-access",
                 "Work item retrieval, project-specific operations",
-                $"Project '{entity.Project}' exists and is accessible",
+                $"Project '{config.Project}' exists and is accessible",
                 $"Exception: {ex.GetType().Name}",
                 FailureCategory.EndpointUnavailable,
                 SanitizeErrorMessage(ex.Message));
@@ -1155,20 +1318,24 @@ public class RealTfsClient : ITfsClient
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyWorkItemQueryAsync(
-        TfsConfigEntity entity, 
+        TfsConfigEntity config, 
         CancellationToken cancellationToken)
     {
         try
         {
+            // Use auth-mode-specific HttpClient (requirement #2, #8)
+            var httpClient = GetAuthenticatedHttpClient(config);
+            
             var wiql = new
             {
                 query = "Select [System.Id] From WorkItems Where [System.WorkItemType] <> ''"
             };
 
-            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/wiql?api-version={entity.ApiVersion}";
+            // WIQL is project-scoped (requirement #1)
+            var url = ProjectUrl(config, "_apis/wit/wiql");
             using var content = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
             
-            var response = await _httpClient.PostAsync(url, content, cancellationToken);
+            var response = await httpClient.PostAsync(url, content, cancellationToken);
             
             if (response.IsSuccessStatusCode)
             {
@@ -1203,14 +1370,17 @@ public class RealTfsClient : ITfsClient
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyWorkItemFieldsAsync(
-        TfsConfigEntity entity, 
+        TfsConfigEntity config, 
         CancellationToken cancellationToken)
     {
         try
         {
-            // Query for work item fields
-            var url = $"{entity.Url.TrimEnd('/')}/_apis/wit/fields?api-version={entity.ApiVersion}";
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            // Use auth-mode-specific HttpClient (requirement #2, #8)
+            var httpClient = GetAuthenticatedHttpClient(config);
+            
+            // Work item fields are collection-scoped (requirement #1)
+            var url = CollectionUrl(config, "_apis/wit/fields");
+            var response = await httpClient.GetAsync(url, cancellationToken);
             
             if (response.IsSuccessStatusCode)
             {
@@ -1267,15 +1437,17 @@ public class RealTfsClient : ITfsClient
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyBatchReadAsync(
-        TfsConfigEntity entity, 
+        TfsConfigEntity config, 
         CancellationToken cancellationToken)
     {
         try
         {
-            // Try to fetch work items in batch (even if there are none, the API should respond)
-            // Note: Batch GET does not require project in path (work item IDs are unique across collection)
-            var url = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems?ids=1,2,3&api-version={entity.ApiVersion}";
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            // Use auth-mode-specific HttpClient (requirement #2, #8)
+            var httpClient = GetAuthenticatedHttpClient(config);
+            
+            // Batch work item GET is collection-scoped (requirement #1)
+            var url = CollectionUrl(config, "_apis/wit/workitems?ids=1,2,3");
+            var response = await httpClient.GetAsync(url, cancellationToken);
             
             // We expect 200 (with items) or 404 (no items found), both are acceptable
             if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound)
@@ -1311,15 +1483,17 @@ public class RealTfsClient : ITfsClient
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyWorkItemRevisionsAsync(
-        TfsConfigEntity entity,
+        TfsConfigEntity config,
         CancellationToken cancellationToken)
     {
         try
         {
-            // Try to get revision history capabilities by checking the revisions endpoint
-            // We'll use work item ID 1 as a test (most TFS instances have at least one work item)
-            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/1/revisions?api-version={entity.ApiVersion}";
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            // Use auth-mode-specific HttpClient (requirement #2, #8)
+            var httpClient = GetAuthenticatedHttpClient(config);
+            
+            // Work item revisions are collection-scoped (work item IDs are unique across collection)
+            var url = CollectionUrl(config, "_apis/wit/workitems/1/revisions");
+            var response = await httpClient.GetAsync(url, cancellationToken);
             
             // We expect either 200 (work item exists with revisions) or 404 (work item doesn't exist)
             // Both indicate the API endpoint is available
@@ -1356,14 +1530,17 @@ public class RealTfsClient : ITfsClient
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyPullRequestsAsync(
-        TfsConfigEntity entity,
+        TfsConfigEntity config,
         CancellationToken cancellationToken)
     {
         try
         {
-            // Try to get repositories to verify Git/PR API access
-            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/git/repositories?api-version={entity.ApiVersion}";
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            // Use auth-mode-specific HttpClient (requirement #2, #8)
+            var httpClient = GetAuthenticatedHttpClient(config);
+            
+            // Git repositories are project-scoped (requirement #1)
+            var url = ProjectUrl(config, "_apis/git/repositories");
+            var response = await httpClient.GetAsync(url, cancellationToken);
             
             if (response.IsSuccessStatusCode)
             {
@@ -1407,17 +1584,20 @@ public class RealTfsClient : ITfsClient
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyWorkItemUpdateAsync(
-        TfsConfigEntity entity,
+        TfsConfigEntity config,
         int workItemId,
         CancellationToken cancellationToken)
     {
         try
         {
+            // Use auth-mode-specific HttpClient (requirement #2, #8)
+            var httpClient = GetAuthenticatedHttpClient(config);
+            
             _logger.LogInformation("Verifying work item update capability using work item {WorkItemId}", workItemId);
             
-            // First, verify the work item exists and get its current state
-            var getUrl = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
-            var getResponse = await _httpClient.GetAsync(getUrl, cancellationToken);
+            // Work item GET is collection-scoped (work item IDs are unique across collection)
+            var getUrl = CollectionUrl(config, $"_apis/wit/workitems/{workItemId}");
+            var getResponse = await httpClient.GetAsync(getUrl, cancellationToken);
             
             if (!getResponse.IsSuccessStatusCode)
             {
@@ -1445,13 +1625,14 @@ public class RealTfsClient : ITfsClient
                 }
             };
 
-            var updateUrl = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
+            // Work item PATCH is collection-scoped
+            var updateUrl = CollectionUrl(config, $"_apis/wit/workitems/{workItemId}");
             using var content = new StringContent(
                 JsonSerializer.Serialize(testPatch), 
                 System.Text.Encoding.UTF8, 
                 "application/json-patch+json");
 
-            var updateResponse = await _httpClient.PatchAsync(updateUrl, content, cancellationToken);
+            var updateResponse = await httpClient.PatchAsync(updateUrl, content, cancellationToken);
             
             // For a test operation, we expect either success or a specific failure about the test
             var isWritable = updateResponse.IsSuccessStatusCode || 
@@ -1999,18 +2180,8 @@ public class RealTfsClient : ITfsClient
                 };
             }
 
-            var pat = _patAccessor.GetPat();
-            if (string.IsNullOrEmpty(pat))
-            {
-                _logger.LogWarning("No PAT found for creating work item");
-                return new WorkItemCreateResult
-                {
-                    Success = false,
-                    ErrorMessage = "PAT not configured"
-                };
-            }
-
-            await ConfigureAuthenticationAsync(entity, cancellationToken);
+            // Use auth-mode-specific HttpClient (requirement #2)
+            var httpClient = GetAuthenticatedHttpClient(entity);
 
             // Build JSON Patch document for work item creation
             // Note: AreaPath must be provided in the request since it's not stored in TfsConfigEntity
@@ -2055,8 +2226,11 @@ public class RealTfsClient : ITfsClient
             }
 
             // URL encode the work item type for the API call
+            // Work item creation IS project-scoped per Azure DevOps REST API:
+            // POST https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/${type}
+            // This is different from batch read which is collection-scoped.
             var encodedType = Uri.EscapeDataString(request.WorkItemType);
-            var createUrl = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/${encodedType}?api-version={entity.ApiVersion}";
+            var createUrl = ProjectUrl(entity, $"_apis/wit/workitems/${encodedType}");
 
             using var content = new StringContent(
                 JsonSerializer.Serialize(patchOperations),
@@ -2065,7 +2239,7 @@ public class RealTfsClient : ITfsClient
 
             _logger.LogDebug("Sending POST request to create work item at {Url}", createUrl);
 
-            var response = await _httpClient.PostAsync(createUrl, content, cancellationToken);
+            var response = await httpClient.PostAsync(createUrl, content, cancellationToken);
 
             if (response.IsSuccessStatusCode)
             {
@@ -2123,14 +2297,8 @@ public class RealTfsClient : ITfsClient
                 return false;
             }
 
-            var pat = _patAccessor.GetPat();
-            if (string.IsNullOrEmpty(pat))
-            {
-                _logger.LogWarning("No PAT found for updating work item parent");
-                return false;
-            }
-
-            await ConfigureAuthenticationAsync(entity, cancellationToken);
+            // Use auth-mode-specific HttpClient (requirement #2)
+            var httpClient = GetAuthenticatedHttpClient(entity);
 
             // Build JSON Patch document to add parent link
             // First, we need to remove existing parent links, then add the new one
@@ -2148,7 +2316,8 @@ public class RealTfsClient : ITfsClient
                 }
             };
 
-            var updateUrl = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems/{workItemId}?api-version={entity.ApiVersion}";
+            // Work item PATCH is collection-scoped
+            var updateUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}");
 
             using var content = new StringContent(
                 JsonSerializer.Serialize(patchOperations),
@@ -2157,7 +2326,7 @@ public class RealTfsClient : ITfsClient
 
             _logger.LogDebug("Sending PATCH request to update work item {WorkItemId} parent", workItemId);
 
-            var response = await _httpClient.PatchAsync(updateUrl, content, cancellationToken);
+            var response = await httpClient.PatchAsync(updateUrl, content, cancellationToken);
 
             if (response.IsSuccessStatusCode)
             {
@@ -2192,13 +2361,14 @@ public class RealTfsClient : ITfsClient
         ValidateTfsConfiguration(entity);
         var config = entity!;
 
-        await ConfigureAuthenticationAsync(config, cancellationToken);
+        // Use auth-mode-specific HttpClient (requirement #2)
+        var httpClient = GetAuthenticatedHttpClient(config);
 
         return await ExecuteWithRetryAsync(async () =>
         {
-            // Get build definitions
-            var buildUrl = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/build/definitions?api-version={config.ApiVersion}";
-            var buildResponse = await _httpClient.GetAsync(buildUrl, cancellationToken);
+            // Build definitions are project-scoped (requirement #1)
+            var buildUrl = ProjectUrl(config, "_apis/build/definitions");
+            var buildResponse = await httpClient.GetAsync(buildUrl, cancellationToken);
             
             var pipelines = new List<PipelineDto>();
 
@@ -2231,10 +2401,11 @@ public class RealTfsClient : ITfsClient
             }
 
             // Try to get release definitions (may not be available in all TFS versions)
+            // Release definitions are project-scoped (requirement #1)
             try
             {
-                var releaseUrl = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/release/definitions?api-version={config.ApiVersion}";
-                var releaseResponse = await _httpClient.GetAsync(releaseUrl, cancellationToken);
+                var releaseUrl = ProjectUrl(config, "_apis/release/definitions");
+                var releaseResponse = await httpClient.GetAsync(releaseUrl, cancellationToken);
 
                 if (releaseResponse.IsSuccessStatusCode)
                 {
@@ -2280,7 +2451,8 @@ public class RealTfsClient : ITfsClient
         ValidateTfsConfiguration(entity);
         var config = entity!;
 
-        await ConfigureAuthenticationAsync(config, cancellationToken);
+        // Use auth-mode-specific HttpClient (requirement #2)
+        var httpClient = GetAuthenticatedHttpClient(config);
 
         return await ExecuteWithRetryAsync(async () =>
         {
@@ -2290,9 +2462,9 @@ public class RealTfsClient : ITfsClient
 
             if (isRelease)
             {
-                // Get release deployments
-                var url = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/release/releases?definitionId={actualId}&$top={top}&api-version={config.ApiVersion}";
-                var response = await _httpClient.GetAsync(url, cancellationToken);
+                // Release runs are project-scoped (requirement #1)
+                var url = ProjectUrl(config, $"_apis/release/releases?definitionId={actualId}&$top={top}");
+                var response = await httpClient.GetAsync(url, cancellationToken);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -2310,9 +2482,9 @@ public class RealTfsClient : ITfsClient
             }
             else
             {
-                // Get build runs
-                var url = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/build/builds?definitions={pipelineId}&$top={top}&api-version={config.ApiVersion}";
-                var response = await _httpClient.GetAsync(url, cancellationToken);
+                // Build runs are project-scoped (requirement #1)
+                var url = ProjectUrl(config, $"_apis/build/builds?definitions={pipelineId}&$top={top}");
+                var response = await httpClient.GetAsync(url, cancellationToken);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -2522,26 +2694,30 @@ public class RealTfsClient : ITfsClient
 
     private static PipelineRunTrigger ParseBuildTrigger(string reason)
     {
+        // Requirement #7: Fix case-sensitive enum parsing
+        // All literals must be lowercase since we apply ToLowerInvariant()
         return reason.ToLowerInvariant() switch
         {
-            "manual" or "userCreated" => PipelineRunTrigger.Manual,
-            "individualCI" or "batchedCI" => PipelineRunTrigger.ContinuousIntegration,
+            "manual" or "usercreated" => PipelineRunTrigger.Manual,
+            "individualci" or "batchedci" => PipelineRunTrigger.ContinuousIntegration,
             "schedule" => PipelineRunTrigger.Schedule,
-            "pullRequest" => PipelineRunTrigger.PullRequest,
-            "buildCompletion" => PipelineRunTrigger.BuildCompletion,
-            "resourceTrigger" => PipelineRunTrigger.ResourceTrigger,
+            "pullrequest" => PipelineRunTrigger.PullRequest,
+            "buildcompletion" => PipelineRunTrigger.BuildCompletion,
+            "resourcetrigger" => PipelineRunTrigger.ResourceTrigger,
             _ => PipelineRunTrigger.Unknown
         };
     }
 
     private static PipelineRunTrigger ParseReleaseTrigger(string reason)
     {
+        // Requirement #7: Fix case-sensitive enum parsing
+        // All literals must be lowercase since we apply ToLowerInvariant()
         return reason.ToLowerInvariant() switch
         {
             "manual" => PipelineRunTrigger.Manual,
-            "continuousIntegration" => PipelineRunTrigger.ContinuousIntegration,
+            "continuousintegration" => PipelineRunTrigger.ContinuousIntegration,
             "schedule" => PipelineRunTrigger.Schedule,
-            "pullRequest" => PipelineRunTrigger.PullRequest,
+            "pullrequest" => PipelineRunTrigger.PullRequest,
             _ => PipelineRunTrigger.Unknown
         };
     }
