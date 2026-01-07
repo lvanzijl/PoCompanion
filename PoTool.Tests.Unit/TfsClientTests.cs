@@ -436,12 +436,12 @@ public class TfsClientTests
         // Setup 3 batch responses using the helper method
         
         // Batch 1: items 1-200
-        var batch1Items = CreateMockWorkItemBatch(1, TestWorkItemBatchSize);
+        var batch1Items = CreateMockWorkItemBatch(1, RealTfsClient.WorkItemBatchSize);
         var batch1Response = new { count = batch1Items.Length, value = batch1Items };
         SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(batch1Response));
 
         // Batch 2: items 201-400
-        var batch2Items = CreateMockWorkItemBatch(201, TestWorkItemBatchSize);
+        var batch2Items = CreateMockWorkItemBatch(201, RealTfsClient.WorkItemBatchSize);
         var batch2Response = new { count = batch2Items.Length, value = batch2Items };
         SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(batch2Response));
 
@@ -576,9 +576,6 @@ public class TfsClientTests
         // Assert - All items should be processed (missing fields become empty strings)
         Assert.HasCount(3, results, "All items should be processed");
     }
-
-    // Test constants matching implementation
-    private const int TestWorkItemBatchSize = 200; // Must match RealTfsClient.WorkItemBatchSize
 
     private int _responseIndex = 0;
     private readonly List<(HttpStatusCode statusCode, string content)> _responses = new();

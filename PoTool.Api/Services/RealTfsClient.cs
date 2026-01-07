@@ -13,6 +13,30 @@ using PoTool.Core.Contracts.TfsVerification;
 namespace PoTool.Api.Services;
 
 /// <summary>
+/// Request payload for Azure DevOps Work Items Batch API.
+/// Used with POST _apis/wit/workitemsbatch to retrieve multiple work items efficiently.
+/// </summary>
+internal sealed class WorkItemBatchRequest
+{
+    /// <summary>
+    /// Array of work item IDs to retrieve.
+    /// </summary>
+    public int[] ids { get; init; } = Array.Empty<int>();
+
+    /// <summary>
+    /// Optional array of field reference names to retrieve.
+    /// If not specified, all fields are returned.
+    /// </summary>
+    public string[]? fields { get; init; }
+
+    /// <summary>
+    /// Optional expansion for additional data (e.g., "relations").
+    /// </summary>
+    // Use @expand to avoid conflict with C# keyword
+    public string? @expand { get; init; }
+}
+
+/// <summary>
 /// Real Azure DevOps/TFS REST client implementation with retry logic and enhanced error handling.
 /// Supports Azure DevOps Server 2022.2 (API 7.0) and TFS 2019+ (API 5.1+).
 /// This is the production implementation that connects to actual Azure DevOps/TFS servers.
@@ -51,7 +75,7 @@ public class RealTfsClient : ITfsClient
     // Batch size for Work Items Batch API calls
     // Azure DevOps supports up to 200 work items per batch for optimal performance
     // Larger batches (up to 500) may work but could impact response time
-    private const int WorkItemBatchSize = 200;
+    internal const int WorkItemBatchSize = 200;
 
     public RealTfsClient(
         HttpClient httpClient,
@@ -313,12 +337,11 @@ public class RealTfsClient : ITfsClient
                     batchIndex + 1, totalBatches, batchIds.Length);
 
                 // Build request body for Work Items Batch API
-                var batchRequest = new
+                var batchRequest = new WorkItemBatchRequest
                 {
                     ids = batchIds,
                     fields = RequiredWorkItemFields,
-                    // Use $expand=relations to get parent link (requirement #4)
-                    @expand = "relations"
+                    @expand = "relations" // Get parent link (requirement #4)
                 };
 
                 // Work Items Batch API is collection-scoped (work item IDs are unique across collection)
@@ -1470,7 +1493,7 @@ public class RealTfsClient : ITfsClient
 
             // Step 2: Fetch work items with relations to verify hierarchy resolution
             // Use Work Items Batch API (POST) instead of GET to avoid potential 414 errors
-            var batchRequest = new
+            var batchRequest = new WorkItemBatchRequest
             {
                 ids = workItemIds,
                 @expand = "relations"
@@ -1642,7 +1665,7 @@ public class RealTfsClient : ITfsClient
             
             // Test Work Items Batch API (POST) which is the recommended approach
             // This is collection-scoped (work item IDs are unique across collection)
-            var batchRequest = new
+            var batchRequest = new WorkItemBatchRequest
             {
                 ids = new[] { 1, 2, 3 }
             };
