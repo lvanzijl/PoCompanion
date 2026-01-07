@@ -6,14 +6,12 @@ namespace PoTool.Client.Services;
 
 /// <summary>
 /// Service for managing TFS configuration via the API.
-/// PAT is stored client-side in secure storage, not on the server.
+/// Authentication uses Windows credentials (NTLM).
 /// </summary>
 public class TfsConfigService
 {
     private readonly IClient _apiClient;
-    private readonly ISecureStorageService _secureStorage;
     private readonly HttpClient _httpClient;
-    private const string PatStorageKey = "tfs_pat";
     
     // JSON options for case-insensitive deserialization of API responses (camelCase to PascalCase)
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -21,15 +19,14 @@ public class TfsConfigService
         PropertyNameCaseInsensitive = true
     };
 
-    public TfsConfigService(IClient apiClient, ISecureStorageService secureStorage, HttpClient httpClient)
+    public TfsConfigService(IClient apiClient, HttpClient httpClient)
     {
         _apiClient = apiClient;
-        _secureStorage = secureStorage;
         _httpClient = httpClient;
     }
 
     /// <summary>
-    /// Gets the current TFS configuration (without PAT).
+    /// Gets the current TFS configuration.
     /// </summary>
     public virtual async Task<TfsConfigDto?> GetConfigAsync(CancellationToken cancellationToken = default)
     {
@@ -55,25 +52,17 @@ public class TfsConfigService
 
     /// <summary>
     /// Saves the TFS configuration.
-    /// PAT is stored client-side in secure storage, other config is sent to API.
+    /// Authentication uses Windows credentials (NTLM).
     /// </summary>
-    public virtual async Task SaveConfigAsync(string url, string project, string defaultAreaPath, string pat, TfsAuthMode authMode = TfsAuthMode.Ntlm, 
-        bool useDefaultCredentials = false, int timeoutSeconds = 30, string apiVersion = "7.0", CancellationToken cancellationToken = default)
+    public virtual async Task SaveConfigAsync(string url, string project, string defaultAreaPath, 
+        bool useDefaultCredentials = true, int timeoutSeconds = 30, string apiVersion = "7.0", CancellationToken cancellationToken = default)
     {
-        // Store PAT in secure storage (client-side only)
-        if (!string.IsNullOrEmpty(pat))
-        {
-            await _secureStorage.SetAsync(PatStorageKey, pat);
-        }
-
-        // Send non-sensitive config to API (PAT is NOT sent to server)
+        // Send config to API
         var request = new TfsConfigRequest
         {
             Url = url,
             Project = project,
             DefaultAreaPath = defaultAreaPath,
-            Pat = null, // PAT is never sent to server for storage
-            AuthMode = (int)authMode,
             UseDefaultCredentials = useDefaultCredentials,
             TimeoutSeconds = timeoutSeconds,
             ApiVersion = apiVersion
@@ -83,32 +72,14 @@ public class TfsConfigService
     }
 
     /// <summary>
-    /// Gets the stored PAT from secure storage.
+    /// Validates the TFS connection using NTLM authentication.
     /// </summary>
-    public virtual async Task<string?> GetPatAsync()
-    {
-        return await _secureStorage.GetAsync(PatStorageKey);
-    }
-
-    /// <summary>
-    /// Validates the TFS connection using the provided PAT.
-    /// </summary>
-    public virtual async Task<bool> ValidateConnectionAsync(string? pat = null, CancellationToken cancellationToken = default)
+    public virtual async Task<bool> ValidateConnectionAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            // If no PAT provided, try to get from secure storage
-            pat ??= await GetPatAsync();
-
-            // Create request with PAT header if available (for PAT auth mode)
-            var request = new HttpRequestMessage(HttpMethod.Get, "/api/tfsvalidate");
-            if (!string.IsNullOrEmpty(pat))
-            {
-                request.Headers.Add("X-TFS-PAT", pat);
-            }
-
             // Call the validation endpoint
-            var response = await _httpClient.SendAsync(request, cancellationToken);
+            var response = await _httpClient.GetAsync("/api/tfsvalidate", cancellationToken);
             
             if (response.IsSuccessStatusCode)
             {
@@ -210,10 +181,7 @@ public class TfsConfigService
     {
         try
         {
-            // Get current TFS configuration to determine auth mode
-            var config = await GetConfigAsync(cancellationToken);
-            
-            // Use direct HttpClient call with request-specific headers for thread safety
+            // Use direct HttpClient call
             var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/api/tfsverify")
             {
                 Content = JsonContent.Create(new TfsVerifyRequest
@@ -222,17 +190,6 @@ public class TfsConfigService
                     WorkItemIdForWriteCheck = workItemIdForWriteCheck
                 })
             };
-            
-            // Only add PAT header if auth mode is PAT
-            if (config?.AuthMode == TfsAuthMode.Pat)
-            {
-                var pat = await GetPatAsync();
-                if (string.IsNullOrEmpty(pat))
-                {
-                    throw new InvalidOperationException("PAT is required when auth mode is set to PAT");
-                }
-                requestMessage.Headers.Add("X-TFS-PAT", pat);
-            }
 
             var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
             response.EnsureSuccessStatusCode();
@@ -260,8 +217,7 @@ public class TfsConfigDto
     public string? Url { get; set; }
     public string? Project { get; set; }
     public string? DefaultAreaPath { get; set; }
-    public TfsAuthMode AuthMode { get; set; } = TfsAuthMode.Ntlm;
-    public bool UseDefaultCredentials { get; set; }
+    public bool UseDefaultCredentials { get; set; } = true;
     public int TimeoutSeconds { get; set; } = 30;
     public string ApiVersion { get; set; } = "7.0";
     public DateTimeOffset? LastValidated { get; set; }

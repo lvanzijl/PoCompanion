@@ -21,14 +21,14 @@
               BestPractices="@_configBestPractices"
               CommonIssues="@_configCommonIssues">
         <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
-            <strong>Security Note:</strong> Your Personal Access Token is stored securely using platform-native secure storage (Windows DPAPI, macOS Keychain, Android KeyStore, iOS Keychain). The token is never sent to any external servers except your configured Azure DevOps instance.
+            <strong>Authentication:</strong> This application uses Windows credentials (NTLM) of the current user to connect to TFS/Azure DevOps Server.
         </MudAlert>
     </PageHelp>
     
     <MudPaper Elevation="2" Class="pa-4">
         <MudText Typo="Typo.h4" Class="mb-4">TFS Configuration</MudText>
         <MudText Typo="Typo.body1" Class="mb-4">
-            Configure your Azure DevOps / TFS connection settings. Your Personal Access Token (PAT) will be stored securely on your device using platform-native secure storage.
+            Configure your Azure DevOps / TFS connection settings. Authentication uses Windows credentials (NTLM) of the current user.
         </MudText>
 
         @if (_isLoading)
@@ -58,41 +58,9 @@
                          Required="true"
                          HelperText="The area path used for work item queries (e.g., ProjectName\Team A)" />
 
-            <CompactSelect T="TfsAuthMode"
-                      Value="@_authMode" 
-                      ValueChanged="@OnAuthModeChanged"
-                      Label="Authentication Mode" 
-                      HelperText="Select authentication method">
-                <MudSelectItem Value="@TfsAuthMode.Pat">Personal Access Token (PAT)</MudSelectItem>
-                <MudSelectItem Value="@TfsAuthMode.Ntlm">NTLM/Windows Authentication</MudSelectItem>
-            </CompactSelect>
-
-            @if (_authMode == TfsAuthMode.Pat)
-            {
-                <CompactTextField @bind-Value="_pat" 
-                             Label="Personal Access Token (PAT)" 
-                             Placeholder="Your PAT"
-                             Required="true"
-                             InputType="InputType.Password"
-                             HelperText="Stored securely on your device (not on server)" />
-            }
-            else
-            {
-                <MudCheckBox @bind-Value="_useDefaultCredentials" 
-                            Label="Use Default Windows Credentials"
-                            Color="Color.Primary"
-                            Class="mb-2">
-                    Use current Windows user credentials for authentication
-                </MudCheckBox>
-
-                @if (!_useDefaultCredentials)
-                {
-                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
-                        <strong>Note:</strong> Specific NTLM credentials are not yet supported in this version.
-                        Please use default Windows credentials or switch to PAT authentication mode.
-                    </MudAlert>
-                }
-            }
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                <strong>Authentication:</strong> Uses Windows credentials (NTLM) of the current user. No additional configuration required.
+            </MudAlert>
 
             <MudNumericField @bind-Value="_timeoutSeconds" 
                             Label="Timeout (seconds)" 
@@ -190,7 +158,7 @@
                 <strong>URL:</strong> @_currentUrl<br />
                 <strong>Project:</strong> @_currentProject<br />
                 <strong>Default Area Path:</strong> @_currentDefaultAreaPath<br />
-                <strong>Auth Mode:</strong> @_authMode<br />
+                <strong>Authentication:</strong> Windows (NTLM)<br />
                 <strong>Timeout:</strong> @_timeoutSeconds seconds<br />
                 <strong>API Version:</strong> @_apiVersion
                 @if (_lastValidated.HasValue)
@@ -214,9 +182,7 @@
     private string _url = string.Empty;
     private string _project = string.Empty;
     private string _defaultAreaPath = string.Empty;
-    private string _pat = string.Empty;
-    private TfsAuthMode _authMode = TfsAuthMode.Ntlm;
-    private bool _useDefaultCredentials = false;
+    private bool _useDefaultCredentials = true;
     private int _timeoutSeconds = 30;
     private string _apiVersion = "7.0";
 
@@ -240,12 +206,6 @@
         await LoadCurrentConfig();
     }
 
-    private void OnAuthModeChanged(TfsAuthMode value)
-    {
-        _authMode = value;
-        StateHasChanged();
-    }
-
     private async Task LoadCurrentConfig()
     {
         try
@@ -261,7 +221,6 @@
                 _url = _currentUrl;
                 _project = _currentProject;
                 _defaultAreaPath = _currentDefaultAreaPath;
-                _authMode = config.AuthMode;
                 _useDefaultCredentials = config.UseDefaultCredentials;
                 _timeoutSeconds = config.TimeoutSeconds;
                 _apiVersion = config.ApiVersion;
@@ -291,12 +250,11 @@
         ClearError();
         try
         {
-            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath, _pat, _authMode, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
+            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
             Snackbar.Add("Configuration saved successfully", Severity.Success);
             _currentUrl = _url;
             _currentProject = _project;
             _currentDefaultAreaPath = _defaultAreaPath;
-            _pat = string.Empty; // Clear PAT after saving
             await LoadCurrentConfig(); // Reload to get LastValidated
         }
         catch (Exception ex)
@@ -318,7 +276,7 @@
         try
         {
             // First save the config
-            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath, _pat, _authMode, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
+            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
 
             // Then test the connection (throws on failure with detailed error information)
             var isValid = await TfsConfigService.ValidateConnectionAsync();
@@ -329,7 +287,6 @@
                 _currentUrl = _url;
                 _currentProject = _project;
                 _currentDefaultAreaPath = _defaultAreaPath;
-                _pat = string.Empty; // Clear PAT after successful test
                 await LoadCurrentConfig(); // Reload to get updated LastValidated
             }
         }
@@ -354,7 +311,7 @@
         try
         {
             // First save the config
-            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath, _pat, _authMode, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
+            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
 
             // Parse work item ID if provided
             int? workItemId = null;
@@ -451,7 +408,6 @@
                 _currentUrl = _url;
                 _currentProject = _project;
                 _currentDefaultAreaPath = _defaultAreaPath;
-                _pat = string.Empty; // Clear PAT after verification
             }
         }
         catch (Exception ex)

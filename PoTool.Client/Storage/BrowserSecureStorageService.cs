@@ -6,7 +6,7 @@ namespace PoTool.Client.Storage;
 /// <summary>
 /// Browser-based secure storage service using sessionStorage.
 /// Note: sessionStorage is cleared when the browser tab/window is closed.
-/// For sensitive data like PAT tokens, users must re-enter on each session.
+/// Used for temporary storage of sensitive data during a browser session.
 /// </summary>
 public class BrowserSecureStorageService : ISecureStorageService
 {

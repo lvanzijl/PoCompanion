@@ -422,7 +422,7 @@
         try
         {
             // Save configuration
-            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath, _pat);
+            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath);
             
             // Test connection
             _isSaving = false;

@@ -91,7 +91,7 @@
         _statusClass = "status-info";
         try
         {
-            await TfsConfigService.SaveConfigAsync(_model.Url, _model.Project, _model.DefaultAreaPath, _model.Pat);
+            await TfsConfigService.SaveConfigAsync(_model.Url, _model.Project, _model.DefaultAreaPath);
             _statusMessage = "Saved successfully";
             _statusClass = "status-success";
         }
