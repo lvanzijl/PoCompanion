@@ -255,13 +255,15 @@ public class RealTfsClient : ITfsClient
         {
             // Build WIQL query with optional date filter for incremental sync (Phase 3)
             // Use UNDER operator for area path to support deeper hierarchies (requirement #3)
+            // Note: WIQL Select only needs System.Id since we fetch full work items in a separate batch call
+            // with all RequiredWorkItemFields. The other fields here are for debugging/logging purposes.
             var dateFilter = since.HasValue 
                 ? $" AND [System.ChangedDate] >= '{since.Value:yyyy-MM-ddTHH:mm:ssZ}'" 
                 : "";
 
             var wiql = new
             {
-                query = $"Select [System.Id], [System.WorkItemType], [System.Title], [System.State] From WorkItems Where [System.AreaPath] UNDER '{EscapeWiql(areaPath)}'{dateFilter}"
+                query = $"Select [System.Id] From WorkItems Where [System.AreaPath] UNDER '{EscapeWiql(areaPath)}'{dateFilter}"
             };
 
             // WIQL is project-scoped (requirement #1)
@@ -2224,7 +2226,9 @@ public class RealTfsClient : ITfsClient
             }
 
             // URL encode the work item type for the API call
-            // Work item creation is project-scoped
+            // Work item creation IS project-scoped per Azure DevOps REST API:
+            // POST https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/${type}
+            // This is different from batch read which is collection-scoped.
             var encodedType = Uri.EscapeDataString(request.WorkItemType);
             var createUrl = ProjectUrl(entity, $"_apis/wit/workitems/${encodedType}");
 
