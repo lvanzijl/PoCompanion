@@ -86,35 +86,43 @@ public class TfsClientTests
         };
         SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse));
 
-        // Mock work items response with parent relationship
+        // Mock work items response with parent relationship using relations array
+        // (Updated to use System.LinkTypes.Hierarchy-Reverse relation instead of System.Parent field)
         var workItemsResponse = new
         {
-            value = new[]
+            value = new object[]
             {
-                new
+                new Dictionary<string, object>
                 {
-                    id = 100,
-                    fields = new Dictionary<string, object>
+                    ["id"] = 100,
+                    ["fields"] = new Dictionary<string, object>
                     {
                         ["System.WorkItemType"] = "Feature",
                         ["System.Title"] = "Parent Feature",
                         ["System.State"] = "Active",
                         ["System.AreaPath"] = "TestProject\\Area1",
                         ["System.IterationPath"] = "TestProject\\Sprint1"
-                        // No parent - this is a root item
                     }
+                    // No relations - this is a root item
                 },
-                new
+                new Dictionary<string, object>
                 {
-                    id = 200,
-                    fields = new Dictionary<string, object>
+                    ["id"] = 200,
+                    ["fields"] = new Dictionary<string, object>
                     {
                         ["System.WorkItemType"] = "User Story",
                         ["System.Title"] = "Child Story",
                         ["System.State"] = "Active",
                         ["System.AreaPath"] = "TestProject\\Area1",
-                        ["System.IterationPath"] = "TestProject\\Sprint1",
-                        ["System.Parent"] = "https://dev.azure.com/testorg/_apis/wit/workItems/100"
+                        ["System.IterationPath"] = "TestProject\\Sprint1"
+                    },
+                    ["relations"] = new object[]
+                    {
+                        new Dictionary<string, object>
+                        {
+                            ["rel"] = "System.LinkTypes.Hierarchy-Reverse",
+                            ["url"] = "https://dev.azure.com/testorg/_apis/wit/workItems/100"
+                        }
                     }
                 }
             }
@@ -160,15 +168,16 @@ public class TfsClientTests
         };
         SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse));
 
-        // Mock work items with 3-level test scenario (Epic → Feature → User Story)
+        // Mock work items with 3-level hierarchy (Epic → Feature → User Story)
+        // Updated to use relations array instead of System.Parent field
         var workItemsResponse = new
         {
-            value = new[]
+            value = new object[]
             {
-                new
+                new Dictionary<string, object>
                 {
-                    id = 1,
-                    fields = new Dictionary<string, object>
+                    ["id"] = 1,
+                    ["fields"] = new Dictionary<string, object>
                     {
                         ["System.WorkItemType"] = "Epic",
                         ["System.Title"] = "Epic 1",
@@ -177,30 +186,44 @@ public class TfsClientTests
                         ["System.IterationPath"] = "TestProject"
                     }
                 },
-                new
+                new Dictionary<string, object>
                 {
-                    id = 2,
-                    fields = new Dictionary<string, object>
+                    ["id"] = 2,
+                    ["fields"] = new Dictionary<string, object>
                     {
                         ["System.WorkItemType"] = "Feature",
                         ["System.Title"] = "Feature 1",
                         ["System.State"] = "Active",
                         ["System.AreaPath"] = "TestProject",
-                        ["System.IterationPath"] = "TestProject",
-                        ["System.Parent"] = "https://dev.azure.com/testorg/_apis/wit/workItems/1"
+                        ["System.IterationPath"] = "TestProject"
+                    },
+                    ["relations"] = new object[]
+                    {
+                        new Dictionary<string, object>
+                        {
+                            ["rel"] = "System.LinkTypes.Hierarchy-Reverse",
+                            ["url"] = "https://dev.azure.com/testorg/_apis/wit/workItems/1"
+                        }
                     }
                 },
-                new
+                new Dictionary<string, object>
                 {
-                    id = 3,
-                    fields = new Dictionary<string, object>
+                    ["id"] = 3,
+                    ["fields"] = new Dictionary<string, object>
                     {
                         ["System.WorkItemType"] = "User Story",
                         ["System.Title"] = "Story 1",
                         ["System.State"] = "Active",
                         ["System.AreaPath"] = "TestProject",
-                        ["System.IterationPath"] = "TestProject",
-                        ["System.Parent"] = "https://dev.azure.com/testorg/_apis/wit/workItems/2"
+                        ["System.IterationPath"] = "TestProject"
+                    },
+                    ["relations"] = new object[]
+                    {
+                        new Dictionary<string, object>
+                        {
+                            ["rel"] = "System.LinkTypes.Hierarchy-Reverse",
+                            ["url"] = "https://dev.azure.com/testorg/_apis/wit/workItems/2"
+                        }
                     }
                 }
             }
@@ -224,7 +247,7 @@ public class TfsClientTests
     }
 
     [TestMethod]
-    public async Task GetWorkItemsAsync_HandlesEmptyParentField()
+    public async Task GetWorkItemsAsync_HandlesEmptyRelations()
     {
         // Arrange - Note: PAT parameter removed
         await _configService.SaveConfigAsync(
@@ -237,22 +260,23 @@ public class TfsClientTests
         var wiqlResponse = new { workItems = new[] { new { id = 100 } } };
         SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse));
 
+        // Work item with empty relations array (no parent)
         var workItemsResponse = new
         {
-            value = new[]
+            value = new object[]
             {
-                new
+                new Dictionary<string, object>
                 {
-                    id = 100,
-                    fields = new Dictionary<string, object>
+                    ["id"] = 100,
+                    ["fields"] = new Dictionary<string, object>
                     {
                         ["System.WorkItemType"] = "Feature",
                         ["System.Title"] = "Test Feature",
                         ["System.State"] = "Active",
                         ["System.AreaPath"] = "TestProject",
-                        ["System.IterationPath"] = "TestProject",
-                        ["System.Parent"] = ""  // Empty string parent
-                    }
+                        ["System.IterationPath"] = "TestProject"
+                    },
+                    ["relations"] = new object[] { }  // Empty relations array
                 }
             }
         };
@@ -263,11 +287,11 @@ public class TfsClientTests
 
         // Assert
         Assert.HasCount(1, results);
-        Assert.IsNull(results[0].ParentTfsId, "Empty parent should be treated as null");
+        Assert.IsNull(results[0].ParentTfsId, "Empty relations should result in null parent");
     }
 
     [TestMethod]
-    public async Task GetWorkItemsAsync_HandlesInvalidParentUrl()
+    public async Task GetWorkItemsAsync_HandlesInvalidRelationUrl()
     {
         // Arrange - Note: PAT parameter removed
         await _configService.SaveConfigAsync(
@@ -280,21 +304,29 @@ public class TfsClientTests
         var wiqlResponse = new { workItems = new[] { new { id = 100 } } };
         SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse));
 
+        // Work item with invalid URL in hierarchy-reverse relation
         var workItemsResponse = new
         {
-            value = new[]
+            value = new object[]
             {
-                new
+                new Dictionary<string, object>
                 {
-                    id = 100,
-                    fields = new Dictionary<string, object>
+                    ["id"] = 100,
+                    ["fields"] = new Dictionary<string, object>
                     {
                         ["System.WorkItemType"] = "Feature",
                         ["System.Title"] = "Test Feature",
                         ["System.State"] = "Active",
                         ["System.AreaPath"] = "TestProject",
-                        ["System.IterationPath"] = "TestProject",
-                        ["System.Parent"] = "invalid-url-no-id"  // Invalid parent URL
+                        ["System.IterationPath"] = "TestProject"
+                    },
+                    ["relations"] = new object[]
+                    {
+                        new Dictionary<string, object>
+                        {
+                            ["rel"] = "System.LinkTypes.Hierarchy-Reverse",
+                            ["url"] = "invalid-url-no-id"  // Invalid parent URL
+                        }
                     }
                 }
             }
