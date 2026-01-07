@@ -14,7 +14,6 @@ public class RealTfsClientVerificationTests
     private Mock<HttpMessageHandler> _mockHttpMessageHandler = null!;
     private HttpClient _httpClient = null!;
     private Mock<TfsConfigurationService> _mockConfigService = null!;
-    private Mock<TfsAuthenticationProvider> _mockAuthProvider = null!;
     private Mock<ILogger<RealTfsClient>> _mockLogger = null!;
     private RealTfsClient _sut = null!;
     private TfsConfigEntity _testConfig = null!;
@@ -25,7 +24,6 @@ public class RealTfsClientVerificationTests
         _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
         _httpClient = new HttpClient(_mockHttpMessageHandler.Object);
         _mockConfigService = new Mock<TfsConfigurationService>(MockBehavior.Strict);
-        _mockAuthProvider = new Mock<TfsAuthenticationProvider>();
         _mockLogger = new Mock<ILogger<RealTfsClient>>();
 
         _testConfig = new TfsConfigEntity
@@ -40,16 +38,24 @@ public class RealTfsClientVerificationTests
         _mockConfigService.Setup(x => x.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testConfig);
 
+        // Create throttler (use real implementation for tests)
+        var throttlerLogger = new Mock<ILogger<TfsRequestThrottler>>();
+        var throttler = new TfsRequestThrottler(throttlerLogger.Object, readConcurrency: 10, writeConcurrency: 10);
+        
+        // Create request sender (use real implementation for tests)
+        var senderLogger = new Mock<ILogger<TfsRequestSender>>();
+        var requestSender = new TfsRequestSender(senderLogger.Object);
+
         // Create mock IHttpClientFactory
         var mockFactory = new Mock<IHttpClientFactory>();
         mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
 
         _sut = new RealTfsClient(
-            _httpClient,
             mockFactory.Object,
             _mockConfigService.Object,
-            _mockAuthProvider.Object,
-            _mockLogger.Object
+            _mockLogger.Object,
+            throttler,
+            requestSender
         );
     }
 

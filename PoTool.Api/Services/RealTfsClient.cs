@@ -22,19 +22,21 @@ internal sealed class WorkItemBatchRequest
     /// Array of work item IDs to retrieve.
     /// Required for valid API requests.
     /// </summary>
-    public required int[] ids { get; init; }
+    [System.Text.Json.Serialization.JsonPropertyName("ids")]
+    public required int[] Ids { get; init; }
 
     /// <summary>
     /// Optional array of field reference names to retrieve.
     /// If not specified, all fields are returned.
     /// </summary>
-    public string[]? fields { get; init; }
+    [System.Text.Json.Serialization.JsonPropertyName("fields")]
+    public string[]? Fields { get; init; }
 
     /// <summary>
     /// Optional expansion for additional data (e.g., "relations").
     /// </summary>
-    // Use @expand to avoid conflict with C# keyword
-    public string? @expand { get; init; }
+    [System.Text.Json.Serialization.JsonPropertyName("expand")]
+    public string? Expand { get; init; }
 }
 
 /// <summary>
@@ -44,11 +46,11 @@ internal sealed class WorkItemBatchRequest
 /// </summary>
 public class RealTfsClient : ITfsClient
 {
-    private readonly HttpClient _httpClient;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TfsConfigurationService _configService;
-    private readonly TfsAuthenticationProvider _authProvider;
     private readonly ILogger<RealTfsClient> _logger;
+    private readonly TfsRequestThrottler _throttler;
+    private readonly TfsRequestSender _requestSender;
     private const int MaxRetries = 3;
 
     // ID offset for release pipelines/runs to avoid collision with build IDs
@@ -78,32 +80,32 @@ public class RealTfsClient : ITfsClient
     internal const int WorkItemBatchSize = 200;
 
     public RealTfsClient(
-        HttpClient httpClient,
         IHttpClientFactory httpClientFactory,
-        TfsConfigurationService configService, 
-        TfsAuthenticationProvider authProvider,
-        ILogger<RealTfsClient> logger)
+        TfsConfigurationService configService,
+        ILogger<RealTfsClient> logger,
+        TfsRequestThrottler throttler,
+        TfsRequestSender requestSender)
     {
-        _httpClient = httpClient;
         _httpClientFactory = httpClientFactory;
         _configService = configService;
-        _authProvider = authProvider;
         _logger = logger;
+        _throttler = throttler;
+        _requestSender = requestSender;
     }
 
     /// <summary>
     /// Gets an HttpClient configured for NTLM authentication.
     /// Uses named HttpClient from IHttpClientFactory to ensure correct handler configuration.
+    /// Per-request timeouts are handled via CancellationToken, not HttpClient.Timeout property.
     /// </summary>
-    /// <param name="entity">TFS configuration entity containing timeout settings.</param>
     /// <returns>Configured HttpClient with NTLM authentication.</returns>
-    private HttpClient GetAuthenticatedHttpClient(TfsConfigEntity entity)
+    private HttpClient GetAuthenticatedHttpClient()
     {
         // Get NTLM-configured client (with UseDefaultCredentials=true in handler)
         var client = _httpClientFactory.CreateClient("TfsClient.NTLM");
         
-        // Configure timeout from entity (per-request since timeout can be changed in configuration)
-        client.Timeout = TimeSpan.FromSeconds(entity.TimeoutSeconds);
+        // NOTE: Do NOT set client.Timeout here - factory-managed clients should not have their
+        // timeout mutated. Per-request timeouts are handled via CancellationTokenSource.
         
         _logger.LogDebug("Using NTLM-authenticated HttpClient for TFS request");
         
@@ -155,7 +157,7 @@ public class RealTfsClient : ITfsClient
         try
         {
             // Use auth-mode-specific HttpClient to avoid credential conflicts
-            var httpClient = GetAuthenticatedHttpClient(entity);
+            var httpClient = GetAuthenticatedHttpClient();
             
             // Step 1: Validate server connectivity using collection-scoped projects endpoint
             var projectsUrl = CollectionUrl(entity, "_apis/projects");
@@ -238,7 +240,7 @@ public class RealTfsClient : ITfsClient
         var config = entity!;
 
         // Get auth-mode-specific HttpClient to avoid credential conflicts
-        var httpClient = GetAuthenticatedHttpClient(config);
+        var httpClient = GetAuthenticatedHttpClient();
 
         var startTime = DateTimeOffset.UtcNow; // Phase 4: Performance metrics
 
@@ -307,8 +309,8 @@ public class RealTfsClient : ITfsClient
 
                 var relationsRequest = new WorkItemBatchRequest
                 {
-                    ids = batchIds,
-                    @expand = "relations" // Only expand relations, no fields
+                    Ids = batchIds,
+                    Expand = "relations" // Only expand relations, no fields
                 };
 
                 var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
@@ -379,8 +381,8 @@ public class RealTfsClient : ITfsClient
 
                 var fieldsRequest = new WorkItemBatchRequest
                 {
-                    ids = batchIds,
-                    fields = RequiredWorkItemFields // Only fetch fields, no expand
+                    Ids = batchIds,
+                    Fields = RequiredWorkItemFields // Only fetch fields, no expand
                 };
 
                 var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
@@ -555,7 +557,7 @@ public class RealTfsClient : ITfsClient
         var config = entity!;
 
         // Use auth-mode-specific HttpClient (requirement #2)
-        var httpClient = GetAuthenticatedHttpClient(config);
+        var httpClient = GetAuthenticatedHttpClient();
 
         var startTime = DateTimeOffset.UtcNow; // Phase 4: Performance metrics
 
@@ -658,7 +660,7 @@ public class RealTfsClient : ITfsClient
         var config = entity!; // Non-null after validation
 
         // Use auth-mode-specific HttpClient (requirement #2)
-        var httpClient = GetAuthenticatedHttpClient(config);
+        var httpClient = GetAuthenticatedHttpClient();
 
         return await ExecuteWithRetryAsync(async () =>
         {
@@ -721,7 +723,7 @@ public class RealTfsClient : ITfsClient
         var config = entity!; // Non-null after validation
 
         // Use auth-mode-specific HttpClient (requirement #2)
-        var httpClient = GetAuthenticatedHttpClient(config);
+        var httpClient = GetAuthenticatedHttpClient();
 
         return await ExecuteWithRetryAsync(async () =>
         {
@@ -806,7 +808,7 @@ public class RealTfsClient : ITfsClient
         var config = entity!; // Non-null after validation
 
         // Use auth-mode-specific HttpClient (requirement #2)
-        var httpClient = GetAuthenticatedHttpClient(config);
+        var httpClient = GetAuthenticatedHttpClient();
 
         return await ExecuteWithRetryAsync(async () =>
         {
@@ -867,7 +869,7 @@ public class RealTfsClient : ITfsClient
         var config = entity!; // Non-null after validation
 
         // Use auth-mode-specific HttpClient (requirement #2)
-        var httpClient = GetAuthenticatedHttpClient(config);
+        var httpClient = GetAuthenticatedHttpClient();
 
         return await ExecuteWithRetryAsync(async () =>
         {
@@ -1071,11 +1073,20 @@ public class RealTfsClient : ITfsClient
         string? repositoryName, 
         CancellationToken cancellationToken)
     {
-        var httpClient = GetAuthenticatedHttpClient(entity);
+        var httpClient = GetAuthenticatedHttpClient();
         return await GetRepositoriesInternalAsync(entity, httpClient, repositoryName, cancellationToken);
     }
 
-    private async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken, int maxRetries = MaxRetries)
+    /// <summary>
+    /// Executes an operation with retry logic for transient errors.
+    /// SAFETY: Only retries safe idempotent operations (GET requests).
+    /// Non-idempotent operations (PATCH, POST create) are never retried to prevent unintended side effects.
+    /// </summary>
+    private async Task<T> ExecuteWithRetryAsync<T>(
+        Func<Task<T>> operation,
+        CancellationToken cancellationToken,
+        int maxRetries = MaxRetries,
+        bool isIdempotent = true)
     {
         int attempt = 0;
         
@@ -1085,8 +1096,28 @@ public class RealTfsClient : ITfsClient
             {
                 return await operation();
             }
-            catch (Exception ex) when (IsTransient(ex) && attempt < maxRetries)
+            catch (TfsRateLimitException rateLimitEx)
             {
+                // Handle rate limiting separately - always retry with backoff
+                attempt++;
+                if (attempt >= maxRetries)
+                {
+                    _logger.LogError("TFS rate limit retry exhausted after {Attempt} attempts", attempt);
+                    throw;
+                }
+
+                // Use Retry-After header if provided, otherwise exponential backoff
+                var delay = rateLimitEx.RetryAfter ?? CalculateBackoffDelay(attempt);
+                
+                _logger.LogWarning(
+                    "TFS rate limit hit (attempt {Attempt}/{MaxRetries}), retrying after {DelayMs}ms",
+                    attempt, maxRetries, delay.TotalMilliseconds);
+                
+                await Task.Delay(delay, cancellationToken);
+            }
+            catch (Exception ex) when (isIdempotent && IsTransient(ex) && attempt < maxRetries)
+            {
+                // Only retry transient errors for idempotent operations
                 attempt++;
                 var delay = CalculateBackoffDelay(attempt);
                 
@@ -1124,9 +1155,9 @@ public class RealTfsClient : ITfsClient
         var exception = response.StatusCode switch
         {
             HttpStatusCode.Unauthorized => new TfsAuthenticationException(
-                "TFS authentication failed. Check your PAT or credentials.", errorContent),
+                "TFS authentication failed. Ensure Windows authentication (NTLM) is enabled and your Windows credentials have access to the TFS server.", errorContent),
             HttpStatusCode.Forbidden => new TfsAuthorizationException(
-                "TFS authorization failed. Insufficient permissions.", errorContent),
+                "TFS authorization failed. Your Windows account does not have sufficient permissions for this operation.", errorContent),
             HttpStatusCode.NotFound => new TfsResourceNotFoundException(
                 "TFS resource not found. Check project name and URL.", errorContent),
             HttpStatusCode.TooManyRequests => new TfsRateLimitException(
@@ -1170,7 +1201,7 @@ public class RealTfsClient : ITfsClient
             }
 
             // Use auth-mode-specific HttpClient (requirement #2)
-            var httpClient = GetAuthenticatedHttpClient(entity);
+            var httpClient = GetAuthenticatedHttpClient();
 
             // Build JSON Patch document
             var patchDocument = new[]
@@ -1228,7 +1259,7 @@ public class RealTfsClient : ITfsClient
             }
 
             // Use auth-mode-specific HttpClient (requirement #2)
-            var httpClient = GetAuthenticatedHttpClient(entity);
+            var httpClient = GetAuthenticatedHttpClient();
 
             // Build JSON Patch document for effort (Microsoft.VSTS.Scheduling.Effort)
             var patchDocument = new[]
@@ -1343,7 +1374,7 @@ public class RealTfsClient : ITfsClient
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
-            var httpClient = GetAuthenticatedHttpClient(config);
+            var httpClient = GetAuthenticatedHttpClient();
             
             // Collection-scoped endpoint for server reachability
             var url = CollectionUrl(config, "_apis/projects");
@@ -1388,7 +1419,7 @@ public class RealTfsClient : ITfsClient
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
-            var httpClient = GetAuthenticatedHttpClient(config);
+            var httpClient = GetAuthenticatedHttpClient();
             
             // Project access check is collection-scoped with project name in path
             var encodedProject = Uri.EscapeDataString(config.Project);
@@ -1438,7 +1469,7 @@ public class RealTfsClient : ITfsClient
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
-            var httpClient = GetAuthenticatedHttpClient(config);
+            var httpClient = GetAuthenticatedHttpClient();
             
             var wiql = new
             {
@@ -1490,7 +1521,7 @@ public class RealTfsClient : ITfsClient
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
-            var httpClient = GetAuthenticatedHttpClient(config);
+            var httpClient = GetAuthenticatedHttpClient();
             
             // Step 1: Run WIQL query to get a few work items
             var wiql = new
@@ -1540,8 +1571,8 @@ public class RealTfsClient : ITfsClient
             // Phase 1: Fetch relations only (no fields)
             var relationsRequest = new WorkItemBatchRequest
             {
-                ids = workItemIds,
-                @expand = "relations"
+                Ids = workItemIds,
+                Expand = "relations"
             };
 
             var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
@@ -1639,7 +1670,7 @@ public class RealTfsClient : ITfsClient
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
-            var httpClient = GetAuthenticatedHttpClient(config);
+            var httpClient = GetAuthenticatedHttpClient();
             
             // Work item fields are collection-scoped (requirement #1)
             var url = CollectionUrl(config, "_apis/wit/fields");
@@ -1706,13 +1737,13 @@ public class RealTfsClient : ITfsClient
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
-            var httpClient = GetAuthenticatedHttpClient(config);
+            var httpClient = GetAuthenticatedHttpClient();
             
             // Test Work Items Batch API (POST) which is the recommended approach
             // This is collection-scoped (work item IDs are unique across collection)
             var batchRequest = new WorkItemBatchRequest
             {
-                ids = new[] { 1, 2, 3 }
+                Ids = new[] { 1, 2, 3 }
             };
 
             var url = CollectionUrl(config, "_apis/wit/workitemsbatch");
@@ -1763,7 +1794,7 @@ public class RealTfsClient : ITfsClient
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
-            var httpClient = GetAuthenticatedHttpClient(config);
+            var httpClient = GetAuthenticatedHttpClient();
             
             // Work item revisions are collection-scoped (work item IDs are unique across collection)
             var url = CollectionUrl(config, "_apis/wit/workitems/1/revisions");
@@ -1810,7 +1841,7 @@ public class RealTfsClient : ITfsClient
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
-            var httpClient = GetAuthenticatedHttpClient(config);
+            var httpClient = GetAuthenticatedHttpClient();
             
             // Git repositories are project-scoped (requirement #1)
             var url = ProjectUrl(config, "_apis/git/repositories");
@@ -1864,7 +1895,7 @@ public class RealTfsClient : ITfsClient
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
-            var httpClient = GetAuthenticatedHttpClient(config);
+            var httpClient = GetAuthenticatedHttpClient();
             
             var buildDefinitionsFound = 0;
             var buildRunsFound = 0;
@@ -1989,7 +2020,7 @@ public class RealTfsClient : ITfsClient
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
-            var httpClient = GetAuthenticatedHttpClient(config);
+            var httpClient = GetAuthenticatedHttpClient();
             
             _logger.LogInformation("Verifying work item update capability using work item {WorkItemId}", workItemId);
             
@@ -2130,15 +2161,17 @@ public class RealTfsClient : ITfsClient
             FailureCategory.Authentication => (
                 new List<string> 
                 { 
-                    "PAT has expired or been revoked",
-                    "PAT is not provided in X-TFS-PAT header",
-                    "Incorrect PAT value"
+                    "Windows authentication (NTLM) failed",
+                    "TFS server does not have Windows authentication enabled",
+                    "Current Windows user does not have access to the TFS server",
+                    "Network connectivity issue preventing authentication"
                 },
                 new List<string> 
                 { 
-                    "Generate a new PAT in Azure DevOps",
-                    "Ensure PAT has 'Work Items (Read)' permission at minimum",
-                    "Verify PAT is being sent with requests"
+                    "Verify TFS server has Windows authentication enabled",
+                    "Confirm your Windows account has access to the TFS project",
+                    "Check if you can access the TFS server URL in a web browser",
+                    "Contact TFS administrator to grant your Windows account access"
                 }),
             
             FailureCategory.Authorization => (
@@ -2151,8 +2184,8 @@ public class RealTfsClient : ITfsClient
                 new List<string> 
                 { 
                     "Verify project name is correct",
-                    "Check PAT permissions include appropriate scopes",
-                    "Contact project administrator to grant access"
+                    "Check that your Windows account has appropriate permissions in TFS",
+                    "Contact project administrator to grant access to required areas"
                 }),
             
             FailureCategory.EndpointUnavailable => (
@@ -2167,7 +2200,7 @@ public class RealTfsClient : ITfsClient
                 { 
                     "Verify server URL is correct and accessible",
                     "Check network connectivity and firewall settings",
-                    "Confirm TFS/Azure DevOps Server version is 2019 or later",
+                    "Confirm TFS/Azure DevOps Server version is 2019 or later (API 5.1+)",
                     "Try increasing timeout settings"
                 }),
             
@@ -2579,7 +2612,7 @@ public class RealTfsClient : ITfsClient
             }
 
             // Use auth-mode-specific HttpClient (requirement #2)
-            var httpClient = GetAuthenticatedHttpClient(entity);
+            var httpClient = GetAuthenticatedHttpClient();
 
             // Build JSON Patch document for work item creation
             // Note: AreaPath must be provided in the request since it's not stored in TfsConfigEntity
@@ -2696,7 +2729,7 @@ public class RealTfsClient : ITfsClient
             }
 
             // Use auth-mode-specific HttpClient (requirement #2)
-            var httpClient = GetAuthenticatedHttpClient(entity);
+            var httpClient = GetAuthenticatedHttpClient();
 
             // Build JSON Patch document to add parent link
             // First, we need to remove existing parent links, then add the new one
@@ -2760,7 +2793,7 @@ public class RealTfsClient : ITfsClient
         var config = entity!;
 
         // Use auth-mode-specific HttpClient (requirement #2)
-        var httpClient = GetAuthenticatedHttpClient(config);
+        var httpClient = GetAuthenticatedHttpClient();
 
         return await ExecuteWithRetryAsync(async () =>
         {
@@ -2850,7 +2883,7 @@ public class RealTfsClient : ITfsClient
         var config = entity!;
 
         // Use auth-mode-specific HttpClient (requirement #2)
-        var httpClient = GetAuthenticatedHttpClient(config);
+        var httpClient = GetAuthenticatedHttpClient();
 
         return await ExecuteWithRetryAsync(async () =>
         {
