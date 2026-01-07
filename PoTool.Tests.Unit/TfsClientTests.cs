@@ -45,15 +45,11 @@ public class TfsClientTests
         _authProvider = new TfsAuthenticationProvider();
         _loggerMock = new Mock<ILogger<RealTfsClient>>();
         
-        // Create mock PatAccessor that returns a test PAT for authenticated requests
-        var mockPatAccessor = new Mock<PatAccessor>(Mock.Of<IHttpContextAccessor>());
-        mockPatAccessor.Setup(p => p.GetPat()).Returns("test-pat-token");
-        
         // Create mock IHttpClientFactory
         var mockFactory = new Mock<IHttpClientFactory>();
         mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
         
-        _client = new RealTfsClient(_httpClient, mockFactory.Object, _configService, _authProvider, mockPatAccessor.Object, _loggerMock.Object);
+        _client = new RealTfsClient(_httpClient, mockFactory.Object, _configService, _authProvider, _loggerMock.Object);
     }
 
     [TestCleanup]
@@ -72,7 +68,7 @@ public class TfsClientTests
             "https://dev.azure.com/testorg",
             "TestProject",
             "TestProject\\Team",
-            TfsAuthMode.Pat);
+            true);
 
 
         // Mock WIQL response
@@ -153,7 +149,7 @@ public class TfsClientTests
             "https://dev.azure.com/testorg",
             "TestProject",
             "TestProject\\Team",
-            TfsAuthMode.Pat);
+            true);
 
 
         // Mock WIQL response - Epic -> Feature -> User Story
@@ -254,7 +250,7 @@ public class TfsClientTests
             "https://dev.azure.com/testorg",
             "TestProject",
             "TestProject\\Team",
-            TfsAuthMode.Pat);
+            true);
 
 
         var wiqlResponse = new { workItems = new[] { new { id = 100 } } };
@@ -298,7 +294,7 @@ public class TfsClientTests
             "https://dev.azure.com/testorg",
             "TestProject",
             "TestProject\\Team",
-            TfsAuthMode.Pat);
+            true);
 
 
         var wiqlResponse = new { workItems = new[] { new { id = 100 } } };
@@ -349,7 +345,7 @@ public class TfsClientTests
             "https://dev.azure.com/testorg",
             "TestProject",
             "TestProject\\Team",
-            TfsAuthMode.Pat);
+            true);
 
         // Mock empty WIQL response (no work items found)
         var wiqlResponse = new
@@ -373,7 +369,7 @@ public class TfsClientTests
             "https://dev.azure.com/testorg",
             "TestProject",
             "TestProject\\Team",
-            TfsAuthMode.Pat);
+            true);
 
         // Mock WIQL response
         var wiqlResponse = new
@@ -422,7 +418,7 @@ public class TfsClientTests
             "https://dev.azure.com/testorg",
             "TestProject",
             "TestProject\\Team",
-            TfsAuthMode.Pat);
+            true);
 
         // Mock WIQL response with 500 work item IDs
         var wiqlResponse = new
@@ -465,7 +461,7 @@ public class TfsClientTests
             "https://dev.azure.com/testorg",
             "TestProject",
             "TestProject\\Team",
-            TfsAuthMode.Pat);
+            true);
 
         // Mock WIQL response
         var wiqlResponse = new
@@ -514,7 +510,7 @@ public class TfsClientTests
             "https://dev.azure.com/testorg",
             "TestProject",
             "TestProject\\Team",
-            TfsAuthMode.Pat);
+            true);
 
         // Mock WIQL response
         var wiqlResponse = new

@@ -111,7 +111,7 @@ public class TfsConfigPageTests : BunitTestContext
         Assert.IsNotNull(result, "Should return configured state");
         Assert.AreEqual("https://dev.azure.com/testorg", result.Url);
         Assert.AreEqual("TestProject", result.Project);
-        Assert.AreEqual(true, result.UseDefaultCredentials);
+        Assert.IsTrue(result.UseDefaultCredentials);
         Assert.AreEqual(60, result.TimeoutSeconds);
     }
 }
