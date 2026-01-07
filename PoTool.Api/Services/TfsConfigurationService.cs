@@ -10,20 +10,15 @@ public sealed class TfsConfig
     public string Url { get; set; } = string.Empty;
     public string Project { get; set; } = string.Empty;
     public string DefaultAreaPath { get; set; } = string.Empty;
-    public TfsAuthMode AuthMode { get; set; } = TfsAuthMode.Ntlm;
-    public bool UseDefaultCredentials { get; set; } = false;
+    public bool UseDefaultCredentials { get; set; } = true;
     public int TimeoutSeconds { get; set; } = 30;
     public string ApiVersion { get; set; } = "7.0";
     public DateTimeOffset? LastValidated { get; set; }
-    // NOTE: PAT is not included in server-side config
-    // PAT is stored client-side using MAUI SecureStorage
-    // See docs/PAT_STORAGE_BEST_PRACTICES.md
 }
 
 /// <summary>
-/// Service to persist TFS configuration (non-sensitive data only).
-/// PAT is stored client-side using MAUI SecureStorage, not on the server.
-/// See docs/PAT_STORAGE_BEST_PRACTICES.md for details.
+/// Service to persist TFS configuration.
+/// Authentication uses Windows credentials (NTLM) - no PAT needed.
 /// </summary>
 public class TfsConfigurationService
 {
@@ -51,7 +46,6 @@ public class TfsConfigurationService
             Url = entity.Url,
             Project = entity.Project,
             DefaultAreaPath = entity.DefaultAreaPath,
-            AuthMode = entity.AuthMode,
             UseDefaultCredentials = entity.UseDefaultCredentials,
             TimeoutSeconds = entity.TimeoutSeconds,
             ApiVersion = entity.ApiVersion,
@@ -60,15 +54,14 @@ public class TfsConfigurationService
     }
 
     /// <summary>
-    /// Saves TFS configuration (non-sensitive fields).
-    /// PAT is NOT stored by this service - it should be stored client-side.
+    /// Saves TFS configuration.
+    /// Authentication uses Windows credentials (NTLM) - always enabled.
     /// </summary>
     public async Task SaveConfigAsync(
         string url, 
         string project,
         string defaultAreaPath,
-        TfsAuthMode authMode = TfsAuthMode.Ntlm,
-        bool useDefaultCredentials = false,
+        bool useDefaultCredentials = true,
         int timeoutSeconds = 30,
         string apiVersion = "7.0",
         CancellationToken cancellationToken = default)
@@ -84,7 +77,6 @@ public class TfsConfigurationService
                 Url = url ?? string.Empty,
                 Project = project ?? string.Empty,
                 DefaultAreaPath = defaultAreaPath ?? string.Empty,
-                AuthMode = authMode,
                 UseDefaultCredentials = useDefaultCredentials,
                 TimeoutSeconds = timeoutSeconds,
                 ApiVersion = apiVersion ?? "7.0",
@@ -99,7 +91,6 @@ public class TfsConfigurationService
             existing.Url = url ?? string.Empty;
             existing.Project = project ?? string.Empty;
             existing.DefaultAreaPath = defaultAreaPath ?? string.Empty;
-            existing.AuthMode = authMode;
             existing.UseDefaultCredentials = useDefaultCredentials;
             existing.TimeoutSeconds = timeoutSeconds;
             existing.ApiVersion = apiVersion ?? "7.0";
@@ -108,7 +99,7 @@ public class TfsConfigurationService
         }
 
         await _db.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("TFS configuration saved/updated for Url={Url}, AuthMode={AuthMode}", url, authMode);
+        _logger.LogInformation("TFS configuration saved/updated for Url={Url}, using NTLM authentication", url);
     }
 
     public async Task<TfsConfigEntity?> GetConfigEntityAsync(CancellationToken cancellationToken = default)

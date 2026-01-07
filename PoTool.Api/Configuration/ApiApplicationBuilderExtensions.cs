@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Hubs;
-using PoTool.Api.Middleware;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
@@ -147,9 +146,6 @@ public static class ApiApplicationBuilderExtensions
         // Add routing so middleware such as CORS apply to endpoints including SignalR
         app.UseRouting();
 
-        // Add PAT authentication middleware to extract PAT from request headers
-        app.UsePatAuthentication();
-
         app.UseCors("AllowBlazorClient");
 
         app.MapControllers();
@@ -171,13 +167,11 @@ public static class ApiApplicationBuilderExtensions
 
         app.MapPost("/api/tfsconfig", async (TfsConfigurationService svc, TfsConfigRequest req) =>
         {
-            // Note: PAT is no longer stored on server - it's stored client-side
-            // See docs/PAT_STORAGE_BEST_PRACTICES.md
+            // Authentication uses Windows credentials (NTLM) - no PAT needed
             await svc.SaveConfigAsync(
                 req.Url ?? string.Empty, 
                 req.Project ?? string.Empty, 
                 req.DefaultAreaPath ?? string.Empty,
-                (TfsAuthMode)req.AuthMode, 
                 req.UseDefaultCredentials, 
                 req.TimeoutSeconds, 
                 req.ApiVersion ?? "7.0");
@@ -256,9 +250,7 @@ public record TfsConfigRequest(
     string? Url, 
     string? Project,
     string? DefaultAreaPath,
-    string? Pat, 
-    int AuthMode = 0, 
-    bool UseDefaultCredentials = false, 
+    bool UseDefaultCredentials = true, 
     int TimeoutSeconds = 30, 
     string? ApiVersion = "7.0");
 

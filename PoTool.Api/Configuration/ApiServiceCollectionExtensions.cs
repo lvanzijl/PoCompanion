@@ -141,10 +141,6 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<TfsAuthenticationProvider>();
         services.AddScoped<ProfileFilterService>();
         
-        // Register PAT accessor to retrieve PAT from request context
-        services.AddHttpContextAccessor();
-        services.AddScoped<PatAccessor>();
-        
         // Register TFS client based on configuration (useMockClient already read above)
         if (useMockClient)
         {
@@ -154,15 +150,7 @@ public static class ApiServiceCollectionExtensions
         else
         {
             // Use real TFS client that connects to Azure DevOps/TFS
-            // Register named HttpClients for different authentication modes to avoid conflicts
-            
-            // PAT authentication client - NO default Windows credentials
-            services.AddHttpClient("TfsClient.PAT")
-                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-                {
-                    AllowAutoRedirect = true,
-                    MaxAutomaticRedirections = 5
-                });
+            // Register named HttpClient for NTLM authentication
             
             // NTLM authentication client - WITH default Windows credentials
             services.AddHttpClient("TfsClient.NTLM")
@@ -180,10 +168,12 @@ public static class ApiServiceCollectionExtensions
             // GetPullRequestFileChangesAsync, GetWorkItemRevisionsAsync, UpdateWorkItemStateAsync, 
             // UpdateWorkItemParentAsync, GetPipelinesAsync, GetPipelineRunsAsync, CreateWorkItemAsync,
             // and various helper/verification methods
-            // This handler has NO default credentials to avoid PAT/NTLM conflicts
+            // This handler uses default credentials for NTLM
             services.AddHttpClient<ITfsClient, RealTfsClient>()
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
                 {
+                    UseDefaultCredentials = true,
+                    Credentials = System.Net.CredentialCache.DefaultNetworkCredentials,
                     AllowAutoRedirect = true,
                     MaxAutomaticRedirections = 5
                 });
