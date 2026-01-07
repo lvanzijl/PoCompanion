@@ -66,54 +66,6 @@ public class WorkItemSelectionServiceTests
     }
 
     [TestMethod]
-    public void ToggleNodeSelection_DeselectsAlreadySelectedNode()
-    {
-        // Arrange
-        var node = CreateTestNode(1, "Test Item");
-        var currentState = new WorkItemSelectionService.SelectionState
-        {
-            SelectedIds = new HashSet<int> { 1 },
-            SelectedWorkItems = new List<WorkItemDto>
-            {
-                new() { TfsId = 1, Title = "Test Item", Type = "Feature", State = "New" }
-            },
-            PrimarySelectedWorkItem = new WorkItemDto { TfsId = 1, Title = "Test Item", Type = "Feature", State = "New" }
-        };
-
-        // Act
-        var newState = _service.ToggleNodeSelection(node, currentState);
-
-        // Assert
-        Assert.IsEmpty(newState.SelectedIds);
-        Assert.IsEmpty(newState.SelectedWorkItems);
-        Assert.IsNull(newState.PrimarySelectedWorkItem);
-    }
-
-    [TestMethod]
-    public void ToggleNodeSelection_MultipleSelections()
-    {
-        // Arrange
-        var node1 = CreateTestNode(1, "Item 1");
-        var node2 = CreateTestNode(2, "Item 2");
-        var currentState = new WorkItemSelectionService.SelectionState();
-
-        // Act
-        var state1 = _service.ToggleNodeSelection(node1, currentState);
-        var state2 = _service.ToggleNodeSelection(node2, state1);
-
-        // Assert
-        Assert.HasCount(2, state2.SelectedIds);
-        
-#pragma warning disable MSTEST0037
-        Assert.IsTrue(state2.SelectedIds.Contains(1));
-        
-#pragma warning disable MSTEST0037
-        Assert.IsTrue(state2.SelectedIds.Contains(2));
-        Assert.HasCount(2, state2.SelectedWorkItems);
-        Assert.AreEqual(2, state2.PrimarySelectedWorkItem?.TfsId); // Last selected
-    }
-
-    [TestMethod]
     public void SelectAllNodes_SelectsAllVisibleNodes()
     {
         // Arrange

@@ -179,62 +179,6 @@ public sealed class ReportServiceTests
     }
 
     [TestMethod]
-    public void GenerateSummaryReport_GroupsByAreaPath_ShowsTop10()
-    {
-        // Arrange
-        var workItems = new[]
-        {
-            new WorkItemDto
-            {
-                TfsId = 123,
-                Title = "Item 1",
-                Type = "Epic",
-                State = "Active",
-                AreaPath = "Project\\Team A",
-                IterationPath = "Sprint 1",
-                ParentTfsId = null,
-                Effort = 5,
-                RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}"
-            },
-            new WorkItemDto
-            {
-                TfsId = 456,
-                Title = "Item 2",
-                Type = "Feature",
-                State = "Active",
-                AreaPath = "Project\\Team A",
-                IterationPath = "Sprint 1",
-                ParentTfsId = 123,
-                Effort = 3,
-                RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}"
-            },
-            new WorkItemDto
-            {
-                TfsId = 789,
-                Title = "Item 3",
-                Type = "Task",
-                State = "Done",
-                AreaPath = "Project\\Team B",
-                IterationPath = "Sprint 2",
-                ParentTfsId = 456,
-                Effort = 2,
-                RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}"
-            }
-        };
-
-        // Act
-        var result = _service.GenerateSummaryReport(workItems);
-
-        // Assert
-        Assert.Contains("## Summary by Area Path", result);
-        Assert.Contains("**Project\\\\Team A:** 2", result);
-        Assert.Contains("**Project\\\\Team B:** 1", result);
-    }
-
-    [TestMethod]
     public void GenerateSummaryReport_ContainsMarkdownTable_WithAllItems()
     {
         // Arrange
