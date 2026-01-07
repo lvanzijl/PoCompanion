@@ -48,6 +48,11 @@ public class RealTfsClient : ITfsClient
         TfsFieldStoryPoints
     };
 
+    // Batch size for Work Items Batch API calls
+    // Azure DevOps supports up to 200 work items per batch for optimal performance
+    // Larger batches (up to 500) may work but could impact response time
+    private const int WorkItemBatchSize = 200;
+
     public RealTfsClient(
         HttpClient httpClient,
         IHttpClientFactory httpClientFactory,
@@ -293,18 +298,16 @@ public class RealTfsClient : ITfsClient
 
             // Use Work Items Batch API to avoid 414 Request-URI Too Long errors
             // Split IDs into batches and use POST _apis/wit/workitemsbatch
-            // Recommended batch size: 200 IDs per batch
-            const int batchSize = 200;
             var results = new List<WorkItemDto>();
-            var totalBatches = (int)Math.Ceiling((double)ids.Length / batchSize);
+            var totalBatches = (int)Math.Ceiling((double)ids.Length / WorkItemBatchSize);
 
             _logger.LogInformation("Fetching {TotalIds} work items in {BatchCount} batches of {BatchSize}", 
-                ids.Length, totalBatches, batchSize);
+                ids.Length, totalBatches, WorkItemBatchSize);
 
             for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++)
             {
                 var batchStartTime = DateTimeOffset.UtcNow;
-                var batchIds = ids.Skip(batchIndex * batchSize).Take(batchSize).ToArray();
+                var batchIds = ids.Skip(batchIndex * WorkItemBatchSize).Take(WorkItemBatchSize).ToArray();
                 
                 _logger.LogDebug("Processing batch {BatchIndex}/{TotalBatches} with {IdCount} IDs", 
                     batchIndex + 1, totalBatches, batchIds.Length);
