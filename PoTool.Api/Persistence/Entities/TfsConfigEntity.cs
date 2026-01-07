@@ -44,6 +44,18 @@ public class TfsConfigEntity
     /// </summary>
     public DateTimeOffset? LastValidated { get; set; }
 
+    /// <summary>
+    /// Whether Test Connection has succeeded at least once.
+    /// Set to true when ValidateConnection succeeds.
+    /// </summary>
+    public bool HasTestedConnectionSuccessfully { get; set; } = false;
+
+    /// <summary>
+    /// Whether Verify TFS API has passed (all checks).
+    /// Set to true only when ALL verification checks pass.
+    /// </summary>
+    public bool HasVerifiedTfsApiSuccessfully { get; set; } = false;
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;

@@ -25,6 +25,9 @@ public interface IProfileRepository
         List<string> areaPaths,
         string teamName,
         List<int> goalIds,
+        ProfilePictureType pictureType = ProfilePictureType.Default,
+        int defaultPictureId = 0,
+        string? customPicturePath = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -36,10 +39,18 @@ public interface IProfileRepository
         List<string> areaPaths,
         string teamName,
         List<int> goalIds,
+        ProfilePictureType? pictureType = null,
+        int? defaultPictureId = null,
+        string? customPicturePath = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes a profile by ID.
     /// </summary>
     Task<bool> DeleteProfileAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns whether any profiles exist.
+    /// </summary>
+    Task<bool> HasAnyProfileAsync(CancellationToken cancellationToken = default);
 }
