@@ -154,6 +154,7 @@ public static class ApiApplicationBuilderExtensions
 
         app.MapControllers();
         app.MapHub<WorkItemHub>("/hubs/workitems");
+        app.MapHub<TfsVerificationHub>("/hubs/tfsverification");
 
         // Health check endpoint
         app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow }));
