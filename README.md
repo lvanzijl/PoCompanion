@@ -96,8 +96,7 @@ This PR provides the **scaffolding baseline**:
 - Implement `ITfsClient` with Azure DevOps REST API
 - Add hierarchical tree rendering (parent-child relationships)
 - Implement text highlighting for search matches
-- Add configuration dialog for Area Path and PAT
-- Client-side PAT storage using MAUI SecureStorage (see `docs/PAT_STORAGE_BEST_PRACTICES.md`)
+- Add configuration dialog for Area Path
 - Implement proper error handling and loading states
 
 ## Architecture Compliance

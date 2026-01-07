@@ -37,7 +37,7 @@ You MUST follow these rules when generating or modifying code.
   * be logged
   * have no hidden side effects
 
-* Credential storage MUST follow PAT\_STORAGE\_BEST\_PRACTICES.md.
+* Authentication uses Windows credentials (NTLM) only.
 
 ## Persistence
 

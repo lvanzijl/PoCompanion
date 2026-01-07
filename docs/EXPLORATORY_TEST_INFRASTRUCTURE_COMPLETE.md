@@ -214,8 +214,7 @@ Consider adding:
 ## Security Verification
 
 ✅ **No secrets exposed**
-- Mock PAT tokens are fake values
-- No real TFS credentials required
+- No credentials required for mock mode
 - Database is local SQLite file
 
 ✅ **Mock data only**
