@@ -475,7 +475,8 @@ public class RealTfsClient : ITfsClient
 
             // Robust URL parsing: strip querystring and trim trailing slash
             // Example URL: https://dev.azure.com/org/project/_apis/wit/workItems/123?api-version=7.0
-            var urlWithoutQuery = url.Split('?')[0].TrimEnd('/');
+            var queryIndex = url.IndexOf('?');
+            var urlWithoutQuery = queryIndex >= 0 ? url.Substring(0, queryIndex).TrimEnd('/') : url.TrimEnd('/');
             var segments = urlWithoutQuery.Split('/');
             if (segments.Length > 0 && int.TryParse(segments[^1], out var parsedId))
             {
