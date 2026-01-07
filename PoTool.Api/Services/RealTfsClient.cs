@@ -20,8 +20,9 @@ internal sealed class WorkItemBatchRequest
 {
     /// <summary>
     /// Array of work item IDs to retrieve.
+    /// Required for valid API requests.
     /// </summary>
-    public int[] ids { get; init; } = Array.Empty<int>();
+    public required int[] ids { get; init; }
 
     /// <summary>
     /// Optional array of field reference names to retrieve.
