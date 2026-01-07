@@ -58,6 +58,8 @@ else
     @ChildContent
 }
 
+@implements IDisposable
+
 @code {
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
@@ -71,6 +73,7 @@ else
     private bool _isChecking = true;
     private bool _isReady = false;
     private StartupReadinessDto? _readiness;
+    private string _lastCheckedLocation = string.Empty;
     
     // Default exempt pages (configuration, profiles, help)
     private static readonly string[] DefaultExemptPages = new[]
@@ -82,17 +85,38 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // Subscribe to location changes to detect actual navigation
+        NavigationManager.LocationChanged += HandleLocationChanged;
+        
+        // Perform initial check
         await CheckReadinessAsync();
     }
-
-    protected override async Task OnParametersSetAsync()
+    
+    private async void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
-        // Re-check when parameters change (e.g., navigation)
+        // Only re-check when the location actually changes
         await CheckReadinessAsync();
+        StateHasChanged();
+    }
+    
+    public void Dispose()
+    {
+        // Unsubscribe from location changes
+        NavigationManager.LocationChanged -= HandleLocationChanged;
     }
 
     private async Task CheckReadinessAsync()
     {
+        // Get current location
+        var currentLocation = NavigationManager.Uri;
+        
+        // Skip check if location hasn't changed (prevents unnecessary checks on component re-renders)
+        if (_lastCheckedLocation == currentLocation && _readiness != null)
+        {
+            return;
+        }
+        
+        _lastCheckedLocation = currentLocation;
         _isChecking = true;
         
         try
