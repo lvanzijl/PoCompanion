@@ -211,6 +211,7 @@ public class TfsConfigService
 
 /// <summary>
 /// DTO for TFS configuration.
+/// Authentication uses Windows credentials (NTLM) only.
 /// </summary>
 public class TfsConfigDto
 {
