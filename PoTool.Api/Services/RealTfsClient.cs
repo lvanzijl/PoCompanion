@@ -119,8 +119,10 @@ public class RealTfsClient : ITfsClient
     /// <param name="config">TFS configuration entity.</param>
     /// <param name="relativePath">Path relative to collection root (e.g., "_apis/projects").</param>
     /// <returns>Full URL including api-version.</returns>
-    private static string CollectionUrl(TfsConfigEntity config, string relativePath)
+    private string CollectionUrl(TfsConfigEntity config, string relativePath)
     {
+        ValidateCollectionUrl(config.Url);
+        
         // Ensure relativePath doesn't start with /
         var path = relativePath.TrimStart('/');
         var separator = path.Contains('?') ? "&" : "?";
@@ -135,14 +137,57 @@ public class RealTfsClient : ITfsClient
     /// <param name="config">TFS configuration entity.</param>
     /// <param name="relativePath">Path relative to project (e.g., "_apis/wit/wiql").</param>
     /// <returns>Full URL including api-version.</returns>
-    private static string ProjectUrl(TfsConfigEntity config, string relativePath)
+    private string ProjectUrl(TfsConfigEntity config, string relativePath)
     {
+        ValidateCollectionUrl(config.Url);
+        
         // URL-encode project name to support spaces and special characters
         var encodedProject = Uri.EscapeDataString(config.Project);
         // Ensure relativePath doesn't start with /
         var path = relativePath.TrimStart('/');
         var separator = path.Contains('?') ? "&" : "?";
         return $"{config.Url.TrimEnd('/')}/{encodedProject}/{path}{separator}api-version={config.ApiVersion}";
+    }
+
+    /// <summary>
+    /// Validates that the TFS URL is a collection root (not a project URL).
+    /// Expected format: https://server/tfs/DefaultCollection or https://dev.azure.com/org
+    /// </summary>
+    /// <param name="url">The TFS URL to validate.</param>
+    private void ValidateCollectionUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            throw new TfsConfigurationException("TFS URL cannot be empty");
+        }
+
+        // Basic validation that it's a valid URI
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            throw new TfsConfigurationException($"TFS URL is not a valid absolute URI: {url}");
+        }
+
+        // Check for common mistakes - project URLs typically have _apis or project-specific paths
+        var path = uri.AbsolutePath.TrimEnd('/');
+        if (path.Contains("/_apis/", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning(
+                "TFS URL appears to include an API path segment (_apis). " +
+                "Expected collection root (e.g., https://server/tfs/DefaultCollection), got: {Url}", url);
+        }
+
+        // For Azure DevOps Services, validate format
+        if (uri.Host.EndsWith("visualstudio.com", StringComparison.OrdinalIgnoreCase) ||
+            uri.Host.EndsWith("dev.azure.com", StringComparison.OrdinalIgnoreCase))
+        {
+            var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length > 1)
+            {
+                _logger.LogWarning(
+                    "Azure DevOps URL may include project name in path. " +
+                    "Expected organization root (e.g., https://dev.azure.com/org), got: {Url}", url);
+            }
+        }
     }
 
     public async Task<bool> ValidateConnectionAsync(CancellationToken cancellationToken = default)
@@ -293,11 +338,27 @@ public class RealTfsClient : ITfsClient
 
             _logger.LogDebug("Found {Count} work item IDs, fetching details using two-phase retrieval", ids.Length);
 
-            // TFS Server 2022 doesn't allow combining $expand=relations with fields= parameter
-            // Implement two-phase retrieval:
-            // Phase 1: Fetch relations only (no fields parameter)
-            // Phase 2: Fetch fields only (no expand parameter)
+            // TFS Server 2022 limitation: Cannot combine $expand=relations with fields= parameter
+            // 
+            // IMPLEMENTATION: Two-phase retrieval strategy
+            // Phase 1: Fetch relations only (no fields parameter) to extract parent hierarchy
+            // Phase 2: Fetch fields only (no expand parameter) to get work item data
             // Then merge by work item ID
+            //
+            // RATIONALE: This approach is required for TFS Server 2022 compatibility.
+            // Azure DevOps Services does not have this limitation, but we maintain this
+            // approach for cross-platform compatibility.
+            //
+            // PERFORMANCE CONSIDERATIONS (Phase 4.3):
+            // - Two API calls per batch vs one combined call
+            // - Tradeoff: Correctness (works on TFS 2022) vs Performance (fewer calls)
+            // - Optimization opportunity: Skip Phase 1 for types without parent relationships
+            // - Current batch size: 200 items per batch (WorkItemBatchSize constant)
+            // - Could increase batch size for relations-only phase (typically smaller payload)
+            //
+            // FUTURE OPTIMIZATION: Make Phase 1 conditional based on work item types
+            // that actually use parent relationships (Epic, Feature, User Story, Task).
+            // Would require: Type detection in WIQL results, conditional Phase 1 execution.
             
             var totalBatches = (int)Math.Ceiling((double)ids.Length / WorkItemBatchSize);
             _logger.LogInformation("Fetching {TotalIds} work items in {BatchCount} batches of {BatchSize} (two-phase retrieval)", 
