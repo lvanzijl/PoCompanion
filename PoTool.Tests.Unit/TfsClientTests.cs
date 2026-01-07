@@ -432,26 +432,23 @@ public class TfsClientTests
         SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse));
 
         // Simulate large batch of work items response
-        var items = Enumerable.Range(1, 500).Select(i => new Dictionary<string, object>
-        {
-            ["id"] = i,
-            ["url"] = $"http://test.com/{i}",
-            ["fields"] = new Dictionary<string, object>
-            {
-                ["System.WorkItemType"] = "Task",
-                ["System.Title"] = $"Task {i}",
-                ["System.State"] = "Active",
-                ["System.AreaPath"] = "TestProject",
-                ["System.IterationPath"] = "TestProject"
-            }
-        }).ToArray();
+        // The implementation uses batch size of 200, so 500 items = 3 batches (200 + 200 + 100)
+        // Setup 3 batch responses using the helper method
+        
+        // Batch 1: items 1-200
+        var batch1Items = CreateMockWorkItemBatch(1, RealTfsClient.WorkItemBatchSize);
+        var batch1Response = new { count = batch1Items.Length, value = batch1Items };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(batch1Response));
 
-        var workItemsResponse = new
-        {
-            count = items.Length,
-            value = items
-        };
-        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(workItemsResponse));
+        // Batch 2: items 201-400
+        var batch2Items = CreateMockWorkItemBatch(201, RealTfsClient.WorkItemBatchSize);
+        var batch2Response = new { count = batch2Items.Length, value = batch2Items };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(batch2Response));
+
+        // Batch 3: items 401-500
+        var batch3Items = CreateMockWorkItemBatch(401, 100);
+        var batch3Response = new { count = batch3Items.Length, value = batch3Items };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(batch3Response));
 
         // Act
         var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
@@ -603,5 +600,27 @@ public class TfsClientTests
                     Content = new StringContent(responseContent)
                 };
             });
+    }
+
+    /// <summary>
+    /// Helper to create a batch of mock work items for testing.
+    /// </summary>
+    private static Dictionary<string, object>[] CreateMockWorkItemBatch(int startId, int count)
+    {
+        return Enumerable.Range(startId, count)
+            .Select(i => new Dictionary<string, object>
+            {
+                ["id"] = i,
+                ["url"] = $"http://test.com/{i}",
+                ["fields"] = new Dictionary<string, object>
+                {
+                    ["System.WorkItemType"] = "Task",
+                    ["System.Title"] = $"Task {i}",
+                    ["System.State"] = "Active",
+                    ["System.AreaPath"] = "TestProject",
+                    ["System.IterationPath"] = "TestProject"
+                }
+            })
+            .ToArray();
     }
 }
