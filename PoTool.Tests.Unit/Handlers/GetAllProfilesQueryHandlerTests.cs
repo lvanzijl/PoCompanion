@@ -51,6 +51,9 @@ public class GetAllProfilesQueryHandlerTests
                 AreaPaths: new List<string> { "Project\\A" },
                 TeamName: "Team Alpha",
                 GoalIds: new List<int> { 1 },
+                PictureType: ProfilePictureType.Default,
+                DefaultPictureId: 0,
+                CustomPicturePath: null,
                 CreatedAt: DateTimeOffset.UtcNow,
                 LastModified: DateTimeOffset.UtcNow
             ),
@@ -60,6 +63,9 @@ public class GetAllProfilesQueryHandlerTests
                 AreaPaths: new List<string> { "Project\\B" },
                 TeamName: "Team Beta",
                 GoalIds: new List<int> { 2, 3 },
+                PictureType: ProfilePictureType.Default,
+                DefaultPictureId: 0,
+                CustomPicturePath: null,
                 CreatedAt: DateTimeOffset.UtcNow,
                 LastModified: DateTimeOffset.UtcNow
             ),
@@ -69,6 +75,9 @@ public class GetAllProfilesQueryHandlerTests
                 AreaPaths: new List<string> { "Project\\C", "Project\\D" },
                 TeamName: "Team Gamma",
                 GoalIds: new List<int>(),
+                PictureType: ProfilePictureType.Default,
+                DefaultPictureId: 0,
+                CustomPicturePath: null,
                 CreatedAt: DateTimeOffset.UtcNow,
                 LastModified: DateTimeOffset.UtcNow
             )
@@ -102,6 +111,9 @@ public class GetAllProfilesQueryHandlerTests
                 AreaPaths: new List<string> { "Project\\ProductA", "Project\\ProductB" },
                 TeamName: "Complete Team",
                 GoalIds: new List<int> { 10, 20, 30 },
+                PictureType: ProfilePictureType.Default,
+                DefaultPictureId: 0,
+                CustomPicturePath: null,
                 CreatedAt: DateTimeOffset.UtcNow,
                 LastModified: DateTimeOffset.UtcNow
             )

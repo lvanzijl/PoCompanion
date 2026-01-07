@@ -43,6 +43,9 @@ public class ProfileRepository : IProfileRepository
         List<string> areaPaths,
         string teamName,
         List<int> goalIds,
+        ProfilePictureType pictureType = ProfilePictureType.Default,
+        int defaultPictureId = 0,
+        string? customPicturePath = null,
         CancellationToken cancellationToken = default)
     {
         var entity = new ProfileEntity
@@ -51,6 +54,9 @@ public class ProfileRepository : IProfileRepository
             AreaPaths = string.Join(",", areaPaths),
             TeamName = teamName,
             GoalIds = string.Join(",", goalIds),
+            PictureType = (int)pictureType,
+            DefaultPictureId = defaultPictureId,
+            CustomPicturePath = customPicturePath,
             CreatedAt = DateTimeOffset.UtcNow,
             LastModified = DateTimeOffset.UtcNow
         };
@@ -68,6 +74,9 @@ public class ProfileRepository : IProfileRepository
         List<string> areaPaths,
         string teamName,
         List<int> goalIds,
+        ProfilePictureType? pictureType = null,
+        int? defaultPictureId = null,
+        string? customPicturePath = null,
         CancellationToken cancellationToken = default)
     {
         var entity = await _context.Profiles
@@ -82,6 +91,20 @@ public class ProfileRepository : IProfileRepository
         entity.AreaPaths = string.Join(",", areaPaths);
         entity.TeamName = teamName;
         entity.GoalIds = string.Join(",", goalIds);
+        
+        if (pictureType.HasValue)
+        {
+            entity.PictureType = (int)pictureType.Value;
+        }
+        if (defaultPictureId.HasValue)
+        {
+            entity.DefaultPictureId = defaultPictureId.Value;
+        }
+        if (customPicturePath != null)
+        {
+            entity.CustomPicturePath = customPicturePath;
+        }
+        
         entity.LastModified = DateTimeOffset.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -104,6 +127,12 @@ public class ProfileRepository : IProfileRepository
         await _context.SaveChangesAsync(cancellationToken);
 
         return true;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> HasAnyProfileAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Profiles.AnyAsync(cancellationToken);
     }
 
     private static ProfileDto MapToDto(ProfileEntity entity)
@@ -136,6 +165,9 @@ public class ProfileRepository : IProfileRepository
             areaPaths,
             entity.TeamName,
             goalIds,
+            (ProfilePictureType)entity.PictureType,
+            entity.DefaultPictureId,
+            entity.CustomPicturePath,
             entity.CreatedAt,
             entity.LastModified
         );

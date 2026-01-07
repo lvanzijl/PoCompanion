@@ -44,6 +44,22 @@ public class ProfileEntity
     public string GoalIds { get; set; } = string.Empty;
 
     /// <summary>
+    /// Type of profile picture: 0 = Default, 1 = Custom.
+    /// </summary>
+    public int PictureType { get; set; } = 0;
+
+    /// <summary>
+    /// Index of the default picture (0-63) when PictureType is Default.
+    /// </summary>
+    public int DefaultPictureId { get; set; } = 0;
+
+    /// <summary>
+    /// Path to custom picture when PictureType is Custom.
+    /// </summary>
+    [MaxLength(512)]
+    public string? CustomPicturePath { get; set; }
+
+    /// <summary>
     /// Timestamp when this profile was created.
     /// </summary>
     [Required]

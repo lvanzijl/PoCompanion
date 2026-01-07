@@ -67,6 +67,9 @@ public class ProfileFilterServiceTests
             AreaPaths: new List<string> { "Project\\ProductA", "Project\\ProductB" },
             TeamName: "Team Alpha",
             GoalIds: new List<int>(),
+            PictureType: ProfilePictureType.Default,
+            DefaultPictureId: 0,
+            CustomPicturePath: null,
             CreatedAt: DateTimeOffset.UtcNow,
             LastModified: DateTimeOffset.UtcNow
         );
@@ -128,6 +131,9 @@ public class ProfileFilterServiceTests
             AreaPaths: new List<string>(),
             TeamName: "Team Alpha",
             GoalIds: new List<int>(),
+            PictureType: ProfilePictureType.Default,
+            DefaultPictureId: 0,
+            CustomPicturePath: null,
             CreatedAt: DateTimeOffset.UtcNow,
             LastModified: DateTimeOffset.UtcNow
         );

@@ -40,6 +40,9 @@ public class CreateProfileCommandHandlerTests
             AreaPaths: command.AreaPaths,
             TeamName: command.TeamName,
             GoalIds: command.GoalIds,
+            PictureType: ProfilePictureType.Default,
+            DefaultPictureId: 0,
+            CustomPicturePath: null,
             CreatedAt: DateTimeOffset.UtcNow,
             LastModified: DateTimeOffset.UtcNow
         );
@@ -49,6 +52,9 @@ public class CreateProfileCommandHandlerTests
             It.IsAny<List<string>>(),
             It.IsAny<string>(),
             It.IsAny<List<int>>(),
+            It.IsAny<ProfilePictureType>(),
+            It.IsAny<int>(),
+            It.IsAny<string?>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(createdProfile);
 
@@ -68,6 +74,9 @@ public class CreateProfileCommandHandlerTests
             It.Is<List<string>>(list => list.Count == 2),
             "Team Alpha",
             It.Is<List<int>>(list => list.Count == 3),
+            It.IsAny<ProfilePictureType>(),
+            It.IsAny<int>(),
+            It.IsAny<string?>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -88,6 +97,9 @@ public class CreateProfileCommandHandlerTests
             AreaPaths: command.AreaPaths,
             TeamName: command.TeamName,
             GoalIds: command.GoalIds,
+            PictureType: ProfilePictureType.Default,
+            DefaultPictureId: 0,
+            CustomPicturePath: null,
             CreatedAt: DateTimeOffset.UtcNow,
             LastModified: DateTimeOffset.UtcNow
         );
@@ -97,6 +109,9 @@ public class CreateProfileCommandHandlerTests
             It.IsAny<List<string>>(),
             It.IsAny<string>(),
             It.IsAny<List<int>>(),
+            It.IsAny<ProfilePictureType>(),
+            It.IsAny<int>(),
+            It.IsAny<string?>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(createdProfile);
 
@@ -134,6 +149,9 @@ public class CreateProfileCommandHandlerTests
             AreaPaths: command.AreaPaths,
             TeamName: command.TeamName,
             GoalIds: command.GoalIds,
+            PictureType: ProfilePictureType.Default,
+            DefaultPictureId: 0,
+            CustomPicturePath: null,
             CreatedAt: DateTimeOffset.UtcNow,
             LastModified: DateTimeOffset.UtcNow
         );
@@ -143,6 +161,9 @@ public class CreateProfileCommandHandlerTests
             It.IsAny<List<string>>(),
             It.IsAny<string>(),
             It.IsAny<List<int>>(),
+            It.IsAny<ProfilePictureType>(),
+            It.IsAny<int>(),
+            It.IsAny<string?>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(createdProfile);
 

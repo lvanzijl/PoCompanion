@@ -128,6 +128,7 @@ builder.Services.AddScoped<TfsConfigService>();
 builder.Services.AddScoped<ModeIsolatedStateService>();
 builder.Services.AddScoped<ErrorMessageService>();
 builder.Services.AddScoped<IOnboardingService, OnboardingService>();
+builder.Services.AddScoped<IStartupOrchestratorService, StartupOrchestratorService>();
 
 // Register browser-based storage services
 builder.Services.AddScoped<IPreferencesService, BrowserPreferencesService>();

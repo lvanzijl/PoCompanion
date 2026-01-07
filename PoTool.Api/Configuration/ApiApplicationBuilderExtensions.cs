@@ -178,13 +178,22 @@ public static class ApiApplicationBuilderExtensions
             return Results.Ok();
         });
 
-        app.MapGet("/api/tfsvalidate", async (ITfsClient client, ILogger<Program> logger) =>
+        app.MapGet("/api/tfsvalidate", async (ITfsClient client, TfsConfigurationService configService, ILogger<Program> logger) =>
         {
             try
             {
                 var ok = await client.ValidateConnectionAsync();
                 if (ok)
                 {
+                    // Update TFS config to mark connection as tested successfully
+                    var config = await configService.GetConfigEntityAsync();
+                    if (config != null)
+                    {
+                        config.HasTestedConnectionSuccessfully = true;
+                        config.LastValidated = DateTimeOffset.UtcNow;
+                        await configService.SaveConfigEntityAsync(config);
+                    }
+                    
                     return Results.Ok(new { success = true, message = "Connection validated successfully" });
                 }
                 else
@@ -214,12 +223,25 @@ public static class ApiApplicationBuilderExtensions
             }
         });
 
-        app.MapPost("/api/tfsverify", async (ITfsClient client, TfsVerifyRequest req, CancellationToken ct) =>
+        app.MapPost("/api/tfsverify", async (ITfsClient client, TfsConfigurationService configService, TfsVerifyRequest req, CancellationToken ct) =>
         {
             var report = await client.VerifyCapabilitiesAsync(
                 req.IncludeWriteChecks, 
                 req.WorkItemIdForWriteCheck, 
                 ct);
+            
+            // If all checks passed, mark TFS API as verified
+            if (report.Success)
+            {
+                var config = await configService.GetConfigEntityAsync(ct);
+                if (config != null)
+                {
+                    config.HasVerifiedTfsApiSuccessfully = true;
+                    config.LastValidated = DateTimeOffset.UtcNow;
+                    await configService.SaveConfigEntityAsync(config, ct);
+                }
+            }
+            
             return Results.Ok(report);
         })
         .Produces<Core.Contracts.TfsVerification.TfsVerificationReport>(StatusCodes.Status200OK);
