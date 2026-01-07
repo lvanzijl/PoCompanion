@@ -215,8 +215,9 @@ public class RealTfsClient : ITfsClient
             _logger.LogDebug("Found {Count} work item IDs, fetching details", ids.Length);
 
             // Batch get work items - use $expand=All to get all fields including System.Parent
+            // Note: Batch GET does not require project in path (work item IDs are unique across collection)
             var idsQuery = string.Join(',', ids);
-            var itemsUrl = $"{config.Url.TrimEnd('/')}/{config.Project}/_apis/wit/workitems?ids={idsQuery}&$expand=All&api-version={config.ApiVersion}";
+            var itemsUrl = $"{config.Url.TrimEnd('/')}/_apis/wit/workitems?ids={idsQuery}&$expand=All&api-version={config.ApiVersion}";
             var itemsResponse = await httpClient.GetAsync(itemsUrl, cancellationToken);
             await HandleHttpErrorsAsync(itemsResponse, cancellationToken);
 
@@ -1272,7 +1273,8 @@ public class RealTfsClient : ITfsClient
         try
         {
             // Try to fetch work items in batch (even if there are none, the API should respond)
-            var url = $"{entity.Url.TrimEnd('/')}/{entity.Project}/_apis/wit/workitems?ids=1,2,3&api-version={entity.ApiVersion}";
+            // Note: Batch GET does not require project in path (work item IDs are unique across collection)
+            var url = $"{entity.Url.TrimEnd('/')}/_apis/wit/workitems?ids=1,2,3&api-version={entity.ApiVersion}";
             var response = await _httpClient.GetAsync(url, cancellationToken);
             
             // We expect 200 (with items) or 404 (no items found), both are acceptable
