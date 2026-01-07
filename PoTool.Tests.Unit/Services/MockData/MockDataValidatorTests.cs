@@ -179,7 +179,7 @@ public class MockDataValidatorTests
         // Assert
         Assert.IsTrue(report.PullRequestVolumeValid,
             $"PR volume should be at least 100. Found {report.TotalPullRequests}");
-        Assert.IsGreaterThanOrEqualTo(report.TotalPullRequests, 100,
+        Assert.IsGreaterThanOrEqualTo(100, report.TotalPullRequests,
             $"Should generate at least 100 PRs. Found {report.TotalPullRequests}");
     }
 

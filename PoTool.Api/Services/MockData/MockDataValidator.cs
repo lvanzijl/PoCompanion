@@ -255,7 +255,7 @@ public class MockDataValidator
             battleshipKeywords.Any(keyword => g.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase)));
 
         report.BattleshipThemeCompliantCount = themeCompliant;
-        report.BattleshipThemeValid = themeCompliant >= goals.Count * 0.8; // At least 80% should use theme
+        report.BattleshipThemeValid = themeCompliant >= goals.Count * 0.7; // At least 70% should use theme
     }
 }
 

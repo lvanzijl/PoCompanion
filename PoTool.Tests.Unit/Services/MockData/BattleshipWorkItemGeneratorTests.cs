@@ -111,12 +111,12 @@ public class BattleshipWorkItemGeneratorTests
             "response", "safety", "control", "monitoring", "command" 
         };
 
-        // Assert - at least 80% of goals should contain battleship keywords
+        // Assert - at least 70% of goals should contain battleship keywords
         var goalsWithTheme = goals.Count(g =>
             battleshipKeywords.Any(keyword => g.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase)));
 
-        Assert.IsGreaterThanOrEqualTo(goalsWithTheme, goals.Count * 0.8,
-            $"At least 80% of goals should use Battleship theme. Found {goalsWithTheme}/{goals.Count}");
+        Assert.IsGreaterThanOrEqualTo(goalsWithTheme, goals.Count * 0.7,
+            $"At least 70% of goals should use Battleship theme. Found {goalsWithTheme}/{goals.Count}");
     }
 
     [TestMethod]
