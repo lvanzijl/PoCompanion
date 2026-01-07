@@ -17,9 +17,8 @@ public class TfsClientTests
 {
     private Mock<HttpMessageHandler> _httpMessageHandlerMock = null!;
     private HttpClient _httpClient = null!;
-    private TfsConfigurationService _configService = null!;
-    private TfsAuthenticationProvider _authProvider = null!;
     private PoToolDbContext _dbContext = null!;
+    private TfsConfigurationService _configService = null!;
     private Mock<ILogger<RealTfsClient>> _loggerMock = null!;
     private RealTfsClient _client = null!;
 
@@ -42,14 +41,26 @@ public class TfsClientTests
         var configLogger = new Mock<ILogger<TfsConfigurationService>>();
         _configService = new TfsConfigurationService(_dbContext, configLogger.Object);
         
-        _authProvider = new TfsAuthenticationProvider();
         _loggerMock = new Mock<ILogger<RealTfsClient>>();
+        
+        // Create throttler (use real implementation for tests)
+        var throttlerLogger = new Mock<ILogger<TfsRequestThrottler>>();
+        var throttler = new TfsRequestThrottler(throttlerLogger.Object, readConcurrency: 10, writeConcurrency: 10);
+        
+        // Create request sender (use real implementation for tests)
+        var senderLogger = new Mock<ILogger<TfsRequestSender>>();
+        var requestSender = new TfsRequestSender(senderLogger.Object);
         
         // Create mock IHttpClientFactory
         var mockFactory = new Mock<IHttpClientFactory>();
         mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
         
-        _client = new RealTfsClient(_httpClient, mockFactory.Object, _configService, _authProvider, _loggerMock.Object);
+        _client = new RealTfsClient(
+            mockFactory.Object,
+            _configService,
+            _loggerMock.Object,
+            throttler,
+            requestSender);
     }
 
     [TestCleanup]

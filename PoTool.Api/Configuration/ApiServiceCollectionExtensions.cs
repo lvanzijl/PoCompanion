@@ -141,6 +141,10 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<TfsAuthenticationProvider>();
         services.AddScoped<ProfileFilterService>();
         
+        // Register TFS throttling and request services (used by RealTfsClient)
+        services.AddSingleton<TfsRequestThrottler>();
+        services.AddScoped<TfsRequestSender>();
+        
         // Register TFS client based on configuration (useMockClient already read above)
         if (useMockClient)
         {
