@@ -896,7 +896,8 @@ public class RealTfsClient : ITfsClient
             if (!doc.RootElement.TryGetProperty("value", out var revisionsArray))
                 return revisions;
 
-            WorkItemRevisionDto? previousRevision = null;
+            // Store previous revision fields for comparison
+            Dictionary<string, JsonElement>? previousRevisionFields = null;
 
             foreach (var revision in revisionsArray.EnumerateArray())
             {
@@ -939,7 +940,7 @@ public class RealTfsClient : ITfsClient
                 // Calculate field changes by comparing with previous revision
                 var fieldChanges = new Dictionary<string, WorkItemFieldChange>();
                 
-                if (previousRevision != null && revision.TryGetProperty("fields", out var currentFields))
+                if (previousRevisionFields != null && revision.TryGetProperty("fields", out var currentFields))
                 {
                     // Get all fields from current revision
                     foreach (var field in currentFields.EnumerateObject())
@@ -947,7 +948,7 @@ public class RealTfsClient : ITfsClient
                         var fieldName = field.Name;
                         var newValue = GetFieldValueAsString(field.Value);
                         
-                        // Skip system fields that are not interesting for history
+                        // Skip system fields that are noise in history
                         if (fieldName.StartsWith("System.Watermark") || 
                             fieldName.StartsWith("System.Rev") ||
                             fieldName == "System.ChangedDate" ||
@@ -959,20 +960,45 @@ public class RealTfsClient : ITfsClient
 
                         // Find the old value from previous revision
                         string? oldValue = null;
-                        if (previousRevision != null)
+                        if (previousRevisionFields.TryGetValue(fieldName, out var previousFieldElement))
                         {
-                            // Try to get from the previous revision's raw data (we'll need to store it)
-                            // For now, we'll mark it as changed if the field exists
-                            oldValue = null; // Will be populated if we had previous revision data
+                            oldValue = GetFieldValueAsString(previousFieldElement);
                         }
 
-                        // Only add if value actually changed or is a new field
+                        // Only add if value actually changed
                         if (oldValue != newValue)
                         {
                             fieldChanges[fieldName] = new WorkItemFieldChange(
                                 FieldName: fieldName,
                                 OldValue: oldValue,
                                 NewValue: newValue
+                            );
+                        }
+                    }
+                    
+                    // Also check for removed fields (present in previous but not in current)
+                    foreach (var previousField in previousRevisionFields)
+                    {
+                        var fieldName = previousField.Key;
+                        
+                        // Skip noise fields
+                        if (fieldName.StartsWith("System.Watermark") || 
+                            fieldName.StartsWith("System.Rev") ||
+                            fieldName == "System.ChangedDate" ||
+                            fieldName == "System.ChangedBy" ||
+                            fieldName == "System.RevisedDate")
+                        {
+                            continue;
+                        }
+                        
+                        // If field not in current revision, it was removed
+                        if (currentFields.TryGetProperty(fieldName, out _) == false)
+                        {
+                            var oldValue = GetFieldValueAsString(previousField.Value);
+                            fieldChanges[fieldName] = new WorkItemFieldChange(
+                                FieldName: fieldName,
+                                OldValue: oldValue,
+                                NewValue: null
                             );
                         }
                     }
@@ -988,7 +1014,16 @@ public class RealTfsClient : ITfsClient
                 );
 
                 revisions.Add(revisionDto);
-                previousRevision = revisionDto;
+                
+                // Store current revision fields for next iteration comparison
+                if (revision.TryGetProperty("fields", out var fieldsToStore))
+                {
+                    previousRevisionFields = new Dictionary<string, JsonElement>();
+                    foreach (var field in fieldsToStore.EnumerateObject())
+                    {
+                        previousRevisionFields[field.Name] = field.Value.Clone();
+                    }
+                }
             }
 
             _logger.LogInformation("Retrieved {Count} revisions for work item {WorkItemId}", 
@@ -1042,10 +1077,31 @@ public class RealTfsClient : ITfsClient
         string? repositoryName, 
         CancellationToken cancellationToken)
     {
-        // If specific repository requested, return just that one
+        // If specific repository requested, resolve it to get the canonical ID
         if (!string.IsNullOrEmpty(repositoryName))
         {
-            return new List<(string Name, string Id)> { (repositoryName, repositoryName) };
+            _logger.LogDebug("Resolving repository name '{RepositoryName}' to canonical ID", repositoryName);
+            
+            // Call _apis/git/repositories/{repositoryName} to resolve canonical repo id/name
+            var repoUrl = ProjectUrl(config, $"_apis/git/repositories/{Uri.EscapeDataString(repositoryName)}");
+            var repoResponse = await httpClient.GetAsync(repoUrl, cancellationToken);
+            
+            if (repoResponse.IsSuccessStatusCode)
+            {
+                using var repoStream = await repoResponse.Content.ReadAsStreamAsync(cancellationToken);
+                using var repoDoc = await JsonDocument.ParseAsync(repoStream, cancellationToken: cancellationToken);
+                
+                var name = repoDoc.RootElement.TryGetProperty("name", out var n) ? n.GetString() ?? repositoryName : repositoryName;
+                var id = repoDoc.RootElement.TryGetProperty("id", out var i) ? i.GetString() ?? repositoryName : repositoryName;
+                
+                _logger.LogInformation("Resolved repository '{Name}' to ID '{Id}'", name, id);
+                return new List<(string Name, string Id)> { (name, id) };
+            }
+            else
+            {
+                _logger.LogWarning("Failed to resolve repository '{RepositoryName}', using name as fallback", repositoryName);
+                return new List<(string Name, string Id)> { (repositoryName, repositoryName) };
+            }
         }
 
         // Git repositories are project-scoped (requirement #1)
@@ -2807,21 +2863,62 @@ public class RealTfsClient : ITfsClient
             // Use auth-mode-specific HttpClient (requirement #2)
             var httpClient = GetAuthenticatedHttpClient();
 
-            // Build JSON Patch document to add parent link
-            // First, we need to remove existing parent links, then add the new one
-            var patchOperations = new object[]
+            // Create per-request timeout token for write operation
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(entity.TimeoutSeconds));
+
+            // Step 1: GET the child work item with $expand=relations to find existing parent
+            var getUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}?$expand=relations");
+            var getResponse = await httpClient.GetAsync(getUrl, timeoutCts.Token);
+            
+            if (!getResponse.IsSuccessStatusCode)
             {
-                new
+                _logger.LogWarning("Failed to get work item {WorkItemId} for parent update. Status: {StatusCode}",
+                    workItemId, getResponse.StatusCode);
+                return false;
+            }
+
+            using var getStream = await getResponse.Content.ReadAsStreamAsync(cancellationToken);
+            using var getDoc = await JsonDocument.ParseAsync(getStream, cancellationToken: cancellationToken);
+
+            // Step 2: Find and remove existing parent relations
+            var patchOperations = new List<object>();
+            
+            if (getDoc.RootElement.TryGetProperty("relations", out var relations))
+            {
+                var relationsList = relations.EnumerateArray().ToList();
+                
+                // Find all parent relations (System.LinkTypes.Hierarchy-Reverse)
+                for (int i = 0; i < relationsList.Count; i++)
                 {
-                    op = "add",
-                    path = "/relations/-",
-                    value = new
+                    var relation = relationsList[i];
+                    if (relation.TryGetProperty("rel", out var rel) && 
+                        rel.GetString() == "System.LinkTypes.Hierarchy-Reverse")
                     {
-                        rel = "System.LinkTypes.Hierarchy-Reverse",
-                        url = $"{entity.Url.TrimEnd('/')}/_apis/wit/workItems/{newParentId}"
+                        // Remove existing parent relation by index
+                        patchOperations.Add(new
+                        {
+                            op = "remove",
+                            path = $"/relations/{i}"
+                        });
+                        
+                        _logger.LogDebug("Removing existing parent relation at index {Index} for work item {WorkItemId}", 
+                            i, workItemId);
                     }
                 }
-            };
+            }
+
+            // Step 3: Add the new parent relation
+            patchOperations.Add(new
+            {
+                op = "add",
+                path = "/relations/-",
+                value = new
+                {
+                    rel = "System.LinkTypes.Hierarchy-Reverse",
+                    url = $"{entity.Url.TrimEnd('/')}/_apis/wit/workItems/{newParentId}"
+                }
+            });
 
             // Work item PATCH is collection-scoped
             var updateUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}");
@@ -2831,9 +2928,11 @@ public class RealTfsClient : ITfsClient
                 System.Text.Encoding.UTF8,
                 "application/json-patch+json");
 
-            _logger.LogDebug("Sending PATCH request to update work item {WorkItemId} parent", workItemId);
+            _logger.LogDebug("Sending PATCH request to update work item {WorkItemId} parent with {OpCount} operations", 
+                workItemId, patchOperations.Count);
 
-            var response = await httpClient.PatchAsync(updateUrl, content, cancellationToken);
+            // PATCH operations are NOT retried - they are non-idempotent
+            var response = await httpClient.PatchAsync(updateUrl, content, timeoutCts.Token);
 
             if (response.IsSuccessStatusCode)
             {
@@ -2849,9 +2948,14 @@ public class RealTfsClient : ITfsClient
                 return false;
             }
         }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError("Update work item {WorkItemId} parent timed out", workItemId);
+            return false;
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating work item {WorkItemId} parent to {NewParentId}",
+            _logger.LogError(ex, "Error updating work item {WorkItemId} parent to {NewParentId}", 
                 workItemId, newParentId);
             return false;
         }
