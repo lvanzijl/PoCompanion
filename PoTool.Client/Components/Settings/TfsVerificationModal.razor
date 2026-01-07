@@ -187,17 +187,6 @@
         _errorMessage = ErrorMessage;
     }
 
-    /// <summary>
-    /// Updates the dialog state from the parent component.
-    /// </summary>
-    public void UpdateState(bool isVerifying, TfsVerificationReport? report, string? errorMessage)
-    {
-        _isVerifying = isVerifying;
-        _report = report;
-        _errorMessage = errorMessage;
-        StateHasChanged();
-    }
-
     private void CloseDialog()
     {
         MudDialog.Close(DialogResult.Ok(_report));
@@ -205,8 +194,14 @@
 
     private static string FormatCapabilityId(string capabilityId)
     {
+        if (string.IsNullOrEmpty(capabilityId))
+        {
+            return capabilityId;
+        }
+        
         // Convert "work-item-hierarchy" to "Work Item Hierarchy"
         return string.Join(" ", capabilityId.Split('-')
+            .Where(word => !string.IsNullOrEmpty(word))
             .Select(word => char.ToUpper(word[0]) + word.Substring(1)));
     }
 }
