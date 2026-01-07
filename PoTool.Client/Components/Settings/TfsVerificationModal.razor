@@ -1,0 +1,207 @@
+@using MudBlazor
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common.Compact
+
+<MudDialog>
+    <DialogContent>
+        <MudPaper Class="pa-4" Elevation="0">
+            @if (_isVerifying)
+            {
+                <div class="d-flex flex-column align-center justify-center pa-4">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Class="mt-4">
+                        Verifying TFS API Capabilities...
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                        This may take a moment. All checks will run even if some fail.
+                    </MudText>
+                </div>
+            }
+            else if (_report != null)
+            {
+                <!-- Verification Report Header -->
+                <MudStack Spacing="3">
+                    @if (_report.Success)
+                    {
+                        <MudAlert Severity="Severity.Success" Dense="true">
+                            <strong>All capability checks passed!</strong> The TFS API is fully functional.
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true">
+                            <strong>Some capability checks failed.</strong> Review the details below to understand impacted functionality.
+                        </MudAlert>
+                    }
+                    
+                    <!-- Summary Information -->
+                    <MudPaper Elevation="0" Class="pa-3 mud-background-gray">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.body2">
+                                <strong>Verified:</strong> @_report.VerifiedAt.ToLocalTime().ToString("g")
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                <strong>Server:</strong> @_report.ServerUrl
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                <strong>Project:</strong> @_report.ProjectName
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                <strong>Summary:</strong> @_report.Summary
+                            </MudText>
+                        </MudStack>
+                    </MudPaper>
+                    
+                    <!-- Collapsible Check Results -->
+                    <MudText Typo="Typo.subtitle1" Class="mt-2">Capability Checks</MudText>
+                    <MudExpansionPanels MultiExpansion="true" Elevation="1">
+                        @foreach (var check in _report.Checks)
+                        {
+                            <MudExpansionPanel>
+                                <TitleContent>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        @if (check.Success)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                        }
+                                        else
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Small" />
+                                        }
+                                        <MudText Typo="Typo.body2">
+                                            <strong>@FormatCapabilityId(check.CapabilityId)</strong>
+                                        </MudText>
+                                        @if (!check.Success)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">Failed</MudChip>
+                                        }
+                                    </MudStack>
+                                </TitleContent>
+                                <ChildContent>
+                                    <MudStack Spacing="2" Class="pa-2">
+                                        <MudText Typo="Typo.body2">
+                                            <strong>Impacted Functionality:</strong> @check.ImpactedFunctionality
+                                        </MudText>
+                                        <MudText Typo="Typo.body2">
+                                            <strong>Expected:</strong> @check.ExpectedBehavior
+                                        </MudText>
+                                        @if (!string.IsNullOrEmpty(check.ObservedBehavior))
+                                        {
+                                            <MudText Typo="Typo.body2">
+                                                <strong>Observed:</strong> @check.ObservedBehavior
+                                            </MudText>
+                                        }
+                                        
+                                        @if (!check.Success)
+                                        {
+                                            @if (check.LikelyCauses?.Any() == true)
+                                            {
+                                                <MudText Typo="Typo.body2" Class="mt-2"><strong>Likely Causes:</strong></MudText>
+                                                <MudList T="string" Dense="true">
+                                                    @foreach (var cause in check.LikelyCauses)
+                                                    {
+                                                        <MudListItem T="string" Icon="@Icons.Material.Filled.FiberManualRecord" IconSize="Size.Small">
+                                                            @cause
+                                                        </MudListItem>
+                                                    }
+                                                </MudList>
+                                            }
+                                            
+                                            @if (check.ResolutionGuidance?.Any() == true)
+                                            {
+                                                <MudText Typo="Typo.body2" Class="mt-2"><strong>Resolution Steps:</strong></MudText>
+                                                <MudList T="string" Dense="true">
+                                                    @foreach (var step in check.ResolutionGuidance)
+                                                    {
+                                                        <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowRight" IconSize="Size.Small">
+                                                            @step
+                                                        </MudListItem>
+                                                    }
+                                                </MudList>
+                                            }
+                                            
+                                            @if (!string.IsNullOrEmpty(check.RawEvidence))
+                                            {
+                                                <MudExpansionPanels Class="mt-2" Elevation="0">
+                                                    <MudExpansionPanel Text="Show Technical Details" Dense="true">
+                                                        <MudText Typo="Typo.body2" Style="font-family: monospace; white-space: pre-wrap; word-break: break-all;">
+                                                            @check.RawEvidence
+                                                        </MudText>
+                                                    </MudExpansionPanel>
+                                                </MudExpansionPanels>
+                                            }
+                                        }
+
+                                        @if (!string.IsNullOrEmpty(check.TargetScope))
+                                        {
+                                            <MudText Typo="Typo.caption" Class="mt-2">
+                                                <strong>Target:</strong> @check.TargetScope
+                                            </MudText>
+                                        }
+                                    </MudStack>
+                                </ChildContent>
+                            </MudExpansionPanel>
+                        }
+                    </MudExpansionPanels>
+                </MudStack>
+            }
+            else if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">
+                    <strong>Verification Failed:</strong> @_errorMessage
+                </MudAlert>
+            }
+        </MudPaper>
+    </DialogContent>
+    <DialogActions>
+        @if (!_isVerifying)
+        {
+            <CompactButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CloseDialog">
+                Close
+            </CompactButton>
+        }
+        else
+        {
+            <CompactButton Color="Color.Default" Variant="Variant.Outlined" Disabled="true">
+                Verifying...
+            </CompactButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter] public TfsVerificationReport? InitialReport { get; set; }
+    [Parameter] public bool IsVerifying { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+
+    private bool _isVerifying;
+    private TfsVerificationReport? _report;
+    private string? _errorMessage;
+
+    protected override void OnParametersSet()
+    {
+        _isVerifying = IsVerifying;
+        _report = InitialReport;
+        _errorMessage = ErrorMessage;
+    }
+
+    private void CloseDialog()
+    {
+        MudDialog.Close(DialogResult.Ok(_report));
+    }
+
+    private static string FormatCapabilityId(string capabilityId)
+    {
+        if (string.IsNullOrEmpty(capabilityId))
+        {
+            return capabilityId;
+        }
+        
+        // Convert "work-item-hierarchy" to "Work Item Hierarchy"
+        return string.Join(" ", capabilityId.Split('-')
+            .Where(word => !string.IsNullOrEmpty(word))
+            .Select(word => char.ToUpper(word[0]) + word.Substring(1)));
+    }
+}

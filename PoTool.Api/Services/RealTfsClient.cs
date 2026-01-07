@@ -1184,13 +1184,24 @@ public class RealTfsClient : ITfsClient
         var checks = new List<TfsCapabilityCheckResult>();
         
         // Run read-only checks
+        // Step 1: Server & authentication validation
         checks.Add(await VerifyServerReachabilityAsync(config, cancellationToken));
+        // Step 2: Project validation
         checks.Add(await VerifyProjectAccessAsync(config, cancellationToken));
+        // Step 3: Work item query (WIQL)
         checks.Add(await VerifyWorkItemQueryAsync(config, cancellationToken));
+        // Step 4: Work item hierarchy chain retrieval
+        checks.Add(await VerifyWorkItemHierarchyAsync(config, cancellationToken));
+        // Step 5: Work item fields
         checks.Add(await VerifyWorkItemFieldsAsync(config, cancellationToken));
+        // Step 6: Batch read
         checks.Add(await VerifyBatchReadAsync(config, cancellationToken));
+        // Step 7: Work item revisions
         checks.Add(await VerifyWorkItemRevisionsAsync(config, cancellationToken));
+        // Step 8: Pull requests
         checks.Add(await VerifyPullRequestsAsync(config, cancellationToken));
+        // Step 9: Pipelines (build + release)
+        checks.Add(await VerifyPipelinesAsync(config, cancellationToken));
         
         // Run write checks if requested
         if (includeWriteChecks)
@@ -1365,6 +1376,143 @@ public class RealTfsClient : ITfsClient
                 "WIQL queries execute successfully",
                 $"Exception: {ex.GetType().Name}",
                 FailureCategory.QueryRestriction,
+                SanitizeErrorMessage(ex.Message));
+        }
+    }
+
+    private async Task<TfsCapabilityCheckResult> VerifyWorkItemHierarchyAsync(
+        TfsConfigEntity config,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Use auth-mode-specific HttpClient (requirement #2, #8)
+            var httpClient = GetAuthenticatedHttpClient(config);
+            
+            // Step 1: Run WIQL query to get a few work items
+            var wiql = new
+            {
+                query = $"Select [System.Id] From WorkItems Where [System.AreaPath] UNDER '{EscapeWiql(config.DefaultAreaPath)}' ORDER BY [System.Id] DESC"
+            };
+
+            var wiqlUrl = ProjectUrl(config, "_apis/wit/wiql");
+            using var wiqlContent = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
+            
+            var wiqlResponse = await httpClient.PostAsync(wiqlUrl, wiqlContent, cancellationToken);
+            
+            if (!wiqlResponse.IsSuccessStatusCode)
+            {
+                return CreateFailureResult(
+                    "work-item-hierarchy",
+                    "Work item hierarchy display (Goal → Task chain)",
+                    "Work item relationships can be resolved",
+                    $"WIQL query failed: HTTP {(int)wiqlResponse.StatusCode}",
+                    CategorizeHttpError(wiqlResponse.StatusCode),
+                    await wiqlResponse.Content.ReadAsStringAsync(cancellationToken));
+            }
+
+            using var wiqlStream = await wiqlResponse.Content.ReadAsStreamAsync(cancellationToken);
+            using var wiqlDoc = await JsonDocument.ParseAsync(wiqlStream, cancellationToken: cancellationToken);
+
+            var workItemIds = wiqlDoc.RootElement.GetProperty("workItems").EnumerateArray()
+                .Take(10) // Sample first 10 items
+                .Select(e => e.GetProperty("id").GetInt32())
+                .ToArray();
+
+            if (workItemIds.Length == 0)
+            {
+                // No work items found - this is acceptable (not a failure)
+                return new TfsCapabilityCheckResult
+                {
+                    CapabilityId = "work-item-hierarchy",
+                    Success = true,
+                    ImpactedFunctionality = "Work item hierarchy display (Goal → Task chain)",
+                    ExpectedBehavior = "Work item relationships can be resolved",
+                    ObservedBehavior = "No work items found in configured area path (hierarchy verification skipped)"
+                };
+            }
+
+            // Step 2: Fetch work items with relations to verify hierarchy resolution
+            var idsQuery = string.Join(',', workItemIds);
+            var itemsUrl = CollectionUrl(config, $"_apis/wit/workitems?ids={idsQuery}&$expand=relations");
+            var itemsResponse = await httpClient.GetAsync(itemsUrl, cancellationToken);
+
+            if (!itemsResponse.IsSuccessStatusCode)
+            {
+                return CreateFailureResult(
+                    "work-item-hierarchy",
+                    "Work item hierarchy display (Goal → Task chain)",
+                    "Work item relationships can be resolved",
+                    $"Batch work item fetch failed: HTTP {(int)itemsResponse.StatusCode}",
+                    CategorizeHttpError(itemsResponse.StatusCode),
+                    await itemsResponse.Content.ReadAsStringAsync(cancellationToken));
+            }
+
+            using var itemsStream = await itemsResponse.Content.ReadAsStreamAsync(cancellationToken);
+            using var itemsDoc = await JsonDocument.ParseAsync(itemsStream, cancellationToken: cancellationToken);
+
+            // Step 3: Verify hierarchy resolution - check for parent relationships
+            var itemsWithParent = 0;
+            var totalItems = 0;
+            var maxDepthFound = 0;
+            var workItemsWithRelations = new Dictionary<int, int?>(); // id -> parentId
+
+            foreach (var item in itemsDoc.RootElement.GetProperty("value").EnumerateArray())
+            {
+                totalItems++;
+                var itemId = item.GetProperty("id").GetInt32();
+                var parentId = ExtractParentIdFromRelations(item);
+                workItemsWithRelations[itemId] = parentId;
+                
+                if (parentId.HasValue)
+                {
+                    itemsWithParent++;
+                }
+            }
+
+            // Try to follow parent chain to find max depth
+            foreach (var (itemId, parentId) in workItemsWithRelations)
+            {
+                if (!parentId.HasValue) continue;
+                
+                var depth = 1;
+                var currentParentId = parentId;
+                var visitedIds = new HashSet<int> { itemId };
+                
+                while (currentParentId.HasValue && depth < 10 && !visitedIds.Contains(currentParentId.Value))
+                {
+                    visitedIds.Add(currentParentId.Value);
+                    if (workItemsWithRelations.TryGetValue(currentParentId.Value, out var nextParent))
+                    {
+                        currentParentId = nextParent;
+                        depth++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                
+                maxDepthFound = Math.Max(maxDepthFound, depth);
+            }
+
+            return new TfsCapabilityCheckResult
+            {
+                CapabilityId = "work-item-hierarchy",
+                Success = true,
+                ImpactedFunctionality = "Work item hierarchy display (Goal → Task chain)",
+                ExpectedBehavior = "Work item relationships can be resolved",
+                ObservedBehavior = $"Hierarchy resolution working. {itemsWithParent}/{totalItems} items have parent links. Max depth traced: {maxDepthFound}"
+            };
+        }
+        catch (Exception ex)
+        {
+            return CreateFailureResult(
+                "work-item-hierarchy",
+                "Work item hierarchy display (Goal → Task chain)",
+                "Work item relationships can be resolved",
+                $"Exception: {ex.GetType().Name}",
+                FailureCategory.EndpointUnavailable,
                 SanitizeErrorMessage(ex.Message));
         }
     }
@@ -1577,6 +1725,130 @@ public class RealTfsClient : ITfsClient
                 "pull-requests",
                 "Pull request retrieval and analysis",
                 "Git repositories and pull request API are accessible",
+                $"Exception: {ex.GetType().Name}",
+                FailureCategory.EndpointUnavailable,
+                SanitizeErrorMessage(ex.Message));
+        }
+    }
+
+    private async Task<TfsCapabilityCheckResult> VerifyPipelinesAsync(
+        TfsConfigEntity config,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Use auth-mode-specific HttpClient (requirement #2, #8)
+            var httpClient = GetAuthenticatedHttpClient(config);
+            
+            var buildDefinitionsFound = 0;
+            var buildRunsFound = 0;
+            var releaseDefinitionsFound = 0;
+            var releaseApiAvailable = false;
+            string? releaseApiError = null;
+
+            // Step 1: Verify build definitions API
+            var buildDefsUrl = ProjectUrl(config, "_apis/build/definitions");
+            var buildDefsResponse = await httpClient.GetAsync(buildDefsUrl, cancellationToken);
+            
+            if (buildDefsResponse.IsSuccessStatusCode)
+            {
+                using var stream = await buildDefsResponse.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                
+                if (doc.RootElement.TryGetProperty("value", out var defs))
+                {
+                    buildDefinitionsFound = defs.GetArrayLength();
+                }
+            }
+            else
+            {
+                return CreateFailureResult(
+                    "pipelines",
+                    "Pipeline and build status monitoring",
+                    "Build/release definitions and runs are accessible",
+                    $"Build definitions API failed: HTTP {(int)buildDefsResponse.StatusCode}",
+                    CategorizeHttpError(buildDefsResponse.StatusCode),
+                    await buildDefsResponse.Content.ReadAsStringAsync(cancellationToken));
+            }
+
+            // Step 2: Verify build runs API (if definitions exist)
+            if (buildDefinitionsFound > 0)
+            {
+                var buildRunsUrl = ProjectUrl(config, "_apis/build/builds?$top=5");
+                var buildRunsResponse = await httpClient.GetAsync(buildRunsUrl, cancellationToken);
+                
+                if (buildRunsResponse.IsSuccessStatusCode)
+                {
+                    using var stream = await buildRunsResponse.Content.ReadAsStreamAsync(cancellationToken);
+                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                    
+                    if (doc.RootElement.TryGetProperty("value", out var runs))
+                    {
+                        buildRunsFound = runs.GetArrayLength();
+                    }
+                }
+            }
+
+            // Step 3: Try release definitions API (soft failure - may not be available)
+            try
+            {
+                var releaseDefsUrl = ProjectUrl(config, "_apis/release/definitions");
+                var releaseDefsResponse = await httpClient.GetAsync(releaseDefsUrl, cancellationToken);
+                
+                if (releaseDefsResponse.IsSuccessStatusCode)
+                {
+                    releaseApiAvailable = true;
+                    using var stream = await releaseDefsResponse.Content.ReadAsStreamAsync(cancellationToken);
+                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                    
+                    if (doc.RootElement.TryGetProperty("value", out var defs))
+                    {
+                        releaseDefinitionsFound = defs.GetArrayLength();
+                    }
+                }
+                else
+                {
+                    releaseApiError = $"HTTP {(int)releaseDefsResponse.StatusCode}";
+                }
+            }
+            catch (Exception ex)
+            {
+                // Release API failure is a soft failure (on-prem variance)
+                releaseApiError = ex.Message;
+                _logger.LogWarning("Release definitions API not available: {Error}", ex.Message);
+            }
+
+            // Build the observed behavior string
+            var observedParts = new List<string>
+            {
+                $"Build definitions: {buildDefinitionsFound}",
+                $"Build runs: {buildRunsFound}"
+            };
+
+            if (releaseApiAvailable)
+            {
+                observedParts.Add($"Release definitions: {releaseDefinitionsFound}");
+            }
+            else
+            {
+                observedParts.Add($"Release API: Not available ({releaseApiError ?? "unknown"})");
+            }
+
+            return new TfsCapabilityCheckResult
+            {
+                CapabilityId = "pipelines",
+                Success = true,
+                ImpactedFunctionality = "Pipeline and build status monitoring",
+                ExpectedBehavior = "Build/release definitions and runs are accessible",
+                ObservedBehavior = string.Join(". ", observedParts)
+            };
+        }
+        catch (Exception ex)
+        {
+            return CreateFailureResult(
+                "pipelines",
+                "Pipeline and build status monitoring",
+                "Build/release definitions and runs are accessible",
                 $"Exception: {ex.GetType().Name}",
                 FailureCategory.EndpointUnavailable,
                 SanitizeErrorMessage(ex.Message));
