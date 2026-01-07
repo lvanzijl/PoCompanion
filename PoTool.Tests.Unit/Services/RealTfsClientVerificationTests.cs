@@ -1,7 +1,9 @@
 using System.Net;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
+using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts.TfsVerification;
@@ -13,18 +15,28 @@ public class RealTfsClientVerificationTests
 {
     private Mock<HttpMessageHandler> _mockHttpMessageHandler = null!;
     private HttpClient _httpClient = null!;
-    private Mock<TfsConfigurationService> _mockConfigService = null!;
+    private PoToolDbContext _dbContext = null!;
+    private TfsConfigurationService _configService = null!;
     private Mock<ILogger<RealTfsClient>> _mockLogger = null!;
     private RealTfsClient _sut = null!;
     private TfsConfigEntity _testConfig = null!;
 
     [TestInitialize]
-    public void Setup()
+    public async Task Setup()
     {
         _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
         _httpClient = new HttpClient(_mockHttpMessageHandler.Object);
-        _mockConfigService = new Mock<TfsConfigurationService>(MockBehavior.Strict);
         _mockLogger = new Mock<ILogger<RealTfsClient>>();
+
+        // Create in-memory database for config service
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
+            .Options;
+        _dbContext = new PoToolDbContext(options);
+        
+        // Create real config service (no longer using mock)
+        var configLogger = new Mock<ILogger<TfsConfigurationService>>();
+        _configService = new TfsConfigurationService(_dbContext, configLogger.Object);
 
         _testConfig = new TfsConfigEntity
         {
@@ -35,8 +47,14 @@ public class RealTfsClientVerificationTests
             UseDefaultCredentials = true
         };
 
-        _mockConfigService.Setup(x => x.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testConfig);
+        // Save test config to database
+        await _configService.SaveConfigAsync(
+            _testConfig.Url,
+            _testConfig.Project,
+            "TestProject\\Area",
+            _testConfig.UseDefaultCredentials,
+            _testConfig.TimeoutSeconds,
+            _testConfig.ApiVersion);
 
         // Create throttler (use real implementation for tests)
         var throttlerLogger = new Mock<ILogger<TfsRequestThrottler>>();
@@ -52,11 +70,18 @@ public class RealTfsClientVerificationTests
 
         _sut = new RealTfsClient(
             mockFactory.Object,
-            _mockConfigService.Object,
+            _configService,
             _mockLogger.Object,
             throttler,
             requestSender
         );
+    }
+
+    [TestCleanup]
+    public void Cleanup()
+    {
+        _dbContext.Database.EnsureDeleted();
+        _dbContext.Dispose();
     }
 
     [TestMethod]

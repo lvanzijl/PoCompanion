@@ -159,11 +159,15 @@ public class RealTfsClient : ITfsClient
             // Use auth-mode-specific HttpClient to avoid credential conflicts
             var httpClient = GetAuthenticatedHttpClient();
             
+            // Create per-request timeout token
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(entity.TimeoutSeconds));
+            
             // Step 1: Validate server connectivity using collection-scoped projects endpoint
             var projectsUrl = CollectionUrl(entity, "_apis/projects");
             _logger.LogInformation("Validating TFS connection: GET {Url} (using NTLM authentication)", projectsUrl);
             
-            var resp = await httpClient.GetAsync(projectsUrl, cancellationToken);
+            var resp = await httpClient.GetAsync(projectsUrl, timeoutCts.Token);
             
             _logger.LogInformation("Validation GET {Url} returned {StatusCode}", projectsUrl, resp.StatusCode);
             
@@ -180,7 +184,7 @@ public class RealTfsClient : ITfsClient
             var projectUrl = CollectionUrl(entity, $"_apis/projects/{encodedProject}");
             _logger.LogInformation("Validating project access: GET {Url}", projectUrl);
             
-            var projectResp = await httpClient.GetAsync(projectUrl, cancellationToken);
+            var projectResp = await httpClient.GetAsync(projectUrl, timeoutCts.Token);
             
             if (!projectResp.IsSuccessStatusCode)
             {
@@ -208,6 +212,11 @@ public class RealTfsClient : ITfsClient
             await _configService.SaveConfigEntityAsync(entity, cancellationToken);
             _logger.LogInformation("TFS connection validation successful");
             return true;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError("TFS connection validation timed out after {Timeout}s", entity.TimeoutSeconds);
+            return false;
         }
         catch (TfsAuthenticationException ex)
         {
@@ -1203,6 +1212,10 @@ public class RealTfsClient : ITfsClient
             // Use auth-mode-specific HttpClient (requirement #2)
             var httpClient = GetAuthenticatedHttpClient();
 
+            // Create per-request timeout token for write operation
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(entity.TimeoutSeconds));
+
             // Build JSON Patch document
             var patchDocument = new[]
             {
@@ -1223,7 +1236,8 @@ public class RealTfsClient : ITfsClient
 
             _logger.LogDebug("Sending PATCH request to update work item {WorkItemId}", workItemId);
             
-            var response = await httpClient.PatchAsync(updateUrl, content, cancellationToken);
+            // PATCH operations are NOT retried - they are non-idempotent
+            var response = await httpClient.PatchAsync(updateUrl, content, timeoutCts.Token);
             
             if (response.IsSuccessStatusCode)
             {
@@ -1237,6 +1251,11 @@ public class RealTfsClient : ITfsClient
                     workItemId, response.StatusCode, responseBody);
                 return false;
             }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError("Update work item {WorkItemId} timed out", workItemId);
+            return false;
         }
         catch (Exception ex)
         {
@@ -1261,6 +1280,10 @@ public class RealTfsClient : ITfsClient
             // Use auth-mode-specific HttpClient (requirement #2)
             var httpClient = GetAuthenticatedHttpClient();
 
+            // Create per-request timeout token for write operation
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(entity.TimeoutSeconds));
+
             // Build JSON Patch document for effort (Microsoft.VSTS.Scheduling.Effort)
             var patchDocument = new[]
             {
@@ -1281,7 +1304,8 @@ public class RealTfsClient : ITfsClient
 
             _logger.LogDebug("Sending PATCH request to update work item {WorkItemId} effort", workItemId);
             
-            var response = await httpClient.PatchAsync(updateUrl, content, cancellationToken);
+            // PATCH operations are NOT retried - they are non-idempotent
+            var response = await httpClient.PatchAsync(updateUrl, content, timeoutCts.Token);
             
             if (response.IsSuccessStatusCode)
             {
@@ -1295,6 +1319,11 @@ public class RealTfsClient : ITfsClient
                     workItemId, response.StatusCode, responseBody);
                 return false;
             }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError("Update work item {WorkItemId} effort timed out", workItemId);
+            return false;
         }
         catch (Exception ex)
         {
@@ -2042,56 +2071,89 @@ public class RealTfsClient : ITfsClient
                     cleanupStatus: CleanupStatus.Skipped);
             }
 
-            // Perform a non-destructive update test (add a comment or verify fields are writable)
-            // We'll use a JSON Patch test operation which doesn't modify data
-            var testPatch = new[]
+            // Perform a reversible write check by adding and then removing a verification tag
+            // This ensures we truly test write permissions without leaving artifacts
+            var verificationTag = $"PoToolVerification_{Guid.NewGuid():N}";
+            var addTagPatch = new[]
             {
                 new
                 {
-                    op = "test",
-                    path = "/fields/System.State",
-                    value = (string?)null // We're just testing if we can access the field
+                    op = "add",
+                    path = "/fields/System.Tags",
+                    value = verificationTag
                 }
             };
 
             // Work item PATCH is collection-scoped
             var updateUrl = CollectionUrl(config, $"_apis/wit/workitems/{workItemId}");
-            using var content = new StringContent(
-                JsonSerializer.Serialize(testPatch), 
+            using var addContent = new StringContent(
+                JsonSerializer.Serialize(addTagPatch), 
                 System.Text.Encoding.UTF8, 
                 "application/json-patch+json");
 
-            var updateResponse = await httpClient.PatchAsync(updateUrl, content, cancellationToken);
+            var addResponse = await httpClient.PatchAsync(updateUrl, addContent, cancellationToken);
             
-            // For a test operation, we expect either success or a specific failure about the test
-            var isWritable = updateResponse.IsSuccessStatusCode || 
-                            updateResponse.StatusCode == HttpStatusCode.BadRequest; // BadRequest is OK for test op
-            
-            if (isWritable)
+            if (!addResponse.IsSuccessStatusCode)
             {
-                return new TfsCapabilityCheckResult
-                {
-                    CapabilityId = "work-item-update",
-                    Success = true,
-                    ImpactedFunctionality = "Work item modifications (state changes, effort updates)",
-                    ExpectedBehavior = "Can update work item fields",
-                    ObservedBehavior = $"Work item {workItemId} is accessible and writable",
-                    TargetScope = $"Work Item #{workItemId}",
-                    MutationType = MutationType.Update,
-                    CleanupStatus = CleanupStatus.NotRequired
-                };
+                return CreateFailureResult(
+                    "work-item-update",
+                    "Work item modifications (state changes, effort updates)",
+                    "Can update work item fields",
+                    $"HTTP {(int)addResponse.StatusCode} - Cannot add tag",
+                    CategorizeHttpError(addResponse.StatusCode),
+                    await addResponse.Content.ReadAsStringAsync(cancellationToken),
+                    targetScope: $"Work Item #{workItemId}",
+                    mutationType: MutationType.Update,
+                    cleanupStatus: CleanupStatus.Skipped);
             }
+
+            // Successfully added tag - now remove it to clean up
+            // Get current tags to construct remove operation
+            using var addResponseStream = await addResponse.Content.ReadAsStreamAsync(cancellationToken);
+            using var addDoc = await JsonDocument.ParseAsync(addResponseStream, cancellationToken: cancellationToken);
             
-            return CreateFailureResult(
-                "work-item-update",
-                "Work item modifications (state changes, effort updates)",
-                "Can update work item fields",
-                $"HTTP {(int)updateResponse.StatusCode}",
-                CategorizeHttpError(updateResponse.StatusCode),
-                await updateResponse.Content.ReadAsStringAsync(cancellationToken),
-                targetScope: $"Work Item #{workItemId}",
-                mutationType: MutationType.Update,
-                cleanupStatus: CleanupStatus.NotRequired);
+            var currentTags = "";
+            if (addDoc.RootElement.TryGetProperty("fields", out var fields) &&
+                fields.TryGetProperty("System.Tags", out var tagsElement))
+            {
+                currentTags = tagsElement.GetString() ?? "";
+            }
+
+            // Remove the verification tag
+            var tagsWithoutVerification = string.Join("; ", 
+                currentTags.Split(new[] { "; " }, StringSplitOptions.RemoveEmptyEntries)
+                    .Where(t => t != verificationTag));
+
+            var removeTagPatch = new[]
+            {
+                new
+                {
+                    op = "add",
+                    path = "/fields/System.Tags",
+                    value = tagsWithoutVerification
+                }
+            };
+
+            using var removeContent = new StringContent(
+                JsonSerializer.Serialize(removeTagPatch), 
+                System.Text.Encoding.UTF8, 
+                "application/json-patch+json");
+
+            var removeResponse = await httpClient.PatchAsync(updateUrl, removeContent, cancellationToken);
+            
+            var cleanupSuccess = removeResponse.IsSuccessStatusCode;
+            
+            return new TfsCapabilityCheckResult
+            {
+                CapabilityId = "work-item-update",
+                Success = true,
+                ImpactedFunctionality = "Work item modifications (state changes, effort updates)",
+                ExpectedBehavior = "Can update work item fields",
+                ObservedBehavior = $"Work item {workItemId} is accessible and writable (verification tag added and removed)",
+                TargetScope = $"Work Item #{workItemId}",
+                MutationType = MutationType.Update,
+                CleanupStatus = cleanupSuccess ? CleanupStatus.CleanedUp : CleanupStatus.Failed
+            };
         }
         catch (Exception ex)
         {
@@ -2345,8 +2407,8 @@ public class RealTfsClient : ITfsClient
         var allComments = new List<PullRequestCommentDto>();
         var allFileChanges = new List<PullRequestFileChangeDto>();
 
-        // Step 2: For each PR, fetch iterations and comments in parallel
-        // Azure DevOps doesn't have a true bulk API, but we can parallelize the calls
+        // Step 2: For each PR, fetch iterations and comments with throttling
+        // Azure DevOps doesn't have a true bulk API, but we can parallelize with bounded concurrency
         var prTasks = new List<Task<(List<PullRequestIterationDto> Iterations, List<PullRequestCommentDto> Comments, int PrId, string Repo)>>();
 
         foreach (var repoGroup in prsByRepo)
@@ -2354,8 +2416,10 @@ public class RealTfsClient : ITfsClient
             var repo = repoGroup.Key;
             foreach (var pr in repoGroup)
             {
-                // Fetch iterations and comments in parallel for each PR (no Task.Run needed for async I/O)
-                prTasks.Add(FetchPrDetailsAsync(pr.Id, repo, cancellationToken));
+                // Apply read throttling to PR details fetching
+                prTasks.Add(_throttler.ExecuteReadAsync(
+                    () => FetchPrDetailsAsync(pr.Id, repo, cancellationToken),
+                    cancellationToken));
             }
         }
 
@@ -2375,7 +2439,7 @@ public class RealTfsClient : ITfsClient
             }
         }
 
-        // Step 3: Fetch file changes for all iterations in parallel
+        // Step 3: Fetch file changes for all iterations with throttling
         var fileChangeTasks = new List<Task<IEnumerable<PullRequestFileChangeDto>>>();
         foreach (var prResult in prResults)
         {
@@ -2383,7 +2447,10 @@ public class RealTfsClient : ITfsClient
             var prId = prResult.PrId;
             foreach (var iteration in prResult.Iterations)
             {
-                fileChangeTasks.Add(GetPullRequestFileChangesAsync(prId, repo, iteration.IterationNumber, cancellationToken));
+                // Apply read throttling to file changes fetching
+                fileChangeTasks.Add(_throttler.ExecuteReadAsync(
+                    () => GetPullRequestFileChangesAsync(prId, repo, iteration.IterationNumber, cancellationToken),
+                    cancellationToken));
             }
         }
 
@@ -2446,8 +2513,8 @@ public class RealTfsClient : ITfsClient
         var successCount = 0;
         var failedCount = 0;
 
-        // Process updates - Azure DevOps requires individual PATCH calls per work item
-        // but we can track them as a batch and parallelize for performance
+        // Process updates with write throttling - Azure DevOps requires individual PATCH calls per work item
+        // Apply bounded concurrency to prevent overwhelming the server
         var updateTasks = updatesList.Select(async update =>
         {
             try
@@ -2457,7 +2524,10 @@ public class RealTfsClient : ITfsClient
                     return new BulkUpdateItemResult(update.WorkItemId, false, $"Invalid effort value {update.EffortValue} (must be >= 0)");
                 }
 
-                var success = await UpdateWorkItemEffortAsync(update.WorkItemId, update.EffortValue, cancellationToken);
+                // Apply write throttling to effort updates (PATCH operations)
+                var success = await _throttler.ExecuteWriteAsync(
+                    () => UpdateWorkItemEffortAsync(update.WorkItemId, update.EffortValue, cancellationToken),
+                    cancellationToken);
                 Interlocked.Increment(ref tfsCallCount);
                 
                 return new BulkUpdateItemResult(update.WorkItemId, success, 
@@ -2504,12 +2574,15 @@ public class RealTfsClient : ITfsClient
         var successCount = 0;
         var failedCount = 0;
 
-        // Process updates in parallel
+        // Process updates with write throttling to prevent overwhelming the server
         var updateTasks = updatesList.Select(async update =>
         {
             try
             {
-                var success = await UpdateWorkItemStateAsync(update.WorkItemId, update.NewState, cancellationToken);
+                // Apply write throttling to state updates (PATCH operations)
+                var success = await _throttler.ExecuteWriteAsync(
+                    () => UpdateWorkItemStateAsync(update.WorkItemId, update.NewState, cancellationToken),
+                    cancellationToken);
                 Interlocked.Increment(ref tfsCallCount);
                 
                 return new BulkUpdateItemResult(update.WorkItemId, success, 
@@ -2555,12 +2628,15 @@ public class RealTfsClient : ITfsClient
         var results = new Dictionary<int, IEnumerable<WorkItemRevisionDto>>();
         var lockObj = new object();
 
-        // Fetch revisions in parallel
+        // Fetch revisions with read throttling to prevent overwhelming the server
         var fetchTasks = idsList.Select(async workItemId =>
         {
             try
             {
-                var revisions = await GetWorkItemRevisionsAsync(workItemId, cancellationToken);
+                // Apply read throttling to revision fetching (GET operations)
+                var revisions = await _throttler.ExecuteReadAsync(
+                    () => GetWorkItemRevisionsAsync(workItemId, cancellationToken),
+                    cancellationToken);
                 Interlocked.Increment(ref tfsCallCount);
                 
                 lock (lockObj)
@@ -2960,13 +3036,16 @@ public class RealTfsClient : ITfsClient
             );
         }
 
-        // Step 2: Fetch runs for each pipeline in parallel
+        // Step 2: Fetch runs for each pipeline with read throttling
         var allRuns = new List<PipelineRunDto>();
         var lockObj = new object();
 
         var fetchTasks = pipelines.Select(async pipeline =>
         {
-            var runs = await GetPipelineRunsAsync(pipeline.Id, runsPerPipeline, cancellationToken);
+            // Apply read throttling to pipeline run fetching (GET operations)
+            var runs = await _throttler.ExecuteReadAsync(
+                () => GetPipelineRunsAsync(pipeline.Id, runsPerPipeline, cancellationToken),
+                cancellationToken);
             Interlocked.Increment(ref tfsCallCount);
             
             lock (lockObj)
