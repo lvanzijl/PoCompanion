@@ -97,7 +97,9 @@
     {
         // Only perform startup routing when on the root path
         var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        if (!string.IsNullOrEmpty(currentPath) && currentPath != "/")
+        // Normalize: trim leading/trailing slashes and check if empty (root path)
+        var normalizedPath = currentPath.Trim('/');
+        if (!string.IsNullOrEmpty(normalizedPath))
         {
             return;
         }

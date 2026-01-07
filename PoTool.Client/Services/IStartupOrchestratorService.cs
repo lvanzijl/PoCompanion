@@ -2,6 +2,9 @@ namespace PoTool.Client.Services;
 
 /// <summary>
 /// Startup readiness DTO matching the backend StartupReadinessDto.
+/// This is a separate copy because the Client (Blazor WebAssembly) cannot 
+/// directly reference PoTool.Core which targets the server-side.
+/// Keep this in sync with PoTool.Core/Settings/StartupReadinessDto.cs.
 /// </summary>
 public sealed record StartupReadinessDto(
     bool IsMockDataEnabled,

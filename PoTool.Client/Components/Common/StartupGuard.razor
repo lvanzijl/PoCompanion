@@ -108,7 +108,8 @@ else
             
             // Check if current page is exempt
             var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-            currentPath = "/" + currentPath.Split('?')[0]; // Remove query string
+            // Normalize: remove query string and ensure leading slash
+            currentPath = "/" + currentPath.Split('?')[0].TrimStart('/');
             
             var exemptPages = ExemptPages?.ToArray() ?? DefaultExemptPages;
             if (exemptPages.Any(p => currentPath.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
