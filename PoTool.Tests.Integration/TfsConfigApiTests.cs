@@ -8,7 +8,8 @@ namespace PoTool.Tests.Integration;
 
 /// <summary>
 /// Integration tests for TFS configuration API endpoints.
-/// Tests the full HTTP round-trip to verify AuthMode persistence.
+/// Tests the full HTTP round-trip to verify configuration persistence.
+/// Note: PAT authentication has been removed - NTLM is now the only supported mode.
 /// </summary>
 [TestClass]
 public class TfsConfigApiTests
@@ -38,8 +39,7 @@ public class TfsConfigApiTests
         {
             url = "https://tfs.mycompany.com",
             project = "MyProject",
-            pat = (string?)null,
-            authMode = 1, // NTLM
+            defaultAreaPath = "MyProject\\Team",
             useDefaultCredentials = true,
             timeoutSeconds = 30,
             apiVersion = "7.0"
@@ -66,41 +66,38 @@ public class TfsConfigApiTests
         Assert.IsNotNull(config, "Config should not be null");
         Assert.AreEqual("https://tfs.mycompany.com", config.Url);
         Assert.AreEqual("MyProject", config.Project);
-        Assert.AreEqual(1, config.AuthMode, "AuthMode should be 1 (NTLM)");
-        Assert.AreEqual(true, config.UseDefaultCredentials);
+        Assert.AreEqual(true, config.UseDefaultCredentials, "Should use default credentials (NTLM)");
     }
 
     [TestMethod]
-    public async Task PostTfsConfig_SwitchingFromPatToNtlm_UpdatesAuthMode()
+    public async Task PostTfsConfig_UpdatingConfiguration_PersistsChanges()
     {
-        // Arrange - First save with PAT
-        var patRequest = new
+        // Arrange - First save initial config
+        var firstRequest = new
         {
             url = "https://dev.azure.com/org",
-            project = "Project",
-            pat = (string?)null,
-            authMode = 0, // PAT
-            useDefaultCredentials = false,
-            timeoutSeconds = 30,
-            apiVersion = "7.0"
-        };
-
-        await _client.PostAsJsonAsync("/api/tfsconfig", patRequest);
-
-        // Arrange - Then switch to NTLM
-        var ntlmRequest = new
-        {
-            url = "https://tfs.mycompany.com",
-            project = "Project",
-            pat = (string?)null,
-            authMode = 1, // NTLM
+            project = "Project1",
+            defaultAreaPath = "Project1\\Team",
             useDefaultCredentials = true,
             timeoutSeconds = 30,
             apiVersion = "7.0"
         };
 
+        await _client.PostAsJsonAsync("/api/tfsconfig", firstRequest);
+
+        // Arrange - Then update to new config
+        var secondRequest = new
+        {
+            url = "https://tfs.mycompany.com",
+            project = "Project2",
+            defaultAreaPath = "Project2\\Team",
+            useDefaultCredentials = true,
+            timeoutSeconds = 60,
+            apiVersion = "7.0"
+        };
+
         // Act
-        await _client.PostAsJsonAsync("/api/tfsconfig", ntlmRequest);
+        await _client.PostAsJsonAsync("/api/tfsconfig", secondRequest);
 
         // Assert
         var getResponse = await _client.GetAsync("/api/tfsconfig");
@@ -111,14 +108,17 @@ public class TfsConfigApiTests
         });
 
         Assert.IsNotNull(config);
-        Assert.AreEqual(1, config.AuthMode, "AuthMode should be updated to 1 (NTLM)");
+        Assert.AreEqual("https://tfs.mycompany.com", config.Url, "URL should be updated");
+        Assert.AreEqual("Project2", config.Project, "Project should be updated");
+        Assert.AreEqual(true, config.UseDefaultCredentials, "Should use default credentials");
+        Assert.AreEqual(60, config.TimeoutSeconds, "Timeout should be updated");
     }
 
     private class TfsConfigResponse
     {
         public string? Url { get; set; }
         public string? Project { get; set; }
-        public int AuthMode { get; set; }
+        public string? DefaultAreaPath { get; set; }
         public bool UseDefaultCredentials { get; set; }
         public int TimeoutSeconds { get; set; }
         public string? ApiVersion { get; set; }
