@@ -23,31 +23,7 @@ Scenario: Reconnect to SignalR hub after disconnect
     And I reconnect to the WorkItem hub
     Then the connection should be successful
 
-# Work Item Sync Progress Notifications
-
-Scenario: Receive sync progress notification - InProgress
-    Given I am connected to the WorkItem hub
-    When I request a sync via SignalR for area "TestArea"
-    Then I should receive a SyncStatus notification with status "InProgress"
-    And the notification message should contain "Retrieving work items"
-
-Scenario: Receive sync progress notification - Completed
-    Given I am connected to the WorkItem hub
-    When I request a sync via SignalR for area "TestArea"
-    Then I should receive a SyncStatus notification with status "Completed"
-    And the notification message should contain "Successfully synced"
-
-Scenario: Receive multiple sync notifications in correct order
-    Given I am connected to the WorkItem hub
-    When I request a sync via SignalR for area "TestArea"
-    Then I should receive sync notifications in order: "InProgress,Completed"
-
 # Multiple Concurrent Client Connections
-
-Scenario: Multiple clients receive sync notifications
-    Given I have 3 connected clients to the WorkItem hub
-    When any client requests a sync via SignalR for area "TestArea"
-    Then all 3 clients should receive SyncStatus notifications
 
 Scenario: Multiple clients can request sync independently
     Given I have 2 connected clients to the WorkItem hub

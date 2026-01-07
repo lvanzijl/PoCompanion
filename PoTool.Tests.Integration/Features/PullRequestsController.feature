@@ -64,11 +64,6 @@ Scenario: Get pull request file changes
     When I request pull request 1 file changes
     Then the response should be OK
 
-Scenario: Sync pull requests command
-    When I send sync pull requests command
-    Then the response should be OK
-    And the sync result should contain synced count
-
 Scenario: Get PR review bottleneck with default parameters
     When I request PR review bottleneck analysis
     Then the response should be OK

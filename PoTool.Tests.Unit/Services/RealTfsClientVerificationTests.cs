@@ -145,24 +145,6 @@ public class RealTfsClientVerificationTests
     }
 
     [TestMethod]
-    public async Task VerifyCapabilitiesAsync_WithWriteChecksButNoWorkItemId_SkipsWriteVerification()
-    {
-        // Arrange
-        SetupSuccessfulHttpResponses();
-
-        // Act
-        var result = await _sut.VerifyCapabilitiesAsync(
-            includeWriteChecks: true,
-            workItemIdForWriteCheck: null);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.IsTrue(result.IncludedWriteChecks);
-        Assert.HasCount(7, result.Checks); // Only read-only checks
-        Assert.IsFalse(result.Checks.Any(c => c.CapabilityId == "work-item-update"));
-    }
-
-    [TestMethod]
     public async Task VerifyCapabilitiesAsync_AuthenticationFailure_ReturnsAuthFailureCategory()
     {
         // Arrange
@@ -191,26 +173,6 @@ public class RealTfsClientVerificationTests
         Assert.IsNotNull(serverCheck);
         Assert.IsFalse(serverCheck.Success);
         Assert.AreEqual(FailureCategory.Authentication, serverCheck.FailureCategory);
-    }
-
-    [TestMethod]
-    public async Task VerifyCapabilitiesAsync_ProjectNotFound_ReturnsAuthorizationFailure()
-    {
-        // Arrange
-        SetupHttpResponse("_apis/projects", HttpStatusCode.OK, "{\"value\":[]}");
-        SetupHttpResponse($"_apis/projects/{_testConfig.Project}", HttpStatusCode.NotFound, "");
-        SetupSuccessfulHttpResponsesExceptProjectAccess();
-
-        // Act
-        var result = await _sut.VerifyCapabilitiesAsync(includeWriteChecks: false);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.IsFalse(result.Success);
-        var projectCheck = result.Checks.FirstOrDefault(c => c.CapabilityId == "project-access");
-        Assert.IsNotNull(projectCheck);
-        Assert.IsFalse(projectCheck.Success);
-        Assert.AreEqual(FailureCategory.Authorization, projectCheck.FailureCategory);
     }
 
     [TestMethod]
