@@ -45,9 +45,9 @@ public class TfsClientTests
         _authProvider = new TfsAuthenticationProvider();
         _loggerMock = new Mock<ILogger<RealTfsClient>>();
         
-        // Create mock PatAccessor that returns null (tests don't need PAT auth for mock responses)
+        // Create mock PatAccessor that returns a test PAT for authenticated requests
         var mockPatAccessor = new Mock<PatAccessor>(Mock.Of<IHttpContextAccessor>());
-        mockPatAccessor.Setup(p => p.GetPat()).Returns((string?)null);
+        mockPatAccessor.Setup(p => p.GetPat()).Returns("test-pat-token");
         
         // Create mock IHttpClientFactory
         var mockFactory = new Mock<IHttpClientFactory>();
@@ -345,12 +345,18 @@ public class TfsClientTests
     public async Task GetWorkItemsAsync_EmptyResponse_ReturnsEmptyList()
     {
         // Arrange
-        var emptyResponse = new
+        await _configService.SaveConfigAsync(
+            "https://dev.azure.com/testorg",
+            "TestProject",
+            "TestProject\\Team",
+            TfsAuthMode.Pat);
+
+        // Mock empty WIQL response (no work items found)
+        var wiqlResponse = new
         {
-            count = 0,
-            value = Array.Empty<object>()
+            workItems = Array.Empty<object>()
         };
-        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(emptyResponse));
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse));
 
         // Act
         var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
@@ -363,16 +369,30 @@ public class TfsClientTests
     public async Task GetWorkItemsAsync_NullFields_HandledGracefully()
     {
         // Arrange
+        await _configService.SaveConfigAsync(
+            "https://dev.azure.com/testorg",
+            "TestProject",
+            "TestProject\\Team",
+            TfsAuthMode.Pat);
+
+        // Mock WIQL response
+        var wiqlResponse = new
+        {
+            workItems = new[] { new { id = 123 } }
+        };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse));
+
+        // Mock work items response with null fields
         var workItemsResponse = new
         {
             count = 1,
-            value = new[]
+            value = new object[]
             {
-                new
+                new Dictionary<string, object?>
                 {
-                    id = 123,
-                    url = "http://test.com/123",
-                    fields = new Dictionary<string, object?>
+                    ["id"] = 123,
+                    ["url"] = "http://test.com/123",
+                    ["fields"] = new Dictionary<string, object?>
                     {
                         ["System.WorkItemType"] = "Task",
                         ["System.Title"] = null,  // Null title
@@ -397,12 +417,26 @@ public class TfsClientTests
     [TestMethod]
     public async Task GetWorkItemsAsync_VeryLargeWorkItemCount_ReturnsAllItems()
     {
-        // Arrange - Simulate large batch of work items
-        var items = Enumerable.Range(1, 500).Select(i => new
+        // Arrange
+        await _configService.SaveConfigAsync(
+            "https://dev.azure.com/testorg",
+            "TestProject",
+            "TestProject\\Team",
+            TfsAuthMode.Pat);
+
+        // Mock WIQL response with 500 work item IDs
+        var wiqlResponse = new
         {
-            id = i,
-            url = $"http://test.com/{i}",
-            fields = new Dictionary<string, object>
+            workItems = Enumerable.Range(1, 500).Select(i => new { id = i }).ToArray()
+        };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse));
+
+        // Simulate large batch of work items response
+        var items = Enumerable.Range(1, 500).Select(i => new Dictionary<string, object>
+        {
+            ["id"] = i,
+            ["url"] = $"http://test.com/{i}",
+            ["fields"] = new Dictionary<string, object>
             {
                 ["System.WorkItemType"] = "Task",
                 ["System.Title"] = $"Task {i}",
@@ -430,16 +464,30 @@ public class TfsClientTests
     public async Task GetWorkItemsAsync_SpecialCharactersInFields_HandledCorrectly()
     {
         // Arrange
+        await _configService.SaveConfigAsync(
+            "https://dev.azure.com/testorg",
+            "TestProject",
+            "TestProject\\Team",
+            TfsAuthMode.Pat);
+
+        // Mock WIQL response
+        var wiqlResponse = new
+        {
+            workItems = new[] { new { id = 123 } }
+        };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse));
+
+        // Mock work items response with special characters
         var workItemsResponse = new
         {
             count = 1,
-            value = new[]
+            value = new object[]
             {
-                new
+                new Dictionary<string, object>
                 {
-                    id = 123,
-                    url = "http://test.com/123",
-                    fields = new Dictionary<string, object>
+                    ["id"] = 123,
+                    ["url"] = "http://test.com/123",
+                    ["fields"] = new Dictionary<string, object>
                     {
                         ["System.WorkItemType"] = "Task",
                         ["System.Title"] = "Test with \"quotes\" and 'apostrophes' & <html> tags",
@@ -464,17 +512,31 @@ public class TfsClientTests
     [TestMethod]
     public async Task GetWorkItemsAsync_MixedValidAndInvalidData_ProcessesValidItems()
     {
-        // Arrange - Mix of valid and items with missing required fields
+        // Arrange
+        await _configService.SaveConfigAsync(
+            "https://dev.azure.com/testorg",
+            "TestProject",
+            "TestProject\\Team",
+            TfsAuthMode.Pat);
+
+        // Mock WIQL response
+        var wiqlResponse = new
+        {
+            workItems = new[] { new { id = 1 }, new { id = 2 }, new { id = 3 } }
+        };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse));
+
+        // Mix of valid and items with missing required fields
         var workItemsResponse = new
         {
             count = 3,
-            value = new[]
+            value = new object[]
             {
-                new
+                new Dictionary<string, object>
                 {
-                    id = 1,
-                    url = "http://test.com/1",
-                    fields = new Dictionary<string, object>
+                    ["id"] = 1,
+                    ["url"] = "http://test.com/1",
+                    ["fields"] = new Dictionary<string, object>
                     {
                         ["System.WorkItemType"] = "Task",
                         ["System.Title"] = "Valid Task 1",
@@ -483,22 +545,22 @@ public class TfsClientTests
                         ["System.IterationPath"] = "TestProject"
                     }
                 },
-                new
+                new Dictionary<string, object>
                 {
-                    id = 2,
-                    url = "http://test.com/2",
-                    fields = new Dictionary<string, object>
+                    ["id"] = 2,
+                    ["url"] = "http://test.com/2",
+                    ["fields"] = new Dictionary<string, object>
                     {
-                        // Missing WorkItemType - should be skipped or handled
+                        // Missing WorkItemType - should be handled (empty string)
                         ["System.Title"] = "Invalid Task",
                         ["System.State"] = "Active"
                     }
                 },
-                new
+                new Dictionary<string, object>
                 {
-                    id = 3,
-                    url = "http://test.com/3",
-                    fields = new Dictionary<string, object>
+                    ["id"] = 3,
+                    ["url"] = "http://test.com/3",
+                    ["fields"] = new Dictionary<string, object>
                     {
                         ["System.WorkItemType"] = "Task",
                         ["System.Title"] = "Valid Task 2",
@@ -514,9 +576,8 @@ public class TfsClientTests
         // Act
         var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
 
-        // Assert - Should process at least the 2 valid items (may process all 3)
-        Assert.IsGreaterThanOrEqualTo(results.Count, 2, "Should process at least the 2 valid items");
-        Assert.IsLessThanOrEqualTo(results.Count, 3, "Should not process more than 3 items total");
+        // Assert - All items should be processed (missing fields become empty strings)
+        Assert.HasCount(3, results, "All items should be processed");
     }
 
     private int _responseIndex = 0;
