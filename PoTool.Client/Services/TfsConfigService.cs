@@ -210,13 +210,9 @@ public class TfsConfigService
     {
         try
         {
-            // Get PAT from secure storage
-            var pat = await GetPatAsync();
-            if (string.IsNullOrEmpty(pat))
-            {
-                throw new InvalidOperationException("PAT is required for TFS API verification");
-            }
-
+            // Get current TFS configuration to determine auth mode
+            var config = await GetConfigAsync(cancellationToken);
+            
             // Use direct HttpClient call with request-specific headers for thread safety
             var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/api/tfsverify")
             {
@@ -226,7 +222,17 @@ public class TfsConfigService
                     WorkItemIdForWriteCheck = workItemIdForWriteCheck
                 })
             };
-            requestMessage.Headers.Add("X-TFS-PAT", pat);
+            
+            // Only add PAT header if auth mode is PAT
+            if (config?.AuthMode == TfsAuthMode.Pat)
+            {
+                var pat = await GetPatAsync();
+                if (string.IsNullOrEmpty(pat))
+                {
+                    throw new InvalidOperationException("PAT is required when auth mode is set to PAT");
+                }
+                requestMessage.Headers.Add("X-TFS-PAT", pat);
+            }
 
             var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
             response.EnsureSuccessStatusCode();
