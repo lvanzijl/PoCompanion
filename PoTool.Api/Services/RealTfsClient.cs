@@ -48,7 +48,6 @@ public class RealTfsClient : ITfsClient
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TfsConfigurationService _configService;
     private readonly TfsAuthenticationProvider _authProvider;
-    private readonly PatAccessor _patAccessor;
     private readonly ILogger<RealTfsClient> _logger;
     private const int MaxRetries = 3;
 
@@ -83,68 +82,30 @@ public class RealTfsClient : ITfsClient
         IHttpClientFactory httpClientFactory,
         TfsConfigurationService configService, 
         TfsAuthenticationProvider authProvider,
-        PatAccessor patAccessor,
         ILogger<RealTfsClient> logger)
     {
         _httpClient = httpClient;
         _httpClientFactory = httpClientFactory;
         _configService = configService;
         _authProvider = authProvider;
-        _patAccessor = patAccessor;
         _logger = logger;
     }
 
     /// <summary>
-    /// Gets an HttpClient properly configured for the current authentication mode.
-    /// Uses named HttpClients from IHttpClientFactory to ensure correct handler configuration.
-    /// For PAT mode: No default Windows credentials (avoids conflicts)
-    /// For NTLM mode: Uses default Windows credentials
+    /// Gets an HttpClient configured for NTLM authentication.
+    /// Uses named HttpClient from IHttpClientFactory to ensure correct handler configuration.
     /// </summary>
-    /// <param name="entity">TFS configuration entity containing auth mode and timeout settings.</param>
-    /// <returns>Configured HttpClient for the specified auth mode.</returns>
-    /// <exception cref="TfsAuthenticationException">Thrown when PAT is required but not provided, or auth mode is unsupported.</exception>
+    /// <param name="entity">TFS configuration entity containing timeout settings.</param>
+    /// <returns>Configured HttpClient with NTLM authentication.</returns>
     private HttpClient GetAuthenticatedHttpClient(TfsConfigEntity entity)
     {
-        HttpClient client;
-        
-        if (entity.AuthMode == TfsAuthMode.Pat)
-        {
-            // Get PAT-configured client (no default credentials in handler)
-            client = _httpClientFactory.CreateClient("TfsClient.PAT");
-            
-            // Get PAT from current request context (provided via X-TFS-PAT header)
-            var pat = _patAccessor.GetPat();
-            
-            if (string.IsNullOrEmpty(pat))
-            {
-                throw new TfsAuthenticationException(
-                    "PAT must be provided via X-TFS-PAT header. " +
-                    "PAT is stored client-side for security. See docs/PAT_STORAGE_BEST_PRACTICES.md", 
-                    (string?)null);
-            }
-
-            // Configure PAT authentication via Authorization header
-            _authProvider.ConfigurePatAuthentication(client, pat);
-            
-            _logger.LogDebug("Using PAT-authenticated HttpClient for TFS request");
-        }
-        else if (entity.AuthMode == TfsAuthMode.Ntlm)
-        {
-            // Get NTLM-configured client (with UseDefaultCredentials=true in handler)
-            client = _httpClientFactory.CreateClient("TfsClient.NTLM");
-            
-            _logger.LogDebug("Using NTLM-authenticated HttpClient for TFS request");
-        }
-        else
-        {
-            throw new TfsAuthenticationException(
-                $"Unsupported authentication mode: {entity.AuthMode}. " +
-                "Only PAT and NTLM modes are supported.", 
-                (string?)null);
-        }
+        // Get NTLM-configured client (with UseDefaultCredentials=true in handler)
+        var client = _httpClientFactory.CreateClient("TfsClient.NTLM");
         
         // Configure timeout from entity (per-request since timeout can be changed in configuration)
         client.Timeout = TimeSpan.FromSeconds(entity.TimeoutSeconds);
+        
+        _logger.LogDebug("Using NTLM-authenticated HttpClient for TFS request");
         
         return client;
     }
@@ -198,7 +159,7 @@ public class RealTfsClient : ITfsClient
             
             // Step 1: Validate server connectivity using collection-scoped projects endpoint
             var projectsUrl = CollectionUrl(entity, "_apis/projects");
-            _logger.LogInformation("Validating TFS connection: GET {Url} (AuthMode: {AuthMode})", projectsUrl, entity.AuthMode);
+            _logger.LogInformation("Validating TFS connection: GET {Url} (using NTLM authentication)", projectsUrl);
             
             var resp = await httpClient.GetAsync(projectsUrl, cancellationToken);
             

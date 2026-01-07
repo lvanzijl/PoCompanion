@@ -79,12 +79,9 @@
                                          Required="true"
                                          HelperText="The area path used for work item queries" />
 
-                            <CompactTextField @bind-Value="_pat" 
-                                         Label="Personal Access Token (PAT)" 
-                                         Placeholder="Your PAT"
-                                         Required="true"
-                                         InputType="InputType.Password"
-                                         HelperText="Your PAT will be encrypted at rest" />
+                            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                                <strong>Authentication:</strong> Uses Windows credentials (NTLM) of the current user. No additional configuration required.
+                            </MudAlert>
 
                             <MudStack Row="true" Spacing="2" Class="mt-2">
                                 <CompactButton Variant="Variant.Filled" 
@@ -331,7 +328,6 @@
     private string _url = string.Empty;
     private string _project = string.Empty;
     private string _defaultAreaPath = string.Empty;
-    private string _pat = string.Empty;
     private ConnectionTestResult? _connectionTestResult;
     private ErrorResponse? _configErrorResponse;
 
@@ -422,7 +418,7 @@
         try
         {
             // Save configuration
-            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath, _pat);
+            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath);
             
             // Test connection
             _isSaving = false;

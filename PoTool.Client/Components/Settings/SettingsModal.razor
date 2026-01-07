@@ -27,9 +27,9 @@
                 <div class="form-text text-muted">The area path used for work item queries.</div>
             </div>
             <div class="form-group">
-                <label>Personal Access Token (PAT)</label>
-                <InputText class="form-control" type="password" @bind-Value="_model.Pat" placeholder="��������" />
-                <div class="form-text text-muted">We store your PAT securely on the server. It's used only for API calls.</div>
+                <div class="alert alert-info">
+                    <strong>Authentication:</strong> Uses Windows credentials (NTLM) of the current user.
+                </div>
             </div>
 
             <div class="settings-actions">
@@ -91,7 +91,7 @@
         _statusClass = "status-info";
         try
         {
-            await TfsConfigService.SaveConfigAsync(_model.Url, _model.Project, _model.DefaultAreaPath, _model.Pat);
+            await TfsConfigService.SaveConfigAsync(_model.Url, _model.Project, _model.DefaultAreaPath);
             _statusMessage = "Saved successfully";
             _statusClass = "status-success";
         }
@@ -143,6 +143,5 @@
         public string Url { get; set; } = string.Empty;
         public string Project { get; set; } = string.Empty;
         public string DefaultAreaPath { get; set; } = string.Empty;
-        public string Pat { get; set; } = string.Empty;
     }
 }

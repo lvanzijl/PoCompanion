@@ -15,7 +15,6 @@ public class RealTfsClientVerificationTests
     private HttpClient _httpClient = null!;
     private Mock<TfsConfigurationService> _mockConfigService = null!;
     private Mock<TfsAuthenticationProvider> _mockAuthProvider = null!;
-    private Mock<PatAccessor> _mockPatAccessor = null!;
     private Mock<ILogger<RealTfsClient>> _mockLogger = null!;
     private RealTfsClient _sut = null!;
     private TfsConfigEntity _testConfig = null!;
@@ -27,7 +26,6 @@ public class RealTfsClientVerificationTests
         _httpClient = new HttpClient(_mockHttpMessageHandler.Object);
         _mockConfigService = new Mock<TfsConfigurationService>(MockBehavior.Strict);
         _mockAuthProvider = new Mock<TfsAuthenticationProvider>();
-        _mockPatAccessor = new Mock<PatAccessor>();
         _mockLogger = new Mock<ILogger<RealTfsClient>>();
 
         _testConfig = new TfsConfigEntity
@@ -36,13 +34,11 @@ public class RealTfsClientVerificationTests
             Project = "TestProject",
             ApiVersion = "7.0",
             TimeoutSeconds = 30,
-            AuthMode = TfsAuthMode.Pat
+            UseDefaultCredentials = true
         };
 
         _mockConfigService.Setup(x => x.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testConfig);
-
-        _mockPatAccessor.Setup(x => x.GetPat()).Returns("test-pat");
 
         // Create mock IHttpClientFactory
         var mockFactory = new Mock<IHttpClientFactory>();
@@ -53,7 +49,6 @@ public class RealTfsClientVerificationTests
             mockFactory.Object,
             _mockConfigService.Object,
             _mockAuthProvider.Object,
-            _mockPatAccessor.Object,
             _mockLogger.Object
         );
     }

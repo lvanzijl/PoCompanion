@@ -31,9 +31,6 @@ Violating these rules is a design error, not an implementation shortcut.
 6. **[Fluent_UI_compat_rules.md](Fluent_UI_compat_rules.md)** - Fluent UI Compact rules
 7. **[mock-data-rules.md](mock-data-rules.md)** - Mock data generation rules (MANDATORY for testing and development)
 
-### Additional Documentation
-8. **[PAT_STORAGE_BEST_PRACTICES.md](PAT_STORAGE_BEST_PRACTICES.md)** - Security best practices for credential storage
-
 
 
 ---
