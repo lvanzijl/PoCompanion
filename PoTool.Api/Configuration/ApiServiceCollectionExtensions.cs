@@ -166,21 +166,10 @@ public static class ApiServiceCollectionExtensions
                     MaxAutomaticRedirections = 5
                 });
             
-            // Also register a default HttpClient for backward compatibility
-            // Used by methods not yet refactored to use GetAuthenticatedHttpClient():
-            // GetPullRequestsAsync, GetPullRequestIterationsAsync, GetPullRequestCommentsAsync,
-            // GetPullRequestFileChangesAsync, GetWorkItemRevisionsAsync, UpdateWorkItemStateAsync, 
-            // UpdateWorkItemParentAsync, GetPipelinesAsync, GetPipelineRunsAsync, CreateWorkItemAsync,
-            // and various helper/verification methods
-            // This handler uses default credentials for NTLM
-            services.AddHttpClient<ITfsClient, RealTfsClient>()
-                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-                {
-                    UseDefaultCredentials = true,
-                    Credentials = System.Net.CredentialCache.DefaultNetworkCredentials,
-                    AllowAutoRedirect = true,
-                    MaxAutomaticRedirections = 5
-                });
+            // Register RealTfsClient as a regular scoped service
+            // RealTfsClient uses IHttpClientFactory internally (via GetAuthenticatedHttpClient)
+            // and has multiple constructor dependencies, so it doesn't follow the typed HttpClient pattern
+            services.AddScoped<ITfsClient, RealTfsClient>();
         }
 
         // Register background services
