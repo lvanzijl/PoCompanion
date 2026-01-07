@@ -1,0 +1,133 @@
+@using PoTool.Client.Services
+@inject IStartupOrchestratorService StartupOrchestrator
+@inject NavigationManager NavigationManager
+
+@* 
+    StartupGuard component that checks startup readiness and routes appropriately.
+    This component should be used in layouts to enforce startup gating.
+*@
+
+@if (_isChecking)
+{
+    <MudContainer Class="d-flex justify-center align-center" Style="height: 100vh;">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+    </MudContainer>
+}
+else if (!_isReady && _readiness != null)
+{
+    @* Show blocking message when not ready *@
+    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            <MudText Typo="Typo.h6">Setup Required</MudText>
+            <MudText Typo="Typo.body1" Class="mt-2">
+                @(_readiness.MissingRequirementMessage ?? "Please complete setup before using this feature.")
+            </MudText>
+        </MudAlert>
+        
+        <MudStack Row="true" Spacing="2">
+            @if (!_readiness.HasSavedTfsConfig || !_readiness.HasTestedConnectionSuccessfully || !_readiness.HasVerifiedTfsApiSuccessfully)
+            {
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           OnClick="@(() => NavigationManager.NavigateTo("/tfsconfig"))">
+                    Go to Configuration
+                </MudButton>
+            }
+            else if (!_readiness.HasAnyProfile)
+            {
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           OnClick="@(() => NavigationManager.NavigateTo("/profiles"))">
+                    Create Profile
+                </MudButton>
+            }
+            else if (_readiness.ActiveProfileId == null)
+            {
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           OnClick="@(() => NavigationManager.NavigateTo("/profiles"))">
+                    Select Profile
+                </MudButton>
+            }
+        </MudStack>
+    </MudContainer>
+}
+else
+{
+    @* App is ready - render child content *@
+    @ChildContent
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+    
+    /// <summary>
+    /// Pages that are exempt from the startup guard (can be accessed without full readiness).
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<string>? ExemptPages { get; set; }
+    
+    private bool _isChecking = true;
+    private bool _isReady = false;
+    private StartupReadinessDto? _readiness;
+    
+    // Default exempt pages (configuration, profiles, help)
+    private static readonly string[] DefaultExemptPages = new[]
+    {
+        "/tfsconfig",
+        "/profiles",
+        "/help"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckReadinessAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Re-check when parameters change (e.g., navigation)
+        await CheckReadinessAsync();
+    }
+
+    private async Task CheckReadinessAsync()
+    {
+        _isChecking = true;
+        
+        try
+        {
+            _readiness = await StartupOrchestrator.GetStartupReadinessAsync();
+            
+            if (_readiness == null)
+            {
+                // Failed to get readiness - assume ready (graceful degradation)
+                _isReady = true;
+                return;
+            }
+            
+            // Check if current page is exempt
+            var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+            currentPath = "/" + currentPath.Split('?')[0]; // Remove query string
+            
+            var exemptPages = ExemptPages?.ToArray() ?? DefaultExemptPages;
+            if (exemptPages.Any(p => currentPath.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+            {
+                _isReady = true;
+                return;
+            }
+            
+            // Check if feature pages are accessible
+            _isReady = StartupOrchestrator.IsFeaturePageAccessible(_readiness);
+        }
+        catch (Exception)
+        {
+            // On error, allow access (graceful degradation)
+            _isReady = true;
+        }
+        finally
+        {
+            _isChecking = false;
+        }
+    }
+}

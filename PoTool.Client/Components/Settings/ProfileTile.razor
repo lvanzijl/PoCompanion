@@ -1,0 +1,107 @@
+@using PoTool.Client.Services
+@using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
+
+<MudCard Class="@GetCardClass()" 
+         Elevation="@(IsActive ? 6 : 2)"
+         Style="cursor: pointer; transition: all 0.3s ease;"
+         @onclick="HandleClick">
+    <MudCardContent Class="d-flex flex-column align-center pa-4">
+        @* Profile Picture *@
+        <MudAvatar Size="Size.Large" 
+                   Style="width: 80px; height: 80px; font-size: 2rem;"
+                   Color="@GetAvatarColor()">
+            @if (Profile != null)
+            {
+                @GetProfileInitials()
+            }
+        </MudAvatar>
+        
+        @* Profile Name *@
+        <MudText Typo="Typo.h6" Class="mt-3 text-center" Style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            @(Profile?.Name ?? "Unknown")
+        </MudText>
+        
+        @* Team Name *@
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-center" Style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            @(Profile?.TeamName ?? "No Team")
+        </MudText>
+        
+        @* Active indicator *@
+        @if (IsActive)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                     Color="Color.Success" 
+                     Size="Size.Small" 
+                     Class="mt-2" />
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter]
+    public ProfileDto? Profile { get; set; }
+    
+    [Parameter]
+    public bool IsActive { get; set; }
+    
+    [Parameter]
+    public EventCallback<ProfileDto> OnClick { get; set; }
+    
+    private string GetCardClass()
+    {
+        return IsActive ? "profile-tile profile-tile-active" : "profile-tile";
+    }
+    
+    private string GetProfileInitials()
+    {
+        if (Profile == null || string.IsNullOrWhiteSpace(Profile.Name))
+        {
+            return "?";
+        }
+        
+        var parts = Profile.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+        {
+            return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
+        }
+        
+        return Profile.Name.Length >= 2 
+            ? Profile.Name.Substring(0, 2).ToUpperInvariant() 
+            : Profile.Name.ToUpperInvariant();
+    }
+    
+    private Color GetAvatarColor()
+    {
+        if (Profile == null) return Color.Default;
+        
+        // Use profile ID to deterministically select a color
+        var colors = new[] { Color.Primary, Color.Secondary, Color.Tertiary, Color.Info, Color.Success, Color.Warning };
+        return colors[Math.Abs(Profile.Id) % colors.Length];
+    }
+    
+    private async Task HandleClick()
+    {
+        if (Profile != null)
+        {
+            await OnClick.InvokeAsync(Profile);
+        }
+    }
+}
+
+<style>
+    .profile-tile {
+        min-width: 160px;
+        max-width: 180px;
+        border-radius: 12px;
+    }
+    
+    .profile-tile:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    .profile-tile-active {
+        border: 2px solid var(--mud-palette-success);
+    }
+</style>

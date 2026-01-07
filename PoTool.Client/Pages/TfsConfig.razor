@@ -5,6 +5,7 @@
 @using PoTool.Client.ApiClient
 @using static PoTool.Client.Components.Common.PageHelp
 @inject TfsConfigService TfsConfigService
+@inject IStartupOrchestratorService StartupOrchestrator
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -12,6 +13,14 @@
 <PageTitle>TFS Configuration</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    
+    @* Startup Readiness Banner *@
+    @if (_startupReadiness != null && !string.IsNullOrEmpty(_startupReadiness.MissingRequirementMessage))
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true" Icon="@Icons.Material.Filled.Info">
+            <MudText Typo="Typo.subtitle2">@_startupReadiness.MissingRequirementMessage</MudText>
+        </MudAlert>
+    }
     
     <!-- Context-Aware Help -->
     <PageHelp Title="Azure DevOps / TFS Configuration"
@@ -200,10 +209,26 @@
 
     // Error display
     private ErrorResponse? _errorResponse;
+    
+    // Startup readiness state
+    private StartupReadinessDto? _startupReadiness;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadCurrentConfig();
+        await LoadStartupReadiness();
+    }
+    
+    private async Task LoadStartupReadiness()
+    {
+        try
+        {
+            _startupReadiness = await StartupOrchestrator.GetStartupReadinessAsync();
+        }
+        catch (Exception)
+        {
+            // Graceful degradation - don't block the page
+        }
     }
 
     private async Task LoadCurrentConfig()

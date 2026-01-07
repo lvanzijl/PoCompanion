@@ -3,6 +3,7 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
 @inject IOnboardingService OnboardingService
+@inject IStartupOrchestratorService StartupOrchestrator
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 @inherits LayoutComponentBase
@@ -35,6 +36,11 @@
                                   Title="Keyboard Shortcuts" 
                                   AriaLabel="Open keyboard shortcuts" />
                 </MudTooltip>
+                <CompactIconButton Icon="@Icons.Material.Filled.AccountCircle" 
+                              Color="Color.Inherit" 
+                              OnClick="@(() => NavigationManager.NavigateTo("/profiles"))" 
+                              Title="Profiles Home" 
+                              AriaLabel="Go to Profiles Home" />
                 <CompactIconButton Icon="@Icons.Material.Filled.AccountBox" 
                               Color="Color.Inherit" 
                               OnClick="OpenProfileManager" 
@@ -49,7 +55,9 @@
         </div>
 
         <article class="content px-4">
-            @Body
+            <StartupGuard>
+                @Body
+            </StartupGuard>
         </article>
     </main>
 </div>
@@ -59,6 +67,7 @@
 @code {
     private bool _settingsVisible = false;
     private bool _hasCheckedOnboarding = false;
+    private bool _hasCheckedStartupRouting = false;
     private ProfileSelector? _profileSelector;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -74,6 +83,50 @@
             {
                 await OpenOnboardingWizard();
             }
+        }
+        
+        // Perform startup routing on first render (only for root path)
+        if (firstRender && !_hasCheckedStartupRouting)
+        {
+            _hasCheckedStartupRouting = true;
+            await PerformStartupRoutingAsync();
+        }
+    }
+    
+    private async Task PerformStartupRoutingAsync()
+    {
+        // Only perform startup routing when on the root path
+        var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        if (!string.IsNullOrEmpty(currentPath) && currentPath != "/")
+        {
+            return;
+        }
+        
+        try
+        {
+            var readiness = await StartupOrchestrator.GetStartupReadinessAsync();
+            if (readiness == null)
+            {
+                return; // Graceful degradation
+            }
+            
+            var routingResult = StartupOrchestrator.DetermineRoute(readiness);
+            
+            // Route based on startup readiness
+            switch (routingResult.Route)
+            {
+                case StartupRoute.Configuration:
+                    NavigationManager.NavigateTo("/tfsconfig");
+                    break;
+                case StartupRoute.CreateFirstProfile:
+                case StartupRoute.ProfilesHome:
+                    NavigationManager.NavigateTo("/profiles");
+                    break;
+            }
+        }
+        catch (Exception)
+        {
+            // Graceful degradation - don't block the app
         }
     }
 

@@ -1,0 +1,185 @@
+@page "/profiles"
+@using PoTool.Client.Services
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Components.Settings
+@using PoTool.Client.ApiClient
+@inject ProfileService ProfileService
+@inject SettingsService SettingsService
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ErrorMessageService ErrorMessageService
+
+<PageTitle>Profiles Home</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudStack AlignItems="AlignItems.Center" Spacing="6">
+        @* Header *@
+        <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">
+            Who's using PO Companion?
+        </MudText>
+        
+        @if (_isLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        }
+        else if (_errorResponse != null)
+        {
+            <ErrorDisplay ErrorResponse="@_errorResponse" 
+                          OnDismiss="ClearError" />
+        }
+        else
+        {
+            @* Profile Grid (Netflix-style) *@
+            <MudStack Row="true" 
+                       Justify="Justify.Center" 
+                       AlignItems="AlignItems.Center" 
+                       Wrap="Wrap.Wrap" 
+                       Spacing="4"
+                       Class="profiles-grid">
+                @if (_profiles != null && _profiles.Any())
+                {
+                    @foreach (var profile in _profiles)
+                    {
+                        <ProfileTile Profile="@profile" 
+                                     IsActive="@(profile.Id == _activeProfileId)"
+                                     OnClick="SelectProfile" />
+                    }
+                }
+                
+                @* Add Profile Tile *@
+                <MudCard Class="add-profile-tile" 
+                         Elevation="2"
+                         Style="cursor: pointer; min-width: 160px; max-width: 180px; border-radius: 12px; transition: all 0.3s ease;"
+                         @onclick="OpenAddProfileDialog">
+                    <MudCardContent Class="d-flex flex-column align-center justify-center pa-4" Style="min-height: 180px;">
+                        <MudIcon Icon="@Icons.Material.Filled.Add" 
+                                 Size="Size.Large" 
+                                 Style="font-size: 3rem;"
+                                 Color="Color.Primary" />
+                        <MudText Typo="Typo.h6" Class="mt-3 text-center">
+                            Add Profile
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudStack>
+            
+            @* Empty State Message *@
+            @if (_profiles == null || !_profiles.Any())
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-4" Dense="true">
+                    <MudText Typo="Typo.body1">
+                        No profiles yet. Create your first profile to get started with PO Companion.
+                    </MudText>
+                </MudAlert>
+            }
+            
+            @* Action Buttons *@
+            <MudStack Row="true" Spacing="2" Class="mt-4">
+                <CompactButton Variant="Variant.Outlined" 
+                               Color="Color.Default"
+                               OnClick="ManageProfiles"
+                               StartIcon="@Icons.Material.Filled.Settings">
+                    Manage Profiles
+                </CompactButton>
+            </MudStack>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private IEnumerable<ProfileDto>? _profiles;
+    private int? _activeProfileId;
+    private bool _isLoading = true;
+    private ErrorResponse? _errorResponse;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfilesAsync();
+    }
+
+    private async Task LoadProfilesAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            ClearError();
+            
+            _profiles = await ProfileService.GetAllProfilesAsync();
+            
+            var settings = await SettingsService.GetSettingsAsync();
+            _activeProfileId = settings?.ActiveProfileId;
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error loading profiles");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SelectProfile(ProfileDto profile)
+    {
+        try
+        {
+            await ProfileService.SetActiveProfileAsync(profile.Id);
+            _activeProfileId = profile.Id;
+            Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
+            
+            // Navigate to home after selecting profile
+            NavigationManager.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error selecting profile: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenAddProfileDialog()
+    {
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+        
+        await DialogService.ShowAsync<ProfileManagerDialog>("Create New Profile", options);
+        
+        // Refresh profiles after dialog closes
+        await LoadProfilesAsync();
+    }
+
+    private async Task ManageProfiles()
+    {
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+        
+        await DialogService.ShowAsync<ProfileManagerDialog>("Manage Profiles", options);
+        
+        // Refresh profiles after dialog closes
+        await LoadProfilesAsync();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+}
+
+<style>
+    .profiles-grid {
+        max-width: 800px;
+    }
+    
+    .add-profile-tile:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3) !important;
+    }
+</style>
