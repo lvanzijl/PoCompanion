@@ -291,50 +291,83 @@ public class RealTfsClient : ITfsClient
 
             _logger.LogDebug("Found {Count} work item IDs, fetching details", ids.Length);
 
-            // Batch get work items - use $expand=relations to get parent link (requirement #4)
-            // Use fields= parameter for explicit field list (requirement #5)
-            // Note: Batch GET is collection-scoped (work item IDs are unique across collection)
-            var idsQuery = string.Join(',', ids);
-            var fieldsQuery = string.Join(',', RequiredWorkItemFields);
-            var itemsUrl = CollectionUrl(config, $"_apis/wit/workitems?ids={idsQuery}&fields={Uri.EscapeDataString(fieldsQuery)}&$expand=relations");
-            var itemsResponse = await httpClient.GetAsync(itemsUrl, cancellationToken);
-            await HandleHttpErrorsAsync(itemsResponse, cancellationToken);
-
-            using var itemsStream = await itemsResponse.Content.ReadAsStreamAsync(cancellationToken);
-            using var itemsDoc = await JsonDocument.ParseAsync(itemsStream, cancellationToken: cancellationToken);
-
+            // Use Work Items Batch API to avoid 414 Request-URI Too Long errors
+            // Split IDs into batches and use POST _apis/wit/workitemsbatch
+            // Recommended batch size: 200 IDs per batch
+            const int batchSize = 200;
             var results = new List<WorkItemDto>();
+            var totalBatches = (int)Math.Ceiling((double)ids.Length / batchSize);
 
-            foreach (var item in itemsDoc.RootElement.GetProperty("value").EnumerateArray())
+            _logger.LogInformation("Fetching {TotalIds} work items in {BatchCount} batches of {BatchSize}", 
+                ids.Length, totalBatches, batchSize);
+
+            for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++)
             {
-                var id = item.GetProperty("id").GetInt32();
-                var fields = item.GetProperty("fields");
-                var type = fields.TryGetProperty("System.WorkItemType", out var t) ? t.GetString() ?? "" : "";
-                var title = fields.TryGetProperty("System.Title", out var ti) ? ti.GetString() ?? "" : "";
-                var state = fields.TryGetProperty("System.State", out var s) ? s.GetString() ?? "" : "";
-                var area = fields.TryGetProperty("System.AreaPath", out var a) ? a.GetString() ?? "" : "";
-                var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
+                var batchStartTime = DateTimeOffset.UtcNow;
+                var batchIds = ids.Skip(batchIndex * batchSize).Take(batchSize).ToArray();
                 
-                // Extract parent work item ID from relations (requirement #4)
-                // Parent relationship is stored in relations with rel == "System.LinkTypes.Hierarchy-Reverse"
-                int? parentId = ExtractParentIdFromRelations(item);
+                _logger.LogDebug("Processing batch {BatchIndex}/{TotalBatches} with {IdCount} IDs", 
+                    batchIndex + 1, totalBatches, batchIds.Length);
 
-                // Extract effort field with robust parsing (requirement #5)
-                // Handle int, double, and string values safely
-                int? effort = ParseEffortField(fields);
+                // Build request body for Work Items Batch API
+                var batchRequest = new
+                {
+                    ids = batchIds,
+                    fields = RequiredWorkItemFields,
+                    // Use $expand=relations to get parent link (requirement #4)
+                    @expand = "relations"
+                };
 
-                results.Add(new WorkItemDto(
-                    TfsId: id,
-                    Type: type,
-                    Title: title,
-                    ParentTfsId: parentId,
-                    AreaPath: area,
-                    IterationPath: iteration,
-                    State: state,
-                    JsonPayload: item.GetRawText(),
-                    RetrievedAt: DateTimeOffset.UtcNow,
-                    Effort: effort
-                ));
+                // Work Items Batch API is collection-scoped (work item IDs are unique across collection)
+                var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
+                using var batchContent = new StringContent(
+                    JsonSerializer.Serialize(batchRequest), 
+                    System.Text.Encoding.UTF8, 
+                    "application/json");
+
+                var batchResponse = await httpClient.PostAsync(batchUrl, batchContent, cancellationToken);
+                await HandleHttpErrorsAsync(batchResponse, cancellationToken);
+
+                using var batchStream = await batchResponse.Content.ReadAsStreamAsync(cancellationToken);
+                using var batchDoc = await JsonDocument.ParseAsync(batchStream, cancellationToken: cancellationToken);
+
+                // Process work items from batch response
+                foreach (var item in batchDoc.RootElement.GetProperty("value").EnumerateArray())
+                {
+                    var id = item.GetProperty("id").GetInt32();
+                    var fields = item.GetProperty("fields");
+                    var type = fields.TryGetProperty("System.WorkItemType", out var t) ? t.GetString() ?? "" : "";
+                    var title = fields.TryGetProperty("System.Title", out var ti) ? ti.GetString() ?? "" : "";
+                    var state = fields.TryGetProperty("System.State", out var s) ? s.GetString() ?? "" : "";
+                    var area = fields.TryGetProperty("System.AreaPath", out var a) ? a.GetString() ?? "" : "";
+                    var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
+                    
+                    // Extract parent work item ID from relations (requirement #4)
+                    // Parent relationship is stored in relations with rel == "System.LinkTypes.Hierarchy-Reverse"
+                    int? parentId = ExtractParentIdFromRelations(item);
+
+                    // Extract effort field with robust parsing (requirement #5)
+                    // Handle int, double, and string values safely
+                    int? effort = ParseEffortField(fields);
+
+                    results.Add(new WorkItemDto(
+                        TfsId: id,
+                        Type: type,
+                        Title: title,
+                        ParentTfsId: parentId,
+                        AreaPath: area,
+                        IterationPath: iteration,
+                        State: state,
+                        JsonPayload: item.GetRawText(),
+                        RetrievedAt: DateTimeOffset.UtcNow,
+                        Effort: effort
+                    ));
+                }
+
+                var batchElapsed = DateTimeOffset.UtcNow - batchStartTime;
+                _logger.LogInformation(
+                    "Batch {BatchIndex}/{TotalBatches} completed: {IdCount} IDs fetched, HTTP {StatusCode}, {ElapsedMs}ms",
+                    batchIndex + 1, totalBatches, batchIds.Length, (int)batchResponse.StatusCode, batchElapsed.TotalMilliseconds);
             }
 
             // Phase 4: Performance metrics
@@ -1433,9 +1466,20 @@ public class RealTfsClient : ITfsClient
             }
 
             // Step 2: Fetch work items with relations to verify hierarchy resolution
-            var idsQuery = string.Join(',', workItemIds);
-            var itemsUrl = CollectionUrl(config, $"_apis/wit/workitems?ids={idsQuery}&$expand=relations");
-            var itemsResponse = await httpClient.GetAsync(itemsUrl, cancellationToken);
+            // Use Work Items Batch API (POST) instead of GET to avoid potential 414 errors
+            var batchRequest = new
+            {
+                ids = workItemIds,
+                @expand = "relations"
+            };
+
+            var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
+            using var batchContent = new StringContent(
+                JsonSerializer.Serialize(batchRequest), 
+                System.Text.Encoding.UTF8, 
+                "application/json");
+
+            var itemsResponse = await httpClient.PostAsync(batchUrl, batchContent, cancellationToken);
 
             if (!itemsResponse.IsSuccessStatusCode)
             {
@@ -1593,9 +1637,20 @@ public class RealTfsClient : ITfsClient
             // Use auth-mode-specific HttpClient (requirement #2, #8)
             var httpClient = GetAuthenticatedHttpClient(config);
             
-            // Batch work item GET is collection-scoped (requirement #1)
-            var url = CollectionUrl(config, "_apis/wit/workitems?ids=1,2,3");
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            // Test Work Items Batch API (POST) which is the recommended approach
+            // This is collection-scoped (work item IDs are unique across collection)
+            var batchRequest = new
+            {
+                ids = new[] { 1, 2, 3 }
+            };
+
+            var url = CollectionUrl(config, "_apis/wit/workitemsbatch");
+            using var content = new StringContent(
+                JsonSerializer.Serialize(batchRequest), 
+                System.Text.Encoding.UTF8, 
+                "application/json");
+
+            var response = await httpClient.PostAsync(url, content, cancellationToken);
             
             // We expect 200 (with items) or 404 (no items found), both are acceptable
             if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound)
@@ -1606,7 +1661,7 @@ public class RealTfsClient : ITfsClient
                     Success = true,
                     ImpactedFunctionality = "Efficient work item synchronization",
                     ExpectedBehavior = "Batch work item retrieval is supported",
-                    ObservedBehavior = "Batch API endpoint responded successfully"
+                    ObservedBehavior = "Work Items Batch API endpoint responded successfully"
                 };
             }
             
