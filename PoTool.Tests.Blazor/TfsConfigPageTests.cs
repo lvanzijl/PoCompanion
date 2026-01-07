@@ -61,8 +61,6 @@ public class TfsConfigPageTests : BunitTestContext
             It.IsAny<string>(), 
             It.IsAny<string>(), 
             It.IsAny<string>(), 
-            It.IsAny<string>(), 
-            It.IsAny<TfsAuthMode>(), 
             It.IsAny<bool>(), 
             It.IsAny<int>(), 
             It.IsAny<string>(), 
@@ -74,9 +72,7 @@ public class TfsConfigPageTests : BunitTestContext
             "https://dev.azure.com/test", 
             "TestProject",
             "TestProject\\Team",
-            "testpat", 
-            TfsAuthMode.Pat, 
-            false, 
+            true, 
             30, 
             "7.0");
 
@@ -85,8 +81,6 @@ public class TfsConfigPageTests : BunitTestContext
             It.IsAny<string>(), 
             It.IsAny<string>(), 
             It.IsAny<string>(), 
-            It.IsAny<string>(), 
-            It.IsAny<TfsAuthMode>(), 
             It.IsAny<bool>(), 
             It.IsAny<int>(), 
             It.IsAny<string>(), 
@@ -101,7 +95,7 @@ public class TfsConfigPageTests : BunitTestContext
         {
             Url = "https://dev.azure.com/testorg",
             Project = "TestProject",
-            AuthMode = TfsAuthMode.Pat,
+            UseDefaultCredentials = true,
             TimeoutSeconds = 60,
             ApiVersion = "7.0",
             LastValidated = DateTimeOffset.UtcNow
@@ -117,7 +111,7 @@ public class TfsConfigPageTests : BunitTestContext
         Assert.IsNotNull(result, "Should return configured state");
         Assert.AreEqual("https://dev.azure.com/testorg", result.Url);
         Assert.AreEqual("TestProject", result.Project);
-        Assert.AreEqual(TfsAuthMode.Pat, result.AuthMode);
+        Assert.AreEqual(true, result.UseDefaultCredentials);
         Assert.AreEqual(60, result.TimeoutSeconds);
     }
 }
