@@ -51,9 +51,8 @@ public static class ApiServiceCollectionExtensions
             // Note: Enum serialization is configured in AddJsonOptions above
             config.SchemaSettings.GenerateEnumMappingDescription = true;
             
-            // Use controller action method names as operation IDs
-            // This ensures the generated client has methods like GetVelocityTrendAsync
-            config.OperationProcessors.Add(new NSwag.Generation.AspNetCore.OperationMethodNameProcessor());
+            // Operation IDs will be added post-processing by add-operation-ids.ps1 script
+            // to ensure generated client has methods like GetVelocityTrendAsync
         });
 
         // Add Mediator (source-generated)
