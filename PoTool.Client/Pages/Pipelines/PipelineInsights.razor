@@ -83,8 +83,8 @@
                         <PropertyColumn Property="x => x.PipelineName" Title="Pipeline" />
                         <PropertyColumn Property="x => x.Type" Title="Type">
                             <CellTemplate>
-                                <MudChip Color="@GetTypeColor(context.Item.Type)" Size="Size.Small">
-                                    @context.Item.Type
+                                <MudChip Color="@GetTypeColor((PipelineType)context.Item.Type)" Size="Size.Small">
+                                    @((PipelineType)context.Item.Type)
                                 </MudChip>
                             </CellTemplate>
                         </PropertyColumn>
