@@ -19,7 +19,7 @@ public class PipelineService
     /// </summary>
     public async Task<IEnumerable<PipelineDto>> GetAllAsync()
     {
-        return await _pipelinesClient.GetAllAsync() ?? Array.Empty<PipelineDto>();
+        return await _pipelinesClient.GetPipelinesAsync() ?? Array.Empty<PipelineDto>();
     }
 
     /// <summary>
@@ -43,6 +43,6 @@ public class PipelineService
     /// </summary>
     public async Task<PipelineSyncResult> SyncAsync(int runsPerPipeline = 50)
     {
-        return await _pipelinesClient.SyncAsync(runsPerPipeline);
+        return await _pipelinesClient.CreateSyncAsync(runsPerPipeline);
     }
 }

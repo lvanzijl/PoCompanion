@@ -34,7 +34,7 @@ public class BacklogHealthCalculationService
             BlockedItems = iteration.BlockedItems
         };
 
-        var response = await _healthCalculationClient.CalculateHealthScoreAsync(request);
+        var response = await _healthCalculationClient.CreateCalculateScoreAsync(request);
         return response.HealthScore;
     }
 

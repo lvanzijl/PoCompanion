@@ -32,7 +32,7 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter)
     {
-        return await _client.GetFilteredAsync(filter);
+        return await _client.GetFilterAsync(filter);
     }
 
     /// <summary>
@@ -40,7 +40,7 @@ public class WorkItemService
     /// </summary>
     public async Task<WorkItemDto?> GetByTfsIdAsync(int tfsId)
     {
-        return await _client.GetByTfsIdAsync(tfsId);
+        return await _client.GetWorkItemsAsync(tfsId);
     }
 
     /// <summary>
@@ -48,7 +48,7 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetAllGoalsAsync()
     {
-        return await _client.GetAllGoalsAsync();
+        return await _client.GetGoalsAsync(null);
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public class WorkItemService
     public async Task<IEnumerable<WorkItemDto>> GetGoalHierarchyAsync(List<int> goalIds)
     {
         var goalIdsParam = string.Join(",", goalIds);
-        return await _client.GetGoalHierarchyAsync(goalIdsParam);
+        return await _client.GetGoalsAsync(goalIdsParam);
     }
 
     /// <summary>
@@ -65,7 +65,7 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<WorkItemWithValidationDto>> GetAllWithValidationAsync()
     {
-        return await _client.GetAllWithValidationAsync();
+        return await _client.GetValidatedAsync();
     }
 
     /// <summary>
@@ -73,7 +73,7 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<WorkItemRevisionDto>> GetRevisionsAsync(int workItemId)
     {
-        return await _client.GetWorkItemRevisionsAsync(workItemId);
+        return await _client.GetRevisionsAsync(workItemId);
     }
 
     /// <summary>

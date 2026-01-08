@@ -19,7 +19,7 @@ public class PullRequestService
     /// </summary>
     public async Task<IEnumerable<PullRequestDto>> GetAllAsync()
     {
-        return await _pullRequestsClient.GetAllAsync() ?? Array.Empty<PullRequestDto>();
+        return await _pullRequestsClient.GetPullRequestsAllAsync() ?? Array.Empty<PullRequestDto>();
     }
 
     /// <summary>
@@ -29,7 +29,7 @@ public class PullRequestService
     {
         try
         {
-            return await _pullRequestsClient.GetByIdAsync(id);
+            return await _pullRequestsClient.GetPullRequestsAsync(id);
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
@@ -55,7 +55,7 @@ public class PullRequestService
         DateTimeOffset? toDate = null,
         string? status = null)
     {
-        return await _pullRequestsClient.GetFilteredAsync(iterationPath, createdBy, fromDate, toDate, status) 
+        return await _pullRequestsClient.GetFilterAsync(iterationPath, createdBy, fromDate, toDate, status) 
             ?? Array.Empty<PullRequestDto>();
     }
 
@@ -64,6 +64,6 @@ public class PullRequestService
     /// </summary>
     public async Task<int> SyncAsync()
     {
-        return await _pullRequestsClient.SyncAsync();
+        return await _pullRequestsClient.CreateSyncAsync();
     }
 }

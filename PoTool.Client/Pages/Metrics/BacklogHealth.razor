@@ -97,7 +97,7 @@
         try
         {
             ClearError();
-            _healthData = await MetricsClient.GetMultiIterationBacklogHealthAsync(
+            _healthData = await MetricsClient.GetMultiIterationHealthAsync(
                 _areaPathFilter, 
                 _maxIterations);
         }
