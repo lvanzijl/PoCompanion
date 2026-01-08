@@ -22,7 +22,7 @@ public class WorkItemExplorerTests : BunitTestContext
     private Mock<IWorkItemSyncHubService> _mockSyncHubService = null!;
     private Mock<ITreeBuilderService> _mockTreeBuilderService = null!;
     private Mock<ISettingsClient> _mockSettingsClient = null!;
-    private Mock<IClient> _mockApiClient = null!;
+    private Mock<ITfsConfigClient> _mockTfsConfigClient = null!;
     private Mock<ISecureStorageService> _mockSecureStorage = null!;
     private Mock<Core.Contracts.IClipboardService> _mockClipboardService = null!;
     private Mock<IDialogService> _mockDialogService = null!;
@@ -43,7 +43,7 @@ public class WorkItemExplorerTests : BunitTestContext
         _mockSyncHubService = new Mock<IWorkItemSyncHubService>();
         _mockTreeBuilderService = new Mock<ITreeBuilderService>();
         _mockSettingsClient = new Mock<ISettingsClient>();
-        _mockApiClient = new Mock<IClient>();
+        _mockTfsConfigClient = new Mock<ITfsConfigClient>();
         _mockSecureStorage = new Mock<ISecureStorageService>();
         _mockClipboardService = new Mock<Core.Contracts.IClipboardService>();
         _mockDialogService = new Mock<IDialogService>();
@@ -58,7 +58,7 @@ public class WorkItemExplorerTests : BunitTestContext
         _mockSettingsClient.Setup(x => x.GetSettingsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SettingsDto { Id = 1, ActiveProfileId = null, LastModified = DateTimeOffset.UtcNow });
 
-        _mockApiClient.Setup(x => x.GetTfsConfigAsync(It.IsAny<CancellationToken>()))
+        _mockTfsConfigClient.Setup(x => x.GetTfsConfigAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new ApiException("Not found", 204, null!, new Dictionary<string, IEnumerable<string>>(), null));
 
         _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync())
@@ -79,7 +79,7 @@ public class WorkItemExplorerTests : BunitTestContext
         Services.AddSingleton(_mockSettingsClient.Object);
         Services.AddSingleton(_mockSyncHubService.Object);
         Services.AddSingleton(_mockTreeBuilderService.Object);
-        Services.AddSingleton(_mockApiClient.Object);
+        Services.AddSingleton(_mockTfsConfigClient.Object);
         Services.AddSingleton(_mockSecureStorage.Object);
         Services.AddSingleton(_mockClipboardService.Object);
         Services.AddSingleton(_mockDialogService.Object);
