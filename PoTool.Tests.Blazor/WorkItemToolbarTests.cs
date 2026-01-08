@@ -36,7 +36,7 @@ public class WorkItemToolbarTests : BunitTestContext
         Services.AddSingleton(mockClipboardService.Object);
         
         // Mock TfsConfigService dependencies
-        var mockApiClient = new Mock<IClient>();
+        var mockApiClient = new Mock<ITfsConfigClient>();
         var mockSecureStorage = new Mock<ISecureStorageService>();
         Services.AddSingleton(mockApiClient.Object);
         Services.AddSingleton(mockSecureStorage.Object);

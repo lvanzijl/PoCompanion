@@ -6,6 +6,7 @@ using MudBlazor.Services;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Pages.Metrics;
 using PoTool.Client.Services;
+using PoTool.Shared.Metrics;
 
 namespace PoTool.Tests.Blazor;
 
@@ -439,7 +440,7 @@ public class EffortDistributionTests : BunitTestContext
                     IterationPath = "Project\\2025\\Sprint 1",
                     Effort = 40,
                     WorkItemCount = 10,
-                    Status = CapacityStatus.Normal
+                    Status = (int)CapacityStatus.Normal
                 },
                 new EffortHeatMapCell
                 {
@@ -447,7 +448,7 @@ public class EffortDistributionTests : BunitTestContext
                     IterationPath = "Project\\2025\\Sprint 2",
                     Effort = 40,
                     WorkItemCount = 10,
-                    Status = CapacityStatus.Normal
+                    Status = (int)CapacityStatus.Normal
                 },
                 new EffortHeatMapCell
                 {
@@ -455,7 +456,7 @@ public class EffortDistributionTests : BunitTestContext
                     IterationPath = "Project\\2025\\Sprint 1",
                     Effort = 35,
                     WorkItemCount = 9,
-                    Status = CapacityStatus.Normal
+                    Status = (int)CapacityStatus.Normal
                 },
                 new EffortHeatMapCell
                 {
@@ -463,7 +464,7 @@ public class EffortDistributionTests : BunitTestContext
                     IterationPath = "Project\\2025\\Sprint 2",
                     Effort = 35,
                     WorkItemCount = 9,
-                    Status = CapacityStatus.Normal
+                    Status = (int)CapacityStatus.Normal
                 }
             }
         };

@@ -6,6 +6,7 @@ using MudBlazor.Services;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Pages.Metrics;
 using PoTool.Client.Services;
+using PoTool.Shared.Metrics;
 
 namespace PoTool.Tests.Blazor;
 
@@ -60,13 +61,13 @@ public class BacklogHealthTests : BunitTestContext
             Trend = new BacklogHealthTrend
             {
                 Summary = "No data available",
-                EffortTrend = TrendDirection.Stable,
-                ValidationTrend = TrendDirection.Stable,
-                BlockerTrend = TrendDirection.Stable
+                EffortTrend = (int)TrendDirection.Stable,
+                ValidationTrend = (int)TrendDirection.Stable,
+                BlockerTrend = (int)TrendDirection.Stable
             }
         };
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(emptyData);
 
         // Act
@@ -90,7 +91,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -115,7 +116,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -139,7 +140,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -162,7 +163,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -184,7 +185,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -206,7 +207,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -228,7 +229,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -252,7 +253,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -274,7 +275,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -284,7 +285,7 @@ public class BacklogHealthTests : BunitTestContext
         cut.WaitForAssertion(() =>
         {
             _mockMetricsClient.Verify(
-                x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<string>(), It.IsAny<int?>()),
+                x => x.GetMultiIterationHealthAsync(It.IsAny<string>(), It.IsAny<int?>()),
                 Times.Once);
         }, timeout: TimeSpan.FromSeconds(5));
     }
@@ -295,7 +296,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationHealthAsync(It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -354,9 +355,9 @@ public class BacklogHealthTests : BunitTestContext
             Trend = new BacklogHealthTrend
             {
                 Summary = "Health improving",
-                EffortTrend = TrendDirection.Improving,
-                ValidationTrend = TrendDirection.Improving,
-                BlockerTrend = TrendDirection.Stable
+                EffortTrend = (int)TrendDirection.Improving,
+                ValidationTrend = (int)TrendDirection.Improving,
+                BlockerTrend = (int)TrendDirection.Stable
             }
         };
     }

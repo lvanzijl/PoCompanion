@@ -38,7 +38,7 @@ public class WorkItemDetailPanelTests : BunitTestContext
             State = "Active",
             JsonPayload = "{}",
             RetrievedAt = DateTimeOffset.Now,
-            Effort = null
+            Effort = 0
         };
 
         // Act
@@ -67,7 +67,7 @@ public class WorkItemDetailPanelTests : BunitTestContext
             State = "New",
             JsonPayload = "{}",
             RetrievedAt = DateTimeOffset.Now,
-            Effort = null
+            Effort = 0
         };
 
         // Act
@@ -88,13 +88,13 @@ public class WorkItemDetailPanelTests : BunitTestContext
             TfsId = 1,
             Type = "Epic",
             Title = "Top level epic",
-            ParentTfsId = null,
+            ParentTfsId = 0,
             AreaPath = "Project",
             IterationPath = "Release 1",
             State = "Active",
             JsonPayload = "{}",
             RetrievedAt = DateTimeOffset.Now,
-            Effort = null
+            Effort = 0
         };
 
         // Act

@@ -56,14 +56,14 @@ public class WorkItemExplorerTests : BunitTestContext
         _mockSyncHubService.Setup(x => x.IsConnected).Returns(true);
 
         _mockSettingsClient.Setup(x => x.GetSettingsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SettingsDto { Id = 1, ActiveProfileId = null, LastModified = DateTimeOffset.UtcNow });
+            .ReturnsAsync(new SettingsDto { Id = 1, ActiveProfileId = 0, LastModified = DateTimeOffset.UtcNow });
 
         _mockTfsConfigClient.Setup(x => x.GetTfsConfigAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new ApiException("Not found", 204, null!, new Dictionary<string, IEnumerable<string>>(), null));
 
-        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync())
+        _mockWorkItemsClient.Setup(x => x.GetValidatedAsync())
             .ReturnsAsync(new List<WorkItemWithValidationDto>());
-        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()))
+        _mockWorkItemsClient.Setup(x => x.GetValidatedAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemWithValidationDto>());
 
         _mockTreeBuilderService.Setup(x => x.BuildTreeWithValidation(
@@ -112,7 +112,7 @@ public class WorkItemExplorerTests : BunitTestContext
     public void WorkItemExplorer_RendersCorrectly_WithEmptyData()
     {
         // Arrange
-        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()))
+        _mockWorkItemsClient.Setup(x => x.GetValidatedAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemWithValidationDto>());
 
         // Act
@@ -141,7 +141,7 @@ public class WorkItemExplorerTests : BunitTestContext
             CreateWorkItemWithValidation(2, "User Story", "Test Story", 1, "Active")
         };
 
-        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync())
+        _mockWorkItemsClient.Setup(x => x.GetValidatedAsync())
             .ReturnsAsync(workItems);
 
         var treeNodes = new List<TreeNode>
@@ -174,7 +174,7 @@ public class WorkItemExplorerTests : BunitTestContext
 
         // Assert
         Assert.Contains("Work Item Explorer", cut.Markup);
-        _mockWorkItemsClient.Verify(x => x.GetAllWithValidationAsync(), Times.AtLeastOnce);
+        _mockWorkItemsClient.Verify(x => x.GetValidatedAsync(), Times.AtLeastOnce);
     }
 
     [TestMethod]
@@ -182,7 +182,7 @@ public class WorkItemExplorerTests : BunitTestContext
     {
         // Arrange
         var tcs = new TaskCompletionSource<ICollection<WorkItemWithValidationDto>>();
-        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync(It.IsAny<CancellationToken>()))
+        _mockWorkItemsClient.Setup(x => x.GetValidatedAsync(It.IsAny<CancellationToken>()))
             .Returns(tcs.Task);
 
         // Act
@@ -263,7 +263,7 @@ public class WorkItemExplorerTests : BunitTestContext
         // Wait for initialization
         cut.WaitForAssertion(() =>
         {
-            _mockWorkItemsClient.Verify(x => x.GetAllWithValidationAsync(), Times.AtLeastOnce);
+            _mockWorkItemsClient.Verify(x => x.GetValidatedAsync(), Times.AtLeastOnce);
         }, timeout: TimeSpan.FromSeconds(5));
     }
 
@@ -276,7 +276,7 @@ public class WorkItemExplorerTests : BunitTestContext
             CreateWorkItemWithValidation(1, "Epic", "Test Epic", null, "New")
         };
 
-        _mockWorkItemsClient.Setup(x => x.GetAllWithValidationAsync())
+        _mockWorkItemsClient.Setup(x => x.GetValidatedAsync())
             .ReturnsAsync(workItems);
 
         // Act
@@ -306,13 +306,13 @@ public class WorkItemExplorerTests : BunitTestContext
             TfsId = id,
             Type = type,
             Title = title,
-            ParentTfsId = parentId,
+            ParentTfsId = parentId ?? 0,
             AreaPath = "Project\\Team",
             IterationPath = "Sprint 1",
             State = state,
             JsonPayload = "{}",
             RetrievedAt = DateTimeOffset.Now,
-            Effort = null,
+            Effort = 0,
             ValidationIssues = new List<ValidationIssue>()
         };
     }
