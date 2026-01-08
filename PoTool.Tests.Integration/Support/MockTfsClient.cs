@@ -173,6 +173,17 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult(true);
     }
 
+    public Task<IEnumerable<string>> GetAreaPathsAsync(CancellationToken cancellationToken = default)
+    {
+        var areaPaths = _mockWorkItems
+            .Select(wi => wi.AreaPath)
+            .Distinct()
+            .OrderBy(ap => ap)
+            .ToList();
+        
+        return Task.FromResult<IEnumerable<string>>(areaPaths);
+    }
+
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, CancellationToken cancellationToken = default)
     {
         return GetWorkItemsAsync(areaPath, since: null, cancellationToken);
