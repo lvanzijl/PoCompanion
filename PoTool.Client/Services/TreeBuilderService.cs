@@ -60,7 +60,7 @@ public class TreeBuilderService : ITreeBuilderService
                     parentNode = new TreeNode
                     {
                         Id = parentId.Value,
-                        Title = $"(missing) Parent #{parentId}",
+                        Title = $"(missing) Parent #{parentId.Value}",
                         Type = "(missing)",
                         State = "",
                         ParentId = null
@@ -229,7 +229,7 @@ public class TreeBuilderService : ITreeBuilderService
                     parentNode = new TreeNode
                     {
                         Id = parentId.Value,
-                        Title = $"(missing) Parent #{parentId}",
+                        Title = $"(missing) Parent #{parentId.Value}",
                         Type = "(missing)",
                         State = "",
                         ParentId = null
