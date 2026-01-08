@@ -25,13 +25,10 @@ You MUST load, understand, and apply all of them before generating any output:
 4. Copilot architecture contract  
    `docs/COPILOT_ARCHITECTURE_CONTRACT.md`
 
-5. PAT storage and credential handling  
-   `docs/PAT_STORAGE_BEST_PRACTICES.md`
-
-6. Fluent UI Compact Rules
+5. Fluent UI Compact Rules
    `docs/Fluent_UI_compat_rules.md`
 
-7. Mock data generation rules
+6. Mock data generation rules
    `docs/mock-data-rules.md`
 
 If any rule conflicts, is ambiguous, or cannot be satisfied, you MUST stop and ask for clarification.
@@ -73,6 +70,7 @@ Assume senior-level review by default.
 ## 4. Decision discipline
 
 - You MUST NOT invent requirements, architecture, or behavior.
+- You MUST NOT edit generated files.
 - You MUST NOT make implicit decisions.
 - If multiple valid options exist:
   - list the options
