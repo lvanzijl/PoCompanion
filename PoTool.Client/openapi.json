@@ -19,7 +19,8 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "operationId": "GetH"
       }
     },
     "/api/tfsconfig": {
@@ -62,7 +63,8 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "operationId": "CreateT"
       }
     },
     "/api/tfsvalidate": {
@@ -74,7 +76,8 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "operationId": "GetT"
       }
     },
     "/api/tfsverify": {
@@ -103,7 +106,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateT"
       }
     },
     "/api/workitems/sync": {
@@ -115,7 +119,8 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "operationId": "CreateSync"
       }
     },
     "/api/Filtering/by-validation-with-ancestors": {
@@ -164,7 +169,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateByValidationWithAncestors"
       }
     },
     "/api/Filtering/ids-by-validation-filter": {
@@ -213,7 +219,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateIdsByValidationFilter"
       }
     },
     "/api/Filtering/count-by-validation-filter": {
@@ -262,7 +269,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateCountByValidationFilter"
       }
     },
     "/api/Filtering/is-descendant-of-goals": {
@@ -311,7 +319,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateIsDescendantOfGoals"
       }
     },
     "/api/Filtering/filter-by-goals": {
@@ -360,7 +369,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateFilterByGoals"
       }
     },
     "/api/HealthCalculation/calculate-score": {
@@ -409,7 +419,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateCalculateScore"
       }
     },
     "/api/Metrics/sprint": {
@@ -448,7 +459,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetSprint"
       }
     },
     "/api/Metrics/velocity": {
@@ -496,7 +508,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetVelocity"
       }
     },
     "/api/Metrics/backlog-health": {
@@ -535,7 +548,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetBacklogHealth"
       }
     },
     "/api/Metrics/multi-iteration-health": {
@@ -583,7 +597,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetMultiIterationHealth"
       }
     },
     "/api/Metrics/effort-distribution": {
@@ -640,7 +655,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetEffortDistribution"
       }
     },
     "/api/Metrics/capacity-plan": {
@@ -688,7 +704,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetCapacityPlan"
       }
     },
     "/api/Metrics/epic-forecast/{epicId}": {
@@ -739,7 +756,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetEpicForecast"
       }
     },
     "/api/Metrics/effort-imbalance": {
@@ -809,7 +827,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetEffortImbalance"
       }
     },
     "/api/Metrics/effort-distribution-trend": {
@@ -866,7 +885,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetEffortDistributionTrend"
       }
     },
     "/api/Metrics/effort-concentration-risk": {
@@ -927,7 +947,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetEffortConcentrationRisk"
       }
     },
     "/api/Metrics/effort-estimation-suggestions": {
@@ -989,7 +1010,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetEffortEstimationSuggestions"
       }
     },
     "/api/Metrics/effort-estimation-quality": {
@@ -1037,7 +1059,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetEffortEstimationQuality"
       }
     },
     "/api/Pipelines": {
@@ -1075,7 +1098,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetP"
       }
     },
     "/api/Pipelines/{id}/runs": {
@@ -1135,7 +1159,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetRuns"
       }
     },
     "/api/Pipelines/metrics": {
@@ -1173,7 +1198,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetMetrics"
       }
     },
     "/api/Pipelines/sync": {
@@ -1214,7 +1240,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateSync"
       }
     },
     "/api/Profiles": {
@@ -1252,7 +1279,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetP"
       },
       "post": {
         "tags": [
@@ -1319,7 +1347,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateP"
       }
     },
     "/api/Profiles/{id}": {
@@ -1380,7 +1409,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetP"
       },
       "put": {
         "tags": [
@@ -1459,7 +1489,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "UpdateP"
       },
       "delete": {
         "tags": [
@@ -1501,7 +1532,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "DeleteP"
       }
     },
     "/api/Profiles/active": {
@@ -1550,7 +1582,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetActive"
       },
       "post": {
         "tags": [
@@ -1597,7 +1630,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateActive"
       }
     },
     "/api/PullRequests": {
@@ -1635,7 +1669,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetP"
       }
     },
     "/api/PullRequests/{id}": {
@@ -1676,7 +1711,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetP"
       }
     },
     "/api/PullRequests/metrics": {
@@ -1714,7 +1750,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetMetrics"
       }
     },
     "/api/PullRequests/filter": {
@@ -1791,7 +1828,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetFilter"
       }
     },
     "/api/PullRequests/{id}/iterations": {
@@ -1841,7 +1879,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetIterations"
       }
     },
     "/api/PullRequests/{id}/comments": {
@@ -1891,7 +1930,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetComments"
       }
     },
     "/api/PullRequests/{id}/filechanges": {
@@ -1941,7 +1981,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetFilechanges"
       }
     },
     "/api/PullRequests/sync": {
@@ -1976,7 +2017,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateSync"
       }
     },
     "/api/PullRequests/review-bottleneck": {
@@ -2027,7 +2069,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetReviewBottleneck"
       }
     },
     "/api/ReleasePlanning/board": {
@@ -2056,7 +2099,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetBoard"
       }
     },
     "/api/ReleasePlanning/unplanned-epics": {
@@ -2094,7 +2138,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetUnplannedEpics"
       }
     },
     "/api/ReleasePlanning/objectives/{objectiveId}/epics": {
@@ -2144,7 +2189,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetEpics"
       }
     },
     "/api/ReleasePlanning/lanes": {
@@ -2193,7 +2239,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateLanes"
       }
     },
     "/api/ReleasePlanning/lanes/{laneId}": {
@@ -2234,7 +2281,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "DeleteLanes"
       }
     },
     "/api/ReleasePlanning/placements": {
@@ -2283,7 +2331,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreatePlacements"
       }
     },
     "/api/ReleasePlanning/placements/{placementId}": {
@@ -2344,7 +2393,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "UpdatePlacements"
       }
     },
     "/api/ReleasePlanning/placements/{placementId}/move": {
@@ -2405,7 +2455,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateMove"
       }
     },
     "/api/ReleasePlanning/rows/reorder": {
@@ -2454,7 +2505,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateReorder"
       }
     },
     "/api/ReleasePlanning/milestone-lines": {
@@ -2503,7 +2555,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateMilestoneLines"
       }
     },
     "/api/ReleasePlanning/milestone-lines/{lineId}": {
@@ -2564,7 +2617,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "UpdateMilestoneLines"
       },
       "delete": {
         "tags": [
@@ -2603,7 +2657,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "DeleteMilestoneLines"
       }
     },
     "/api/ReleasePlanning/iteration-lines": {
@@ -2652,7 +2707,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateIterationLines"
       }
     },
     "/api/ReleasePlanning/iteration-lines/{lineId}": {
@@ -2713,7 +2769,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "UpdateIterationLines"
       },
       "delete": {
         "tags": [
@@ -2752,7 +2809,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "DeleteIterationLines"
       }
     },
     "/api/ReleasePlanning/validation/refresh": {
@@ -2781,7 +2839,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateRefresh"
       }
     },
     "/api/ReleasePlanning/epics/{epicId}/features": {
@@ -2831,7 +2890,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetFeatures"
       }
     },
     "/api/ReleasePlanning/epics/{epicId}/split": {
@@ -2892,7 +2952,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateSplit"
       }
     },
     "/api/ReleasePlanning/export": {
@@ -2941,7 +3002,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateExport"
       }
     },
     "/api/Settings": {
@@ -2990,7 +3052,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetS"
       }
     },
     "/api/Settings/effort-estimation": {
@@ -3019,7 +3082,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetEffortEstimation"
       },
       "put": {
         "tags": [
@@ -3049,7 +3113,8 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "operationId": "UpdateEffortEstimation"
       }
     },
     "/api/Startup/readiness": {
@@ -3078,7 +3143,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetReadiness"
       }
     },
     "/api/WorkItems": {
@@ -3116,7 +3182,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetW"
       }
     },
     "/api/WorkItems/area-paths": {
@@ -3154,7 +3221,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetAreaPaths"
       }
     },
     "/api/WorkItems/validated": {
@@ -3192,7 +3260,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetValidated"
       }
     },
     "/api/WorkItems/filter/{filter}": {
@@ -3240,7 +3309,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetFilter"
       }
     },
     "/api/WorkItems/{tfsId}": {
@@ -3281,7 +3351,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetW"
       }
     },
     "/api/WorkItems/{workItemId}/revisions": {
@@ -3331,7 +3402,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetRevisions"
       }
     },
     "/api/WorkItems/goals/all": {
@@ -3369,7 +3441,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetAll"
       }
     },
     "/api/WorkItems/goals": {
@@ -3416,7 +3489,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetGoals"
       }
     },
     "/api/WorkItems/{id}/state-timeline": {
@@ -3457,7 +3531,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetStateTimeline"
       }
     },
     "/api/WorkItems/advanced-filter": {
@@ -3564,7 +3639,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetAdvancedFilter"
       }
     },
     "/api/WorkItems/dependency-graph": {
@@ -3616,7 +3692,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetDependencyGraph"
       }
     },
     "/api/WorkItems/validation-history": {
@@ -3686,7 +3763,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetValidationHistory"
       }
     },
     "/api/WorkItems/validation-impact-analysis": {
@@ -3731,7 +3809,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "GetValidationImpactAnalysis"
       }
     },
     "/api/WorkItems/fix-validation-violations": {
@@ -3780,7 +3859,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateFixValidationViolations"
       }
     },
     "/api/WorkItems/bulk-assign-effort": {
@@ -3829,7 +3909,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "CreateBulkAssignEffort"
       }
     }
   },
