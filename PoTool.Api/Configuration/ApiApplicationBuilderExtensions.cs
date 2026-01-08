@@ -139,8 +139,7 @@ public static class ApiApplicationBuilderExtensions
             app.UseHttpsRedirection();
         }
 
-        // Serve Blazor WebAssembly static files
-        app.UseBlazorFrameworkFiles();
+        // Serve static files from wwwroot (OpenAPI spec, API documentation, etc.)
         app.UseStaticFiles();
 
         // Add routing so middleware such as CORS apply to endpoints including SignalR
@@ -257,9 +256,6 @@ public static class ApiApplicationBuilderExtensions
             await mediator.Send(new PoTool.Core.WorkItems.Commands.SyncWorkItemsCommand(config.DefaultAreaPath), ct);
             return Results.Ok();
         });
-
-        // Fallback to index.html for client-side routing
-        app.MapFallbackToFile("index.html");
 
         return app;
     }
