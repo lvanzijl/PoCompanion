@@ -17,17 +17,18 @@ public class TfsConfigurationServiceSqliteTests
     private PoToolDbContext _context = null!;
     private TfsConfigurationService _service = null!;
     private Mock<ILogger<TfsConfigurationService>> _loggerMock = null!;
-    private string _dbPath = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        // Create SQLite database (this will test the actual SQLite provider behavior)
-        _dbPath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.db");
+        // Create SQLite in-memory database (faster than disk-based for testing)
+        // This still uses actual SQLite provider to test DateTimeOffset ordering behavior
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
-            .UseSqlite($"Data Source={_dbPath}")
+            .UseSqlite("Data Source=:memory:")
             .Options;
         _context = new PoToolDbContext(options);
+        // Need to open connection for in-memory database to persist
+        _context.Database.OpenConnection();
         _context.Database.EnsureCreated();
         
         _loggerMock = new Mock<ILogger<TfsConfigurationService>>();
@@ -39,13 +40,8 @@ public class TfsConfigurationServiceSqliteTests
     [TestCleanup]
     public void Cleanup()
     {
-        _context.Database.EnsureDeleted();
+        _context.Database.CloseConnection();
         _context.Dispose();
-        
-        if (File.Exists(_dbPath))
-        {
-            File.Delete(_dbPath);
-        }
     }
 
     [TestMethod]
