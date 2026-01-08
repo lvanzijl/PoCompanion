@@ -23,10 +23,10 @@
     <ProjectReference Include="..\PoTool.Shared\PoTool.Shared.csproj" />
   </ItemGroup>
 
-  <!-- NSwag client generation -->
+  <!-- NSwag client generation - uses openapi.json configured in nswag.json -->
   <Target Name="NSwag" BeforeTargets="CoreCompile" Condition="'$(Configuration)' == 'Debug' OR '$(GenerateApiClient)' == 'true'">
     <Message Text="Starting NSwag client generation with Net100 runtime..." Importance="high" />
-    <Exec Command="$(NSwagExe_Net100) run nswag.json /variables:InputSwaggerFile=swagger.json" ConsoleToMSBuild="true" ContinueOnError="true">
+    <Exec Command="$(NSwagExe_Net100) run nswag.json" ConsoleToMSBuild="true" ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="NSwagExitCode" />
     </Exec>
     <Message Text="NSwag generation completed with exit code: $(NSwagExitCode)" Importance="high" />
