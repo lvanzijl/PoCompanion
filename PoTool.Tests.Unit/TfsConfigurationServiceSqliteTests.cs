@@ -54,9 +54,9 @@ public class TfsConfigurationServiceSqliteTests
         // Arrange - Create multiple configs with different timestamps
         // Note: PAT parameter removed from SaveConfigAsync
         await _service.SaveConfigAsync("url1", "project1", "TestProject\\Team");
-        await Task.Delay(100); // Ensure different timestamps
+        await Task.Delay(10); // Ensure different timestamps
         await _service.SaveConfigAsync("url2", "project2", "TestProject\\Team");
-        await Task.Delay(100);
+        await Task.Delay(10);
         await _service.SaveConfigAsync("url3", "project3", "TestProject\\Team");
 
         // Act - This would fail with the old code (OrderBy DateTimeOffset in SQL)
@@ -73,7 +73,7 @@ public class TfsConfigurationServiceSqliteTests
     {
         // Arrange - Create multiple configs
         await _service.SaveConfigAsync("url1", "project1", "TestProject\\Team");
-        await Task.Delay(100);
+        await Task.Delay(10);
         await _service.SaveConfigAsync("url2", "project2", "TestProject\\Team");
 
         // Act - This would fail with the old code
