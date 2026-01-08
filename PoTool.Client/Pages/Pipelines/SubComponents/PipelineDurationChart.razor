@@ -32,7 +32,7 @@
             new ChartSeries
             {
                 Name = "Duration (min)",
-                Data = metricsWithDuration.Select(m => m.AverageDuration!.Value.TotalMinutes).ToArray()
+                Data = metricsWithDuration.Select(m => TimeSpan.Parse(m.AverageDuration!).TotalMinutes).ToArray()
             }
         };
     }

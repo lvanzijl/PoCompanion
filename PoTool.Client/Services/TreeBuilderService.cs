@@ -112,9 +112,9 @@ public class TreeBuilderService : ITreeBuilderService
             }
 
             var current = match;
-            while (current.ParentTfsId.HasValue)
+            while (current.ParentTfsId > 0)
             {
-                var parentId = current.ParentTfsId.Value;
+                var parentId = current.ParentTfsId;
                 if (itemLookup.TryGetValue(parentId, out var parent))
                 {
                     if (!toInclude.ContainsKey(parent.TfsId))
