@@ -6,7 +6,7 @@
 @using PoTool.Client.Validators
 @using PoTool.Client.Helpers
 @using PoTool.Client.Models
-@using PoTool.Core.Settings
+@using CoreSettings = PoTool.Core.Settings
 @inject ProfileService ProfileService
 @inject WorkItemService WorkItemService
 @inject ISnackbar Snackbar
@@ -164,7 +164,7 @@
     private List<WorkItemDto> _selectedGoalsList = new();
 
     // Profile picture state
-    private ProfilePictureType _pictureType = ProfilePictureType.Default;
+    private CoreSettings.ProfilePictureType _pictureType = CoreSettings.ProfilePictureType.Default;
     private int _defaultPictureId = 0;
     private string? _customPicturePath = null;
 
@@ -237,7 +237,7 @@
             .ToList();
         
         // Load profile picture settings
-        _pictureType = profile.PictureType;
+        _pictureType = (CoreSettings.ProfilePictureType)profile.PictureType;
         _defaultPictureId = profile.DefaultPictureId;
         _customPicturePath = profile.CustomPicturePath;
     }
@@ -357,7 +357,7 @@
         _teamName = string.Empty;
         _selectedAreaPathsList = new List<string>();
         _selectedGoalsList = new List<WorkItemDto>();
-        _pictureType = ProfilePictureType.Default;
+        _pictureType = CoreSettings.ProfilePictureType.Default;
         _defaultPictureId = 0;
         _customPicturePath = null;
         _form?.ResetValidation();

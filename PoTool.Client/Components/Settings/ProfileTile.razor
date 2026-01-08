@@ -1,7 +1,7 @@
 @using PoTool.Client.Services
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
-@using PoTool.Core.Settings
+@using CoreSettings = PoTool.Core.Settings
 
 <MudCard Class="@GetCardClass()" 
          Elevation="@(IsActive ? 6 : 2)"
@@ -63,7 +63,8 @@
         }
         
         // Use custom picture if set
-        if (Profile.PictureType == ProfilePictureType.Custom && !string.IsNullOrEmpty(Profile.CustomPicturePath))
+        if ((CoreSettings.ProfilePictureType)Profile.PictureType == CoreSettings.ProfilePictureType.Custom 
+            && !string.IsNullOrEmpty(Profile.CustomPicturePath))
         {
             return Profile.CustomPicturePath;
         }
