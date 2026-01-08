@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PoTool.Api\PoTool.Api.csproj" />
+    <ProjectReference Include="..\PoTool.Client\PoTool.Client.csproj" />
     <ProjectReference Include="..\PoTool.Core\PoTool.Core.csproj" />
   </ItemGroup>
 

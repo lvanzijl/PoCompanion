@@ -40,30 +40,46 @@ This solution follows a three-layer architecture as defined in `docs/ARCHITECTUR
 - Visual Studio 2022 (version 17.8 or later) or VS Code
 - ASP.NET and web development workload (for Visual Studio)
 
-Quick start:
-1. Open `PoTool.sln` in Visual Studio 2022
-2. Set **PoTool.Api** as the startup project
-3. Press **F5** to run
-4. Open browser to `http://localhost:5291`
+### Running the Application
 
-### Running from Command Line
+The API and Client now run as separate processes for better separation of concerns.
 
-#### Build
-```bash
-dotnet build
-```
+#### Option 1: Two Terminal Development (Recommended)
 
-#### Run Application
+**Terminal 1 - Start the API:**
 ```bash
 cd PoTool.Api
 dotnet run
 ```
 
-The API will be available at `http://localhost:5291` with:
-- **Main Application**: `http://localhost:5291`
+**Terminal 2 - Start the Client:**
+```bash
+cd PoTool.Client
+dotnet run
+```
+
+Then open your browser to `http://localhost:5292` (Client) which communicates with the API at `http://localhost:5291`.
+
+#### Option 2: Visual Studio Multi-Project Startup
+
+1. Open `PoTool.sln` in Visual Studio 2022
+2. Right-click the Solution → **Configure Startup Projects**
+3. Select **Multiple startup projects**
+4. Set both **PoTool.Api** and **PoTool.Client** to "Start"
+5. Press **F5** to run
+
+### API Endpoints
+
+The API is available at `http://localhost:5291` with:
 - **OpenAPI documentation**: `http://localhost:5291/swagger` (development only)
 - **Health endpoint**: `http://localhost:5291/health`
 - **SignalR hub**: `http://localhost:5291/hubs/workitems`
+
+### Building from Command Line
+
+```bash
+dotnet build
+```
 
 ## Database
 
