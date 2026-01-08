@@ -1,20 +1,8 @@
-namespace PoTool.Core.Settings;
+using PoTool.Shared.Settings;
 
-/// <summary>
-/// Enumeration for profile picture types.
-/// </summary>
-public enum ProfilePictureType
-{
-    /// <summary>
-    /// Uses a default maritime-themed picture (0-63).
-    /// </summary>
-    Default = 0,
-    
-    /// <summary>
-    /// Uses a custom user-provided picture.
-    /// </summary>
-    Custom = 1
-}
+using PoTool.Shared.Settings;
+
+namespace PoTool.Core.Settings;
 
 /// <summary>
 /// Immutable DTO for user profile.

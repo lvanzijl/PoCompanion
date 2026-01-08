@@ -1,3 +1,5 @@
+using PoTool.Shared.Metrics;
+
 namespace PoTool.Core.Metrics;
 
 /// <summary>
@@ -32,13 +34,3 @@ public sealed record SprintForecast(
     int RemainingEffortAfterSprint,
     double ProgressPercentage
 );
-
-/// <summary>
-/// Confidence level for forecast prediction.
-/// </summary>
-public enum ForecastConfidence
-{
-    Low,      // Less than 3 sprints of historical data
-    Medium,   // 3-5 sprints of historical data
-    High      // 5+ sprints of historical data with stable velocity
-}

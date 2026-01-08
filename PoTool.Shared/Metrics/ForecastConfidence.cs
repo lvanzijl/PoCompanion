@@ -1,8 +1,7 @@
-namespace PoTool.Client.Models;
+namespace PoTool.Shared.Metrics;
 
 /// <summary>
 /// Confidence level for forecast predictions.
-/// Client-side copy that matches PoTool.Core.Metrics.ForecastConfidence.
 /// </summary>
 public enum ForecastConfidence
 {

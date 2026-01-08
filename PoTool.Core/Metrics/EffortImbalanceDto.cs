@@ -1,3 +1,5 @@
+using PoTool.Shared.Metrics;
+
 namespace PoTool.Core.Metrics;
 
 /// <summary>
@@ -39,17 +41,6 @@ public sealed record SprintImbalance(
 );
 
 /// <summary>
-/// Risk level for imbalance detection.
-/// </summary>
-public enum ImbalanceRiskLevel
-{
-    Low,      // Deviation < 30%
-    Medium,   // Deviation 30-50%
-    High,     // Deviation 50-80%
-    Critical  // Deviation > 80%
-}
-
-/// <summary>
 /// Represents a recommendation for rebalancing effort distribution.
 /// </summary>
 public sealed record RebalancingRecommendation(
@@ -61,16 +52,3 @@ public sealed record RebalancingRecommendation(
     string? TargetIterationPath = null,
     int? SuggestedEffortChange = null
 );
-
-/// <summary>
-/// Type of rebalancing recommendation.
-/// </summary>
-public enum RecommendationType
-{
-    ReduceTeamLoad,
-    IncreaseTeamLoad,
-    LevelSprintLoad,
-    RedistributeAcrossTeams,
-    AddCapacity,
-    DeferWork
-}

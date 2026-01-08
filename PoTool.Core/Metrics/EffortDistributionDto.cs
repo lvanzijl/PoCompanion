@@ -1,3 +1,5 @@
+using PoTool.Shared.Metrics;
+
 namespace PoTool.Core.Metrics;
 
 /// <summary>
@@ -44,15 +46,3 @@ public sealed record EffortHeatMapCell(
     int WorkItemCount,
     CapacityStatus Status
 );
-
-/// <summary>
-/// Status indicating if effort is within, near, or exceeding capacity.
-/// </summary>
-public enum CapacityStatus
-{
-    Unknown,
-    Underutilized,
-    Normal,
-    NearCapacity,
-    OverCapacity
-}
