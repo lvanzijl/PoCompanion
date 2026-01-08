@@ -1,6 +1,5 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
-using CoreSettings = PoTool.Core.Settings;
 
 namespace PoTool.Client.Services;
 
@@ -62,7 +61,7 @@ public class ProfileService
         List<string> areaPaths,
         string teamName,
         List<int> goalIds,
-        CoreSettings.ProfilePictureType pictureType = CoreSettings.ProfilePictureType.Default,
+        ProfilePictureType pictureType = ProfilePictureType.Default,
         int defaultPictureId = 0,
         string? customPicturePath = null,
         CancellationToken cancellationToken = default)
@@ -90,7 +89,7 @@ public class ProfileService
         List<string> areaPaths,
         string teamName,
         List<int> goalIds,
-        CoreSettings.ProfilePictureType pictureType = CoreSettings.ProfilePictureType.Default,
+        ProfilePictureType pictureType = ProfilePictureType.Default,
         int defaultPictureId = 0,
         string? customPicturePath = null,
         CancellationToken cancellationToken = default)
@@ -146,7 +145,7 @@ public class ProfileService
         List<string> areaPaths,
         string teamName,
         List<int> goalIds,
-        CoreSettings.ProfilePictureType pictureType = CoreSettings.ProfilePictureType.Default,
+        ProfilePictureType pictureType = ProfilePictureType.Default,
         int defaultPictureId = 0,
         string? customPicturePath = null,
         CancellationToken cancellationToken = default)

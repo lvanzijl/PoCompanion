@@ -1,7 +1,7 @@
 @using PoTool.Client.Services
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
-@using CoreSettings = PoTool.Core.Settings
+@using PoTool.Client.Models
 
 <MudCard Class="@GetCardClass()" 
          Elevation="@(IsActive ? 6 : 2)"
@@ -50,9 +50,6 @@
     [Parameter]
     public EventCallback<ProfileDto> OnClick { get; set; }
     
-    private const string DefaultProfilePicturesPath = "/assets/profile-defaults/";
-    private const string DefaultProfilePictureFallback = "profile-0.svg";
-    
     private string GetCardClass()
     {
         return IsActive ? "profile-tile profile-tile-active" : "profile-tile";
@@ -66,7 +63,7 @@
         }
         
         // Use custom picture if set
-        if ((CoreSettings.ProfilePictureType)Profile.PictureType == CoreSettings.ProfilePictureType.Custom 
+        if ((ProfilePictureType)Profile.PictureType == ProfilePictureType.Custom 
             && !string.IsNullOrEmpty(Profile.CustomPicturePath))
         {
             return Profile.CustomPicturePath;
