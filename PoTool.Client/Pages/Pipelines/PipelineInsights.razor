@@ -95,7 +95,7 @@
                         <PropertyColumn Property="x => x.AverageDuration" Title="Avg Duration" Format="hh\:mm\:ss" />
                         <PropertyColumn Property="x => x.LastRunResult" Title="Last Result">
                             <CellTemplate>
-                                <MudChip Color="@GetResultColor(context.Item.LastRunResult)" Size="Size.Small">
+                                <MudChip Color="@GetResultColor(context.Item.LastRunResult.HasValue ? (PipelineRunResult?)context.Item.LastRunResult.Value : null)" Size="Size.Small">
                                     @(context.Item.LastRunResult?.ToString() ?? "N/A")
                                 </MudChip>
                             </CellTemplate>

@@ -46,9 +46,9 @@
                                IterationCount="@_healthData.IterationHealth.Count"
                                TotalWorkItems="@_healthData.TotalWorkItems"
                                TotalIssues="@_healthData.TotalIssues"
-                               EffortTrend="@_healthData.Trend.EffortTrend"
-                               ValidationTrend="@_healthData.Trend.ValidationTrend"
-                               BlockerTrend="@_healthData.Trend.BlockerTrend" />
+                               EffortTrend="@((TrendDirection)_healthData.Trend.EffortTrend)"
+                               ValidationTrend="@((TrendDirection)_healthData.Trend.ValidationTrend)"
+                               BlockerTrend="@((TrendDirection)_healthData.Trend.BlockerTrend)" />
 
         <!-- Filters -->
         <BacklogHealthFilters @bind-AreaPathFilter="@_areaPathFilter"

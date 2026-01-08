@@ -16,7 +16,7 @@ public class PullRequestMetricsService
     {
         var metricsList = metrics.ToList();
         if (!metricsList.Any()) return "0d";
-        var avgDays = metricsList.Average(m => m.TotalTimeOpen.TotalDays);
+        var avgDays = metricsList.Average(m => TimeSpan.Parse(m.TotalTimeOpen).TotalDays);
         return $"{avgDays:F1}d";
     }
 
@@ -106,7 +106,7 @@ public class PullRequestMetricsService
             .Take(10)
             .ToList();
 
-        var data = topItems.Select(m => m.TotalTimeOpen.TotalDays).ToArray();
+        var data = topItems.Select(m => TimeSpan.Parse(m.TotalTimeOpen).TotalDays).ToArray();
         var labels = topItems.Select(m => m.Title.Length > 30 ? m.Title[0..27] + "..." : m.Title).ToArray();
 
         return (data, labels);
@@ -150,7 +150,7 @@ public class PullRequestMetricsService
         if (metricsList.Count > 2)
             hash.Add(metricsList[metricsList.Count / 2].Title);
         // Add aggregate values for additional validation
-        hash.Add(metricsList.Sum(m => m.TotalTimeOpen.TotalDays));
+        hash.Add(metricsList.Sum(m => TimeSpan.Parse(m.TotalTimeOpen).TotalDays));
         hash.Add(metricsList.Sum(m => m.IterationCount));
         return hash.ToHashCode();
     }

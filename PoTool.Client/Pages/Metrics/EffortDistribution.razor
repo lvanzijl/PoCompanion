@@ -253,7 +253,7 @@
                                 <MudCard>
                                     <MudCardContent>
                                         <MudText Typo="Typo.h6">Overall Risk</MudText>
-                                        <MudChip T="string" Size="Size.Large" Color="@GetImbalanceRiskColor(_imbalanceData.OverallRiskLevel)">
+                                        <MudChip T="string" Size="Size.Large" Color="@GetImbalanceRiskColor((ImbalanceRiskLevel)_imbalanceData.OverallRiskLevel)">
                                             @_imbalanceData.OverallRiskLevel
                                         </MudChip>
                                     </MudCardContent>
@@ -287,7 +287,7 @@
                                     <MudTd DataLabel="Average" class="text-right">@context.AverageEffortAcrossTeams</MudTd>
                                     <MudTd DataLabel="Deviation" class="text-right">@context.DeviationPercentage.ToString("F1")%</MudTd>
                                     <MudTd DataLabel="Risk Level">
-                                        <MudChip T="string" Size="Size.Small" Color="@GetImbalanceRiskColor(context.RiskLevel)">
+                                        <MudChip T="string" Size="Size.Small" Color="@GetImbalanceRiskColor((ImbalanceRiskLevel)context.RiskLevel)">
                                             @context.RiskLevel
                                         </MudChip>
                                     </MudTd>
@@ -302,7 +302,7 @@
                             <MudList T="string" Dense="true">
                                 @foreach (var rec in _imbalanceData.Recommendations)
                                 {
-                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Lightbulb" IconColor="@GetImbalanceRiskColor(rec.Priority)">
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Lightbulb" IconColor="@GetImbalanceRiskColor((ImbalanceRiskLevel)rec.Priority)">
                                         <MudText Typo="Typo.subtitle2"><strong>@rec.Title</strong></MudText>
                                         <MudText Typo="Typo.body2">@rec.Description</MudText>
                                     </MudListItem>
@@ -326,7 +326,7 @@
                                 <MudCard>
                                     <MudCardContent>
                                         <MudText Typo="Typo.h6">Overall Trend</MudText>
-                                        <MudChip T="string" Size="Size.Large" Color="@GetTrendColor(_trendData.OverallTrend)">
+                                        <MudChip T="string" Size="Size.Large" Color="@GetTrendColor((EffortTrendDirection)_trendData.OverallTrend)">
                                             @_trendData.OverallTrend
                                         </MudChip>
                                     </MudCardContent>
@@ -387,7 +387,7 @@
                                 <MudCard>
                                     <MudCardContent>
                                         <MudText Typo="Typo.h6">Risk Level</MudText>
-                                        <MudChip T="string" Size="Size.Large" Color="@GetConcentrationRiskColor(_concentrationData.OverallRiskLevel)">
+                                        <MudChip T="string" Size="Size.Large" Color="@GetConcentrationRiskColor((ConcentrationRiskLevel)_concentrationData.OverallRiskLevel)">
                                             @_concentrationData.OverallRiskLevel
                                         </MudChip>
                                     </MudCardContent>
@@ -419,7 +419,7 @@
                                     <MudTd DataLabel="Effort" class="text-right">@context.EffortAmount</MudTd>
                                     <MudTd DataLabel="% of Total" class="text-right">@context.PercentageOfTotal.ToString("F1")%</MudTd>
                                     <MudTd DataLabel="Risk Level">
-                                        <MudChip T="string" Size="Size.Small" Color="@GetConcentrationRiskColor(context.RiskLevel)">
+                                        <MudChip T="string" Size="Size.Small" Color="@GetConcentrationRiskColor((ConcentrationRiskLevel)context.RiskLevel)">
                                             @context.RiskLevel
                                         </MudChip>
                                     </MudTd>
@@ -434,7 +434,7 @@
                             <MudList T="string" Dense="true">
                                 @foreach (var rec in _concentrationData.Recommendations)
                                 {
-                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Security" IconColor="@GetConcentrationRiskColor(rec.Priority)">
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Security" IconColor="@GetConcentrationRiskColor((ConcentrationRiskLevel)rec.Priority)">
                                         <MudText Typo="Typo.subtitle2"><strong>@rec.Title</strong></MudText>
                                         <MudText Typo="Typo.body2">@rec.Description</MudText>
                                     </MudListItem>
@@ -672,7 +672,7 @@
         if (cell == null || cell.Effort == 0)
             return "background-color: var(--mud-palette-background-grey); color: var(--mud-palette-text-disabled);";
 
-        var color = cell.Status switch
+        var color = ((CapacityStatus)cell.Status) switch
         {
             CapacityStatus.OverCapacity => "background-color: rgba(244, 67, 54, 0.3);",  // Red
             CapacityStatus.NearCapacity => "background-color: rgba(255, 152, 0, 0.3);", // Orange

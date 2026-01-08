@@ -73,10 +73,10 @@
                     </div>
                     <MudStack Spacing="2">
                         <MudText Typo="Typo.caption">
-                            <strong>Total Cycle Time:</strong> @FormatTimeSpan(_timelineData.TotalCycleTime)
+                            <strong>Total Cycle Time:</strong> @FormatTimeSpan(TimeSpan.Parse(_timelineData.TotalCycleTime))
                         </MudText>
                         <MudText Typo="Typo.caption">
-                            <strong>Time In Progress:</strong> @FormatTimeSpan(_timelineData.TotalTimeInProgress)
+                            <strong>Time In Progress:</strong> @FormatTimeSpan(TimeSpan.Parse(_timelineData.TotalTimeInProgress))
                         </MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
                             Analyzed: @_timelineData.AnalysisTimestamp.LocalDateTime.ToString("g")
@@ -95,9 +95,9 @@
                     @foreach (var bottleneck in _timelineData.Bottlenecks.OrderByDescending(b => b.Severity))
                     {
                         <MudChip T="string" Size="Size.Medium" 
-                                 Color="@GetSeverityColor(bottleneck.Severity)"
+                                 Color="@GetSeverityColor((BottleneckSeverity)bottleneck.Severity)"
                                  Icon="@Icons.Material.Filled.Warning">
-                            <strong>@bottleneck.State:</strong> @FormatTimeSpan(bottleneck.TimeSpent) - @bottleneck.Reason
+                            <strong>@bottleneck.State:</strong> @FormatTimeSpan(TimeSpan.Parse(bottleneck.TimeSpent)) - @bottleneck.Reason
                         </MudChip>
                     }
                 </MudStack>
@@ -135,7 +135,7 @@
                                             Changed by: @transition.ChangedBy
                                         </MudText>
                                         <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                            Time in @transition.FromState: @FormatTimeSpan(transition.TimeInPreviousState)
+                                            Time in @transition.FromState: @FormatTimeSpan(TimeSpan.Parse(transition.TimeInPreviousState))
                                         </MudText>
                                     </MudCardContent>
                                 </MudCard>
@@ -175,7 +175,7 @@
                         <MudTd DataLabel="Transition Date">@context.TransitionDate.LocalDateTime.ToString("g")</MudTd>
                         <MudTd DataLabel="Changed By">@context.ChangedBy</MudTd>
                         <MudTd DataLabel="Time in Previous State" class="text-right">
-                            @FormatTimeSpan(context.TimeInPreviousState)
+                            @FormatTimeSpan(TimeSpan.Parse(context.TimeInPreviousState))
                         </MudTd>
                     </RowTemplate>
                 </MudTable>
@@ -301,11 +301,11 @@
     private Color GetTransitionColor(StateTransition transition)
     {
         // Color code based on time spent in previous state
-        if (transition.TimeInPreviousState.TotalDays > 14)
+        if (TimeSpan.Parse(transition.TimeInPreviousState).TotalDays > 14)
             return Color.Error;
-        if (transition.TimeInPreviousState.TotalDays > 7)
+        if (TimeSpan.Parse(transition.TimeInPreviousState).TotalDays > 7)
             return Color.Warning;
-        if (transition.TimeInPreviousState.TotalDays > 3)
+        if (TimeSpan.Parse(transition.TimeInPreviousState).TotalDays > 3)
             return Color.Info;
         return Color.Success;
     }
@@ -320,7 +320,7 @@
             .Select(g => new
             {
                 State = g.Key,
-                TotalDays = g.Sum(t => t.TimeInPreviousState.TotalDays)
+                TotalDays = g.Sum(t => TimeSpan.Parse(t.TimeInPreviousState).TotalDays)
             })
             .OrderByDescending(s => s.TotalDays)
             .ToList();
@@ -345,7 +345,7 @@
             .Select(g => g.Key)
             .OrderByDescending(state => _timelineData.StateHistory
                 .Where(t => t.FromState == state)
-                .Sum(t => t.TimeInPreviousState.TotalDays))
+                .Sum(t => TimeSpan.Parse(t.TimeInPreviousState).TotalDays))
             .ToArray();
     }
 
