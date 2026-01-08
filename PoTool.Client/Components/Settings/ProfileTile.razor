@@ -50,6 +50,9 @@
     [Parameter]
     public EventCallback<ProfileDto> OnClick { get; set; }
     
+    private const string DefaultProfilePicturesPath = "/assets/profile-defaults/";
+    private const string DefaultProfilePictureFallback = "profile-0.svg";
+    
     private string GetCardClass()
     {
         return IsActive ? "profile-tile profile-tile-active" : "profile-tile";
