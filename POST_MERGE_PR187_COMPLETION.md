@@ -31,8 +31,11 @@ PR #187 merged with the following incomplete items:
 **Changes:**
 - Created `.config/dotnet-tools.json` with NSwag.ConsoleCore v14.6.3
 - Fixed `PoTool.Client/nswag.json`:
-  - Removed fragile `$(InputSwaggerFile)` variable
+  - Removed fragile `$(InputSwaggerFile)` variable from nswag.json
   - Now uses `openapi.json` file path directly
+- Fixed `PoTool.Client/PoTool.Client.csproj`:
+  - Removed unused `/variables:InputSwaggerFile=swagger.json` argument from MSBuild target
+  - Deleted stale `swagger.json` file (was duplicate of `openapi.json`)
 - Created `docs/dev/NSWAG.md` with regeneration instructions
 
 **Command now works:**
