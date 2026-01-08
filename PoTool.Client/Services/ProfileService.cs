@@ -1,4 +1,5 @@
 using PoTool.Client.ApiClient;
+using PoTool.Client.Models;
 
 namespace PoTool.Client.Services;
 

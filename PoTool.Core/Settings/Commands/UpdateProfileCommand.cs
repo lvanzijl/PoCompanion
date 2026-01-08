@@ -11,5 +11,8 @@ public sealed record UpdateProfileCommand(
     string Name,
     List<string> AreaPaths,
     string TeamName,
-    List<int> GoalIds
+    List<int> GoalIds,
+    ProfilePictureType PictureType = ProfilePictureType.Default,
+    int DefaultPictureId = 0,
+    string? CustomPicturePath = null
 ) : ICommand<ProfileDto>;

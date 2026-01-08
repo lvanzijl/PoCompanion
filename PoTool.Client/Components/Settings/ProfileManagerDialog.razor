@@ -4,6 +4,7 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Validators
 @using PoTool.Client.Helpers
+@using PoTool.Client.Models
 @inject ProfileService ProfileService
 @inject WorkItemService WorkItemService
 @inject ISnackbar Snackbar
@@ -72,30 +73,25 @@
                               Required="true"
                               HelperText="The team responsible for these area paths" />
 
-                <CompactSelect T="string"
-                               Label="Area Paths"
-                               @bind-SelectedValues="_selectedAreaPaths"
-                               MultiSelection="true"
-                               HelperText="Click to open and select multiple area paths using checkboxes"
-                               Required="true"
-                               Class="mt-2">
-                    @foreach (var areaPath in _allAreaPaths)
-                    {
-                        <MudSelectItem T="string" Value="@areaPath">@areaPath</MudSelectItem>
-                    }
-                </CompactSelect>
+                <MultiSelectCombobox TItem="string"
+                                     Label="Area Paths"
+                                     Placeholder="Type to filter area paths..."
+                                     Items="@_allAreaPaths"
+                                     SelectedItems="@_selectedAreaPathsList"
+                                     SelectedItemsChanged="@((items) => _selectedAreaPathsList = items.ToList())"
+                                     GetItemText="@(item => item)"
+                                     HelperText="Select one or more area paths"
+                                     Required="true" />
 
-                <CompactSelect T="int"
-                               Label="Goals (Optional)"
-                               @bind-SelectedValues="_selectedGoalIds"
-                               MultiSelection="true"
-                               HelperText="Click to open and select multiple goals using checkboxes"
-                               Class="mt-2">
-                    @foreach (var goal in _availableGoals)
-                    {
-                        <MudSelectItem T="int" Value="@goal.TfsId">@goal.Title (ID: @goal.TfsId)</MudSelectItem>
-                    }
-                </CompactSelect>
+                <MultiSelectCombobox TItem="WorkItemDto"
+                                     Label="Goals"
+                                     Placeholder="Type to filter goals..."
+                                     Items="@_availableGoals"
+                                     SelectedItems="@_selectedGoalsList"
+                                     SelectedItemsChanged="@((items) => _selectedGoalsList = items.ToList())"
+                                     GetItemText="@GetGoalText"
+                                     HelperText="Select one or more goals"
+                                     Required="true" />
 
                 @if (_errorResponse != null)
                 {
@@ -108,7 +104,7 @@
                     <CompactButton OnClick="SaveProfile" 
                                Color="Color.Primary" 
                                Variant="Variant.Filled" 
-                               Disabled="_isSaving"
+                               Disabled="@(_isSaving || !CanSaveProfile())"
                                StartIcon="@Icons.Material.Filled.Save">
                         @if (_isSaving)
                         {
@@ -155,10 +151,13 @@
     private string _profileName = string.Empty;
     private string _teamName = string.Empty;
     
-    private IEnumerable<string> _selectedAreaPaths = new List<string>();
-    private IEnumerable<int> _selectedGoalIds = new List<int>();
+    // Changed from IEnumerable to List for multi-select combobox
+    private List<string> _selectedAreaPathsList = new();
+    private List<WorkItemDto> _selectedGoalsList = new();
 
     private ErrorResponse? _errorResponse;
+
+    private string GetGoalText(WorkItemDto item) => $"{item.Title} (ID: {item.TfsId})";
 
     protected override async Task OnInitializedAsync()
     {
@@ -217,8 +216,12 @@
         _editingProfileId = profile.Id;
         _profileName = profile.Name;
         _teamName = profile.TeamName;
-        _selectedAreaPaths = profile.AreaPaths.ToList();
-        _selectedGoalIds = profile.GoalIds.ToList();
+        _selectedAreaPathsList = profile.AreaPaths.ToList();
+        
+        // Map goal IDs to WorkItemDto objects
+        _selectedGoalsList = _availableGoals
+            .Where(g => profile.GoalIds.Contains(g.TfsId))
+            .ToList();
     }
 
     private async Task DeleteProfile(ProfileDto profile)
@@ -248,6 +251,14 @@
         }
     }
 
+    private bool CanSaveProfile()
+    {
+        return !string.IsNullOrWhiteSpace(_profileName) 
+            && !string.IsNullOrWhiteSpace(_teamName)
+            && _selectedAreaPathsList.Any()
+            && _selectedGoalsList.Any();
+    }
+
     private async Task SaveProfile()
     {
         await _form.Validate();
@@ -256,9 +267,15 @@
             return;
         }
 
-        if (!_selectedAreaPaths.Any())
+        if (!_selectedAreaPathsList.Any())
         {
-            Snackbar.Add("Please add at least one area path", Severity.Warning);
+            Snackbar.Add("Please select at least one area path", Severity.Warning);
+            return;
+        }
+
+        if (!_selectedGoalsList.Any())
+        {
+            Snackbar.Add("Please select at least one goal", Severity.Warning);
             return;
         }
 
@@ -267,8 +284,8 @@
             _isSaving = true;
             ClearError();
 
-            var areaPaths = _selectedAreaPaths.ToList();
-            var goalIds = _selectedGoalIds.ToList();
+            var areaPaths = _selectedAreaPathsList.ToList();
+            var goalIds = _selectedGoalsList.Select(g => g.TfsId).ToList();
 
             if (_isEditing && _editingProfileId.HasValue)
             {
@@ -314,8 +331,8 @@
         _editingProfileId = null;
         _profileName = string.Empty;
         _teamName = string.Empty;
-        _selectedAreaPaths = new List<string>();
-        _selectedGoalIds = new List<int>();
+        _selectedAreaPathsList = new List<string>();
+        _selectedGoalsList = new List<WorkItemDto>();
         _form?.ResetValidation();
     }
 

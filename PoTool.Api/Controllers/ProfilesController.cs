@@ -81,7 +81,10 @@ public class ProfilesController : ControllerBase
             request.Name,
             request.AreaPaths,
             request.TeamName,
-            request.GoalIds);
+            request.GoalIds,
+            request.PictureType,
+            request.DefaultPictureId,
+            request.CustomPicturePath);
 
         var result = await _mediator.Send(command, cancellationToken);
 
@@ -106,7 +109,10 @@ public class ProfilesController : ControllerBase
                 request.Name,
                 request.AreaPaths,
                 request.TeamName,
-                request.GoalIds);
+                request.GoalIds,
+                request.PictureType,
+                request.DefaultPictureId,
+                request.CustomPicturePath);
 
             var result = await _mediator.Send(command, cancellationToken);
 
@@ -159,7 +165,10 @@ public record CreateProfileRequest(
     string Name,
     List<string> AreaPaths,
     string TeamName,
-    List<int> GoalIds
+    List<int> GoalIds,
+    ProfilePictureType PictureType = ProfilePictureType.Default,
+    int DefaultPictureId = 0,
+    string? CustomPicturePath = null
 );
 
 /// <summary>
@@ -169,7 +178,10 @@ public record UpdateProfileRequest(
     string Name,
     List<string> AreaPaths,
     string TeamName,
-    List<int> GoalIds
+    List<int> GoalIds,
+    ProfilePictureType PictureType = ProfilePictureType.Default,
+    int DefaultPictureId = 0,
+    string? CustomPicturePath = null
 );
 
 /// <summary>
