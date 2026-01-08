@@ -1,13 +1,11 @@
-namespace PoTool.Client.Models;
+namespace PoTool.Shared.Metrics;
 
 /// <summary>
 /// Direction of a trend across sprints.
-/// Client-side copy that matches PoTool.Core.Metrics.TrendDirection.
 /// </summary>
 public enum TrendDirection
 {
     Improving = 0,
     Stable = 1,
-    Degrading = 2,
-    Unknown = 3
+    Declining = 2
 }

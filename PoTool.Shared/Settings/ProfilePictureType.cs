@@ -1,8 +1,7 @@
-namespace PoTool.Client.Models;
+namespace PoTool.Shared.Settings;
 
 /// <summary>
-/// Enumeration for profile picture types.
-/// This is a client-side copy that matches PoTool.Core.Settings.ProfilePictureType.
+/// Type of profile picture to use.
 /// </summary>
 public enum ProfilePictureType
 {

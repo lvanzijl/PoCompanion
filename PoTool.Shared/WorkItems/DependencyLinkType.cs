@@ -1,8 +1,7 @@
-namespace PoTool.Client.Models;
+namespace PoTool.Shared.WorkItems;
 
 /// <summary>
 /// Type of dependency link between work items.
-/// Client-side copy that matches PoTool.Core.WorkItems.DependencyLinkType.
 /// </summary>
 public enum DependencyLinkType
 {

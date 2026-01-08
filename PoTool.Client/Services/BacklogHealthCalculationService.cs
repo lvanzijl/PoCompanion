@@ -1,5 +1,6 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
+using PoTool.Shared.Metrics;
 using MudBlazor;
 
 namespace PoTool.Client.Services;

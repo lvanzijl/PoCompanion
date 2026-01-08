@@ -1,3 +1,5 @@
+using PoTool.Shared.Pipelines;
+
 namespace PoTool.Core.Pipelines;
 
 /// <summary>

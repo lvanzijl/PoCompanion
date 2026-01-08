@@ -1,8 +1,7 @@
-namespace PoTool.Client.Models;
+namespace PoTool.Shared.Metrics;
 
 /// <summary>
 /// Direction of effort distribution trend.
-/// Client-side copy that matches PoTool.Core.Metrics.EffortTrendDirection.
 /// </summary>
 public enum EffortTrendDirection
 {

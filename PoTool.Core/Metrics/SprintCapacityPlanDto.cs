@@ -1,3 +1,5 @@
+using PoTool.Shared.Metrics;
+
 namespace PoTool.Core.Metrics;
 
 /// <summary>
@@ -36,13 +38,3 @@ public sealed record CapacityWarning(
     string Message,
     IReadOnlyList<string> AffectedMembers
 );
-
-/// <summary>
-/// Severity level of a capacity warning.
-/// </summary>
-public enum WarningLevel
-{
-    Info,
-    Warning,
-    Critical
-}

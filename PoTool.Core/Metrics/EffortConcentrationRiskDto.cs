@@ -1,3 +1,5 @@
+using PoTool.Shared.Metrics;
+
 namespace PoTool.Core.Metrics;
 
 /// <summary>
@@ -27,18 +29,6 @@ public sealed record ConcentrationRisk(
 );
 
 /// <summary>
-/// Risk level for concentration analysis.
-/// </summary>
-public enum ConcentrationRiskLevel
-{
-    None,     // < 25% concentration
-    Low,      // 25-40% concentration
-    Medium,   // 40-60% concentration
-    High,     // 60-80% concentration
-    Critical  // > 80% concentration
-}
-
-/// <summary>
 /// Represents a recommendation for mitigating concentration risk.
 /// </summary>
 public sealed record RiskMitigationRecommendation(
@@ -49,16 +39,3 @@ public sealed record RiskMitigationRecommendation(
     string? TargetPath = null,
     int? EffortToRedistribute = null
 );
-
-/// <summary>
-/// Type of mitigation strategy.
-/// </summary>
-public enum MitigationStrategy
-{
-    DiversifyAcrossAreas,
-    SpreadAcrossSprints,
-    BreakDownLargeItems,
-    AddParallelCapacity,
-    DeferNonCritical,
-    IncreaseBacklog
-}

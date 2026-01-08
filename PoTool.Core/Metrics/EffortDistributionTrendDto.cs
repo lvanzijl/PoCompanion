@@ -1,3 +1,5 @@
+using PoTool.Shared.Metrics;
+
 namespace PoTool.Core.Metrics;
 
 /// <summary>
@@ -48,14 +50,3 @@ public sealed record DistributionForecast(
     int HighEstimate,
     double ConfidenceLevel
 );
-
-/// <summary>
-/// Direction of effort trend movement over time.
-/// </summary>
-public enum EffortTrendDirection
-{
-    Stable,
-    Increasing,
-    Decreasing,
-    Volatile
-}

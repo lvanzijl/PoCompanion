@@ -1,3 +1,5 @@
+using PoTool.Shared.Metrics;
+
 namespace PoTool.Core.WorkItems;
 
 /// <summary>
@@ -35,14 +37,3 @@ public sealed record TimelineBottleneck(
     BottleneckSeverity Severity,
     string Reason
 );
-
-/// <summary>
-/// Severity of a bottleneck.
-/// </summary>
-public enum BottleneckSeverity
-{
-    Low,
-    Medium,
-    High,
-    Critical
-}

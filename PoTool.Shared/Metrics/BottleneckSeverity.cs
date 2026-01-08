@@ -1,8 +1,7 @@
-namespace PoTool.Client.Models;
+namespace PoTool.Shared.Metrics;
 
 /// <summary>
 /// Indicates the severity of a bottleneck in the workflow.
-/// Client-side copy that matches PoTool.Core.WorkItems.BottleneckSeverity.
 /// </summary>
 public enum BottleneckSeverity
 {

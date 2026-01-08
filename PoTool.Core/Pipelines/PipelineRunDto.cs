@@ -1,3 +1,5 @@
+using PoTool.Shared.Pipelines;
+
 namespace PoTool.Core.Pipelines;
 
 /// <summary>
@@ -17,30 +19,3 @@ public record PipelineRunDto(
     string? RequestedFor,
     DateTimeOffset RetrievedAt
 );
-
-/// <summary>
-/// Result of a pipeline run.
-/// </summary>
-public enum PipelineRunResult
-{
-    Unknown,
-    Succeeded,
-    Failed,
-    PartiallySucceeded,
-    Canceled,
-    None
-}
-
-/// <summary>
-/// What triggered the pipeline run.
-/// </summary>
-public enum PipelineRunTrigger
-{
-    Unknown,
-    Manual,
-    ContinuousIntegration,
-    Schedule,
-    PullRequest,
-    BuildCompletion,
-    ResourceTrigger
-}

@@ -1,3 +1,5 @@
+using PoTool.Shared.WorkItems;
+
 namespace PoTool.Core.WorkItems;
 
 /// <summary>
@@ -54,26 +56,3 @@ public sealed record DependencyChain(
     int ChainLength,
     DependencyChainRisk RiskLevel
 );
-
-/// <summary>
-/// Type of dependency link between work items.
-/// </summary>
-public enum DependencyLinkType
-{
-    RelatedTo,
-    DependsOn,
-    Blocks,
-    Parent,
-    Child
-}
-
-/// <summary>
-/// Risk level for a dependency chain.
-/// </summary>
-public enum DependencyChainRisk
-{
-    Low,
-    Medium,
-    High,
-    Critical
-}

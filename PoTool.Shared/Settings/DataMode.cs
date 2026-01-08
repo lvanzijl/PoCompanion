@@ -1,4 +1,4 @@
-namespace PoTool.Client.Models;
+namespace PoTool.Shared.Settings;
 
 /// <summary>
 /// Represents the data source mode for the application.

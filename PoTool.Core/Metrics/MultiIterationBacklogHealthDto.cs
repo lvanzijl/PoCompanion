@@ -1,3 +1,5 @@
+using PoTool.Shared.Metrics;
+
 namespace PoTool.Core.Metrics;
 
 /// <summary>
@@ -21,14 +23,3 @@ public sealed record BacklogHealthTrend(
     TrendDirection BlockerTrend,
     string Summary
 );
-
-/// <summary>
-/// Direction of a trend across sprints.
-/// </summary>
-public enum TrendDirection
-{
-    Improving,
-    Stable,
-    Degrading,
-    Unknown
-}

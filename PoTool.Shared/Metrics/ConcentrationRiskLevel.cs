@@ -1,8 +1,7 @@
-namespace PoTool.Client.Models;
+namespace PoTool.Shared.Metrics;
 
 /// <summary>
 /// Risk level for effort concentration.
-/// Client-side copy that matches PoTool.Core.Metrics.ConcentrationRiskLevel.
 /// </summary>
 public enum ConcentrationRiskLevel
 {

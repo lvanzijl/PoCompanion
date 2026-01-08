@@ -1,3 +1,5 @@
+using PoTool.Shared.PullRequests;
+
 namespace PoTool.Core.PullRequests;
 
 /// <summary>
@@ -46,14 +48,3 @@ public sealed record ReviewMetricsSummary(
     string BottleneckReviewer,
     string FastestReviewer
 );
-
-/// <summary>
-/// Status of a reviewer based on their performance.
-/// </summary>
-public enum ReviewerStatus
-{
-    Fast,       // Average response < 4 hours
-    Normal,     // Average response 4-24 hours
-    Slow,       // Average response 24-48 hours
-    Bottleneck  // Average response > 48 hours
-}

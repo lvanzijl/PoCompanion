@@ -1,3 +1,5 @@
+using PoTool.Shared.Pipelines;
+
 namespace PoTool.Core.Pipelines;
 
 /// <summary>
@@ -10,12 +12,3 @@ public record PipelineDto(
     string? Path,
     DateTimeOffset RetrievedAt
 );
-
-/// <summary>
-/// Type of pipeline.
-/// </summary>
-public enum PipelineType
-{
-    Build,
-    Release
-}

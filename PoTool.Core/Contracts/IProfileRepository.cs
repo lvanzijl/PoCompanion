@@ -1,4 +1,5 @@
 using PoTool.Core.Settings;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Core.Contracts;
 
