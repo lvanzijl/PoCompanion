@@ -132,7 +132,7 @@ public class ProfileService
     {
         var request = new SetActiveProfileRequest
         {
-            ProfileId = profileId
+            ProfileId = profileId ?? 0
         };
 
         return await _profilesClient.CreateActiveAsync(request, cancellationToken);

@@ -52,20 +52,20 @@ public class TreeBuilderService : ITreeBuilderService
             var node = nodeMap[dto.TfsId];
             var parentId = dto.ParentTfsId;
 
-            if (parentId.HasValue)
+            if (parentId > 0)
             {
-                if (!nodeMap.TryGetValue(parentId.Value, out var parentNode))
+                if (!nodeMap.TryGetValue(parentId, out var parentNode))
                 {
                     // Create placeholder parent node for missing parent
                     parentNode = new TreeNode
                     {
-                        Id = parentId.Value,
-                        Title = $"(missing) Parent #{parentId.Value}",
+                        Id = parentId,
+                        Title = $"(missing) Parent #{parentId}",
                         Type = "(missing)",
                         State = "",
                         ParentId = null
                     };
-                    nodeMap[parentId.Value] = parentNode;
+                    nodeMap[parentId] = parentNode;
                 }
 
                 parentNode.Children.Add(node);
@@ -221,20 +221,20 @@ public class TreeBuilderService : ITreeBuilderService
             var node = nodeMap[dto.TfsId];
             var parentId = dto.ParentTfsId;
 
-            if (parentId.HasValue)
+            if (parentId > 0)
             {
-                if (!nodeMap.TryGetValue(parentId.Value, out var parentNode))
+                if (!nodeMap.TryGetValue(parentId, out var parentNode))
                 {
                     // Create placeholder parent node for missing parent
                     parentNode = new TreeNode
                     {
-                        Id = parentId.Value,
-                        Title = $"(missing) Parent #{parentId.Value}",
+                        Id = parentId,
+                        Title = $"(missing) Parent #{parentId}",
                         Type = "(missing)",
                         State = "",
                         ParentId = null
                     };
-                    nodeMap[parentId.Value] = parentNode;
+                    nodeMap[parentId] = parentNode;
                 }
 
                 parentNode.Children.Add(node);

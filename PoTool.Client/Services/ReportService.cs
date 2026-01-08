@@ -72,15 +72,15 @@ public class ReportService
 
     private static void AppendEffortSummary(StringBuilder sb, List<WorkItemDto> items)
     {
-        var itemsWithEffort = items.Where(w => w.Effort.HasValue).ToList();
+        var itemsWithEffort = items.Where(w => w.Effort > 0).ToList();
         if (!itemsWithEffort.Any())
             return;
 
         sb.AppendLine("## Effort Summary");
         sb.AppendLine();
         sb.AppendLine($"- **Items with Effort:** {itemsWithEffort.Count} of {items.Count}");
-        sb.AppendLine($"- **Total Effort:** {itemsWithEffort.Sum(w => w.Effort!.Value)} hours");
-        sb.AppendLine($"- **Average Effort:** {itemsWithEffort.Average(w => w.Effort!.Value):F2} hours");
+        sb.AppendLine($"- **Total Effort:** {itemsWithEffort.Sum(w => w.Effort)} hours");
+        sb.AppendLine($"- **Average Effort:** {itemsWithEffort.Average(w => w.Effort):F2} hours");
         sb.AppendLine();
     }
 
@@ -109,7 +109,7 @@ public class ReportService
         
         foreach (var item in items.OrderBy(w => w.TfsId))
         {
-            var effort = item.Effort.HasValue ? $"{item.Effort.Value}h" : "-";
+            var effort = item.Effort > 0 ? $"{item.Effort}h" : "-";
             sb.AppendLine($"| {item.TfsId} | {item.Type} | {item.State} | {EscapeMarkdown(item.Title)} | {effort} |");
         }
     }

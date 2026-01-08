@@ -116,7 +116,7 @@
                             {
                                 <th class="text-center">
                                     <div>@iteration.SprintName</div>
-                                    @if (iteration.Capacity.HasValue)
+                                    @if (iteration.Capacity > 0)
                                     {
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">Cap: @iteration.Capacity</MudText>
                                     }
@@ -210,7 +210,7 @@
                     <MudTd DataLabel="Work Items" class="text-right">@context.WorkItemCount</MudTd>
                     <MudTd DataLabel="Total Effort" class="text-right">@context.TotalEffort</MudTd>
                     <MudTd DataLabel="Capacity" class="text-right">
-                        @(context.Capacity?.ToString() ?? "N/A")
+                        @(context.Capacity > 0 ? context.Capacity.ToString() : "N/A")
                     </MudTd>
                     <MudTd DataLabel="Utilization" class="text-right">
                         @context.UtilizationPercentage.ToString("F1")%
@@ -704,7 +704,7 @@
             new ChartSeries
             {
                 Name = "Capacity",
-                Data = _distributionData.EffortByIteration.Select(i => (double)(i.Capacity ?? 0)).ToArray()
+                Data = _distributionData.EffortByIteration.Select(i => (double)i.Capacity).ToArray()
             }
         };
     }

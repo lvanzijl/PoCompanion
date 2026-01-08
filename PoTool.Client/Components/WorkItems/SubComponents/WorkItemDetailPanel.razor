@@ -130,22 +130,22 @@ else if (SelectedWorkItem != null)
                     <label>Iteration Path:</label>
                     <span>@SelectedWorkItem.IterationPath</span>
                 </div>
-                @if (SelectedWorkItem.ParentTfsId.HasValue)
+                @if (SelectedWorkItem.ParentTfsId > 0)
                 {
                     <div class="detail-field">
                         <label>Parent ID:</label>
-                        <span>@SelectedWorkItem.ParentTfsId.Value</span>
+                        <span>@SelectedWorkItem.ParentTfsId</span>
                     </div>
                 }
                 <div class="detail-field">
                     <label>Retrieved At:</label>
                     <span>@SelectedWorkItem.RetrievedAt.ToString("g")</span>
                 </div>
-                @if (SelectedWorkItem.Effort.HasValue)
+                @if (SelectedWorkItem.Effort > 0)
                 {
                     <div class="detail-field">
                         <label>Effort:</label>
-                        <span>@SelectedWorkItem.Effort.Value hours</span>
+                        <span>@SelectedWorkItem.Effort hours</span>
                     </div>
                 }
                 else
