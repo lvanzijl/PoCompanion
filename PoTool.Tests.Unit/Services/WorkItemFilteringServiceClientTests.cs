@@ -33,7 +33,7 @@ public class WorkItemFilteringServiceClientTests
         var targetIds = new HashSet<int> { 3 };
 
         _mockFilteringClient
-            .Setup(x => x.FilterByValidationWithAncestorsAsync(It.IsAny<FilterByValidationRequest>()))
+            .Setup(x => x.CreateByValidationWithAncestorsAsync(It.IsAny<FilterByValidationRequest>()))
             .ReturnsAsync(new FilterByValidationResponse
             {
                 WorkItemIds = new List<int> { 1, 2, 3 }
@@ -66,7 +66,7 @@ public class WorkItemFilteringServiceClientTests
         var filterId = "missingEffort";
 
         _mockFilteringClient
-            .Setup(x => x.GetWorkItemIdsByValidationFilterAsync(It.IsAny<GetWorkItemIdsByValidationFilterRequest>()))
+            .Setup(x => x.CreateIdsByValidationFilterAsync(It.IsAny<GetWorkItemIdsByValidationFilterRequest>()))
             .ReturnsAsync(new GetWorkItemIdsByValidationFilterResponse
             {
                 WorkItemIds = new List<int> { 1, 2 }
@@ -98,7 +98,7 @@ public class WorkItemFilteringServiceClientTests
         var filterId = "missingEffort";
 
         _mockFilteringClient
-            .Setup(x => x.CountWorkItemsByValidationFilterAsync(It.IsAny<CountWorkItemsByValidationFilterRequest>()))
+            .Setup(x => x.CreateCountByValidationFilterAsync(It.IsAny<CountWorkItemsByValidationFilterRequest>()))
             .ReturnsAsync(new CountWorkItemsByValidationFilterResponse
             {
                 Count = 2
@@ -128,14 +128,14 @@ public class WorkItemFilteringServiceClientTests
         var enabledFilters = new List<string> { "missingEffort" };
 
         _mockFilteringClient
-            .Setup(x => x.GetWorkItemIdsByValidationFilterAsync(It.IsAny<GetWorkItemIdsByValidationFilterRequest>()))
+            .Setup(x => x.CreateIdsByValidationFilterAsync(It.IsAny<GetWorkItemIdsByValidationFilterRequest>()))
             .ReturnsAsync(new GetWorkItemIdsByValidationFilterResponse
             {
                 WorkItemIds = new List<int> { 1 }
             });
 
         _mockFilteringClient
-            .Setup(x => x.FilterByValidationWithAncestorsAsync(It.IsAny<FilterByValidationRequest>()))
+            .Setup(x => x.CreateByValidationWithAncestorsAsync(It.IsAny<FilterByValidationRequest>()))
             .ReturnsAsync(new FilterByValidationResponse
             {
                 WorkItemIds = new List<int> { 1 }
