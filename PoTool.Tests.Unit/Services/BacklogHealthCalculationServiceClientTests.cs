@@ -46,7 +46,7 @@ public class BacklogHealthCalculationServiceClientTests
         var iteration = CreateHealthDto(totalWorkItems: 0);
 
         _mockHealthCalculationClient
-            .Setup(x => x.CalculateHealthScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
+            .Setup(x => x.CreateCalculateScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
             .ReturnsAsync(new CalculateHealthScoreResponse
             {
                 HealthScore = 100
@@ -74,7 +74,7 @@ public class BacklogHealthCalculationServiceClientTests
         var iteration = CreateHealthDto(totalWorkItems: 10);
 
         _mockHealthCalculationClient
-            .Setup(x => x.CalculateHealthScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
+            .Setup(x => x.CreateCalculateScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
             .ReturnsAsync(new CalculateHealthScoreResponse
             {
                 HealthScore = 100
@@ -98,7 +98,7 @@ public class BacklogHealthCalculationServiceClientTests
         );
 
         _mockHealthCalculationClient
-            .Setup(x => x.CalculateHealthScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
+            .Setup(x => x.CreateCalculateScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
             .ReturnsAsync(new CalculateHealthScoreResponse
             {
                 HealthScore = 70
@@ -130,7 +130,7 @@ public class BacklogHealthCalculationServiceClientTests
         );
 
         _mockHealthCalculationClient
-            .Setup(x => x.CalculateHealthScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
+            .Setup(x => x.CreateCalculateScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
             .ReturnsAsync(new CalculateHealthScoreResponse
             {
                 HealthScore = 0
@@ -156,7 +156,7 @@ public class BacklogHealthCalculationServiceClientTests
         );
 
         _mockHealthCalculationClient
-            .Setup(x => x.CalculateHealthScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
+            .Setup(x => x.CreateCalculateScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
             .ReturnsAsync(new CalculateHealthScoreResponse { HealthScore = 53 });
 
         // Act
