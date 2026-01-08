@@ -5,6 +5,7 @@ using MudBlazor.Services;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Pages.Metrics.SubComponents;
 using PoTool.Client.Services;
+using PoTool.Shared.Metrics;
 
 namespace PoTool.Tests.Blazor;
 
@@ -38,7 +39,7 @@ public class BacklogHealthTrendCardTests : BunitTestContext
             .Add(p => p.TotalIssues, 12)
             .Add(p => p.EffortTrend, TrendDirection.Improving)
             .Add(p => p.ValidationTrend, TrendDirection.Stable)
-            .Add(p => p.BlockerTrend, TrendDirection.Degrading));
+            .Add(p => p.BlockerTrend, TrendDirection.Declining));
 
         // Assert
         Assert.IsNotNull(cut);
@@ -62,7 +63,7 @@ public class BacklogHealthTrendCardTests : BunitTestContext
             .Add(p => p.TotalIssues, 5)
             .Add(p => p.EffortTrend, TrendDirection.Improving)
             .Add(p => p.ValidationTrend, TrendDirection.Stable)
-            .Add(p => p.BlockerTrend, TrendDirection.Degrading));
+            .Add(p => p.BlockerTrend, TrendDirection.Declining));
 
         // Assert
         var icons = cut.FindComponents<MudBlazor.MudIcon>();

@@ -51,7 +51,7 @@ public sealed class ExportServiceTests
                 State = "Active",
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 1",
-                ParentTfsId = null,
+                ParentTfsId = 0,
                 Effort = 5,
                 RetrievedAt = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero),
                 JsonPayload = "{}"
@@ -83,8 +83,8 @@ public sealed class ExportServiceTests
                 State = "Active",
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 1",
-                ParentTfsId = null,
-                Effort = null,
+                ParentTfsId = 0,
+                Effort = 0,
                 RetrievedAt = DateTimeOffset.UtcNow,
                 JsonPayload = "{}"
             }
@@ -111,7 +111,7 @@ public sealed class ExportServiceTests
                 State = "Active",
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 1",
-                ParentTfsId = null,
+                ParentTfsId = 0,
                 Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
                 JsonPayload = "{}"
@@ -178,7 +178,7 @@ public sealed class ExportServiceTests
                 State = "Active",
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 1",
-                ParentTfsId = null,
+                ParentTfsId = 0,
                 Effort = 5,
                 RetrievedAt = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero),
                 JsonPayload = "{}"
@@ -208,7 +208,7 @@ public sealed class ExportServiceTests
                 State = "Active",
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 1",
-                ParentTfsId = null,
+                ParentTfsId = 0,
                 Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
                 JsonPayload = "{}"

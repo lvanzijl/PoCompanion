@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Settings;
+using PoTool.Shared.Settings;
 using PoTool.Tests.Integration.Support;
 using Reqnroll;
 

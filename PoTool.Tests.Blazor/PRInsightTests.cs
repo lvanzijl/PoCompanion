@@ -139,7 +139,7 @@ public class PRInsightTests : BunitTestContext
         _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
             .ReturnsAsync(new List<PullRequestMetricsDto>());
 
-        _mockPullRequestsClient.Setup(x => x.SyncAsync())
+        _mockPullRequestsClient.Setup(x => x.CreateSyncAsync())
             .ReturnsAsync(5);
 
         var cut = RenderPRInsightWithMudProvider();
@@ -149,7 +149,7 @@ public class PRInsightTests : BunitTestContext
         await syncButton.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
 
         // Assert
-        _mockPullRequestsClient.Verify(x => x.SyncAsync(), Times.Once);
+        _mockPullRequestsClient.Verify(x => x.CreateSyncAsync(), Times.Once);
         _mockSnackbar.Verify(x => x.Add(It.IsAny<string>(), Severity.Success, It.IsAny<Action<SnackbarOptions>?>(), It.IsAny<string?>()), Times.Once);
     }
 
@@ -314,7 +314,7 @@ public class PRInsightTests : BunitTestContext
             CreatedDate = DateTimeOffset.UtcNow.AddDays(-5),
             Status = status,
             IterationPath = "/Project/Sprint1",
-            TotalTimeOpen = TimeSpan.FromDays(2.5),
+            TotalTimeOpen = TimeSpan.FromDays(2.5).ToString(),
             IterationCount = iterationCount,
             TotalFileCount = fileCount,
             CommentCount = commentCount,

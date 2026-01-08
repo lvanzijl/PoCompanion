@@ -26,7 +26,7 @@ public class WorkItemFilteringServiceClientTests
         // Arrange
         var workItems = new List<WorkItemWithValidationDto>
         {
-            new() { TfsId = 1, Title = "Goal", ParentTfsId = null, ValidationIssues = new List<ValidationIssue>() },
+            new() { TfsId = 1, Title = "Goal", ParentTfsId = 0, ValidationIssues = new List<ValidationIssue>() },
             new() { TfsId = 2, Title = "Feature", ParentTfsId = 1, ValidationIssues = new List<ValidationIssue>() },
             new() { TfsId = 3, Title = "Story", ParentTfsId = 2, ValidationIssues = new List<ValidationIssue>() }
         };
@@ -49,7 +49,7 @@ public class WorkItemFilteringServiceClientTests
         Assert.IsTrue(resultList.Any(wi => wi.TfsId == 2));
         Assert.IsTrue(resultList.Any(wi => wi.TfsId == 3));
         
-        _mockFilteringClient.Verify(x => x.FilterByValidationWithAncestorsAsync(
+        _mockFilteringClient.Verify(x => x.CreateByValidationWithAncestorsAsync(
             It.Is<FilterByValidationRequest>(r => r.TargetIds.Count == targetIds.Count && targetIds.All(id => r.TargetIds.Contains(id)))),
             Times.Once);
     }
@@ -81,7 +81,7 @@ public class WorkItemFilteringServiceClientTests
         Assert.Contains(1, resultList);
         Assert.Contains(2, resultList);
         
-        _mockFilteringClient.Verify(x => x.GetWorkItemIdsByValidationFilterAsync(
+        _mockFilteringClient.Verify(x => x.CreateIdsByValidationFilterAsync(
             It.Is<GetWorkItemIdsByValidationFilterRequest>(r => r.FilterId == filterId)),
             Times.Once);
     }
@@ -110,7 +110,7 @@ public class WorkItemFilteringServiceClientTests
         // Assert
         Assert.AreEqual(2, result);
         
-        _mockFilteringClient.Verify(x => x.CountWorkItemsByValidationFilterAsync(
+        _mockFilteringClient.Verify(x => x.CreateCountByValidationFilterAsync(
             It.Is<CountWorkItemsByValidationFilterRequest>(r => r.FilterId == filterId)),
             Times.Once);
     }
@@ -121,7 +121,7 @@ public class WorkItemFilteringServiceClientTests
         // Arrange
         var workItems = new List<WorkItemWithValidationDto>
         {
-            new() { TfsId = 1, Title = "Item 1", ParentTfsId = null, ValidationIssues = new List<ValidationIssue>() },
+            new() { TfsId = 1, Title = "Item 1", ParentTfsId = 0, ValidationIssues = new List<ValidationIssue>() },
             new() { TfsId = 2, Title = "Item 2", ParentTfsId = 1, ValidationIssues = new List<ValidationIssue>() }
         };
         var textFilter = "";
@@ -164,13 +164,13 @@ public class WorkItemFilteringServiceClientTests
         var goalIds = new List<int> { 1 };
         var allWorkItems = new List<WorkItemWithValidationDto>
         {
-            new() { TfsId = 1, Title = "Goal", ParentTfsId = null, ValidationIssues = new List<ValidationIssue>() },
+            new() { TfsId = 1, Title = "Goal", ParentTfsId = 0, ValidationIssues = new List<ValidationIssue>() },
             new() { TfsId = 2, Title = "Feature", ParentTfsId = 1, ValidationIssues = new List<ValidationIssue>() },
             item
         };
 
         _mockFilteringClient
-            .Setup(x => x.IsDescendantOfGoalsAsync(It.IsAny<IsDescendantOfGoalsRequest>()))
+            .Setup(x => x.CreateIsDescendantOfGoalsAsync(It.IsAny<IsDescendantOfGoalsRequest>()))
             .ReturnsAsync(new IsDescendantOfGoalsResponse
             {
                 IsDescendant = true
@@ -182,7 +182,7 @@ public class WorkItemFilteringServiceClientTests
         // Assert
         Assert.IsTrue(result);
         
-        _mockFilteringClient.Verify(x => x.IsDescendantOfGoalsAsync(
+        _mockFilteringClient.Verify(x => x.CreateIsDescendantOfGoalsAsync(
             It.Is<IsDescendantOfGoalsRequest>(r => r.WorkItemId == 3 && r.GoalIds.SequenceEqual(goalIds))),
             Times.Once);
     }

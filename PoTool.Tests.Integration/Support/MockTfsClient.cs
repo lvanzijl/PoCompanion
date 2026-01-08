@@ -3,6 +3,7 @@ using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
 using PoTool.Core.Pipelines;
 using PoTool.Core.Contracts.TfsVerification;
+using PoTool.Shared.Pipelines;
 
 namespace PoTool.Tests.Integration.Support;
 

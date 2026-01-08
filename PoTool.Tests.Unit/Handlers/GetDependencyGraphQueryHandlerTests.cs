@@ -5,6 +5,7 @@ using PoTool.Api.Handlers.WorkItems;
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Queries;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Handlers;
 
