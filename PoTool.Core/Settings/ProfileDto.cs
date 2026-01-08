@@ -1,7 +1,5 @@
 using PoTool.Shared.Settings;
 
-using PoTool.Shared.Settings;
-
 namespace PoTool.Core.Settings;
 
 /// <summary>
