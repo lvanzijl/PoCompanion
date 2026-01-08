@@ -29,10 +29,7 @@
   <ItemGroup>
     <ProjectReference Include="..\PoTool.Core\PoTool.Core.csproj" />
     <ProjectReference Include="..\PoTool.Shared\PoTool.Shared.csproj" />
-    <!-- Temporarily comment out Client reference to break circular dependency during OpenAPI regeneration -->
-    <!--
     <ProjectReference Include="..\PoTool.Client\PoTool.Client.csproj" />
-    -->
   </ItemGroup>
 
 </Project>
