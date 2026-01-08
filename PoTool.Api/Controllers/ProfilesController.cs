@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PoTool.Core.Settings;
 using PoTool.Core.Settings.Commands;
 using PoTool.Core.Settings.Queries;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Controllers;
 

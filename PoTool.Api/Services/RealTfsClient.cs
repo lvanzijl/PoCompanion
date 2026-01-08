@@ -9,6 +9,7 @@ using PoTool.Core.Pipelines;
 using PoTool.Core.Exceptions;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts.TfsVerification;
+using PoTool.Shared.Pipelines;
 
 namespace PoTool.Api.Services;
 
@@ -3350,7 +3351,7 @@ public class RealTfsClient : ITfsClient
             "failed" => PipelineRunResult.Failed,
             "partiallysucceeded" => PipelineRunResult.PartiallySucceeded,
             "canceled" => PipelineRunResult.Canceled,
-            "none" => PipelineRunResult.None,
+            "none" => PipelineRunResult.Unknown,
             _ => PipelineRunResult.Unknown
         };
     }
@@ -3362,7 +3363,7 @@ public class RealTfsClient : ITfsClient
             "succeeded" or "active" => PipelineRunResult.Succeeded,
             "failed" or "rejected" => PipelineRunResult.Failed,
             "abandoned" or "canceled" => PipelineRunResult.Canceled,
-            "undefined" or "draft" => PipelineRunResult.None,
+            "undefined" or "draft" => PipelineRunResult.Unknown,
             _ => PipelineRunResult.Unknown
         };
     }

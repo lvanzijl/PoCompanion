@@ -4,6 +4,7 @@ using PoTool.Core.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Validators;
+using PoTool.Shared.Metrics;
 
 namespace PoTool.Api.Handlers.Metrics;
 
@@ -209,7 +210,7 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
         return change switch
         {
             < -0.05 => TrendDirection.Improving, // 5% improvement
-            > 0.05 => TrendDirection.Degrading,  // 5% degradation
+            > 0.05 => TrendDirection.Declining,  // 5% degradation
             _ => TrendDirection.Stable
         };
     }
@@ -221,15 +222,15 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
     {
         var trends = new[] { effortTrend, validationTrend, blockerTrend };
         var improving = trends.Count(t => t == TrendDirection.Improving);
-        var degrading = trends.Count(t => t == TrendDirection.Degrading);
+        var declining = trends.Count(t => t == TrendDirection.Declining);
 
-        if (improving > degrading)
+        if (improving > declining)
         {
             return "Overall backlog health is improving";
         }
-        else if (degrading > improving)
+        else if (declining > improving)
         {
-            return "Overall backlog health is degrading - attention needed";
+            return "Overall backlog health is declining - attention needed";
         }
         else
         {

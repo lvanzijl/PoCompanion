@@ -30,8 +30,14 @@ public static class ApiServiceCollectionExtensions
         bool isDevelopment,
         Action<IServiceCollection, IConfiguration>? configureDatabase = null)
     {
-        // Add controllers and OpenAPI
-        services.AddControllers();
+        // Add controllers with JSON configuration for enum handling
+        services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                // Configure System.Text.Json to serialize enums as strings
+                options.JsonSerializerOptions.Converters.Add(
+                    new System.Text.Json.Serialization.JsonStringEnumConverter());
+            });
         services.AddOpenApi();
 
         // Add OpenAPI/Swagger support with NSwag
@@ -42,7 +48,7 @@ public static class ApiServiceCollectionExtensions
             config.Description = "API for PO Companion work item management";
             
             // Configure enum handling to generate proper enum types in the client
-            config.DefaultEnumHandling = NSwag.Generation.OpenApiSchemaGeneratorSettings.EnumHandling.String;
+            // Note: Enum serialization is configured in AddJsonOptions above
             config.SchemaSettings.GenerateEnumMappingDescription = true;
         });
 
