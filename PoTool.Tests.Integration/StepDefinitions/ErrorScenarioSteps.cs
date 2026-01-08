@@ -19,10 +19,10 @@ public class ErrorScenarioSteps
     private List<HttpResponseMessage> _responses = new();
     private Stopwatch _stopwatch = new();
 
-    public ErrorScenarioSteps(ScenarioContext scenarioContext)
+    public ErrorScenarioSteps(ScenarioContext scenarioContext, SharedTestContext sharedContext)
     {
         _scenarioContext = scenarioContext;
-        _factory = new IntegrationTestWebApplicationFactory();
+        _factory = sharedContext.Factory;
         _client = _factory.CreateClient();
     }
 

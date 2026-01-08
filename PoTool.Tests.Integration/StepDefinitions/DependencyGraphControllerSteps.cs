@@ -18,10 +18,10 @@ public class DependencyGraphControllerSteps
     private HttpResponseMessage? _response;
     private DependencyGraphDto? _dependencyGraph;
 
-    public DependencyGraphControllerSteps(ScenarioContext scenarioContext)
+    public DependencyGraphControllerSteps(ScenarioContext scenarioContext, SharedTestContext sharedContext)
     {
         _scenarioContext = scenarioContext;
-        _factory = new IntegrationTestWebApplicationFactory();
+        _factory = sharedContext.Factory;
         _client = _factory.CreateClient();
     }
 

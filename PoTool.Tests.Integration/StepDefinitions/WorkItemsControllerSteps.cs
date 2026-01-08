@@ -20,10 +20,10 @@ public class WorkItemsControllerSteps
     private WorkItemDto? _workItem;
     private List<WorkItemWithValidationDto>? _workItemsWithValidation;
 
-    public WorkItemsControllerSteps(ScenarioContext scenarioContext)
+    public WorkItemsControllerSteps(ScenarioContext scenarioContext, SharedTestContext sharedContext)
     {
         _scenarioContext = scenarioContext;
-        _factory = new IntegrationTestWebApplicationFactory();
+        _factory = sharedContext.Factory;
         _client = _factory.CreateClient();
     }
 
