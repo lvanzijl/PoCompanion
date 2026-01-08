@@ -78,7 +78,7 @@
                         </MudText>
                     </div>
                     <MudStack Spacing="2">
-                        <MudChip T="string" Size="Size.Large" Color="@GetConfidenceColor(_forecastData.Confidence)">
+                        <MudChip T="string" Size="Size.Large" Color="@GetConfidenceColor((ForecastConfidence)_forecastData.Confidence)">
                             @_forecastData.Confidence Confidence
                         </MudChip>
                     </MudStack>

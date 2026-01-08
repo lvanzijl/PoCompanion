@@ -30,7 +30,7 @@ public class WorkItemFilteringService
     {
         // Call API to get filtered IDs
         var request = new ApiClient.FilterByValidationRequest { TargetIds = targetIds };
-        var response = await _filteringClient.FilterByValidationWithAncestorsAsync(request);
+        var response = await _filteringClient.CreateByValidationWithAncestorsAsync(request);
 
         // Return work items matching the filtered IDs
         var filteredIds = new HashSet<int>(response.WorkItemIds);
@@ -49,7 +49,7 @@ public class WorkItemFilteringService
     {
         // Call API to get work item IDs by filter
         var request = new ApiClient.GetWorkItemIdsByValidationFilterRequest { FilterId = filterId };
-        var response = await _filteringClient.GetWorkItemIdsByValidationFilterAsync(request);
+        var response = await _filteringClient.CreateIdsByValidationFilterAsync(request);
         return response.WorkItemIds;
     }
 
@@ -65,7 +65,7 @@ public class WorkItemFilteringService
     {
         // Call API to count work items by filter
         var request = new ApiClient.CountWorkItemsByValidationFilterRequest { FilterId = filterId };
-        var response = await _filteringClient.CountWorkItemsByValidationFilterAsync(request);
+        var response = await _filteringClient.CreateCountByValidationFilterAsync(request);
         return response.Count;
     }
 
@@ -133,7 +133,7 @@ public class WorkItemFilteringService
             WorkItemId = item.TfsId,
             GoalIds = goalIds
         };
-        var response = await _filteringClient.IsDescendantOfGoalsAsync(request);
+        var response = await _filteringClient.CreateIsDescendantOfGoalsAsync(request);
         return response.IsDescendant;
     }
 
@@ -147,7 +147,7 @@ public class WorkItemFilteringService
     {
         // Call API to get filtered IDs in a single batch operation
         var request = new ApiClient.FilterByGoalsRequest { GoalIds = goalIds };
-        var response = await _filteringClient.FilterByGoalsAsync(request);
+        var response = await _filteringClient.CreateFilterByGoalsAsync(request);
         return new HashSet<int>(response.WorkItemIds);
     }
 

@@ -30,7 +30,7 @@
                     </td>
                     <td>@metric.PipelineName</td>
                     <td>
-                        <MudChip T="string" Color="@GetTypeColor(metric.Type)" Size="Size.Small">
+                        <MudChip T="string" Color="@GetTypeColor((PipelineType)metric.Type)" Size="Size.Small">
                             @metric.Type
                         </MudChip>
                     </td>
@@ -54,7 +54,7 @@
                     <td>
                         @if (metric.LastRunTime.HasValue)
                         {
-                            <MudChip T="string" Color="@GetResultColor(metric.LastRunResult)" Size="Size.Small">
+                            <MudChip T="string" Color="@GetResultColor(metric.LastRunResult.HasValue ? (PipelineRunResult?)metric.LastRunResult.Value : null)" Size="Size.Small">
                                 @(metric.LastRunResult?.ToString() ?? "Unknown")
                             </MudChip>
                             <MudText Typo="Typo.caption" Class="ml-2">

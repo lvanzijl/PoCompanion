@@ -21,7 +21,7 @@ public class ProfileService
     /// </summary>
     public async Task<IEnumerable<ProfileDto>> GetAllProfilesAsync(CancellationToken cancellationToken = default)
     {
-        return await _profilesClient.GetAllProfilesAsync(cancellationToken);
+        return await _profilesClient.GetProfilesAllAsync(cancellationToken);
     }
 
     /// <summary>
@@ -31,7 +31,7 @@ public class ProfileService
     {
         try
         {
-            return await _profilesClient.GetProfileByIdAsync(id, cancellationToken);
+            return await _profilesClient.GetProfilesAsync(id, cancellationToken);
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
@@ -46,7 +46,7 @@ public class ProfileService
     {
         try
         {
-            return await _profilesClient.GetActiveProfileAsync(cancellationToken);
+            return await _profilesClient.GetActiveAsync(cancellationToken);
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
@@ -78,7 +78,7 @@ public class ProfileService
             CustomPicturePath = customPicturePath
         };
 
-        return await _profilesClient.CreateProfileAsync(request, cancellationToken);
+        return await _profilesClient.CreateProfilesAsync(request, cancellationToken);
     }
 
     /// <summary>
@@ -106,7 +106,7 @@ public class ProfileService
             CustomPicturePath = customPicturePath
         };
 
-        return await _profilesClient.UpdateProfileAsync(id, request, cancellationToken);
+        return await _profilesClient.UpdateProfilesAsync(id, request, cancellationToken);
     }
 
     /// <summary>
@@ -116,7 +116,7 @@ public class ProfileService
     {
         try
         {
-            await _profilesClient.DeleteProfileAsync(id, cancellationToken);
+            await _profilesClient.DeleteProfilesAsync(id, cancellationToken);
             return true;
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
@@ -132,10 +132,10 @@ public class ProfileService
     {
         var request = new SetActiveProfileRequest
         {
-            ProfileId = profileId
+            ProfileId = profileId ?? 0
         };
 
-        return await _profilesClient.SetActiveProfileAsync(request, cancellationToken);
+        return await _profilesClient.CreateActiveAsync(request, cancellationToken);
     }
 
     /// <summary>

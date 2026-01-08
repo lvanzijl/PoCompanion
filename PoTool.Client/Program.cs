@@ -43,10 +43,42 @@ builder.Services.AddScoped<HubConnection>(sp =>
 
 // Register NSwag-generated API clients
 // Note: Generated clients have a default BaseUrl, but we override it with the configured apiBaseUrl
-builder.Services.AddScoped<IClient>(sp =>
+builder.Services.AddScoped<IHealthClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
-    var client = new PoTool.Client.ApiClient.Client(httpClient);
+    var client = new HealthClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
+builder.Services.AddScoped<ITfsConfigClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new TfsConfigClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
+builder.Services.AddScoped<IWorkitemsClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new WorkitemsClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
+builder.Services.AddScoped<IStartupClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new StartupClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
+builder.Services.AddScoped<IReleasePlanningClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new ReleasePlanningClient(httpClient);
     client.BaseUrl = apiBaseUrl;
     return client;
 });

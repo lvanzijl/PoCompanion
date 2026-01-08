@@ -21,7 +21,7 @@
     protected override void OnParametersSet()
     {
         var metricsWithDuration = Metrics
-            .Where(m => m.AverageDuration.HasValue && m.AverageDuration.Value.TotalMinutes > 0)
+            .Where(m => !string.IsNullOrEmpty(m.AverageDuration) && TimeSpan.Parse(m.AverageDuration).TotalMinutes > 0)
             .Take(10)
             .ToList();
         
@@ -32,7 +32,7 @@
             new ChartSeries
             {
                 Name = "Duration (min)",
-                Data = metricsWithDuration.Select(m => m.AverageDuration!.Value.TotalMinutes).ToArray()
+                Data = metricsWithDuration.Select(m => TimeSpan.Parse(m.AverageDuration!).TotalMinutes).ToArray()
             }
         };
     }

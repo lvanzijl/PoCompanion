@@ -48,8 +48,8 @@
         get
         {
             var durations = Metrics
-                .Where(m => m.AverageDuration.HasValue)
-                .Select(m => m.AverageDuration!.Value)
+                .Where(m => !string.IsNullOrEmpty(m.AverageDuration))
+                .Select(m => TimeSpan.Parse(m.AverageDuration!))
                 .ToList();
             
             if (!durations.Any()) return TimeSpan.Zero;

@@ -189,7 +189,7 @@ public class TfsConfigService
                 Content = JsonContent.Create(new TfsVerifyRequest
                 {
                     IncludeWriteChecks = includeWriteChecks,
-                    WorkItemIdForWriteCheck = workItemIdForWriteCheck
+                    WorkItemIdForWriteCheck = workItemIdForWriteCheck ?? 0
                 })
             };
 

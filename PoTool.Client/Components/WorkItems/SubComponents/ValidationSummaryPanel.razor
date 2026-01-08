@@ -327,7 +327,7 @@
                 Fixes = fixes
             };
 
-            var result = await WorkItemsClient.FixValidationViolationsAsync(command);
+            var result = await WorkItemsClient.CreateFixValidationViolationsAsync(command);
 
             // Show results
             if (result.SuccessfulFixes > 0)

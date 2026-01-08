@@ -180,7 +180,7 @@
         try
         {
             // Get velocity trend for last 10 sprints
-            _velocityTrend = await MetricsClient.GetVelocityTrendAsync(areaPath: null, maxSprints: 10);
+            _velocityTrend = await MetricsClient.GetVelocityAsync(areaPath: null, maxSprints: 10);
             
             if (_velocityTrend?.Sprints.Any() == true)
             {

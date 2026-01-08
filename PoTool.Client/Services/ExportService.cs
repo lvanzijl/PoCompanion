@@ -33,8 +33,8 @@ public class ExportService
                          $"{EscapeCsv(item.State)}," +
                          $"{EscapeCsv(item.AreaPath)}," +
                          $"{EscapeCsv(item.IterationPath)}," +
-                         $"{EscapeCsv(item.ParentTfsId?.ToString() ?? string.Empty)}," +
-                         $"{EscapeCsv(item.Effort?.ToString() ?? string.Empty)}," +
+                         $"{EscapeCsv(item.ParentTfsId > 0 ? item.ParentTfsId.ToString() : string.Empty)}," +
+                         $"{EscapeCsv(item.Effort > 0 ? item.Effort.ToString() : string.Empty)}," +
                          $"{EscapeCsv(item.RetrievedAt.ToString("yyyy-MM-dd HH:mm:ss"))}");
         }
         
