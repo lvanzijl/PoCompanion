@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
+using PoTool.Shared.Settings;
 using System.Text.Json;
 
 namespace PoTool.Client.Services;

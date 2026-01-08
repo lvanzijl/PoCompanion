@@ -5,7 +5,8 @@ namespace PoTool.Shared.Metrics;
 /// </summary>
 public enum EffortTrendDirection
 {
-    Improving = 0,
-    Stable = 1,
-    Worsening = 2
+    Stable = 0,
+    Increasing = 1,
+    Decreasing = 2,
+    Volatile = 3
 }

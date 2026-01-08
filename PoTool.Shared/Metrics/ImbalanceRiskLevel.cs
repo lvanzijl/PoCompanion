@@ -5,8 +5,8 @@ namespace PoTool.Shared.Metrics;
 /// </summary>
 public enum ImbalanceRiskLevel
 {
-    None = 0,
-    Low = 1,      // Deviation < 30%
-    Medium = 2,   // Deviation 30-50%
-    High = 3      // Deviation 50-80%
+    Low = 0,      // Deviation < 30%
+    Medium = 1,   // Deviation 30-50%
+    High = 2,     // Deviation 50-80%
+    Critical = 3  // Deviation > 80%
 }
