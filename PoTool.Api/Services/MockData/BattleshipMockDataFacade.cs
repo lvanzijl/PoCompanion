@@ -448,6 +448,22 @@ public class BattleshipMockDataFacade : ITfsClient
         return Task.FromResult(true);
     }
 
+    public Task<IEnumerable<string>> GetAreaPathsAsync(CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: GetAreaPathsAsync called");
+        
+        var allWorkItems = GetMockHierarchy();
+        var areaPaths = allWorkItems
+            .Select(wi => wi.AreaPath)
+            .Distinct()
+            .OrderBy(ap => ap)
+            .ToList();
+        
+        _logger.LogInformation("Mock TFS client: Returning {Count} area paths", areaPaths.Count);
+        return Task.FromResult<IEnumerable<string>>(areaPaths);
+    }
+
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, CancellationToken cancellationToken = default)
     {
         return GetWorkItemsAsync(areaPath, since: null, cancellationToken);

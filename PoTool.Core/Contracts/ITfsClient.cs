@@ -36,6 +36,13 @@ public interface ITfsClient
     Task<bool> ValidateConnectionAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves all area paths from the TFS/Azure DevOps project.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of area path strings.</returns>
+    Task<IEnumerable<string>> GetAreaPathsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves pull requests from TFS/Azure DevOps.
     /// </summary>
     /// <param name="repositoryName">Optional repository name to filter by.</param>

@@ -200,12 +200,24 @@
     {
         try
         {
-            var areaPaths = await WorkItemService.GetDistinctAreaPathsAsync();
+            // Load area paths directly from TFS to ensure all paths are available
+            // even before any work items are synced
+            var areaPaths = await WorkItemService.GetAreaPathsFromTfsAsync();
             _allAreaPaths = areaPaths.ToList();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading area paths: {ex.Message}");
+            Console.WriteLine($"Error loading area paths from TFS: {ex.Message}");
+            // Fallback to cached area paths if TFS call fails
+            try
+            {
+                var cachedAreaPaths = await WorkItemService.GetDistinctAreaPathsAsync();
+                _allAreaPaths = cachedAreaPaths.ToList();
+            }
+            catch (Exception fallbackEx)
+            {
+                Console.WriteLine($"Error loading cached area paths: {fallbackEx.Message}");
+            }
         }
     }
 

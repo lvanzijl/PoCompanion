@@ -88,5 +88,16 @@ public class WorkItemService
             .OrderBy(ap => ap)
             .ToList();
     }
+
+    /// <summary>
+    /// Gets all area paths directly from TFS/Azure DevOps server.
+    /// This method retrieves the full area path hierarchy from the project classification nodes,
+    /// independent of cached work items. Useful when creating profiles before any work items are synced.
+    /// </summary>
+    public async Task<IEnumerable<string>> GetAreaPathsFromTfsAsync()
+    {
+        // Call the generated client method (WorkItems_GetFromTfs in the API)
+        return await _client.GetFromTfsAsync();
+    }
 }
 

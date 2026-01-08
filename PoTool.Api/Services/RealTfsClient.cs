@@ -281,6 +281,79 @@ public class RealTfsClient : ITfsClient
         }
     }
 
+    public async Task<IEnumerable<string>> GetAreaPathsAsync(CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+        
+        var config = entity!;
+
+        // Use auth-mode-specific HttpClient to avoid credential conflicts
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            // Classification nodes API is project-scoped
+            // Use $depth parameter to get full area path hierarchy
+            var classificationUrl = ProjectUrl(config, "_apis/wit/classificationnodes/areas?$depth=10");
+            
+            _logger.LogDebug("Retrieving area paths from {Url}", classificationUrl);
+            
+            var response = await httpClient.GetAsync(classificationUrl, cancellationToken);
+            await HandleHttpErrorsAsync(response, cancellationToken);
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            var areaPaths = new List<string>();
+            
+            // The root node is returned with a 'name' property
+            if (doc.RootElement.TryGetProperty("name", out var rootName))
+            {
+                var rootPath = rootName.GetString() ?? config.Project;
+                areaPaths.Add(rootPath);
+                
+                // Recursively extract child area paths
+                if (doc.RootElement.TryGetProperty("children", out var children))
+                {
+                    ExtractAreaPathsRecursive(children, rootPath, areaPaths);
+                }
+            }
+            
+            _logger.LogInformation("Retrieved {Count} area paths from TFS", areaPaths.Count);
+            
+            return areaPaths.OrderBy(ap => ap).AsEnumerable();
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Recursively extracts area paths from classification nodes hierarchy.
+    /// </summary>
+    private void ExtractAreaPathsRecursive(JsonElement children, string parentPath, List<string> areaPaths)
+    {
+        if (children.ValueKind != JsonValueKind.Array)
+            return;
+
+        foreach (var child in children.EnumerateArray())
+        {
+            if (child.TryGetProperty("name", out var childName))
+            {
+                var name = childName.GetString();
+                if (!string.IsNullOrEmpty(name))
+                {
+                    var fullPath = $"{parentPath}\\{name}";
+                    areaPaths.Add(fullPath);
+                    
+                    // Recursively process children
+                    if (child.TryGetProperty("children", out var grandChildren))
+                    {
+                        ExtractAreaPathsRecursive(grandChildren, fullPath, areaPaths);
+                    }
+                }
+            }
+        }
+    }
+
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, CancellationToken cancellationToken = default)
     {
         return GetWorkItemsAsync(areaPath, since: null, cancellationToken);

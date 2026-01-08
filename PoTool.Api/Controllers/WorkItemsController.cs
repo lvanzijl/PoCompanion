@@ -62,6 +62,26 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets all area paths directly from TFS/Azure DevOps server.
+    /// This endpoint retrieves the full area path hierarchy from the project classification nodes,
+    /// independent of cached work items. Useful when creating profiles before any work items are synced.
+    /// </summary>
+    [HttpGet("area-paths/from-tfs")]
+    public async Task<ActionResult<IEnumerable<string>>> GetAreaPathsFromTfs(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var areaPaths = await _mediator.Send(new GetAreaPathsFromTfsQuery(), cancellationToken);
+            return Ok(areaPaths);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving area paths from TFS");
+            return StatusCode(500, "Error retrieving area paths from TFS");
+        }
+    }
+
+    /// <summary>
     /// Gets all cached work items with validation results.
     /// </summary>
     [HttpGet("validated")]
