@@ -96,12 +96,8 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<string>> GetAreaPathsFromTfsAsync()
     {
-        // TODO: Uncomment after API client regeneration
-        // return await _client.GetAreaPathsFromTfsAsync();
-        
-        // Temporary implementation: Make direct HTTP call to the API
-        // This will be replaced with the generated client method after regeneration
-        throw new NotImplementedException("API client needs to be regenerated. Run: pwsh tools/generate-openapi.ps1");
+        // Call the generated client method (WorkItems_GetFromTfs in the API)
+        return await _client.GetFromTfsAsync();
     }
 }
 
