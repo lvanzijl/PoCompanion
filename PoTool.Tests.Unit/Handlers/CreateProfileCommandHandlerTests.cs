@@ -5,6 +5,7 @@ using PoTool.Api.Handlers.Settings;
 using PoTool.Core.Contracts;
 using PoTool.Core.Settings;
 using PoTool.Core.Settings.Commands;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit.Handlers;
 

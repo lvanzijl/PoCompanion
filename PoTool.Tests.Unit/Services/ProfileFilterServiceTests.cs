@@ -4,6 +4,7 @@ using Moq;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Settings;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit.Services;
 
