@@ -52,12 +52,26 @@ try {
 
 } finally {
     # Step 4: Restore original API csproj
-    Write-Host "[5/6] Restoring API project file..." -ForegroundColor Yellow
+    Write-Host "[5/8] Restoring API project file..." -ForegroundColor Yellow
     Move-Item "$apiCsproj.bak" $apiCsproj -Force
 }
 
-# Step 5: Regenerate client
-Write-Host "[6/6] Regenerating API client..." -ForegroundColor Yellow
+# Step 5: Add operation IDs to OpenAPI spec
+Write-Host "[6/8] Adding operation IDs..." -ForegroundColor Yellow
+& "$PSScriptRoot/add-operation-ids.ps1"
+if ($LASTEXITCODE -ne 0) {
+    throw "Adding operation IDs failed"
+}
+
+# Step 6: Fix OpenAPI type issues
+Write-Host "[7/8] Fixing OpenAPI type issues..." -ForegroundColor Yellow
+& "$PSScriptRoot/fix-openapi-types.ps1"
+if ($LASTEXITCODE -ne 0) {
+    throw "OpenAPI type fixing failed"
+}
+
+# Step 7: Regenerate client
+Write-Host "[8/8] Regenerating API client..." -ForegroundColor Yellow
 Push-Location "$repoRoot/PoTool.Client"
 try {
     dotnet nswag run nswag.json 2>&1 | Out-Null
