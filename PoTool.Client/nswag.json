@@ -42,7 +42,13 @@
       "queryNullValue": "",
       "className": "{controller}Client",
       "operationGenerationMode": "MultipleClientsFromPathSegments",
-      "additionalNamespaceUsages": [],
+      "additionalNamespaceUsages": [
+        "PoTool.Shared.Metrics",
+        "PoTool.Shared.Pipelines",
+        "PoTool.Shared.PullRequests",
+        "PoTool.Shared.Settings",
+        "PoTool.Shared.WorkItems"
+      ],
       "additionalContractNamespaceUsages": [],
       "generateOptionalParameters": false,
       "generateJsonMethods": false,
@@ -90,6 +96,7 @@
       "typeNameGeneratorType": null,
       "propertyNameGeneratorType": null,
       "enumNameGeneratorType": null,
+      "inlineNamedEnums": false,
       "serviceHost": null,
       "serviceSchemes": null,
       "output": "ApiClient/ApiClient.g.cs",

@@ -49,7 +49,7 @@ public class BacklogHealthCalculationService
         {
             TrendDirection.Improving => Color.Success,
             TrendDirection.Stable => Color.Info,
-            TrendDirection.Degrading => Color.Error,
+            TrendDirection.Declining => Color.Error,
             _ => Color.Default
         };
     }
@@ -65,7 +65,7 @@ public class BacklogHealthCalculationService
         {
             TrendDirection.Improving => Icons.Material.Filled.TrendingUp,
             TrendDirection.Stable => Icons.Material.Filled.TrendingFlat,
-            TrendDirection.Degrading => Icons.Material.Filled.TrendingDown,
+            TrendDirection.Declining => Icons.Material.Filled.TrendingDown,
             _ => Icons.Material.Filled.HelpOutline
         };
     }
