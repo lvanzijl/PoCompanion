@@ -3,6 +3,7 @@ using Mediator;
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Queries;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Handlers.WorkItems;
 

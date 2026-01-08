@@ -5,6 +5,7 @@ namespace PoTool.Shared.Metrics;
 /// </summary>
 public enum TrendDirection
 {
+    Unknown = -1,
     Improving = 0,
     Stable = 1,
     Declining = 2

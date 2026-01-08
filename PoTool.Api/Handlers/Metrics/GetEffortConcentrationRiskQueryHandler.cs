@@ -3,6 +3,7 @@ using PoTool.Core.Contracts;
 using PoTool.Core.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
+using PoTool.Shared.Metrics;
 
 namespace PoTool.Api.Handlers.Metrics;
 
@@ -308,7 +309,7 @@ public sealed class GetEffortConcentrationRiskQueryHandler
         if (overallRisk >= ConcentrationRiskLevel.Medium)
         {
             recommendations.Add(new RiskMitigationRecommendation(
-                Strategy: MitigationStrategy.IncreaseBacklog,
+                Strategy: MitigationStrategy.DiversifyAcrossAreas,
                 Title: "Increase backlog diversity",
                 Description: "Add more work items across different areas to create a more balanced portfolio " +
                             "and reduce dependency on concentrated efforts.",

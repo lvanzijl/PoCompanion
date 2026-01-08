@@ -48,7 +48,7 @@ public static class ApiServiceCollectionExtensions
             config.Description = "API for PO Companion work item management";
             
             // Configure enum handling to generate proper enum types in the client
-            config.DefaultEnumHandling = NSwag.Generation.OpenApiSchemaGeneratorSettings.EnumHandling.String;
+            // Note: Enum serialization is configured in AddJsonOptions above
             config.SchemaSettings.GenerateEnumMappingDescription = true;
         });
 
