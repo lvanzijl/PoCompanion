@@ -704,7 +704,7 @@
             new ChartSeries
             {
                 Name = "Capacity",
-                Data = _distributionData.EffortByIteration.Select(i => (double)i.Capacity).ToArray()
+                Data = _distributionData.EffortByIteration.Select(i => (double)(i.Capacity ?? 0)).ToArray()
             }
         };
     }
