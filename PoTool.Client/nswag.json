@@ -41,7 +41,7 @@
       "serializeTypeInformation": false,
       "queryNullValue": "",
       "className": "{controller}Client",
-      "operationGenerationMode": "MultipleClientsFromPathSegments",
+      "operationGenerationMode": "MultipleClientsFromOperationId",
       "additionalNamespaceUsages": [
         "PoTool.Shared.Metrics",
         "PoTool.Shared.Pipelines",

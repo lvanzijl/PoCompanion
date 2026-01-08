@@ -10,7 +10,8 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class TfsConfigService
 {
-    private readonly IClient _apiClient;
+    private readonly ITfsConfigClient _tfsConfigClient;
+    private readonly IWorkitemsClient _workItemsClient;
     private readonly HttpClient _httpClient;
     
     // JSON options for case-insensitive deserialization of API responses (camelCase to PascalCase)
@@ -19,9 +20,10 @@ public class TfsConfigService
         PropertyNameCaseInsensitive = true
     };
 
-    public TfsConfigService(IClient apiClient, HttpClient httpClient)
+    public TfsConfigService(ITfsConfigClient tfsConfigClient, IWorkitemsClient workItemsClient, HttpClient httpClient)
     {
-        _apiClient = apiClient;
+        _tfsConfigClient = tfsConfigClient;
+        _workItemsClient = workItemsClient;
         _httpClient = httpClient;
     }
 
@@ -68,7 +70,7 @@ public class TfsConfigService
             ApiVersion = apiVersion
         };
         
-        await _apiClient.PostApiTfsconfigAsync(request, cancellationToken);
+        await _tfsConfigClient.CreateTfsConfigAsync(request, cancellationToken);
     }
 
     /// <summary>
@@ -140,7 +142,7 @@ public class TfsConfigService
     {
         try
         {
-            await _apiClient.PostApiWorkitemsSyncAsync(cancellationToken);
+            await _workItemsClient.CreateSyncAsync(cancellationToken);
             return true;
         }
         catch (ApiException)
@@ -158,7 +160,7 @@ public class TfsConfigService
         // This will need to be handled differently or the API needs to expose a separate endpoint
         try
         {
-            await _apiClient.PostApiWorkitemsSyncAsync(cancellationToken);
+            await _workItemsClient.CreateSyncAsync(cancellationToken);
             return true;
         }
         catch (ApiException)
