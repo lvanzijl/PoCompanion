@@ -71,6 +71,32 @@ The application uses SQLite for local caching:
 - Database file: `potool.db` (created automatically)
 - Migrations: Auto-created on startup (EnsureCreated)
 
+## API Client Generation
+
+The Blazor client uses a strongly-typed C# client generated from the API's OpenAPI specification.
+
+### Regenerating the API Client
+
+When you make changes to API controllers or DTOs, regenerate the client:
+
+```powershell
+# 1. Generate fresh OpenAPI specification
+.\tools\generate-openapi.ps1
+
+# 2. Regenerate C# client
+cd PoTool.Client
+dotnet nswag run nswag.json
+cd ..
+
+# 3. Build and test
+dotnet build
+dotnet test
+```
+
+For detailed documentation, see:
+- [`docs/dev/OPENAPI.md`](docs/dev/OPENAPI.md) - OpenAPI generation
+- [`docs/dev/NSWAG.md`](docs/dev/NSWAG.md) - NSwag client generation
+
 ## Work Item Tree Feature
 
 The Work Item Tree feature (as described in `features/Simple_workitem_explorer.md`) provides:

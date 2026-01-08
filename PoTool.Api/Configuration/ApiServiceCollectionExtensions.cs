@@ -40,6 +40,10 @@ public static class ApiServiceCollectionExtensions
             config.Title = "PoTool API";
             config.Version = "v1";
             config.Description = "API for PO Companion work item management";
+            
+            // Configure enum handling to generate proper enum types in the client
+            config.DefaultEnumHandling = NSwag.Generation.OpenApiSchemaGeneratorSettings.EnumHandling.String;
+            config.SchemaSettings.GenerateEnumMappingDescription = true;
         });
 
         // Add Mediator (source-generated)

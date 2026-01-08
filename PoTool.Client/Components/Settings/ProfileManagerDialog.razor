@@ -93,6 +93,12 @@
                                      HelperText="Select one or more goals"
                                      Required="true" />
 
+                <MudDivider Class="my-4" />
+
+                <ProfilePictureSelector @bind-PictureType="_pictureType"
+                                       @bind-DefaultPictureId="_defaultPictureId"
+                                       @bind-CustomPicturePath="_customPicturePath" />
+
                 @if (_errorResponse != null)
                 {
                     <ErrorDisplay ErrorResponse="@_errorResponse" 
@@ -154,6 +160,11 @@
     // Changed from IEnumerable to List for multi-select combobox
     private List<string> _selectedAreaPathsList = new();
     private List<WorkItemDto> _selectedGoalsList = new();
+
+    // Profile picture state
+    private ProfilePictureType _pictureType = ProfilePictureType.Default;
+    private int _defaultPictureId = 0;
+    private string? _customPicturePath = null;
 
     private ErrorResponse? _errorResponse;
 
@@ -222,6 +233,11 @@
         _selectedGoalsList = _availableGoals
             .Where(g => profile.GoalIds.Contains(g.TfsId))
             .ToList();
+        
+        // Load profile picture settings
+        _pictureType = (ProfilePictureType)profile.PictureType;
+        _defaultPictureId = profile.DefaultPictureId;
+        _customPicturePath = profile.CustomPicturePath;
     }
 
     private async Task DeleteProfile(ProfileDto profile)
@@ -294,7 +310,10 @@
                     _profileName,
                     areaPaths,
                     _teamName,
-                    goalIds);
+                    goalIds,
+                    _pictureType,
+                    _defaultPictureId,
+                    _customPicturePath);
                 Snackbar.Add("Profile updated successfully", Severity.Success);
             }
             else
@@ -303,7 +322,10 @@
                     _profileName,
                     areaPaths,
                     _teamName,
-                    goalIds);
+                    goalIds,
+                    _pictureType,
+                    _defaultPictureId,
+                    _customPicturePath);
                 Snackbar.Add("Profile created successfully", Severity.Success);
             }
 
@@ -333,6 +355,9 @@
         _teamName = string.Empty;
         _selectedAreaPathsList = new List<string>();
         _selectedGoalsList = new List<WorkItemDto>();
+        _pictureType = ProfilePictureType.Default;
+        _defaultPictureId = 0;
+        _customPicturePath = null;
         _form?.ResetValidation();
     }
 

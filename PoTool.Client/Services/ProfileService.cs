@@ -61,6 +61,9 @@ public class ProfileService
         List<string> areaPaths,
         string teamName,
         List<int> goalIds,
+        ProfilePictureType pictureType = ProfilePictureType.Default,
+        int defaultPictureId = 0,
+        string? customPicturePath = null,
         CancellationToken cancellationToken = default)
     {
         var request = new CreateProfileRequest
@@ -68,7 +71,10 @@ public class ProfileService
             Name = name,
             AreaPaths = areaPaths,
             TeamName = teamName,
-            GoalIds = goalIds
+            GoalIds = goalIds,
+            PictureType = (int)pictureType,
+            DefaultPictureId = defaultPictureId,
+            CustomPicturePath = customPicturePath
         };
 
         return await _profilesClient.CreateProfileAsync(request, cancellationToken);
@@ -83,6 +89,9 @@ public class ProfileService
         List<string> areaPaths,
         string teamName,
         List<int> goalIds,
+        ProfilePictureType pictureType = ProfilePictureType.Default,
+        int defaultPictureId = 0,
+        string? customPicturePath = null,
         CancellationToken cancellationToken = default)
     {
         var request = new UpdateProfileRequest
@@ -90,7 +99,10 @@ public class ProfileService
             Name = name,
             AreaPaths = areaPaths,
             TeamName = teamName,
-            GoalIds = goalIds
+            GoalIds = goalIds,
+            PictureType = (int)pictureType,
+            DefaultPictureId = defaultPictureId,
+            CustomPicturePath = customPicturePath
         };
 
         return await _profilesClient.UpdateProfileAsync(id, request, cancellationToken);
@@ -133,10 +145,14 @@ public class ProfileService
         List<string> areaPaths,
         string teamName,
         List<int> goalIds,
+        ProfilePictureType pictureType = ProfilePictureType.Default,
+        int defaultPictureId = 0,
+        string? customPicturePath = null,
         CancellationToken cancellationToken = default)
     {
         // Create the profile
-        var profile = await CreateProfileAsync(name, areaPaths, teamName, goalIds, cancellationToken);
+        var profile = await CreateProfileAsync(name, areaPaths, teamName, goalIds, 
+            pictureType, defaultPictureId, customPicturePath, cancellationToken);
 
         // Set it as active
         await SetActiveProfileAsync(profile.Id, cancellationToken);

@@ -1,6 +1,7 @@
 @using PoTool.Client.Services
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Models
 
 <MudCard Class="@GetCardClass()" 
          Elevation="@(IsActive ? 6 : 2)"
@@ -9,11 +10,12 @@
     <MudCardContent Class="d-flex flex-column align-center pa-4">
         @* Profile Picture *@
         <MudAvatar Size="Size.Large" 
-                   Style="width: 80px; height: 80px; font-size: 2rem;"
-                   Color="@GetAvatarColor()">
+                   Style="width: 80px; height: 80px; font-size: 2rem;">
             @if (Profile != null)
             {
-                @GetProfileInitials()
+                <MudImage Src="@GetProfileImageUrl()" 
+                          Alt="@Profile.Name" 
+                          ObjectFit="ObjectFit.Cover" />
             }
         </MudAvatar>
         
@@ -48,36 +50,31 @@
     [Parameter]
     public EventCallback<ProfileDto> OnClick { get; set; }
     
+    private const string DefaultProfilePicturesPath = "/assets/profile-defaults/";
+    private const string DefaultProfilePictureFallback = "profile-0.svg";
+    
     private string GetCardClass()
     {
         return IsActive ? "profile-tile profile-tile-active" : "profile-tile";
     }
     
-    private string GetProfileInitials()
+    private string GetProfileImageUrl()
     {
-        if (Profile == null || string.IsNullOrWhiteSpace(Profile.Name))
+        if (Profile == null)
         {
-            return "?";
+            return $"{DefaultProfilePicturesPath}{DefaultProfilePictureFallback}";
         }
         
-        var parts = Profile.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 2)
+        // Use custom picture if set
+        if ((ProfilePictureType)Profile.PictureType == ProfilePictureType.Custom 
+            && !string.IsNullOrEmpty(Profile.CustomPicturePath))
         {
-            return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
+            return Profile.CustomPicturePath;
         }
         
-        return Profile.Name.Length >= 2 
-            ? Profile.Name.Substring(0, 2).ToUpperInvariant() 
-            : Profile.Name.ToUpperInvariant();
-    }
-    
-    private Color GetAvatarColor()
-    {
-        if (Profile == null) return Color.Default;
-        
-        // Use profile ID to deterministically select a color
-        var colors = new[] { Color.Primary, Color.Secondary, Color.Tertiary, Color.Info, Color.Success, Color.Warning };
-        return colors[Math.Abs(Profile.Id) % colors.Length];
+        // Use default picture (constrain to 0-63 range)
+        var pictureId = Math.Clamp(Profile.DefaultPictureId, 0, 63);
+        return $"{DefaultProfilePicturesPath}profile-{pictureId}.svg";
     }
     
     private async Task HandleClick()
