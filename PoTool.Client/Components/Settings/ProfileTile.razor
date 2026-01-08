@@ -50,6 +50,9 @@
     [Parameter]
     public EventCallback<ProfileDto> OnClick { get; set; }
     
+    private const string DefaultProfilePicturesPath = "/assets/profile-defaults/";
+    private const string DefaultProfilePictureFallback = "profile-0.svg";
+    
     private string GetCardClass()
     {
         return IsActive ? "profile-tile profile-tile-active" : "profile-tile";
@@ -59,7 +62,7 @@
     {
         if (Profile == null)
         {
-            return "/assets/profile-defaults/profile-0.svg";
+            return $"{DefaultProfilePicturesPath}{DefaultProfilePictureFallback}";
         }
         
         // Use custom picture if set
@@ -71,7 +74,7 @@
         
         // Use default picture (constrain to 0-63 range)
         var pictureId = Math.Clamp(Profile.DefaultPictureId, 0, 63);
-        return $"/assets/profile-defaults/profile-{pictureId}.svg";
+        return $"{DefaultProfilePicturesPath}profile-{pictureId}.svg";
     }
     
     private async Task HandleClick()
