@@ -29,47 +29,743 @@ namespace PoTool.Client.ApiClient
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial interface IClient
     {
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task GetHealthAsync();
+        System.Threading.Tasks.Task HealthAsync();
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task GetHealthAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task HealthAsync(System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<TfsConfig> GetTfsConfigAsync();
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<TfsConfig> GetTfsConfigAsync(System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task PostApiTfsconfigAsync(TfsConfigRequest req);
+        System.Threading.Tasks.Task TfsconfigAsync(TfsConfigRequest body);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task PostApiTfsconfigAsync(TfsConfigRequest req, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task TfsconfigAsync(TfsConfigRequest body, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task GetApiTfsvalidateAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task GetApiTfsvalidateAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<TfsVerificationReport> PostApiTfsverifyAsync(TfsVerifyRequest req);
+        System.Threading.Tasks.Task TfsvalidateAsync();
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<TfsVerificationReport> PostApiTfsverifyAsync(TfsVerifyRequest req, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task TfsvalidateAsync(System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task PostApiWorkitemsSyncAsync();
+        System.Threading.Tasks.Task<TfsVerificationReport> TfsverifyAsync(TfsVerifyRequest body);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task PostApiWorkitemsSyncAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<TfsVerificationReport> TfsverifyAsync(TfsVerifyRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task SyncAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task SyncAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<FilterByValidationResponse> ByValidationWithAncestorsAsync(FilterByValidationRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<FilterByValidationResponse> ByValidationWithAncestorsAsync(FilterByValidationRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<GetWorkItemIdsByValidationFilterResponse> IdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<GetWorkItemIdsByValidationFilterResponse> IdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<CountWorkItemsByValidationFilterResponse> CountByValidationFilterAsync(CountWorkItemsByValidationFilterRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<CountWorkItemsByValidationFilterResponse> CountByValidationFilterAsync(CountWorkItemsByValidationFilterRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<IsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<IsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<FilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<FilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<CalculateHealthScoreResponse> CalculateScoreAsync(CalculateHealthScoreRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<CalculateHealthScoreResponse> CalculateScoreAsync(CalculateHealthScoreRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<SprintMetricsDto> SprintAsync(string iterationPath);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<SprintMetricsDto> SprintAsync(string iterationPath, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<VelocityTrendDto> VelocityAsync(string? areaPath, int? maxSprints);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<VelocityTrendDto> VelocityAsync(string? areaPath, int? maxSprints, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<BacklogHealthDto> BacklogHealthAsync(string iterationPath);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<BacklogHealthDto> BacklogHealthAsync(string iterationPath, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> MultiIterationHealthAsync(string? areaPath, int? maxIterations);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> MultiIterationHealthAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortDistributionDto> EffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortDistributionDto> EffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<SprintCapacityPlanDto> CapacityPlanAsync(string iterationPath, int? defaultCapacity);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<SprintCapacityPlanDto> CapacityPlanAsync(string iterationPath, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicCompletionForecastDto> EpicForecastAsync(int epicId, int? maxSprintsForVelocity);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicCompletionForecastDto> EpicForecastAsync(int epicId, int? maxSprintsForVelocity, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortImbalanceDto> EffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortImbalanceDto> EffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortDistributionTrendDto> EffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortDistributionTrendDto> EffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortConcentrationRiskDto> EffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortConcentrationRiskDto> EffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>> EffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>> EffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortEstimationQualityDto> EffortEstimationQualityAsync(string? areaPath, int? maxIterations);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortEstimationQualityDto> EffortEstimationQualityAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDto>> PipelinesAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDto>> PipelinesAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> RunsAsync(int id, int? top);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> RunsAsync(int id, int? top, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> MetricsAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> MetricsAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<PipelineSyncResult> Sync2Async(int? runsPerPipeline);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<PipelineSyncResult> Sync2Async(int? runsPerPipeline, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProfileDto>> ProfilesAllAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProfileDto>> ProfilesAllAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Created</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProfileDto> ProfilesPOSTAsync(CreateProfileRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Created</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProfileDto> ProfilesPOSTAsync(CreateProfileRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProfileDto> ProfilesGETAsync(int id);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProfileDto> ProfilesGETAsync(int id, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProfileDto> ProfilesPUTAsync(int id, UpdateProfileRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProfileDto> ProfilesPUTAsync(int id, UpdateProfileRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>No Content</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task ProfilesDELETEAsync(int id);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>No Content</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task ProfilesDELETEAsync(int id, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProfileDto> ActiveGETAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProfileDto> ActiveGETAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<SettingsDto> ActivePOSTAsync(SetActiveProfileRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<SettingsDto> ActivePOSTAsync(SetActiveProfileRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> PullRequestsAllAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> PullRequestsAllAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<PullRequestDto> PullRequestsAsync(int id);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<PullRequestDto> PullRequestsAsync(int id, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> Metrics2Async();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> Metrics2Async(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> FilterAsync(string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> FilterAsync(string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestIterationDto>> IterationsAsync(int id);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestIterationDto>> IterationsAsync(int id, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestCommentDto>> CommentsAsync(int id);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestCommentDto>> CommentsAsync(int id, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestFileChangeDto>> FilechangesAsync(int id);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestFileChangeDto>> FilechangesAsync(int id, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<int> Sync3Async();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<int> Sync3Async(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<PRReviewBottleneckDto> ReviewBottleneckAsync(int? maxPRs, int? daysBack);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<PRReviewBottleneckDto> ReviewBottleneckAsync(int? maxPRs, int? daysBack, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ReleasePlanningBoardDto> BoardAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ReleasePlanningBoardDto> BoardAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<UnplannedEpicDto>> UnplannedEpicsAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<UnplannedEpicDto>> UnplannedEpicsAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ObjectiveEpicDto>> EpicsAsync(int objectiveId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ObjectiveEpicDto>> EpicsAsync(int objectiveId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LaneOperationResultDto> LanesPOSTAsync(CreateLaneCommand body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LaneOperationResultDto> LanesPOSTAsync(CreateLaneCommand body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LaneOperationResultDto> LanesDELETEAsync(int laneId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LaneOperationResultDto> LanesDELETEAsync(int laneId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicPlacementResultDto> PlacementsPOSTAsync(CreateEpicPlacementCommand body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicPlacementResultDto> PlacementsPOSTAsync(CreateEpicPlacementCommand body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicPlacementResultDto> PlacementsPUTAsync(int placementId, UpdatePlacementRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicPlacementResultDto> PlacementsPUTAsync(int placementId, UpdatePlacementRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicPlacementResultDto> MoveAsync(int placementId, MoveEpicRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicPlacementResultDto> MoveAsync(int placementId, MoveEpicRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicPlacementResultDto> ReorderAsync(ReorderEpicsInRowCommand body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicPlacementResultDto> ReorderAsync(ReorderEpicsInRowCommand body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LineOperationResultDto> MilestoneLinesPOSTAsync(CreateMilestoneLineCommand body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LineOperationResultDto> MilestoneLinesPOSTAsync(CreateMilestoneLineCommand body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LineOperationResultDto> MilestoneLinesPUTAsync(int lineId, UpdateMilestoneLineRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LineOperationResultDto> MilestoneLinesPUTAsync(int lineId, UpdateMilestoneLineRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LineOperationResultDto> MilestoneLinesDELETEAsync(int lineId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LineOperationResultDto> MilestoneLinesDELETEAsync(int lineId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LineOperationResultDto> IterationLinesPOSTAsync(CreateIterationLineCommand body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LineOperationResultDto> IterationLinesPOSTAsync(CreateIterationLineCommand body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LineOperationResultDto> IterationLinesPUTAsync(int lineId, UpdateIterationLineRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LineOperationResultDto> IterationLinesPUTAsync(int lineId, UpdateIterationLineRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LineOperationResultDto> IterationLinesDELETEAsync(int lineId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<LineOperationResultDto> IterationLinesDELETEAsync(int lineId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ValidationCacheResultDto> RefreshAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ValidationCacheResultDto> RefreshAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EpicFeatureDto>> FeaturesAsync(int epicId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EpicFeatureDto>> FeaturesAsync(int epicId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicSplitResultDto> SplitAsync(int epicId, SplitEpicRequest body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicSplitResultDto> SplitAsync(int epicId, SplitEpicRequest body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ExportResultDto> ExportAsync(ExportOptionsDto body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ExportResultDto> ExportAsync(ExportOptionsDto body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<SettingsDto> SettingsAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<SettingsDto> SettingsAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortEstimationSettingsDto> EffortEstimationGETAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EffortEstimationSettingsDto> EffortEstimationGETAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task EffortEstimationPUTAsync(EffortEstimationSettingsDto body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task EffortEstimationPUTAsync(EffortEstimationSettingsDto body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<StartupReadinessDto> ReadinessAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<StartupReadinessDto> ReadinessAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> WorkItemsAllAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> WorkItemsAllAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> AreaPathsAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> AreaPathsAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemWithValidationDto>> ValidatedAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemWithValidationDto>> ValidatedAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> Filter2Async(string filter);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> Filter2Async(string filter, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<WorkItemDto> WorkItemsAsync(int tfsId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<WorkItemDto> WorkItemsAsync(int tfsId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemRevisionDto>> RevisionsAsync(int workItemId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemRevisionDto>> RevisionsAsync(int workItemId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> AllAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> AllAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GoalsAsync(string? goalIds);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GoalsAsync(string? goalIds, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<WorkItemStateTimelineDto> StateTimelineAsync(int id);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<WorkItemStateTimelineDto> StateTimelineAsync(int id, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> AdvancedFilterAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> AdvancedFilterAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DependencyGraphDto> DependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DependencyGraphDto> DependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ValidationViolationHistoryDto>> ValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ValidationViolationHistoryDto>> ValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ValidationImpactAnalysisDto> ValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ValidationImpactAnalysisDto> ValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<FixValidationViolationResultDto> FixValidationViolationsAsync(FixValidationViolationBatchCommand body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<FixValidationViolationResultDto> FixValidationViolationsAsync(FixValidationViolationBatchCommand body, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<BulkEffortAssignmentResultDto> BulkAssignEffortAsync(BulkAssignEffortCommand body);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<BulkEffortAssignmentResultDto> BulkAssignEffortAsync(BulkAssignEffortCommand body, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -88,7 +784,7 @@ namespace PoTool.Client.ApiClient
         public Client(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            BaseUrl = "http://localhost:5000";
+            BaseUrl = "http://localhost:5291/";
             _httpClient = httpClient;
             Initialize();
         }
@@ -121,15 +817,17 @@ namespace PoTool.Client.ApiClient
         partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
         partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task GetHealthAsync()
+        public virtual System.Threading.Tasks.Task HealthAsync()
         {
-            return GetHealthAsync(System.Threading.CancellationToken.None);
+            return HealthAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task GetHealthAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task HealthAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -191,6 +889,7 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         public virtual System.Threading.Tasks.Task<TfsConfig> GetTfsConfigAsync()
         {
@@ -198,6 +897,7 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<TfsConfig> GetTfsConfigAsync(System.Threading.CancellationToken cancellationToken)
         {
@@ -251,7 +951,7 @@ namespace PoTool.Client.ApiClient
                         if (status_ == 204)
                         {
                             string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
-                            throw new ApiException("A server side error occurred.", status_, responseText_, headers_, null);
+                            throw new ApiException("No Content", status_, responseText_, headers_, null);
                         }
                         else
                         {
@@ -273,18 +973,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task PostApiTfsconfigAsync(TfsConfigRequest req)
+        public virtual System.Threading.Tasks.Task TfsconfigAsync(TfsConfigRequest body)
         {
-            return PostApiTfsconfigAsync(req, System.Threading.CancellationToken.None);
+            return TfsconfigAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task PostApiTfsconfigAsync(TfsConfigRequest req, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task TfsconfigAsync(TfsConfigRequest body, System.Threading.CancellationToken cancellationToken)
         {
-            if (req == null)
-                throw new System.ArgumentNullException("req");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -292,7 +994,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(req, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -350,15 +1052,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task GetApiTfsvalidateAsync()
+        public virtual System.Threading.Tasks.Task TfsvalidateAsync()
         {
-            return GetApiTfsvalidateAsync(System.Threading.CancellationToken.None);
+            return TfsvalidateAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task GetApiTfsvalidateAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task TfsvalidateAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -420,18 +1124,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<TfsVerificationReport> PostApiTfsverifyAsync(TfsVerifyRequest req)
+        public virtual System.Threading.Tasks.Task<TfsVerificationReport> TfsverifyAsync(TfsVerifyRequest body)
         {
-            return PostApiTfsverifyAsync(req, System.Threading.CancellationToken.None);
+            return TfsverifyAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<TfsVerificationReport> PostApiTfsverifyAsync(TfsVerifyRequest req, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<TfsVerificationReport> TfsverifyAsync(TfsVerifyRequest body, System.Threading.CancellationToken cancellationToken)
         {
-            if (req == null)
-                throw new System.ArgumentNullException("req");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -439,7 +1145,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(req, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -503,15 +1209,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task PostApiWorkitemsSyncAsync()
+        public virtual System.Threading.Tasks.Task SyncAsync()
         {
-            return PostApiWorkitemsSyncAsync(System.Threading.CancellationToken.None);
+            return SyncAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task PostApiWorkitemsSyncAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task SyncAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -574,235 +1282,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
-        protected struct ObjectResponseResult<T>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<FilterByValidationResponse> ByValidationWithAncestorsAsync(FilterByValidationRequest body)
         {
-            public ObjectResponseResult(T responseObject, string responseText)
-            {
-                this.Object = responseObject;
-                this.Text = responseText;
-            }
-
-            public T Object { get; }
-
-            public string Text { get; }
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<string> ReadAsStringAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStringAsync(cancellationToken);
-    #else
-            return content.ReadAsStringAsync();
-    #endif
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<System.IO.Stream> ReadAsStreamAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStreamAsync(cancellationToken);
-    #else
-            return content.ReadAsStreamAsync();
-    #endif
-        }
-
-        public bool ReadResponseAsString { get; set; }
-
-        protected virtual async System.Threading.Tasks.Task<ObjectResponseResult<T>> ReadObjectResponseAsync<T>(System.Net.Http.HttpResponseMessage response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.Threading.CancellationToken cancellationToken)
-        {
-            if (response == null || response.Content == null)
-            {
-                return new ObjectResponseResult<T>(default(T)!, string.Empty);
-            }
-
-            if (ReadResponseAsString)
-            {
-                var responseText = await ReadAsStringAsync(response.Content, cancellationToken).ConfigureAwait(false);
-                try
-                {
-                    var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody!, responseText);
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, responseText, headers, exception);
-                }
-            }
-            else
-            {
-                try
-                {
-                    using (var responseStream = await ReadAsStreamAsync(response.Content, cancellationToken).ConfigureAwait(false))
-                    {
-                        var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
-                    }
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
-                }
-            }
-        }
-
-        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
-        {
-            if (value == null)
-            {
-                return "";
-            }
-
-            if (value is System.Enum)
-            {
-                var name = System.Enum.GetName(value.GetType(), value);
-                if (name != null)
-                {
-                    var field_ = System.Reflection.IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
-                    if (field_ != null)
-                    {
-                        var attribute = System.Reflection.CustomAttributeExtensions.GetCustomAttribute(field_, typeof(System.Runtime.Serialization.EnumMemberAttribute)) 
-                            as System.Runtime.Serialization.EnumMemberAttribute;
-                        if (attribute != null)
-                        {
-                            return attribute.Value != null ? attribute.Value : name;
-                        }
-                    }
-
-                    var converted = System.Convert.ToString(System.Convert.ChangeType(value, System.Enum.GetUnderlyingType(value.GetType()), cultureInfo));
-                    return converted == null ? string.Empty : converted;
-                }
-            }
-            else if (value is bool) 
-            {
-                return System.Convert.ToString((bool)value, cultureInfo).ToLowerInvariant();
-            }
-            else if (value is byte[])
-            {
-                return System.Convert.ToBase64String((byte[]) value);
-            }
-            else if (value is string[])
-            {
-                return string.Join(",", (string[])value);
-            }
-            else if (value.GetType().IsArray)
-            {
-                var valueArray = (System.Array)value;
-                var valueTextArray = new string[valueArray.Length];
-                for (var i = 0; i < valueArray.Length; i++)
-                {
-                    valueTextArray[i] = ConvertToString(valueArray.GetValue(i), cultureInfo);
-                }
-                return string.Join(",", valueTextArray);
-            }
-
-            var result = System.Convert.ToString(value, cultureInfo);
-            return result == null ? "" : result;
-        }
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial interface IFilteringClient
-    {
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FilterByValidationResponse> FilterByValidationWithAncestorsAsync(FilterByValidationRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FilterByValidationResponse> FilterByValidationWithAncestorsAsync(FilterByValidationRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<GetWorkItemIdsByValidationFilterResponse> GetWorkItemIdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<GetWorkItemIdsByValidationFilterResponse> GetWorkItemIdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<CountWorkItemsByValidationFilterResponse> CountWorkItemsByValidationFilterAsync(CountWorkItemsByValidationFilterRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<CountWorkItemsByValidationFilterResponse> CountWorkItemsByValidationFilterAsync(CountWorkItemsByValidationFilterRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<IsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<IsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest request, System.Threading.CancellationToken cancellationToken);
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class FilteringClient : IFilteringClient
-    {
-        #pragma warning disable 8618
-        private string _baseUrl;
-        #pragma warning restore 8618
-
-        private System.Net.Http.HttpClient _httpClient;
-        private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
-        private System.Text.Json.JsonSerializerOptions _instanceSettings;
-
-    #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public FilteringClient(System.Net.Http.HttpClient httpClient)
-    #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        {
-            BaseUrl = "http://localhost:5000";
-            _httpClient = httpClient;
-            Initialize();
-        }
-
-        private static System.Text.Json.JsonSerializerOptions CreateSerializerSettings()
-        {
-            var settings = new System.Text.Json.JsonSerializerOptions();
-            UpdateJsonSerializerSettings(settings);
-            return settings;
-        }
-
-        public string BaseUrl
-        {
-            get { return _baseUrl; }
-            set
-            {
-                _baseUrl = value;
-                if (!string.IsNullOrEmpty(_baseUrl) && !_baseUrl.EndsWith("/"))
-                    _baseUrl += '/';
-            }
-        }
-
-        protected System.Text.Json.JsonSerializerOptions JsonSerializerSettings { get { return _instanceSettings ?? _settings.Value; } }
-
-        static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
-
-        partial void Initialize();
-
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, string url);
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
-        partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<FilterByValidationResponse> FilterByValidationWithAncestorsAsync(FilterByValidationRequest request)
-        {
-            return FilterByValidationWithAncestorsAsync(request, System.Threading.CancellationToken.None);
+            return ByValidationWithAncestorsAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<FilterByValidationResponse> FilterByValidationWithAncestorsAsync(FilterByValidationRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<FilterByValidationResponse> ByValidationWithAncestorsAsync(FilterByValidationRequest body, System.Threading.CancellationToken cancellationToken)
         {
-            if (request == null)
-                throw new System.ArgumentNullException("request");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -810,7 +1303,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -874,18 +1367,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<GetWorkItemIdsByValidationFilterResponse> GetWorkItemIdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest request)
+        public virtual System.Threading.Tasks.Task<GetWorkItemIdsByValidationFilterResponse> IdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest body)
         {
-            return GetWorkItemIdsByValidationFilterAsync(request, System.Threading.CancellationToken.None);
+            return IdsByValidationFilterAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<GetWorkItemIdsByValidationFilterResponse> GetWorkItemIdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<GetWorkItemIdsByValidationFilterResponse> IdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest body, System.Threading.CancellationToken cancellationToken)
         {
-            if (request == null)
-                throw new System.ArgumentNullException("request");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -893,7 +1388,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -957,18 +1452,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<CountWorkItemsByValidationFilterResponse> CountWorkItemsByValidationFilterAsync(CountWorkItemsByValidationFilterRequest request)
+        public virtual System.Threading.Tasks.Task<CountWorkItemsByValidationFilterResponse> CountByValidationFilterAsync(CountWorkItemsByValidationFilterRequest body)
         {
-            return CountWorkItemsByValidationFilterAsync(request, System.Threading.CancellationToken.None);
+            return CountByValidationFilterAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<CountWorkItemsByValidationFilterResponse> CountWorkItemsByValidationFilterAsync(CountWorkItemsByValidationFilterRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<CountWorkItemsByValidationFilterResponse> CountByValidationFilterAsync(CountWorkItemsByValidationFilterRequest body, System.Threading.CancellationToken cancellationToken)
         {
-            if (request == null)
-                throw new System.ArgumentNullException("request");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -976,7 +1473,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -1040,18 +1537,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<IsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest request)
+        public virtual System.Threading.Tasks.Task<IsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest body)
         {
-            return IsDescendantOfGoalsAsync(request, System.Threading.CancellationToken.None);
+            return IsDescendantOfGoalsAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<IsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<IsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest body, System.Threading.CancellationToken cancellationToken)
         {
-            if (request == null)
-                throw new System.ArgumentNullException("request");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1059,7 +1558,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -1123,18 +1622,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<FilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest request)
+        public virtual System.Threading.Tasks.Task<FilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest body)
         {
-            return FilterByGoalsAsync(request, System.Threading.CancellationToken.None);
+            return FilterByGoalsAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<FilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<FilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest body, System.Threading.CancellationToken cancellationToken)
         {
-            if (request == null)
-                throw new System.ArgumentNullException("request");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1142,7 +1643,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -1206,207 +1707,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
-        protected struct ObjectResponseResult<T>
-        {
-            public ObjectResponseResult(T responseObject, string responseText)
-            {
-                this.Object = responseObject;
-                this.Text = responseText;
-            }
-
-            public T Object { get; }
-
-            public string Text { get; }
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<string> ReadAsStringAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStringAsync(cancellationToken);
-    #else
-            return content.ReadAsStringAsync();
-    #endif
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<System.IO.Stream> ReadAsStreamAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStreamAsync(cancellationToken);
-    #else
-            return content.ReadAsStreamAsync();
-    #endif
-        }
-
-        public bool ReadResponseAsString { get; set; }
-
-        protected virtual async System.Threading.Tasks.Task<ObjectResponseResult<T>> ReadObjectResponseAsync<T>(System.Net.Http.HttpResponseMessage response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.Threading.CancellationToken cancellationToken)
-        {
-            if (response == null || response.Content == null)
-            {
-                return new ObjectResponseResult<T>(default(T)!, string.Empty);
-            }
-
-            if (ReadResponseAsString)
-            {
-                var responseText = await ReadAsStringAsync(response.Content, cancellationToken).ConfigureAwait(false);
-                try
-                {
-                    var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody!, responseText);
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, responseText, headers, exception);
-                }
-            }
-            else
-            {
-                try
-                {
-                    using (var responseStream = await ReadAsStreamAsync(response.Content, cancellationToken).ConfigureAwait(false))
-                    {
-                        var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
-                    }
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
-                }
-            }
-        }
-
-        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
-        {
-            if (value == null)
-            {
-                return "";
-            }
-
-            if (value is System.Enum)
-            {
-                var name = System.Enum.GetName(value.GetType(), value);
-                if (name != null)
-                {
-                    var field_ = System.Reflection.IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
-                    if (field_ != null)
-                    {
-                        var attribute = System.Reflection.CustomAttributeExtensions.GetCustomAttribute(field_, typeof(System.Runtime.Serialization.EnumMemberAttribute)) 
-                            as System.Runtime.Serialization.EnumMemberAttribute;
-                        if (attribute != null)
-                        {
-                            return attribute.Value != null ? attribute.Value : name;
-                        }
-                    }
-
-                    var converted = System.Convert.ToString(System.Convert.ChangeType(value, System.Enum.GetUnderlyingType(value.GetType()), cultureInfo));
-                    return converted == null ? string.Empty : converted;
-                }
-            }
-            else if (value is bool) 
-            {
-                return System.Convert.ToString((bool)value, cultureInfo).ToLowerInvariant();
-            }
-            else if (value is byte[])
-            {
-                return System.Convert.ToBase64String((byte[]) value);
-            }
-            else if (value is string[])
-            {
-                return string.Join(",", (string[])value);
-            }
-            else if (value.GetType().IsArray)
-            {
-                var valueArray = (System.Array)value;
-                var valueTextArray = new string[valueArray.Length];
-                for (var i = 0; i < valueArray.Length; i++)
-                {
-                    valueTextArray[i] = ConvertToString(valueArray.GetValue(i), cultureInfo);
-                }
-                return string.Join(",", valueTextArray);
-            }
-
-            var result = System.Convert.ToString(value, cultureInfo);
-            return result == null ? "" : result;
-        }
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial interface IHealthCalculationClient
-    {
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<CalculateHealthScoreResponse> CalculateHealthScoreAsync(CalculateHealthScoreRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<CalculateHealthScoreResponse> CalculateHealthScoreAsync(CalculateHealthScoreRequest request, System.Threading.CancellationToken cancellationToken);
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class HealthCalculationClient : IHealthCalculationClient
-    {
-        #pragma warning disable 8618
-        private string _baseUrl;
-        #pragma warning restore 8618
-
-        private System.Net.Http.HttpClient _httpClient;
-        private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
-        private System.Text.Json.JsonSerializerOptions _instanceSettings;
-
-    #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public HealthCalculationClient(System.Net.Http.HttpClient httpClient)
-    #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        public virtual System.Threading.Tasks.Task<CalculateHealthScoreResponse> CalculateScoreAsync(CalculateHealthScoreRequest body)
         {
-            BaseUrl = "http://localhost:5000";
-            _httpClient = httpClient;
-            Initialize();
-        }
-
-        private static System.Text.Json.JsonSerializerOptions CreateSerializerSettings()
-        {
-            var settings = new System.Text.Json.JsonSerializerOptions();
-            UpdateJsonSerializerSettings(settings);
-            return settings;
-        }
-
-        public string BaseUrl
-        {
-            get { return _baseUrl; }
-            set
-            {
-                _baseUrl = value;
-                if (!string.IsNullOrEmpty(_baseUrl) && !_baseUrl.EndsWith("/"))
-                    _baseUrl += '/';
-            }
-        }
-
-        protected System.Text.Json.JsonSerializerOptions JsonSerializerSettings { get { return _instanceSettings ?? _settings.Value; } }
-
-        static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
-
-        partial void Initialize();
-
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, string url);
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
-        partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<CalculateHealthScoreResponse> CalculateHealthScoreAsync(CalculateHealthScoreRequest request)
-        {
-            return CalculateHealthScoreAsync(request, System.Threading.CancellationToken.None);
+            return CalculateScoreAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<CalculateHealthScoreResponse> CalculateHealthScoreAsync(CalculateHealthScoreRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<CalculateHealthScoreResponse> CalculateScoreAsync(CalculateHealthScoreRequest body, System.Threading.CancellationToken cancellationToken)
         {
-            if (request == null)
-                throw new System.ArgumentNullException("request");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1414,7 +1728,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -1478,282 +1792,21 @@ namespace PoTool.Client.ApiClient
             }
         }
 
-        protected struct ObjectResponseResult<T>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<SprintMetricsDto> SprintAsync(string iterationPath)
         {
-            public ObjectResponseResult(T responseObject, string responseText)
-            {
-                this.Object = responseObject;
-                this.Text = responseText;
-            }
-
-            public T Object { get; }
-
-            public string Text { get; }
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<string> ReadAsStringAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStringAsync(cancellationToken);
-    #else
-            return content.ReadAsStringAsync();
-    #endif
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<System.IO.Stream> ReadAsStreamAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStreamAsync(cancellationToken);
-    #else
-            return content.ReadAsStreamAsync();
-    #endif
-        }
-
-        public bool ReadResponseAsString { get; set; }
-
-        protected virtual async System.Threading.Tasks.Task<ObjectResponseResult<T>> ReadObjectResponseAsync<T>(System.Net.Http.HttpResponseMessage response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.Threading.CancellationToken cancellationToken)
-        {
-            if (response == null || response.Content == null)
-            {
-                return new ObjectResponseResult<T>(default(T)!, string.Empty);
-            }
-
-            if (ReadResponseAsString)
-            {
-                var responseText = await ReadAsStringAsync(response.Content, cancellationToken).ConfigureAwait(false);
-                try
-                {
-                    var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody!, responseText);
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, responseText, headers, exception);
-                }
-            }
-            else
-            {
-                try
-                {
-                    using (var responseStream = await ReadAsStreamAsync(response.Content, cancellationToken).ConfigureAwait(false))
-                    {
-                        var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
-                    }
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
-                }
-            }
-        }
-
-        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
-        {
-            if (value == null)
-            {
-                return "";
-            }
-
-            if (value is System.Enum)
-            {
-                var name = System.Enum.GetName(value.GetType(), value);
-                if (name != null)
-                {
-                    var field_ = System.Reflection.IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
-                    if (field_ != null)
-                    {
-                        var attribute = System.Reflection.CustomAttributeExtensions.GetCustomAttribute(field_, typeof(System.Runtime.Serialization.EnumMemberAttribute)) 
-                            as System.Runtime.Serialization.EnumMemberAttribute;
-                        if (attribute != null)
-                        {
-                            return attribute.Value != null ? attribute.Value : name;
-                        }
-                    }
-
-                    var converted = System.Convert.ToString(System.Convert.ChangeType(value, System.Enum.GetUnderlyingType(value.GetType()), cultureInfo));
-                    return converted == null ? string.Empty : converted;
-                }
-            }
-            else if (value is bool) 
-            {
-                return System.Convert.ToString((bool)value, cultureInfo).ToLowerInvariant();
-            }
-            else if (value is byte[])
-            {
-                return System.Convert.ToBase64String((byte[]) value);
-            }
-            else if (value is string[])
-            {
-                return string.Join(",", (string[])value);
-            }
-            else if (value.GetType().IsArray)
-            {
-                var valueArray = (System.Array)value;
-                var valueTextArray = new string[valueArray.Length];
-                for (var i = 0; i < valueArray.Length; i++)
-                {
-                    valueTextArray[i] = ConvertToString(valueArray.GetValue(i), cultureInfo);
-                }
-                return string.Join(",", valueTextArray);
-            }
-
-            var result = System.Convert.ToString(value, cultureInfo);
-            return result == null ? "" : result;
-        }
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial interface IMetricsClient
-    {
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintMetricsDto> GetSprintMetricsAsync(string? iterationPath);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintMetricsDto> GetSprintMetricsAsync(string? iterationPath, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<VelocityTrendDto> GetVelocityTrendAsync(string? areaPath, int? maxSprints);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<VelocityTrendDto> GetVelocityTrendAsync(string? areaPath, int? maxSprints, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<BacklogHealthDto> GetBacklogHealthAsync(string? iterationPath);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<BacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(string? areaPath, int? maxIterations);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? defaultCapacity);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortImbalanceDto> GetEffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortImbalanceDto> GetEffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortDistributionTrendDto> GetEffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortDistributionTrendDto> GetEffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortConcentrationRiskDto> GetEffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortConcentrationRiskDto> GetEffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>> GetEffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>> GetEffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortEstimationQualityDto> GetEffortEstimationQualityAsync(string? areaPath, int? maxIterations);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortEstimationQualityDto> GetEffortEstimationQualityAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class MetricsClient : IMetricsClient
-    {
-        #pragma warning disable 8618
-        private string _baseUrl;
-        #pragma warning restore 8618
-
-        private System.Net.Http.HttpClient _httpClient;
-        private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
-        private System.Text.Json.JsonSerializerOptions _instanceSettings;
-
-    #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public MetricsClient(System.Net.Http.HttpClient httpClient)
-    #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        {
-            BaseUrl = "http://localhost:5000";
-            _httpClient = httpClient;
-            Initialize();
-        }
-
-        private static System.Text.Json.JsonSerializerOptions CreateSerializerSettings()
-        {
-            var settings = new System.Text.Json.JsonSerializerOptions();
-            UpdateJsonSerializerSettings(settings);
-            return settings;
-        }
-
-        public string BaseUrl
-        {
-            get { return _baseUrl; }
-            set
-            {
-                _baseUrl = value;
-                if (!string.IsNullOrEmpty(_baseUrl) && !_baseUrl.EndsWith("/"))
-                    _baseUrl += '/';
-            }
-        }
-
-        protected System.Text.Json.JsonSerializerOptions JsonSerializerSettings { get { return _instanceSettings ?? _settings.Value; } }
-
-        static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
-
-        partial void Initialize();
-
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, string url);
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
-        partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<SprintMetricsDto> GetSprintMetricsAsync(string? iterationPath)
-        {
-            return GetSprintMetricsAsync(iterationPath, System.Threading.CancellationToken.None);
+            return SprintAsync(iterationPath, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<SprintMetricsDto> GetSprintMetricsAsync(string? iterationPath, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SprintMetricsDto> SprintAsync(string iterationPath, System.Threading.CancellationToken cancellationToken)
         {
+            if (iterationPath == null)
+                throw new System.ArgumentNullException("iterationPath");
+
             var client_ = _httpClient;
             var disposeClient_ = false;
             try
@@ -1768,10 +1821,7 @@ namespace PoTool.Client.ApiClient
                     // Operation Path: "api/Metrics/sprint"
                     urlBuilder_.Append("api/Metrics/sprint");
                     urlBuilder_.Append('?');
-                    if (iterationPath != null)
-                    {
-                        urlBuilder_.Append(System.Uri.EscapeDataString("iterationPath")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(iterationPath, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
-                    }
+                    urlBuilder_.Append(System.Uri.EscapeDataString("iterationPath")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(iterationPath, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     urlBuilder_.Length--;
 
                     PrepareRequest(client_, request_, urlBuilder_);
@@ -1826,15 +1876,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<VelocityTrendDto> GetVelocityTrendAsync(string? areaPath, int? maxSprints)
+        public virtual System.Threading.Tasks.Task<VelocityTrendDto> VelocityAsync(string? areaPath, int? maxSprints)
         {
-            return GetVelocityTrendAsync(areaPath, maxSprints, System.Threading.CancellationToken.None);
+            return VelocityAsync(areaPath, maxSprints, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<VelocityTrendDto> GetVelocityTrendAsync(string? areaPath, int? maxSprints, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<VelocityTrendDto> VelocityAsync(string? areaPath, int? maxSprints, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1912,16 +1964,21 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<BacklogHealthDto> GetBacklogHealthAsync(string? iterationPath)
+        public virtual System.Threading.Tasks.Task<BacklogHealthDto> BacklogHealthAsync(string iterationPath)
         {
-            return GetBacklogHealthAsync(iterationPath, System.Threading.CancellationToken.None);
+            return BacklogHealthAsync(iterationPath, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<BacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<BacklogHealthDto> BacklogHealthAsync(string iterationPath, System.Threading.CancellationToken cancellationToken)
         {
+            if (iterationPath == null)
+                throw new System.ArgumentNullException("iterationPath");
+
             var client_ = _httpClient;
             var disposeClient_ = false;
             try
@@ -1936,10 +1993,7 @@ namespace PoTool.Client.ApiClient
                     // Operation Path: "api/Metrics/backlog-health"
                     urlBuilder_.Append("api/Metrics/backlog-health");
                     urlBuilder_.Append('?');
-                    if (iterationPath != null)
-                    {
-                        urlBuilder_.Append(System.Uri.EscapeDataString("iterationPath")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(iterationPath, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
-                    }
+                    urlBuilder_.Append(System.Uri.EscapeDataString("iterationPath")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(iterationPath, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     urlBuilder_.Length--;
 
                     PrepareRequest(client_, request_, urlBuilder_);
@@ -1994,15 +2048,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(string? areaPath, int? maxIterations)
+        public virtual System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> MultiIterationHealthAsync(string? areaPath, int? maxIterations)
         {
-            return GetMultiIterationBacklogHealthAsync(areaPath, maxIterations, System.Threading.CancellationToken.None);
+            return MultiIterationHealthAsync(areaPath, maxIterations, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> MultiIterationHealthAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -2080,15 +2136,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity)
+        public virtual System.Threading.Tasks.Task<EffortDistributionDto> EffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity)
         {
-            return GetEffortDistributionAsync(areaPathFilter, maxIterations, defaultCapacity, System.Threading.CancellationToken.None);
+            return EffortDistributionAsync(areaPathFilter, maxIterations, defaultCapacity, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<EffortDistributionDto> EffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -2170,16 +2228,21 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<SprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? defaultCapacity)
+        public virtual System.Threading.Tasks.Task<SprintCapacityPlanDto> CapacityPlanAsync(string iterationPath, int? defaultCapacity)
         {
-            return GetSprintCapacityPlanAsync(iterationPath, defaultCapacity, System.Threading.CancellationToken.None);
+            return CapacityPlanAsync(iterationPath, defaultCapacity, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<SprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SprintCapacityPlanDto> CapacityPlanAsync(string iterationPath, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
         {
+            if (iterationPath == null)
+                throw new System.ArgumentNullException("iterationPath");
+
             var client_ = _httpClient;
             var disposeClient_ = false;
             try
@@ -2194,10 +2257,7 @@ namespace PoTool.Client.ApiClient
                     // Operation Path: "api/Metrics/capacity-plan"
                     urlBuilder_.Append("api/Metrics/capacity-plan");
                     urlBuilder_.Append('?');
-                    if (iterationPath != null)
-                    {
-                        urlBuilder_.Append(System.Uri.EscapeDataString("iterationPath")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(iterationPath, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
-                    }
+                    urlBuilder_.Append(System.Uri.EscapeDataString("iterationPath")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(iterationPath, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     if (defaultCapacity != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("defaultCapacity")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(defaultCapacity, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
@@ -2256,15 +2316,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity)
+        public virtual System.Threading.Tasks.Task<EpicCompletionForecastDto> EpicForecastAsync(int epicId, int? maxSprintsForVelocity)
         {
-            return GetEpicForecastAsync(epicId, maxSprintsForVelocity, System.Threading.CancellationToken.None);
+            return EpicForecastAsync(epicId, maxSprintsForVelocity, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<EpicCompletionForecastDto> EpicForecastAsync(int epicId, int? maxSprintsForVelocity, System.Threading.CancellationToken cancellationToken)
         {
             if (epicId == null)
                 throw new System.ArgumentNullException("epicId");
@@ -2342,15 +2404,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EffortImbalanceDto> GetEffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold)
+        public virtual System.Threading.Tasks.Task<EffortImbalanceDto> EffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold)
         {
-            return GetEffortImbalanceAsync(areaPathFilter, maxIterations, defaultCapacity, imbalanceThreshold, System.Threading.CancellationToken.None);
+            return EffortImbalanceAsync(areaPathFilter, maxIterations, defaultCapacity, imbalanceThreshold, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EffortImbalanceDto> GetEffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<EffortImbalanceDto> EffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -2436,15 +2500,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EffortDistributionTrendDto> GetEffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity)
+        public virtual System.Threading.Tasks.Task<EffortDistributionTrendDto> EffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity)
         {
-            return GetEffortDistributionTrendAsync(areaPathFilter, maxIterations, defaultCapacity, System.Threading.CancellationToken.None);
+            return EffortDistributionTrendAsync(areaPathFilter, maxIterations, defaultCapacity, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EffortDistributionTrendDto> GetEffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<EffortDistributionTrendDto> EffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -2526,15 +2592,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EffortConcentrationRiskDto> GetEffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold)
+        public virtual System.Threading.Tasks.Task<EffortConcentrationRiskDto> EffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold)
         {
-            return GetEffortConcentrationRiskAsync(areaPathFilter, maxIterations, concentrationThreshold, System.Threading.CancellationToken.None);
+            return EffortConcentrationRiskAsync(areaPathFilter, maxIterations, concentrationThreshold, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EffortConcentrationRiskDto> GetEffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<EffortConcentrationRiskDto> EffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -2616,15 +2684,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>> GetEffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>> EffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems)
         {
-            return GetEffortEstimationSuggestionsAsync(iterationPath, areaPath, onlyInProgressItems, System.Threading.CancellationToken.None);
+            return EffortEstimationSuggestionsAsync(iterationPath, areaPath, onlyInProgressItems, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>> GetEffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>> EffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -2706,15 +2776,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EffortEstimationQualityDto> GetEffortEstimationQualityAsync(string? areaPath, int? maxIterations)
+        public virtual System.Threading.Tasks.Task<EffortEstimationQualityDto> EffortEstimationQualityAsync(string? areaPath, int? maxIterations)
         {
-            return GetEffortEstimationQualityAsync(areaPath, maxIterations, System.Threading.CancellationToken.None);
+            return EffortEstimationQualityAsync(areaPath, maxIterations, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EffortEstimationQualityDto> GetEffortEstimationQualityAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<EffortEstimationQualityDto> EffortEstimationQualityAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -2792,225 +2864,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
-        protected struct ObjectResponseResult<T>
-        {
-            public ObjectResponseResult(T responseObject, string responseText)
-            {
-                this.Object = responseObject;
-                this.Text = responseText;
-            }
-
-            public T Object { get; }
-
-            public string Text { get; }
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<string> ReadAsStringAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStringAsync(cancellationToken);
-    #else
-            return content.ReadAsStringAsync();
-    #endif
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<System.IO.Stream> ReadAsStreamAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStreamAsync(cancellationToken);
-    #else
-            return content.ReadAsStreamAsync();
-    #endif
-        }
-
-        public bool ReadResponseAsString { get; set; }
-
-        protected virtual async System.Threading.Tasks.Task<ObjectResponseResult<T>> ReadObjectResponseAsync<T>(System.Net.Http.HttpResponseMessage response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.Threading.CancellationToken cancellationToken)
-        {
-            if (response == null || response.Content == null)
-            {
-                return new ObjectResponseResult<T>(default(T)!, string.Empty);
-            }
-
-            if (ReadResponseAsString)
-            {
-                var responseText = await ReadAsStringAsync(response.Content, cancellationToken).ConfigureAwait(false);
-                try
-                {
-                    var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody!, responseText);
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, responseText, headers, exception);
-                }
-            }
-            else
-            {
-                try
-                {
-                    using (var responseStream = await ReadAsStreamAsync(response.Content, cancellationToken).ConfigureAwait(false))
-                    {
-                        var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
-                    }
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
-                }
-            }
-        }
-
-        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
-        {
-            if (value == null)
-            {
-                return "";
-            }
-
-            if (value is System.Enum)
-            {
-                var name = System.Enum.GetName(value.GetType(), value);
-                if (name != null)
-                {
-                    var field_ = System.Reflection.IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
-                    if (field_ != null)
-                    {
-                        var attribute = System.Reflection.CustomAttributeExtensions.GetCustomAttribute(field_, typeof(System.Runtime.Serialization.EnumMemberAttribute)) 
-                            as System.Runtime.Serialization.EnumMemberAttribute;
-                        if (attribute != null)
-                        {
-                            return attribute.Value != null ? attribute.Value : name;
-                        }
-                    }
-
-                    var converted = System.Convert.ToString(System.Convert.ChangeType(value, System.Enum.GetUnderlyingType(value.GetType()), cultureInfo));
-                    return converted == null ? string.Empty : converted;
-                }
-            }
-            else if (value is bool) 
-            {
-                return System.Convert.ToString((bool)value, cultureInfo).ToLowerInvariant();
-            }
-            else if (value is byte[])
-            {
-                return System.Convert.ToBase64String((byte[]) value);
-            }
-            else if (value is string[])
-            {
-                return string.Join(",", (string[])value);
-            }
-            else if (value.GetType().IsArray)
-            {
-                var valueArray = (System.Array)value;
-                var valueTextArray = new string[valueArray.Length];
-                for (var i = 0; i < valueArray.Length; i++)
-                {
-                    valueTextArray[i] = ConvertToString(valueArray.GetValue(i), cultureInfo);
-                }
-                return string.Join(",", valueTextArray);
-            }
-
-            var result = System.Convert.ToString(value, cultureInfo);
-            return result == null ? "" : result;
-        }
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial interface IPipelinesClient
-    {
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDto>> GetAllAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDto>> GetAllAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> GetRunsAsync(int id, int? top);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> GetRunsAsync(int id, int? top, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline, System.Threading.CancellationToken cancellationToken);
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PipelinesClient : IPipelinesClient
-    {
-        #pragma warning disable 8618
-        private string _baseUrl;
-        #pragma warning restore 8618
-
-        private System.Net.Http.HttpClient _httpClient;
-        private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
-        private System.Text.Json.JsonSerializerOptions _instanceSettings;
-
-    #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public PipelinesClient(System.Net.Http.HttpClient httpClient)
-    #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDto>> PipelinesAsync()
         {
-            BaseUrl = "http://localhost:5000";
-            _httpClient = httpClient;
-            Initialize();
-        }
-
-        private static System.Text.Json.JsonSerializerOptions CreateSerializerSettings()
-        {
-            var settings = new System.Text.Json.JsonSerializerOptions();
-            UpdateJsonSerializerSettings(settings);
-            return settings;
-        }
-
-        public string BaseUrl
-        {
-            get { return _baseUrl; }
-            set
-            {
-                _baseUrl = value;
-                if (!string.IsNullOrEmpty(_baseUrl) && !_baseUrl.EndsWith("/"))
-                    _baseUrl += '/';
-            }
-        }
-
-        protected System.Text.Json.JsonSerializerOptions JsonSerializerSettings { get { return _instanceSettings ?? _settings.Value; } }
-
-        static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
-
-        partial void Initialize();
-
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, string url);
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
-        partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDto>> GetAllAsync()
-        {
-            return GetAllAsync(System.Threading.CancellationToken.None);
+            return PipelinesAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDto>> GetAllAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDto>> PipelinesAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -3078,15 +2942,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> GetRunsAsync(int id, int? top)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> RunsAsync(int id, int? top)
         {
-            return GetRunsAsync(id, top, System.Threading.CancellationToken.None);
+            return RunsAsync(id, top, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> GetRunsAsync(int id, int? top, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> RunsAsync(int id, int? top, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -3165,15 +3031,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync()
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> MetricsAsync()
         {
-            return GetMetricsAsync(System.Threading.CancellationToken.None);
+            return MetricsAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> MetricsAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -3241,15 +3109,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline)
+        public virtual System.Threading.Tasks.Task<PipelineSyncResult> Sync2Async(int? runsPerPipeline)
         {
-            return SyncAsync(runsPerPipeline, System.Threading.CancellationToken.None);
+            return Sync2Async(runsPerPipeline, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<PipelineSyncResult> Sync2Async(int? runsPerPipeline, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -3324,246 +3194,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
-        protected struct ObjectResponseResult<T>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProfileDto>> ProfilesAllAsync()
         {
-            public ObjectResponseResult(T responseObject, string responseText)
-            {
-                this.Object = responseObject;
-                this.Text = responseText;
-            }
-
-            public T Object { get; }
-
-            public string Text { get; }
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<string> ReadAsStringAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStringAsync(cancellationToken);
-    #else
-            return content.ReadAsStringAsync();
-    #endif
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<System.IO.Stream> ReadAsStreamAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStreamAsync(cancellationToken);
-    #else
-            return content.ReadAsStreamAsync();
-    #endif
-        }
-
-        public bool ReadResponseAsString { get; set; }
-
-        protected virtual async System.Threading.Tasks.Task<ObjectResponseResult<T>> ReadObjectResponseAsync<T>(System.Net.Http.HttpResponseMessage response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.Threading.CancellationToken cancellationToken)
-        {
-            if (response == null || response.Content == null)
-            {
-                return new ObjectResponseResult<T>(default(T)!, string.Empty);
-            }
-
-            if (ReadResponseAsString)
-            {
-                var responseText = await ReadAsStringAsync(response.Content, cancellationToken).ConfigureAwait(false);
-                try
-                {
-                    var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody!, responseText);
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, responseText, headers, exception);
-                }
-            }
-            else
-            {
-                try
-                {
-                    using (var responseStream = await ReadAsStreamAsync(response.Content, cancellationToken).ConfigureAwait(false))
-                    {
-                        var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
-                    }
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
-                }
-            }
-        }
-
-        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
-        {
-            if (value == null)
-            {
-                return "";
-            }
-
-            if (value is System.Enum)
-            {
-                var name = System.Enum.GetName(value.GetType(), value);
-                if (name != null)
-                {
-                    var field_ = System.Reflection.IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
-                    if (field_ != null)
-                    {
-                        var attribute = System.Reflection.CustomAttributeExtensions.GetCustomAttribute(field_, typeof(System.Runtime.Serialization.EnumMemberAttribute)) 
-                            as System.Runtime.Serialization.EnumMemberAttribute;
-                        if (attribute != null)
-                        {
-                            return attribute.Value != null ? attribute.Value : name;
-                        }
-                    }
-
-                    var converted = System.Convert.ToString(System.Convert.ChangeType(value, System.Enum.GetUnderlyingType(value.GetType()), cultureInfo));
-                    return converted == null ? string.Empty : converted;
-                }
-            }
-            else if (value is bool) 
-            {
-                return System.Convert.ToString((bool)value, cultureInfo).ToLowerInvariant();
-            }
-            else if (value is byte[])
-            {
-                return System.Convert.ToBase64String((byte[]) value);
-            }
-            else if (value is string[])
-            {
-                return string.Join(",", (string[])value);
-            }
-            else if (value.GetType().IsArray)
-            {
-                var valueArray = (System.Array)value;
-                var valueTextArray = new string[valueArray.Length];
-                for (var i = 0; i < valueArray.Length; i++)
-                {
-                    valueTextArray[i] = ConvertToString(valueArray.GetValue(i), cultureInfo);
-                }
-                return string.Join(",", valueTextArray);
-            }
-
-            var result = System.Convert.ToString(value, cultureInfo);
-            return result == null ? "" : result;
-        }
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial interface IProfilesClient
-    {
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProfileDto>> GetAllProfilesAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProfileDto>> GetAllProfilesAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProfileDto> CreateProfileAsync(CreateProfileRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProfileDto> CreateProfileAsync(CreateProfileRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProfileDto> GetProfileByIdAsync(int id);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProfileDto> GetProfileByIdAsync(int id, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProfileDto> UpdateProfileAsync(int id, UpdateProfileRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProfileDto> UpdateProfileAsync(int id, UpdateProfileRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task DeleteProfileAsync(int id);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task DeleteProfileAsync(int id, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProfileDto> GetActiveProfileAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProfileDto> GetActiveProfileAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SettingsDto> SetActiveProfileAsync(SetActiveProfileRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SettingsDto> SetActiveProfileAsync(SetActiveProfileRequest request, System.Threading.CancellationToken cancellationToken);
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ProfilesClient : IProfilesClient
-    {
-        #pragma warning disable 8618
-        private string _baseUrl;
-        #pragma warning restore 8618
-
-        private System.Net.Http.HttpClient _httpClient;
-        private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
-        private System.Text.Json.JsonSerializerOptions _instanceSettings;
-
-    #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public ProfilesClient(System.Net.Http.HttpClient httpClient)
-    #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        {
-            BaseUrl = "http://localhost:5000";
-            _httpClient = httpClient;
-            Initialize();
-        }
-
-        private static System.Text.Json.JsonSerializerOptions CreateSerializerSettings()
-        {
-            var settings = new System.Text.Json.JsonSerializerOptions();
-            UpdateJsonSerializerSettings(settings);
-            return settings;
-        }
-
-        public string BaseUrl
-        {
-            get { return _baseUrl; }
-            set
-            {
-                _baseUrl = value;
-                if (!string.IsNullOrEmpty(_baseUrl) && !_baseUrl.EndsWith("/"))
-                    _baseUrl += '/';
-            }
-        }
-
-        protected System.Text.Json.JsonSerializerOptions JsonSerializerSettings { get { return _instanceSettings ?? _settings.Value; } }
-
-        static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
-
-        partial void Initialize();
-
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, string url);
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
-        partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProfileDto>> GetAllProfilesAsync()
-        {
-            return GetAllProfilesAsync(System.Threading.CancellationToken.None);
+            return ProfilesAllAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProfileDto>> GetAllProfilesAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProfileDto>> ProfilesAllAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -3631,18 +3272,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Created</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ProfileDto> CreateProfileAsync(CreateProfileRequest request)
+        public virtual System.Threading.Tasks.Task<ProfileDto> ProfilesPOSTAsync(CreateProfileRequest body)
         {
-            return CreateProfileAsync(request, System.Threading.CancellationToken.None);
+            return ProfilesPOSTAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Created</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ProfileDto> CreateProfileAsync(CreateProfileRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<ProfileDto> ProfilesPOSTAsync(CreateProfileRequest body, System.Threading.CancellationToken cancellationToken)
         {
-            if (request == null)
-                throw new System.ArgumentNullException("request");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -3650,7 +3293,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -3702,7 +3345,7 @@ namespace PoTool.Client.ApiClient
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            throw new ApiException<ProblemDetails>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                            throw new ApiException<ProblemDetails>("Bad Request", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
                         {
@@ -3724,15 +3367,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ProfileDto> GetProfileByIdAsync(int id)
+        public virtual System.Threading.Tasks.Task<ProfileDto> ProfilesGETAsync(int id)
         {
-            return GetProfileByIdAsync(id, System.Threading.CancellationToken.None);
+            return ProfilesGETAsync(id, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ProfileDto> GetProfileByIdAsync(int id, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<ProfileDto> ProfilesGETAsync(int id, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -3792,7 +3437,7 @@ namespace PoTool.Client.ApiClient
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            throw new ApiException<ProblemDetails>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                            throw new ApiException<ProblemDetails>("Not Found", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
                         {
@@ -3814,21 +3459,23 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ProfileDto> UpdateProfileAsync(int id, UpdateProfileRequest request)
+        public virtual System.Threading.Tasks.Task<ProfileDto> ProfilesPUTAsync(int id, UpdateProfileRequest body)
         {
-            return UpdateProfileAsync(id, request, System.Threading.CancellationToken.None);
+            return ProfilesPUTAsync(id, body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ProfileDto> UpdateProfileAsync(int id, UpdateProfileRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<ProfileDto> ProfilesPUTAsync(int id, UpdateProfileRequest body, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
 
-            if (request == null)
-                throw new System.ArgumentNullException("request");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -3836,7 +3483,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -3889,7 +3536,7 @@ namespace PoTool.Client.ApiClient
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            throw new ApiException<ProblemDetails>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                            throw new ApiException<ProblemDetails>("Not Found", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
                         {
@@ -3911,15 +3558,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>No Content</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task DeleteProfileAsync(int id)
+        public virtual System.Threading.Tasks.Task ProfilesDELETEAsync(int id)
         {
-            return DeleteProfileAsync(id, System.Threading.CancellationToken.None);
+            return ProfilesDELETEAsync(id, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>No Content</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task DeleteProfileAsync(int id, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task ProfilesDELETEAsync(int id, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -3973,7 +3622,7 @@ namespace PoTool.Client.ApiClient
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            throw new ApiException<ProblemDetails>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                            throw new ApiException<ProblemDetails>("Not Found", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
                         {
@@ -3995,15 +3644,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ProfileDto> GetActiveProfileAsync()
+        public virtual System.Threading.Tasks.Task<ProfileDto> ActiveGETAsync()
         {
-            return GetActiveProfileAsync(System.Threading.CancellationToken.None);
+            return ActiveGETAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ProfileDto> GetActiveProfileAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<ProfileDto> ActiveGETAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -4059,7 +3710,7 @@ namespace PoTool.Client.ApiClient
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            throw new ApiException<ProblemDetails>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                            throw new ApiException<ProblemDetails>("Not Found", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
                         {
@@ -4081,18 +3732,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<SettingsDto> SetActiveProfileAsync(SetActiveProfileRequest request)
+        public virtual System.Threading.Tasks.Task<SettingsDto> ActivePOSTAsync(SetActiveProfileRequest body)
         {
-            return SetActiveProfileAsync(request, System.Threading.CancellationToken.None);
+            return ActivePOSTAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<SettingsDto> SetActiveProfileAsync(SetActiveProfileRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SettingsDto> ActivePOSTAsync(SetActiveProfileRequest body, System.Threading.CancellationToken cancellationToken)
         {
-            if (request == null)
-                throw new System.ArgumentNullException("request");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -4100,7 +3753,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -4164,260 +3817,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
-        protected struct ObjectResponseResult<T>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> PullRequestsAllAsync()
         {
-            public ObjectResponseResult(T responseObject, string responseText)
-            {
-                this.Object = responseObject;
-                this.Text = responseText;
-            }
-
-            public T Object { get; }
-
-            public string Text { get; }
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<string> ReadAsStringAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStringAsync(cancellationToken);
-    #else
-            return content.ReadAsStringAsync();
-    #endif
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<System.IO.Stream> ReadAsStreamAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStreamAsync(cancellationToken);
-    #else
-            return content.ReadAsStreamAsync();
-    #endif
-        }
-
-        public bool ReadResponseAsString { get; set; }
-
-        protected virtual async System.Threading.Tasks.Task<ObjectResponseResult<T>> ReadObjectResponseAsync<T>(System.Net.Http.HttpResponseMessage response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.Threading.CancellationToken cancellationToken)
-        {
-            if (response == null || response.Content == null)
-            {
-                return new ObjectResponseResult<T>(default(T)!, string.Empty);
-            }
-
-            if (ReadResponseAsString)
-            {
-                var responseText = await ReadAsStringAsync(response.Content, cancellationToken).ConfigureAwait(false);
-                try
-                {
-                    var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody!, responseText);
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, responseText, headers, exception);
-                }
-            }
-            else
-            {
-                try
-                {
-                    using (var responseStream = await ReadAsStreamAsync(response.Content, cancellationToken).ConfigureAwait(false))
-                    {
-                        var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
-                    }
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
-                }
-            }
-        }
-
-        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
-        {
-            if (value == null)
-            {
-                return "";
-            }
-
-            if (value is System.Enum)
-            {
-                var name = System.Enum.GetName(value.GetType(), value);
-                if (name != null)
-                {
-                    var field_ = System.Reflection.IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
-                    if (field_ != null)
-                    {
-                        var attribute = System.Reflection.CustomAttributeExtensions.GetCustomAttribute(field_, typeof(System.Runtime.Serialization.EnumMemberAttribute)) 
-                            as System.Runtime.Serialization.EnumMemberAttribute;
-                        if (attribute != null)
-                        {
-                            return attribute.Value != null ? attribute.Value : name;
-                        }
-                    }
-
-                    var converted = System.Convert.ToString(System.Convert.ChangeType(value, System.Enum.GetUnderlyingType(value.GetType()), cultureInfo));
-                    return converted == null ? string.Empty : converted;
-                }
-            }
-            else if (value is bool) 
-            {
-                return System.Convert.ToString((bool)value, cultureInfo).ToLowerInvariant();
-            }
-            else if (value is byte[])
-            {
-                return System.Convert.ToBase64String((byte[]) value);
-            }
-            else if (value is string[])
-            {
-                return string.Join(",", (string[])value);
-            }
-            else if (value.GetType().IsArray)
-            {
-                var valueArray = (System.Array)value;
-                var valueTextArray = new string[valueArray.Length];
-                for (var i = 0; i < valueArray.Length; i++)
-                {
-                    valueTextArray[i] = ConvertToString(valueArray.GetValue(i), cultureInfo);
-                }
-                return string.Join(",", valueTextArray);
-            }
-
-            var result = System.Convert.ToString(value, cultureInfo);
-            return result == null ? "" : result;
-        }
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial interface IPullRequestsClient
-    {
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetAllAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetAllAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestDto> GetByIdAsync(int id);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestDto> GetByIdAsync(int id, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> GetMetricsAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> GetMetricsAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetFilteredAsync(string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetFilteredAsync(string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestIterationDto>> GetIterationsAsync(int id);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestIterationDto>> GetIterationsAsync(int id, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestCommentDto>> GetCommentsAsync(int id);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestCommentDto>> GetCommentsAsync(int id, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestFileChangeDto>> GetFileChangesAsync(int id);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestFileChangeDto>> GetFileChangesAsync(int id, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<int> SyncAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<int> SyncAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack, System.Threading.CancellationToken cancellationToken);
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PullRequestsClient : IPullRequestsClient
-    {
-        #pragma warning disable 8618
-        private string _baseUrl;
-        #pragma warning restore 8618
-
-        private System.Net.Http.HttpClient _httpClient;
-        private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
-        private System.Text.Json.JsonSerializerOptions _instanceSettings;
-
-    #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public PullRequestsClient(System.Net.Http.HttpClient httpClient)
-    #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        {
-            BaseUrl = "http://localhost:5000";
-            _httpClient = httpClient;
-            Initialize();
-        }
-
-        private static System.Text.Json.JsonSerializerOptions CreateSerializerSettings()
-        {
-            var settings = new System.Text.Json.JsonSerializerOptions();
-            UpdateJsonSerializerSettings(settings);
-            return settings;
-        }
-
-        public string BaseUrl
-        {
-            get { return _baseUrl; }
-            set
-            {
-                _baseUrl = value;
-                if (!string.IsNullOrEmpty(_baseUrl) && !_baseUrl.EndsWith("/"))
-                    _baseUrl += '/';
-            }
-        }
-
-        protected System.Text.Json.JsonSerializerOptions JsonSerializerSettings { get { return _instanceSettings ?? _settings.Value; } }
-
-        static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
-
-        partial void Initialize();
-
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, string url);
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
-        partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetAllAsync()
-        {
-            return GetAllAsync(System.Threading.CancellationToken.None);
+            return PullRequestsAllAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetAllAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> PullRequestsAllAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -4485,15 +3895,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PullRequestDto> GetByIdAsync(int id)
+        public virtual System.Threading.Tasks.Task<PullRequestDto> PullRequestsAsync(int id)
         {
-            return GetByIdAsync(id, System.Threading.CancellationToken.None);
+            return PullRequestsAsync(id, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PullRequestDto> GetByIdAsync(int id, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<PullRequestDto> PullRequestsAsync(int id, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -4565,15 +3977,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> GetMetricsAsync()
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> Metrics2Async()
         {
-            return GetMetricsAsync(System.Threading.CancellationToken.None);
+            return Metrics2Async(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> GetMetricsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> Metrics2Async(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -4641,15 +4055,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetFilteredAsync(string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> FilterAsync(string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status)
         {
-            return GetFilteredAsync(iterationPath, createdBy, fromDate, toDate, status, System.Threading.CancellationToken.None);
+            return FilterAsync(iterationPath, createdBy, fromDate, toDate, status, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetFilteredAsync(string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> FilterAsync(string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -4739,15 +4155,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestIterationDto>> GetIterationsAsync(int id)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestIterationDto>> IterationsAsync(int id)
         {
-            return GetIterationsAsync(id, System.Threading.CancellationToken.None);
+            return IterationsAsync(id, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestIterationDto>> GetIterationsAsync(int id, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestIterationDto>> IterationsAsync(int id, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -4820,15 +4238,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestCommentDto>> GetCommentsAsync(int id)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestCommentDto>> CommentsAsync(int id)
         {
-            return GetCommentsAsync(id, System.Threading.CancellationToken.None);
+            return CommentsAsync(id, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestCommentDto>> GetCommentsAsync(int id, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestCommentDto>> CommentsAsync(int id, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -4901,15 +4321,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestFileChangeDto>> GetFileChangesAsync(int id)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestFileChangeDto>> FilechangesAsync(int id)
         {
-            return GetFileChangesAsync(id, System.Threading.CancellationToken.None);
+            return FilechangesAsync(id, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestFileChangeDto>> GetFileChangesAsync(int id, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestFileChangeDto>> FilechangesAsync(int id, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -4982,15 +4404,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<int> SyncAsync()
+        public virtual System.Threading.Tasks.Task<int> Sync3Async()
         {
-            return SyncAsync(System.Threading.CancellationToken.None);
+            return Sync3Async(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<int> SyncAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<int> Sync3Async(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5059,15 +4483,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack)
+        public virtual System.Threading.Tasks.Task<PRReviewBottleneckDto> ReviewBottleneckAsync(int? maxPRs, int? daysBack)
         {
-            return GetReviewBottleneckAsync(maxPRs, daysBack, System.Threading.CancellationToken.None);
+            return ReviewBottleneckAsync(maxPRs, daysBack, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<PRReviewBottleneckDto> ReviewBottleneckAsync(int? maxPRs, int? daysBack, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5145,316 +4571,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
-        protected struct ObjectResponseResult<T>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<ReleasePlanningBoardDto> BoardAsync()
         {
-            public ObjectResponseResult(T responseObject, string responseText)
-            {
-                this.Object = responseObject;
-                this.Text = responseText;
-            }
-
-            public T Object { get; }
-
-            public string Text { get; }
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<string> ReadAsStringAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStringAsync(cancellationToken);
-    #else
-            return content.ReadAsStringAsync();
-    #endif
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<System.IO.Stream> ReadAsStreamAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStreamAsync(cancellationToken);
-    #else
-            return content.ReadAsStreamAsync();
-    #endif
-        }
-
-        public bool ReadResponseAsString { get; set; }
-
-        protected virtual async System.Threading.Tasks.Task<ObjectResponseResult<T>> ReadObjectResponseAsync<T>(System.Net.Http.HttpResponseMessage response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.Threading.CancellationToken cancellationToken)
-        {
-            if (response == null || response.Content == null)
-            {
-                return new ObjectResponseResult<T>(default(T)!, string.Empty);
-            }
-
-            if (ReadResponseAsString)
-            {
-                var responseText = await ReadAsStringAsync(response.Content, cancellationToken).ConfigureAwait(false);
-                try
-                {
-                    var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody!, responseText);
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, responseText, headers, exception);
-                }
-            }
-            else
-            {
-                try
-                {
-                    using (var responseStream = await ReadAsStreamAsync(response.Content, cancellationToken).ConfigureAwait(false))
-                    {
-                        var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
-                    }
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
-                }
-            }
-        }
-
-        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
-        {
-            if (value == null)
-            {
-                return "";
-            }
-
-            if (value is System.Enum)
-            {
-                var name = System.Enum.GetName(value.GetType(), value);
-                if (name != null)
-                {
-                    var field_ = System.Reflection.IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
-                    if (field_ != null)
-                    {
-                        var attribute = System.Reflection.CustomAttributeExtensions.GetCustomAttribute(field_, typeof(System.Runtime.Serialization.EnumMemberAttribute)) 
-                            as System.Runtime.Serialization.EnumMemberAttribute;
-                        if (attribute != null)
-                        {
-                            return attribute.Value != null ? attribute.Value : name;
-                        }
-                    }
-
-                    var converted = System.Convert.ToString(System.Convert.ChangeType(value, System.Enum.GetUnderlyingType(value.GetType()), cultureInfo));
-                    return converted == null ? string.Empty : converted;
-                }
-            }
-            else if (value is bool) 
-            {
-                return System.Convert.ToString((bool)value, cultureInfo).ToLowerInvariant();
-            }
-            else if (value is byte[])
-            {
-                return System.Convert.ToBase64String((byte[]) value);
-            }
-            else if (value is string[])
-            {
-                return string.Join(",", (string[])value);
-            }
-            else if (value.GetType().IsArray)
-            {
-                var valueArray = (System.Array)value;
-                var valueTextArray = new string[valueArray.Length];
-                for (var i = 0; i < valueArray.Length; i++)
-                {
-                    valueTextArray[i] = ConvertToString(valueArray.GetValue(i), cultureInfo);
-                }
-                return string.Join(",", valueTextArray);
-            }
-
-            var result = System.Convert.ToString(value, cultureInfo);
-            return result == null ? "" : result;
-        }
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial interface IReleasePlanningClient
-    {
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ReleasePlanningBoardDto> GetBoardAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ReleasePlanningBoardDto> GetBoardAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<UnplannedEpicDto>> GetUnplannedEpicsAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<UnplannedEpicDto>> GetUnplannedEpicsAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ObjectiveEpicDto>> GetObjectiveEpicsAsync(int objectiveId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ObjectiveEpicDto>> GetObjectiveEpicsAsync(int objectiveId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LaneOperationResultDto> CreateLaneAsync(CreateLaneCommand command);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LaneOperationResultDto> CreateLaneAsync(CreateLaneCommand command, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LaneOperationResultDto> DeleteLaneAsync(int laneId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LaneOperationResultDto> DeleteLaneAsync(int laneId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> CreatePlacementAsync(CreateEpicPlacementCommand command);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> CreatePlacementAsync(CreateEpicPlacementCommand command, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> UpdatePlacementAsync(int placementId, UpdatePlacementRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> UpdatePlacementAsync(int placementId, UpdatePlacementRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> MoveEpicAsync(int placementId, MoveEpicRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> MoveEpicAsync(int placementId, MoveEpicRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> ReorderEpicsInRowAsync(ReorderEpicsInRowCommand command);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> ReorderEpicsInRowAsync(ReorderEpicsInRowCommand command, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> CreateMilestoneLineAsync(CreateMilestoneLineCommand command);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> CreateMilestoneLineAsync(CreateMilestoneLineCommand command, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> UpdateMilestoneLineAsync(int lineId, UpdateMilestoneLineRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> UpdateMilestoneLineAsync(int lineId, UpdateMilestoneLineRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> DeleteMilestoneLineAsync(int lineId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> DeleteMilestoneLineAsync(int lineId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> CreateIterationLineAsync(CreateIterationLineCommand command);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> CreateIterationLineAsync(CreateIterationLineCommand command, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> UpdateIterationLineAsync(int lineId, UpdateIterationLineRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> UpdateIterationLineAsync(int lineId, UpdateIterationLineRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> DeleteIterationLineAsync(int lineId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> DeleteIterationLineAsync(int lineId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationCacheResultDto> RefreshValidationAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationCacheResultDto> RefreshValidationAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ExportResultDto> ExportBoardAsync(ExportOptionsDto options);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ExportResultDto> ExportBoardAsync(ExportOptionsDto options, System.Threading.CancellationToken cancellationToken);
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ReleasePlanningClient : IReleasePlanningClient
-    {
-        #pragma warning disable 8618
-        private string _baseUrl;
-        #pragma warning restore 8618
-
-        private System.Net.Http.HttpClient _httpClient;
-        private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
-        private System.Text.Json.JsonSerializerOptions _instanceSettings;
-
-    #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public ReleasePlanningClient(System.Net.Http.HttpClient httpClient)
-    #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        {
-            BaseUrl = "http://localhost:5000";
-            _httpClient = httpClient;
-            Initialize();
-        }
-
-        private static System.Text.Json.JsonSerializerOptions CreateSerializerSettings()
-        {
-            var settings = new System.Text.Json.JsonSerializerOptions();
-            UpdateJsonSerializerSettings(settings);
-            return settings;
-        }
-
-        public string BaseUrl
-        {
-            get { return _baseUrl; }
-            set
-            {
-                _baseUrl = value;
-                if (!string.IsNullOrEmpty(_baseUrl) && !_baseUrl.EndsWith("/"))
-                    _baseUrl += '/';
-            }
-        }
-
-        protected System.Text.Json.JsonSerializerOptions JsonSerializerSettings { get { return _instanceSettings ?? _settings.Value; } }
-
-        static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
-
-        partial void Initialize();
-
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, string url);
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
-        partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ReleasePlanningBoardDto> GetBoardAsync()
-        {
-            return GetBoardAsync(System.Threading.CancellationToken.None);
+            return BoardAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ReleasePlanningBoardDto> GetBoardAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<ReleasePlanningBoardDto> BoardAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5522,15 +4649,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<UnplannedEpicDto>> GetUnplannedEpicsAsync()
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<UnplannedEpicDto>> UnplannedEpicsAsync()
         {
-            return GetUnplannedEpicsAsync(System.Threading.CancellationToken.None);
+            return UnplannedEpicsAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<UnplannedEpicDto>> GetUnplannedEpicsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<UnplannedEpicDto>> UnplannedEpicsAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5598,15 +4727,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ObjectiveEpicDto>> GetObjectiveEpicsAsync(int objectiveId)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ObjectiveEpicDto>> EpicsAsync(int objectiveId)
         {
-            return GetObjectiveEpicsAsync(objectiveId, System.Threading.CancellationToken.None);
+            return EpicsAsync(objectiveId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ObjectiveEpicDto>> GetObjectiveEpicsAsync(int objectiveId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ObjectiveEpicDto>> EpicsAsync(int objectiveId, System.Threading.CancellationToken cancellationToken)
         {
             if (objectiveId == null)
                 throw new System.ArgumentNullException("objectiveId");
@@ -5679,18 +4810,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LaneOperationResultDto> CreateLaneAsync(CreateLaneCommand command)
+        public virtual System.Threading.Tasks.Task<LaneOperationResultDto> LanesPOSTAsync(CreateLaneCommand body)
         {
-            return CreateLaneAsync(command, System.Threading.CancellationToken.None);
+            return LanesPOSTAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LaneOperationResultDto> CreateLaneAsync(CreateLaneCommand command, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<LaneOperationResultDto> LanesPOSTAsync(CreateLaneCommand body, System.Threading.CancellationToken cancellationToken)
         {
-            if (command == null)
-                throw new System.ArgumentNullException("command");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5698,7 +4831,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(command, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -5762,15 +4895,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LaneOperationResultDto> DeleteLaneAsync(int laneId)
+        public virtual System.Threading.Tasks.Task<LaneOperationResultDto> LanesDELETEAsync(int laneId)
         {
-            return DeleteLaneAsync(laneId, System.Threading.CancellationToken.None);
+            return LanesDELETEAsync(laneId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LaneOperationResultDto> DeleteLaneAsync(int laneId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<LaneOperationResultDto> LanesDELETEAsync(int laneId, System.Threading.CancellationToken cancellationToken)
         {
             if (laneId == null)
                 throw new System.ArgumentNullException("laneId");
@@ -5842,18 +4977,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> CreatePlacementAsync(CreateEpicPlacementCommand command)
+        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> PlacementsPOSTAsync(CreateEpicPlacementCommand body)
         {
-            return CreatePlacementAsync(command, System.Threading.CancellationToken.None);
+            return PlacementsPOSTAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> CreatePlacementAsync(CreateEpicPlacementCommand command, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> PlacementsPOSTAsync(CreateEpicPlacementCommand body, System.Threading.CancellationToken cancellationToken)
         {
-            if (command == null)
-                throw new System.ArgumentNullException("command");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5861,7 +4998,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(command, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -5925,21 +5062,23 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> UpdatePlacementAsync(int placementId, UpdatePlacementRequest request)
+        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> PlacementsPUTAsync(int placementId, UpdatePlacementRequest body)
         {
-            return UpdatePlacementAsync(placementId, request, System.Threading.CancellationToken.None);
+            return PlacementsPUTAsync(placementId, body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> UpdatePlacementAsync(int placementId, UpdatePlacementRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> PlacementsPUTAsync(int placementId, UpdatePlacementRequest body, System.Threading.CancellationToken cancellationToken)
         {
             if (placementId == null)
                 throw new System.ArgumentNullException("placementId");
 
-            if (request == null)
-                throw new System.ArgumentNullException("request");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5947,7 +5086,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -6012,21 +5151,23 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> MoveEpicAsync(int placementId, MoveEpicRequest request)
+        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> MoveAsync(int placementId, MoveEpicRequest body)
         {
-            return MoveEpicAsync(placementId, request, System.Threading.CancellationToken.None);
+            return MoveAsync(placementId, body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> MoveEpicAsync(int placementId, MoveEpicRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> MoveAsync(int placementId, MoveEpicRequest body, System.Threading.CancellationToken cancellationToken)
         {
             if (placementId == null)
                 throw new System.ArgumentNullException("placementId");
 
-            if (request == null)
-                throw new System.ArgumentNullException("request");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6034,7 +5175,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -6100,18 +5241,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> ReorderEpicsInRowAsync(ReorderEpicsInRowCommand command)
+        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> ReorderAsync(ReorderEpicsInRowCommand body)
         {
-            return ReorderEpicsInRowAsync(command, System.Threading.CancellationToken.None);
+            return ReorderAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> ReorderEpicsInRowAsync(ReorderEpicsInRowCommand command, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> ReorderAsync(ReorderEpicsInRowCommand body, System.Threading.CancellationToken cancellationToken)
         {
-            if (command == null)
-                throw new System.ArgumentNullException("command");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6119,7 +5262,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(command, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -6183,18 +5326,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LineOperationResultDto> CreateMilestoneLineAsync(CreateMilestoneLineCommand command)
+        public virtual System.Threading.Tasks.Task<LineOperationResultDto> MilestoneLinesPOSTAsync(CreateMilestoneLineCommand body)
         {
-            return CreateMilestoneLineAsync(command, System.Threading.CancellationToken.None);
+            return MilestoneLinesPOSTAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> CreateMilestoneLineAsync(CreateMilestoneLineCommand command, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> MilestoneLinesPOSTAsync(CreateMilestoneLineCommand body, System.Threading.CancellationToken cancellationToken)
         {
-            if (command == null)
-                throw new System.ArgumentNullException("command");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6202,7 +5347,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(command, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -6266,21 +5411,23 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LineOperationResultDto> UpdateMilestoneLineAsync(int lineId, UpdateMilestoneLineRequest request)
+        public virtual System.Threading.Tasks.Task<LineOperationResultDto> MilestoneLinesPUTAsync(int lineId, UpdateMilestoneLineRequest body)
         {
-            return UpdateMilestoneLineAsync(lineId, request, System.Threading.CancellationToken.None);
+            return MilestoneLinesPUTAsync(lineId, body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> UpdateMilestoneLineAsync(int lineId, UpdateMilestoneLineRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> MilestoneLinesPUTAsync(int lineId, UpdateMilestoneLineRequest body, System.Threading.CancellationToken cancellationToken)
         {
             if (lineId == null)
                 throw new System.ArgumentNullException("lineId");
 
-            if (request == null)
-                throw new System.ArgumentNullException("request");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6288,7 +5435,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -6353,15 +5500,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LineOperationResultDto> DeleteMilestoneLineAsync(int lineId)
+        public virtual System.Threading.Tasks.Task<LineOperationResultDto> MilestoneLinesDELETEAsync(int lineId)
         {
-            return DeleteMilestoneLineAsync(lineId, System.Threading.CancellationToken.None);
+            return MilestoneLinesDELETEAsync(lineId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> DeleteMilestoneLineAsync(int lineId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> MilestoneLinesDELETEAsync(int lineId, System.Threading.CancellationToken cancellationToken)
         {
             if (lineId == null)
                 throw new System.ArgumentNullException("lineId");
@@ -6433,18 +5582,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LineOperationResultDto> CreateIterationLineAsync(CreateIterationLineCommand command)
+        public virtual System.Threading.Tasks.Task<LineOperationResultDto> IterationLinesPOSTAsync(CreateIterationLineCommand body)
         {
-            return CreateIterationLineAsync(command, System.Threading.CancellationToken.None);
+            return IterationLinesPOSTAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> CreateIterationLineAsync(CreateIterationLineCommand command, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> IterationLinesPOSTAsync(CreateIterationLineCommand body, System.Threading.CancellationToken cancellationToken)
         {
-            if (command == null)
-                throw new System.ArgumentNullException("command");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6452,7 +5603,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(command, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -6516,21 +5667,23 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LineOperationResultDto> UpdateIterationLineAsync(int lineId, UpdateIterationLineRequest request)
+        public virtual System.Threading.Tasks.Task<LineOperationResultDto> IterationLinesPUTAsync(int lineId, UpdateIterationLineRequest body)
         {
-            return UpdateIterationLineAsync(lineId, request, System.Threading.CancellationToken.None);
+            return IterationLinesPUTAsync(lineId, body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> UpdateIterationLineAsync(int lineId, UpdateIterationLineRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> IterationLinesPUTAsync(int lineId, UpdateIterationLineRequest body, System.Threading.CancellationToken cancellationToken)
         {
             if (lineId == null)
                 throw new System.ArgumentNullException("lineId");
 
-            if (request == null)
-                throw new System.ArgumentNullException("request");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6538,7 +5691,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -6603,15 +5756,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LineOperationResultDto> DeleteIterationLineAsync(int lineId)
+        public virtual System.Threading.Tasks.Task<LineOperationResultDto> IterationLinesDELETEAsync(int lineId)
         {
-            return DeleteIterationLineAsync(lineId, System.Threading.CancellationToken.None);
+            return IterationLinesDELETEAsync(lineId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> DeleteIterationLineAsync(int lineId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> IterationLinesDELETEAsync(int lineId, System.Threading.CancellationToken cancellationToken)
         {
             if (lineId == null)
                 throw new System.ArgumentNullException("lineId");
@@ -6683,15 +5838,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ValidationCacheResultDto> RefreshValidationAsync()
+        public virtual System.Threading.Tasks.Task<ValidationCacheResultDto> RefreshAsync()
         {
-            return RefreshValidationAsync(System.Threading.CancellationToken.None);
+            return RefreshAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ValidationCacheResultDto> RefreshValidationAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<ValidationCacheResultDto> RefreshAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6760,18 +5917,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ExportResultDto> ExportBoardAsync(ExportOptionsDto options)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EpicFeatureDto>> FeaturesAsync(int epicId)
         {
-            return ExportBoardAsync(options, System.Threading.CancellationToken.None);
+            return FeaturesAsync(epicId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ExportResultDto> ExportBoardAsync(ExportOptionsDto options, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EpicFeatureDto>> FeaturesAsync(int epicId, System.Threading.CancellationToken cancellationToken)
         {
-            if (options == null)
-                throw new System.ArgumentNullException("options");
+            if (epicId == null)
+                throw new System.ArgumentNullException("epicId");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6779,7 +5938,180 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(options, JsonSerializerSettings);
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/ReleasePlanning/epics/{epicId}/features"
+                    urlBuilder_.Append("api/ReleasePlanning/epics/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(epicId, System.Globalization.CultureInfo.InvariantCulture)));
+                    urlBuilder_.Append("/features");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<EpicFeatureDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<EpicSplitResultDto> SplitAsync(int epicId, SplitEpicRequest body)
+        {
+            return SplitAsync(epicId, body, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<EpicSplitResultDto> SplitAsync(int epicId, SplitEpicRequest body, System.Threading.CancellationToken cancellationToken)
+        {
+            if (epicId == null)
+                throw new System.ArgumentNullException("epicId");
+
+            if (body == null)
+                throw new System.ArgumentNullException("body");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.ByteArrayContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/ReleasePlanning/epics/{epicId}/split"
+                    urlBuilder_.Append("api/ReleasePlanning/epics/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(epicId, System.Globalization.CultureInfo.InvariantCulture)));
+                    urlBuilder_.Append("/split");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<EpicSplitResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<ExportResultDto> ExportAsync(ExportOptionsDto body)
+        {
+            return ExportAsync(body, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<ExportResultDto> ExportAsync(ExportOptionsDto body, System.Threading.CancellationToken cancellationToken)
+        {
+            if (body == null)
+                throw new System.ArgumentNullException("body");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -6843,218 +6175,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
-        protected struct ObjectResponseResult<T>
-        {
-            public ObjectResponseResult(T responseObject, string responseText)
-            {
-                this.Object = responseObject;
-                this.Text = responseText;
-            }
-
-            public T Object { get; }
-
-            public string Text { get; }
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<string> ReadAsStringAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStringAsync(cancellationToken);
-    #else
-            return content.ReadAsStringAsync();
-    #endif
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<System.IO.Stream> ReadAsStreamAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStreamAsync(cancellationToken);
-    #else
-            return content.ReadAsStreamAsync();
-    #endif
-        }
-
-        public bool ReadResponseAsString { get; set; }
-
-        protected virtual async System.Threading.Tasks.Task<ObjectResponseResult<T>> ReadObjectResponseAsync<T>(System.Net.Http.HttpResponseMessage response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.Threading.CancellationToken cancellationToken)
-        {
-            if (response == null || response.Content == null)
-            {
-                return new ObjectResponseResult<T>(default(T)!, string.Empty);
-            }
-
-            if (ReadResponseAsString)
-            {
-                var responseText = await ReadAsStringAsync(response.Content, cancellationToken).ConfigureAwait(false);
-                try
-                {
-                    var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody!, responseText);
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, responseText, headers, exception);
-                }
-            }
-            else
-            {
-                try
-                {
-                    using (var responseStream = await ReadAsStreamAsync(response.Content, cancellationToken).ConfigureAwait(false))
-                    {
-                        var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
-                    }
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
-                }
-            }
-        }
-
-        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
-        {
-            if (value == null)
-            {
-                return "";
-            }
-
-            if (value is System.Enum)
-            {
-                var name = System.Enum.GetName(value.GetType(), value);
-                if (name != null)
-                {
-                    var field_ = System.Reflection.IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
-                    if (field_ != null)
-                    {
-                        var attribute = System.Reflection.CustomAttributeExtensions.GetCustomAttribute(field_, typeof(System.Runtime.Serialization.EnumMemberAttribute)) 
-                            as System.Runtime.Serialization.EnumMemberAttribute;
-                        if (attribute != null)
-                        {
-                            return attribute.Value != null ? attribute.Value : name;
-                        }
-                    }
-
-                    var converted = System.Convert.ToString(System.Convert.ChangeType(value, System.Enum.GetUnderlyingType(value.GetType()), cultureInfo));
-                    return converted == null ? string.Empty : converted;
-                }
-            }
-            else if (value is bool) 
-            {
-                return System.Convert.ToString((bool)value, cultureInfo).ToLowerInvariant();
-            }
-            else if (value is byte[])
-            {
-                return System.Convert.ToBase64String((byte[]) value);
-            }
-            else if (value is string[])
-            {
-                return string.Join(",", (string[])value);
-            }
-            else if (value.GetType().IsArray)
-            {
-                var valueArray = (System.Array)value;
-                var valueTextArray = new string[valueArray.Length];
-                for (var i = 0; i < valueArray.Length; i++)
-                {
-                    valueTextArray[i] = ConvertToString(valueArray.GetValue(i), cultureInfo);
-                }
-                return string.Join(",", valueTextArray);
-            }
-
-            var result = System.Convert.ToString(value, cultureInfo);
-            return result == null ? "" : result;
-        }
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial interface ISettingsClient
-    {
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SettingsDto> GetSettingsAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SettingsDto> GetSettingsAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortEstimationSettingsDto> GetEffortEstimationSettingsAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortEstimationSettingsDto> GetEffortEstimationSettingsAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task UpdateEffortEstimationSettingsAsync(EffortEstimationSettingsDto settings);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task UpdateEffortEstimationSettingsAsync(EffortEstimationSettingsDto settings, System.Threading.CancellationToken cancellationToken);
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SettingsClient : ISettingsClient
-    {
-        #pragma warning disable 8618
-        private string _baseUrl;
-        #pragma warning restore 8618
-
-        private System.Net.Http.HttpClient _httpClient;
-        private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
-        private System.Text.Json.JsonSerializerOptions _instanceSettings;
-
-    #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public SettingsClient(System.Net.Http.HttpClient httpClient)
-    #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        public virtual System.Threading.Tasks.Task<SettingsDto> SettingsAsync()
         {
-            BaseUrl = "http://localhost:5000";
-            _httpClient = httpClient;
-            Initialize();
-        }
-
-        private static System.Text.Json.JsonSerializerOptions CreateSerializerSettings()
-        {
-            var settings = new System.Text.Json.JsonSerializerOptions();
-            UpdateJsonSerializerSettings(settings);
-            return settings;
-        }
-
-        public string BaseUrl
-        {
-            get { return _baseUrl; }
-            set
-            {
-                _baseUrl = value;
-                if (!string.IsNullOrEmpty(_baseUrl) && !_baseUrl.EndsWith("/"))
-                    _baseUrl += '/';
-            }
-        }
-
-        protected System.Text.Json.JsonSerializerOptions JsonSerializerSettings { get { return _instanceSettings ?? _settings.Value; } }
-
-        static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
-
-        partial void Initialize();
-
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, string url);
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
-        partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<SettingsDto> GetSettingsAsync()
-        {
-            return GetSettingsAsync(System.Threading.CancellationToken.None);
+            return SettingsAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<SettingsDto> GetSettingsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<SettingsDto> SettingsAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -7110,7 +6241,7 @@ namespace PoTool.Client.ApiClient
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            throw new ApiException<ProblemDetails>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                            throw new ApiException<ProblemDetails>("Not Found", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
                         {
@@ -7132,15 +6263,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EffortEstimationSettingsDto> GetEffortEstimationSettingsAsync()
+        public virtual System.Threading.Tasks.Task<EffortEstimationSettingsDto> EffortEstimationGETAsync()
         {
-            return GetEffortEstimationSettingsAsync(System.Threading.CancellationToken.None);
+            return EffortEstimationGETAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EffortEstimationSettingsDto> GetEffortEstimationSettingsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<EffortEstimationSettingsDto> EffortEstimationGETAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -7208,18 +6341,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task UpdateEffortEstimationSettingsAsync(EffortEstimationSettingsDto settings)
+        public virtual System.Threading.Tasks.Task EffortEstimationPUTAsync(EffortEstimationSettingsDto body)
         {
-            return UpdateEffortEstimationSettingsAsync(settings, System.Threading.CancellationToken.None);
+            return EffortEstimationPUTAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task UpdateEffortEstimationSettingsAsync(EffortEstimationSettingsDto settings, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task EffortEstimationPUTAsync(EffortEstimationSettingsDto body, System.Threading.CancellationToken cancellationToken)
         {
-            if (settings == null)
-                throw new System.ArgumentNullException("settings");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -7227,7 +6362,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(settings, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -7285,302 +6420,95 @@ namespace PoTool.Client.ApiClient
             }
         }
 
-        protected struct ObjectResponseResult<T>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<StartupReadinessDto> ReadinessAsync()
         {
-            public ObjectResponseResult(T responseObject, string responseText)
-            {
-                this.Object = responseObject;
-                this.Text = responseText;
-            }
-
-            public T Object { get; }
-
-            public string Text { get; }
+            return ReadinessAsync(System.Threading.CancellationToken.None);
         }
 
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<string> ReadAsStringAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<StartupReadinessDto> ReadinessAsync(System.Threading.CancellationToken cancellationToken)
         {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStringAsync(cancellationToken);
-    #else
-            return content.ReadAsStringAsync();
-    #endif
-        }
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        private static System.Threading.Tasks.Task<System.IO.Stream> ReadAsStreamAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
-        {
-    #if NET5_0_OR_GREATER
-            return content.ReadAsStreamAsync(cancellationToken);
-    #else
-            return content.ReadAsStreamAsync();
-    #endif
-        }
-
-        public bool ReadResponseAsString { get; set; }
-
-        protected virtual async System.Threading.Tasks.Task<ObjectResponseResult<T>> ReadObjectResponseAsync<T>(System.Net.Http.HttpResponseMessage response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.Threading.CancellationToken cancellationToken)
-        {
-            if (response == null || response.Content == null)
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
             {
-                return new ObjectResponseResult<T>(default(T)!, string.Empty);
-            }
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
-            if (ReadResponseAsString)
-            {
-                var responseText = await ReadAsStringAsync(response.Content, cancellationToken).ConfigureAwait(false);
-                try
-                {
-                    var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody!, responseText);
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, responseText, headers, exception);
-                }
-            }
-            else
-            {
-                try
-                {
-                    using (var responseStream = await ReadAsStreamAsync(response.Content, cancellationToken).ConfigureAwait(false))
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/Startup/readiness"
+                    urlBuilder_.Append("api/Startup/readiness");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
                     {
-                        var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
-                    }
-                }
-                catch (System.Text.Json.JsonException exception)
-                {
-                    var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
-                }
-            }
-        }
-
-        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
-        {
-            if (value == null)
-            {
-                return "";
-            }
-
-            if (value is System.Enum)
-            {
-                var name = System.Enum.GetName(value.GetType(), value);
-                if (name != null)
-                {
-                    var field_ = System.Reflection.IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
-                    if (field_ != null)
-                    {
-                        var attribute = System.Reflection.CustomAttributeExtensions.GetCustomAttribute(field_, typeof(System.Runtime.Serialization.EnumMemberAttribute)) 
-                            as System.Runtime.Serialization.EnumMemberAttribute;
-                        if (attribute != null)
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
                         {
-                            return attribute.Value != null ? attribute.Value : name;
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<StartupReadinessDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
-
-                    var converted = System.Convert.ToString(System.Convert.ChangeType(value, System.Enum.GetUnderlyingType(value.GetType()), cultureInfo));
-                    return converted == null ? string.Empty : converted;
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
                 }
             }
-            else if (value is bool) 
+            finally
             {
-                return System.Convert.ToString((bool)value, cultureInfo).ToLowerInvariant();
+                if (disposeClient_)
+                    client_.Dispose();
             }
-            else if (value is byte[])
-            {
-                return System.Convert.ToBase64String((byte[]) value);
-            }
-            else if (value is string[])
-            {
-                return string.Join(",", (string[])value);
-            }
-            else if (value.GetType().IsArray)
-            {
-                var valueArray = (System.Array)value;
-                var valueTextArray = new string[valueArray.Length];
-                for (var i = 0; i < valueArray.Length; i++)
-                {
-                    valueTextArray[i] = ConvertToString(valueArray.GetValue(i), cultureInfo);
-                }
-                return string.Join(",", valueTextArray);
-            }
-
-            var result = System.Convert.ToString(value, cultureInfo);
-            return result == null ? "" : result;
         }
-    }
 
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial interface IWorkItemsClient
-    {
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> GetDistinctAreaPathsAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> GetDistinctAreaPathsAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemWithValidationDto>> GetAllWithValidationAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemWithValidationDto>> GetAllWithValidationAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetFilteredAsync(string filter);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetFilteredAsync(string filter, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<WorkItemDto> GetByTfsIdAsync(int tfsId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<WorkItemDto> GetByTfsIdAsync(int tfsId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(int workItemId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(int workItemId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllGoalsAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllGoalsAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetGoalHierarchyAsync(string? goalIds);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetGoalHierarchyAsync(string? goalIds, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<WorkItemStateTimelineDto> GetStateTimelineAsync(int id);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<WorkItemStateTimelineDto> GetStateTimelineAsync(int id, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ValidationViolationHistoryDto>> GetValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ValidationViolationHistoryDto>> GetValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationImpactAnalysisDto> GetValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationImpactAnalysisDto> GetValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FixValidationViolationResultDto> FixValidationViolationsAsync(FixValidationViolationBatchCommand command);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FixValidationViolationResultDto> FixValidationViolationsAsync(FixValidationViolationBatchCommand command, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<BulkEffortAssignmentResultDto> BulkAssignEffortAsync(BulkAssignEffortCommand command);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<BulkEffortAssignmentResultDto> BulkAssignEffortAsync(BulkAssignEffortCommand command, System.Threading.CancellationToken cancellationToken);
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class WorkItemsClient : IWorkItemsClient
-    {
-        #pragma warning disable 8618
-        private string _baseUrl;
-        #pragma warning restore 8618
-
-        private System.Net.Http.HttpClient _httpClient;
-        private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
-        private System.Text.Json.JsonSerializerOptions _instanceSettings;
-
-    #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public WorkItemsClient(System.Net.Http.HttpClient httpClient)
-    #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> WorkItemsAllAsync()
         {
-            BaseUrl = "http://localhost:5000";
-            _httpClient = httpClient;
-            Initialize();
-        }
-
-        private static System.Text.Json.JsonSerializerOptions CreateSerializerSettings()
-        {
-            var settings = new System.Text.Json.JsonSerializerOptions();
-            UpdateJsonSerializerSettings(settings);
-            return settings;
-        }
-
-        public string BaseUrl
-        {
-            get { return _baseUrl; }
-            set
-            {
-                _baseUrl = value;
-                if (!string.IsNullOrEmpty(_baseUrl) && !_baseUrl.EndsWith("/"))
-                    _baseUrl += '/';
-            }
-        }
-
-        protected System.Text.Json.JsonSerializerOptions JsonSerializerSettings { get { return _instanceSettings ?? _settings.Value; } }
-
-        static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
-
-        partial void Initialize();
-
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, string url);
-        partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
-        partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllAsync()
-        {
-            return GetAllAsync(System.Threading.CancellationToken.None);
+            return WorkItemsAllAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> WorkItemsAllAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -7648,15 +6576,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> GetDistinctAreaPathsAsync()
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> AreaPathsAsync()
         {
-            return GetDistinctAreaPathsAsync(System.Threading.CancellationToken.None);
+            return AreaPathsAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> GetDistinctAreaPathsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> AreaPathsAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -7724,15 +6654,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemWithValidationDto>> GetAllWithValidationAsync()
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemWithValidationDto>> ValidatedAsync()
         {
-            return GetAllWithValidationAsync(System.Threading.CancellationToken.None);
+            return ValidatedAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemWithValidationDto>> GetAllWithValidationAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemWithValidationDto>> ValidatedAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -7800,15 +6732,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetFilteredAsync(string filter)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> Filter2Async(string filter)
         {
-            return GetFilteredAsync(filter, System.Threading.CancellationToken.None);
+            return Filter2Async(filter, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetFilteredAsync(string filter, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> Filter2Async(string filter, System.Threading.CancellationToken cancellationToken)
         {
             if (filter == null)
                 throw new System.ArgumentNullException("filter");
@@ -7880,15 +6814,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<WorkItemDto> GetByTfsIdAsync(int tfsId)
+        public virtual System.Threading.Tasks.Task<WorkItemDto> WorkItemsAsync(int tfsId)
         {
-            return GetByTfsIdAsync(tfsId, System.Threading.CancellationToken.None);
+            return WorkItemsAsync(tfsId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<WorkItemDto> GetByTfsIdAsync(int tfsId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<WorkItemDto> WorkItemsAsync(int tfsId, System.Threading.CancellationToken cancellationToken)
         {
             if (tfsId == null)
                 throw new System.ArgumentNullException("tfsId");
@@ -7960,15 +6896,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(int workItemId)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemRevisionDto>> RevisionsAsync(int workItemId)
         {
-            return GetWorkItemRevisionsAsync(workItemId, System.Threading.CancellationToken.None);
+            return RevisionsAsync(workItemId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(int workItemId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemRevisionDto>> RevisionsAsync(int workItemId, System.Threading.CancellationToken cancellationToken)
         {
             if (workItemId == null)
                 throw new System.ArgumentNullException("workItemId");
@@ -8041,15 +6979,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllGoalsAsync()
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> AllAsync()
         {
-            return GetAllGoalsAsync(System.Threading.CancellationToken.None);
+            return AllAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllGoalsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> AllAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -8117,15 +7057,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetGoalHierarchyAsync(string? goalIds)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GoalsAsync(string? goalIds)
         {
-            return GetGoalHierarchyAsync(goalIds, System.Threading.CancellationToken.None);
+            return GoalsAsync(goalIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetGoalHierarchyAsync(string? goalIds, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GoalsAsync(string? goalIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -8199,15 +7141,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<WorkItemStateTimelineDto> GetStateTimelineAsync(int id)
+        public virtual System.Threading.Tasks.Task<WorkItemStateTimelineDto> StateTimelineAsync(int id)
         {
-            return GetStateTimelineAsync(id, System.Threading.CancellationToken.None);
+            return StateTimelineAsync(id, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<WorkItemStateTimelineDto> GetStateTimelineAsync(int id, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<WorkItemStateTimelineDto> StateTimelineAsync(int id, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -8280,15 +7224,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> AdvancedFilterAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch)
         {
-            return GetAdvancedFilteredAsync(typeFilter, stateFilter, iterationPathFilter, areaPathFilter, minEffort, maxEffort, hasValidationIssues, isBlocked, titleSearch, System.Threading.CancellationToken.None);
+            return AdvancedFilterAsync(typeFilter, stateFilter, iterationPathFilter, areaPathFilter, minEffort, maxEffort, hasValidationIssues, isBlocked, titleSearch, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> AdvancedFilterAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -8394,15 +7340,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes)
+        public virtual System.Threading.Tasks.Task<DependencyGraphDto> DependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes)
         {
-            return GetDependencyGraphAsync(areaPathFilter, workItemIds, workItemTypes, System.Threading.CancellationToken.None);
+            return DependencyGraphAsync(areaPathFilter, workItemIds, workItemTypes, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DependencyGraphDto> DependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -8484,15 +7432,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ValidationViolationHistoryDto>> GetValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ValidationViolationHistoryDto>> ValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType)
         {
-            return GetValidationHistoryAsync(areaPathFilter, startDate, endDate, violationType, System.Threading.CancellationToken.None);
+            return ValidationHistoryAsync(areaPathFilter, startDate, endDate, violationType, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ValidationViolationHistoryDto>> GetValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ValidationViolationHistoryDto>> ValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -8578,15 +7528,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ValidationImpactAnalysisDto> GetValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter)
+        public virtual System.Threading.Tasks.Task<ValidationImpactAnalysisDto> ValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter)
         {
-            return GetValidationImpactAnalysisAsync(areaPathFilter, iterationPathFilter, System.Threading.CancellationToken.None);
+            return ValidationImpactAnalysisAsync(areaPathFilter, iterationPathFilter, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ValidationImpactAnalysisDto> GetValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<ValidationImpactAnalysisDto> ValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -8664,18 +7616,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<FixValidationViolationResultDto> FixValidationViolationsAsync(FixValidationViolationBatchCommand command)
+        public virtual System.Threading.Tasks.Task<FixValidationViolationResultDto> FixValidationViolationsAsync(FixValidationViolationBatchCommand body)
         {
-            return FixValidationViolationsAsync(command, System.Threading.CancellationToken.None);
+            return FixValidationViolationsAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<FixValidationViolationResultDto> FixValidationViolationsAsync(FixValidationViolationBatchCommand command, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<FixValidationViolationResultDto> FixValidationViolationsAsync(FixValidationViolationBatchCommand body, System.Threading.CancellationToken cancellationToken)
         {
-            if (command == null)
-                throw new System.ArgumentNullException("command");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -8683,7 +7637,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(command, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -8747,18 +7701,20 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<BulkEffortAssignmentResultDto> BulkAssignEffortAsync(BulkAssignEffortCommand command)
+        public virtual System.Threading.Tasks.Task<BulkEffortAssignmentResultDto> BulkAssignEffortAsync(BulkAssignEffortCommand body)
         {
-            return BulkAssignEffortAsync(command, System.Threading.CancellationToken.None);
+            return BulkAssignEffortAsync(body, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<BulkEffortAssignmentResultDto> BulkAssignEffortAsync(BulkAssignEffortCommand command, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<BulkEffortAssignmentResultDto> BulkAssignEffortAsync(BulkAssignEffortCommand body, System.Threading.CancellationToken cancellationToken)
         {
-            if (command == null)
-                throw new System.ArgumentNullException("command");
+            if (body == null)
+                throw new System.ArgumentNullException("body");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -8766,7 +7722,7 @@ namespace PoTool.Client.ApiClient
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(command, JsonSerializerSettings);
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
@@ -8960,398 +7916,43 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TfsConfig
+    public partial class AreaPathTrendData
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("url")]
-        public string Url { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("project")]
-        public string Project { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("authMode")]
-        public TfsAuthMode AuthMode { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("useDefaultCredentials")]
-        public bool UseDefaultCredentials { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("timeoutSeconds")]
-        public int TimeoutSeconds { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("apiVersion")]
-        public string ApiVersion { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("lastValidated")]
-        public System.DateTimeOffset? LastValidated { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum TfsAuthMode
-    {
-
-        Pat = 0,
-
-        Ntlm = 1,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TfsConfigRequest
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("url")]
-        public string? Url { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("project")]
-        public string? Project { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("defaultAreaPath")]
-        public string? DefaultAreaPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("pat")]
-        public string? Pat { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("authMode")]
-        public int AuthMode { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("useDefaultCredentials")]
-        public bool UseDefaultCredentials { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("timeoutSeconds")]
-        public int TimeoutSeconds { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("apiVersion")]
-        public string? ApiVersion { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TfsVerificationReport
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("verifiedAt")]
-        public System.DateTimeOffset VerifiedAt { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("serverUrl")]
-        public string ServerUrl { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("projectName")]
-        public string ProjectName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("apiVersion")]
-        public string ApiVersion { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("includedWriteChecks")]
-        public bool IncludedWriteChecks { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("success")]
-        public bool Success { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("checks")]
-        public System.Collections.Generic.ICollection<TfsCapabilityCheckResult> Checks { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("summary")]
-        public string Summary { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("impactedFunctionalities")]
-        public System.Collections.Generic.ICollection<string> ImpactedFunctionalities { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TfsCapabilityCheckResult
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("capabilityId")]
-        public string CapabilityId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("success")]
-        public bool Success { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("impactedFunctionality")]
-        public string ImpactedFunctionality { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("expectedBehavior")]
-        public string ExpectedBehavior { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("observedBehavior")]
-        public string? ObservedBehavior { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("failureCategory")]
-        public FailureCategory? FailureCategory { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("rawEvidence")]
-        public string? RawEvidence { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("likelyCauses")]
-        public System.Collections.Generic.ICollection<string>? LikelyCauses { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("resolutionGuidance")]
-        public System.Collections.Generic.ICollection<string>? ResolutionGuidance { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("targetScope")]
-        public string? TargetScope { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("mutationType")]
-        public MutationType? MutationType { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("cleanupStatus")]
-        public CleanupStatus? CleanupStatus { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum FailureCategory
-    {
-
-        Authentication = 0,
-
-        Authorization = 1,
-
-        EndpointUnavailable = 2,
-
-        UnsupportedApiVersion = 3,
-
-        MissingField = 4,
-
-        InvalidProcessTemplate = 5,
-
-        QueryRestriction = 6,
-
-        PayloadShapeMismatch = 7,
-
-        RateLimit = 8,
-
-        Unknown = 9,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum MutationType
-    {
-
-        Create = 0,
-
-        Update = 1,
-
-        Link = 2,
-
-        Close = 3,
-
-        Other = 4,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum CleanupStatus
-    {
-
-        CleanedUp = 0,
-
-        NotRequired = 1,
-
-        Failed = 2,
-
-        Skipped = 3,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TfsVerifyRequest
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("includeWriteChecks")]
-        public bool IncludeWriteChecks { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemIdForWriteCheck")]
-        public int? WorkItemIdForWriteCheck { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class FilterByValidationResponse
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemIds")]
-        public System.Collections.Generic.ICollection<int> WorkItemIds { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class FilterByValidationRequest
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("targetIds")]
-        public System.Collections.Generic.ICollection<int> TargetIds { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class GetWorkItemIdsByValidationFilterResponse
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemIds")]
-        public System.Collections.Generic.ICollection<int> WorkItemIds { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class GetWorkItemIdsByValidationFilterRequest
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("filterId")]
-        public string FilterId { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CountWorkItemsByValidationFilterResponse
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("count")]
-        public int Count { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CountWorkItemsByValidationFilterRequest
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("filterId")]
-        public string FilterId { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class IsDescendantOfGoalsResponse
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("isDescendant")]
-        public bool IsDescendant { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class IsDescendantOfGoalsRequest
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        public int WorkItemId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("goalIds")]
-        public System.Collections.Generic.ICollection<int> GoalIds { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class FilterByGoalsResponse
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemIds")]
-        public System.Collections.Generic.ICollection<int> WorkItemIds { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class FilterByGoalsRequest
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("goalIds")]
-        public System.Collections.Generic.ICollection<int> GoalIds { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CalculateHealthScoreResponse
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("healthScore")]
-        public int HealthScore { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CalculateHealthScoreRequest
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalWorkItems")]
-        public int TotalWorkItems { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemsWithoutEffort")]
-        public int WorkItemsWithoutEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemsInProgressWithoutEffort")]
-        public int WorkItemsInProgressWithoutEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("parentProgressIssues")]
-        public int ParentProgressIssues { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("blockedItems")]
-        public int BlockedItems { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SprintMetricsDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
-        public string IterationPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
-        public string SprintName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("startDate")]
-        public System.DateTimeOffset? StartDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("endDate")]
-        public System.DateTimeOffset? EndDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("completedStoryPoints")]
-        public int CompletedStoryPoints { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("plannedStoryPoints")]
-        public int PlannedStoryPoints { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("completedWorkItemCount")]
-        public int CompletedWorkItemCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalWorkItemCount")]
-        public int TotalWorkItemCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("completedPBIs")]
-        public int CompletedPBIs { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("completedBugs")]
-        public int CompletedBugs { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("completedTasks")]
-        public int CompletedTasks { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class VelocityTrendDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("sprints")]
-        public System.Collections.Generic.ICollection<SprintMetricsDto> Sprints { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("averageVelocity")]
-        public double AverageVelocity { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("threeSprintAverage")]
-        public double ThreeSprintAverage { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("sixSprintAverage")]
-        public double SixSprintAverage { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalCompletedStoryPoints")]
-        public int TotalCompletedStoryPoints { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalSprints")]
-        public int TotalSprints { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string AreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effortBySprint")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> EffortBySprint { get; set; } = new System.Collections.ObjectModel.Collection<int>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double AverageEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("standardDeviation")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double StandardDeviation { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("direction")]
+        public int Direction { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("trendSlope")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double TrendSlope { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
@@ -9360,27 +7961,41 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string IterationPath { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string SprintName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalWorkItems")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalWorkItems { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemsWithoutEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemsWithoutEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemsInProgressWithoutEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemsInProgressWithoutEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("parentProgressIssues")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ParentProgressIssues { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("blockedItems")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int BlockedItems { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("inProgressAtIterationEnd")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int InProgressAtIterationEnd { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("iterationStart")]
@@ -9390,43 +8005,17 @@ namespace PoTool.Client.ApiClient
         public System.DateTimeOffset? IterationEnd { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("validationIssues")]
-        public System.Collections.Generic.ICollection<ValidationIssueSummary> ValidationIssues { get; set; } = default!;
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ValidationIssueSummary> ValidationIssues { get; set; } = new System.Collections.ObjectModel.Collection<ValidationIssueSummary>();
 
-    }
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ValidationIssueSummary
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("validationType")]
-        public string ValidationType { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("count")]
-        public int Count { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("affectedWorkItemIds")]
-        public System.Collections.Generic.ICollection<int> AffectedWorkItemIds { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class MultiIterationBacklogHealthDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationHealth")]
-        public System.Collections.Generic.ICollection<BacklogHealthDto> IterationHealth { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("trend")]
-        public BacklogHealthTrend Trend { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalWorkItems")]
-        public int TotalWorkItems { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalIssues")]
-        public int TotalIssues { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
-        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
@@ -9435,190 +8024,190 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("effortTrend")]
-        public TrendDirection EffortTrend { get; set; } = default!;
+        public int EffortTrend { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("validationTrend")]
-        public TrendDirection ValidationTrend { get; set; } = default!;
+        public int ValidationTrend { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("blockerTrend")]
-        public TrendDirection BlockerTrend { get; set; } = default!;
+        public int BlockerTrend { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("summary")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Summary { get; set; } = default!;
 
-    }
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum TrendDirection
-    {
-
-        Improving = 0,
-
-        Stable = 1,
-
-        Degrading = 2,
-
-        Unknown = 3,
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class EffortDistributionDto
+    public partial class BulkAssignEffortCommand
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("effortByArea")]
-        public System.Collections.Generic.ICollection<EffortByAreaPath> EffortByArea { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("assignments")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<BulkEffortAssignmentDto> Assignments { get; set; } = new System.Collections.ObjectModel.Collection<BulkEffortAssignmentDto>();
 
-        [System.Text.Json.Serialization.JsonPropertyName("effortByIteration")]
-        public System.Collections.Generic.ICollection<EffortByIteration> EffortByIteration { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        [System.Text.Json.Serialization.JsonPropertyName("heatMapData")]
-        public System.Collections.Generic.ICollection<EffortHeatMapCell> HeatMapData { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        public int TotalEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
-        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class EffortByAreaPath
+    public partial class BulkEffortAssignmentDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
-        public string AreaPath { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        public int TotalEffort { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("effortValue")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int EffortValue { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
-        public int WorkItemCount { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        [System.Text.Json.Serialization.JsonPropertyName("averageEffortPerItem")]
-        public double AverageEffortPerItem { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class EffortByIteration
+    public partial class BulkEffortAssignmentItemResult
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
-        public string IterationPath { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
-        public string SprintName { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("success")]
+        public bool Success { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        public int TotalEffort { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
+        public string? ErrorMessage { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
-        public int WorkItemCount { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        [System.Text.Json.Serialization.JsonPropertyName("capacity")]
-        public int? Capacity { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
-        public double UtilizationPercentage { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class EffortHeatMapCell
+    public partial class BulkEffortAssignmentResultDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
-        public string AreaPath { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("totalRequested")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalRequested { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
-        public string IterationPath { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("successfulUpdates")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int SuccessfulUpdates { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        public int Effort { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("failedUpdates")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int FailedUpdates { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
-        public int WorkItemCount { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("results")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<BulkEffortAssignmentItemResult> Results { get; set; } = new System.Collections.ObjectModel.Collection<BulkEffortAssignmentItemResult>();
 
-        [System.Text.Json.Serialization.JsonPropertyName("status")]
-        public CapacityStatus Status { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum CapacityStatus
+    public partial class CalculateHealthScoreRequest
     {
 
-        Unknown = 0,
+        [System.Text.Json.Serialization.JsonPropertyName("totalWorkItems")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalWorkItems { get; set; } = default!;
 
-        Underutilized = 1,
+        [System.Text.Json.Serialization.JsonPropertyName("workItemsWithoutEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemsWithoutEffort { get; set; } = default!;
 
-        Normal = 2,
+        [System.Text.Json.Serialization.JsonPropertyName("workItemsInProgressWithoutEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemsInProgressWithoutEffort { get; set; } = default!;
 
-        NearCapacity = 3,
+        [System.Text.Json.Serialization.JsonPropertyName("parentProgressIssues")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int ParentProgressIssues { get; set; } = default!;
 
-        OverCapacity = 4,
+        [System.Text.Json.Serialization.JsonPropertyName("blockedItems")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int BlockedItems { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SprintCapacityPlanDto
+    public partial class CalculateHealthScoreResponse
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
-        public string IterationPath { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("healthScore")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int HealthScore { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
-        public string SprintName { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        [System.Text.Json.Serialization.JsonPropertyName("startDate")]
-        public System.DateTimeOffset? StartDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("endDate")]
-        public System.DateTimeOffset? EndDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalPlannedEffort")]
-        public int TotalPlannedEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalCapacity")]
-        public int TotalCapacity { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
-        public double UtilizationPercentage { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("status")]
-        public CapacityStatus Status { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("teamCapacities")]
-        public System.Collections.Generic.ICollection<TeamMemberCapacity> TeamCapacities { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("warnings")]
-        public System.Collections.Generic.ICollection<CapacityWarning> Warnings { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
-        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TeamMemberCapacity
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("memberName")]
-        public string MemberName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("assignedEffort")]
-        public int AssignedEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("availableCapacity")]
-        public int AvailableCapacity { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
-        public double UtilizationPercentage { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("status")]
-        public CapacityStatus Status { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
@@ -9627,377 +8216,47 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("level")]
-        public WarningLevel Level { get; set; } = default!;
+        public int Level { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("message")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Message { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("affectedMembers")]
-        public System.Collections.Generic.ICollection<string> AffectedMembers { get; set; } = default!;
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> AffectedMembers { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum WarningLevel
+    public partial class CircularDependency
     {
 
-        Info = 0,
-
-        Warning = 1,
-
-        Critical = 2,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class EpicCompletionForecastDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("epicId")]
-        public int EpicId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public string Type { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        public int TotalEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("completedEffort")]
-        public int CompletedEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("remainingEffort")]
-        public int RemainingEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("estimatedVelocity")]
-        public double EstimatedVelocity { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("sprintsRemaining")]
-        public int SprintsRemaining { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("estimatedCompletionDate")]
-        public System.DateTimeOffset? EstimatedCompletionDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("confidence")]
-        public ForecastConfidence Confidence { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("forecastByDate")]
-        public System.Collections.Generic.ICollection<SprintForecast> ForecastByDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
-        public string AreaPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
-        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ForecastConfidence
-    {
-
-        Low = 0,
-
-        Medium = 1,
-
-        High = 2,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SprintForecast
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
-        public string SprintName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
-        public string IterationPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("sprintStartDate")]
-        public System.DateTimeOffset SprintStartDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("sprintEndDate")]
-        public System.DateTimeOffset SprintEndDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("expectedCompletedEffort")]
-        public int ExpectedCompletedEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("remainingEffortAfterSprint")]
-        public int RemainingEffortAfterSprint { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("progressPercentage")]
-        public double ProgressPercentage { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class EffortImbalanceDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("teamImbalances")]
-        public System.Collections.Generic.ICollection<TeamImbalance> TeamImbalances { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("sprintImbalances")]
-        public System.Collections.Generic.ICollection<SprintImbalance> SprintImbalances { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("overallRiskLevel")]
-        public ImbalanceRiskLevel OverallRiskLevel { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("imbalanceScore")]
-        public double ImbalanceScore { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("recommendations")]
-        public System.Collections.Generic.ICollection<RebalancingRecommendation> Recommendations { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
-        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TeamImbalance
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
-        public string AreaPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        public int TotalEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("averageEffortAcrossTeams")]
-        public int AverageEffortAcrossTeams { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("deviationPercentage")]
-        public double DeviationPercentage { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("riskLevel")]
-        public ImbalanceRiskLevel RiskLevel { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("cycleWorkItemIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> CycleWorkItemIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Description { get; set; } = default!;
 
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ImbalanceRiskLevel
-    {
-
-        Low = 0,
-
-        Medium = 1,
-
-        High = 2,
-
-        Critical = 3,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SprintImbalance
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
-        public string IterationPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
-        public string SprintName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        public int TotalEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("averageEffortAcrossSprints")]
-        public int AverageEffortAcrossSprints { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("deviationPercentage")]
-        public double DeviationPercentage { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("riskLevel")]
-        public ImbalanceRiskLevel RiskLevel { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("description")]
-        public string Description { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class RebalancingRecommendation
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public RecommendationType Type { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("description")]
-        public string Description { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("priority")]
-        public ImbalanceRiskLevel Priority { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("targetAreaPath")]
-        public string? TargetAreaPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("targetIterationPath")]
-        public string? TargetIterationPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("suggestedEffortChange")]
-        public int? SuggestedEffortChange { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum RecommendationType
-    {
-
-        ReduceTeamLoad = 0,
-
-        IncreaseTeamLoad = 1,
-
-        LevelSprintLoad = 2,
-
-        RedistributeAcrossTeams = 3,
-
-        AddCapacity = 4,
-
-        DeferWork = 5,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class EffortDistributionTrendDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("trendBySprint")]
-        public System.Collections.Generic.ICollection<SprintTrendData> TrendBySprint { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("trendByAreaPath")]
-        public System.Collections.Generic.ICollection<AreaPathTrendData> TrendByAreaPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("overallTrend")]
-        public EffortTrendDirection OverallTrend { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("trendSlope")]
-        public double TrendSlope { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("forecasts")]
-        public System.Collections.Generic.ICollection<DistributionForecast> Forecasts { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
-        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SprintTrendData
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
-        public string IterationPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
-        public string SprintName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        public int TotalEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
-        public int WorkItemCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
-        public double UtilizationPercentage { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("changeFromPrevious")]
-        public double ChangeFromPrevious { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("direction")]
-        public EffortTrendDirection Direction { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum EffortTrendDirection
-    {
-
-        Stable = 0,
-
-        Increasing = 1,
-
-        Decreasing = 2,
-
-        Volatile = 3,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class AreaPathTrendData
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
-        public string AreaPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("effortBySprint")]
-        public System.Collections.Generic.ICollection<int> EffortBySprint { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("averageEffort")]
-        public double AverageEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("standardDeviation")]
-        public double StandardDeviation { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("direction")]
-        public EffortTrendDirection Direction { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("trendSlope")]
-        public double TrendSlope { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class DistributionForecast
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
-        public string SprintName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("forecastedEffort")]
-        public int ForecastedEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("lowEstimate")]
-        public int LowEstimate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("highEstimate")]
-        public int HighEstimate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("confidenceLevel")]
-        public double ConfidenceLevel { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class EffortConcentrationRiskDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("areaPathRisks")]
-        public System.Collections.Generic.ICollection<ConcentrationRisk> AreaPathRisks { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationRisks")]
-        public System.Collections.Generic.ICollection<ConcentrationRisk> IterationRisks { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("overallRiskLevel")]
-        public ConcentrationRiskLevel OverallRiskLevel { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("concentrationIndex")]
-        public double ConcentrationIndex { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("recommendations")]
-        public System.Collections.Generic.ICollection<RiskMitigationRecommendation> Recommendations { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
-        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
@@ -10006,431 +8265,209 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("name")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Name { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("path")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Path { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effortAmount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int EffortAmount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("percentageOfTotal")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
         public double PercentageOfTotal { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("riskLevel")]
-        public ConcentrationRiskLevel RiskLevel { get; set; } = default!;
+        public int RiskLevel { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Description { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("topWorkItems")]
-        public System.Collections.Generic.ICollection<string> TopWorkItems { get; set; } = default!;
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> TopWorkItems { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ConcentrationRiskLevel
+    public partial class ConnectorDto
     {
 
-        None = 0,
+        [System.Text.Json.Serialization.JsonPropertyName("sourcePlacementId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int SourcePlacementId { get; set; } = default!;
 
-        Low = 1,
+        [System.Text.Json.Serialization.JsonPropertyName("targetPlacementId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TargetPlacementId { get; set; } = default!;
 
-        Medium = 2,
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public int Type { get; set; } = default!;
 
-        High = 3,
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        Critical = 4,
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class RiskMitigationRecommendation
+    public partial class CountWorkItemsByValidationFilterRequest
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("strategy")]
-        public MitigationStrategy Strategy { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("filterId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string FilterId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string Title { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        [System.Text.Json.Serialization.JsonPropertyName("description")]
-        public string Description { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("priority")]
-        public ConcentrationRiskLevel Priority { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("targetPath")]
-        public string? TargetPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("effortToRedistribute")]
-        public int? EffortToRedistribute { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum MitigationStrategy
+    public partial class CountWorkItemsByValidationFilterResponse
     {
-
-        DiversifyAcrossAreas = 0,
-
-        SpreadAcrossSprints = 1,
-
-        BreakDownLargeItems = 2,
-
-        AddParallelCapacity = 3,
-
-        DeferNonCritical = 4,
-
-        IncreaseBacklog = 5,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class EffortEstimationSuggestionDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        public int WorkItemId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemTitle")]
-        public string WorkItemTitle { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemType")]
-        public string WorkItemType { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("currentEffort")]
-        public int? CurrentEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("suggestedEffort")]
-        public int SuggestedEffort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("confidence")]
-        public double Confidence { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("rationale")]
-        public string Rationale { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("similarWorkItems")]
-        public System.Collections.Generic.ICollection<HistoricalEffortExample> SimilarWorkItems { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class HistoricalEffortExample
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        public int WorkItemId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        public int Effort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("state")]
-        public string State { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("similarityScore")]
-        public double SimilarityScore { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class EffortEstimationQualityDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("averageEstimationAccuracy")]
-        public double AverageEstimationAccuracy { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalCompletedWorkItems")]
-        public int TotalCompletedWorkItems { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemsWithEstimates")]
-        public int WorkItemsWithEstimates { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("qualityByType")]
-        public System.Collections.Generic.ICollection<WorkItemTypeEstimationQuality> QualityByType { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("trendOverTime")]
-        public System.Collections.Generic.ICollection<EstimationTrend> TrendOverTime { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class WorkItemTypeEstimationQuality
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemType")]
-        public string WorkItemType { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("count")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Count { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("averageAccuracy")]
-        public double AverageAccuracy { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        [System.Text.Json.Serialization.JsonPropertyName("typicalEffortMin")]
-        public int TypicalEffortMin { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("typicalEffortMax")]
-        public int TypicalEffortMax { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("averageEffort")]
-        public int AverageEffort { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class EstimationTrend
+    public partial class CreateEpicPlacementCommand
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("period")]
-        public string Period { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("epicId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int EpicId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("startDate")]
-        public System.DateTimeOffset StartDate { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("laneId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int LaneId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("endDate")]
-        public System.DateTimeOffset EndDate { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int RowIndex { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("averageAccuracy")]
-        public double AverageAccuracy { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("orderInRow")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int OrderInRow { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("estimatedCount")]
-        public int EstimatedCount { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PipelineDto
+    public partial class CreateIterationLineCommand
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public int Id { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("label")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Label { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("name")]
-        public string Name { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("verticalPosition")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double VerticalPosition { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateLaneCommand
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("objectiveId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int ObjectiveId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("displayOrder")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DisplayOrder { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateMilestoneLineCommand
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("label")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Label { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("verticalPosition")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double VerticalPosition { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public PipelineType Type { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("path")]
-        public string? Path { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("retrievedAt")]
-        public System.DateTimeOffset RetrievedAt { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum PipelineType
-    {
-
-        Build = 0,
-
-        Release = 1,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PipelineRunDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("runId")]
-        public int RunId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("pipelineId")]
-        public int PipelineId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("pipelineName")]
-        public string PipelineName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("startTime")]
-        public System.DateTimeOffset? StartTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("finishTime")]
-        public System.DateTimeOffset? FinishTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("duration")]
-        public System.TimeSpan? Duration { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("result")]
-        public PipelineRunResult Result { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("trigger")]
-        public PipelineRunTrigger Trigger { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("triggerInfo")]
-        public string? TriggerInfo { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("branch")]
-        public string? Branch { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("requestedFor")]
-        public string? RequestedFor { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("retrievedAt")]
-        public System.DateTimeOffset RetrievedAt { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum PipelineRunResult
-    {
-
-        Unknown = 0,
-
-        Succeeded = 1,
-
-        Failed = 2,
-
-        PartiallySucceeded = 3,
-
-        Canceled = 4,
-
-        None = 5,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum PipelineRunTrigger
-    {
-
-        Unknown = 0,
-
-        Manual = 1,
-
-        ContinuousIntegration = 2,
-
-        Schedule = 3,
-
-        PullRequest = 4,
-
-        BuildCompletion = 5,
-
-        ResourceTrigger = 6,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PipelineMetricsDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("pipelineId")]
-        public int PipelineId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("pipelineName")]
-        public string PipelineName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public PipelineType Type { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalRuns")]
-        public int TotalRuns { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("successfulRuns")]
-        public int SuccessfulRuns { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("failedRuns")]
-        public int FailedRuns { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("partiallySucceededRuns")]
-        public int PartiallySucceededRuns { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("canceledRuns")]
-        public int CanceledRuns { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("failureRate")]
-        public double FailureRate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("averageDuration")]
-        public System.TimeSpan? AverageDuration { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("minDuration")]
-        public System.TimeSpan? MinDuration { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("maxDuration")]
-        public System.TimeSpan? MaxDuration { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("durationVariance")]
-        public double? DurationVariance { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("lastRunResult")]
-        public PipelineRunResult? LastRunResult { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("lastRunTime")]
-        public System.DateTimeOffset? LastRunTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("consecutiveFailures")]
-        public int ConsecutiveFailures { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PipelineSyncResult
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("pipelines")]
-        public System.Collections.Generic.ICollection<PipelineDto> Pipelines { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("runs")]
-        public System.Collections.Generic.ICollection<PipelineRunDto> Runs { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("tfsCallCount")]
-        public int TfsCallCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("syncedAt")]
-        public System.DateTimeOffset SyncedAt { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ProfileDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public int Id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("name")]
-        public string Name { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("areaPaths")]
-        public System.Collections.Generic.ICollection<string> AreaPaths { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("teamName")]
-        public string TeamName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("goalIds")]
-        public System.Collections.Generic.ICollection<int> GoalIds { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("createdAt")]
-        public System.DateTimeOffset CreatedAt { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("lastModified")]
-        public System.DateTimeOffset LastModified { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ProblemDetails
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public string? Type { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string? Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("status")]
-        public int? Status { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("detail")]
-        public string? Detail { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("instance")]
-        public string? Instance { get; set; } = default!;
+        public int Type { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -10448,387 +8485,736 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("name")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Name { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("areaPaths")]
-        public System.Collections.Generic.ICollection<string> AreaPaths { get; set; } = default!;
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> AreaPaths { get; set; } = new System.Collections.ObjectModel.Collection<string>();
 
         [System.Text.Json.Serialization.JsonPropertyName("teamName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string TeamName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("goalIds")]
-        public System.Collections.Generic.ICollection<int> GoalIds { get; set; } = default!;
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> GoalIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("pictureType")]
+        public int PictureType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("defaultPictureId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DefaultPictureId { get; set; } = "0";
+
+        [System.Text.Json.Serialization.JsonPropertyName("customPicturePath")]
+        public string? CustomPicturePath { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class UpdateProfileRequest
+    public partial class DependencyChain
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("name")]
-        public string Name { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("workItemIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> WorkItemIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
 
-        [System.Text.Json.Serialization.JsonPropertyName("areaPaths")]
-        public System.Collections.Generic.ICollection<string> AreaPaths { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalEffort { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("teamName")]
-        public string TeamName { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("chainLength")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int ChainLength { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("goalIds")]
-        public System.Collections.Generic.ICollection<int> GoalIds { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("riskLevel")]
+        public int RiskLevel { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SettingsDto
+    public partial class DependencyGraphDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public int Id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("activeProfileId")]
-        public int? ActiveProfileId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("lastModified")]
-        public System.DateTimeOffset LastModified { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SetActiveProfileRequest
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("profileId")]
-        public int? ProfileId { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PullRequestDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public int Id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("repositoryName")]
-        public string RepositoryName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("createdBy")]
-        public string CreatedBy { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
-        public System.DateTimeOffset CreatedDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("completedDate")]
-        public System.DateTimeOffset? CompletedDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("status")]
-        public string Status { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
-        public string IterationPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("sourceBranch")]
-        public string SourceBranch { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("targetBranch")]
-        public string TargetBranch { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("retrievedAt")]
-        public System.DateTimeOffset RetrievedAt { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PullRequestMetricsDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
-        public int PullRequestId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("createdBy")]
-        public string CreatedBy { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
-        public System.DateTimeOffset CreatedDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("completedDate")]
-        public System.DateTimeOffset? CompletedDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("status")]
-        public string Status { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
-        public string IterationPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalTimeOpen")]
-        public System.TimeSpan TotalTimeOpen { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("effectiveWorkTime")]
-        public System.TimeSpan? EffectiveWorkTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationCount")]
-        public int IterationCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("commentCount")]
-        public int CommentCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("unresolvedCommentCount")]
-        public int UnresolvedCommentCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalFileCount")]
-        public int TotalFileCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalLinesAdded")]
-        public int TotalLinesAdded { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalLinesDeleted")]
-        public int TotalLinesDeleted { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("averageLinesPerFile")]
-        public double AverageLinesPerFile { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PullRequestIterationDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
-        public int PullRequestId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationNumber")]
-        public int IterationNumber { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
-        public System.DateTimeOffset CreatedDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("updatedDate")]
-        public System.DateTimeOffset UpdatedDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("commitCount")]
-        public int CommitCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("changeCount")]
-        public int ChangeCount { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PullRequestCommentDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public int Id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
-        public int PullRequestId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("threadId")]
-        public int ThreadId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("author")]
-        public string Author { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("content")]
-        public string Content { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
-        public System.DateTimeOffset CreatedDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("updatedDate")]
-        public System.DateTimeOffset? UpdatedDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("isResolved")]
-        public bool IsResolved { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("resolvedDate")]
-        public System.DateTimeOffset? ResolvedDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("resolvedBy")]
-        public string? ResolvedBy { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PullRequestFileChangeDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
-        public int PullRequestId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationId")]
-        public int IterationId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("filePath")]
-        public string FilePath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("changeType")]
-        public string ChangeType { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("linesAdded")]
-        public int LinesAdded { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("linesDeleted")]
-        public int LinesDeleted { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("linesModified")]
-        public int LinesModified { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PRReviewBottleneckDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("reviewerPerformances")]
-        public System.Collections.Generic.ICollection<ReviewerPerformance> ReviewerPerformances { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("pRsWaitingLongest")]
-        public System.Collections.Generic.ICollection<PRWaitingForReview> PRsWaitingLongest { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("summary")]
-        public ReviewMetricsSummary Summary { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("nodes")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DependencyNode> Nodes { get; set; } = new System.Collections.ObjectModel.Collection<DependencyNode>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("links")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DependencyLink> Links { get; set; } = new System.Collections.ObjectModel.Collection<DependencyLink>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("criticalPaths")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DependencyChain> CriticalPaths { get; set; } = new System.Collections.ObjectModel.Collection<DependencyChain>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("blockedWorkItemIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> BlockedWorkItemIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("circularDependencies")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<CircularDependency> CircularDependencies { get; set; } = new System.Collections.ObjectModel.Collection<CircularDependency>();
 
         [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
 
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ReviewerPerformance
+    public partial class DependencyLink
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("reviewerName")]
-        public string ReviewerName { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("sourceWorkItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int SourceWorkItemId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("totalReviewsAssigned")]
-        public int TotalReviewsAssigned { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("targetWorkItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TargetWorkItemId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("reviewsCompleted")]
-        public int ReviewsCompleted { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("linkType")]
+        public int LinkType { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("averageResponseTimeHours")]
-        public double AverageResponseTimeHours { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Description { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("medianResponseTimeHours")]
-        public double MedianResponseTimeHours { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        [System.Text.Json.Serialization.JsonPropertyName("pRsWaitingForReview")]
-        public int PRsWaitingForReview { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DependencyNode
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effort")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? Effort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("dependencyCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DependencyCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("dependentCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DependentCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isBlocking")]
+        public bool IsBlocking { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DistributionForecast
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string SprintName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("forecastedEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int ForecastedEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lowEstimate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int LowEstimate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("highEstimate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int HighEstimate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("confidenceLevel")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double ConfidenceLevel { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EffortByAreaPath
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string AreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageEffortPerItem")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double AverageEffortPerItem { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EffortByIteration
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string SprintName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("capacity")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? Capacity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double UtilizationPercentage { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EffortConcentrationRiskDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPathRisks")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ConcentrationRisk> AreaPathRisks { get; set; } = new System.Collections.ObjectModel.Collection<ConcentrationRisk>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationRisks")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ConcentrationRisk> IterationRisks { get; set; } = new System.Collections.ObjectModel.Collection<ConcentrationRisk>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("overallRiskLevel")]
+        public int OverallRiskLevel { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("concentrationIndex")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double ConcentrationIndex { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recommendations")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<RiskMitigationRecommendation> Recommendations { get; set; } = new System.Collections.ObjectModel.Collection<RiskMitigationRecommendation>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EffortDistributionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("effortByArea")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<EffortByAreaPath> EffortByArea { get; set; } = new System.Collections.ObjectModel.Collection<EffortByAreaPath>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("effortByIteration")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<EffortByIteration> EffortByIteration { get; set; } = new System.Collections.ObjectModel.Collection<EffortByIteration>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("heatMapData")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<EffortHeatMapCell> HeatMapData { get; set; } = new System.Collections.ObjectModel.Collection<EffortHeatMapCell>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EffortDistributionTrendDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("trendBySprint")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<SprintTrendData> TrendBySprint { get; set; } = new System.Collections.ObjectModel.Collection<SprintTrendData>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("trendByAreaPath")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<AreaPathTrendData> TrendByAreaPath { get; set; } = new System.Collections.ObjectModel.Collection<AreaPathTrendData>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("overallTrend")]
+        public int OverallTrend { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("trendSlope")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double TrendSlope { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("forecasts")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DistributionForecast> Forecasts { get; set; } = new System.Collections.ObjectModel.Collection<DistributionForecast>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EffortEstimationQualityDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageEstimationAccuracy")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double AverageEstimationAccuracy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalCompletedWorkItems")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalCompletedWorkItems { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemsWithEstimates")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemsWithEstimates { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("qualityByType")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<WorkItemTypeEstimationQuality> QualityByType { get; set; } = new System.Collections.ObjectModel.Collection<WorkItemTypeEstimationQuality>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("trendOverTime")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<EstimationTrend> TrendOverTime { get; set; } = new System.Collections.ObjectModel.Collection<EstimationTrend>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EffortEstimationSettingsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortTask")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DefaultEffortTask { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortBug")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DefaultEffortBug { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortUserStory")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DefaultEffortUserStory { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortPBI")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DefaultEffortPBI { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortFeature")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DefaultEffortFeature { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortEpic")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DefaultEffortEpic { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortGeneric")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DefaultEffortGeneric { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("enableProactiveNotifications")]
+        public bool EnableProactiveNotifications { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EffortEstimationSuggestionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemTitle")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string WorkItemTitle { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string WorkItemType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currentEffort")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? CurrentEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("suggestedEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int SuggestedEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("confidence")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double Confidence { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rationale")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Rationale { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("similarWorkItems")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<HistoricalEffortExample> SimilarWorkItems { get; set; } = new System.Collections.ObjectModel.Collection<HistoricalEffortExample>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EffortHeatMapCell
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string AreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int Effort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("status")]
-        public ReviewerStatus Status { get; set; } = default!;
+        public int Status { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ReviewerStatus
+    public partial class EffortImbalanceDto
     {
 
-        Fast = 0,
+        [System.Text.Json.Serialization.JsonPropertyName("teamImbalances")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<TeamImbalance> TeamImbalances { get; set; } = new System.Collections.ObjectModel.Collection<TeamImbalance>();
 
-        Normal = 1,
+        [System.Text.Json.Serialization.JsonPropertyName("sprintImbalances")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<SprintImbalance> SprintImbalances { get; set; } = new System.Collections.ObjectModel.Collection<SprintImbalance>();
 
-        Slow = 2,
+        [System.Text.Json.Serialization.JsonPropertyName("overallRiskLevel")]
+        public int OverallRiskLevel { get; set; } = default!;
 
-        Bottleneck = 3,
+        [System.Text.Json.Serialization.JsonPropertyName("imbalanceScore")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double ImbalanceScore { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recommendations")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<RebalancingRecommendation> Recommendations { get; set; } = new System.Collections.ObjectModel.Collection<RebalancingRecommendation>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PRWaitingForReview
+    public partial class EpicCompletionForecastDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
-        public int PullRequestId { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("epicId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int EpicId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completedEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int CompletedEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("remainingEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int RemainingEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("estimatedVelocity")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double EstimatedVelocity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintsRemaining")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int SprintsRemaining { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("estimatedCompletionDate")]
+        public System.DateTimeOffset? EstimatedCompletionDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("confidence")]
+        public int Confidence { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("forecastByDate")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<SprintForecast> ForecastByDate { get; set; } = new System.Collections.ObjectModel.Collection<SprintForecast>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string AreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class EpicFeatureDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("featureId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int FeatureId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("title")]
         public string Title { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("author")]
-        public string Author { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("effort")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? Effort { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
-        public System.DateTimeOffset CreatedDate { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public string State { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("hoursWaiting")]
-        public double HoursWaiting { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        [System.Text.Json.Serialization.JsonPropertyName("pendingReviewers")]
-        public System.Collections.Generic.ICollection<string> PendingReviewers { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ReviewMetricsSummary
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("averageTimeToFirstReviewHours")]
-        public double AverageTimeToFirstReviewHours { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("averageTimeToCompleteReviewsHours")]
-        public double AverageTimeToCompleteReviewsHours { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalPRsPendingReview")]
-        public int TotalPRsPendingReview { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("bottleneckReviewer")]
-        public string BottleneckReviewer { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("fastestReviewer")]
-        public string FastestReviewer { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ReleasePlanningBoardDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("lanes")]
-        public System.Collections.Generic.ICollection<LaneDto> Lanes { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("placements")]
-        public System.Collections.Generic.ICollection<EpicPlacementDto> Placements { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("milestoneLines")]
-        public System.Collections.Generic.ICollection<MilestoneLineDto> MilestoneLines { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationLines")]
-        public System.Collections.Generic.ICollection<IterationLineDto> IterationLines { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("connectors")]
-        public System.Collections.Generic.ICollection<ConnectorDto> Connectors { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("maxRowIndex")]
-        public int MaxRowIndex { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalRows")]
-        public int TotalRows { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class LaneDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public int Id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("objectiveId")]
-        public int ObjectiveId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("objectiveTitle")]
-        public string ObjectiveTitle { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("displayOrder")]
-        public int DisplayOrder { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
@@ -10837,201 +9223,46 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("epicId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int EpicId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("epicTitle")]
         public string EpicTitle { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("laneId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int LaneId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int RowIndex { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("orderInRow")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int OrderInRow { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int? Effort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("state")]
         public string State { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("validationIndicator")]
-        public ValidationIndicator ValidationIndicator { get; set; } = default!;
+        public int ValidationIndicator { get; set; } = default!;
 
-    }
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ValidationIndicator
-    {
-
-        None = 0,
-
-        Warning = 1,
-
-        Error = 2,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class MilestoneLineDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public int Id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("label")]
-        public string Label { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("verticalPosition")]
-        public double VerticalPosition { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public MilestoneType Type { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum MilestoneType
-    {
-
-        Release = 0,
-
-        Deadline = 1,
-
-        Custom = 2,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class IterationLineDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public int Id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("label")]
-        public string Label { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("verticalPosition")]
-        public double VerticalPosition { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ConnectorDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("sourcePlacementId")]
-        public int SourcePlacementId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("targetPlacementId")]
-        public int TargetPlacementId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public ConnectorType Type { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ConnectorType
-    {
-
-        Direct = 0,
-
-        Split = 1,
-
-        Merge = 2,
-
-        Parallel = 3,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class UnplannedEpicDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("epicId")]
-        public int EpicId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("objectiveId")]
-        public int ObjectiveId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("objectiveTitle")]
-        public string ObjectiveTitle { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        public int? Effort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("state")]
-        public string State { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("validationIndicator")]
-        public ValidationIndicator ValidationIndicator { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("tfsOrder")]
-        public int TfsOrder { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ObjectiveEpicDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("epicId")]
-        public int EpicId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("isPlanned")]
-        public bool IsPlanned { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        public int? Effort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("state")]
-        public string State { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("validationIndicator")]
-        public ValidationIndicator ValidationIndicator { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
-        public int? RowIndex { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class LaneOperationResultDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("success")]
-        public bool Success { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
-        public string? ErrorMessage { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("laneId")]
-        public int? LaneId { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CreateLaneCommand
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("objectiveId")]
-        public int ObjectiveId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("displayOrder")]
-        public int DisplayOrder { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
@@ -11046,69 +9277,22 @@ namespace PoTool.Client.ApiClient
         public string? ErrorMessage { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("placementId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int? PlacementId { get; set; } = default!;
 
-    }
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CreateEpicPlacementCommand
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("epicId")]
-        public int EpicId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("laneId")]
-        public int LaneId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
-        public int RowIndex { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("orderInRow")]
-        public int OrderInRow { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class UpdatePlacementRequest
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
-        public int RowIndex { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("orderInRow")]
-        public int OrderInRow { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class MoveEpicRequest
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("newRowIndex")]
-        public int NewRowIndex { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("newOrderInRow")]
-        public int NewOrderInRow { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ReorderEpicsInRowCommand
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("laneId")]
-        public int LaneId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
-        public int RowIndex { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("placementIdsInOrder")]
-        public System.Collections.Generic.ICollection<int> PlacementIdsInOrder { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class LineOperationResultDto
+    public partial class EpicSplitResultDto
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("success")]
@@ -11117,80 +9301,111 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
         public string? ErrorMessage { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("lineId")]
-        public int? LineId { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("originalEpicId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int OriginalEpicId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("extractedEpicId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? ExtractedEpicId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("originalEpicNewEffort")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? OriginalEpicNewEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("extractedEpicEffort")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? ExtractedEpicEffort { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CreateMilestoneLineCommand
+    public partial class EstimationTrend
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("label")]
-        public string Label { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("period")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Period { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("verticalPosition")]
-        public double VerticalPosition { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("startDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset StartDate { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public MilestoneType Type { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("endDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset EndDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageAccuracy")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double AverageAccuracy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("estimatedCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int EstimatedCount { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class UpdateMilestoneLineRequest
+    public partial class ExportOptionsDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("label")]
-        public string Label { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("format")]
+        public int Format { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("verticalPosition")]
-        public double VerticalPosition { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("paperSize")]
+        public int PaperSize { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public MilestoneType Type { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("layout")]
+        public int Layout { get; set; } = default!;
 
-    }
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        public string Title { get; set; } = default!;
 
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CreateIterationLineCommand
-    {
+        [System.Text.Json.Serialization.JsonPropertyName("includedObjectiveIds")]
+        public System.Collections.Generic.ICollection<int> IncludedObjectiveIds { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("label")]
-        public string Label { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("includeMilestoneLines")]
+        public bool IncludeMilestoneLines { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("verticalPosition")]
-        public double VerticalPosition { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("includeIterationLines")]
+        public bool IncludeIterationLines { get; set; } = default!;
 
-    }
+        [System.Text.Json.Serialization.JsonPropertyName("startMilestoneId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? StartMilestoneId { get; set; } = default!;
 
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class UpdateIterationLineRequest
-    {
+        [System.Text.Json.Serialization.JsonPropertyName("endMilestoneId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? EndMilestoneId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("label")]
-        public string Label { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        [System.Text.Json.Serialization.JsonPropertyName("verticalPosition")]
-        public double VerticalPosition { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ValidationCacheResultDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("success")]
-        public bool Success { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("errorCount")]
-        public int ErrorCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("warningCount")]
-        public int WarningCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
-        public string? ErrorMessage { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
@@ -11214,555 +9429,93 @@ namespace PoTool.Client.ApiClient
         public string? ContentType { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("pageCount")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int PageCount { get; set; } = default!;
 
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ExportOptionsDto
+    public partial class FilterByGoalsRequest
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("format")]
-        public ExportFormat Format { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("goalIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> GoalIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
 
-        [System.Text.Json.Serialization.JsonPropertyName("paperSize")]
-        public PaperSize PaperSize { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        [System.Text.Json.Serialization.JsonPropertyName("layout")]
-        public ExportLayout Layout { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("includedObjectiveIds")]
-        public System.Collections.Generic.ICollection<int> IncludedObjectiveIds { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("includeMilestoneLines")]
-        public bool IncludeMilestoneLines { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("includeIterationLines")]
-        public bool IncludeIterationLines { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("startMilestoneId")]
-        public int? StartMilestoneId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("endMilestoneId")]
-        public int? EndMilestoneId { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ExportFormat
-    {
-
-        Png = 0,
-
-        Pdf = 1,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum PaperSize
-    {
-
-        A4 = 0,
-
-        A3 = 1,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ExportLayout
-    {
-
-        FitToPage = 0,
-
-        MultiPage = 1,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class EffortEstimationSettingsDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortTask")]
-        public int DefaultEffortTask { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortBug")]
-        public int DefaultEffortBug { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortUserStory")]
-        public int DefaultEffortUserStory { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortPBI")]
-        public int DefaultEffortPBI { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortFeature")]
-        public int DefaultEffortFeature { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortEpic")]
-        public int DefaultEffortEpic { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("defaultEffortGeneric")]
-        public int DefaultEffortGeneric { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("enableProactiveNotifications")]
-        public bool EnableProactiveNotifications { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class WorkItemDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("tfsId")]
-        public int TfsId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public string Type { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("parentTfsId")]
-        public int? ParentTfsId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
-        public string AreaPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
-        public string IterationPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("state")]
-        public string State { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("jsonPayload")]
-        public string JsonPayload { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("retrievedAt")]
-        public System.DateTimeOffset RetrievedAt { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        public int? Effort { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class WorkItemWithValidationDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("tfsId")]
-        public int TfsId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public string Type { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("parentTfsId")]
-        public int? ParentTfsId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
-        public string AreaPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
-        public string IterationPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("state")]
-        public string State { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("jsonPayload")]
-        public string JsonPayload { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("retrievedAt")]
-        public System.DateTimeOffset RetrievedAt { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        public int? Effort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("validationIssues")]
-        public System.Collections.Generic.ICollection<ValidationIssue> ValidationIssues { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ValidationIssue
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("severity")]
-        public string Severity { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("message")]
-        public string Message { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class WorkItemRevisionDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("revisionNumber")]
-        public int RevisionNumber { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        public int WorkItemId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("changedBy")]
-        public string ChangedBy { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("changedDate")]
-        public System.DateTimeOffset ChangedDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("fieldChanges")]
-        public System.Collections.Generic.IDictionary<string, WorkItemFieldChange> FieldChanges { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("comment")]
-        public string? Comment { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class WorkItemFieldChange
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("fieldName")]
-        public string FieldName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("oldValue")]
-        public string? OldValue { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("newValue")]
-        public string? NewValue { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class WorkItemStateTimelineDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        public int WorkItemId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public string Type { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("stateHistory")]
-        public System.Collections.Generic.ICollection<StateTransition> StateHistory { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("bottlenecks")]
-        public System.Collections.Generic.ICollection<TimelineBottleneck> Bottlenecks { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalTimeInProgress")]
-        public System.TimeSpan TotalTimeInProgress { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalCycleTime")]
-        public System.TimeSpan TotalCycleTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
-        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class StateTransition
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("fromState")]
-        public string FromState { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("toState")]
-        public string ToState { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("transitionDate")]
-        public System.DateTimeOffset TransitionDate { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("changedBy")]
-        public string ChangedBy { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("timeInPreviousState")]
-        public System.TimeSpan TimeInPreviousState { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TimelineBottleneck
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("state")]
-        public string State { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("timeSpent")]
-        public System.TimeSpan TimeSpent { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("severity")]
-        public BottleneckSeverity Severity { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("reason")]
-        public string Reason { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum BottleneckSeverity
-    {
-
-        Low = 0,
-
-        Medium = 1,
-
-        High = 2,
-
-        Critical = 3,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class DependencyGraphDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("nodes")]
-        public System.Collections.Generic.ICollection<DependencyNode> Nodes { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("links")]
-        public System.Collections.Generic.ICollection<DependencyLink> Links { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("criticalPaths")]
-        public System.Collections.Generic.ICollection<DependencyChain> CriticalPaths { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("blockedWorkItemIds")]
-        public System.Collections.Generic.ICollection<int> BlockedWorkItemIds { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("circularDependencies")]
-        public System.Collections.Generic.ICollection<CircularDependency> CircularDependencies { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
-        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class DependencyNode
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        public int WorkItemId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public string Type { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("state")]
-        public string State { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        public int? Effort { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("dependencyCount")]
-        public int DependencyCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("dependentCount")]
-        public int DependentCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("isBlocking")]
-        public bool IsBlocking { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class DependencyLink
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("sourceWorkItemId")]
-        public int SourceWorkItemId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("targetWorkItemId")]
-        public int TargetWorkItemId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("linkType")]
-        public DependencyLinkType LinkType { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("description")]
-        public string Description { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum DependencyLinkType
-    {
-
-        RelatedTo = 0,
-
-        DependsOn = 1,
-
-        Blocks = 2,
-
-        Parent = 3,
-
-        Child = 4,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class DependencyChain
+    public partial class FilterByGoalsResponse
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemIds")]
-        public System.Collections.Generic.ICollection<int> WorkItemIds { get; set; } = default!;
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> WorkItemIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
 
-        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        public int TotalEffort { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        [System.Text.Json.Serialization.JsonPropertyName("chainLength")]
-        public int ChainLength { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("riskLevel")]
-        public DependencyChainRisk RiskLevel { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum DependencyChainRisk
-    {
-
-        Low = 0,
-
-        Medium = 1,
-
-        High = 2,
-
-        Critical = 3,
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CircularDependency
+    public partial class FilterByValidationRequest
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("cycleWorkItemIds")]
-        public System.Collections.Generic.ICollection<int> CycleWorkItemIds { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("targetIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> TargetIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
 
-        [System.Text.Json.Serialization.JsonPropertyName("description")]
-        public string Description { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ValidationViolationHistoryDto
+    public partial class FilterByValidationResponse
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        public int WorkItemId { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("workItemIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> WorkItemIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
 
-        [System.Text.Json.Serialization.JsonPropertyName("workItemType")]
-        public string WorkItemType { get; set; } = default!;
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        [System.Text.Json.Serialization.JsonPropertyName("workItemTitle")]
-        public string WorkItemTitle { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("validationType")]
-        public string ValidationType { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("severity")]
-        public string Severity { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("violationMessage")]
-        public string ViolationMessage { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
-        public string AreaPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
-        public string IterationPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("detectedAt")]
-        public System.DateTimeOffset DetectedAt { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ValidationImpactAnalysisDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("violations")]
-        public System.Collections.Generic.ICollection<ViolationImpact> Violations { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalBlockedItems")]
-        public int TotalBlockedItems { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalAffectedHierarchies")]
-        public int TotalAffectedHierarchies { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("recommendations")]
-        public System.Collections.Generic.ICollection<WorkflowRecommendation> Recommendations { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ViolationImpact
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        public int WorkItemId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemType")]
-        public string WorkItemType { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemTitle")]
-        public string WorkItemTitle { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("violationType")]
-        public string ViolationType { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("severity")]
-        public string Severity { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("blockedChildrenIds")]
-        public System.Collections.Generic.ICollection<int> BlockedChildrenIds { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("blockedDescendantIds")]
-        public System.Collections.Generic.ICollection<int> BlockedDescendantIds { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class WorkflowRecommendation
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("recommendationType")]
-        public string RecommendationType { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("description")]
-        public string Description { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("affectedWorkItemIds")]
-        public System.Collections.Generic.ICollection<int> AffectedWorkItemIds { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("priority")]
-        public int Priority { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class FixValidationViolationResultDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("totalAttempted")]
-        public int TotalAttempted { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("successfulFixes")]
-        public int SuccessfulFixes { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("failedFixes")]
-        public int FailedFixes { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("results")]
-        public System.Collections.Generic.ICollection<FixResult> Results { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
@@ -11771,13 +9524,25 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("success")]
         public bool Success { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("message")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Message { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
@@ -11786,7 +9551,17 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("fixes")]
-        public System.Collections.Generic.ICollection<FixValidationViolationDto> Fixes { get; set; } = default!;
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<FixValidationViolationDto> Fixes { get; set; } = new System.Collections.ObjectModel.Collection<FixValidationViolationDto>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
@@ -11795,46 +9570,248 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("fixType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string FixType { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Description { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("newState")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string NewState { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("justification")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Justification { get; set; } = default!;
 
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class BulkEffortAssignmentResultDto
+    public partial class FixValidationViolationResultDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("totalRequested")]
-        public int TotalRequested { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("totalAttempted")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalAttempted { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("successfulUpdates")]
-        public int SuccessfulUpdates { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("successfulFixes")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int SuccessfulFixes { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("failedUpdates")]
-        public int FailedUpdates { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("failedFixes")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int FailedFixes { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("results")]
-        public System.Collections.Generic.ICollection<BulkEffortAssignmentItemResult> Results { get; set; } = default!;
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<FixResult> Results { get; set; } = new System.Collections.ObjectModel.Collection<FixResult>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class BulkEffortAssignmentItemResult
+    public partial class GetWorkItemIdsByValidationFilterRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("filterId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string FilterId { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class GetWorkItemIdsByValidationFilterResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> WorkItemIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class HistoricalEffortExample
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int Effort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("similarityScore")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double SimilarityScore { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class IsDescendantOfGoalsRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("goalIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> GoalIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class IsDescendantOfGoalsResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("isDescendant")]
+        public bool IsDescendant { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class IterationLineDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("label")]
+        public string Label { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("verticalPosition")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double VerticalPosition { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LaneDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("objectiveId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int ObjectiveId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("objectiveTitle")]
+        public string ObjectiveTitle { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("displayOrder")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DisplayOrder { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LaneOperationResultDto
+    {
 
         [System.Text.Json.Serialization.JsonPropertyName("success")]
         public bool Success { get; set; } = default!;
@@ -11842,26 +9819,2483 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
         public string? ErrorMessage { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("laneId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? LaneId { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class BulkAssignEffortCommand
+    public partial class LineOperationResultDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("assignments")]
-        public System.Collections.Generic.ICollection<BulkEffortAssignmentDto> Assignments { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("success")]
+        public bool Success { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
+        public string? ErrorMessage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lineId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? LineId { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class BulkEffortAssignmentDto
+    public partial class MilestoneLineDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("label")]
+        public string Label { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("verticalPosition")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double VerticalPosition { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public int Type { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class MoveEpicRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("newRowIndex")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int NewRowIndex { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("newOrderInRow")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int NewOrderInRow { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class MultiIterationBacklogHealthDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationHealth")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<BacklogHealthDto> IterationHealth { get; set; } = new System.Collections.ObjectModel.Collection<BacklogHealthDto>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("trend")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public BacklogHealthTrend Trend { get; set; } = new BacklogHealthTrend();
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalWorkItems")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalWorkItems { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalIssues")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalIssues { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ObjectiveEpicDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("epicId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int EpicId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isPlanned")]
+        public bool IsPlanned { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effort")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? Effort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public string State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("validationIndicator")]
+        public int ValidationIndicator { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? RowIndex { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PipelineDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public int Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("path")]
+        public string? Path { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retrievedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset RetrievedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PipelineMetricsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("pipelineId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int PipelineId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pipelineName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string PipelineName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public int Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalRuns")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalRuns { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("successfulRuns")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int SuccessfulRuns { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failedRuns")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int FailedRuns { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("partiallySucceededRuns")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int PartiallySucceededRuns { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("canceledRuns")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int CanceledRuns { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failureRate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double FailureRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageDuration")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$")]
+        public string? AverageDuration { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("minDuration")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$")]
+        public string? MinDuration { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("maxDuration")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$")]
+        public string? MaxDuration { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("durationVariance")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double? DurationVariance { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lastRunResult")]
+        public int? LastRunResult { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lastRunTime")]
+        public System.DateTimeOffset? LastRunTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("consecutiveFailures")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int ConsecutiveFailures { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PipelineRunDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("runId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int RunId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pipelineId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int PipelineId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pipelineName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string PipelineName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("startTime")]
+        public System.DateTimeOffset? StartTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("finishTime")]
+        public System.DateTimeOffset? FinishTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("duration")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$")]
+        public string? Duration { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("result")]
+        public int Result { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("trigger")]
+        public int Trigger { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("triggerInfo")]
+        public string? TriggerInfo { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("branch")]
+        public string? Branch { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("requestedFor")]
+        public string? RequestedFor { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retrievedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset RetrievedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PipelineSyncResult
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("pipelines")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<PipelineDto> Pipelines { get; set; } = new System.Collections.ObjectModel.Collection<PipelineDto>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("runs")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<PipelineRunDto> Runs { get; set; } = new System.Collections.ObjectModel.Collection<PipelineRunDto>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("tfsCallCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TfsCallCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("syncedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset SyncedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProblemDetails
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public string? Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        public string? Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("detail")]
+        public string? Detail { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("instance")]
+        public string? Instance { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProfileDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPaths")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> AreaPaths { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("teamName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string TeamName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("goalIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> GoalIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("pictureType")]
+        public int PictureType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("defaultPictureId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DefaultPictureId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("customPicturePath")]
+        public string? CustomPicturePath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset CreatedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lastModified")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset LastModified { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PRReviewBottleneckDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("reviewerPerformances")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ReviewerPerformance> ReviewerPerformances { get; set; } = new System.Collections.ObjectModel.Collection<ReviewerPerformance>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("pRsWaitingLongest")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<PRWaitingForReview> PRsWaitingLongest { get; set; } = new System.Collections.ObjectModel.Collection<PRWaitingForReview>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("summary")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public ReviewMetricsSummary Summary { get; set; } = new ReviewMetricsSummary();
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PRWaitingForReview
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int PullRequestId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("author")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Author { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset CreatedDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("hoursWaiting")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double HoursWaiting { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pendingReviewers")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> PendingReviewers { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PullRequestCommentDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int PullRequestId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("threadId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int ThreadId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("author")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Author { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("content")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Content { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset CreatedDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("updatedDate")]
+        public System.DateTimeOffset? UpdatedDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isResolved")]
+        public bool IsResolved { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("resolvedDate")]
+        public System.DateTimeOffset? ResolvedDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("resolvedBy")]
+        public string? ResolvedBy { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PullRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("repositoryName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string RepositoryName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdBy")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string CreatedBy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset CreatedDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completedDate")]
+        public System.DateTimeOffset? CompletedDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sourceBranch")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string SourceBranch { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("targetBranch")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string TargetBranch { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retrievedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset RetrievedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PullRequestFileChangeDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int PullRequestId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int IterationId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("filePath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string FilePath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("changeType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ChangeType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("linesAdded")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int LinesAdded { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("linesDeleted")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int LinesDeleted { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("linesModified")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int LinesModified { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PullRequestIterationDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int PullRequestId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationNumber")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int IterationNumber { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset CreatedDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("updatedDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset UpdatedDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("commitCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int CommitCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("changeCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int ChangeCount { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PullRequestMetricsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int PullRequestId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdBy")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string CreatedBy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset CreatedDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completedDate")]
+        public System.DateTimeOffset? CompletedDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalTimeOpen")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$")]
+        public string TotalTimeOpen { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effectiveWorkTime")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$")]
+        public string? EffectiveWorkTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int IterationCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("commentCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int CommentCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("unresolvedCommentCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int UnresolvedCommentCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalFileCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalFileCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalLinesAdded")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalLinesAdded { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalLinesDeleted")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalLinesDeleted { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageLinesPerFile")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double AverageLinesPerFile { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RebalancingRecommendation
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public int Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Description { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("priority")]
+        public int Priority { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("targetAreaPath")]
+        public string? TargetAreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("targetIterationPath")]
+        public string? TargetIterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("suggestedEffortChange")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? SuggestedEffortChange { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReleasePlanningBoardDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("lanes")]
+        public System.Collections.Generic.ICollection<LaneDto> Lanes { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("placements")]
+        public System.Collections.Generic.ICollection<EpicPlacementDto> Placements { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("milestoneLines")]
+        public System.Collections.Generic.ICollection<MilestoneLineDto> MilestoneLines { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationLines")]
+        public System.Collections.Generic.ICollection<IterationLineDto> IterationLines { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("connectors")]
+        public System.Collections.Generic.ICollection<ConnectorDto> Connectors { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("maxRowIndex")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int MaxRowIndex { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalRows")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalRows { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReorderEpicsInRowCommand
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("laneId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int LaneId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int RowIndex { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("placementIdsInOrder")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> PlacementIdsInOrder { get; set; } = new System.Collections.ObjectModel.Collection<int>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReviewerPerformance
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("reviewerName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ReviewerName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalReviewsAssigned")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalReviewsAssigned { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reviewsCompleted")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int ReviewsCompleted { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageResponseTimeHours")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double AverageResponseTimeHours { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("medianResponseTimeHours")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double MedianResponseTimeHours { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pRsWaitingForReview")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int PRsWaitingForReview { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public int Status { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReviewMetricsSummary
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageTimeToFirstReviewHours")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double AverageTimeToFirstReviewHours { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageTimeToCompleteReviewsHours")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double AverageTimeToCompleteReviewsHours { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalPRsPendingReview")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalPRsPendingReview { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("bottleneckReviewer")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string BottleneckReviewer { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("fastestReviewer")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string FastestReviewer { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RiskMitigationRecommendation
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("strategy")]
+        public int Strategy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Description { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("priority")]
+        public int Priority { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("targetPath")]
+        public string? TargetPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effortToRedistribute")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? EffortToRedistribute { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SetActiveProfileRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("profileId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? ProfileId { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SettingsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("activeProfileId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? ActiveProfileId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lastModified")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset LastModified { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SplitEpicRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("extractedEpicTitle")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ExtractedEpicTitle { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("featureIdsForExtractedEpic")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> FeatureIdsForExtractedEpic { get; set; } = new System.Collections.ObjectModel.Collection<int>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SprintCapacityPlanDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string SprintName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("startDate")]
+        public System.DateTimeOffset? StartDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("endDate")]
+        public System.DateTimeOffset? EndDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalPlannedEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalPlannedEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalCapacity")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalCapacity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double UtilizationPercentage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public int Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("teamCapacities")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<TeamMemberCapacity> TeamCapacities { get; set; } = new System.Collections.ObjectModel.Collection<TeamMemberCapacity>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("warnings")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<CapacityWarning> Warnings { get; set; } = new System.Collections.ObjectModel.Collection<CapacityWarning>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SprintForecast
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string SprintName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintStartDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset SprintStartDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintEndDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset SprintEndDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("expectedCompletedEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int ExpectedCompletedEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("remainingEffortAfterSprint")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int RemainingEffortAfterSprint { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("progressPercentage")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double ProgressPercentage { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SprintImbalance
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string SprintName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageEffortAcrossSprints")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int AverageEffortAcrossSprints { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("deviationPercentage")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double DeviationPercentage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("riskLevel")]
+        public int RiskLevel { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Description { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SprintMetricsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string SprintName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("startDate")]
+        public System.DateTimeOffset? StartDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("endDate")]
+        public System.DateTimeOffset? EndDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completedStoryPoints")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int CompletedStoryPoints { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("plannedStoryPoints")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int PlannedStoryPoints { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completedWorkItemCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int CompletedWorkItemCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalWorkItemCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalWorkItemCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completedPBIs")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int CompletedPBIs { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completedBugs")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int CompletedBugs { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completedTasks")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int CompletedTasks { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SprintTrendData
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string SprintName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double UtilizationPercentage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("changeFromPrevious")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double ChangeFromPrevious { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("direction")]
+        public int Direction { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class StartupReadinessDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("isMockDataEnabled")]
+        public bool IsMockDataEnabled { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("hasSavedTfsConfig")]
+        public bool HasSavedTfsConfig { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("hasTestedConnectionSuccessfully")]
+        public bool HasTestedConnectionSuccessfully { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("hasVerifiedTfsApiSuccessfully")]
+        public bool HasVerifiedTfsApiSuccessfully { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("hasAnyProfile")]
+        public bool HasAnyProfile { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("activeProfileId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? ActiveProfileId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("missingRequirementMessage")]
+        public string? MissingRequirementMessage { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class StateTransition
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("fromState")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string FromState { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("toState")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ToState { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("transitionDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset TransitionDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("changedBy")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ChangedBy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("timeInPreviousState")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$")]
+        public string TimeInPreviousState { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TeamImbalance
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string AreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageEffortAcrossTeams")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int AverageEffortAcrossTeams { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("deviationPercentage")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double DeviationPercentage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("riskLevel")]
+        public int RiskLevel { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Description { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TeamMemberCapacity
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("memberName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string MemberName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("assignedEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int AssignedEffort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("availableCapacity")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int AvailableCapacity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double UtilizationPercentage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public int Status { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TfsCapabilityCheckResult
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("capabilityId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string CapabilityId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("success")]
+        public bool Success { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("impactedFunctionality")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ImpactedFunctionality { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("expectedBehavior")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ExpectedBehavior { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("observedBehavior")]
+        public string? ObservedBehavior { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failureCategory")]
+        public int? FailureCategory { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rawEvidence")]
+        public string? RawEvidence { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("likelyCauses")]
+        public System.Collections.Generic.ICollection<string>? LikelyCauses { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("resolutionGuidance")]
+        public System.Collections.Generic.ICollection<string>? ResolutionGuidance { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("targetScope")]
+        public string? TargetScope { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("mutationType")]
+        public int? MutationType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cleanupStatus")]
+        public int? CleanupStatus { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TfsConfig
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        public string Url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("project")]
+        public string Project { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("defaultAreaPath")]
+        public string DefaultAreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("useDefaultCredentials")]
+        public bool UseDefaultCredentials { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("timeoutSeconds")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TimeoutSeconds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("apiVersion")]
+        public string ApiVersion { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lastValidated")]
+        public System.DateTimeOffset? LastValidated { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TfsConfigRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        public string? Url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("project")]
+        public string? Project { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("defaultAreaPath")]
+        public string? DefaultAreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("useDefaultCredentials")]
+        public bool UseDefaultCredentials { get; set; } = true;
+
+        [System.Text.Json.Serialization.JsonPropertyName("timeoutSeconds")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TimeoutSeconds { get; set; } = "30";
+
+        [System.Text.Json.Serialization.JsonPropertyName("apiVersion")]
+        public string? ApiVersion { get; set; } = "7.0";
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TfsVerificationReport
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("verifiedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset VerifiedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverUrl")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ServerUrl { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("projectName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ProjectName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("apiVersion")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ApiVersion { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("includedWriteChecks")]
+        public bool IncludedWriteChecks { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("success")]
+        public bool Success { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("checks")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<TfsCapabilityCheckResult> Checks { get; set; } = new System.Collections.ObjectModel.Collection<TfsCapabilityCheckResult>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("summary")]
+        public string? Summary { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("impactedFunctionalities")]
+        public System.Collections.Generic.ICollection<string>? ImpactedFunctionalities { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TfsVerifyRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("includeWriteChecks")]
+        public bool IncludeWriteChecks { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemIdForWriteCheck")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? WorkItemIdForWriteCheck { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TimelineBottleneck
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("timeSpent")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$")]
+        public string TimeSpent { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("severity")]
+        public int Severity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Reason { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UnplannedEpicDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("epicId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int EpicId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("objectiveId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int ObjectiveId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("objectiveTitle")]
+        public string ObjectiveTitle { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effort")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? Effort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public string State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("validationIndicator")]
+        public int ValidationIndicator { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tfsOrder")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TfsOrder { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateIterationLineRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("label")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Label { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("verticalPosition")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double VerticalPosition { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateMilestoneLineRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("label")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Label { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("verticalPosition")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double VerticalPosition { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public int Type { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdatePlacementRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int RowIndex { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("orderInRow")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int OrderInRow { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateProfileRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPaths")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> AreaPaths { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("teamName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string TeamName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("goalIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> GoalIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("pictureType")]
+        public int PictureType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("defaultPictureId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int DefaultPictureId { get; set; } = "0";
+
+        [System.Text.Json.Serialization.JsonPropertyName("customPicturePath")]
+        public string? CustomPicturePath { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ValidationCacheResultDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("success")]
+        public bool Success { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("errorCount")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int ErrorCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("warningCount")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WarningCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
+        public string? ErrorMessage { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ValidationImpactAnalysisDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("violations")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ViolationImpact> Violations { get; set; } = new System.Collections.ObjectModel.Collection<ViolationImpact>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalBlockedItems")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalBlockedItems { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalAffectedHierarchies")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalAffectedHierarchies { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recommendations")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<WorkflowRecommendation> Recommendations { get; set; } = new System.Collections.ObjectModel.Collection<WorkflowRecommendation>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ValidationIssue
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("severity")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Severity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("message")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Message { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ValidationIssueSummary
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("validationType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ValidationType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("count")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int Count { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("affectedWorkItemIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> AffectedWorkItemIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ValidationViolationHistoryDto
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("effortValue")]
-        public int EffortValue { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("workItemType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string WorkItemType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemTitle")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string WorkItemTitle { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("validationType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ValidationType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("severity")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Severity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("violationMessage")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ViolationMessage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string AreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("detectedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset DetectedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class VelocityTrendDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprints")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<SprintMetricsDto> Sprints { get; set; } = new System.Collections.ObjectModel.Collection<SprintMetricsDto>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageVelocity")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double AverageVelocity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("threeSprintAverage")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double ThreeSprintAverage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sixSprintAverage")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double SixSprintAverage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalCompletedStoryPoints")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalCompletedStoryPoints { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalSprints")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TotalSprints { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ViolationImpact
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string WorkItemType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemTitle")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string WorkItemTitle { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("violationType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ViolationType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("severity")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Severity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("blockedChildrenIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> BlockedChildrenIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("blockedDescendantIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> BlockedDescendantIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WorkflowRecommendation
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("recommendationType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string RecommendationType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Description { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("affectedWorkItemIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<int> AffectedWorkItemIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("priority")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int Priority { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WorkItemDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("tfsId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TfsId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("parentTfsId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? ParentTfsId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string AreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("jsonPayload")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string JsonPayload { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retrievedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset RetrievedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effort")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? Effort { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WorkItemFieldChange
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("fieldName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string FieldName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("oldValue")]
+        public string? OldValue { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("newValue")]
+        public string? NewValue { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WorkItemRevisionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("revisionNumber")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int RevisionNumber { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("changedBy")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ChangedBy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("changedDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset ChangedDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("fieldChanges")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.IDictionary<string, WorkItemFieldChange> FieldChanges { get; set; } = new System.Collections.Generic.Dictionary<string, WorkItemFieldChange>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("comment")]
+        public string? Comment { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WorkItemStateTimelineDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int WorkItemId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("stateHistory")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<StateTransition> StateHistory { get; set; } = new System.Collections.ObjectModel.Collection<StateTransition>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("bottlenecks")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<TimelineBottleneck> Bottlenecks { get; set; } = new System.Collections.ObjectModel.Collection<TimelineBottleneck>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalTimeInProgress")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$")]
+        public string TotalTimeInProgress { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalCycleTime")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$")]
+        public string TotalCycleTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WorkItemTypeEstimationQuality
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string WorkItemType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("count")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int Count { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageAccuracy")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$")]
+        public double AverageAccuracy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("typicalEffortMin")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TypicalEffortMin { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("typicalEffortMax")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TypicalEffortMax { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("averageEffort")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int AverageEffort { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WorkItemWithValidationDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("tfsId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int TfsId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("parentTfsId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? ParentTfsId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string AreaPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("iterationPath")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IterationPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("jsonPayload")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string JsonPayload { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retrievedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTimeOffset RetrievedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effort")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
+        public int? Effort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("validationIssues")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ValidationIssue> ValidationIssues { get; set; } = new System.Collections.ObjectModel.Collection<ValidationIssue>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 

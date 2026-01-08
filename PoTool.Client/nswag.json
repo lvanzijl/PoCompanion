@@ -3,7 +3,7 @@
   "defaultVariables": null,
   "documentGenerator": {
     "fromDocument": {
-      "json": "$(InputSwaggerFile)",
+      "json": "openapi.json",
       "output": null,
       "newLineBehavior": "Auto"
     }
