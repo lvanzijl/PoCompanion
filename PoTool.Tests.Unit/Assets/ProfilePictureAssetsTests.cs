@@ -60,9 +60,9 @@ public class ProfilePictureAssetsTests
         foreach (var file in files)
         {
             var fileInfo = new FileInfo(file);
-            Assert.IsTrue(fileInfo.Length > 0, 
+            Assert.IsGreaterThan(fileInfo.Length, 0L, 
                 $"Profile picture {fileInfo.Name} is empty");
-            Assert.IsTrue(fileInfo.Length < 10000, 
+            Assert.IsLessThan(fileInfo.Length, 10000L, 
                 $"Profile picture {fileInfo.Name} is unexpectedly large (should be a simple SVG)");
         }
     }

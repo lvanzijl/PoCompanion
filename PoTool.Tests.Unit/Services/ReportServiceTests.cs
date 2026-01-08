@@ -51,7 +51,7 @@ public sealed class ReportServiceTests
                 State = "Active",
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 1",
-                ParentTfsId = null,
+                ParentTfsId = 0,
                 Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
                 JsonPayload = "{}"
@@ -89,7 +89,7 @@ public sealed class ReportServiceTests
                 State = "Active",
                 AreaPath = "Project\\Team A",
                 IterationPath = "Sprint 1",
-                ParentTfsId = null,
+                ParentTfsId = 0,
                 Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
                 JsonPayload = "{}"
@@ -150,7 +150,7 @@ public sealed class ReportServiceTests
                 State = "Active",
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 1",
-                ParentTfsId = null,
+                ParentTfsId = 0,
                 Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
                 JsonPayload = "{}"
@@ -164,7 +164,7 @@ public sealed class ReportServiceTests
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 1",
                 ParentTfsId = 123,
-                Effort = null,
+                Effort = 0,
                 RetrievedAt = DateTimeOffset.UtcNow,
                 JsonPayload = "{}"
             }
@@ -192,7 +192,7 @@ public sealed class ReportServiceTests
                 State = "Active",
                 AreaPath = "Project\\Team",
                 IterationPath = "Sprint 1",
-                ParentTfsId = null,
+                ParentTfsId = 0,
                 Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
                 JsonPayload = "{}"

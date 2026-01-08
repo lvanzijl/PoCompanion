@@ -23,7 +23,7 @@ public class PullRequestMetricsServiceTests
             Title = $"PR {id}",
             CreatedBy = $"User{id % 3}", // Cycle through 3 users
             Status = status,
-            TotalTimeOpen = TimeSpan.FromDays(daysOpen),
+            TotalTimeOpen = TimeSpan.FromDays(daysOpen).ToString(),
             IterationCount = iterations,
             TotalFileCount = files,
             CommentCount = 5,
@@ -252,7 +252,7 @@ public class PullRequestMetricsServiceTests
             {
                 PullRequestId = 1,
                 Title = "This is a very long pull request title that needs truncation",
-                TotalTimeOpen = TimeSpan.FromDays(5),
+                TotalTimeOpen = TimeSpan.FromDays(5).ToString(),
                 IterationCount = 1,
                 TotalFileCount = 10,
                 CreatedDate = DateTime.UtcNow,
