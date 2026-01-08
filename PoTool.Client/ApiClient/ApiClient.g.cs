@@ -11251,33 +11251,21 @@ namespace PoTool.Client.ApiClient
         public string SprintName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalWorkItems")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalWorkItems { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemsWithoutEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemsWithoutEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemsInProgressWithoutEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemsInProgressWithoutEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("parentProgressIssues")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ParentProgressIssues { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("blockedItems")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int BlockedItems { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("inProgressAtIterationEnd")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int InProgressAtIterationEnd { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("iterationStart")]
@@ -11353,13 +11341,9 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effortValue")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int EffortValue { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -11378,8 +11362,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("success")]
@@ -11404,18 +11386,12 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("totalRequested")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalRequested { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("successfulUpdates")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int SuccessfulUpdates { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("failedUpdates")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int FailedUpdates { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("results")]
@@ -11438,28 +11414,18 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("totalWorkItems")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalWorkItems { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemsWithoutEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemsWithoutEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemsInProgressWithoutEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemsInProgressWithoutEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("parentProgressIssues")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ParentProgressIssues { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("blockedItems")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int BlockedItems { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -11478,8 +11444,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("healthScore")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int HealthScore { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -11555,8 +11519,6 @@ namespace PoTool.Client.ApiClient
         public string Path { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effortAmount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int EffortAmount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("percentageOfTotal")]
@@ -11591,11 +11553,9 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("sourcePlacementId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int SourcePlacementId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("targetPlacementId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TargetPlacementId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("type")]
@@ -11636,8 +11596,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("count")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Count { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -11656,23 +11614,15 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("epicId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int EpicId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("laneId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int LaneId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int RowIndex { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("orderInRow")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int OrderInRow { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -11715,13 +11665,9 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("objectiveId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ObjectiveId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("displayOrder")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int DisplayOrder { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -11786,8 +11732,7 @@ namespace PoTool.Client.ApiClient
         public int PictureType { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("defaultPictureId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int DefaultPictureId { get; set; } = "0";
+        public int DefaultPictureId { get; set; } = 0;
 
         [System.Text.Json.Serialization.JsonPropertyName("customPicturePath")]
         public string? CustomPicturePath { get; set; } = default!;
@@ -11812,13 +11757,9 @@ namespace PoTool.Client.ApiClient
         public System.Collections.Generic.ICollection<int> WorkItemIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
 
         [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("chainLength")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ChainLength { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("riskLevel")]
@@ -11879,13 +11820,9 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("sourceWorkItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int SourceWorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("targetWorkItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TargetWorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("linkType")]
@@ -11911,8 +11848,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("title")]
@@ -11928,17 +11863,12 @@ namespace PoTool.Client.ApiClient
         public string State { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? Effort { get; set; } = default!;
+        public int Effort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("dependencyCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int DependencyCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("dependentCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int DependentCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isBlocking")]
@@ -11964,18 +11894,12 @@ namespace PoTool.Client.ApiClient
         public string SprintName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("forecastedEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ForecastedEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lowEstimate")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int LowEstimate { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("highEstimate")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int HighEstimate { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("confidenceLevel")]
@@ -12003,13 +11927,9 @@ namespace PoTool.Client.ApiClient
         public string AreaPath { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("averageEffortPerItem")]
@@ -12041,18 +11961,13 @@ namespace PoTool.Client.ApiClient
         public string SprintName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("capacity")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? Capacity { get; set; } = default!;
+        public int Capacity { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -12126,8 +12041,6 @@ namespace PoTool.Client.ApiClient
         public System.Collections.Generic.ICollection<EffortHeatMapCell> HeatMapData { get; set; } = new System.Collections.ObjectModel.Collection<EffortHeatMapCell>();
 
         [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
@@ -12194,13 +12107,9 @@ namespace PoTool.Client.ApiClient
         public double AverageEstimationAccuracy { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalCompletedWorkItems")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalCompletedWorkItems { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemsWithEstimates")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemsWithEstimates { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("qualityByType")]
@@ -12227,38 +12136,24 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("defaultEffortTask")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int DefaultEffortTask { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("defaultEffortBug")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int DefaultEffortBug { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("defaultEffortUserStory")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int DefaultEffortUserStory { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("defaultEffortPBI")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int DefaultEffortPBI { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("defaultEffortFeature")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int DefaultEffortFeature { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("defaultEffortEpic")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int DefaultEffortEpic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("defaultEffortGeneric")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int DefaultEffortGeneric { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("enableProactiveNotifications")]
@@ -12280,8 +12175,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemTitle")]
@@ -12293,12 +12186,9 @@ namespace PoTool.Client.ApiClient
         public string WorkItemType { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("currentEffort")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? CurrentEffort { get; set; } = default!;
+        public int CurrentEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("suggestedEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int SuggestedEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("confidence")]
@@ -12338,13 +12228,9 @@ namespace PoTool.Client.ApiClient
         public string IterationPath { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Effort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("status")]
@@ -12405,8 +12291,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("epicId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int EpicId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("title")]
@@ -12418,18 +12302,12 @@ namespace PoTool.Client.ApiClient
         public string Type { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("completedEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int CompletedEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("remainingEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int RemainingEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("estimatedVelocity")]
@@ -12438,8 +12316,6 @@ namespace PoTool.Client.ApiClient
         public double EstimatedVelocity { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("sprintsRemaining")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int SprintsRemaining { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("estimatedCompletionDate")]
@@ -12476,15 +12352,13 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("featureId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int FeatureId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("title")]
         public string Title { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? Effort { get; set; } = default!;
+        public int Effort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("state")]
         public string State { get; set; } = default!;
@@ -12505,31 +12379,25 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("id")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("epicId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int EpicId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("epicTitle")]
         public string EpicTitle { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("laneId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int LaneId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int RowIndex { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("orderInRow")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int OrderInRow { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? Effort { get; set; } = default!;
+        public int Effort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("state")]
         public string State { get; set; } = default!;
@@ -12559,8 +12427,7 @@ namespace PoTool.Client.ApiClient
         public string? ErrorMessage { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("placementId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? PlacementId { get; set; } = default!;
+        public int PlacementId { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -12584,20 +12451,16 @@ namespace PoTool.Client.ApiClient
         public string? ErrorMessage { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("originalEpicId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int OriginalEpicId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("extractedEpicId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? ExtractedEpicId { get; set; } = default!;
+        public int ExtractedEpicId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("originalEpicNewEffort")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? OriginalEpicNewEffort { get; set; } = default!;
+        public int OriginalEpicNewEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("extractedEpicEffort")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? ExtractedEpicEffort { get; set; } = default!;
+        public int ExtractedEpicEffort { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -12632,8 +12495,6 @@ namespace PoTool.Client.ApiClient
         public double AverageAccuracy { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("estimatedCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int EstimatedCount { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -12673,12 +12534,10 @@ namespace PoTool.Client.ApiClient
         public bool IncludeIterationLines { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("startMilestoneId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? StartMilestoneId { get; set; } = default!;
+        public int StartMilestoneId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("endMilestoneId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? EndMilestoneId { get; set; } = default!;
+        public int EndMilestoneId { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -12711,7 +12570,6 @@ namespace PoTool.Client.ApiClient
         public string? ContentType { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("pageCount")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int PageCount { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -12806,8 +12664,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("success")]
@@ -12852,8 +12708,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("fixType")]
@@ -12888,18 +12742,12 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("totalAttempted")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalAttempted { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("successfulFixes")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int SuccessfulFixes { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("failedFixes")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int FailedFixes { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("results")]
@@ -12960,8 +12808,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("title")]
@@ -12969,8 +12815,6 @@ namespace PoTool.Client.ApiClient
         public string Title { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Effort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("state")]
@@ -12998,8 +12842,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("goalIds")]
@@ -13040,7 +12882,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("id")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("label")]
@@ -13066,18 +12907,15 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("id")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("objectiveId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ObjectiveId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("objectiveTitle")]
         public string ObjectiveTitle { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("displayOrder")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int DisplayOrder { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -13102,8 +12940,7 @@ namespace PoTool.Client.ApiClient
         public string? ErrorMessage { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("laneId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? LaneId { get; set; } = default!;
+        public int LaneId { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -13127,8 +12964,7 @@ namespace PoTool.Client.ApiClient
         public string? ErrorMessage { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lineId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? LineId { get; set; } = default!;
+        public int LineId { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -13146,7 +12982,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("id")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("label")]
@@ -13175,13 +13010,9 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("newRowIndex")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int NewRowIndex { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("newOrderInRow")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int NewOrderInRow { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -13208,13 +13039,9 @@ namespace PoTool.Client.ApiClient
         public BacklogHealthTrend Trend { get; set; } = new BacklogHealthTrend();
 
         [System.Text.Json.Serialization.JsonPropertyName("totalWorkItems")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalWorkItems { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalIssues")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalIssues { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
@@ -13237,7 +13064,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("epicId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int EpicId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("title")]
@@ -13247,8 +13073,7 @@ namespace PoTool.Client.ApiClient
         public bool IsPlanned { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? Effort { get; set; } = default!;
+        public int Effort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("state")]
         public string State { get; set; } = default!;
@@ -13257,8 +13082,7 @@ namespace PoTool.Client.ApiClient
         public int ValidationIndicator { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? RowIndex { get; set; } = default!;
+        public int RowIndex { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -13276,8 +13100,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("id")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("name")]
@@ -13310,8 +13132,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("pipelineId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int PipelineId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("pipelineName")]
@@ -13322,28 +13142,18 @@ namespace PoTool.Client.ApiClient
         public int Type { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalRuns")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalRuns { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("successfulRuns")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int SuccessfulRuns { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("failedRuns")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int FailedRuns { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("partiallySucceededRuns")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int PartiallySucceededRuns { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("canceledRuns")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int CanceledRuns { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("failureRate")]
@@ -13374,8 +13184,6 @@ namespace PoTool.Client.ApiClient
         public System.DateTimeOffset? LastRunTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("consecutiveFailures")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ConsecutiveFailures { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -13394,13 +13202,9 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("runId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int RunId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("pipelineId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int PipelineId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("pipelineName")]
@@ -13460,8 +13264,6 @@ namespace PoTool.Client.ApiClient
         public System.Collections.Generic.ICollection<PipelineRunDto> Runs { get; set; } = new System.Collections.ObjectModel.Collection<PipelineRunDto>();
 
         [System.Text.Json.Serialization.JsonPropertyName("tfsCallCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TfsCallCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("syncedAt")]
@@ -13490,8 +13292,7 @@ namespace PoTool.Client.ApiClient
         public string? Title { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("status")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? Status { get; set; } = default!;
+        public int Status { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("detail")]
         public string? Detail { get; set; } = default!;
@@ -13515,8 +13316,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("id")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("name")]
@@ -13539,8 +13338,6 @@ namespace PoTool.Client.ApiClient
         public int PictureType { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("defaultPictureId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int DefaultPictureId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("customPicturePath")]
@@ -13601,8 +13398,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int PullRequestId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("title")]
@@ -13642,18 +13437,12 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("id")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int PullRequestId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("threadId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ThreadId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("author")]
@@ -13696,8 +13485,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("id")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("repositoryName")]
@@ -13755,13 +13542,9 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int PullRequestId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("iterationId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int IterationId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("filePath")]
@@ -13773,18 +13556,12 @@ namespace PoTool.Client.ApiClient
         public string ChangeType { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("linesAdded")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int LinesAdded { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("linesDeleted")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int LinesDeleted { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("linesModified")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int LinesModified { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -13803,13 +13580,9 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int PullRequestId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("iterationNumber")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int IterationNumber { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
@@ -13821,13 +13594,9 @@ namespace PoTool.Client.ApiClient
         public System.DateTimeOffset UpdatedDate { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("commitCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int CommitCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("changeCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ChangeCount { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -13846,8 +13615,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("pullRequestId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int PullRequestId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("title")]
@@ -13883,33 +13650,21 @@ namespace PoTool.Client.ApiClient
         public string? EffectiveWorkTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("iterationCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int IterationCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("commentCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int CommentCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("unresolvedCommentCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int UnresolvedCommentCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalFileCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalFileCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalLinesAdded")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalLinesAdded { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalLinesDeleted")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalLinesDeleted { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("averageLinesPerFile")]
@@ -13953,8 +13708,7 @@ namespace PoTool.Client.ApiClient
         public string? TargetIterationPath { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("suggestedEffortChange")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? SuggestedEffortChange { get; set; } = default!;
+        public int SuggestedEffortChange { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -13987,11 +13741,9 @@ namespace PoTool.Client.ApiClient
         public System.Collections.Generic.ICollection<ConnectorDto> Connectors { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("maxRowIndex")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int MaxRowIndex { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalRows")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalRows { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -14010,13 +13762,9 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("laneId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int LaneId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int RowIndex { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("placementIdsInOrder")]
@@ -14043,13 +13791,9 @@ namespace PoTool.Client.ApiClient
         public string ReviewerName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalReviewsAssigned")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalReviewsAssigned { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("reviewsCompleted")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ReviewsCompleted { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("averageResponseTimeHours")]
@@ -14063,8 +13807,6 @@ namespace PoTool.Client.ApiClient
         public double MedianResponseTimeHours { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("pRsWaitingForReview")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int PRsWaitingForReview { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("status")]
@@ -14096,8 +13838,6 @@ namespace PoTool.Client.ApiClient
         public double AverageTimeToCompleteReviewsHours { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalPRsPendingReview")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalPRsPendingReview { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("bottleneckReviewer")]
@@ -14141,8 +13881,7 @@ namespace PoTool.Client.ApiClient
         public string? TargetPath { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effortToRedistribute")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? EffortToRedistribute { get; set; } = default!;
+        public int EffortToRedistribute { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -14160,8 +13899,7 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("profileId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? ProfileId { get; set; } = default!;
+        public int ProfileId { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -14179,13 +13917,10 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("id")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("activeProfileId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? ActiveProfileId { get; set; } = default!;
+        public int ActiveProfileId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lastModified")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -14244,13 +13979,9 @@ namespace PoTool.Client.ApiClient
         public System.DateTimeOffset? EndDate { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalPlannedEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalPlannedEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalCapacity")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalCapacity { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
@@ -14305,13 +14036,9 @@ namespace PoTool.Client.ApiClient
         public System.DateTimeOffset SprintEndDate { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("expectedCompletedEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ExpectedCompletedEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("remainingEffortAfterSprint")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int RemainingEffortAfterSprint { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("progressPercentage")]
@@ -14343,13 +14070,9 @@ namespace PoTool.Client.ApiClient
         public string SprintName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("averageEffortAcrossSprints")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int AverageEffortAcrossSprints { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("deviationPercentage")]
@@ -14394,38 +14117,24 @@ namespace PoTool.Client.ApiClient
         public System.DateTimeOffset? EndDate { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("completedStoryPoints")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int CompletedStoryPoints { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("plannedStoryPoints")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int PlannedStoryPoints { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("completedWorkItemCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int CompletedWorkItemCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalWorkItemCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalWorkItemCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("completedPBIs")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int CompletedPBIs { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("completedBugs")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int CompletedBugs { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("completedTasks")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int CompletedTasks { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -14452,13 +14161,9 @@ namespace PoTool.Client.ApiClient
         public string SprintName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
@@ -14505,8 +14210,7 @@ namespace PoTool.Client.ApiClient
         public bool HasAnyProfile { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("activeProfileId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? ActiveProfileId { get; set; } = default!;
+        public int ActiveProfileId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("missingRequirementMessage")]
         public string? MissingRequirementMessage { get; set; } = default!;
@@ -14567,13 +14271,9 @@ namespace PoTool.Client.ApiClient
         public string AreaPath { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("averageEffortAcrossTeams")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int AverageEffortAcrossTeams { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("deviationPercentage")]
@@ -14608,13 +14308,9 @@ namespace PoTool.Client.ApiClient
         public string MemberName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("assignedEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int AssignedEffort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("availableCapacity")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int AvailableCapacity { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
@@ -14707,7 +14403,6 @@ namespace PoTool.Client.ApiClient
         public bool UseDefaultCredentials { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("timeoutSeconds")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TimeoutSeconds { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("apiVersion")]
@@ -14744,8 +14439,7 @@ namespace PoTool.Client.ApiClient
         public bool UseDefaultCredentials { get; set; } = true;
 
         [System.Text.Json.Serialization.JsonPropertyName("timeoutSeconds")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int TimeoutSeconds { get; set; } = "30";
+        public int TimeoutSeconds { get; set; } = 30;
 
         [System.Text.Json.Serialization.JsonPropertyName("apiVersion")]
         public string? ApiVersion { get; set; } = "7.0";
@@ -14816,8 +14510,7 @@ namespace PoTool.Client.ApiClient
         public bool IncludeWriteChecks { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemIdForWriteCheck")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? WorkItemIdForWriteCheck { get; set; } = default!;
+        public int WorkItemIdForWriteCheck { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -14866,22 +14559,19 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("epicId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int EpicId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("title")]
         public string Title { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("objectiveId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ObjectiveId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("objectiveTitle")]
         public string ObjectiveTitle { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? Effort { get; set; } = default!;
+        public int Effort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("state")]
         public string State { get; set; } = default!;
@@ -14890,7 +14580,6 @@ namespace PoTool.Client.ApiClient
         public int ValidationIndicator { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("tfsOrder")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TfsOrder { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -14960,13 +14649,9 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("rowIndex")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int RowIndex { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("orderInRow")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int OrderInRow { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -15004,8 +14689,7 @@ namespace PoTool.Client.ApiClient
         public int PictureType { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("defaultPictureId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int DefaultPictureId { get; set; } = "0";
+        public int DefaultPictureId { get; set; } = 0;
 
         [System.Text.Json.Serialization.JsonPropertyName("customPicturePath")]
         public string? CustomPicturePath { get; set; } = default!;
@@ -15029,11 +14713,9 @@ namespace PoTool.Client.ApiClient
         public bool Success { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("errorCount")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int ErrorCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("warningCount")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WarningCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
@@ -15059,13 +14741,9 @@ namespace PoTool.Client.ApiClient
         public System.Collections.Generic.ICollection<ViolationImpact> Violations { get; set; } = new System.Collections.ObjectModel.Collection<ViolationImpact>();
 
         [System.Text.Json.Serialization.JsonPropertyName("totalBlockedItems")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalBlockedItems { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalAffectedHierarchies")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalAffectedHierarchies { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("recommendations")]
@@ -15115,8 +14793,6 @@ namespace PoTool.Client.ApiClient
         public string ValidationType { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("count")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Count { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("affectedWorkItemIds")]
@@ -15139,8 +14815,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemType")]
@@ -15210,13 +14884,9 @@ namespace PoTool.Client.ApiClient
         public double SixSprintAverage { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalCompletedStoryPoints")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalCompletedStoryPoints { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalSprints")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TotalSprints { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -15235,8 +14905,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemType")]
@@ -15291,8 +14959,6 @@ namespace PoTool.Client.ApiClient
         public System.Collections.Generic.ICollection<int> AffectedWorkItemIds { get; set; } = new System.Collections.ObjectModel.Collection<int>();
 
         [System.Text.Json.Serialization.JsonPropertyName("priority")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Priority { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -15311,8 +14977,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("tfsId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TfsId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("type")]
@@ -15324,8 +14988,7 @@ namespace PoTool.Client.ApiClient
         public string Title { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("parentTfsId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? ParentTfsId { get; set; } = default!;
+        public int ParentTfsId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -15348,8 +15011,7 @@ namespace PoTool.Client.ApiClient
         public System.DateTimeOffset RetrievedAt { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? Effort { get; set; } = default!;
+        public int Effort { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -15392,13 +15054,9 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("revisionNumber")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int RevisionNumber { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("changedBy")]
@@ -15432,8 +15090,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int WorkItemId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("title")]
@@ -15486,8 +15142,6 @@ namespace PoTool.Client.ApiClient
         public string WorkItemType { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("count")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int Count { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("averageAccuracy")]
@@ -15496,18 +15150,12 @@ namespace PoTool.Client.ApiClient
         public double AverageAccuracy { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("typicalEffortMin")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TypicalEffortMin { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("typicalEffortMax")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TypicalEffortMax { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("averageEffort")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int AverageEffort { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -15526,8 +15174,6 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("tfsId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
         public int TfsId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("type")]
@@ -15539,8 +15185,7 @@ namespace PoTool.Client.ApiClient
         public string Title { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("parentTfsId")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? ParentTfsId { get; set; } = default!;
+        public int ParentTfsId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -15563,8 +15208,7 @@ namespace PoTool.Client.ApiClient
         public System.DateTimeOffset RetrievedAt { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int? Effort { get; set; } = default!;
+        public int Effort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("validationIssues")]
         [System.ComponentModel.DataAnnotations.Required]
