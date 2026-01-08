@@ -25,6 +25,9 @@ public class UpdateProfileCommandHandler : ICommandHandler<UpdateProfileCommand,
             command.AreaPaths,
             command.TeamName,
             command.GoalIds,
-            cancellationToken: cancellationToken);
+            command.PictureType,
+            command.DefaultPictureId,
+            command.CustomPicturePath,
+            cancellationToken);
     }
 }

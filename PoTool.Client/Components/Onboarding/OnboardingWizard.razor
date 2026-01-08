@@ -87,7 +87,7 @@
                                 <CompactButton Variant="Variant.Filled" 
                                           Color="Color.Primary" 
                                           OnClick="SaveAndTestConfig"
-                                          Disabled="@(!_configFormValid || _isSaving || _isTesting)"
+                                          Disabled="@(!_configFormValid || _isSaving || _isTesting || _isVerifying)"
                                           StartIcon="@Icons.Material.Filled.Check">
                                     @if (_isSaving || _isTesting)
                                     {
@@ -99,6 +99,22 @@
                                         <span>Save & Test Connection</span>
                                     }
                                 </CompactButton>
+                                
+                                <CompactButton Variant="Variant.Filled" 
+                                          Color="Color.Info" 
+                                          OnClick="VerifyTfsApi"
+                                          Disabled="@(!_hasTestedConnection || _isVerifying)"
+                                          StartIcon="@Icons.Material.Filled.Verified">
+                                    @if (_isVerifying)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                        <span>Verifying...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Verify TFS API</span>
+                                    }
+                                </CompactButton>
                             </MudStack>
                         </MudForm>
 
@@ -108,6 +124,33 @@
                                 @_connectionTestResult.Message
                             </MudAlert>
                         }
+                        
+                        @if (_verificationReport != null)
+                        {
+                            <MudPaper Elevation="2" Class="pa-3">
+                                <MudText Typo="Typo.subtitle1" Class="mb-2">
+                                    <strong>TFS API Verification Results</strong>
+                                </MudText>
+                                @if (_verificationReport.Success)
+                                {
+                                    <MudAlert Severity="Severity.Success" Dense="true">
+                                        All verification checks passed! You can now proceed to profile creation.
+                                    </MudAlert>
+                                }
+                                else
+                                {
+                                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
+                                        Some checks failed. Review the results below:
+                                    </MudAlert>
+                                    @foreach (var check in _verificationReport.Checks.Where(c => !c.Success))
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Error">
+                                            • @check.CapabilityId: @check.ImpactedFunctionality
+                                        </MudText>
+                                    }
+                                }
+                            </MudPaper>
+                        }
 
                         @if (_configErrorResponse != null)
                         {
@@ -116,7 +159,24 @@
                         }
                         
                         <MudAlert Severity="Severity.Info" Dense="true">
-                            You can configure these settings now or skip and do it later from the Configuration page.
+                            <strong>Required to proceed:</strong>
+                            <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                                <li>Fill in all configuration fields ✓ @(_configFormValid ? "Done" : "Pending")</li>
+                                <li>Test Connection successfully ✓ @(_hasTestedConnection ? "Done" : "Pending")</li>
+                                <li>Verify TFS API ✓ @(_hasVerifiedApi ? "Done" : "Pending")</li>
+                            </ul>
+                            @if (!_hasTestedConnection)
+                            {
+                                <div class="mt-2">Click "Save & Test Connection" first.</div>
+                            }
+                            else if (!_hasVerifiedApi)
+                            {
+                                <div class="mt-2">Click "Verify TFS API" to continue.</div>
+                            }
+                            else
+                            {
+                                <div class="mt-2"><strong>Ready!</strong> Click "Next" to create your profile.</div>
+                            }
                         </MudAlert>
                     </MudStack>
                 }
@@ -296,7 +356,8 @@
             }
             @if (_currentStep < 4)
             {
-                <CompactButton OnClick="Next" Color="Color.Primary" Variant="Variant.Filled">
+                <CompactButton OnClick="Next" Color="Color.Primary" Variant="Variant.Filled"
+                               Disabled="@(!CanProceedFromCurrentStep())">
                     Next
                 </CompactButton>
             }
@@ -342,9 +403,39 @@
     private ConnectionTestResult? _profileSaveResult;
     private ErrorResponse? _profileErrorResponse;
 
+    // Track validation state for TFS config step
+    private bool _hasTestedConnection = false;
+    private bool _hasVerifiedApi = false;
+    private bool _isVerifying = false;
+    private TfsVerificationReport? _verificationReport;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadExistingConfig();
+    }
+    
+    private bool CanProceedFromCurrentStep()
+    {
+        // Step 0 (Welcome) - always can proceed
+        if (_currentStep == 0) return true;
+        
+        // Step 1 (TFS Config) - must have valid config + tested + verified
+        if (_currentStep == 1)
+        {
+            bool hasRequiredFields = !string.IsNullOrWhiteSpace(_url) 
+                                   && !string.IsNullOrWhiteSpace(_project) 
+                                   && !string.IsNullOrWhiteSpace(_defaultAreaPath);
+            return hasRequiredFields && _hasTestedConnection && _hasVerifiedApi;
+        }
+        
+        // Step 2 (Profile) - can proceed if profile is valid (handled by form validation)
+        if (_currentStep == 2) return _profileFormValid;
+        
+        // Step 3 (Sync) - always can proceed
+        if (_currentStep == 3) return true;
+        
+        // Step 4 (Features) - always can proceed
+        return true;
     }
 
     private async Task LoadExistingConfig()
@@ -428,16 +519,19 @@
             
             if (isValid)
             {
-                _connectionTestResult = new ConnectionTestResult(true, "Connection successful! You're all set.");
-                Snackbar.Add("Configuration saved and tested successfully", Severity.Success);
+                _hasTestedConnection = true;
+                _connectionTestResult = new ConnectionTestResult(true, "Connection successful! Now verify TFS API to continue.");
+                Snackbar.Add("Connection tested successfully", Severity.Success);
             }
             else
             {
+                _hasTestedConnection = false;
                 _connectionTestResult = new ConnectionTestResult(false, "Connection failed. Please check your settings.");
             }
         }
         catch (Exception ex)
         {
+            _hasTestedConnection = false;
             _connectionTestResult = new ConnectionTestResult(false, "Connection test failed.");
             ShowConfigError(ex, "Error testing connection");
         }
@@ -458,6 +552,44 @@
     {
         _configErrorResponse = null;
         _connectionTestResult = null;
+    }
+
+    private async Task VerifyTfsApi()
+    {
+        if (!_hasTestedConnection) return;
+
+        _isVerifying = true;
+        ClearConfigError();
+        _verificationReport = null;
+        
+        try
+        {
+            // Run verification without write checks for onboarding
+            var report = await TfsConfigService.VerifyTfsApiAsync(includeWriteChecks: false, workItemIdForWriteCheck: null);
+            
+            _verificationReport = report;
+            
+            if (report != null && report.Success)
+            {
+                _hasVerifiedApi = true;
+                Snackbar.Add("TFS API verified successfully! You can now proceed to create your profile.", Severity.Success);
+            }
+            else
+            {
+                _hasVerifiedApi = false;
+                var failedCount = report?.Checks.Count(c => !c.Success) ?? 0;
+                Snackbar.Add($"TFS API verification completed with {failedCount} failures. Please check the results.", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            _hasVerifiedApi = false;
+            ShowConfigError(ex, "Error verifying TFS API");
+        }
+        finally
+        {
+            _isVerifying = false;
+        }
     }
 
     private async Task SaveProfile()

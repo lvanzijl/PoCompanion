@@ -1,0 +1,120 @@
+@using PoTool.Client.Models
+
+<MudStack Spacing="3">
+    <MudText Typo="Typo.subtitle1">Profile Picture</MudText>
+    
+    <MudRadioGroup @bind-Value="_pictureType">
+        <MudRadio Value="@ProfilePictureType.Default" Color="Color.Primary">
+            Choose from defaults
+        </MudRadio>
+        <MudRadio Value="@ProfilePictureType.Custom" Color="Color.Primary" Disabled="true">
+            Custom image (coming soon)
+        </MudRadio>
+    </MudRadioGroup>
+    
+    @if (_pictureType == ProfilePictureType.Default)
+    {
+        <MudPaper Elevation="0" Class="pa-3" Style="max-height: 400px; overflow-y: auto; border: 1px solid var(--mud-palette-divider);">
+            <MudGrid Spacing="2">
+                @for (int i = 0; i < 64; i++)
+                {
+                    var index = i; // Capture for lambda
+                    var isSelected = _selectedDefaultId == index;
+                    <MudItem xs="3" sm="2" md="2">
+                        <MudPaper Elevation="@(isSelected ? 8 : 2)" 
+                                  Class="pa-1 cursor-pointer"
+                                  Style="@(isSelected ? "border: 3px solid var(--mud-palette-primary);" : "")"
+                                  @onclick="@(() => SelectDefaultImage(index))">
+                            <MudImage Src="@($"/assets/profile-defaults/profile-{index}.svg")" 
+                                      Alt="@($"Profile {index}")"
+                                      Width="80"
+                                      Height="80"
+                                      ObjectFit="ObjectFit.Cover" />
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudPaper>
+        
+        <MudButton Variant="Variant.Text" 
+                   Color="Color.Default" 
+                   Size="Size.Small"
+                   OnClick="@(() => SelectDefaultImage(0))">
+            Reset to default
+        </MudButton>
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            Custom image upload will be available in a future update.
+        </MudText>
+    }
+    
+    <MudDivider />
+    
+    <MudText Typo="Typo.subtitle2">Preview</MudText>
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudAvatar Size="Size.Large" Style="width: 120px; height: 120px;">
+            <MudImage Src="@GetPreviewImageUrl()" />
+        </MudAvatar>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            This is how your profile will appear
+        </MudText>
+    </MudStack>
+</MudStack>
+
+@code {
+    [Parameter]
+    public ProfilePictureType PictureType { get; set; } = ProfilePictureType.Default;
+    
+    [Parameter]
+    public EventCallback<ProfilePictureType> PictureTypeChanged { get; set; }
+    
+    [Parameter]
+    public int DefaultPictureId { get; set; } = 0;
+    
+    [Parameter]
+    public EventCallback<int> DefaultPictureIdChanged { get; set; }
+    
+    [Parameter]
+    public string? CustomPicturePath { get; set; }
+    
+    [Parameter]
+    public EventCallback<string?> CustomPicturePathChanged { get; set; }
+    
+    private ProfilePictureType _pictureType;
+    private int _selectedDefaultId;
+    
+    protected override void OnParametersSet()
+    {
+        _pictureType = PictureType;
+        _selectedDefaultId = DefaultPictureId;
+    }
+    
+    private async Task SelectDefaultImage(int index)
+    {
+        _selectedDefaultId = index;
+        await DefaultPictureIdChanged.InvokeAsync(index);
+    }
+    
+    private string GetPreviewImageUrl()
+    {
+        if (_pictureType == ProfilePictureType.Custom && !string.IsNullOrEmpty(CustomPicturePath))
+        {
+            return CustomPicturePath;
+        }
+        
+        return $"/assets/profile-defaults/profile-{_selectedDefaultId}.svg";
+    }
+}
+
+<style>
+    .cursor-pointer {
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    
+    .cursor-pointer:hover {
+        transform: scale(1.05);
+    }
+</style>

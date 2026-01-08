@@ -1,0 +1,155 @@
+@typeparam TItem
+@using System.Linq
+
+<MudStack Spacing="2">
+    <MudTextField @bind-Value="_searchText"
+                  Label="@Label"
+                  Placeholder="@Placeholder"
+                  Variant="Variant.Outlined"
+                  Margin="Margin.Dense"
+                  Adornment="Adornment.End"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  OnKeyUp="@OnSearchChanged"
+                  HelperText="@HelperText" />
+    
+    @if (_isExpanded)
+    {
+        <MudPaper Elevation="4" Class="pa-2" Style="max-height: 300px; overflow-y: auto;">
+            @if (_filteredItems.Any())
+            {
+                @foreach (var item in _filteredItems)
+                {
+                    var isSelected = _selectedItems.Contains(item);
+                    <MudCheckBox T="bool" 
+                                 Value="@isSelected" 
+                                 ValueChanged="@(value => ToggleSelection(item, value))"
+                                 Label="@GetItemText(item)"
+                                 Dense="true"
+                                 Color="Color.Primary" />
+                }
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-2">
+                    No items found matching "@_searchText"
+                </MudText>
+            }
+        </MudPaper>
+    }
+    
+    @if (_selectedItems.Any())
+    {
+        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" Class="mt-2">
+            <MudText Typo="Typo.body2" Color="Color.Primary">
+                Selected (@_selectedItems.Count):
+            </MudText>
+            @foreach (var item in _selectedItems.Take(10))
+            {
+                <MudChip T="string" 
+                         Size="Size.Small" 
+                         OnClose="@(() => RemoveSelection(item))"
+                         Color="Color.Primary"
+                         Variant="Variant.Outlined">
+                    @GetItemText(item)
+                </MudChip>
+            }
+            @if (_selectedItems.Count > 10)
+            {
+                <MudChip T="string" 
+                         Size="Size.Small" 
+                         Color="Color.Secondary"
+                         Variant="Variant.Outlined">
+                    +@(_selectedItems.Count - 10) more
+                </MudChip>
+            }
+        </MudStack>
+    }
+    else if (Required)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+            Please select at least one @Label.ToLower()
+        </MudAlert>
+    }
+</MudStack>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = "Select Items";
+    
+    [Parameter]
+    public string Placeholder { get; set; } = "Type to filter...";
+    
+    [Parameter]
+    public string? HelperText { get; set; }
+    
+    [Parameter]
+    public bool Required { get; set; }
+    
+    [Parameter]
+    public IEnumerable<TItem> Items { get; set; } = Enumerable.Empty<TItem>();
+    
+    [Parameter]
+    public IEnumerable<TItem> SelectedItems { get; set; } = Enumerable.Empty<TItem>();
+    
+    [Parameter]
+    public EventCallback<IEnumerable<TItem>> SelectedItemsChanged { get; set; }
+    
+    [Parameter]
+    public Func<TItem, string> GetItemText { get; set; } = item => item?.ToString() ?? string.Empty;
+    
+    private string _searchText = string.Empty;
+    private bool _isExpanded = false;
+    private HashSet<TItem> _selectedItems = new();
+    private List<TItem> _filteredItems = new();
+    
+    protected override void OnParametersSet()
+    {
+        _selectedItems = new HashSet<TItem>(SelectedItems);
+        FilterItems();
+    }
+    
+    protected override void OnInitialized()
+    {
+        _isExpanded = true; // Always show the list for easier interaction
+    }
+    
+    private void OnSearchChanged()
+    {
+        FilterItems();
+    }
+    
+    private void FilterItems()
+    {
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            _filteredItems = Items.ToList();
+        }
+        else
+        {
+            var searchLower = _searchText.ToLowerInvariant();
+            _filteredItems = Items
+                .Where(item => GetItemText(item).ToLowerInvariant().Contains(searchLower))
+                .ToList();
+        }
+    }
+    
+    private async Task ToggleSelection(TItem item, bool isSelected)
+    {
+        if (isSelected)
+        {
+            _selectedItems.Add(item);
+        }
+        else
+        {
+            _selectedItems.Remove(item);
+        }
+        
+        await SelectedItemsChanged.InvokeAsync(_selectedItems);
+    }
+    
+    private async Task RemoveSelection(TItem item)
+    {
+        _selectedItems.Remove(item);
+        await SelectedItemsChanged.InvokeAsync(_selectedItems);
+    }
+}
