@@ -139,7 +139,7 @@ public static class ApiApplicationBuilderExtensions
             app.UseHttpsRedirection();
         }
 
-        // Serve static files (e.g., wwwroot content) if needed for API-only scenarios
+        // Serve static files from wwwroot (OpenAPI spec, API documentation, etc.)
         app.UseStaticFiles();
 
         // Add routing so middleware such as CORS apply to endpoints including SignalR

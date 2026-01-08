@@ -58,7 +58,7 @@ cd PoTool.Client
 dotnet run
 ```
 
-Then open your browser to `http://localhost:5292` (Client) which communicates with the API at `http://localhost:5291`.
+Then open your browser to `http://localhost:5292` (Client) which communicates with the API at `http://localhost:5291`. These ports are configured in each project's `Properties/launchSettings.json` file.
 
 #### Option 2: Visual Studio Multi-Project Startup
 
