@@ -39,8 +39,11 @@ function Fix-Schema {
             $typeValue.Contains("string") -and
             ($obj.format -eq "int32" -or $obj.format -eq "int64")) {
             
-            # Fix: change to just "integer"
+            # Fix: change to just "integer" and remove the pattern
             $obj.type = "integer"
+            if ($obj.PSObject.Properties['pattern']) {
+                $obj.PSObject.Properties.Remove('pattern')
+            }
             $script:fixCount++
             Write-Host "  Fixed union type to integer (format: $($obj.format))" -ForegroundColor Green
         }

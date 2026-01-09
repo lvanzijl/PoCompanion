@@ -54,18 +54,18 @@ public class TreeBuilderService : ITreeBuilderService
 
             if (parentId > 0)
             {
-                if (!nodeMap.TryGetValue(parentId.Value, out var parentNode))
+                if (!nodeMap.TryGetValue(parentId, out var parentNode))
                 {
                     // Create placeholder parent node for missing parent
                     parentNode = new TreeNode
                     {
-                        Id = parentId.Value,
-                        Title = $"(missing) Parent #{parentId.Value}",
+                        Id = parentId,
+                        Title = $"(missing) Parent #{parentId}",
                         Type = "(missing)",
                         State = "",
                         ParentId = null
                     };
-                    nodeMap[parentId.Value] = parentNode;
+                    nodeMap[parentId] = parentNode;
                 }
 
                 parentNode.Children.Add(node);
@@ -114,7 +114,7 @@ public class TreeBuilderService : ITreeBuilderService
             var current = match;
             while (current.ParentTfsId > 0)
             {
-                var parentId = current.ParentTfsId.Value;
+                var parentId = current.ParentTfsId;
                 if (itemLookup.TryGetValue(parentId, out var parent))
                 {
                     if (!toInclude.ContainsKey(parent.TfsId))
@@ -223,18 +223,18 @@ public class TreeBuilderService : ITreeBuilderService
 
             if (parentId > 0)
             {
-                if (!nodeMap.TryGetValue(parentId.Value, out var parentNode))
+                if (!nodeMap.TryGetValue(parentId, out var parentNode))
                 {
                     // Create placeholder parent node for missing parent
                     parentNode = new TreeNode
                     {
-                        Id = parentId.Value,
-                        Title = $"(missing) Parent #{parentId.Value}",
+                        Id = parentId,
+                        Title = $"(missing) Parent #{parentId}",
                         Type = "(missing)",
                         State = "",
                         ParentId = null
                     };
-                    nodeMap[parentId.Value] = parentNode;
+                    nodeMap[parentId] = parentNode;
                 }
 
                 parentNode.Children.Add(node);

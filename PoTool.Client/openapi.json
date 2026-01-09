@@ -480,7 +480,6 @@
             "name": "maxSprints",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32",
               "default": 10
@@ -569,7 +568,6 @@
             "name": "maxIterations",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32",
               "default": 5
@@ -618,7 +616,6 @@
             "name": "maxIterations",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32",
               "default": 10
@@ -628,7 +625,6 @@
             "name": "defaultCapacity",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -677,7 +673,6 @@
             "name": "defaultCapacity",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -728,7 +723,6 @@
             "name": "maxSprintsForVelocity",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32",
               "default": 5
@@ -777,7 +771,6 @@
             "name": "maxIterations",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32",
               "default": 10
@@ -787,7 +780,6 @@
             "name": "defaultCapacity",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -848,7 +840,6 @@
             "name": "maxIterations",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32",
               "default": 10
@@ -858,7 +849,6 @@
             "name": "defaultCapacity",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -906,7 +896,6 @@
             "name": "maxIterations",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32",
               "default": 10
@@ -1031,7 +1020,6 @@
             "name": "maxIterations",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32",
               "default": 10
@@ -1122,7 +1110,6 @@
             "name": "top",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32",
               "default": 100
@@ -1212,7 +1199,6 @@
             "name": "runsPerPipeline",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32",
               "default": 50
@@ -1362,7 +1348,6 @@
             "in": "path",
             "required": true,
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -1422,7 +1407,6 @@
             "in": "path",
             "required": true,
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -1502,7 +1486,6 @@
             "in": "path",
             "required": true,
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -1996,21 +1979,18 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "pattern": "^-?(?:0|[1-9]\\d*)$",
                   "type": "integer",
                   "format": "int32"
                 }
               },
               "application/json": {
                 "schema": {
-                  "pattern": "^-?(?:0|[1-9]\\d*)$",
                   "type": "integer",
                   "format": "int32"
                 }
               },
               "text/json": {
                 "schema": {
-                  "pattern": "^-?(?:0|[1-9]\\d*)$",
                   "type": "integer",
                   "format": "int32"
                 }
@@ -2031,7 +2011,6 @@
             "name": "maxPRs",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32",
               "default": 100
@@ -2041,7 +2020,6 @@
             "name": "daysBack",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32",
               "default": 30
@@ -3612,7 +3590,6 @@
             "name": "minEffort",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -3621,7 +3598,6 @@
             "name": "maxEffort",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -3972,7 +3948,6 @@
           "effortBySprint": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -4029,32 +4004,26 @@
             "type": "string"
           },
           "totalWorkItems": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "workItemsWithoutEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "workItemsInProgressWithoutEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "parentProgressIssues": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "blockedItems": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "inProgressAtIterationEnd": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4128,12 +4097,10 @@
         "type": "object",
         "properties": {
           "workItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "effortValue": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -4147,7 +4114,6 @@
         "type": "object",
         "properties": {
           "workItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4172,17 +4138,14 @@
         "type": "object",
         "properties": {
           "totalRequested": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "successfulUpdates": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "failedUpdates": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4205,27 +4168,22 @@
         "type": "object",
         "properties": {
           "totalWorkItems": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "workItemsWithoutEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "workItemsInProgressWithoutEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "parentProgressIssues": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "blockedItems": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -4238,7 +4196,6 @@
         "type": "object",
         "properties": {
           "healthScore": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -4279,7 +4236,6 @@
           "cycleWorkItemIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -4311,7 +4267,6 @@
             "type": "string"
           },
           "effortAmount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4344,12 +4299,10 @@
         "type": "object",
         "properties": {
           "sourcePlacementId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "targetPlacementId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4379,7 +4332,6 @@
         "type": "object",
         "properties": {
           "count": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -4395,22 +4347,18 @@
         "type": "object",
         "properties": {
           "epicId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "laneId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "rowIndex": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "orderInRow": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -4444,12 +4392,10 @@
         "type": "object",
         "properties": {
           "objectiveId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "displayOrder": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -4503,7 +4449,6 @@
           "goalIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -4512,7 +4457,6 @@
             "$ref": "#/components/schemas/ProfilePictureType"
           },
           "defaultPictureId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32",
             "default": 0
@@ -4537,18 +4481,15 @@
           "workItemIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
           },
           "totalEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "chainLength": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4592,7 +4533,6 @@
           "blockedWorkItemIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -4619,12 +4559,10 @@
         "type": "object",
         "properties": {
           "sourceWorkItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "targetWorkItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4653,7 +4591,6 @@
         "type": "object",
         "properties": {
           "workItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4667,17 +4604,14 @@
             "type": "string"
           },
           "effort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "dependencyCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "dependentCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4700,17 +4634,14 @@
             "type": "string"
           },
           "forecastedEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "lowEstimate": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "highEstimate": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4737,12 +4668,10 @@
             "type": "string"
           },
           "totalEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "workItemCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4774,17 +4703,14 @@
             "type": "string"
           },
           "totalEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "workItemCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "capacity": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4873,7 +4799,6 @@
             }
           },
           "totalEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4948,12 +4873,10 @@
             "format": "double"
           },
           "totalCompletedWorkItems": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "workItemsWithEstimates": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -4985,37 +4908,30 @@
         "type": "object",
         "properties": {
           "defaultEffortTask": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "defaultEffortBug": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "defaultEffortUserStory": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "defaultEffortPBI": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "defaultEffortFeature": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "defaultEffortEpic": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "defaultEffortGeneric": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5038,7 +4954,6 @@
         "type": "object",
         "properties": {
           "workItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5049,12 +4964,10 @@
             "type": "string"
           },
           "currentEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "suggestedEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5094,12 +5007,10 @@
             "type": "string"
           },
           "effort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "workItemCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5176,7 +5087,6 @@
         "type": "object",
         "properties": {
           "epicId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5187,17 +5097,14 @@
             "type": "string"
           },
           "totalEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "completedEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "remainingEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5210,7 +5117,6 @@
             "format": "double"
           },
           "sprintsRemaining": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5243,7 +5149,6 @@
         "type": "object",
         "properties": {
           "featureId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5251,7 +5156,6 @@
             "type": "string"
           },
           "effort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5264,12 +5168,10 @@
         "type": "object",
         "properties": {
           "id": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "epicId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5277,22 +5179,18 @@
             "type": "string"
           },
           "laneId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "rowIndex": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "orderInRow": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "effort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5317,7 +5215,6 @@
             ]
           },
           "placementId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -5336,22 +5233,18 @@
             ]
           },
           "originalEpicId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "extractedEpicId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "originalEpicNewEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "extractedEpicEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -5387,7 +5280,6 @@
             "format": "double"
           },
           "estimatedCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -5417,7 +5309,6 @@
           "includedObjectiveIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -5429,12 +5320,10 @@
             "type": "boolean"
           },
           "startMilestoneId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "endMilestoneId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -5471,7 +5360,6 @@
             ]
           },
           "pageCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -5489,7 +5377,6 @@
           "goalIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -5505,7 +5392,6 @@
           "workItemIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -5521,7 +5407,6 @@
           "targetIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -5537,7 +5422,6 @@
           "workItemIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -5553,7 +5437,6 @@
         "type": "object",
         "properties": {
           "workItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5590,7 +5473,6 @@
         "type": "object",
         "properties": {
           "workItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5618,17 +5500,14 @@
         "type": "object",
         "properties": {
           "totalAttempted": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "successfulFixes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "failedFixes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5663,7 +5542,6 @@
           "workItemIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -5681,7 +5559,6 @@
         "type": "object",
         "properties": {
           "workItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5689,7 +5566,6 @@
             "type": "string"
           },
           "effort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5717,14 +5593,12 @@
         "type": "object",
         "properties": {
           "workItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "goalIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -5746,7 +5620,6 @@
         "type": "object",
         "properties": {
           "id": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5767,12 +5640,10 @@
         "type": "object",
         "properties": {
           "id": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "objectiveId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5780,7 +5651,6 @@
             "type": "string"
           },
           "displayOrder": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -5799,7 +5669,6 @@
             ]
           },
           "laneId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -5818,7 +5687,6 @@
             ]
           },
           "lineId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -5828,7 +5696,6 @@
         "type": "object",
         "properties": {
           "id": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5862,12 +5729,10 @@
         "type": "object",
         "properties": {
           "newRowIndex": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "newOrderInRow": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -5893,12 +5758,10 @@
             "$ref": "#/components/schemas/BacklogHealthTrend"
           },
           "totalWorkItems": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "totalIssues": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5915,7 +5778,6 @@
         "type": "object",
         "properties": {
           "epicId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5926,7 +5788,6 @@
             "type": "boolean"
           },
           "effort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -5937,7 +5798,6 @@
             "$ref": "#/components/schemas/ValidationIndicator"
           },
           "rowIndex": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -5957,7 +5817,6 @@
         "type": "object",
         "properties": {
           "id": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6001,7 +5860,6 @@
         "type": "object",
         "properties": {
           "pipelineId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6012,27 +5870,22 @@
             "$ref": "#/components/schemas/PipelineType"
           },
           "totalRuns": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "successfulRuns": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "failedRuns": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "partiallySucceededRuns": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "canceledRuns": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6092,7 +5945,6 @@
             "format": "date-time"
           },
           "consecutiveFailures": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -6116,12 +5968,10 @@
         "type": "object",
         "properties": {
           "runId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "pipelineId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6207,7 +6057,6 @@
             }
           },
           "tfsCallCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6236,7 +6085,6 @@
             ]
           },
           "status": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6270,7 +6118,6 @@
         "type": "object",
         "properties": {
           "id": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6289,7 +6136,6 @@
           "goalIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -6298,7 +6144,6 @@
             "$ref": "#/components/schemas/ProfilePictureType"
           },
           "defaultPictureId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6363,7 +6208,6 @@
         "type": "object",
         "properties": {
           "pullRequestId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6409,17 +6253,14 @@
         "type": "object",
         "properties": {
           "id": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "pullRequestId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "threadId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6475,7 +6316,6 @@
         "type": "object",
         "properties": {
           "id": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6530,12 +6370,10 @@
         "type": "object",
         "properties": {
           "pullRequestId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "iterationId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6546,17 +6384,14 @@
             "type": "string"
           },
           "linesAdded": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "linesDeleted": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "linesModified": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -6574,12 +6409,10 @@
         "type": "object",
         "properties": {
           "pullRequestId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "iterationNumber": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6592,12 +6425,10 @@
             "format": "date-time"
           },
           "commitCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "changeCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -6625,7 +6456,6 @@
         "type": "object",
         "properties": {
           "pullRequestId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6664,32 +6494,26 @@
             ]
           },
           "iterationCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "commentCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "unresolvedCommentCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "totalFileCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "totalLinesAdded": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "totalLinesDeleted": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6737,7 +6561,6 @@
             ]
           },
           "suggestedEffortChange": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -6780,12 +6603,10 @@
             }
           },
           "maxRowIndex": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "totalRows": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -6800,19 +6621,16 @@
         "type": "object",
         "properties": {
           "laneId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "rowIndex": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "placementIdsInOrder": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -6835,12 +6653,10 @@
             "type": "string"
           },
           "totalReviewsAssigned": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "reviewsCompleted": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6861,7 +6677,6 @@
             "format": "double"
           },
           "pRsWaitingForReview": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6900,7 +6715,6 @@
             "format": "double"
           },
           "totalPRsPendingReview": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6940,7 +6754,6 @@
             ]
           },
           "effortToRedistribute": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -6953,7 +6766,6 @@
         "type": "object",
         "properties": {
           "profileId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -6968,12 +6780,10 @@
         "type": "object",
         "properties": {
           "id": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "activeProfileId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -6996,7 +6806,6 @@
           "featureIdsForExtractedEpic": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -7040,12 +6849,10 @@
             "format": "date-time"
           },
           "totalPlannedEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "totalCapacity": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -7105,12 +6912,10 @@
             "format": "date-time"
           },
           "expectedCompletedEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "remainingEffortAfterSprint": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -7143,12 +6948,10 @@
             "type": "string"
           },
           "totalEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "averageEffortAcrossSprints": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -7205,37 +7008,30 @@
             "format": "date-time"
           },
           "completedStoryPoints": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "plannedStoryPoints": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "completedWorkItemCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "totalWorkItemCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "completedPBIs": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "completedBugs": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "completedTasks": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -7260,12 +7056,10 @@
             "type": "string"
           },
           "totalEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "workItemCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -7318,7 +7112,6 @@
             "type": "boolean"
           },
           "activeProfileId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -7374,12 +7167,10 @@
             "type": "string"
           },
           "totalEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "averageEffortAcrossTeams": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -7413,12 +7204,10 @@
             "type": "string"
           },
           "assignedEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "availableCapacity": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -7540,7 +7329,6 @@
             "type": "boolean"
           },
           "timeoutSeconds": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -7587,7 +7375,6 @@
             "default": true
           },
           "timeoutSeconds": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32",
             "default": 30
@@ -7666,7 +7453,6 @@
             "type": "boolean"
           },
           "workItemIdForWriteCheck": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -7703,7 +7489,6 @@
         "type": "object",
         "properties": {
           "epicId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -7711,7 +7496,6 @@
             "type": "string"
           },
           "objectiveId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -7719,7 +7503,6 @@
             "type": "string"
           },
           "effort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -7730,7 +7513,6 @@
             "$ref": "#/components/schemas/ValidationIndicator"
           },
           "tfsOrder": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -7788,12 +7570,10 @@
         "type": "object",
         "properties": {
           "rowIndex": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "orderInRow": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -7823,7 +7603,6 @@
           "goalIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -7832,7 +7611,6 @@
             "$ref": "#/components/schemas/ProfilePictureType"
           },
           "defaultPictureId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32",
             "default": 0
@@ -7852,12 +7630,10 @@
             "type": "boolean"
           },
           "errorCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "warningCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -7885,12 +7661,10 @@
             }
           },
           "totalBlockedItems": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "totalAffectedHierarchies": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -7932,14 +7706,12 @@
             "type": "string"
           },
           "count": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "affectedWorkItemIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -7961,7 +7733,6 @@
         "type": "object",
         "properties": {
           "workItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -8034,12 +7805,10 @@
             "format": "double"
           },
           "totalCompletedStoryPoints": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "totalSprints": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -8058,7 +7827,6 @@
         "type": "object",
         "properties": {
           "workItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -8077,7 +7845,6 @@
           "blockedChildrenIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -8085,7 +7852,6 @@
           "blockedDescendantIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
@@ -8113,13 +7879,11 @@
           "affectedWorkItemIds": {
             "type": "array",
             "items": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
             }
           },
           "priority": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -8141,7 +7905,6 @@
         "type": "object",
         "properties": {
           "tfsId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -8152,7 +7915,6 @@
             "type": "string"
           },
           "parentTfsId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -8173,7 +7935,6 @@
             "format": "date-time"
           },
           "effort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -8216,12 +7977,10 @@
         "type": "object",
         "properties": {
           "revisionNumber": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "workItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -8260,7 +8019,6 @@
         "type": "object",
         "properties": {
           "workItemId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -8311,7 +8069,6 @@
             "type": "string"
           },
           "count": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -8324,17 +8081,14 @@
             "format": "double"
           },
           "typicalEffortMin": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "typicalEffortMax": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
           "averageEffort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           }
@@ -8357,7 +8111,6 @@
         "type": "object",
         "properties": {
           "tfsId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -8368,7 +8121,6 @@
             "type": "string"
           },
           "parentTfsId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },
@@ -8389,7 +8141,6 @@
             "format": "date-time"
           },
           "effort": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
           },

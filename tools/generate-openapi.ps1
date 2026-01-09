@@ -88,7 +88,7 @@ if (-not $Ready) {
 Write-Host "      ✓ API is ready" -ForegroundColor Green
 
 # Step 4: Download OpenAPI spec
-Write-Host "[4/5] Downloading OpenAPI specification..." -ForegroundColor Yellow
+Write-Host "[4/6] Downloading OpenAPI specification..." -ForegroundColor Yellow
 try {
     Invoke-WebRequest -Uri $OpenApiUrl -OutFile $OutputPath -ErrorAction Stop
     $FileSize = (Get-Item $OutputPath).Length
@@ -100,8 +100,17 @@ catch {
     exit 1
 }
 
-# Step 5: Stop the API
-Write-Host "[5/5] Stopping API server..." -ForegroundColor Yellow
+# Step 5: Fix integer type issues
+Write-Host "[5/6] Fixing integer type issues..." -ForegroundColor Yellow
+& "$PSScriptRoot/fix-openapi-types.ps1"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "      ✗ Failed to fix OpenAPI types" -ForegroundColor Red
+    Stop-Process -Id $ApiProcess.Id -Force -ErrorAction SilentlyContinue
+    exit 1
+}
+
+# Step 6: Stop the API
+Write-Host "[6/6] Stopping API server..." -ForegroundColor Yellow
 Stop-Process -Id $ApiProcess.Id -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 Write-Host "      ✓ API stopped" -ForegroundColor Green

@@ -38,7 +38,20 @@ public static class ApiServiceCollectionExtensions
                 options.JsonSerializerOptions.Converters.Add(
                     new System.Text.Json.Serialization.JsonStringEnumConverter());
             });
-        services.AddOpenApi();
+        
+        // Configure built-in OpenAPI generation (Microsoft.AspNetCore.OpenApi)
+        services.AddOpenApi(options =>
+        {
+            options.AddSchemaTransformer(async (schema, context, cancellationToken) =>
+            {
+                // Remove regex patterns from integer types to prevent union type generation
+                // The pattern property causes NSwag to generate ["integer", "string"] union types
+                // which results in incorrect string defaults for int properties in the generated client
+                schema.Pattern = null;
+                
+                await Task.CompletedTask;
+            });
+        });
 
         // Add OpenAPI/Swagger support with NSwag
         services.AddOpenApiDocument(config =>
@@ -50,6 +63,10 @@ public static class ApiServiceCollectionExtensions
             // Configure enum handling to generate proper enum types in the client
             // Note: Enum serialization is configured in AddJsonOptions above
             config.SchemaSettings.GenerateEnumMappingDescription = true;
+            
+            // Add document processor to clean up integer type schemas after generation
+            // This prevents NSwag from generating ["integer", "string"] union types with regex patterns
+            config.DocumentProcessors.Add(new IntegerSchemaProcessor());
             
             // Operation IDs will be added post-processing by add-operation-ids.ps1 script
             // to ensure generated client has methods like GetVelocityTrendAsync
