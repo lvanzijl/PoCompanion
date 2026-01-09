@@ -7,6 +7,10 @@ using PoTool.Shared.WorkItems;
 using PoTool.Tests.Integration.Support;
 using Reqnroll;
 
+using PoTool.Core.WorkItems;
+
+using PoTool.Core.Settings;
+
 namespace PoTool.Tests.Integration.StepDefinitions;
 
 [Binding]
@@ -338,7 +342,7 @@ public class WorkItemsControllerSteps
     }
 
     // Bulk Assign Effort steps
-    private Core.WorkItems.BulkEffortAssignmentResultDto? _bulkAssignmentResult;
+    private BulkEffortAssignmentResultDto? _bulkAssignmentResult;
 
     [Given(@"work items exist for testing")]
     public async Task GivenWorkItemsExistForTesting(Table table)
@@ -374,10 +378,10 @@ public class WorkItemsControllerSteps
     [When(@"I bulk assign effort with assignments")]
     public async Task WhenIBulkAssignEffortWithAssignments(Table table)
     {
-        var assignments = new List<Core.WorkItems.BulkEffortAssignmentDto>();
+        var assignments = new List<BulkEffortAssignmentDto>();
         foreach (var row in table.Rows)
         {
-            assignments.Add(new Core.WorkItems.BulkEffortAssignmentDto(
+            assignments.Add(new BulkEffortAssignmentDto(
                 WorkItemId: int.Parse(row["WorkItemId"]),
                 EffortValue: int.Parse(row["EffortValue"])
             ));
@@ -388,14 +392,14 @@ public class WorkItemsControllerSteps
         
         if (_response.IsSuccessStatusCode)
         {
-            _bulkAssignmentResult = await _response.Content.ReadFromJsonAsync<Core.WorkItems.BulkEffortAssignmentResultDto>();
+            _bulkAssignmentResult = await _response.Content.ReadFromJsonAsync<BulkEffortAssignmentResultDto>();
         }
     }
 
     [When(@"I bulk assign effort with empty assignments")]
     public async Task WhenIBulkAssignEffortWithEmptyAssignments()
     {
-        var command = new Core.WorkItems.Commands.BulkAssignEffortCommand(new List<Core.WorkItems.BulkEffortAssignmentDto>());
+        var command = new Core.WorkItems.Commands.BulkAssignEffortCommand(new List<BulkEffortAssignmentDto>());
         _scenarioContext["Response"] = _response = await _client.PostAsJsonAsync("/api/workitems/bulk-assign-effort", command);
     }
 

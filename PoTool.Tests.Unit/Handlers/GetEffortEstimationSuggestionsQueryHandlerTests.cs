@@ -9,6 +9,8 @@ using PoTool.Shared.WorkItems;
 using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Queries;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit.Handlers;
 
 [TestClass]

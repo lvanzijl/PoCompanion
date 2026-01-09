@@ -7,6 +7,8 @@ using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 using PoTool.Core.WorkItems.Validators;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit.Handlers;
 
 [TestClass]

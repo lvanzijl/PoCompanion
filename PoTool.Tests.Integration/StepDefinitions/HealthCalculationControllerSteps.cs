@@ -4,6 +4,10 @@ using PoTool.Client.ApiClient;
 using PoTool.Tests.Integration.Support;
 using Reqnroll;
 
+using PoTool.Core.WorkItems;
+
+using PoTool.Core.Settings;
+
 namespace PoTool.Tests.Integration.StepDefinitions;
 
 [Binding]

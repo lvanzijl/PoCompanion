@@ -1,3 +1,7 @@
+using PoTool.Core.WorkItems;
+
+using PoTool.Core.Settings;
+
 namespace PoTool.Tests.Integration.Support;
 
 /// <summary>

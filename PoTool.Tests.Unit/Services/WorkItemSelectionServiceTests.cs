@@ -4,6 +4,8 @@ using PoTool.Client.Models;
 using PoTool.Client.Services;
 using System.Text.Json;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit.Services;
 
 [TestClass]

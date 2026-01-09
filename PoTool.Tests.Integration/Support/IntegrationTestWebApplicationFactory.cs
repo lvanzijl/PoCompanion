@@ -7,6 +7,10 @@ using Microsoft.Extensions.Hosting;
 using PoTool.Api.Persistence;
 using PoTool.Core.Contracts;
 
+using PoTool.Core.WorkItems;
+
+using PoTool.Core.Settings;
+
 namespace PoTool.Tests.Integration.Support;
 
 /// <summary>

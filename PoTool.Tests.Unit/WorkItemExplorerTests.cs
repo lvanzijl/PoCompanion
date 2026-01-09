@@ -10,6 +10,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit;
 
 [TestClass]

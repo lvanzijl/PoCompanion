@@ -8,6 +8,8 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Shared.Contracts.TfsVerification;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit.Services;
 
 [TestClass]

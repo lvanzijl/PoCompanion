@@ -3,6 +3,8 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Repositories;
 using PoTool.Shared.WorkItems;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit;
 
 [TestClass]

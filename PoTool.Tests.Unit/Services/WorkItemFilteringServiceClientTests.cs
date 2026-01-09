@@ -3,6 +3,8 @@ using Moq;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit.Services;
 
 [TestClass]

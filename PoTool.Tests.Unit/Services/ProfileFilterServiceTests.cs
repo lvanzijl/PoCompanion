@@ -5,6 +5,8 @@ using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit.Services;
 
 [TestClass]

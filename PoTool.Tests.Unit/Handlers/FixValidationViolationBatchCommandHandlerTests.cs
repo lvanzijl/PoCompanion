@@ -6,6 +6,8 @@ using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Commands;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit.Handlers;
 
 [TestClass]

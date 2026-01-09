@@ -1,6 +1,8 @@
 using PoTool.Api.Services;
 using PoTool.Shared.ReleasePlanning;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit;
 
 [TestClass]

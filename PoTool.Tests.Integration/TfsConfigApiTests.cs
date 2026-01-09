@@ -4,6 +4,10 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using PoTool.Tests.Integration.Support;
 
+using PoTool.Core.WorkItems;
+
+using PoTool.Core.Settings;
+
 namespace PoTool.Tests.Integration;
 
 /// <summary>
