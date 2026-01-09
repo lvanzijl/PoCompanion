@@ -10609,7 +10609,7 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("epicId")]
-        public int EpicId { get; set; } = default!;
+        public int? EpicId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("laneId")]
         public int LaneId { get; set; } = default!;
@@ -10858,7 +10858,7 @@ namespace PoTool.Client.ApiClient
         public string State { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        public int Effort { get; set; } = default!;
+        public int? Effort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("dependencyCount")]
         public int DependencyCount { get; set; } = default!;
@@ -11223,7 +11223,7 @@ namespace PoTool.Client.ApiClient
         public string IterationPath { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        public int Effort { get; set; } = default!;
+        public int? Effort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemCount")]
         public int WorkItemCount { get; set; } = default!;
@@ -11286,7 +11286,7 @@ namespace PoTool.Client.ApiClient
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("epicId")]
-        public int EpicId { get; set; } = default!;
+        public int? EpicId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("title")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -11810,7 +11810,7 @@ namespace PoTool.Client.ApiClient
         public string Title { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        public int Effort { get; set; } = default!;
+        public int? Effort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("state")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -13983,7 +13983,7 @@ namespace PoTool.Client.ApiClient
         public string Title { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("parentTfsId")]
-        public int ParentTfsId { get; set; } = default!;
+        public int? ParentTfsId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -14006,7 +14006,7 @@ namespace PoTool.Client.ApiClient
         public System.DateTimeOffset RetrievedAt { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        public int Effort { get; set; } = default!;
+        public int? Effort { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -14180,7 +14180,7 @@ namespace PoTool.Client.ApiClient
         public string Title { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("parentTfsId")]
-        public int ParentTfsId { get; set; } = default!;
+        public int? ParentTfsId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("areaPath")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -14203,7 +14203,7 @@ namespace PoTool.Client.ApiClient
         public System.DateTimeOffset RetrievedAt { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
-        public int Effort { get; set; } = default!;
+        public int? Effort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("validationIssues")]
         [System.ComponentModel.DataAnnotations.Required]

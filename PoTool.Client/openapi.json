@@ -4387,7 +4387,6 @@
       },
       "CreateEpicPlacementCommand": {
         "required": [
-          "epicId",
           "laneId",
           "rowIndex",
           "orderInRow"
@@ -4397,7 +4396,8 @@
           "epicId": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
           },
           "laneId": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -4645,7 +4645,6 @@
           "title",
           "type",
           "state",
-          "effort",
           "dependencyCount",
           "dependentCount",
           "isBlocking"
@@ -4669,7 +4668,8 @@
           "effort": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
           },
           "dependencyCount": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -5081,7 +5081,6 @@
         "required": [
           "areaPath",
           "iterationPath",
-          "effort",
           "workItemCount",
           "status"
         ],
@@ -5096,7 +5095,8 @@
           "effort": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
           },
           "workItemCount": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -5159,7 +5159,6 @@
       },
       "EpicCompletionForecastDto": {
         "required": [
-          "epicId",
           "title",
           "type",
           "totalEffort",
@@ -5178,7 +5177,8 @@
           "epicId": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
           },
           "title": {
             "type": "string"
@@ -5674,7 +5674,6 @@
         "required": [
           "workItemId",
           "title",
-          "effort",
           "state",
           "similarityScore"
         ],
@@ -5691,7 +5690,8 @@
           "effort": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
           },
           "state": {
             "type": "string"
@@ -8130,13 +8130,11 @@
           "tfsId",
           "type",
           "title",
-          "parentTfsId",
           "areaPath",
           "iterationPath",
           "state",
           "jsonPayload",
-          "retrievedAt",
-          "effort"
+          "retrievedAt"
         ],
         "type": "object",
         "properties": {
@@ -8154,7 +8152,8 @@
           "parentTfsId": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
           },
           "areaPath": {
             "type": "string"
@@ -8175,7 +8174,8 @@
           "effort": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
           }
         }
       },
@@ -8345,13 +8345,11 @@
           "tfsId",
           "type",
           "title",
-          "parentTfsId",
           "areaPath",
           "iterationPath",
           "state",
           "jsonPayload",
           "retrievedAt",
-          "effort",
           "validationIssues"
         ],
         "type": "object",
@@ -8370,7 +8368,8 @@
           "parentTfsId": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
           },
           "areaPath": {
             "type": "string"
@@ -8391,7 +8390,8 @@
           "effort": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
           },
           "validationIssues": {
             "type": "array",

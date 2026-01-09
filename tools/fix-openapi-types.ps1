@@ -6,6 +6,7 @@
 .DESCRIPTION
     This script fixes a known issue where NSwag generates OpenAPI schemas with union types
     like ["integer", "string"] for integer properties that have regex patterns.
+    The script also fixes nullable properties that are incorrectly marked as required.
     The script modifies the openapi.json to use only "integer" type for these properties.
 
 .EXAMPLE
@@ -22,6 +23,10 @@ Write-Host "Fixing OpenAPI type issues..." -ForegroundColor Yellow
 $json = Get-Content $openApiPath -Raw | ConvertFrom-Json -Depth 100
 
 $fixCount = 0
+$nullabilityFixCount = 0
+
+# List of properties that should be nullable (based on C# DTOs with nullable types)
+$nullableProperties = @('parentTfsId', 'effort', 'epicId')
 
 # Function to recursively fix schemas
 function Fix-Schema {
@@ -64,6 +69,43 @@ function Fix-Schema {
 # Fix schemas in components
 if ($json.PSObject.Properties['components'] -and $json.components.PSObject.Properties['schemas']) {
     Fix-Schema $json.components.schemas
+    
+    # Fix nullability: Remove nullable properties from required arrays and mark them as nullable
+    foreach ($schemaName in $json.components.schemas.PSObject.Properties.Name) {
+        $schema = $json.components.schemas.$schemaName
+        
+        if ($schema.PSObject.Properties['required'] -and $schema.PSObject.Properties['properties']) {
+            $requiredList = [System.Collections.ArrayList]@($schema.required)
+            
+            foreach ($propName in $schema.properties.PSObject.Properties.Name) {
+                if ($nullableProperties -contains $propName) {
+                    # Remove from required list if present
+                    if ($requiredList.Contains($propName)) {
+                        $requiredList.Remove($propName) | Out-Null
+                        $script:nullabilityFixCount++
+                        Write-Host "  Removed '$propName' from required list in '$schemaName'" -ForegroundColor Green
+                    }
+                    
+                    # Add nullable flag to property
+                    $property = $schema.properties.$propName
+                    if (-not $property.PSObject.Properties['nullable']) {
+                        $property | Add-Member -NotePropertyName 'nullable' -NotePropertyValue $true -Force
+                    }
+                    elseif (-not $property.nullable) {
+                        $property.nullable = $true
+                    }
+                }
+            }
+            
+            # Update the required array
+            if ($requiredList.Count -eq 0) {
+                $schema.PSObject.Properties.Remove('required')
+            }
+            else {
+                $schema.required = $requiredList.ToArray()
+            }
+        }
+    }
 }
 
 # Fix schemas in paths
@@ -71,10 +113,11 @@ if ($json.PSObject.Properties['paths']) {
     Fix-Schema $json.paths
 }
 
-if ($fixCount -gt 0) {
+$totalFixes = $fixCount + $nullabilityFixCount
+if ($totalFixes -gt 0) {
     # Write back the fixed JSON
     $json | ConvertTo-Json -Depth 100 | Set-Content $openApiPath -Encoding UTF8
-    Write-Host "✓ Fixed $fixCount type issues in openapi.json" -ForegroundColor Green
+    Write-Host "✓ Fixed $fixCount type issues and $nullabilityFixCount nullability issues in openapi.json" -ForegroundColor Green
 }
 else {
     Write-Host "✓ No type issues found in openapi.json" -ForegroundColor Green
