@@ -13,6 +13,10 @@ public class WorkItemService
     private readonly IWorkItemsClient _client;
     private readonly HttpClient _httpClient;
     
+    // API endpoint paths for direct TFS calls (bypassing cache)
+    private const string AreaPathsFromTfsEndpoint = "/api/workitems/area-paths/from-tfs";
+    private const string GoalsFromTfsEndpoint = "/api/workitems/goals/from-tfs";
+    
     // JSON options for case-insensitive deserialization of API responses
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -107,7 +111,7 @@ public class WorkItemService
     public async Task<IEnumerable<string>> GetAreaPathsFromTfsAsync()
     {
         // Direct TFS call to avoid relying on empty cache during Add Profile flow
-        var response = await _httpClient.GetAsync("/api/workitems/area-paths/from-tfs");
+        var response = await _httpClient.GetAsync(AreaPathsFromTfsEndpoint);
         response.EnsureSuccessStatusCode();
         
         var areaPaths = await response.Content.ReadFromJsonAsync<IEnumerable<string>>(_jsonOptions);
@@ -121,7 +125,7 @@ public class WorkItemService
     public async Task<IEnumerable<WorkItemDto>> GetGoalsFromTfsAsync()
     {
         // Direct TFS call to avoid relying on empty cache during Add Profile flow
-        var response = await _httpClient.GetAsync("/api/workitems/goals/from-tfs");
+        var response = await _httpClient.GetAsync(GoalsFromTfsEndpoint);
         response.EnsureSuccessStatusCode();
         
         var goals = await response.Content.ReadFromJsonAsync<IEnumerable<WorkItemDto>>(_jsonOptions);
