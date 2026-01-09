@@ -8,14 +8,15 @@
          @onclick="HandleClick">
     <MudCardContent Class="d-flex flex-column align-center pa-4">
         @* Profile Picture *@
-        <MudAvatar Size="Size.Large" 
-                   Style="width: 80px; height: 80px; font-size: 2rem;"
-                   Color="@GetAvatarColor()">
-            @if (Profile != null)
-            {
+        <div style="width: 80px; height: 80px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+            <img src="@GetProfileImagePath()" 
+                 alt="@(Profile?.Name ?? "Profile")" 
+                 style="width: 100%; height: 100%; object-fit: cover;"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+            <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; background-color: @GetAvatarColorHex(); color: white; font-size: 2rem; font-weight: bold;">
                 @GetProfileInitials()
-            }
-        </MudAvatar>
+            </div>
+        </div>
         
         @* Profile Name *@
         <MudText Typo="Typo.h6" Class="mt-3 text-center" Style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -53,6 +54,24 @@
         return IsActive ? "profile-tile profile-tile-active" : "profile-tile";
     }
     
+    private string GetProfileImagePath()
+    {
+        if (Profile == null)
+        {
+            return "images/profiles/profile-0.png";
+        }
+        
+        // Use custom picture if available, otherwise use default
+        if (Profile.PictureType == ProfilePictureType.Custom && !string.IsNullOrEmpty(Profile.CustomPicturePath))
+        {
+            return Profile.CustomPicturePath;
+        }
+        
+        // Use default picture ID (0-63)
+        var imageId = Math.Max(0, Math.Min(63, Profile.DefaultPictureId));
+        return $"images/profiles/profile-{imageId}.png";
+    }
+    
     private string GetProfileInitials()
     {
         if (Profile == null || string.IsNullOrWhiteSpace(Profile.Name))
@@ -77,6 +96,15 @@
         
         // Use profile ID to deterministically select a color
         var colors = new[] { Color.Primary, Color.Secondary, Color.Tertiary, Color.Info, Color.Success, Color.Warning };
+        return colors[Math.Abs(Profile.Id) % colors.Length];
+    }
+    
+    private string GetAvatarColorHex()
+    {
+        if (Profile == null) return "#757575";
+        
+        // Use profile ID to deterministically select a color
+        var colors = new[] { "#1976d2", "#9c27b0", "#d32f2f", "#0288d1", "#388e3c", "#f57c00" };
         return colors[Math.Abs(Profile.Id) % colors.Length];
     }
     
