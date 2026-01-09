@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using MudBlazor.Services;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Pages.Metrics.SubComponents;
@@ -20,7 +21,11 @@ public class BacklogHealthTrendCardTests : BunitTestContext
         // Add MudBlazor services
         Services.AddMudServices();
         
-        // Register BacklogHealthCalculationService
+        // Mock IHealthCalculationClient for BacklogHealthCalculationService
+        var mockHealthCalculationClient = new Mock<IHealthCalculationClient>();
+        Services.AddSingleton(mockHealthCalculationClient.Object);
+        
+        // Register BacklogHealthCalculationService with mocked dependency
         Services.AddSingleton<BacklogHealthCalculationService>();
         
         // Configure JSInterop in Loose mode

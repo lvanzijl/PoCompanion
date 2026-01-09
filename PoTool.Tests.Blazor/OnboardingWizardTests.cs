@@ -17,22 +17,27 @@ namespace PoTool.Tests.Blazor;
 public class OnboardingWizardTests : BunitTestContext
 {
     private Mock<IOnboardingService> _mockOnboardingService = null!;
-    private Mock<TfsConfigService> _mockTfsConfigService = null!;
-    private Mock<ErrorMessageService> _mockErrorMessageService = null!;
+    private TfsConfigService _tfsConfigService = null!;
+    private ErrorMessageService _errorMessageService = null!;
     private Mock<ISnackbar> _mockSnackbar = null!;
 
     [TestInitialize]
     public void Setup()
     {
         _mockOnboardingService = new Mock<IOnboardingService>();
-        _mockTfsConfigService = new Mock<TfsConfigService>(MockBehavior.Loose, null!);
-        _mockErrorMessageService = new Mock<ErrorMessageService>();
+        
+        // Create TfsConfigService with mocked dependencies (cannot mock the class itself)
+        var mockApiClient = new Mock<Client.ApiClient.IClient>();
+        var mockHttpClient = new HttpClient { BaseAddress = new Uri("http://localhost/") };
+        _tfsConfigService = new TfsConfigService(mockApiClient.Object, mockHttpClient);
+        
+        _errorMessageService = new ErrorMessageService();
         _mockSnackbar = new Mock<ISnackbar>();
 
         // Register services
         Services.AddSingleton(_mockOnboardingService.Object);
-        Services.AddSingleton(_mockTfsConfigService.Object);
-        Services.AddSingleton(_mockErrorMessageService.Object);
+        Services.AddSingleton(_tfsConfigService);
+        Services.AddSingleton(_errorMessageService);
         Services.AddSingleton(_mockSnackbar.Object);
         Services.AddMudServices();
         
@@ -96,16 +101,14 @@ public class OnboardingWizardTests : BunitTestContext
     public void OnboardingWizard_DependsOnTfsConfigService()
     {
         // This test verifies that TfsConfigService is properly injected
-        Assert.IsNotNull(_mockTfsConfigService);
-        Assert.IsNotNull(_mockTfsConfigService.Object);
+        Assert.IsNotNull(_tfsConfigService);
     }
 
     [TestMethod]
     public void OnboardingWizard_DependsOnErrorMessageService()
     {
         // This test verifies that ErrorMessageService is properly injected
-        Assert.IsNotNull(_mockErrorMessageService);
-        Assert.IsNotNull(_mockErrorMessageService.Object);
+        Assert.IsNotNull(_errorMessageService);
     }
 
     [TestMethod]

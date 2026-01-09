@@ -414,6 +414,30 @@ public class MockTfsClient : ITfsClient
             },
             new TfsCapabilityCheckResult
             {
+                CapabilityId = "work-item-query",
+                Success = true,
+                ImpactedFunctionality = "Work item search and filtering",
+                ExpectedBehavior = "WIQL queries execute successfully",
+                ObservedBehavior = "Mock WIQL query executed successfully"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "work-item-fields",
+                Success = true,
+                ImpactedFunctionality = "Work item display and processing",
+                ExpectedBehavior = "Required work item fields are accessible",
+                ObservedBehavior = "All required fields present in mock data"
+            },
+            new TfsCapabilityCheckResult
+            {
+                CapabilityId = "batch-read",
+                Success = true,
+                ImpactedFunctionality = "Efficient work item synchronization",
+                ExpectedBehavior = "Batch work item retrieval is supported",
+                ObservedBehavior = "Mock batch API endpoint simulated successfully"
+            },
+            new TfsCapabilityCheckResult
+            {
                 CapabilityId = "work-item-revisions",
                 Success = true,
                 ImpactedFunctionality = "Work item history and change tracking",

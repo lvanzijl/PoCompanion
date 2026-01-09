@@ -599,7 +599,9 @@ public class TfsClientTests
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(() =>
             {
-                var (code, responseContent) = _responses[_responseIndex];
+                // Use modulo to wrap around or clamp to last response if index exceeds list size
+                var index = Math.Min(_responseIndex, _responses.Count - 1);
+                var (code, responseContent) = _responses[index];
                 _responseIndex++;
                 return new HttpResponseMessage
                 {

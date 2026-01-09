@@ -22,11 +22,26 @@ public class PRDateRangeFilterTests : BunitTestContext
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
 
+    private IRenderedFragment RenderWithMudProvider(MudBlazor.DateRange? dateRange = null)
+    {
+        return Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<PRDateRangeFilter>(1);
+            if (dateRange != null)
+            {
+                builder.AddAttribute(2, nameof(PRDateRangeFilter.DateRange), dateRange);
+            }
+            builder.CloseComponent();
+        });
+    }
+
     [TestMethod]
     public void PRDateRangeFilter_RendersCorrectly()
     {
         // Arrange & Act
-        var cut = RenderComponent<PRDateRangeFilter>();
+        var cut = RenderWithMudProvider();
 
         // Assert
         Assert.IsNotNull(cut);
@@ -39,8 +54,7 @@ public class PRDateRangeFilterTests : BunitTestContext
     {
         // Arrange & Act
         var dateRange = new MudBlazor.DateRange(DateTime.Now.AddDays(-7), DateTime.Now);
-        var cut = RenderComponent<PRDateRangeFilter>(parameters => parameters
-            .Add(p => p.DateRange, dateRange));
+        var cut = RenderWithMudProvider(dateRange);
 
         // Assert
         Assert.Contains("Clear", cut.Markup);
@@ -50,8 +64,7 @@ public class PRDateRangeFilterTests : BunitTestContext
     public void PRDateRangeFilter_HidesClearButton_WhenNoDateRange()
     {
         // Arrange & Act
-        var cut = RenderComponent<PRDateRangeFilter>(parameters => parameters
-            .Add(p => p.DateRange, null));
+        var cut = RenderWithMudProvider(null);
 
         // Assert
         Assert.DoesNotContain("Clear", cut.Markup);

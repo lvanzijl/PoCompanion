@@ -1,5 +1,8 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using MudBlazor;
+using MudBlazor.Services;
 using PoTool.Client.Components.WorkItems.SubComponents;
 using PoTool.Client.Models;
 
@@ -11,6 +14,20 @@ namespace PoTool.Tests.Blazor;
 [TestClass]
 public class WorkItemTreeViewTests : BunitTestContext
 {
+    [TestInitialize]
+    public void Setup()
+    {
+        // Add MudBlazor services (required for MudChip and IKeyInterceptorService)
+        Services.AddMudServices();
+        
+        // Mock IKeyInterceptorService explicitly (required by MudChip in bUnit tests)
+        var mockKeyInterceptorService = new Mock<IKeyInterceptorService>();
+        Services.AddSingleton(mockKeyInterceptorService.Object);
+        
+        // Configure JSInterop in Loose mode
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
     [TestMethod]
     public void WorkItemTreeView_ShowsLoading_WhenLoading()
     {

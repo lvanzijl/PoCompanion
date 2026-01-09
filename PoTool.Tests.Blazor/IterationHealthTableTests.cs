@@ -1,5 +1,6 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using MudBlazor.Services;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Pages.Metrics.SubComponents;
@@ -19,7 +20,19 @@ public class IterationHealthTableTests : BunitTestContext
         // Add MudBlazor services
         Services.AddMudServices();
         
-        // Register BacklogHealthCalculationService
+        // Mock IHealthCalculationClient for BacklogHealthCalculationService
+        var mockHealthCalculationClient = new Mock<IHealthCalculationClient>();
+        // Setup mock to return a health score response - match any call signature
+        mockHealthCalculationClient.Setup(x => x.CalculateHealthScoreAsync(
+                It.IsAny<CalculateHealthScoreRequest>()))
+            .ReturnsAsync(new CalculateHealthScoreResponse { HealthScore = 80 });
+        mockHealthCalculationClient.Setup(x => x.CalculateHealthScoreAsync(
+                It.IsAny<CalculateHealthScoreRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CalculateHealthScoreResponse { HealthScore = 80 });
+        
+        Services.AddSingleton(mockHealthCalculationClient.Object);
+        
+        // Register BacklogHealthCalculationService with mocked dependency
         Services.AddSingleton<BacklogHealthCalculationService>();
         
         // Configure JSInterop in Loose mode

@@ -95,8 +95,8 @@ public class RealTfsClientVerificationTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsTrue(result.Success);
-        Assert.HasCount(7, result.Checks); // 5 base + 2 new checks
+        Assert.IsTrue(result.Success, $"Verification should succeed. Failed checks: {string.Join(", ", result.Checks.Where(c => !c.Success).Select(c => c.CapabilityId))}");
+        Assert.HasCount(9, result.Checks); // 9 read-only checks (server, project, query, hierarchy, fields, batch, revisions, PRs, pipelines)
         Assert.IsTrue(result.Checks.All(c => c.Success));
         Assert.AreEqual(_testConfig.Url, result.ServerUrl);
         Assert.AreEqual(_testConfig.Project, result.ProjectName);
@@ -138,7 +138,7 @@ public class RealTfsClientVerificationTests
         // Assert
         Assert.IsNotNull(result);
         Assert.IsTrue(result.IncludedWriteChecks);
-        Assert.HasCount(8, result.Checks); // 7 read-only + 1 write check
+        Assert.HasCount(10, result.Checks); // 9 read-only + 1 write check
         var writeCheck = result.Checks.FirstOrDefault(c => c.CapabilityId == "work-item-update");
         Assert.IsNotNull(writeCheck);
         Assert.AreEqual($"Work Item #{testWorkItemId}", writeCheck.TargetScope);
