@@ -23,61 +23,38 @@ This document lists compliance violations discovered during a comprehensive audi
 
 ## Critical Violations (Require Separate Sessions)
 
-### ARCH-1: Client Layer Directly References Core Layer
+### ARCH-1: Client→Core Architectural Violation (FIXED ✅)
 
-**Severity**: 🔴 CRITICAL  
+**Severity**: ✅ RESOLVED  
 **Rule Violated**: ARCHITECTURE_RULES.md Section 2.3, COPILOT_ARCHITECTURE_CONTRACT.md  
-**Session Estimate**: Multiple sessions (large refactoring)
+**Session Date**: 2026-01-09
 
-#### Problem Description
+#### Previous Status
 
-The `PoTool.Client` project has a direct project reference to `PoTool.Core`:
+The `PoTool.Client` project had a direct project reference to `PoTool.Core`, violating architectural boundary rules.
 
-```xml
-<!-- PoTool.Client/PoTool.Client.csproj -->
-<ItemGroup>
-  <ProjectReference Include="..\PoTool.Core\PoTool.Core.csproj" />
-</ItemGroup>
-```
+#### Resolution
 
-The Client layer is using the following Core components directly:
+**Files Modified:**
+- Moved all DTOs from `PoTool.Core` to `PoTool.Shared`:
+  - WorkItem DTOs (WorkItemDto.cs, ValidationIssue.cs, etc.)
+  - PullRequest DTOs (PullRequestDto.cs, PullRequestMetricsDto.cs, etc.)
+  - Pipeline DTOs (PipelineDto.cs, PipelineRunDto.cs, etc.)
+  - TFS Verification DTOs (TfsVerificationReport.cs, etc.)
+  - Metrics DTOs (all *Dto.cs files)
+  - Settings DTOs (ProfileDto.cs, SettingsDto.cs, etc.)
+- Moved TFS exception classes from `PoTool.Core/Exceptions` to `PoTool.Shared/Exceptions`
+- Updated `PoTool.Client/PoTool.Client.csproj` - Removed Core reference
+- Updated all namespace imports across solution (Client, Api, Core, Tests)
+- Added solution hierarchy rules to `docs/ARCHITECTURE_RULES.md`
 
-1. **Business Logic Classes**:
-   - `PoTool.Core.WorkItems.Filtering.WorkItemFilterer` (used in `WorkItemFilteringService.cs`)
-   - `PoTool.Core.Health.BacklogHealthCalculator` (used in `BacklogHealthCalculationService.cs`)
+**Verification:** ✅ 
+- Client.csproj now references only Shared
+- Build succeeds with no errors
+- Core violation is physically impossible
 
-2. **Interfaces**:
-   - `PoTool.Core.Contracts.IClipboardService` (used in `ClipboardService.cs`)
-   - `PoTool.Core.Contracts.ITfsClient` (referenced but should not be)
-
-3. **Exceptions**:
-   - `PoTool.Core.Exceptions.*` (used throughout Client for error handling)
-
-#### Architecture Rule Statement
-
-From ARCHITECTURE_RULES.md Section 2.3:
-
-> Frontend:
-> - MUST be Blazor WebAssembly (Razor class library)
-> - MUST communicate exclusively via:
->   - HTTP Web API
->   - SignalR
-> - MUST NOT access TFS directly
-> - MUST NOT contain business logic
->
-> Frontend MUST NOT:
-> - Call backend services directly (even in-process)
-> - Store sensitive data locally
-> - Depend on backend runtime hosting model
-
-#### Impact
-
-This violation means:
-- Business logic is duplicated between Client and API layers
-- Client and API are tightly coupled
-- Cannot deploy API separately from Client
-- Violates the "backend can be deployed standalone" architectural invariant (ARCHITECTURE_RULES.md Section 15, item 6)
-- Makes testing more difficult (Client tests need Core logic)
+**Updated Checklist Item:**
+- [x] **FIXED**: Client does not reference Core (ARCH-1)
 
 #### Affected Files
 
