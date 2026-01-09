@@ -4762,7 +4762,6 @@
           "sprintName",
           "totalEffort",
           "workItemCount",
-          "capacity",
           "utilizationPercentage"
         ],
         "type": "object",
@@ -4786,7 +4785,8 @@
           "capacity": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
           },
           "utilizationPercentage": {
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",

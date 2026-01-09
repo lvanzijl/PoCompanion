@@ -26,7 +26,21 @@ $fixCount = 0
 $nullabilityFixCount = 0
 
 # List of properties that should be nullable (based on C# DTOs with nullable types)
-$nullableProperties = @('parentTfsId', 'effort', 'epicId')
+# IMPORTANT: Keep this list in sync with actual DTO definitions in PoTool.Core
+# This list is needed because NSwag's OpenAPI generation sometimes incorrectly marks
+# nullable properties as required. This causes compilation errors in the generated client.
+# 
+# To find nullable properties in DTOs:
+#   grep -r "int?" PoTool.Core/ --include="*.cs"
+#   grep -r "string?" PoTool.Core/ --include="*.cs" 
+#
+# Common nullable properties across DTOs:
+$nullableProperties = @(
+    'parentTfsId',  # WorkItemDto, WorkItemWithValidationDto (parent is optional for root items)
+    'effort',       # WorkItemDto, EffortDistribution DTOs (effort may not be estimated yet)
+    'epicId',       # Various DTOs (epic relationship is optional)
+    'capacity'      # IterationEffortDistribution (capacity may not be set for iterations)
+)
 
 # Function to recursively fix schemas
 function Fix-Schema {

@@ -95,18 +95,27 @@ The complete workflow for updating the API client after API changes:
 # 2. Build the API
 dotnet build PoTool.Api
 
-# 3. Generate fresh OpenAPI spec
+# 3. Generate fresh OpenAPI spec (starts API, downloads spec, stops API)
 .\tools\generate-openapi.ps1
 
-# 4. Regenerate the client
+# 4. Add operation IDs to the OpenAPI spec
+.\tools\add-operation-ids.ps1
+
+# 5. Fix type and nullability issues in the OpenAPI spec
+.\tools\fix-openapi-types.ps1
+
+# 6. Regenerate the client
 cd PoTool.Client
 dotnet nswag run nswag.json
 cd ..
 
-# 5. Build and test the client
+# 7. Build and test the client
 dotnet build PoTool.Client
 dotnet test
 ```
+
+**Note**: API client generation is **manual only**. The client is NOT automatically regenerated during build.
+This ensures predictable builds and avoids issues with automatic generation during compilation.
 
 ## Troubleshooting
 

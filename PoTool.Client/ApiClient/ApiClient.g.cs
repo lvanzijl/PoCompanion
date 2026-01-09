@@ -10962,7 +10962,7 @@ namespace PoTool.Client.ApiClient
         public int WorkItemCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("capacity")]
-        public int Capacity { get; set; } = default!;
+        public int? Capacity { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("utilizationPercentage")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
