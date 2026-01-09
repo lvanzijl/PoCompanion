@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using PoTool.Core.WorkItems;
-using PoTool.Core.WorkItems.Filtering;
 using PoTool.Shared.WorkItems;
+using PoTool.Core.WorkItems.Filtering;
 using Mediator;
 using PoTool.Core.WorkItems.Queries;
 

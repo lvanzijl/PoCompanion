@@ -1,6 +1,8 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Validators;
+
+using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit;
 

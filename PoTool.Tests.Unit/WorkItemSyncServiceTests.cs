@@ -5,9 +5,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
-using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
 using PoTool.Api.Hubs;
 using PoTool.Api.Persistence;
+
+using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit;
 

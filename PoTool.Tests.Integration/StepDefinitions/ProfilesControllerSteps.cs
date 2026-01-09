@@ -1,8 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
-using PoTool.Core.Settings;
+using PoTool.Shared.Settings;
 using PoTool.Tests.Integration.Support;
 using Reqnroll;
+
+using PoTool.Core.WorkItems;
+
+using PoTool.Core.Settings;
 
 namespace PoTool.Tests.Integration.StepDefinitions;
 

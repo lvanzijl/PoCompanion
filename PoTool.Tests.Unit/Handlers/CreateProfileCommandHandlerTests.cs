@@ -3,8 +3,10 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Handlers.Settings;
 using PoTool.Core.Contracts;
-using PoTool.Core.Settings;
+using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Commands;
+
+using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Handlers;
 

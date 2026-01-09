@@ -1,6 +1,6 @@
 using Microsoft.JSInterop;
 using Moq;
-using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services.MockData;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+
+using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit;
 

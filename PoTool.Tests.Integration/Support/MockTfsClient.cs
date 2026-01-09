@@ -1,8 +1,13 @@
 using PoTool.Core.Contracts;
+using PoTool.Shared.WorkItems;
+using PoTool.Shared.PullRequests;
+using PoTool.Shared.Pipelines;
+using PoTool.Shared.Contracts.TfsVerification;
 using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
 using PoTool.Core.Pipelines;
-using PoTool.Core.Contracts.TfsVerification;
+
+using PoTool.Core.Settings;
 
 namespace PoTool.Tests.Integration.Support;
 

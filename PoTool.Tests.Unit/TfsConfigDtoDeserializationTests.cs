@@ -2,6 +2,8 @@ using System.Text.Json;
 using PoTool.Client.Services;
 using PoTool.Client.ApiClient;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit;
 
 /// <summary>

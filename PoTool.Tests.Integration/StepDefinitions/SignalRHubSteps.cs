@@ -3,6 +3,10 @@ using PoTool.Tests.Integration.Support;
 using Reqnroll;
 using System.Text.Json;
 
+using PoTool.Core.WorkItems;
+
+using PoTool.Core.Settings;
+
 namespace PoTool.Tests.Integration.StepDefinitions;
 
 [Binding]

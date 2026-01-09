@@ -1,3 +1,5 @@
+using PoTool.Shared.WorkItems;
+
 namespace PoTool.Core.WorkItems.Validators;
 
 /// <summary>

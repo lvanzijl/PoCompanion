@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
-using PoTool.Core.Metrics;
+using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 
 namespace PoTool.Api.Controllers;

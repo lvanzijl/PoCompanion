@@ -1,4 +1,4 @@
-using PoTool.Core.PullRequests;
+using PoTool.Shared.PullRequests;
 
 namespace PoTool.Core.Contracts;
 

@@ -6,7 +6,9 @@ using Moq.Protected;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
-using PoTool.Core.Contracts.TfsVerification;
+using PoTool.Shared.Contracts.TfsVerification;
+
+using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 

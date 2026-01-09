@@ -2,6 +2,7 @@ using Mediator;
 using PoTool.Core.Contracts;
 using PoTool.Core.ReleasePlanning;
 using PoTool.Shared.ReleasePlanning;
+using PoTool.Shared.WorkItems;
 using PoTool.Core.ReleasePlanning.Commands;
 
 namespace PoTool.Api.Handlers.ReleasePlanning;
@@ -140,11 +141,11 @@ public sealed class RefreshValidationCacheCommandHandler : ICommandHandler<Refre
         return ValidationIndicator.None;
     }
 
-    private static List<Core.WorkItems.WorkItemDto> GetDescendants(
+    private static List<WorkItemDto> GetDescendants(
         int parentId, 
-        List<Core.WorkItems.WorkItemDto> allItems)
+        List<WorkItemDto> allItems)
     {
-        var descendants = new List<Core.WorkItems.WorkItemDto>();
+        var descendants = new List<WorkItemDto>();
         var children = allItems.Where(w => w.ParentTfsId == parentId).ToList();
         
         foreach (var child in children)

@@ -1,7 +1,7 @@
 using Mediator;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
-using PoTool.Core.Settings;
+using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Queries;
 
 namespace PoTool.Api.Handlers.Settings;

@@ -3,7 +3,7 @@ using PoTool.Core.Contracts;
 using PoTool.Core.ReleasePlanning;
 using PoTool.Shared.ReleasePlanning;
 using PoTool.Core.ReleasePlanning.Queries;
-using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Handlers.ReleasePlanning;
 

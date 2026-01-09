@@ -1,5 +1,7 @@
 using PoTool.Api.Helpers;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit.Helpers;
 
 [TestClass]

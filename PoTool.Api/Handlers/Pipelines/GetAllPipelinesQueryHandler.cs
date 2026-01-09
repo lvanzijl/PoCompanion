@@ -1,6 +1,6 @@
 using Mediator;
 using PoTool.Core.Contracts;
-using PoTool.Core.Pipelines;
+using PoTool.Shared.Pipelines;
 using PoTool.Core.Pipelines.Queries;
 
 namespace PoTool.Api.Handlers.Pipelines;

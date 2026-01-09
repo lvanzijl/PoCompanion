@@ -1,6 +1,10 @@
 using System.Net;
 using Reqnroll;
 
+using PoTool.Core.WorkItems;
+
+using PoTool.Core.Settings;
+
 namespace PoTool.Tests.Integration.StepDefinitions;
 
 [Binding]

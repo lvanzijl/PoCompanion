@@ -1,9 +1,12 @@
 using Mediator;
 using PoTool.Core.Contracts;
-using PoTool.Core.Metrics;
+using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
-using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
+using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Queries;
+
+using PoTool.Core.WorkItems;
 
 namespace PoTool.Api.Handlers.Metrics;
 
@@ -104,7 +107,7 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
     private EffortEstimationSuggestionDto GenerateSuggestion(
         WorkItemDto workItem,
         List<WorkItemDto> historicalData,
-        Core.Settings.EffortEstimationSettingsDto settings)
+        EffortEstimationSettingsDto settings)
     {
         // Find similar work items by type
         var similarByType = historicalData

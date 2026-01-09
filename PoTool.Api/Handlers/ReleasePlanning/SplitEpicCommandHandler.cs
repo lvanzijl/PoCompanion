@@ -2,7 +2,10 @@ using Mediator;
 using PoTool.Core.Contracts;
 using PoTool.Core.ReleasePlanning;
 using PoTool.Shared.ReleasePlanning;
+using PoTool.Shared.WorkItems;
 using PoTool.Core.ReleasePlanning.Commands;
+
+using PoTool.Core.WorkItems;
 
 namespace PoTool.Api.Handlers.ReleasePlanning;
 
@@ -209,7 +212,7 @@ public sealed class SplitEpicCommandHandler : ICommandHandler<SplitEpicCommand, 
     /// </summary>
     private static (int OriginalEffort, int ExtractedEffort) CalculateEffortDistribution(
         int totalEpicEffort,
-        List<Core.WorkItems.WorkItemDto> allFeatures,
+        List<WorkItemDto> allFeatures,
         HashSet<int> extractedFeatureIds)
     {
         if (totalEpicEffort == 0)

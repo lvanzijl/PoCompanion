@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
-using PoTool.Core.PullRequests;
+using PoTool.Shared.PullRequests;
 
 namespace PoTool.Api.Repositories;
 

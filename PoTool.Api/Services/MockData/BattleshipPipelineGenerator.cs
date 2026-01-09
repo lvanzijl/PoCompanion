@@ -1,4 +1,4 @@
-using PoTool.Core.Pipelines;
+using PoTool.Shared.Pipelines;
 using Microsoft.Extensions.Logging;
 
 namespace PoTool.Api.Services.MockData;

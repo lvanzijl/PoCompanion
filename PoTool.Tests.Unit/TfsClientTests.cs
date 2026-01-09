@@ -10,6 +10,8 @@ using PoTool.Api.Services;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit;
 
 [TestClass]

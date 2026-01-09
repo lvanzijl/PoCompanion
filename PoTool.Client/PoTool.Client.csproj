@@ -21,7 +21,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PoTool.Shared\PoTool.Shared.csproj" />
-    <ProjectReference Include="..\PoTool.Core\PoTool.Core.csproj" />
   </ItemGroup>
 
   <!-- NSwag client generation -->

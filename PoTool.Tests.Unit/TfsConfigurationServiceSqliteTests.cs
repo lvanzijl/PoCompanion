@@ -4,6 +4,8 @@ using Moq;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
 
+using PoTool.Core.WorkItems;
+
 namespace PoTool.Tests.Unit;
 
 /// <summary>

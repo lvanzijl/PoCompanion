@@ -3,7 +3,7 @@ using PoTool.Api.Helpers;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
-using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Repositories;
 

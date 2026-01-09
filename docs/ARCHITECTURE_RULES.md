@@ -226,3 +226,155 @@ The application is designed to seamlessly transition to HTTPS in production thro
 ## Conclusion
 
 Adhering to these architecture rules ensures that PoCompanion remains maintainable, testable, and scalable. As the project evolves, these rules may be updated to reflect new patterns and practices. Always discuss significant deviations from these rules with the team before implementation.
+Following these architectural rules ensures that PoCompanion remains maintainable, testable, and scalable as the project evolves.
+
+---
+
+## Solution Hierarchy and Assembly References
+
+### Assembly Dependency Rules
+
+The solution follows a strict layered architecture with clear dependency boundaries:
+
+```
+┌─────────────────────────────────────────────────┐
+│  Dependency Flow (A → B means "A references B") │
+├─────────────────────────────────────────────────┤
+│  PoTool.Client  →  PoTool.Shared                │
+│  PoTool.Api     →  PoTool.Core + PoTool.Shared  │
+│  PoTool.Core    →  PoTool.Shared                │
+│  PoTool.Shared  →  (nothing - leaf assembly)    │
+└─────────────────────────────────────────────────┘
+```
+
+### What Belongs in Each Assembly
+
+#### PoTool.Shared (Data Contracts)
+**Purpose:** Contains data contracts (DTOs) that cross assembly boundaries, particularly between API and Client.
+
+**Contains:**
+- DTOs (Data Transfer Objects)
+- Enums used in DTOs
+- Constants used in DTOs
+- Request/Response models
+- Exception types that cross boundaries
+
+**Must NOT contain:**
+- Business logic
+- Validation logic
+- Entity Framework entities
+- Services or interfaces
+- Any dependencies except System.*
+
+**References:** Nothing (leaf assembly)
+
+**Examples:**
+- `WorkItemDto`, `PullRequestDto`, `PipelineDto`
+- `TfsVerificationReport`
+- All `*Request` and `*Response` models
+- `TfsException` and derived exception types
+
+#### PoTool.Core (Business Logic)
+**Purpose:** Contains domain logic, business rules, and application orchestration.
+
+**Contains:**
+- Domain services
+- Query/Command definitions (MediatR)
+- Business logic interfaces (IRepository, ITfsClient)
+- Domain exceptions
+- Validation logic
+- Use case orchestration
+- Domain-specific helper classes
+
+**Must NOT contain:**
+- Infrastructure concerns (DB, HTTP, File I/O)
+- UI components
+- EF Core entities (those belong in Api/Persistence)
+- DTOs (those belong in Shared)
+
+**References:** PoTool.Shared only
+
+**Examples:**
+- `IWorkItemRepository`, `ITfsClient`
+- `GetWorkItemsQuery`, `SyncWorkItemsCommand`
+- `WorkItemValidationService`
+- `WorkItemType`, `WorkItemHierarchyHelper`
+
+#### PoTool.Api (Backend Infrastructure)
+**Purpose:** ASP.NET Core backend with controllers, handlers, persistence, and TFS integration.
+
+**Contains:**
+- Controllers (HTTP endpoints)
+- MediatR Handlers (query/command execution)
+- EF Core DbContext and entities
+- Repository implementations
+- TFS client implementations
+- SignalR hubs
+
+**Must NOT contain:**
+- UI components
+- Client-specific logic
+
+**References:** PoTool.Core + PoTool.Shared
+
+**Examples:**
+- `WorkItemsController`, `PullRequestsController`
+- `GetWorkItemsQueryHandler`
+- `WorkItemRepository`, `RealTfsClient`
+- `WorkItemEntity` (EF Core entity)
+
+#### PoTool.Client (Blazor WebAssembly Frontend)
+**Purpose:** Browser-based UI using Blazor WebAssembly.
+
+**Contains:**
+- Razor components (.razor files)
+- Pages and layouts
+- Client services (HTTP wrappers around NSwag-generated clients)
+- View models
+- Client-side state management
+
+**Must NOT contain:**
+- Business logic (belongs in Core)
+- Direct HTTP API calls (use NSwag-generated clients)
+- Database access
+- Server-side concerns
+
+**References:** PoTool.Shared only (NO reference to Core)
+
+**Communication:** Via HTTP using NSwag-generated clients in `PoTool.Client.ApiClient` namespace
+
+**Examples:**
+- `WorkItemExplorer.razor`, `TfsConfig.razor`
+- `WorkItemService`, `ProfileService`
+- View-specific models like `TreeNode`
+
+### Why Client Cannot Reference Core
+
+**Reason:** 
+1. Client runs in browser (WebAssembly), Core may contain server-side dependencies
+2. Creates tight coupling between presentation and business logic
+3. Violates separation of concerns - Client should only know about data shapes (DTOs), not business rules
+4. Makes it impossible to evolve Core independently of UI
+
+**Instead:** 
+- Client uses NSwag-generated API clients which consume Shared DTOs
+- All business logic stays in Core
+- API handlers map between Core domain models and Shared DTOs
+
+### Enforcement
+
+**Manual:** Code review against this document (see `docs/PROCESS_RULES.md`)
+
+**Automated:** (Future) CI checks will prevent violations of these boundaries
+
+### Validation Checklist
+
+Use this to verify compliance:
+
+- [ ] Shared has no ProjectReferences (except System.*)
+- [ ] Core references only Shared
+- [ ] Api references Core + Shared
+- [ ] Client references only Shared (NOT Core)
+- [ ] All DTOs are in Shared
+- [ ] All business logic is in Core
+- [ ] All EF entities are in Api/Persistence

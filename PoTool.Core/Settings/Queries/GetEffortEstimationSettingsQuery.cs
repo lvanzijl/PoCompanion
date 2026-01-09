@@ -1,5 +1,7 @@
 using Mediator;
 
+using PoTool.Shared.Settings;
+
 namespace PoTool.Core.Settings.Queries;
 
 /// <summary>

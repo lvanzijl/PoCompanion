@@ -1,6 +1,8 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Client.Services;
-using PoTool.Core.Exceptions;
+using PoTool.Shared.Exceptions;
+
+using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 

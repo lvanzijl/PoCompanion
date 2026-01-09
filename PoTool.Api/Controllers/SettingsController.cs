@@ -1,6 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
-using PoTool.Core.Settings;
+using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Commands;
 using PoTool.Core.Settings.Queries;
 

@@ -1,5 +1,7 @@
 using Mediator;
 
+using PoTool.Shared.PullRequests;
+
 namespace PoTool.Core.PullRequests.Queries;
 
 /// <summary>

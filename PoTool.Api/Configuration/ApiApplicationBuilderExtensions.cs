@@ -5,6 +5,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Shared.Contracts.TfsVerification;
 
 namespace PoTool.Api.Configuration;
 
@@ -244,7 +245,7 @@ public static class ApiApplicationBuilderExtensions
             
             return Results.Ok(report);
         })
-        .Produces<Core.Contracts.TfsVerification.TfsVerificationReport>(StatusCodes.Status200OK);
+        .Produces<TfsVerificationReport>(StatusCodes.Status200OK);
 
         app.MapPost("/api/workitems/sync", async (IMediator mediator, TfsConfigurationService configService, CancellationToken ct) =>
         {

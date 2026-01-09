@@ -1,6 +1,6 @@
 using Mediator;
 using PoTool.Core.Contracts;
-using PoTool.Core.Metrics;
+using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 
 namespace PoTool.Api.Handlers.Metrics;

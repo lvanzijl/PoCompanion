@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Configuration;
 using PoTool.Api.Services.MockData;
 using PoTool.Core.Contracts;
+using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 

@@ -1,6 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
-using PoTool.Core.PullRequests;
+using PoTool.Shared.PullRequests;
 using PoTool.Core.PullRequests.Commands;
 using PoTool.Core.PullRequests.Queries;
 

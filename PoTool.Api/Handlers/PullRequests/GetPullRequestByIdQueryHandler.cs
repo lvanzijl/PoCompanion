@@ -1,6 +1,6 @@
 using Mediator;
 using PoTool.Core.Contracts;
-using PoTool.Core.PullRequests;
+using PoTool.Shared.PullRequests;
 using PoTool.Core.PullRequests.Queries;
 
 namespace PoTool.Api.Handlers.PullRequests;

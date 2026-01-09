@@ -3,7 +3,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
-using PoTool.Core.Settings;
+using PoTool.Shared.Settings;
+
+using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 
