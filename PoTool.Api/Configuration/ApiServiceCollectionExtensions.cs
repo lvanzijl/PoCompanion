@@ -40,18 +40,9 @@ public static class ApiServiceCollectionExtensions
             });
         
         // Configure built-in OpenAPI generation (Microsoft.AspNetCore.OpenApi)
-        services.AddOpenApi(options =>
-        {
-            options.AddSchemaTransformer(async (schema, context, cancellationToken) =>
-            {
-                // Remove regex patterns from integer types to prevent union type generation
-                // The pattern property causes NSwag to generate ["integer", "string"] union types
-                // which results in incorrect string defaults for int properties in the generated client
-                schema.Pattern = null;
-                
-                await Task.CompletedTask;
-            });
-        });
+        // Note: Integer type regex patterns are fixed post-generation by fix-openapi-types.ps1
+        // which is automatically run as part of generate-openapi.ps1
+        services.AddOpenApi();
 
         // Add OpenAPI/Swagger support with NSwag
         services.AddOpenApiDocument(config =>
