@@ -164,6 +164,44 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets area paths directly from TFS (bypasses cache).
+    /// Used specifically for Add Profile flow where cache is not yet populated.
+    /// </summary>
+    [HttpGet("area-paths/from-tfs")]
+    public async Task<ActionResult<IEnumerable<string>>> GetAreaPathsFromTfs(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var areaPaths = await _mediator.Send(new GetAreaPathsFromTfsQuery(), cancellationToken);
+            return Ok(areaPaths);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving area paths from TFS");
+            return StatusCode(500, "Error retrieving area paths from TFS");
+        }
+    }
+
+    /// <summary>
+    /// Gets goals directly from TFS (bypasses cache).
+    /// Used specifically for Add Profile flow where cache is not yet populated.
+    /// </summary>
+    [HttpGet("goals/from-tfs")]
+    public async Task<ActionResult<IEnumerable<WorkItemDto>>> GetGoalsFromTfs(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var goals = await _mediator.Send(new GetGoalsFromTfsQuery(), cancellationToken);
+            return Ok(goals);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving goals from TFS");
+            return StatusCode(500, "Error retrieving goals from TFS");
+        }
+    }
+
+    /// <summary>
     /// Gets work items for specific Goal IDs (full hierarchy from Goals down to Tasks).
     /// </summary>
     [HttpGet("goals")]

@@ -189,7 +189,9 @@
     {
         try
         {
-            var areaPaths = await WorkItemService.GetDistinctAreaPathsAsync();
+            // Fetch area paths directly from TFS instead of cache
+            // Cache is intentionally bypassed here because it's not yet populated in the Add Profile flow
+            var areaPaths = await WorkItemService.GetAreaPathsFromTfsAsync();
             _allAreaPaths = areaPaths.ToList();
         }
         catch (Exception ex)
@@ -202,7 +204,9 @@
     {
         try
         {
-            var goals = await WorkItemService.GetAllGoalsAsync();
+            // Fetch goals directly from TFS instead of cache
+            // Cache is intentionally bypassed here because it's not yet populated in the Add Profile flow
+            var goals = await WorkItemService.GetGoalsFromTfsAsync();
             _availableGoals = goals.ToList();
         }
         catch (Exception ex)
