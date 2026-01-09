@@ -64,9 +64,8 @@ public static class ApiServiceCollectionExtensions
             // Note: Enum serialization is configured in AddJsonOptions above
             config.SchemaSettings.GenerateEnumMappingDescription = true;
             
-            // Add document processor to clean up integer type schemas after generation
-            // This prevents NSwag from generating ["integer", "string"] union types with regex patterns
-            config.DocumentProcessors.Add(new IntegerSchemaProcessor());
+            // Note: Integer type issues are fixed post-generation by fix-openapi-types.ps1
+            // which is automatically run as part of generate-openapi.ps1
             
             // Operation IDs will be added post-processing by add-operation-ids.ps1 script
             // to ensure generated client has methods like GetVelocityTrendAsync
