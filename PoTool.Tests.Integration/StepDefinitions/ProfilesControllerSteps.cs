@@ -18,10 +18,11 @@ public class ProfilesControllerSteps
     private List<ProfileDto>? _profilesList;
     private int? _currentProfileId;
 
-    public ProfilesControllerSteps(ScenarioContext scenarioContext)
+    public ProfilesControllerSteps(ScenarioContext scenarioContext, SharedTestContext sharedContext)
     {
         _scenarioContext = scenarioContext;
-        _factory = new IntegrationTestWebApplicationFactory();
+        // Use shared factory to avoid creating a new web server per step class
+        _factory = sharedContext.Factory;
         _client = _factory.CreateClient();
     }
 

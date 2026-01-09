@@ -22,10 +22,11 @@ public class ValidationEnhancementsSteps
     private FixValidationViolationResultDto? _fixResult;
     private List<FixValidationViolationDto> _fixSuggestions = new();
 
-    public ValidationEnhancementsSteps(ScenarioContext scenarioContext)
+    public ValidationEnhancementsSteps(ScenarioContext scenarioContext, SharedTestContext sharedContext)
     {
         _scenarioContext = scenarioContext;
-        _factory = new IntegrationTestWebApplicationFactory();
+        // Use shared factory to avoid creating a new web server per step class
+        _factory = sharedContext.Factory;
         _client = _factory.CreateClient();
     }
 

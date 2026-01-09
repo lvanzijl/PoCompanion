@@ -150,7 +150,9 @@ public class TfsConfigurationServiceTests
     {
         // Arrange
         await _service.SaveConfigAsync("url1", "project1", "TestProject\\Team");
-        await Task.Delay(50); // Ensure different timestamps
+        // Small delay to ensure different timestamps. DateTimeOffset.UtcNow typically has
+        // ~10-15ms resolution on Windows, sub-ms on Linux. 10ms is sufficient.
+        await Task.Delay(10);
         await _service.SaveConfigAsync("url2", "project2", "TestProject\\Team");
 
         // Act

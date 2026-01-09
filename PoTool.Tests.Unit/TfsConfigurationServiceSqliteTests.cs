@@ -8,7 +8,7 @@ namespace PoTool.Tests.Unit;
 
 /// <summary>
 /// Unit tests for TfsConfigurationService using actual SQLite provider to verify DateTimeOffset ordering fix.
-/// Uses SQLite database provider (instead of InMemory) to test the actual database behavior.
+/// Uses in-memory SQLite database (instead of disk-based) for faster test execution without I/O overhead.
 /// Note: PAT is no longer stored server-side - these tests verify non-sensitive config storage only.
 /// </summary>
 [TestClass]
@@ -17,17 +17,19 @@ public class TfsConfigurationServiceSqliteTests
     private PoToolDbContext _context = null!;
     private TfsConfigurationService _service = null!;
     private Mock<ILogger<TfsConfigurationService>> _loggerMock = null!;
-    private string _dbPath = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        // Create SQLite database (this will test the actual SQLite provider behavior)
-        _dbPath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.db");
+        // Use in-memory SQLite database for faster test execution without disk I/O.
+        // The :memory: connection string creates a temporary database that exists
+        // only for the lifetime of the connection, eliminating file cleanup needs.
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
-            .UseSqlite($"Data Source={_dbPath}")
+            .UseSqlite("Data Source=:memory:")
             .Options;
         _context = new PoToolDbContext(options);
+        // Important: Keep connection open for in-memory database to persist
+        _context.Database.OpenConnection();
         _context.Database.EnsureCreated();
         
         _loggerMock = new Mock<ILogger<TfsConfigurationService>>();
@@ -39,13 +41,9 @@ public class TfsConfigurationServiceSqliteTests
     [TestCleanup]
     public void Cleanup()
     {
-        _context.Database.EnsureDeleted();
+        // Close connection to dispose of in-memory database
+        _context.Database.CloseConnection();
         _context.Dispose();
-        
-        if (File.Exists(_dbPath))
-        {
-            File.Delete(_dbPath);
-        }
     }
 
     [TestMethod]
@@ -54,9 +52,11 @@ public class TfsConfigurationServiceSqliteTests
         // Arrange - Create multiple configs with different timestamps
         // Note: PAT parameter removed from SaveConfigAsync
         await _service.SaveConfigAsync("url1", "project1", "TestProject\\Team");
-        await Task.Delay(100); // Ensure different timestamps
+        // Small delay to ensure different timestamps. DateTimeOffset.UtcNow typically has
+        // ~10-15ms resolution on Windows, sub-ms on Linux. 10ms is sufficient.
+        await Task.Delay(10);
         await _service.SaveConfigAsync("url2", "project2", "TestProject\\Team");
-        await Task.Delay(100);
+        await Task.Delay(10);
         await _service.SaveConfigAsync("url3", "project3", "TestProject\\Team");
 
         // Act - This would fail with the old code (OrderBy DateTimeOffset in SQL)
@@ -73,7 +73,9 @@ public class TfsConfigurationServiceSqliteTests
     {
         // Arrange - Create multiple configs
         await _service.SaveConfigAsync("url1", "project1", "TestProject\\Team");
-        await Task.Delay(100);
+        // Small delay to ensure different timestamps. DateTimeOffset.UtcNow typically has
+        // ~10-15ms resolution on Windows, sub-ms on Linux. 10ms is sufficient.
+        await Task.Delay(10);
         await _service.SaveConfigAsync("url2", "project2", "TestProject\\Team");
 
         // Act - This would fail with the old code

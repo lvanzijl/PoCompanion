@@ -23,10 +23,11 @@ public class MetricsControllerSteps
     private EffortDistributionDto? _effortDistribution;
     private SprintCapacityPlanDto? _capacityPlan;
 
-    public MetricsControllerSteps(ScenarioContext scenarioContext)
+    public MetricsControllerSteps(ScenarioContext scenarioContext, SharedTestContext sharedContext)
     {
         _scenarioContext = scenarioContext;
-        _factory = new IntegrationTestWebApplicationFactory();
+        // Use shared factory to avoid creating a new web server per step class
+        _factory = sharedContext.Factory;
         _client = _factory.CreateClient();
     }
 

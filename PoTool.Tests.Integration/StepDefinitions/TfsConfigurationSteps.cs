@@ -16,10 +16,11 @@ public class TfsConfigurationSteps
     private TfsConfigDto? _savedConfig;
     private TfsConfigDto? _returnedConfig;
 
-    public TfsConfigurationSteps(ScenarioContext scenarioContext)
+    public TfsConfigurationSteps(ScenarioContext scenarioContext, SharedTestContext sharedContext)
     {
         _scenarioContext = scenarioContext;
-        _factory = new IntegrationTestWebApplicationFactory();
+        // Use shared factory to avoid creating a new web server per step class
+        _factory = sharedContext.Factory;
         _client = _factory.CreateClient();
     }
 

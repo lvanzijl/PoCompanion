@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
 using PoTool.Api.Configuration;
 using PoTool.Core.Contracts.TfsVerification;
+using PoTool.Tests.Integration.Support;
 using Reqnroll;
 
 namespace PoTool.Tests.Integration.StepDefinitions;
@@ -15,9 +15,10 @@ public class TfsVerificationSteps
     private TfsVerificationReport? _verificationReport;
     private TfsVerifyRequest? _verifyRequest;
 
-    public TfsVerificationSteps(WebApplicationFactory<Program> factory)
+    public TfsVerificationSteps(SharedTestContext sharedContext)
     {
-        _client = factory.CreateClient();
+        // Use shared factory to avoid creating a new web server per step class
+        _client = sharedContext.Factory.CreateClient();
     }
 
     [When(@"I request TFS API verification with read-only checks")]
