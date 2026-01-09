@@ -81,7 +81,10 @@ public class TfsVerificationSteps
     {
         Assert.IsNotNull(_verificationReport);
         Assert.IsFalse(_verificationReport.IncludedWriteChecks);
-        Assert.IsTrue(_verificationReport.Checks.Count >= 7); // At least 7 read-only checks
+        
+        var checkCount = _verificationReport.Checks.Count;
+        var checkIds = string.Join(", ", _verificationReport.Checks.Select(c => c.CapabilityId));
+        Assert.IsTrue(checkCount >= 7, $"Expected at least 7 read-only checks, but found {checkCount}. Checks: {checkIds}");
     }
 
     [Then(@"the verification report should include write checks")]

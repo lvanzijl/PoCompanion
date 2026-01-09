@@ -267,7 +267,7 @@ public class PullRequestMetricsServiceTests
 
         // Assert
         Assert.HasCount(1, labels);
-        Assert.EndsWith(labels[0], "...");
+        Assert.IsTrue(labels[0].EndsWith("..."), $"Label should end with '...', but was: {labels[0]}");
         Assert.IsLessThanOrEqualTo(labels[0].Length, 30);
     }
 

@@ -1,4 +1,5 @@
 using System.Net;
+using PoTool.Core.Exceptions;
 
 namespace PoTool.Client.Services;
 
@@ -25,8 +26,40 @@ public class ErrorMessageService
             }
         };
 
+        // Handle specific TFS exception types first
+        if (exception is TfsAuthenticationException)
+        {
+            response.UserMessage = "Authentication failed. Please check your Personal Access Token and ensure it has not expired.";
+            response.Suggestion = "Verify your Personal Access Token is correct and hasn't expired.";
+            response.TechnicalDetails.StatusCode = 401;
+        }
+        else if (exception is TfsAuthorizationException)
+        {
+            response.UserMessage = "Access denied. Please verify you have permission to access this resource.";
+            response.Suggestion = "Check your project permissions in Azure DevOps or contact your administrator.";
+            response.TechnicalDetails.StatusCode = 403;
+        }
+        else if (exception is TfsResourceNotFoundException)
+        {
+            response.UserMessage = "Resource not found. Please verify your configuration.";
+            response.Suggestion = "Verify your organization URL and project name are correct.";
+            response.TechnicalDetails.StatusCode = 404;
+        }
+        else if (exception is TfsRateLimitException)
+        {
+            response.UserMessage = "Too many requests. Please wait a moment before trying again.";
+            response.Suggestion = "Azure DevOps has rate limits. Wait a few minutes before retrying.";
+            response.TechnicalDetails.StatusCode = 429;
+        }
+        else if (exception is TfsException tfsEx && tfsEx.StatusCode.HasValue)
+        {
+            // Generic TFS exception - try to extract status code
+            response.UserMessage = MapHttpStatusToUserMessage(tfsEx.StatusCode.Value);
+            response.Suggestion = GetSuggestionForStatusCode(tfsEx.StatusCode.Value);
+            response.TechnicalDetails.StatusCode = tfsEx.StatusCode.Value;
+        }
         // Map HTTP exceptions to user-friendly messages
-        if (exception is HttpRequestException httpEx)
+        else if (exception is HttpRequestException httpEx)
         {
             response.UserMessage = "Network error occurred. Please check your connection.";
             response.Suggestion = "Verify your internet connection and that the API is accessible.";
