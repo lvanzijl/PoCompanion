@@ -1,4 +1,6 @@
 using PoTool.Client.ApiClient;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace PoTool.Client.Services;
 
@@ -9,14 +11,23 @@ namespace PoTool.Client.Services;
 public class WorkItemService
 {
     private readonly IWorkItemsClient _client;
+    private readonly HttpClient _httpClient;
+    
+    // JSON options for case-insensitive deserialization of API responses
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkItemService"/> class.
     /// </summary>
     /// <param name="client">The work items API client.</param>
-    public WorkItemService(IWorkItemsClient client)
+    /// <param name="httpClient">HTTP client for direct API calls.</param>
+    public WorkItemService(IWorkItemsClient client, HttpClient httpClient)
     {
         _client = client;
+        _httpClient = httpClient;
     }
 
     /// <summary>
@@ -87,6 +98,34 @@ public class WorkItemService
             .Distinct()
             .OrderBy(ap => ap)
             .ToList();
+    }
+
+    /// <summary>
+    /// Gets area paths directly from TFS, bypassing the cache.
+    /// Used specifically for the Add Profile flow where cache is not yet populated.
+    /// </summary>
+    public async Task<IEnumerable<string>> GetAreaPathsFromTfsAsync()
+    {
+        // Direct TFS call to avoid relying on empty cache during Add Profile flow
+        var response = await _httpClient.GetAsync("/api/workitems/area-paths/from-tfs");
+        response.EnsureSuccessStatusCode();
+        
+        var areaPaths = await response.Content.ReadFromJsonAsync<IEnumerable<string>>(_jsonOptions);
+        return areaPaths ?? Enumerable.Empty<string>();
+    }
+
+    /// <summary>
+    /// Gets goals directly from TFS, bypassing the cache.
+    /// Used specifically for the Add Profile flow where cache is not yet populated.
+    /// </summary>
+    public async Task<IEnumerable<WorkItemDto>> GetGoalsFromTfsAsync()
+    {
+        // Direct TFS call to avoid relying on empty cache during Add Profile flow
+        var response = await _httpClient.GetAsync("/api/workitems/goals/from-tfs");
+        response.EnsureSuccessStatusCode();
+        
+        var goals = await response.Content.ReadFromJsonAsync<IEnumerable<WorkItemDto>>(_jsonOptions);
+        return goals ?? Enumerable.Empty<WorkItemDto>();
     }
 }
 
