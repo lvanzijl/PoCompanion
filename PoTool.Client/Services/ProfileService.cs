@@ -1,4 +1,5 @@
 using PoTool.Client.ApiClient;
+using ProfilePictureType = PoTool.Shared.Settings.ProfilePictureType;
 
 namespace PoTool.Client.Services;
 
@@ -74,7 +75,7 @@ public class ProfileService
             AreaPaths = areaPaths,
             TeamName = teamName,
             GoalIds = goalIds,
-            PictureType = pictureType,
+            PictureType = (ApiClient.ProfilePictureType)pictureType,
             DefaultPictureId = pictureId,
             CustomPicturePath = customPicturePath
         };
@@ -102,7 +103,7 @@ public class ProfileService
             AreaPaths = areaPaths,
             TeamName = teamName,
             GoalIds = goalIds,
-            PictureType = pictureType,
+            PictureType = pictureType.HasValue ? (ApiClient.ProfilePictureType?)pictureType.Value : null,
             DefaultPictureId = defaultPictureId,
             CustomPicturePath = customPicturePath
         };

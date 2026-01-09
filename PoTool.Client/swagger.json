@@ -4553,6 +4553,17 @@
           "lastModified": {
             "type": "string",
             "format": "date-time"
+          },
+          "pictureType": {
+            "$ref": "#/components/schemas/ProfilePictureType"
+          },
+          "defaultPictureId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "customPicturePath": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
@@ -4607,6 +4618,17 @@
               "type": "integer",
               "format": "int32"
             }
+          },
+          "pictureType": {
+            "$ref": "#/components/schemas/ProfilePictureType"
+          },
+          "defaultPictureId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "customPicturePath": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
@@ -4632,6 +4654,23 @@
               "type": "integer",
               "format": "int32"
             }
+          },
+          "pictureType": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProfilePictureType"
+              }
+            ]
+          },
+          "defaultPictureId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "customPicturePath": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
@@ -6320,6 +6359,18 @@
             "format": "int32"
           }
         }
+      },
+      "ProfilePictureType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Default",
+          "Custom"
+        ],
+        "enum": [
+          0,
+          1
+        ]
       }
     }
   }
