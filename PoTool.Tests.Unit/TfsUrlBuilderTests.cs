@@ -1,5 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit;
 

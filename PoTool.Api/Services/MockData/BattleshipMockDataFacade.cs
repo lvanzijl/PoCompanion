@@ -1,9 +1,15 @@
-using PoTool.Core.WorkItems;
-using PoTool.Core.PullRequests;
-using PoTool.Core.Pipelines;
+using PoTool.Shared.WorkItems;
+using PoTool.Shared.PullRequests;
+using PoTool.Shared.Pipelines;
 using PoTool.Core.Contracts;
-using PoTool.Core.Contracts.TfsVerification;
+using PoTool.Shared.Contracts.TfsVerification;
 using Microsoft.Extensions.Logging;
+
+using PoTool.Core.PullRequests;
+
+using PoTool.Core.WorkItems;
+
+using PoTool.Core.Pipelines;
 
 namespace PoTool.Api.Services.MockData;
 

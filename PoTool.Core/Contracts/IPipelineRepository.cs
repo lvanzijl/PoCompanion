@@ -1,3 +1,4 @@
+using PoTool.Shared.Pipelines;
 using PoTool.Core.Pipelines;
 
 namespace PoTool.Core.Contracts;

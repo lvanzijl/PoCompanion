@@ -1,6 +1,6 @@
 using Mediator;
 using PoTool.Core.Contracts;
-using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 using PoTool.Api.Services;
 

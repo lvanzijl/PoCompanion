@@ -1,5 +1,7 @@
+using PoTool.Shared.WorkItems;
+using PoTool.Shared.PullRequests;
+
 using PoTool.Core.WorkItems;
-using PoTool.Core.PullRequests;
 
 namespace PoTool.Api.Services.MockData;
 

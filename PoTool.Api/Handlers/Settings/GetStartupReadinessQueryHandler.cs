@@ -2,7 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Configuration;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
-using PoTool.Core.Settings;
+using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Queries;
 
 namespace PoTool.Api.Handlers.Settings;

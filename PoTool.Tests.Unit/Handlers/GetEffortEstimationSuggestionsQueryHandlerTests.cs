@@ -5,8 +5,8 @@ using Mediator;
 using PoTool.Api.Handlers.Metrics;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Queries;
-using PoTool.Core.WorkItems;
-using PoTool.Core.Settings;
+using PoTool.Shared.WorkItems;
+using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Queries;
 
 namespace PoTool.Tests.Unit.Handlers;

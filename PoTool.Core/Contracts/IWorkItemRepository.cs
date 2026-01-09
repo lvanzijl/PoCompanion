@@ -1,4 +1,4 @@
-using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Core.Contracts;
 

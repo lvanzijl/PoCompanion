@@ -1,5 +1,5 @@
 using System.Net;
-using PoTool.Core.Exceptions;
+using PoTool.Shared.Exceptions;
 
 namespace PoTool.Client.Services;
 

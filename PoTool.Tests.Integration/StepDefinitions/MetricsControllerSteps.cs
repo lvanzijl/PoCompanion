@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
-using PoTool.Core.Metrics;
+using PoTool.Shared.Metrics;
 using PoTool.Tests.Integration.Support;
 using Reqnroll;
 

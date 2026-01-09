@@ -3,12 +3,18 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PoTool.Core.Contracts;
-using PoTool.Core.WorkItems;
-using PoTool.Core.PullRequests;
-using PoTool.Core.Pipelines;
-using PoTool.Core.Exceptions;
+using PoTool.Shared.WorkItems;
+using PoTool.Shared.PullRequests;
+using PoTool.Shared.Pipelines;
+using PoTool.Shared.Exceptions;
 using PoTool.Api.Persistence.Entities;
-using PoTool.Core.Contracts.TfsVerification;
+using PoTool.Shared.Contracts.TfsVerification;
+
+using PoTool.Core.PullRequests;
+
+using PoTool.Core.WorkItems;
+
+using PoTool.Core.Pipelines;
 
 namespace PoTool.Api.Services;
 

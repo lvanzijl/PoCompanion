@@ -1,5 +1,5 @@
 using PoTool.Core.Contracts;
-using PoTool.Core.Settings;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Services;
 

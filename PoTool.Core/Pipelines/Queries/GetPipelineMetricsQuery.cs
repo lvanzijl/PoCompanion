@@ -1,5 +1,7 @@
 using Mediator;
 
+using PoTool.Shared.Pipelines;
+
 namespace PoTool.Core.Pipelines.Queries;
 
 /// <summary>

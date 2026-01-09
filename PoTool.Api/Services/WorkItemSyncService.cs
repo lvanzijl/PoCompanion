@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using PoTool.Api.Hubs;
 using PoTool.Core.Contracts;
-using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
 using PoTool.Api.Repositories;
 
 namespace PoTool.Api.Services;

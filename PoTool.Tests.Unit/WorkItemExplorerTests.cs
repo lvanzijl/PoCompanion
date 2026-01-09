@@ -1,6 +1,6 @@
 using Microsoft.JSInterop;
 using Moq;
-using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services.MockData;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

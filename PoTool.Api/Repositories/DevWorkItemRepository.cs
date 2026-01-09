@@ -1,6 +1,6 @@
 using PoTool.Api.Services.MockData;
 using PoTool.Core.Contracts;
-using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Repositories;
 

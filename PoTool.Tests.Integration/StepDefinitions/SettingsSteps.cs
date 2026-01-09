@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using PoTool.Core.Settings;
+using PoTool.Shared.Settings;
 using PoTool.Tests.Integration.Support;
 using Reqnroll;
 

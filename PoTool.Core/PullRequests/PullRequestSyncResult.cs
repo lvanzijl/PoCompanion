@@ -1,3 +1,5 @@
+using PoTool.Shared.PullRequests;
+
 namespace PoTool.Core.PullRequests;
 
 /// <summary>

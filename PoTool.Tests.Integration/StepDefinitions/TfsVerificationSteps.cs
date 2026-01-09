@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using PoTool.Api.Configuration;
-using PoTool.Core.Contracts.TfsVerification;
+using PoTool.Shared.Contracts.TfsVerification;
 using PoTool.Tests.Integration.Support;
 using Reqnroll;
 

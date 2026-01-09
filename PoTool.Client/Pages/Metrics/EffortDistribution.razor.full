@@ -2,7 +2,7 @@
 @using PoTool.Client.Services
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
-@using PoTool.Core.Metrics
+@using PoTool.Shared.Metrics
 @inject MetricsClient MetricsClient
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar

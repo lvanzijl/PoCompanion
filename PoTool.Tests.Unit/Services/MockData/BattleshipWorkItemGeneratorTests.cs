@@ -1,5 +1,5 @@
 using PoTool.Api.Services.MockData;
-using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Services.MockData;
 

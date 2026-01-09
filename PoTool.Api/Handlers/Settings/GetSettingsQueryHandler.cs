@@ -1,6 +1,6 @@
 using Mediator;
 using PoTool.Core.Contracts;
-using PoTool.Core.Settings;
+using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Queries;
 
 namespace PoTool.Api.Handlers.Settings;
