@@ -59,7 +59,7 @@ public sealed class GetGoalsFromTfsQueryHandler : IQueryHandler<GetGoalsFromTfsQ
             // Step 1: Execute WIQL query to retrieve only Goal work item IDs
             var wiql = new
             {
-                query = $"SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = '{WorkItemType.Goal}' AND [System.AreaPath] UNDER '{EscapeWiql(config.DefaultAreaPath)}' ORDER BY [System.Title]"
+                query = $"SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = '{EscapeWiql(WorkItemType.Goal)}' AND [System.AreaPath] UNDER '{EscapeWiql(config.DefaultAreaPath)}' ORDER BY [System.Title]"
             };
 
             var wiqlUrl = BuildProjectUrl(config, "_apis/wit/wiql");
