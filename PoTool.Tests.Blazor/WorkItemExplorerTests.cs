@@ -22,6 +22,7 @@ public class WorkItemExplorerTests : BunitTestContext
     private Mock<IWorkItemSyncHubService> _mockSyncHubService = null!;
     private Mock<ITreeBuilderService> _mockTreeBuilderService = null!;
     private Mock<ISettingsClient> _mockSettingsClient = null!;
+    private Mock<IProfilesClient> _mockProfilesClient = null!;
     private Mock<IClient> _mockApiClient = null!;
     private Mock<ISecureStorageService> _mockSecureStorage = null!;
     private Mock<Core.Contracts.IClipboardService> _mockClipboardService = null!;
@@ -43,6 +44,7 @@ public class WorkItemExplorerTests : BunitTestContext
         _mockSyncHubService = new Mock<IWorkItemSyncHubService>();
         _mockTreeBuilderService = new Mock<ITreeBuilderService>();
         _mockSettingsClient = new Mock<ISettingsClient>();
+        _mockProfilesClient = new Mock<IProfilesClient>();
         _mockApiClient = new Mock<IClient>();
         _mockSecureStorage = new Mock<ISecureStorageService>();
         _mockClipboardService = new Mock<Core.Contracts.IClipboardService>();
@@ -57,6 +59,9 @@ public class WorkItemExplorerTests : BunitTestContext
 
         _mockSettingsClient.Setup(x => x.GetSettingsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SettingsDto { Id = 1, ActiveProfileId = null, LastModified = DateTimeOffset.UtcNow });
+
+        _mockProfilesClient.Setup(x => x.GetAllProfilesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ProfileDto>());
 
         _mockApiClient.Setup(x => x.GetTfsConfigAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new ApiException("Not found", 204, null!, new Dictionary<string, IEnumerable<string>>(), null));
@@ -77,6 +82,7 @@ public class WorkItemExplorerTests : BunitTestContext
         // Register mock clients
         Services.AddSingleton(_mockWorkItemsClient.Object);
         Services.AddSingleton(_mockSettingsClient.Object);
+        Services.AddSingleton(_mockProfilesClient.Object);
         Services.AddSingleton(_mockSyncHubService.Object);
         Services.AddSingleton(_mockTreeBuilderService.Object);
         Services.AddSingleton(_mockApiClient.Object);
@@ -89,6 +95,7 @@ public class WorkItemExplorerTests : BunitTestContext
         // Register concrete services that wrap the clients
         Services.AddSingleton<WorkItemService>();
         Services.AddSingleton<SettingsService>();
+        Services.AddSingleton<ProfileService>();
         Services.AddSingleton<TfsConfigService>();
         Services.AddSingleton<ErrorMessageService>();
         Services.AddSingleton<ModeIsolatedStateService>();

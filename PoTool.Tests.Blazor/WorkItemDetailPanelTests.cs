@@ -1,5 +1,8 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using MudBlazor;
+using MudBlazor.Services;
 using PoTool.Client.Components.WorkItems.SubComponents;
 using PoTool.Client.ApiClient;
 
@@ -11,6 +14,20 @@ namespace PoTool.Tests.Blazor;
 [TestClass]
 public class WorkItemDetailPanelTests : BunitTestContext
 {
+    [TestInitialize]
+    public void Setup()
+    {
+        // Add MudBlazor services
+        Services.AddMudServices();
+        
+        // Add required mock services
+        var mockSnackbar = new Mock<ISnackbar>();
+        Services.AddSingleton(mockSnackbar.Object);
+        
+        // Configure JSInterop in Loose mode
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
     [TestMethod]
     public void WorkItemDetailPanel_ShowsNothing_WhenNoSelection()
     {

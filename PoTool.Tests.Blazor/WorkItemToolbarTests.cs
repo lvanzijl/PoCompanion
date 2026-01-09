@@ -6,7 +6,7 @@ using MudBlazor;
 using MudBlazor.Services;
 using PoTool.Client.Components.WorkItems.SubComponents;
 using PoTool.Client.Services;
-using PoTool.Core.Contracts;
+using PoTool.Shared.Contracts;
 using PoTool.Client.ApiClient;
 using Moq;
 
