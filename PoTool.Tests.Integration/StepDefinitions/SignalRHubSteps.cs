@@ -22,9 +22,10 @@ public class SignalRHubSteps : IDisposable
     private Exception? _connectionError;
     private Exception? _invocationError;
 
-    public SignalRHubSteps()
+    public SignalRHubSteps(SharedTestContext sharedContext)
     {
-        _factory = new IntegrationTestWebApplicationFactory();
+        // Use shared factory to avoid creating a new web server per step class
+        _factory = sharedContext.Factory;
     }
 
     // Helper class to capture sync status messages

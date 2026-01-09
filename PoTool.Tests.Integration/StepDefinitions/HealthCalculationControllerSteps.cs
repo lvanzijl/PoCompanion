@@ -15,10 +15,11 @@ public class HealthCalculationControllerSteps
     private HttpResponseMessage? _response;
     private CalculateHealthScoreResponse? _healthScoreResponse;
 
-    public HealthCalculationControllerSteps(ScenarioContext scenarioContext)
+    public HealthCalculationControllerSteps(ScenarioContext scenarioContext, SharedTestContext sharedContext)
     {
         _scenarioContext = scenarioContext;
-        _factory = new IntegrationTestWebApplicationFactory();
+        // Use shared factory to avoid creating a new web server per step class
+        _factory = sharedContext.Factory;
         _client = _factory.CreateClient();
     }
 
