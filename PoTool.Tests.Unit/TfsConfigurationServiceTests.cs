@@ -150,7 +150,7 @@ public class TfsConfigurationServiceTests
     {
         // Arrange
         await _service.SaveConfigAsync("url1", "project1", "TestProject\\Team");
-        await Task.Delay(50); // Ensure different timestamps
+        await Task.Delay(10); // Ensure different timestamps
         await _service.SaveConfigAsync("url2", "project2", "TestProject\\Team");
 
         // Act

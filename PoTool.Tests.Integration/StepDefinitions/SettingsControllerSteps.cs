@@ -19,10 +19,10 @@ public class SettingsControllerSteps
     private HttpResponseMessage? _response;
     private SettingsDto? _settings;
 
-    public SettingsControllerSteps(ScenarioContext scenarioContext)
+    public SettingsControllerSteps(ScenarioContext scenarioContext, SharedTestContext sharedContext)
     {
         _scenarioContext = scenarioContext;
-        _factory = new IntegrationTestWebApplicationFactory();
+        _factory = sharedContext.Factory;
         _client = _factory.CreateClient();
     }
 

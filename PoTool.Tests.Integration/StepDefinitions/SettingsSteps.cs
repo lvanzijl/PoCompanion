@@ -16,10 +16,10 @@ public class SettingsSteps
     private SettingsDto? _settings;
     private SettingsDto? _returnedSettings;
 
-    public SettingsSteps(ScenarioContext scenarioContext)
+    public SettingsSteps(ScenarioContext scenarioContext, SharedTestContext sharedContext)
     {
         _scenarioContext = scenarioContext;
-        _factory = new IntegrationTestWebApplicationFactory();
+        _factory = sharedContext.Factory;
         _client = _factory.CreateClient();
     }
 

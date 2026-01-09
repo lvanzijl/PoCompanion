@@ -20,10 +20,10 @@ public class PullRequestsControllerSteps
     private PullRequestDto? _pullRequest;
     private List<PullRequestMetricsDto>? _metrics;
 
-    public PullRequestsControllerSteps(ScenarioContext scenarioContext)
+    public PullRequestsControllerSteps(ScenarioContext scenarioContext, SharedTestContext sharedContext)
     {
         _scenarioContext = scenarioContext;
-        _factory = new IntegrationTestWebApplicationFactory();
+        _factory = sharedContext.Factory;
         _client = _factory.CreateClient();
     }
 

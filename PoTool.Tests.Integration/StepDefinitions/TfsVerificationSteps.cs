@@ -15,9 +15,9 @@ public class TfsVerificationSteps
     private TfsVerificationReport? _verificationReport;
     private TfsVerifyRequest? _verifyRequest;
 
-    public TfsVerificationSteps(WebApplicationFactory<Program> factory)
+    public TfsVerificationSteps(SharedTestContext sharedContext)
     {
-        _client = factory.CreateClient();
+        _client = sharedContext.Factory.CreateClient();
     }
 
     [When(@"I request TFS API verification with read-only checks")]

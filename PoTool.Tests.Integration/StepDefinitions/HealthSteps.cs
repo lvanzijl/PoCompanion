@@ -15,10 +15,10 @@ public class HealthSteps
     private HttpResponseMessage? _response;
     private HealthResponse? _healthResponse;
 
-    public HealthSteps(ScenarioContext scenarioContext)
+    public HealthSteps(ScenarioContext scenarioContext, SharedTestContext sharedContext)
     {
         _scenarioContext = scenarioContext;
-        _factory = new IntegrationTestWebApplicationFactory();
+        _factory = sharedContext.Factory;
         _client = _factory.CreateClient();
     }
 

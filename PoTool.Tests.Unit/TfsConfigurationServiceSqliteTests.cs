@@ -17,17 +17,18 @@ public class TfsConfigurationServiceSqliteTests
     private PoToolDbContext _context = null!;
     private TfsConfigurationService _service = null!;
     private Mock<ILogger<TfsConfigurationService>> _loggerMock = null!;
-    private string _dbPath = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        // Create SQLite database (this will test the actual SQLite provider behavior)
-        _dbPath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.db");
+        // Create SQLite in-memory database (faster than disk-based for testing)
+        // This still uses actual SQLite provider to test DateTimeOffset ordering behavior
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
-            .UseSqlite($"Data Source={_dbPath}")
+            .UseSqlite("Data Source=:memory:")
             .Options;
         _context = new PoToolDbContext(options);
+        // Need to open connection for in-memory database to persist
+        _context.Database.OpenConnection();
         _context.Database.EnsureCreated();
         
         _loggerMock = new Mock<ILogger<TfsConfigurationService>>();
@@ -39,13 +40,8 @@ public class TfsConfigurationServiceSqliteTests
     [TestCleanup]
     public void Cleanup()
     {
-        _context.Database.EnsureDeleted();
+        _context.Database.CloseConnection();
         _context.Dispose();
-        
-        if (File.Exists(_dbPath))
-        {
-            File.Delete(_dbPath);
-        }
     }
 
     [TestMethod]
@@ -54,9 +50,9 @@ public class TfsConfigurationServiceSqliteTests
         // Arrange - Create multiple configs with different timestamps
         // Note: PAT parameter removed from SaveConfigAsync
         await _service.SaveConfigAsync("url1", "project1", "TestProject\\Team");
-        await Task.Delay(100); // Ensure different timestamps
+        await Task.Delay(10); // Ensure different timestamps
         await _service.SaveConfigAsync("url2", "project2", "TestProject\\Team");
-        await Task.Delay(100);
+        await Task.Delay(10);
         await _service.SaveConfigAsync("url3", "project3", "TestProject\\Team");
 
         // Act - This would fail with the old code (OrderBy DateTimeOffset in SQL)
@@ -73,7 +69,7 @@ public class TfsConfigurationServiceSqliteTests
     {
         // Arrange - Create multiple configs
         await _service.SaveConfigAsync("url1", "project1", "TestProject\\Team");
-        await Task.Delay(100);
+        await Task.Delay(10);
         await _service.SaveConfigAsync("url2", "project2", "TestProject\\Team");
 
         // Act - This would fail with the old code

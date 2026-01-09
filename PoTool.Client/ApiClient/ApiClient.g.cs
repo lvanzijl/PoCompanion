@@ -10782,7 +10782,7 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("defaultPictureId")]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int DefaultPictureId { get; set; } = 0;
+        public int DefaultPictureId { get; set; } = "0";
 
         [System.Text.Json.Serialization.JsonPropertyName("customPicturePath")]
         public string? CustomPicturePath { get; set; } = default!;
@@ -13740,7 +13740,7 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("timeoutSeconds")]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int TimeoutSeconds { get; set; } = 30;
+        public int TimeoutSeconds { get; set; } = "30";
 
         [System.Text.Json.Serialization.JsonPropertyName("apiVersion")]
         public string? ApiVersion { get; set; } = "7.0";
@@ -14000,7 +14000,7 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("defaultPictureId")]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(?:0|[1-9]\d*)$")]
-        public int DefaultPictureId { get; set; } = 0;
+        public int DefaultPictureId { get; set; } = "0";
 
         [System.Text.Json.Serialization.JsonPropertyName("customPicturePath")]
         public string? CustomPicturePath { get; set; } = default!;
