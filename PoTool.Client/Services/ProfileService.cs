@@ -1,4 +1,5 @@
 using PoTool.Client.ApiClient;
+using ProfilePictureType = PoTool.Shared.Settings.ProfilePictureType;
 
 namespace PoTool.Client.Services;
 
@@ -60,14 +61,23 @@ public class ProfileService
         List<string> areaPaths,
         string teamName,
         List<int> goalIds,
+        ProfilePictureType pictureType = ProfilePictureType.Default,
+        int? defaultPictureId = null,
+        string? customPicturePath = null,
         CancellationToken cancellationToken = default)
     {
+        // If no picture ID is specified and using default type, randomize it
+        var pictureId = defaultPictureId ?? Random.Shared.Next(0, 64);
+        
         var request = new CreateProfileRequest
         {
             Name = name,
             AreaPaths = areaPaths,
             TeamName = teamName,
-            GoalIds = goalIds
+            GoalIds = goalIds,
+            PictureType = (ApiClient.ProfilePictureType)pictureType,
+            DefaultPictureId = pictureId,
+            CustomPicturePath = customPicturePath
         };
 
         return await _profilesClient.CreateProfileAsync(request, cancellationToken);
@@ -82,6 +92,9 @@ public class ProfileService
         List<string> areaPaths,
         string teamName,
         List<int> goalIds,
+        ProfilePictureType? pictureType = null,
+        int? defaultPictureId = null,
+        string? customPicturePath = null,
         CancellationToken cancellationToken = default)
     {
         var request = new UpdateProfileRequest
@@ -89,7 +102,10 @@ public class ProfileService
             Name = name,
             AreaPaths = areaPaths,
             TeamName = teamName,
-            GoalIds = goalIds
+            GoalIds = goalIds,
+            PictureType = pictureType.HasValue ? (ApiClient.ProfilePictureType?)pictureType.Value : null,
+            DefaultPictureId = defaultPictureId,
+            CustomPicturePath = customPicturePath
         };
 
         return await _profilesClient.UpdateProfileAsync(id, request, cancellationToken);
@@ -132,10 +148,14 @@ public class ProfileService
         List<string> areaPaths,
         string teamName,
         List<int> goalIds,
+        ProfilePictureType pictureType = ProfilePictureType.Default,
+        int? defaultPictureId = null,
+        string? customPicturePath = null,
         CancellationToken cancellationToken = default)
     {
         // Create the profile
-        var profile = await CreateProfileAsync(name, areaPaths, teamName, goalIds, cancellationToken);
+        var profile = await CreateProfileAsync(name, areaPaths, teamName, goalIds, 
+            pictureType, defaultPictureId, customPicturePath, cancellationToken);
 
         // Set it as active
         await SetActiveProfileAsync(profile.Id, cancellationToken);
