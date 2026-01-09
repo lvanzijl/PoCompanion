@@ -5,6 +5,7 @@ using MudBlazor;
 using MudBlazor.Services;
 using PoTool.Client.Components.WorkItems.SubComponents;
 using PoTool.Client.ApiClient;
+using PoTool.Client.Services;
 
 namespace PoTool.Tests.Blazor;
 
@@ -23,6 +24,13 @@ public class WorkItemDetailPanelTests : BunitTestContext
         // Add required mock services
         var mockSnackbar = new Mock<ISnackbar>();
         Services.AddSingleton(mockSnackbar.Object);
+        
+        // Mock IWorkItemsClient for WorkItemService
+        var mockWorkItemsClient = new Mock<IWorkItemsClient>();
+        var mockHttpClient = new HttpClient { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(mockWorkItemsClient.Object);
+        Services.AddSingleton(mockHttpClient);
+        Services.AddSingleton<WorkItemService>();
         
         // Configure JSInterop in Loose mode
         JSInterop.Mode = JSRuntimeMode.Loose;

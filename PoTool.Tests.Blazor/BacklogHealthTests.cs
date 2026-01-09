@@ -31,8 +31,13 @@ public class BacklogHealthTests : BunitTestContext
         _mockMetricsClient = new Mock<IMetricsClient>();
         _mockSnackbar = new Mock<ISnackbar>();
 
+        // Mock IHealthCalculationClient for BacklogHealthCalculationService
+        var mockHealthCalculationClient = new Mock<IHealthCalculationClient>();
+        
         // Register mock services
         Services.AddSingleton(_mockMetricsClient.Object);
+        Services.AddSingleton(mockHealthCalculationClient.Object);
+        Services.AddSingleton<BacklogHealthCalculationService>();
         Services.AddSingleton<ErrorMessageService>();
         Services.AddSingleton(_mockSnackbar.Object);
     }

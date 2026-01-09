@@ -94,6 +94,7 @@ public class WorkItemExplorerTests : BunitTestContext
         
         // Register concrete services that wrap the clients
         Services.AddSingleton<WorkItemService>();
+        Services.AddSingleton<WorkItemSelectionService>();
         Services.AddSingleton<SettingsService>();
         Services.AddSingleton<ProfileService>();
         Services.AddSingleton<TfsConfigService>();
