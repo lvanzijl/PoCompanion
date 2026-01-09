@@ -13,24 +13,10 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.1" PrivateAssets="all" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.1" />
     <PackageReference Include="MudBlazor" Version="8.0.0" />
-    <PackageReference Include="NSwag.MSBuild" Version="14.6.3">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\PoTool.Shared\PoTool.Shared.csproj" />
   </ItemGroup>
-
-  <!-- NSwag client generation - uses openapi.json configured in nswag.json -->
-  <Target Name="NSwag" BeforeTargets="CoreCompile" Condition="'$(Configuration)' == 'Debug' OR '$(GenerateApiClient)' == 'true'">
-    <Message Text="Starting NSwag client generation with Net100 runtime..." Importance="high" />
-    <Exec Command="$(NSwagExe_Net100) run nswag.json" ConsoleToMSBuild="true" ContinueOnError="true">
-      <Output TaskParameter="ExitCode" PropertyName="NSwagExitCode" />
-    </Exec>
-    <Message Text="NSwag generation completed with exit code: $(NSwagExitCode)" Importance="high" />
-    <Error Text="NSwag client generation failed! Check output above for details." Condition="'$(NSwagExitCode)' != '0'" />
-  </Target>
 
 </Project>
