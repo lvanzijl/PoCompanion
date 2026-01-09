@@ -34,10 +34,17 @@ public class BacklogHealthTests : BunitTestContext
         // Mock IHealthCalculationClient for BacklogHealthCalculationService
         var mockHealthCalculationClient = new Mock<IHealthCalculationClient>();
         
+        // Mock IWorkItemsClient for WorkItemService (needed by BacklogHealthFilters child component)
+        var mockWorkItemsClient = new Mock<IWorkItemsClient>();
+        var mockHttpClient = new HttpClient { BaseAddress = new Uri("http://localhost/") };
+        
         // Register mock services
         Services.AddSingleton(_mockMetricsClient.Object);
         Services.AddSingleton(mockHealthCalculationClient.Object);
         Services.AddSingleton<BacklogHealthCalculationService>();
+        Services.AddSingleton(mockWorkItemsClient.Object);
+        Services.AddSingleton(mockHttpClient);
+        Services.AddSingleton<WorkItemService>();
         Services.AddSingleton<ErrorMessageService>();
         Services.AddSingleton(_mockSnackbar.Object);
     }

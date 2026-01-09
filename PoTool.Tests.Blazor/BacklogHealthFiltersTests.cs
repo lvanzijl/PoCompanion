@@ -32,13 +32,24 @@ public class BacklogHealthFiltersTests : BunitTestContext
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
 
+    private IRenderedFragment RenderWithMudProvider(string areaPath = "", int maxIterations = 5)
+    {
+        return Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<BacklogHealthFilters>(1);
+            builder.AddAttribute(2, nameof(BacklogHealthFilters.AreaPathFilter), areaPath);
+            builder.AddAttribute(3, nameof(BacklogHealthFilters.MaxIterations), maxIterations);
+            builder.CloseComponent();
+        });
+    }
+
     [TestMethod]
     public void BacklogHealthFilters_RendersCorrectly()
     {
         // Arrange & Act
-        var cut = RenderComponent<BacklogHealthFilters>(parameters => parameters
-            .Add(p => p.AreaPathFilter, "Project/Team")
-            .Add(p => p.MaxIterations, 5));
+        var cut = RenderWithMudProvider("Project/Team", 5);
 
         // Assert
         Assert.IsNotNull(cut);
@@ -51,7 +62,7 @@ public class BacklogHealthFiltersTests : BunitTestContext
     public void BacklogHealthFilters_DisplaysDefaultMaxIterations()
     {
         // Arrange & Act
-        var cut = RenderComponent<BacklogHealthFilters>();
+        var cut = RenderWithMudProvider("", 5);
 
         // Assert
         Assert.Contains("Max Iterations", cut.Markup);
@@ -80,8 +91,7 @@ public class BacklogHealthFiltersTests : BunitTestContext
     public void BacklogHealthFilters_HasTextFieldForAreaPath()
     {
         // Arrange & Act
-        var cut = RenderComponent<BacklogHealthFilters>(parameters => parameters
-            .Add(p => p.AreaPathFilter, "MyProject"));
+        var cut = RenderWithMudProvider("MyProject", 5);
 
         // Assert
         var textFields = cut.FindComponents<MudBlazor.MudTextField<string>>();
@@ -92,8 +102,7 @@ public class BacklogHealthFiltersTests : BunitTestContext
     public void BacklogHealthFilters_HasNumericFieldForMaxIterations()
     {
         // Arrange & Act
-        var cut = RenderComponent<BacklogHealthFilters>(parameters => parameters
-            .Add(p => p.MaxIterations, 10));
+        var cut = RenderWithMudProvider("", 10);
 
         // Assert
         var numericFields = cut.FindComponents<MudBlazor.MudNumericField<int>>();

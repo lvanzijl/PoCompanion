@@ -32,6 +32,9 @@ public class WorkItemDetailPanelTests : BunitTestContext
         Services.AddSingleton(mockHttpClient);
         Services.AddSingleton<WorkItemService>();
         
+        // Add BrowserNavigationService (required by WorkItemDetailPanel)
+        Services.AddSingleton<BrowserNavigationService>();
+        
         // Configure JSInterop in Loose mode
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
