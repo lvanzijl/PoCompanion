@@ -22,7 +22,10 @@ public class IterationHealthTableTests : BunitTestContext
         
         // Mock IHealthCalculationClient for BacklogHealthCalculationService
         var mockHealthCalculationClient = new Mock<IHealthCalculationClient>();
-        // Setup mock to return a health score response
+        // Setup mock to return a health score response - match any call signature
+        mockHealthCalculationClient.Setup(x => x.CalculateHealthScoreAsync(
+                It.IsAny<CalculateHealthScoreRequest>()))
+            .ReturnsAsync(new CalculateHealthScoreResponse { HealthScore = 80 });
         mockHealthCalculationClient.Setup(x => x.CalculateHealthScoreAsync(
                 It.IsAny<CalculateHealthScoreRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CalculateHealthScoreResponse { HealthScore = 80 });

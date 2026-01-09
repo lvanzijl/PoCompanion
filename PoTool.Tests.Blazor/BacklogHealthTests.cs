@@ -33,6 +33,13 @@ public class BacklogHealthTests : BunitTestContext
 
         // Mock IHealthCalculationClient for BacklogHealthCalculationService
         var mockHealthCalculationClient = new Mock<IHealthCalculationClient>();
+        // Setup mock to return a proper response object (not null) - match any call signature
+        mockHealthCalculationClient.Setup(x => x.CalculateHealthScoreAsync(
+                It.IsAny<CalculateHealthScoreRequest>()))
+            .ReturnsAsync(new CalculateHealthScoreResponse { HealthScore = 80 });
+        mockHealthCalculationClient.Setup(x => x.CalculateHealthScoreAsync(
+                It.IsAny<CalculateHealthScoreRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CalculateHealthScoreResponse { HealthScore = 80 });
         
         // Mock IWorkItemsClient for WorkItemService (needed by BacklogHealthFilters child component)
         var mockWorkItemsClient = new Mock<IWorkItemsClient>();

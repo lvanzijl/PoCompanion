@@ -9,6 +9,7 @@ using PoTool.Client.Services;
 using PoTool.Shared.Contracts;
 using PoTool.Client.ApiClient;
 using Moq;
+using System.Linq;
 
 namespace PoTool.Tests.Blazor;
 
@@ -92,8 +93,10 @@ public class WorkItemToolbarTests : BunitTestContext
             builder.CloseComponent();
         });
 
-        // Act
-        var syncButton = cut.Find("button.btn-sync");
+        // Act - Find button by text content (MudButton containing "Full Sync")
+        var buttons = cut.FindAll("button");
+        var syncButton = buttons.FirstOrDefault(b => b.TextContent.Contains("Full Sync"));
+        Assert.IsNotNull(syncButton, "Should find Full Sync button");
         await syncButton.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
 
         // Assert
@@ -114,8 +117,10 @@ public class WorkItemToolbarTests : BunitTestContext
             builder.CloseComponent();
         });
 
-        // Assert
-        var syncButton = cut.Find("button.btn-sync");
+        // Assert - Find button by text content (will show "Syncing..." when IsSyncing is true)
+        var buttons = cut.FindAll("button");
+        var syncButton = buttons.FirstOrDefault(b => b.TextContent.Contains("Syncing"));
+        Assert.IsNotNull(syncButton, "Should find sync button");
         Assert.IsTrue(syncButton.HasAttribute("disabled"), "Sync button should be disabled during sync");
     }
 

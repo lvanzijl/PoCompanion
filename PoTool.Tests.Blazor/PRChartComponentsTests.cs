@@ -61,11 +61,13 @@ public class PRChartComponentsTests : BunitTestContext
         // Arrange
         var timeOpenData = new double[] { 5, 10, 8, 3 };
         var timeOpenLabels = new string[] { "0-1 days", "1-3 days", "3-7 days", ">7 days" };
+        var chartOptions = new MudBlazor.ChartOptions();
 
         // Act
         var cut = RenderComponent<PRTimeOpenChart>(parameters => parameters
             .Add(p => p.TimeOpenData, timeOpenData)
-            .Add(p => p.TimeOpenLabels, timeOpenLabels));
+            .Add(p => p.TimeOpenLabels, timeOpenLabels)
+            .Add(p => p.ChartOptions, chartOptions));
 
         // Assert
         Assert.IsNotNull(cut);
@@ -78,11 +80,13 @@ public class PRChartComponentsTests : BunitTestContext
         // Arrange
         var timeOpenData = new double[] { 5, 10, 8, 3 };
         var timeOpenLabels = new string[] { "0-1 days", "1-3 days", "3-7 days", ">7 days" };
+        var chartOptions = new MudBlazor.ChartOptions();
 
         // Act
         var cut = RenderComponent<PRTimeOpenChart>(parameters => parameters
             .Add(p => p.TimeOpenData, timeOpenData)
-            .Add(p => p.TimeOpenLabels, timeOpenLabels));
+            .Add(p => p.TimeOpenLabels, timeOpenLabels)
+            .Add(p => p.ChartOptions, chartOptions));
 
         // Assert
         var charts = cut.FindComponents<MudBlazor.MudChart>();
@@ -95,11 +99,13 @@ public class PRChartComponentsTests : BunitTestContext
         // Arrange
         var userData = new double[] { 15, 12, 8, 5 };
         var userLabels = new string[] { "Alice", "Bob", "Charlie", "Diana" };
+        var chartOptions = new MudBlazor.ChartOptions();
 
         // Act
         var cut = RenderComponent<PRUserChart>(parameters => parameters
             .Add(p => p.UserData, userData)
-            .Add(p => p.UserLabels, userLabels));
+            .Add(p => p.UserLabels, userLabels)
+            .Add(p => p.ChartOptions, chartOptions));
 
         // Assert
         Assert.IsNotNull(cut);
@@ -112,11 +118,13 @@ public class PRChartComponentsTests : BunitTestContext
         // Arrange
         var userData = new double[] { 15, 12, 8, 5 };
         var userLabels = new string[] { "Alice", "Bob", "Charlie", "Diana" };
+        var chartOptions = new MudBlazor.ChartOptions();
 
         // Act
         var cut = RenderComponent<PRUserChart>(parameters => parameters
             .Add(p => p.UserData, userData)
-            .Add(p => p.UserLabels, userLabels));
+            .Add(p => p.UserLabels, userLabels)
+            .Add(p => p.ChartOptions, chartOptions));
 
         // Assert
         var charts = cut.FindComponents<MudBlazor.MudChart>();

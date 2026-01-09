@@ -32,6 +32,18 @@ public class WorkItemDetailPanelTests : BunitTestContext
         Services.AddSingleton(mockHttpClient);
         Services.AddSingleton<WorkItemService>();
         
+        // Mock IClient for TfsConfigService
+        var mockApiClient = new Mock<Client.ApiClient.IClient>();
+        var mockTfsHttpClient = new HttpClient { BaseAddress = new Uri("http://localhost/") };
+        Services.AddSingleton(mockApiClient.Object);
+        Services.AddSingleton<TfsConfigService>(sp => new TfsConfigService(mockApiClient.Object, mockTfsHttpClient));
+        
+        // Mock IClipboardService for WorkItemDetailPanel
+        var mockClipboardService = new Mock<Shared.Contracts.IClipboardService>();
+        mockClipboardService.Setup(x => x.CopyToClipboardAsync(It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+        Services.AddSingleton(mockClipboardService.Object);
+        
         // Add BrowserNavigationService (required by WorkItemDetailPanel)
         Services.AddSingleton<BrowserNavigationService>();
         
@@ -43,8 +55,14 @@ public class WorkItemDetailPanelTests : BunitTestContext
     public void WorkItemDetailPanel_ShowsNothing_WhenNoSelection()
     {
         // Arrange & Act
-        var cut = RenderComponent<WorkItemDetailPanel>(parameters => parameters
-            .Add(p => p.SelectedWorkItem, null));
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<WorkItemDetailPanel>(1);
+            builder.AddAttribute(2, nameof(WorkItemDetailPanel.SelectedWorkItem), (WorkItemDto?)null);
+            builder.CloseComponent();
+        });
 
         // Assert
         // Component renders nothing when no item is selected
@@ -70,8 +88,14 @@ public class WorkItemDetailPanelTests : BunitTestContext
         };
 
         // Act
-        var cut = RenderComponent<WorkItemDetailPanel>(parameters => parameters
-            .Add(p => p.SelectedWorkItem, workItem));
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<WorkItemDetailPanel>(1);
+            builder.AddAttribute(2, nameof(WorkItemDetailPanel.SelectedWorkItem), workItem);
+            builder.CloseComponent();
+        });
 
         // Assert
         Assert.Contains("123", cut.Markup, "Should display work item ID");
@@ -99,8 +123,14 @@ public class WorkItemDetailPanelTests : BunitTestContext
         };
 
         // Act
-        var cut = RenderComponent<WorkItemDetailPanel>(parameters => parameters
-            .Add(p => p.SelectedWorkItem, workItem));
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<WorkItemDetailPanel>(1);
+            builder.AddAttribute(2, nameof(WorkItemDetailPanel.SelectedWorkItem), workItem);
+            builder.CloseComponent();
+        });
 
         // Assert
         Assert.Contains("100", cut.Markup, "Should display parent ID");
@@ -126,8 +156,14 @@ public class WorkItemDetailPanelTests : BunitTestContext
         };
 
         // Act
-        var cut = RenderComponent<WorkItemDetailPanel>(parameters => parameters
-            .Add(p => p.SelectedWorkItem, workItem));
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<WorkItemDetailPanel>(1);
+            builder.AddAttribute(2, nameof(WorkItemDetailPanel.SelectedWorkItem), workItem);
+            builder.CloseComponent();
+        });
 
         // Assert
         // Should show node details but not parent section

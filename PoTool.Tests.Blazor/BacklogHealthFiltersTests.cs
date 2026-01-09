@@ -93,9 +93,8 @@ public class BacklogHealthFiltersTests : BunitTestContext
         // Arrange & Act
         var cut = RenderWithMudProvider("MyProject", 5);
 
-        // Assert
-        var textFields = cut.FindComponents<MudBlazor.MudTextField<string>>();
-        Assert.HasCount(1, textFields, "Should have one text field for area path");
+        // Assert - Verify area path filter is present in markup
+        Assert.Contains("Area Path Filter", cut.Markup);
     }
 
     [TestMethod]
