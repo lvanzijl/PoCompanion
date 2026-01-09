@@ -39,6 +39,15 @@ public interface ITfsClient
     Task<bool> ValidateConnectionAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves area paths from TFS using the Classification Nodes API.
+    /// This method returns area paths directly from TFS metadata without fetching work items.
+    /// </summary>
+    /// <param name="depth">Optional depth for hierarchical area paths. If not specified, retrieves all levels.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of area path strings (full paths).</returns>
+    Task<IEnumerable<string>> GetAreaPathsAsync(int? depth = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves pull requests from TFS/Azure DevOps.
     /// </summary>
     /// <param name="repositoryName">Optional repository name to filter by.</param>
