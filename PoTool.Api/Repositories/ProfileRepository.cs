@@ -40,8 +40,6 @@ public class ProfileRepository : IProfileRepository
     /// <inheritdoc />
     public async Task<ProfileDto> CreateProfileAsync(
         string name,
-        List<string> areaPaths,
-        string teamName,
         List<int> goalIds,
         ProfilePictureType pictureType = ProfilePictureType.Default,
         int defaultPictureId = 0,
@@ -51,8 +49,6 @@ public class ProfileRepository : IProfileRepository
         var entity = new ProfileEntity
         {
             Name = name,
-            AreaPaths = string.Join(",", areaPaths),
-            TeamName = teamName,
             GoalIds = string.Join(",", goalIds),
             PictureType = (int)pictureType,
             DefaultPictureId = defaultPictureId,
@@ -71,8 +67,6 @@ public class ProfileRepository : IProfileRepository
     public async Task<ProfileDto> UpdateProfileAsync(
         int id,
         string name,
-        List<string> areaPaths,
-        string teamName,
         List<int> goalIds,
         ProfilePictureType? pictureType = null,
         int? defaultPictureId = null,
@@ -88,8 +82,6 @@ public class ProfileRepository : IProfileRepository
         }
 
         entity.Name = name;
-        entity.AreaPaths = string.Join(",", areaPaths);
-        entity.TeamName = teamName;
         entity.GoalIds = string.Join(",", goalIds);
 
         if (pictureType.HasValue)
@@ -137,16 +129,6 @@ public class ProfileRepository : IProfileRepository
 
     private static ProfileDto MapToDto(ProfileEntity entity)
     {
-        var areaPaths = new List<string>();
-        if (!string.IsNullOrWhiteSpace(entity.AreaPaths))
-        {
-            areaPaths = entity.AreaPaths
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(ap => ap.Trim())
-                .Where(ap => !string.IsNullOrWhiteSpace(ap))
-                .ToList();
-        }
-
         var goalIds = new List<int>();
         if (!string.IsNullOrWhiteSpace(entity.GoalIds))
         {
@@ -162,8 +144,6 @@ public class ProfileRepository : IProfileRepository
         return new ProfileDto(
             entity.Id,
             entity.Name,
-            areaPaths,
-            entity.TeamName,
             goalIds,
             (ProfilePictureType)entity.PictureType,
             entity.DefaultPictureId,

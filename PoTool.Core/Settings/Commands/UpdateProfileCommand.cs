@@ -4,7 +4,7 @@ using PoTool.Shared.Settings;
 namespace PoTool.Core.Settings.Commands;
 
 /// <summary>
-/// Command to update an existing profile.
+/// Command to update an existing profile (Product Owner).
 /// </summary>
 /// <param name="PictureType">Optional: Type of profile picture to update</param>
 /// <param name="DefaultPictureId">Optional: ID of default picture (0-63). Only used when PictureType is provided.</param>
@@ -12,8 +12,6 @@ namespace PoTool.Core.Settings.Commands;
 public sealed record UpdateProfileCommand(
     int Id,
     string Name,
-    List<string> AreaPaths,
-    string TeamName,
     List<int> GoalIds,
     ProfilePictureType? PictureType = null,
     int? DefaultPictureId = null,

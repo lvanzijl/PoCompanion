@@ -18,12 +18,10 @@ public interface IProfileRepository
     Task<ProfileDto?> GetProfileByIdAsync(int id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Creates a new profile.
+    /// Creates a new profile (Product Owner).
     /// </summary>
     Task<ProfileDto> CreateProfileAsync(
         string name,
-        List<string> areaPaths,
-        string teamName,
         List<int> goalIds,
         ProfilePictureType pictureType = ProfilePictureType.Default,
         int defaultPictureId = 0,
@@ -31,13 +29,11 @@ public interface IProfileRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Updates an existing profile.
+    /// Updates an existing profile (Product Owner).
     /// </summary>
     Task<ProfileDto> UpdateProfileAsync(
         int id,
         string name,
-        List<string> areaPaths,
-        string teamName,
         List<int> goalIds,
         ProfilePictureType? pictureType = null,
         int? defaultPictureId = null,

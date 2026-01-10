@@ -17,14 +17,12 @@ public enum ProfilePictureType
 }
 
 /// <summary>
-/// Immutable DTO for user profile.
-/// A profile represents a set of area paths, a team, and selected goals.
+/// Immutable DTO for user profile (Product Owner).
+/// A profile represents a Product Owner who manages products and teams.
 /// </summary>
 public sealed record ProfileDto(
     int Id,
     string Name,
-    List<string> AreaPaths,
-    string TeamName,
     List<int> GoalIds,
     ProfilePictureType PictureType,
     int DefaultPictureId,

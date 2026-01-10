@@ -131,8 +131,6 @@ public class PoToolDbContext : DbContext
         {
             entity.HasIndex(e => e.Name);
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
-            entity.Property(e => e.AreaPaths).HasMaxLength(2000).IsRequired();
-            entity.Property(e => e.TeamName).HasMaxLength(200).IsRequired();
             entity.Property(e => e.GoalIds).HasMaxLength(1000);
         });
 
@@ -214,7 +212,6 @@ public class PoToolDbContext : DbContext
         {
             entity.HasIndex(e => e.ProductOwnerId);
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
-            entity.Property(e => e.ProductAreaPath).HasMaxLength(500).IsRequired();
             entity.Property(e => e.CustomPicturePath).HasMaxLength(512);
 
             entity.HasOne(e => e.ProductOwner)

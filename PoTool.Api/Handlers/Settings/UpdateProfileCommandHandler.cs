@@ -22,8 +22,6 @@ public class UpdateProfileCommandHandler : ICommandHandler<UpdateProfileCommand,
         return await _repository.UpdateProfileAsync(
             command.Id,
             command.Name,
-            command.AreaPaths,
-            command.TeamName,
             command.GoalIds,
             command.PictureType,
             command.DefaultPictureId,
