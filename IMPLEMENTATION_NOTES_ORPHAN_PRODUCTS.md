@@ -193,56 +193,146 @@ All handlers follow the standard Mediator pattern:
 - Removed broken `TeamName` reference
 - Profile tile now shows only name and active status
 
+## Phase 3 Implementation (UI Integration)
+
+### Goals
+1. Regenerate API client with new endpoints
+2. Add ProductService wrapper methods
+3. Create ManageProducts page for global product management
+4. Support creating orphan products
+
+### ProductService Updates
+**File**: `PoTool.Client/Services/ProductService.cs`
+
+Added four new methods:
+
+```csharp
+// Get all products in the system
+public async Task<IEnumerable<ProductDto>> GetAllProductsAsync(CancellationToken cancellationToken = default)
+
+// Get only orphaned products
+public async Task<IEnumerable<ProductDto>> GetOrphanProductsAsync(CancellationToken cancellationToken = default)
+
+// Get products selectable by a specific Product Owner (owned + orphaned)
+public async Task<IEnumerable<ProductDto>> GetSelectableProductsAsync(int productOwnerId, CancellationToken cancellationToken = default)
+
+// Change the Product Owner for a product
+public async Task<ProductDto> ChangeProductOwnerAsync(int productId, int? newProductOwnerId, CancellationToken cancellationToken = default)
+```
+
+Also updated `CreateProductAsync` to accept nullable `productOwnerId` parameter.
+
+### ManageProducts Page
+**File**: `PoTool.Client/Pages/Settings/ManageProducts.razor`
+**Route**: `/settings/products`
+
+Features implemented:
+- **Global Product Listing**: Shows all products across all Product Owners
+- **Orphan Badge**: Orange "Orphan" chip for products with ProductOwnerId == null
+- **Filter Toggle**: "Show Only Orphans" switch to filter display
+- **Warning Banner**: Displays count of orphaned products with quick filter button
+- **CRUD Operations**: Add, Edit, Delete products
+- **Product Owner Display**: Shows owner ID for owned products
+- **Work Item Display**: Shows BacklogRootWorkItemId for each product
+- **Team Count**: Shows number of linked teams
+- **Empty States**: Different messages for no products vs no orphans
+
+### ProductEditor Updates
+**File**: `PoTool.Client/Components/Settings/ProductEditor.razor`
+
+Changes:
+- Updated to handle `ProductOwnerId = 0` as "create orphan"
+- When ProductOwnerId is 0, passes null to CreateProductAsync
+- This allows creating products without a Product Owner from ManageProducts page
+
+### Compilation Fixes
+Fixed errors caused by DTO changes:
+
+1. **ProfileSelector.razor**: Removed TeamName reference (doesn't exist in ProfileDto)
+2. **ProductEditor.razor**: Fixed BacklogRootWorkItemId handling (not nullable in DTO)
+3. **ManageProductOwner.razor**: Removed null check for BacklogRootWorkItemId
+
+### API Client Regeneration
+- Started API server to generate fresh swagger.json
+- Manually updated swagger.json to make ProductOwnerId nullable in CreateProductRequest
+- Regenerated NSwag client with `dotnet build`
+- New client includes all 4 new endpoints:
+  - GET /api/products/all
+  - GET /api/products/orphans
+  - GET /api/products/selectable
+  - PATCH /api/products/{id}/owner
+
+### CreateProductRequest Update
+**File**: `PoTool.Api/Controllers/ProductsController.cs`
+
+Changed ProductOwnerId from `int` to `int?`:
+
+```csharp
+public record CreateProductRequest(
+    int? ProductOwnerId,  // Changed from int to int?
+    string Name,
+    int BacklogRootWorkItemId,
+    ...
+);
+```
+
+This allows API to accept requests for creating orphan products.
+
 ## Testing Checklist for Next Phase
 
 ### Backend Testing
-- [ ] Create orphan product via API
-- [ ] Create owned product via API
-- [ ] Change product owner from Owner A to orphan
-- [ ] Change product owner from orphan to Owner B
-- [ ] Get all products returns both owned and orphan
-- [ ] Get orphan products returns only orphans
-- [ ] Get selectable products for Owner A returns their products + orphans
-- [ ] Get selectable products for Owner A does NOT return Owner B's products
+- [x] Create orphan product via API (via ManageProducts page)
+- [x] Create owned product via API (via Product Owner page)
+- [ ] Change product owner from Owner A to orphan (Phase 4)
+- [ ] Change product owner from orphan to Owner B (Phase 4)
+- [x] Get all products returns both owned and orphan
+- [x] Get orphan products returns only orphans
+- [ ] Get selectable products for Owner A returns their products + orphans (Phase 4)
+- [ ] Get selectable products for Owner A does NOT return Owner B's products (Phase 4)
 
-### Frontend Integration (Phase 3)
-- [ ] Regenerate API client with new endpoints
-- [ ] Create ProductService wrapper methods
+### Frontend Integration (Phase 3) ✅ COMPLETE
+- [x] Regenerate API client with new endpoints
+- [x] Create ProductService wrapper methods
+- [x] Fix compilation errors from DTO changes
+- [x] Update swagger.json to support nullable ProductOwnerId
+- [x] Build ManageProducts page
+- [x] Test page loads and displays products
+- [x] Verify orphan badge displays correctly
+
+### Manage Products Page (Phase 3) ✅ COMPLETE
+- [x] Display all products
+- [x] Show orphan indicator badge/chip
+- [x] Filter to show only orphans
+- [x] Show warning banner when orphans exist
+- [x] Create/edit/delete products
+- [x] Proper error handling
+
+### Product Owner Selection (Phase 4)
+- [ ] Update ManageProductOwner to use GetSelectableProductsAsync
 - [ ] Build product selector showing only valid products
 - [ ] Test product assignment (orphan → owner)
 - [ ] Test product deselection (owner → orphan)
 - [ ] Verify persistence across page refresh
 
-### Manage Products Page (Phase 4)
-- [ ] Display all products
-- [ ] Show orphan indicator badge/chip
-- [ ] Filter to show only orphans
-- [ ] Show warning banner when orphans exist
-- [ ] Create/edit/delete products
-- [ ] Navigate from Product Owner page
-
 ## Known Limitations
 
-1. **API Client Not Regenerated**: The NSwag-generated API client needs the API to run to regenerate. This will happen automatically on next build when API is running.
+1. ~~**API Client Not Regenerated**~~: ✅ FIXED in Phase 3. The NSwag-generated API client has been regenerated with all new endpoints.
 
-2. **No UI for Orphan Management Yet**: Backend is complete but UI integration is pending Phase 3.
+2. ~~**No UI for Orphan Management Yet**~~: ✅ FIXED in Phase 3. ManageProducts page provides full orphan management UI.
 
 3. **Order Field for Orphans**: Orphans have Order = 0. If this becomes a problem (e.g., sorting multiple orphans), we may need to add orphan-specific ordering logic.
 
 4. **No Orphan Cascade**: Deleting a Product Owner does NOT automatically orphan their products. They're currently cascade-deleted. This may need review.
 
+5. **Manual Swagger Update**: The swagger.json file was manually updated to make ProductOwnerId nullable in CreateProductRequest. Future API restarts will need to regenerate and update this field.
+
 ## Next Session Tasks
 
-### Priority 1: API Client Regeneration
-```bash
-cd PoTool.Api
-dotnet run &
-# Wait for API to start
-# Client will regenerate automatically on next build
-```
+### ~~Priority 1: API Client Regeneration~~ ✅ DONE (Phase 3)
+The API client has been regenerated with all new endpoints.
 
-### Priority 2: ProductService Updates
-Add these methods to `PoTool.Client/Services/ProductService.cs`:
+### ~~Priority 2: ProductService Updates~~ ✅ DONE (Phase 3)
+Added these methods to `PoTool.Client/Services/ProductService.cs`:
 
 ```csharp
 public async Task<IEnumerable<ProductDto>> GetAllProductsAsync(...)
@@ -251,18 +341,26 @@ public async Task<IEnumerable<ProductDto>> GetSelectableProductsAsync(int produc
 public async Task<ProductDto> ChangeProductOwnerAsync(int productId, int? newProductOwnerId, ...)
 ```
 
-### Priority 3: Create ManageProducts.razor
+### ~~Priority 3: Create ManageProducts.razor~~ ✅ DONE (Phase 3)
 Location: `PoTool.Client/Pages/Settings/ManageProducts.razor`
 Route: `/settings/products`
 
-Key features:
-- List all products (use `GetAllProductsAsync`)
+Implemented features:
+- List all products (uses `GetAllProductsAsync`)
 - Show orphan chip/badge for products where ProductOwnerId == null
 - Filter toggle to show only orphans
 - Warning banner: "X orphaned products need assignment"
-- Add/Edit/Delete functionality
+- Add/Edit/Delete functionality via ProductEditor
 
-### Priority 4: TFS Validation
+### Priority 4: Product Owner Selection Filter (Phase 4)
+Update `PoTool.Client/Pages/Settings/ManageProductOwner.razor`:
+- Replace `GetProductsByOwnerAsync` with `GetSelectableProductsAsync`
+- Show products owned by this owner + orphaned products
+- Add UI to assign orphaned products to this owner
+- Add UI to deselect products (makes them orphaned)
+- Test ownership changes persist
+
+### Priority 5: TFS Validation (Phase 5)
 Update `PoTool.Client/Components/Settings/ProductEditor.razor`:
 - Add validation on BacklogRootWorkItemId blur
 - Call WorkItemService to verify work item exists
@@ -323,6 +421,11 @@ This ensures no order conflicts when reassigning products.
 - `PoTool.Client/Pages/ProfilesHome.razor`
 - `PoTool.Client/Pages/Settings/ManageProductOwner.razor`
 - `PoTool.Client/Components/Settings/ProfileTile.razor`
+- `PoTool.Client/Components/Settings/ProfileSelector.razor` (Phase 3)
+- `PoTool.Client/Components/Settings/ProductEditor.razor` (Phase 3)
+- `PoTool.Client/Services/ProductService.cs` (Phase 3)
+- `PoTool.Client/swagger.json` (Phase 3 - manual update for nullable ProductOwnerId)
+- `PoTool.Client/ApiClient/ApiClient.g.cs` (Phase 3 - regenerated)
 
 ### Files Created
 - `PoTool.Core/Settings/Commands/ChangeProductOwnerCommand.cs`
@@ -335,13 +438,15 @@ This ensures no order conflicts when reassigning products.
 - `PoTool.Api/Handlers/Settings/Products/GetSelectableProductsQueryHandler.cs`
 - `PoTool.Api/Migrations/20260110221715_MakeProductOwnerIdNullable.cs`
 - `PoTool.Api/Migrations/20260110221715_MakeProductOwnerIdNullable.Designer.cs`
+- `PoTool.Client/Pages/Settings/ManageProducts.razor` (Phase 3)
 
 ### Commits
 1. `8e99404` - Phase 1: Fix immediate UI issues
 2. `af8eaa1` - Phase 2: Backend support for orphan products
+3. `e8a9ed1` - Phase 3: ProductService wrapper methods and ManageProducts page
 
 ---
 
 **Author**: GitHub Copilot Agent  
 **Date**: 2026-01-10  
-**Status**: Phases 1-2 Complete, Ready for Phase 3
+**Status**: Phases 1-3 Complete, Ready for Phase 4
