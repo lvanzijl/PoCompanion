@@ -3,6 +3,7 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.Settings
 @using PoTool.Client.ApiClient
+@using ProfilePictureType = PoTool.Shared.Settings.ProfilePictureType
 @inject ProfileService ProfileService
 @inject SettingsService SettingsService
 @inject IDialogService DialogService
@@ -145,32 +146,35 @@
 
     private async Task OpenAddProfileDialog()
     {
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Large,
-            FullWidth = true
-        };
-        
-        await DialogService.ShowAsync<ProfileManagerDialog>("Create New Profile", options);
-        
-        // Refresh profiles after dialog closes
-        await LoadProfilesAsync();
+        // Create a minimal profile and navigate to the management page
+        try
+        {
+            // Create a basic profile with minimal data
+            var newProfile = await ProfileService.CreateProfileAsync(
+                "New Product Owner",
+                new List<string>(),  // Empty area paths - to be configured in management page
+                "Default Team",      // Default team name - to be configured
+                new List<int>(),     // No goals initially
+                ProfilePictureType.Default,
+                Random.Shared.Next(0, 64),  // Random picture
+                null
+            );
+            
+            Snackbar.Add("Product Owner profile created. Configure products and details below.", Severity.Success);
+            
+            // Navigate to the management page for the new profile
+            NavigationManager.NavigateTo($"/settings/productowner/{newProfile.Id}");
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error creating profile");
+        }
     }
 
-    private async Task ManageProfiles()
+    private void ManageProfiles()
     {
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Large,
-            FullWidth = true
-        };
-        
-        await DialogService.ShowAsync<ProfileManagerDialog>("Manage Profiles", options);
-        
-        // Refresh profiles after dialog closes
-        await LoadProfilesAsync();
+        // Since each profile has a "Manage Products" button, inform the user
+        Snackbar.Add("Click 'Manage Products' on any profile tile to configure it", Severity.Info);
     }
 
     private void ManageTeams()
