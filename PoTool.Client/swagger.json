@@ -8,7 +8,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5000"
+      "url": "http://localhost:5291"
     }
   ],
   "paths": {
@@ -950,6 +950,330 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PipelineSyncResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Products": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "Products_GetProductsByOwner",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProductDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "Products_CreateProduct",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Products/{id}": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "Products_GetProductById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "Products_UpdateProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "Products_DeleteProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Products/reorder": {
+      "post": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "Products_ReorderProducts",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderProductsRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProductDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Products/{productId}/teams/{teamId}": {
+      "post": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "Products_LinkTeamToProduct",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "Products_UnlinkTeamFromProduct",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -2051,6 +2375,85 @@
         }
       }
     },
+    "/api/ReleasePlanning/epics/{epicId}/features": {
+      "get": {
+        "tags": [
+          "ReleasePlanning"
+        ],
+        "operationId": "ReleasePlanning_GetEpicFeatures",
+        "parameters": [
+          {
+            "name": "epicId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EpicFeatureDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ReleasePlanning/epics/{epicId}/split": {
+      "post": {
+        "tags": [
+          "ReleasePlanning"
+        ],
+        "operationId": "ReleasePlanning_SplitEpic",
+        "parameters": [
+          {
+            "name": "epicId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SplitEpicRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EpicSplitResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/ReleasePlanning/export": {
       "post": {
         "tags": [
@@ -2152,6 +2555,248 @@
         "responses": {
           "200": {
             "description": ""
+          }
+        }
+      }
+    },
+    "/api/Startup/readiness": {
+      "get": {
+        "tags": [
+          "Startup"
+        ],
+        "operationId": "Startup_GetStartupReadiness",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartupReadinessDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Teams": {
+      "get": {
+        "tags": [
+          "Teams"
+        ],
+        "operationId": "Teams_GetAllTeams",
+        "parameters": [
+          {
+            "name": "includeArchived",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Teams"
+        ],
+        "operationId": "Teams_CreateTeam",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTeamRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Teams/{id}": {
+      "get": {
+        "tags": [
+          "Teams"
+        ],
+        "operationId": "Teams_GetTeamById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Teams"
+        ],
+        "operationId": "Teams_UpdateTeam",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTeamRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Teams/{id}/archive": {
+      "post": {
+        "tags": [
+          "Teams"
+        ],
+        "operationId": "Teams_ArchiveTeam",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchiveTeamRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -2332,6 +2977,52 @@
           "WorkItems"
         ],
         "operationId": "WorkItems_GetAllGoals",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkItemDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/WorkItems/area-paths/from-tfs": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetAreaPathsFromTfs",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/WorkItems/goals/from-tfs": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetGoalsFromTfs",
         "responses": {
           "200": {
             "description": "",
@@ -2751,8 +3442,8 @@
           "project": {
             "type": "string"
           },
-          "authMode": {
-            "$ref": "#/components/schemas/TfsAuthMode"
+          "defaultAreaPath": {
+            "type": "string"
           },
           "useDefaultCredentials": {
             "type": "boolean"
@@ -2771,18 +3462,6 @@
           }
         }
       },
-      "TfsAuthMode": {
-        "type": "integer",
-        "description": "",
-        "x-enumNames": [
-          "Pat",
-          "Ntlm"
-        ],
-        "enum": [
-          0,
-          1
-        ]
-      },
       "TfsConfigRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -2798,14 +3477,6 @@
           "defaultAreaPath": {
             "type": "string",
             "nullable": true
-          },
-          "pat": {
-            "type": "string",
-            "nullable": true
-          },
-          "authMode": {
-            "type": "integer",
-            "format": "int32"
           },
           "useDefaultCredentials": {
             "type": "boolean"
@@ -4519,7 +5190,7 @@
           }
         }
       },
-      "ProfileDto": {
+      "ProductDto": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -4527,24 +5198,35 @@
             "type": "integer",
             "format": "int32"
           },
+          "productOwnerId": {
+            "type": "integer",
+            "format": "int32"
+          },
           "name": {
             "type": "string"
           },
-          "areaPaths": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "teamName": {
+          "productAreaPath": {
             "type": "string"
           },
-          "goalIds": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "format": "int32"
-            }
+          "backlogRootWorkItemId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pictureType": {
+            "$ref": "#/components/schemas/ProductPictureType"
+          },
+          "defaultPictureId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "customPicturePath": {
+            "type": "string",
+            "nullable": true
           },
           "createdAt": {
             "type": "string",
@@ -4554,18 +5236,26 @@
             "type": "string",
             "format": "date-time"
           },
-          "pictureType": {
-            "$ref": "#/components/schemas/ProfilePictureType"
-          },
-          "defaultPictureId": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "customPicturePath": {
-            "type": "string",
-            "nullable": true
+          "teamIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
           }
         }
+      },
+      "ProductPictureType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Default",
+          "Custom"
+        ],
+        "enum": [
+          0,
+          1
+        ]
       },
       "ProblemDetails": {
         "type": "object",
@@ -4595,6 +5285,149 @@
             "nullable": true
           }
         }
+      },
+      "CreateProductRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productOwnerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "productAreaPath": {
+            "type": "string"
+          },
+          "backlogRootWorkItemId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "pictureType": {
+            "$ref": "#/components/schemas/ProductPictureType"
+          },
+          "defaultPictureId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "customPicturePath": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateProductRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "productAreaPath": {
+            "type": "string"
+          },
+          "backlogRootWorkItemId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "pictureType": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProductPictureType"
+              }
+            ]
+          },
+          "defaultPictureId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "customPicturePath": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ReorderProductsRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productOwnerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "ProfileDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "areaPaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "teamName": {
+            "type": "string"
+          },
+          "goalIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "pictureType": {
+            "$ref": "#/components/schemas/ProfilePictureType"
+          },
+          "defaultPictureId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "customPicturePath": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastModified": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ProfilePictureType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Default",
+          "Custom"
+        ],
+        "enum": [
+          0,
+          1
+        ]
       },
       "CreateProfileRequest": {
         "type": "object",
@@ -5538,6 +6371,75 @@
           }
         }
       },
+      "EpicFeatureDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "featureId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "effort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "state": {
+            "type": "string"
+          }
+        }
+      },
+      "EpicSplitResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "originalEpicId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "extractedEpicId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "originalEpicNewEffort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "extractedEpicEffort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "SplitEpicRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "extractedEpicTitle": {
+            "type": "string"
+          },
+          "featureIdsForExtractedEpic": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
       "ExportResultDto": {
         "type": "object",
         "additionalProperties": false,
@@ -5677,6 +6579,147 @@
             "format": "int32"
           },
           "enableProactiveNotifications": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StartupReadinessDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "isMockDataEnabled": {
+            "type": "boolean"
+          },
+          "hasSavedTfsConfig": {
+            "type": "boolean"
+          },
+          "hasTestedConnectionSuccessfully": {
+            "type": "boolean"
+          },
+          "hasVerifiedTfsApiSuccessfully": {
+            "type": "boolean"
+          },
+          "hasAnyProfile": {
+            "type": "boolean"
+          },
+          "activeProfileId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "missingRequirementMessage": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "TeamDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "teamAreaPath": {
+            "type": "string"
+          },
+          "isArchived": {
+            "type": "boolean"
+          },
+          "pictureType": {
+            "$ref": "#/components/schemas/TeamPictureType"
+          },
+          "defaultPictureId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "customPicturePath": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastModified": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TeamPictureType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Default",
+          "Custom"
+        ],
+        "enum": [
+          0,
+          1
+        ]
+      },
+      "CreateTeamRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "teamAreaPath": {
+            "type": "string"
+          },
+          "pictureType": {
+            "$ref": "#/components/schemas/TeamPictureType"
+          },
+          "defaultPictureId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "customPicturePath": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateTeamRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "teamAreaPath": {
+            "type": "string"
+          },
+          "pictureType": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TeamPictureType"
+              }
+            ]
+          },
+          "defaultPictureId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "customPicturePath": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ArchiveTeamRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "isArchived": {
             "type": "boolean"
           }
         }
@@ -6359,18 +7402,6 @@
             "format": "int32"
           }
         }
-      },
-      "ProfilePictureType": {
-        "type": "integer",
-        "description": "",
-        "x-enumNames": [
-          "Default",
-          "Custom"
-        ],
-        "enum": [
-          0,
-          1
-        ]
       }
     }
   }

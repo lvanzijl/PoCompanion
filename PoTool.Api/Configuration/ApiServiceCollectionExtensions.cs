@@ -102,6 +102,11 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IPullRequestRepository, PullRequestRepository>();
         services.AddScoped<IReleasePlanningRepository, ReleasePlanningRepository>();
         services.AddSingleton<IPipelineRepository, Repositories.PipelineRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<ITeamRepository, TeamRepository>();
+
+        // Register Classification service
+        services.AddScoped<IWorkItemClassificationService, WorkItemClassificationService>();
 
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();
@@ -144,6 +149,9 @@ public static class ApiServiceCollectionExtensions
         // Register TFS throttling and request services (used by RealTfsClient)
         services.AddSingleton<TfsRequestThrottler>();
         services.AddScoped<TfsRequestSender>();
+        
+        // Always register HttpClientFactory for handlers that need it
+        services.AddHttpClient();
         
         // Register TFS client based on configuration (useMockClient already read above)
         if (useMockClient)
