@@ -132,8 +132,8 @@
         if (Product != null)
         {
             _name = Product.Name;
-            _backlogRootWorkItemId = Product.BacklogRootWorkItemId ?? 0;
-            _backlogRootWorkItemIdText = Product.BacklogRootWorkItemId?.ToString() ?? string.Empty;
+            _backlogRootWorkItemId = Product.BacklogRootWorkItemId;
+            _backlogRootWorkItemIdText = Product.BacklogRootWorkItemId.ToString();
             _selectedImageId = Product.DefaultPictureId;
             _selectedTeamIds = Product.TeamIds.ToList();
         }
@@ -189,8 +189,9 @@
             }
             else
             {
+                var ownerIdToUse = ProductOwnerId == 0 ? (int?)null : ProductOwnerId;
                 var created = await ProductService.CreateProductAsync(
-                    ProductOwnerId,
+                    ownerIdToUse,
                     _name,
                     _backlogRootWorkItemId,
                     ProductPictureType.Default,

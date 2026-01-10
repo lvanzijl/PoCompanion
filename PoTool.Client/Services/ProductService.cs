@@ -42,7 +42,7 @@ public class ProductService
     /// Creates a new product.
     /// </summary>
     public async Task<ProductDto> CreateProductAsync(
-        int productOwnerId,
+        int? productOwnerId,
         string name,
         int backlogRootWorkItemId,
         ProductPictureType pictureType = ProductPictureType.Default,
@@ -153,5 +153,44 @@ public class ProductService
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Gets all products in the system.
+    /// </summary>
+    public async Task<IEnumerable<ProductDto>> GetAllProductsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _productsClient.GetAllProductsAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets all orphaned products (products with no owner).
+    /// </summary>
+    public async Task<IEnumerable<ProductDto>> GetOrphanProductsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _productsClient.GetOrphanProductsAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets products selectable by a specific Product Owner (owned + orphaned).
+    /// </summary>
+    public async Task<IEnumerable<ProductDto>> GetSelectableProductsAsync(int productOwnerId, CancellationToken cancellationToken = default)
+    {
+        return await _productsClient.GetSelectableProductsAsync(productOwnerId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Changes the Product Owner for a product.
+    /// </summary>
+    /// <param name="productId">ID of the product</param>
+    /// <param name="newProductOwnerId">New owner ID, or null to make orphan</param>
+    public async Task<ProductDto> ChangeProductOwnerAsync(int productId, int? newProductOwnerId, CancellationToken cancellationToken = default)
+    {
+        var request = new ChangeProductOwnerRequest
+        {
+            NewProductOwnerId = newProductOwnerId
+        };
+
+        return await _productsClient.ChangeProductOwnerAsync(productId, request, cancellationToken);
     }
 }

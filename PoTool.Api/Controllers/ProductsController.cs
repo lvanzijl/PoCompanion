@@ -243,7 +243,7 @@ public class ProductsController : ControllerBase
 /// Request model for creating a product.
 /// </summary>
 public record CreateProductRequest(
-    int ProductOwnerId,
+    int? ProductOwnerId,
     string Name,
     int BacklogRootWorkItemId,
     ProductPictureType PictureType = ProductPictureType.Default,

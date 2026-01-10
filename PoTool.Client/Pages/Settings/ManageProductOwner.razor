@@ -80,13 +80,7 @@
                                                 <MudImage Src="@GetProductImagePath(product)" Alt="@product.Name" />
                                             </MudAvatar>
                                             <MudStack Spacing="0">
-                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                    <MudText Typo="Typo.body1"><strong>@product.Name</strong></MudText>
-                                                    @if (product.BacklogRootWorkItemId == null)
-                                                    {
-                                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">Backlog-less</MudChip>
-                                                    }
-                                                </MudStack>
+                                                <MudText Typo="Typo.body1"><strong>@product.Name</strong></MudText>
                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                     @product.TeamIds.Count team(s) linked
                                                 </MudText>
