@@ -20,11 +20,30 @@
                           Required="true"
                           HelperText="e.g., 'Customer Portal', 'Mobile App'" />
 
-            <CompactTextField @bind-Value="_backlogRootWorkItemIdText" 
-                          Label="Backlog Root Work Item ID" 
-                          Required="true"
-                          HelperText="Enter the work item ID that defines the product backlog"
-                          InputType="InputType.Number" />
+            <MudStack Spacing="1">
+                <CompactTextField @bind-Value="_backlogRootWorkItemIdText" 
+                              Label="Backlog Root Work Item ID" 
+                              Required="true"
+                              HelperText="Enter the work item ID that defines the product backlog"
+                              InputType="InputType.Number"
+                              OnBlur="ValidateWorkItemId"
+                              Error="@_workItemValidationFailed"
+                              ErrorText="@_workItemValidationError" />
+                
+                @if (_isValidatingWorkItem)
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Validating work item...</MudText>
+                    </MudStack>
+                }
+                else if (_workItemValidationSuccess)
+                {
+                    <MudAlert Severity="Severity.Success" Dense="true" Class="mt-1">
+                        Work item validated successfully
+                    </MudAlert>
+                }
+            </MudStack>
 
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
@@ -74,7 +93,7 @@
                 <CompactButton OnClick="SaveProduct" 
                            Color="Color.Primary" 
                            Variant="Variant.Filled" 
-                           Disabled="_isSaving"
+                           Disabled="@(_isSaving || _workItemValidationFailed || _isValidatingWorkItem)"
                            StartIcon="@Icons.Material.Filled.Save">
                     @if (_isSaving)
                     {
@@ -114,6 +133,12 @@
     private bool IsEditing => Product != null;
     private bool _isSaving = false;
     private ErrorResponse? _errorResponse;
+
+    // TFS Work Item validation state
+    private bool _isValidatingWorkItem = false;
+    private bool _workItemValidationFailed = false;
+    private bool _workItemValidationSuccess = false;
+    private string _workItemValidationError = string.Empty;
 
     private string _name = string.Empty;
     private string _backlogRootWorkItemIdText = string.Empty;
@@ -165,6 +190,23 @@
         {
             Snackbar.Add("Please enter a valid work item ID", Severity.Warning);
             return;
+        }
+
+        // Check if validation passed
+        if (_workItemValidationFailed)
+        {
+            Snackbar.Add("Please fix the work item validation error before saving", Severity.Error);
+            return;
+        }
+
+        // Validate if not already validated
+        if (!_workItemValidationSuccess && !IsEditing)
+        {
+            await ValidateWorkItemId();
+            if (_workItemValidationFailed)
+            {
+                return;
+            }
         }
 
         try
@@ -239,6 +281,52 @@
     private async Task Cancel()
     {
         await OnCancelled.InvokeAsync();
+    }
+
+    private async Task ValidateWorkItemId()
+    {
+        // Reset validation state
+        _workItemValidationFailed = false;
+        _workItemValidationSuccess = false;
+        _workItemValidationError = string.Empty;
+
+        // Parse the work item ID
+        if (!int.TryParse(_backlogRootWorkItemIdText, out var workItemId) || workItemId <= 0)
+        {
+            _workItemValidationFailed = true;
+            _workItemValidationError = "Please enter a valid work item ID";
+            return;
+        }
+
+        try
+        {
+            _isValidatingWorkItem = true;
+            StateHasChanged();
+
+            // Call TFS to validate the work item exists
+            var workItem = await WorkItemService.GetByTfsIdAsync(workItemId);
+            
+            if (workItem == null)
+            {
+                _workItemValidationFailed = true;
+                _workItemValidationError = $"Work item {workItemId} not found in TFS";
+            }
+            else
+            {
+                _workItemValidationSuccess = true;
+                _backlogRootWorkItemId = workItemId;
+            }
+        }
+        catch (Exception ex)
+        {
+            _workItemValidationFailed = true;
+            _workItemValidationError = $"Error validating work item: {ex.Message}";
+        }
+        finally
+        {
+            _isValidatingWorkItem = false;
+            StateHasChanged();
+        }
     }
 
     private async Task OpenCreateTeamDialog()
