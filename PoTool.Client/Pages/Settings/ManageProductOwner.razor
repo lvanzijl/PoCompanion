@@ -37,12 +37,20 @@
                         </MudText>
                     </MudStack>
                 </MudStack>
-                <CompactButton Variant="Variant.Outlined" 
-                               Color="Color.Default"
-                               OnClick="GoBack"
-                               StartIcon="@Icons.Material.Filled.ArrowBack">
-                    Back to Profiles
-                </CompactButton>
+                <MudStack Row="true" Spacing="2">
+                    <CompactButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary"
+                                   OnClick="EditProfileInfo"
+                                   StartIcon="@Icons.Material.Filled.Edit">
+                        Edit Profile
+                    </CompactButton>
+                    <CompactButton Variant="Variant.Outlined" 
+                                   Color="Color.Default"
+                                   OnClick="GoBack"
+                                   StartIcon="@Icons.Material.Filled.ArrowBack">
+                        Back to Profiles
+                    </CompactButton>
+                </MudStack>
             </MudStack>
 
             <MudDivider />
@@ -274,6 +282,22 @@
     private void GoBack()
     {
         NavigationManager.NavigateTo("/profiles");
+    }
+
+    private async Task EditProfileInfo()
+    {
+        // Open ProfileManagerDialog to edit the basic profile information
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+        
+        await DialogService.ShowAsync<ProfileManagerDialog>("Edit Profile Information", options);
+        
+        // Reload the profile data after editing
+        await LoadDataAsync();
     }
 
     private string GetProfileImagePath()

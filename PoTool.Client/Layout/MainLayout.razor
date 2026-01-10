@@ -162,22 +162,10 @@
         await DialogService.ShowAsync<KeyboardShortcutsDialog>("Keyboard Shortcuts", options);
     }
 
-    private async Task OpenProfileManager()
+    private void OpenProfileManager()
     {
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Large,
-            FullWidth = true
-        };
-        
-        await DialogService.ShowAsync<ProfileManagerDialog>("Manage Profiles", options);
-        
-        // Refresh the profile selector after the dialog closes
-        if (_profileSelector != null)
-        {
-            await _profileSelector.RefreshAsync();
-        }
+        // Navigate to profiles home where users can manage their Product Owner profiles
+        NavigationManager.NavigateTo("/profiles");
     }
 
     private void HandleProfileChanged()
