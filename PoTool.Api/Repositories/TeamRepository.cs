@@ -131,6 +131,32 @@ public class TeamRepository : ITeamRepository
         return MapToDto(entity);
     }
 
+    /// <inheritdoc />
+    public async Task<bool> DeleteTeamAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _context.Teams
+            .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+
+        if (entity == null)
+        {
+            return false;
+        }
+
+        // Remove all product-team links first
+        var productLinks = await _context.ProductTeamLinks
+            .Where(ptl => ptl.TeamId == id)
+            .ToListAsync(cancellationToken);
+        
+        _context.ProductTeamLinks.RemoveRange(productLinks);
+
+        // Then remove the team entity
+        _context.Teams.Remove(entity);
+        
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
+
     private static TeamDto MapToDto(TeamEntity entity)
     {
         return new TeamDto(

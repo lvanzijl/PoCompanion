@@ -127,6 +127,24 @@ public class TeamsController : ControllerBase
             return NotFound();
         }
     }
+
+    /// <summary>
+    /// Permanently deletes a team and all its product links.
+    /// </summary>
+    [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteTeam(int id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new DeleteTeamCommand(id), cancellationToken);
+
+        if (!result)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
 }
 
 /// <summary>
