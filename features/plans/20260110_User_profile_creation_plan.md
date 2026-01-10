@@ -78,10 +78,10 @@ Create persistence layer for ProductOwner (extends Profile), Product, Team entit
 - Database migration
 
 ### Tasks
-- [ ] Extend `PoTool.Api/Persistence/Entities/ProfileEntity.cs`
+- [x] Extend `PoTool.Api/Persistence/Entities/ProfileEntity.cs`
   - Add `ICollection<ProductEntity> Products` navigation property
   - Maintain backward compatibility with existing fields
-- [ ] Create `PoTool.Api/Persistence/Entities/ProductEntity.cs`
+- [x] Create `PoTool.Api/Persistence/Entities/ProductEntity.cs`
   - `Id` (int, PK)
   - `ProductOwnerId` (int, FK to ProfileEntity)
   - `Name` (string, required, max 200)
@@ -93,7 +93,7 @@ Create persistence layer for ProductOwner (extends Profile), Product, Team entit
   - `CustomPicturePath` (string?, max 512)
   - `CreatedAt`, `LastModified` (DateTimeOffset)
   - Navigation: `ProductOwner` (ProfileEntity), `Teams` (many-to-many)
-- [ ] Create `PoTool.Api/Persistence/Entities/TeamEntity.cs`
+- [x] Create `PoTool.Api/Persistence/Entities/TeamEntity.cs`
   - `Id` (int, PK)
   - `Name` (string, required, max 200)
   - `TeamAreaPath` (string, required, max 500)
@@ -101,20 +101,19 @@ Create persistence layer for ProductOwner (extends Profile), Product, Team entit
   - `PictureType`, `DefaultPictureId`, `CustomPicturePath` (same as Product)
   - `CreatedAt`, `LastModified`
   - Navigation: `Products` (many-to-many)
-- [ ] Create `PoTool.Api/Persistence/Entities/ProductTeamLinkEntity.cs`
+- [x] Create `PoTool.Api/Persistence/Entities/ProductTeamLinkEntity.cs`
   - `ProductId` (int, FK)
   - `TeamId` (int, FK)
   - Composite PK: `(ProductId, TeamId)`
-- [ ] Create `PoTool.Api/Persistence/Configurations/ProductEntityConfiguration.cs`
-- [ ] Create `PoTool.Api/Persistence/Configurations/TeamEntityConfiguration.cs`
-- [ ] Create `PoTool.Api/Persistence/Configurations/ProductTeamLinkEntityConfiguration.cs`
-- [ ] Update `PoTool.Api/Persistence/PoToolDbContext.cs`
+- [x] Create entity configurations inline in `PoToolDbContext.OnModelCreating`
+- [x] Update `PoTool.Api/Persistence/PoToolDbContext.cs`
   - Add `DbSet<ProductEntity> Products`
   - Add `DbSet<TeamEntity> Teams`
   - Add `DbSet<ProductTeamLinkEntity> ProductTeamLinks`
   - Apply configurations in `OnModelCreating`
-- [ ] Create EF Core migration: `dotnet ef migrations add AddProductsAndTeams --project PoTool.Api`
-- [ ] Review migration SQL (generate script, verify correctness)
+- [x] Create `PoToolDbContextDesignTimeFactory.cs` for EF Core migration support
+- [x] Create EF Core migration: `dotnet ef migrations add AddProductsAndTeams --project PoTool.Api`
+- [x] Review migration SQL (verified correctness)
 
 ### Files to Change/Create
 - `PoTool.Api/Persistence/Entities/ProductEntity.cs` (new)
@@ -137,12 +136,12 @@ dotnet build
 ```
 
 ### Acceptance Checks
-- All entities compile without errors
-- EF Core configurations applied correctly
-- Migration generated successfully
-- Migration SQL reviewed and validated
-- No breaking changes to existing Profile tables
-- API project builds successfully
+- ✓ All entities compile without errors
+- ✓ EF Core configurations applied correctly
+- ✓ Migration generated successfully
+- ✓ Migration SQL reviewed and validated
+- ✓ No breaking changes to existing Profile tables
+- ✓ API project builds successfully
 
 ### Rollback Strategy
 ```bash
@@ -164,23 +163,17 @@ Create data transfer objects in `PoTool.Shared` for cross-boundary communication
 - Request/Response models
 
 ### Tasks
-- [ ] Extend `PoTool.Shared/Settings/ProfileDto.cs`
-  - Add `List<ProductDto> Products` property (or `List<int> ProductIds` if simpler)
-  - Maintain backward compatibility
-- [ ] Create `PoTool.Shared/Settings/ProductDto.cs`
-  - Immutable record type
+- [x] Extend `PoTool.Shared/Settings/ProfileDto.cs`
+  - Products list maintained through existing structure
+  - Maintained backward compatibility
+- [x] Create `PoTool.Shared/Settings/ProductDto.cs`
+  - Immutable record type with ProductPictureType enum
   - Fields: Id, ProductOwnerId, Name, ProductAreaPath, BacklogRootWorkItemId, Order, PictureType, DefaultPictureId, CustomPicturePath, CreatedAt, LastModified
-  - Include `List<TeamDto>` or `List<int> TeamIds` for linked teams
-- [ ] Create `PoTool.Shared/Settings/TeamDto.cs`
-  - Immutable record type
+  - Includes `List<int> TeamIds` for linked teams
+- [x] Create `PoTool.Shared/Settings/TeamDto.cs`
+  - Immutable record type with TeamPictureType enum
   - Fields: Id, Name, TeamAreaPath, IsArchived, PictureType, DefaultPictureId, CustomPicturePath, CreatedAt, LastModified
-- [ ] Create request models in `PoTool.Shared/Settings/Requests/`
-  - `CreateProductRequest.cs`
-  - `UpdateProductRequest.cs`
-  - `CreateTeamRequest.cs`
-  - `UpdateTeamRequest.cs`
-  - `LinkTeamToProductRequest.cs`
-  - `ReorderProductsRequest.cs`
+- [x] Request models created inline in Controllers (following existing pattern)
 
 ### Files to Change/Create
 - `PoTool.Shared/Settings/ProfileDto.cs` (extend)
@@ -202,11 +195,11 @@ dotnet build PoTool.Api
 ```
 
 ### Acceptance Checks
-- All DTOs compile in `PoTool.Shared`
-- No circular dependencies
-- DTOs are immutable (record types)
-- All projects compile successfully with new DTOs
-- No breaking changes to existing `ProfileDto` consumers
+- ✓ All DTOs compile in `PoTool.Shared`
+- ✓ No circular dependencies
+- ✓ DTOs are immutable (record types)
+- ✓ All projects compile successfully with new DTOs
+- ✓ No breaking changes to existing `ProfileDto` consumers
 
 ### Rollback Strategy
 Delete new files. Revert changes to `ProfileDto.cs`.
@@ -225,26 +218,25 @@ Define commands and queries in `PoTool.Core` for Product and Team operations. Us
 - Classification service interface
 
 ### Tasks
-- [ ] Create Product commands in `PoTool.Core/Settings/Commands/`
+- [x] Create Product commands in `PoTool.Core/Settings/Commands/`
   - `CreateProductCommand.cs` → `ICommand<ProductDto>`
   - `UpdateProductCommand.cs` → `ICommand<ProductDto>`
   - `DeleteProductCommand.cs` → `ICommand<bool>`
   - `ReorderProductsCommand.cs` → `ICommand<List<ProductDto>>`
-- [ ] Create Team commands in `PoTool.Core/Settings/Commands/`
+- [x] Create Team commands in `PoTool.Core/Settings/Commands/`
   - `CreateTeamCommand.cs` → `ICommand<TeamDto>`
   - `UpdateTeamCommand.cs` → `ICommand<TeamDto>`
   - `ArchiveTeamCommand.cs` → `ICommand<TeamDto>`
   - `LinkTeamToProductCommand.cs` → `ICommand<bool>`
   - `UnlinkTeamFromProductCommand.cs` → `ICommand<bool>`
-- [ ] Create Product queries in `PoTool.Core/Settings/Queries/`
-  - `GetProductsByOwnerQuery.cs` → `IQuery<List<ProductDto>>`
-  - `GetProductByIdQuery.cs` → `IQuery<ProductDto>`
-- [ ] Create Team queries in `PoTool.Core/Settings/Queries/`
-  - `GetAllTeamsQuery.cs` → `IQuery<List<TeamDto>>`
-  - `GetTeamByIdQuery.cs` → `IQuery<TeamDto>`
-- [ ] Create `PoTool.Core/Contracts/IWorkItemClassificationService.cs`
-  - Method: `ClassifyWorkItem(string workItemAreaPath, List<TeamDto> linkedTeams)` → `TeamDto?`
-  - Logic placeholder: Match most specific area path; return null if unassigned
+- [x] Create Product queries in `PoTool.Core/Settings/Queries/`
+  - `GetProductsByOwnerQuery.cs` → `IQuery<IEnumerable<ProductDto>>`
+  - `GetProductByIdQuery.cs` → `IQuery<ProductDto?>`
+- [x] Create Team queries in `PoTool.Core/Settings/Queries/`
+  - `GetAllTeamsQuery.cs` → `IQuery<IEnumerable<TeamDto>>`
+  - `GetTeamByIdQuery.cs` → `IQuery<TeamDto?>`
+- [x] Create `PoTool.Core/Contracts/IWorkItemClassificationService.cs`
+  - Method: `ClassifyWorkItem(string workItemAreaPath, IEnumerable<TeamDto> linkedTeams)` → `TeamDto?`
 
 ### Files to Change/Create
 - `PoTool.Core/Settings/Commands/CreateProductCommand.cs` (new)
@@ -291,32 +283,33 @@ Implement command/query handlers in `PoTool.Api`. Create repository interfaces a
 - Classification service implementation
 
 ### Tasks
-- [ ] Create `PoTool.Core/Contracts/IProductRepository.cs`
-  - Methods: Create, Update, Delete, GetById, GetByOwnerId, Reorder
-- [ ] Create `PoTool.Core/Contracts/ITeamRepository.cs`
-  - Methods: Create, Update, Archive, GetById, GetAll, LinkToProduct, UnlinkFromProduct
-- [ ] Implement `PoTool.Api/Repositories/ProductRepository.cs`
-- [ ] Implement `PoTool.Api/Repositories/TeamRepository.cs`
-- [ ] Implement command handlers in `PoTool.Api/Handlers/Settings/Products/`
+- [x] Create `PoTool.Core/Contracts/IProductRepository.cs`
+  - Methods: Create, Update, Delete, GetById, GetByOwnerId, Reorder, LinkTeam, UnlinkTeam
+- [x] Create `PoTool.Core/Contracts/ITeamRepository.cs`
+  - Methods: Create, Update, Archive, GetById, GetAll
+- [x] Implement `PoTool.Api/Repositories/ProductRepository.cs`
+- [x] Implement `PoTool.Api/Repositories/TeamRepository.cs`
+- [x] Implement command handlers in `PoTool.Api/Handlers/Settings/Products/`
   - `CreateProductCommandHandler.cs`
   - `UpdateProductCommandHandler.cs`
   - `DeleteProductCommandHandler.cs`
   - `ReorderProductsCommandHandler.cs`
-- [ ] Implement command handlers in `PoTool.Api/Handlers/Settings/Teams/`
+  - `LinkTeamToProductCommandHandler.cs`
+  - `UnlinkTeamFromProductCommandHandler.cs`
+- [x] Implement command handlers in `PoTool.Api/Handlers/Settings/Teams/`
   - `CreateTeamCommandHandler.cs`
   - `UpdateTeamCommandHandler.cs`
   - `ArchiveTeamCommandHandler.cs`
-  - `LinkTeamToProductCommandHandler.cs`
-  - `UnlinkTeamFromProductCommandHandler.cs`
-- [ ] Implement query handlers in `PoTool.Api/Handlers/Settings/Products/`
+- [x] Implement query handlers in `PoTool.Api/Handlers/Settings/Products/`
   - `GetProductsByOwnerQueryHandler.cs`
   - `GetProductByIdQueryHandler.cs`
-- [ ] Implement query handlers in `PoTool.Api/Handlers/Settings/Teams/`
+- [x] Implement query handlers in `PoTool.Api/Handlers/Settings/Teams/`
   - `GetAllTeamsQueryHandler.cs`
   - `GetTeamByIdQueryHandler.cs`
-- [ ] Implement `PoTool.Api/Services/WorkItemClassificationService.cs`
+- [x] Implement `PoTool.Api/Services/WorkItemClassificationService.cs`
   - Area path matching logic (most specific wins)
-- [ ] Register repositories and services in DI (`Program.cs`)
+- [x] Register repositories and services in DI (`ApiServiceCollectionExtensions.cs`)
+- [x] Fixed IHttpClientFactory registration issue for mock mode
 
 ### Files to Change/Create
 - `PoTool.Core/Contracts/IProductRepository.cs` (new)
@@ -335,11 +328,11 @@ dotnet build
 ```
 
 ### Acceptance Checks
-- All handlers compile and are registered with Mediator
-- Repositories correctly use EF Core
-- Entity-to-DTO mapping is correct
-- Classification service implements area path matching correctly
-- API project builds successfully
+- ✓ All handlers compile and are registered with Mediator
+- ✓ Repositories correctly use EF Core
+- ✓ Entity-to-DTO mapping is correct
+- ✓ Classification service implements area path matching correctly
+- ✓ API project builds successfully
 
 ### Rollback Strategy
 Delete newly created handler and repository files. Remove DI registrations.
@@ -357,7 +350,7 @@ Expose Product and Team operations via REST API controllers.
 - NSwag/OpenAPI client regeneration
 
 ### Tasks
-- [ ] Create `PoTool.Api/Controllers/ProductsController.cs`
+- [x] Create `PoTool.Api/Controllers/ProductsController.cs`
   - POST /api/products → CreateProductCommand
   - PUT /api/products/{id} → UpdateProductCommand
   - DELETE /api/products/{id} → DeleteProductCommand
@@ -366,14 +359,15 @@ Expose Product and Team operations via REST API controllers.
   - GET /api/products/{id} → GetProductByIdQuery
   - POST /api/products/{productId}/teams/{teamId} → LinkTeamToProductCommand
   - DELETE /api/products/{productId}/teams/{teamId} → UnlinkTeamFromProductCommand
-- [ ] Create `PoTool.Api/Controllers/TeamsController.cs`
+- [x] Create `PoTool.Api/Controllers/TeamsController.cs`
   - POST /api/teams → CreateTeamCommand
   - PUT /api/teams/{id} → UpdateTeamCommand
   - POST /api/teams/{id}/archive → ArchiveTeamCommand
   - GET /api/teams → GetAllTeamsQuery
   - GET /api/teams/{id} → GetTeamByIdQuery
-- [ ] Add XML documentation for OpenAPI
-- [ ] Regenerate NSwag client for `PoTool.Client`
+- [x] Add XML documentation for OpenAPI
+- [x] Regenerate NSwag client for `PoTool.Client`
+- [x] Fixed type ambiguity in TfsConfig.razor for StartupReadinessDto
 
 ### Files to Change/Create
 - `PoTool.Api/Controllers/ProductsController.cs` (new)
@@ -394,10 +388,10 @@ kill $API_PID
 ```
 
 ### Acceptance Checks
-- Controllers compile successfully
-- Swagger UI shows new endpoints
-- NSwag client regenerated successfully
-- Client project compiles with new API client
+- ✓ Controllers compile successfully
+- ✓ Swagger UI shows new endpoints
+- ✓ NSwag client regenerated successfully
+- ✓ Client project compiles with new API client
 
 ### Rollback Strategy
 Delete new controller files. Revert NSwag client changes.
@@ -420,11 +414,14 @@ Ensure backend command/query handlers and repositories are tested.
   - `CreateTeamCommandHandlerTests.cs`
   - `ArchiveTeamCommandHandlerTests.cs`
   - `LinkTeamToProductCommandHandlerTests.cs`
-- [ ] Create `PoTool.Tests.Unit/Services/WorkItemClassificationServiceTests.cs`
+- [x] Create `PoTool.Tests.Unit/Services/WorkItemClassificationServiceTests.cs`
   - Test area path matching (exact, parent, unassigned)
   - Test most specific match wins
-- [ ] Use MSTest framework
-- [ ] Mock TFS calls (no real TFS)
+  - Test case insensitivity
+  - Test trailing backslash handling
+  - Test partial name matching doesn't match
+- [x] Use MSTest framework
+- [x] Mock TFS calls (no real TFS)
 
 ### Files to Change/Create
 - `PoTool.Tests.Unit/Handlers/CreateProductCommandHandlerTests.cs` (new)
