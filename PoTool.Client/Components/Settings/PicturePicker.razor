@@ -1,0 +1,127 @@
+@using PoTool.Shared.Settings
+
+<MudStack Spacing="3">
+    <MudText Typo="Typo.subtitle1">@Title</MudText>
+    
+    @* Current Selection Display *@
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+        <MudCard Elevation="2" Style="width: 80px; height: 80px; padding: 4px;">
+            <img src="@GetCurrentImagePath()" 
+                 alt="Selected picture" 
+                 style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;" />
+        </MudCard>
+        <MudStack Spacing="1">
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Current Selection
+            </MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                Image @SelectedImageId
+            </MudText>
+        </MudStack>
+    </MudStack>
+    
+    @* Image Grid *@
+    <MudText Typo="Typo.body2" Color="Color.Secondary">
+        Choose from @TotalImages images:
+    </MudText>
+    
+    <MudPaper Elevation="1" Class="pa-3" Style="max-height: 300px; overflow-y: auto;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 6px;">
+            @for (int i = 0; i < TotalImages; i++)
+            {
+                var imageId = i; // Capture for lambda
+                var isSelected = imageId == SelectedImageId;
+                var imagePath = GetImagePath(imageId);
+                
+                <div @onclick="() => SelectImage(imageId)" 
+                     style="@GetImageStyle(isSelected)"
+                     title="Image @imageId">
+                    <img src="@imagePath" 
+                         alt="@Category @imageId" 
+                         style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;" />
+                </div>
+            }
+        </div>
+    </MudPaper>
+    
+    @* Future: Custom Image Upload *@
+    <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
+        <MudText Typo="Typo.caption">
+            Custom image upload coming soon!
+        </MudText>
+    </MudAlert>
+</MudStack>
+
+@code {
+    private const int TotalImages = 64;
+    
+    /// <summary>
+    /// The title displayed above the picker.
+    /// </summary>
+    [Parameter]
+    public string Title { get; set; } = "Picture";
+    
+    /// <summary>
+    /// The category determines which image folder to use.
+    /// Valid values: "Profile", "Product", "Team"
+    /// </summary>
+    [Parameter]
+    public string Category { get; set; } = "Profile";
+    
+    /// <summary>
+    /// The currently selected image ID (0-63).
+    /// </summary>
+    [Parameter]
+    public int SelectedImageId { get; set; } = 0;
+    
+    /// <summary>
+    /// Event callback when the selected image changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> SelectedImageIdChanged { get; set; }
+    
+    private async Task SelectImage(int imageId)
+    {
+        SelectedImageId = imageId;
+        await SelectedImageIdChanged.InvokeAsync(imageId);
+    }
+    
+    private string GetImagePath(int imageId)
+    {
+        // Use the appropriate folder based on category
+        // For now, all categories use the profile images as placeholders
+        // When separate image sets are created, this can be updated
+        var folder = Category.ToLowerInvariant() switch
+        {
+            "product" => "profiles", // TODO: Use "products" when images available
+            "team" => "profiles",    // TODO: Use "teams" when images available
+            _ => "profiles"
+        };
+        
+        return $"images/{folder}/profile-{imageId}.png";
+    }
+    
+    private string GetCurrentImagePath()
+    {
+        return GetImagePath(SelectedImageId);
+    }
+    
+    private string GetImageStyle(bool isSelected)
+    {
+        var baseStyle = "cursor: pointer; width: 50px; height: 50px; border-radius: 6px; transition: all 0.2s ease;";
+        
+        if (isSelected)
+        {
+            return baseStyle + " border: 3px solid var(--mud-palette-primary); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);";
+        }
+        
+        return baseStyle + " border: 2px solid transparent; opacity: 0.7;";
+    }
+}
+
+<style>
+    .picture-picker img:hover {
+        opacity: 1 !important;
+        transform: scale(1.05);
+    }
+</style>

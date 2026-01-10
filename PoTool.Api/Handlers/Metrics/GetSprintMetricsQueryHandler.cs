@@ -29,7 +29,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         _logger.LogDebug("Handling GetSprintMetricsQuery for iteration: {IterationPath}", query.IterationPath);
 
         var allWorkItems = await _repository.GetAllAsync(cancellationToken);
-        
+
         // Filter work items for this specific iteration
         var sprintWorkItems = allWorkItems
             .Where(wi => wi.IterationPath.Equals(query.IterationPath, StringComparison.OrdinalIgnoreCase))
@@ -55,15 +55,15 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
             .Where(wi => wi.Effort.HasValue)
             .Sum(wi => wi.Effort!.Value);
 
-        var completedPBIs = completedItems.Count(wi => 
+        var completedPBIs = completedItems.Count(wi =>
             wi.Type.Equals("Product Backlog Item", StringComparison.OrdinalIgnoreCase) ||
             wi.Type.Equals("PBI", StringComparison.OrdinalIgnoreCase) ||
             wi.Type.Equals("User Story", StringComparison.OrdinalIgnoreCase));
 
-        var completedBugs = completedItems.Count(wi => 
+        var completedBugs = completedItems.Count(wi =>
             wi.Type.Equals("Bug", StringComparison.OrdinalIgnoreCase));
 
-        var completedTasks = completedItems.Count(wi => 
+        var completedTasks = completedItems.Count(wi =>
             wi.Type.Equals("Task", StringComparison.OrdinalIgnoreCase));
 
         // Extract sprint name from iteration path (last segment)

@@ -85,6 +85,21 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<CachedValidationResultEntity> CachedValidationResults => Set<CachedValidationResultEntity>();
 
+    /// <summary>
+    /// Products owned by Product Owners.
+    /// </summary>
+    public DbSet<ProductEntity> Products => Set<ProductEntity>();
+
+    /// <summary>
+    /// Teams that can work on products.
+    /// </summary>
+    public DbSet<TeamEntity> Teams => Set<TeamEntity>();
+
+    /// <summary>
+    /// Product-Team many-to-many links.
+    /// </summary>
+    public DbSet<ProductTeamLinkEntity> ProductTeamLinks => Set<ProductTeamLinkEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -93,9 +108,9 @@ public class PoToolDbContext : DbContext
         {
             entity.HasIndex(e => e.TfsId)
                 .IsUnique();
-            
+
             entity.HasIndex(e => e.Type);
-            
+
             entity.HasIndex(e => e.Title);
         });
 
@@ -125,13 +140,13 @@ public class PoToolDbContext : DbContext
         {
             entity.HasIndex(e => e.Id)
                 .IsUnique();
-            
+
             entity.HasIndex(e => e.RepositoryName);
-            
+
             entity.HasIndex(e => e.CreatedBy);
-            
+
             entity.HasIndex(e => e.IterationPath);
-            
+
             entity.HasIndex(e => e.Status);
         });
 
@@ -144,7 +159,7 @@ public class PoToolDbContext : DbContext
         modelBuilder.Entity<PullRequestCommentEntity>(entity =>
         {
             entity.HasIndex(e => e.PullRequestId);
-            
+
             entity.HasIndex(e => e.ThreadId);
         });
 
@@ -163,7 +178,7 @@ public class PoToolDbContext : DbContext
         {
             entity.HasIndex(e => e.ObjectiveId)
                 .IsUnique();
-            
+
             entity.HasMany(e => e.Placements)
                 .WithOne(p => p.Lane)
                 .HasForeignKey(p => p.LaneId)
@@ -174,7 +189,7 @@ public class PoToolDbContext : DbContext
         {
             entity.HasIndex(e => e.EpicId)
                 .IsUnique();
-            
+
             entity.HasIndex(e => new { e.LaneId, e.RowIndex, e.OrderInRow });
         });
 
@@ -192,6 +207,45 @@ public class PoToolDbContext : DbContext
         {
             entity.HasIndex(e => e.EpicId)
                 .IsUnique();
+        });
+
+        // Product entity
+        modelBuilder.Entity<ProductEntity>(entity =>
+        {
+            entity.HasIndex(e => e.ProductOwnerId);
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.ProductAreaPath).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.CustomPicturePath).HasMaxLength(512);
+
+            entity.HasOne(e => e.ProductOwner)
+                .WithMany(p => p.Products)
+                .HasForeignKey(e => e.ProductOwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Team entity
+        modelBuilder.Entity<TeamEntity>(entity =>
+        {
+            entity.HasIndex(e => e.Name);
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.TeamAreaPath).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.CustomPicturePath).HasMaxLength(512);
+        });
+
+        // Product-Team many-to-many link
+        modelBuilder.Entity<ProductTeamLinkEntity>(entity =>
+        {
+            entity.HasKey(e => new { e.ProductId, e.TeamId });
+
+            entity.HasOne(e => e.Product)
+                .WithMany(p => p.ProductTeamLinks)
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Team)
+                .WithMany(t => t.ProductTeamLinks)
+                .HasForeignKey(e => e.TeamId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

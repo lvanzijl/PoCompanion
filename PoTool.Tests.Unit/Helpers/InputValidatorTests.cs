@@ -60,10 +60,10 @@ public class InputValidatorTests
         var result = InputValidator.SanitizeFilter(input);
 
         // Assert
-        
+
 #pragma warning disable MSTEST0037
         Assert.IsFalse(result.Contains('<'));
-        
+
 #pragma warning disable MSTEST0037
         Assert.IsFalse(result.Contains('>'));
 #pragma warning disable MSTEST0037
@@ -86,7 +86,7 @@ public class InputValidatorTests
         // Assert
 #pragma warning disable MSTEST0037
         Assert.IsFalse(result.Contains('\''));
-        
+
 #pragma warning disable MSTEST0037
         Assert.IsFalse(result.Contains(';'));
         Assert.Contains(result, "test");

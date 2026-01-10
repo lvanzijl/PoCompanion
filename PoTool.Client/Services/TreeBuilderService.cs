@@ -324,8 +324,9 @@ public class TreeBuilderService : ITreeBuilderService
         // Using int.MaxValue as a fallback for defensive programming, though this should never occur.
         var sortedInvalidDescendants = invalidDescendants
             .Distinct()
-            .Select(item => new { 
-                Id = item.Id, 
+            .Select(item => new
+            {
+                Id = item.Id,
                 Depth = nodeMap.TryGetValue(item.Id, out var foundNode) ? foundNode.Level : int.MaxValue,
                 Order = item.Order
             })

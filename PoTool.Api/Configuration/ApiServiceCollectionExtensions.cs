@@ -68,7 +68,7 @@ public static class ApiServiceCollectionExtensions
                 {
                     options.UseSqlite(configuration.GetConnectionString("DefaultConnection")
                         ?? "Data Source=potool.db");
-                    
+
                     // Suppress pending model changes warning in development for exploratory testing
                     if (isDevelopment)
                     {
@@ -102,6 +102,11 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IPullRequestRepository, PullRequestRepository>();
         services.AddScoped<IReleasePlanningRepository, ReleasePlanningRepository>();
         services.AddSingleton<IPipelineRepository, Repositories.PipelineRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<ITeamRepository, TeamRepository>();
+
+        // Register Classification service
+        services.AddScoped<IWorkItemClassificationService, WorkItemClassificationService>();
 
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();
@@ -140,11 +145,14 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<TfsConfigurationService>();
         services.AddScoped<TfsAuthenticationProvider>();
         services.AddScoped<ProfileFilterService>();
-        
+
         // Register TFS throttling and request services (used by RealTfsClient)
         services.AddSingleton<TfsRequestThrottler>();
         services.AddScoped<TfsRequestSender>();
-        
+
+        // Always register HttpClientFactory for handlers that need it
+        services.AddHttpClient();
+
         // Register TFS client based on configuration (useMockClient already read above)
         if (useMockClient)
         {
@@ -155,7 +163,7 @@ public static class ApiServiceCollectionExtensions
         {
             // Use real TFS client that connects to Azure DevOps/TFS
             // Register named HttpClient for NTLM authentication
-            
+
             // NTLM authentication client - WITH default Windows credentials
             services.AddHttpClient("TfsClient.NTLM")
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
@@ -165,7 +173,7 @@ public static class ApiServiceCollectionExtensions
                     AllowAutoRedirect = true,
                     MaxAutomaticRedirections = 5
                 });
-            
+
             // Register RealTfsClient as a regular scoped service
             // RealTfsClient uses IHttpClientFactory internally (via GetAuthenticatedHttpClient)
             // and has multiple constructor dependencies, so it doesn't follow the typed HttpClient pattern

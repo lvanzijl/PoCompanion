@@ -167,6 +167,69 @@ namespace PoTool.Api.Migrations
                     b.ToTable("MilestoneLines");
                 });
 
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProductEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("BacklogRootWorkItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomPicturePath")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DefaultPictureId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PictureType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProductAreaPath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProductOwnerId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductOwnerId");
+
+                    b.ToTable("Products");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProductTeamLinkEntity", b =>
+                {
+                    b.Property<int>("ProductId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TeamId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ProductId", "TeamId");
+
+                    b.HasIndex("TeamId");
+
+                    b.ToTable("ProductTeamLinks");
+                });
+
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProfileEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -421,6 +484,48 @@ namespace PoTool.Api.Migrations
                     b.ToTable("Settings");
                 });
 
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.TeamEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomPicturePath")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DefaultPictureId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PictureType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TeamAreaPath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("Teams");
+                });
+
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.TfsConfigEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -545,9 +650,54 @@ namespace PoTool.Api.Migrations
                     b.Navigation("Lane");
                 });
 
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProductEntity", b =>
+                {
+                    b.HasOne("PoTool.Api.Persistence.Entities.ProfileEntity", "ProductOwner")
+                        .WithMany("Products")
+                        .HasForeignKey("ProductOwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProductOwner");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProductTeamLinkEntity", b =>
+                {
+                    b.HasOne("PoTool.Api.Persistence.Entities.ProductEntity", "Product")
+                        .WithMany("ProductTeamLinks")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PoTool.Api.Persistence.Entities.TeamEntity", "Team")
+                        .WithMany("ProductTeamLinks")
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Team");
+                });
+
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.LaneEntity", b =>
                 {
                     b.Navigation("Placements");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProductEntity", b =>
+                {
+                    b.Navigation("ProductTeamLinks");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProfileEntity", b =>
+                {
+                    b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.TeamEntity", b =>
+                {
+                    b.Navigation("ProductTeamLinks");
                 });
 #pragma warning restore 612, 618
         }

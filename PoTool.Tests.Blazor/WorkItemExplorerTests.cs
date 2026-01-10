@@ -91,17 +91,17 @@ public class WorkItemExplorerTests : BunitTestContext
         Services.AddSingleton(_mockApiClient.Object);
         Services.AddSingleton(_mockSecureStorage.Object);
         Services.AddSingleton(_mockClipboardService.Object);
-        
+
         // Also register as Shared.Contracts.IClipboardService for WorkItemToolbar
         var mockSharedClipboardService = new Mock<Shared.Contracts.IClipboardService>();
         mockSharedClipboardService.Setup(x => x.CopyToClipboardAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
         Services.AddSingleton(mockSharedClipboardService.Object);
-        
+
         Services.AddSingleton(_mockDialogService.Object);
         Services.AddSingleton(_mockSnackbar.Object);
         Services.AddSingleton(_mockLogger.Object);
-        
+
         // Register concrete services that wrap the clients
         Services.AddSingleton<WorkItemService>();
         Services.AddSingleton<WorkItemSelectionService>();
@@ -165,10 +165,10 @@ public class WorkItemExplorerTests : BunitTestContext
 
         var treeNodes = new List<TreeNode>
         {
-            new TreeNode 
-            { 
-                Id = 1, 
-                Title = "Test Epic", 
+            new TreeNode
+            {
+                Id = 1,
+                Title = "Test Epic",
                 Type = "Epic",
                 Children = new List<TreeNode>
                 {
@@ -212,7 +212,7 @@ public class WorkItemExplorerTests : BunitTestContext
         Assert.IsNotNull(cut);
 
         // Complete the async operation
-        tcs.SetResult(new List<WorkItemWithValidationDto>() );
+        tcs.SetResult(new List<WorkItemWithValidationDto>());
     }
 
     [TestMethod]

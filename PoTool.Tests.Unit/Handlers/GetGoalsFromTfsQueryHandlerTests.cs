@@ -27,30 +27,30 @@ public class GetGoalsFromTfsQueryHandlerTests
     {
         _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
         _httpClient = new HttpClient(_httpMessageHandlerMock.Object);
-        
+
         // Create in-memory database for config service
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
             .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
             .Options;
         _dbContext = new PoToolDbContext(options);
-        
+
         // Create config service
         var configLogger = new Mock<ILogger<TfsConfigurationService>>();
         _configService = new TfsConfigurationService(_dbContext, configLogger.Object);
-        
+
         // Set up TFS configuration
         await _configService.SaveConfigAsync(
             "https://dev.azure.com/testorg",
             "TestProject",
             "TestProject\\Team",
             true);
-        
+
         _loggerMock = new Mock<ILogger<GetGoalsFromTfsQueryHandler>>();
-        
+
         // Create mock IHttpClientFactory
         var mockFactory = new Mock<IHttpClientFactory>();
         mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
-        
+
         _handler = new GetGoalsFromTfsQueryHandler(
             mockFactory.Object,
             _configService,
@@ -70,13 +70,13 @@ public class GetGoalsFromTfsQueryHandlerTests
     {
         // Arrange
         var query = new GetGoalsFromTfsQuery();
-        
+
         // Mock WIQL response with no results
         var wiqlResponse = new
         {
             workItems = Array.Empty<object>()
         };
-        
+
         SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse));
 
         // Act
@@ -92,7 +92,7 @@ public class GetGoalsFromTfsQueryHandlerTests
     {
         // Arrange
         var query = new GetGoalsFromTfsQuery();
-        
+
         // Mock WIQL response with goal IDs
         var wiqlResponse = new
         {
@@ -141,7 +141,7 @@ public class GetGoalsFromTfsQueryHandlerTests
                 }
             }
         };
-        
+
         // Setup sequence of responses: first WIQL, then batch
         SetupHttpResponseSequence(
             (HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse)),
@@ -167,7 +167,7 @@ public class GetGoalsFromTfsQueryHandlerTests
     {
         // Arrange
         var query = new GetGoalsFromTfsQuery();
-        
+
         // Mock WIQL response failure (e.g., work item type not found)
         SetupHttpResponse(HttpStatusCode.BadRequest, "Work item type 'Goal' does not exist");
 
@@ -186,7 +186,7 @@ public class GetGoalsFromTfsQueryHandlerTests
         // Clear the database to simulate no configuration
         _dbContext.Database.EnsureDeleted();
         _dbContext.Database.EnsureCreated();
-        
+
         var query = new GetGoalsFromTfsQuery();
 
         // Act
@@ -202,7 +202,7 @@ public class GetGoalsFromTfsQueryHandlerTests
     {
         // Arrange
         var query = new GetGoalsFromTfsQuery();
-        
+
         // Mock successful WIQL response, then batch fetch failure
         var wiqlResponse = new
         {
@@ -211,7 +211,7 @@ public class GetGoalsFromTfsQueryHandlerTests
                 new { id = 100 }
             }
         };
-        
+
         SetupHttpResponseSequence(
             (HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse)),
             (HttpStatusCode.InternalServerError, "Server error"));

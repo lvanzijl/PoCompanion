@@ -183,7 +183,7 @@ public class GetEffortConcentrationRiskQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.IsNotEmpty(result.Recommendations);
-        Assert.IsTrue(result.Recommendations.Any(r => 
+        Assert.IsTrue(result.Recommendations.Any(r =>
             r.Strategy == MitigationStrategy.DiversifyAcrossAreas));
     }
 
@@ -217,7 +217,7 @@ public class GetEffortConcentrationRiskQueryHandlerTests
     public async Task Handle_CalculatesConcentrationIndex()
     {
         // Arrange - two scenarios: concentrated vs distributed
-        
+
         // Scenario 1: Concentrated (should have high HHI) - 90% in one area, one sprint
         var concentratedWorkItems = new List<WorkItemDto>
         {
@@ -298,7 +298,7 @@ public class GetEffortConcentrationRiskQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(ConcentrationRiskLevel.Critical, result.OverallRiskLevel);
-        Assert.IsTrue(result.Recommendations.Any(r => 
+        Assert.IsTrue(result.Recommendations.Any(r =>
             r.Priority == ConcentrationRiskLevel.Critical));
     }
 

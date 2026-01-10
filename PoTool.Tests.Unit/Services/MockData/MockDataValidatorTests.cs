@@ -213,6 +213,6 @@ public class MockDataValidatorTests
         Assert.IsNotNull(summary);
         Assert.Contains("Mock Data Validation Report", summary);
         Assert.Contains("Work Items:", summary);
-        Assert.Contains("Data Quality:", summary); 
+        Assert.Contains("Data Quality:", summary);
     }
 }

@@ -25,7 +25,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
         _mockRepository = new Mock<IWorkItemRepository>();
         _mockValidator = new Mock<IWorkItemValidator>();
         _mockLogger = new Mock<ILogger<GetValidationImpactAnalysisQueryHandler>>();
-        
+
         _handler = new GetValidationImpactAnalysisQueryHandler(
             _mockRepository.Object,
             _mockValidator.Object,
@@ -132,7 +132,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
         Assert.IsNotNull(result);
         Assert.IsGreaterThan(result.TotalBlockedItems, 0);
         Assert.HasCount(1, result.Violations);
-        
+
         // The violation should have descendants
         var violation = result.Violations[0];
         Assert.IsNotEmpty(violation.BlockedDescendantIds);
@@ -171,7 +171,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
         Assert.IsNotNull(result);
         Assert.IsNotNull(result.Recommendations);
         Assert.IsNotEmpty(result.Recommendations);
-        
+
         // Should have a recommendation to set parents to in progress
         var setParentsRecommendation = result.Recommendations
             .FirstOrDefault(r => r.RecommendationType == "SetParentsToInProgress");

@@ -24,7 +24,7 @@ public class GetActiveProfileQueryHandler : IQueryHandler<GetActiveProfileQuery,
     public async ValueTask<ProfileDto?> Handle(GetActiveProfileQuery query, CancellationToken cancellationToken)
     {
         var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
-        
+
         if (settings?.ActiveProfileId == null)
         {
             return null;

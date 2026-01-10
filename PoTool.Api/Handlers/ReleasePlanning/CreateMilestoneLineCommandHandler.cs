@@ -37,9 +37,9 @@ public sealed class CreateMilestoneLineCommandHandler : ICommandHandler<CreateMi
         }
 
         var lineId = await _repository.CreateMilestoneLineAsync(
-            command.Label, 
-            command.VerticalPosition, 
-            command.Type, 
+            command.Label,
+            command.VerticalPosition,
+            command.Type,
             cancellationToken);
 
         return new LineOperationResultDto

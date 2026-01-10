@@ -25,7 +25,7 @@ public class GetValidationViolationHistoryQueryHandlerTests
         _mockRepository = new Mock<IWorkItemRepository>();
         _mockValidator = new Mock<IWorkItemValidator>();
         _mockLogger = new Mock<ILogger<GetValidationViolationHistoryQueryHandler>>();
-        
+
         _handler = new GetValidationViolationHistoryQueryHandler(
             _mockRepository.Object,
             _mockValidator.Object,

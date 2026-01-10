@@ -20,19 +20,19 @@ public static class TfsUrlBuilder
     {
         if (string.IsNullOrWhiteSpace(organizationUrl))
             throw new ArgumentException("Organization URL cannot be null or empty", nameof(organizationUrl));
-        
+
         if (string.IsNullOrWhiteSpace(project))
             throw new ArgumentException("Project name cannot be null or empty", nameof(project));
-        
+
         if (workItemId <= 0)
             throw new ArgumentException("Work item ID must be greater than zero", nameof(workItemId));
 
         // Normalize URL - remove trailing slash if present
         var baseUrl = organizationUrl.TrimEnd('/');
-        
+
         // Encode project name for URL
         var encodedProject = Uri.EscapeDataString(project);
-        
+
         // Construct Azure DevOps work item URL
         // Format: {organizationUrl}/{project}/_workitems/edit/{id}
         return $"{baseUrl}/{encodedProject}/_workitems/edit/{workItemId}";

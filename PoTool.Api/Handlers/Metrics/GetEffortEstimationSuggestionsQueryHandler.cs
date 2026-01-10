@@ -14,7 +14,7 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetEffortEstimationSuggestionsQuery.
 /// Provides intelligent effort estimation suggestions based on historical data and ML/heuristic analysis.
 /// </summary>
-public sealed class GetEffortEstimationSuggestionsQueryHandler 
+public sealed class GetEffortEstimationSuggestionsQueryHandler
     : IQueryHandler<GetEffortEstimationSuggestionsQuery, IReadOnlyList<EffortEstimationSuggestionDto>>
 {
     // Confidence calculation constants
@@ -203,13 +203,13 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
     {
         // Enhanced similarity algorithm with stop word filtering and n-gram analysis
         var stopWords = new HashSet<string> { "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "from", "as", "is", "was", "are", "be", "been" };
-        
+
         // Tokenize and clean
         var words1 = title1.ToLowerInvariant()
             .Split(new[] { ' ', '-', '_', ',', '.', ':', ';' }, StringSplitOptions.RemoveEmptyEntries)
             .Where(w => w.Length > 2 && !stopWords.Contains(w))
             .ToList();
-            
+
         var words2 = title2.ToLowerInvariant()
             .Split(new[] { ' ', '-', '_', ',', '.', ':', ';' }, StringSplitOptions.RemoveEmptyEntries)
             .Where(w => w.Length > 2 && !stopWords.Contains(w))
@@ -237,10 +237,10 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
 
         var chars1 = str1.ToHashSet();
         var chars2 = str2.ToHashSet();
-        
+
         var intersection = chars1.Intersect(chars2).Count();
         var union = chars1.Union(chars2).Count();
-        
+
         return union > 0 ? (double)intersection / union : 0.0;
     }
 
@@ -272,8 +272,8 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
     {
         // Base confidence on sample size and variance
         var sampleConfidence = Math.Min(1.0, sampleSize / (double)MinSampleSizeForMaxConfidence);
-        var varianceConfidence = variance < MaxVarianceForHighConfidence 
-            ? 1.0 
+        var varianceConfidence = variance < MaxVarianceForHighConfidence
+            ? 1.0
             : Math.Max(MinConfidenceWithNoData, 1.0 - (variance / VarianceScalingFactor));
 
         return (sampleConfidence + varianceConfidence) / 2.0;

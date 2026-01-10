@@ -102,7 +102,7 @@ public class ErrorMessageService
     {
         // Check if it's an API exception with status code in message or properties
         var message = exception.Message;
-        
+
         // Common patterns: "Status: 401" or "401" or "Response status code does not indicate success: 401"
         if (message.Contains("401") || message.Contains("Unauthorized"))
             return 401;

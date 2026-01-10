@@ -25,12 +25,12 @@ public class OnboardingWizardTests : BunitTestContext
     public void Setup()
     {
         _mockOnboardingService = new Mock<IOnboardingService>();
-        
+
         // Create TfsConfigService with mocked dependencies (cannot mock the class itself)
         var mockApiClient = new Mock<Client.ApiClient.IClient>();
         var mockHttpClient = new HttpClient { BaseAddress = new Uri("http://localhost/") };
         _tfsConfigService = new TfsConfigService(mockApiClient.Object, mockHttpClient);
-        
+
         _errorMessageService = new ErrorMessageService();
         _mockSnackbar = new Mock<ISnackbar>();
 
@@ -40,7 +40,7 @@ public class OnboardingWizardTests : BunitTestContext
         Services.AddSingleton(_errorMessageService);
         Services.AddSingleton(_mockSnackbar.Object);
         Services.AddMudServices();
-        
+
         // Mock NavigationManager
         Services.AddSingleton<Microsoft.AspNetCore.Components.NavigationManager>(
             new MockNavigationManager());

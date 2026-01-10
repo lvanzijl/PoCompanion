@@ -44,7 +44,7 @@ public class MetricsController : ControllerBase
             }
 
             var metrics = await _mediator.Send(
-                new GetSprintMetricsQuery(iterationPath), 
+                new GetSprintMetricsQuery(iterationPath),
                 cancellationToken);
 
             if (metrics == null)
@@ -82,7 +82,7 @@ public class MetricsController : ControllerBase
             }
 
             var velocityTrend = await _mediator.Send(
-                new GetVelocityTrendQuery(areaPath, maxSprints), 
+                new GetVelocityTrendQuery(areaPath, maxSprints),
                 cancellationToken);
 
             return Ok(velocityTrend);
@@ -113,7 +113,7 @@ public class MetricsController : ControllerBase
             }
 
             var health = await _mediator.Send(
-                new GetBacklogHealthQuery(iterationPath), 
+                new GetBacklogHealthQuery(iterationPath),
                 cancellationToken);
 
             if (health == null)
@@ -151,7 +151,7 @@ public class MetricsController : ControllerBase
             }
 
             var health = await _mediator.Send(
-                new GetMultiIterationBacklogHealthQuery(areaPath, maxIterations), 
+                new GetMultiIterationBacklogHealthQuery(areaPath, maxIterations),
                 cancellationToken);
 
             return Ok(health);
@@ -191,7 +191,7 @@ public class MetricsController : ControllerBase
             }
 
             var distribution = await _mediator.Send(
-                new GetEffortDistributionQuery(areaPathFilter, maxIterations, defaultCapacity), 
+                new GetEffortDistributionQuery(areaPathFilter, maxIterations, defaultCapacity),
                 cancellationToken);
 
             return Ok(distribution);
@@ -229,7 +229,7 @@ public class MetricsController : ControllerBase
             }
 
             var plan = await _mediator.Send(
-                new GetSprintCapacityPlanQuery(iterationPath, defaultCapacity), 
+                new GetSprintCapacityPlanQuery(iterationPath, defaultCapacity),
                 cancellationToken);
 
             if (plan == null)
@@ -267,7 +267,7 @@ public class MetricsController : ControllerBase
             }
 
             var forecast = await _mediator.Send(
-                new GetEpicCompletionForecastQuery(epicId, maxSprintsForVelocity), 
+                new GetEpicCompletionForecastQuery(epicId, maxSprintsForVelocity),
                 cancellationToken);
 
             if (forecast == null)
@@ -320,7 +320,7 @@ public class MetricsController : ControllerBase
             }
 
             var imbalance = await _mediator.Send(
-                new GetEffortImbalanceQuery(areaPathFilter, maxIterations, defaultCapacity, imbalanceThreshold), 
+                new GetEffortImbalanceQuery(areaPathFilter, maxIterations, defaultCapacity, imbalanceThreshold),
                 cancellationToken);
 
             return Ok(imbalance);
@@ -361,7 +361,7 @@ public class MetricsController : ControllerBase
             }
 
             var trend = await _mediator.Send(
-                new GetEffortDistributionTrendQuery(areaPathFilter, maxIterations, defaultCapacity), 
+                new GetEffortDistributionTrendQuery(areaPathFilter, maxIterations, defaultCapacity),
                 cancellationToken);
 
             return Ok(trend);
@@ -402,7 +402,7 @@ public class MetricsController : ControllerBase
             }
 
             var risk = await _mediator.Send(
-                new GetEffortConcentrationRiskQuery(areaPathFilter, maxIterations, concentrationThreshold), 
+                new GetEffortConcentrationRiskQuery(areaPathFilter, maxIterations, concentrationThreshold),
                 cancellationToken);
 
             return Ok(risk);

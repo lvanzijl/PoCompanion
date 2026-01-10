@@ -35,7 +35,7 @@ public class RealTfsClientVerificationTests
             .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
             .Options;
         _dbContext = new PoToolDbContext(options);
-        
+
         // Create real config service (no longer using mock)
         var configLogger = new Mock<ILogger<TfsConfigurationService>>();
         _configService = new TfsConfigurationService(_dbContext, configLogger.Object);
@@ -61,7 +61,7 @@ public class RealTfsClientVerificationTests
         // Create throttler (use real implementation for tests)
         var throttlerLogger = new Mock<ILogger<TfsRequestThrottler>>();
         var throttler = new TfsRequestThrottler(throttlerLogger.Object, readConcurrency: 10, writeConcurrency: 10);
-        
+
         // Create request sender (use real implementation for tests)
         var senderLogger = new Mock<ILogger<TfsRequestSender>>();
         var requestSender = new TfsRequestSender(senderLogger.Object);

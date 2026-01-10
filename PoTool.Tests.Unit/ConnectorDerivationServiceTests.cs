@@ -179,12 +179,12 @@ public class ConnectorDerivationServiceTests
 
         // Assert
         Assert.HasCount(3, result); // 1 direct + 2 split
-        
+
         // Lane 1 connector
         var lane1Connector = result.Single(c => c.SourcePlacementId == 1);
         Assert.AreEqual(2, lane1Connector.TargetPlacementId);
         Assert.AreEqual(ConnectorType.Direct, lane1Connector.Type);
-        
+
         // Lane 2 connectors
         var lane2Connectors = result.Where(c => c.SourcePlacementId == 3).ToList();
         Assert.HasCount(2, lane2Connectors);

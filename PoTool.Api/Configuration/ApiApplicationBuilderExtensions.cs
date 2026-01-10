@@ -35,7 +35,7 @@ public static class ApiApplicationBuilderExtensions
             {
                 // Check if we're using InMemory database (for testing)
                 var isInMemory = db.Database.ProviderName == InMemoryProviderName;
-                
+
                 if (isInMemory)
                 {
                     // For InMemory database, just ensure it's created
@@ -170,11 +170,11 @@ public static class ApiApplicationBuilderExtensions
         {
             // Authentication uses Windows credentials (NTLM) - no PAT needed
             await svc.SaveConfigAsync(
-                req.Url ?? string.Empty, 
-                req.Project ?? string.Empty, 
+                req.Url ?? string.Empty,
+                req.Project ?? string.Empty,
                 req.DefaultAreaPath ?? string.Empty,
-                req.UseDefaultCredentials, 
-                req.TimeoutSeconds, 
+                req.UseDefaultCredentials,
+                req.TimeoutSeconds,
                 req.ApiVersion ?? "7.0");
             return Results.Ok();
         });
@@ -194,7 +194,7 @@ public static class ApiApplicationBuilderExtensions
                         config.LastValidated = DateTimeOffset.UtcNow;
                         await configService.SaveConfigEntityAsync(config);
                     }
-                    
+
                     return Results.Ok(new { success = true, message = "Connection validated successfully" });
                 }
                 else
@@ -202,11 +202,12 @@ public static class ApiApplicationBuilderExtensions
                     // Validation failed - return detailed error
                     logger.LogWarning("TFS validation endpoint: Connection test failed (returned false)");
                     return Results.Json(
-                        new { 
-                            success = false, 
-                            message = "Connection test failed", 
-                            details = "The TFS server did not respond successfully. Check the logs for more details about HTTP status codes and error responses." 
-                        }, 
+                        new
+                        {
+                            success = false,
+                            message = "Connection test failed",
+                            details = "The TFS server did not respond successfully. Check the logs for more details about HTTP status codes and error responses."
+                        },
                         statusCode: 500);
                 }
             }
@@ -214,12 +215,13 @@ public static class ApiApplicationBuilderExtensions
             {
                 logger.LogError(ex, "TFS validation endpoint: Exception during connection test");
                 return Results.Json(
-                    new { 
-                        success = false, 
-                        message = "Connection test failed with exception", 
+                    new
+                    {
+                        success = false,
+                        message = "Connection test failed with exception",
                         details = ex.Message,
                         exceptionType = ex.GetType().Name
-                    }, 
+                    },
                     statusCode: 500);
             }
         });
@@ -227,10 +229,10 @@ public static class ApiApplicationBuilderExtensions
         app.MapPost("/api/tfsverify", async (ITfsClient client, TfsConfigurationService configService, TfsVerifyRequest req, CancellationToken ct) =>
         {
             var report = await client.VerifyCapabilitiesAsync(
-                req.IncludeWriteChecks, 
-                req.WorkItemIdForWriteCheck, 
+                req.IncludeWriteChecks,
+                req.WorkItemIdForWriteCheck,
                 ct);
-            
+
             // If all checks passed, mark TFS API as verified
             if (report.Success)
             {
@@ -242,7 +244,7 @@ public static class ApiApplicationBuilderExtensions
                     await configService.SaveConfigEntityAsync(config, ct);
                 }
             }
-            
+
             return Results.Ok(report);
         })
         .Produces<TfsVerificationReport>(StatusCodes.Status200OK);
@@ -254,7 +256,7 @@ public static class ApiApplicationBuilderExtensions
             {
                 return Results.BadRequest(new { error = "Default Area Path is not configured. Configure this in TFS settings." });
             }
-            
+
             await mediator.Send(new PoTool.Core.WorkItems.Commands.SyncWorkItemsCommand(config.DefaultAreaPath), ct);
             return Results.Ok();
         });
@@ -270,11 +272,11 @@ public static class ApiApplicationBuilderExtensions
 /// Request model for TFS configuration endpoint.
 /// </summary>
 public record TfsConfigRequest(
-    string? Url, 
+    string? Url,
     string? Project,
     string? DefaultAreaPath,
-    bool UseDefaultCredentials = true, 
-    int TimeoutSeconds = 30, 
+    bool UseDefaultCredentials = true,
+    int TimeoutSeconds = 30,
     string? ApiVersion = "7.0");
 
 /// <summary>

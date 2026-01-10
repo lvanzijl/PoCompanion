@@ -45,7 +45,7 @@ public sealed class GetGoalsFromTfsQueryHandler : IQueryHandler<GetGoalsFromTfsQ
         _logger.LogDebug("Fetching goals directly from TFS using WIQL query (cache bypass for Add Profile flow)");
 
         var config = await _configService.GetConfigEntityAsync(cancellationToken);
-        
+
         if (config == null || string.IsNullOrWhiteSpace(config.DefaultAreaPath))
         {
             _logger.LogWarning("No TFS configuration or default area path found");
@@ -55,7 +55,7 @@ public sealed class GetGoalsFromTfsQueryHandler : IQueryHandler<GetGoalsFromTfsQ
         try
         {
             var httpClient = _httpClientFactory.CreateClient("TfsClient.NTLM");
-            
+
             // Step 1: Execute WIQL query to retrieve only Goal work item IDs
             var wiql = new
             {
@@ -64,27 +64,27 @@ public sealed class GetGoalsFromTfsQueryHandler : IQueryHandler<GetGoalsFromTfsQ
 
             var wiqlUrl = BuildProjectUrl(config, "_apis/wit/wiql");
             using var wiqlContent = new StringContent(
-                JsonSerializer.Serialize(wiql), 
-                System.Text.Encoding.UTF8, 
+                JsonSerializer.Serialize(wiql),
+                System.Text.Encoding.UTF8,
                 "application/json");
 
             _logger.LogDebug("Executing WIQL query for Goals: {Query}", wiql.query);
-            
+
             var wiqlResponse = await httpClient.PostAsync(wiqlUrl, wiqlContent, cancellationToken);
-            
+
             if (!wiqlResponse.IsSuccessStatusCode)
             {
                 var errorBody = await wiqlResponse.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogError("WIQL query failed: HTTP {StatusCode}, Response: {ErrorBody}", 
+                _logger.LogError("WIQL query failed: HTTP {StatusCode}, Response: {ErrorBody}",
                     wiqlResponse.StatusCode, errorBody);
-                
+
                 // Check if this is a "work item type not found" error
                 if (errorBody.Contains("does not exist", StringComparison.OrdinalIgnoreCase) ||
                     errorBody.Contains("not found", StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogWarning("Goal work item type not found or not accessible in TFS project");
                 }
-                
+
                 return Enumerable.Empty<WorkItemDto>();
             }
 
@@ -112,16 +112,16 @@ public sealed class GetGoalsFromTfsQueryHandler : IQueryHandler<GetGoalsFromTfsQ
 
             var batchUrl = BuildCollectionUrl(config, "_apis/wit/workitemsbatch");
             using var batchContent = new StringContent(
-                JsonSerializer.Serialize(batchRequest), 
-                System.Text.Encoding.UTF8, 
+                JsonSerializer.Serialize(batchRequest),
+                System.Text.Encoding.UTF8,
                 "application/json");
 
             var batchResponse = await httpClient.PostAsync(batchUrl, batchContent, cancellationToken);
-            
+
             if (!batchResponse.IsSuccessStatusCode)
             {
                 var errorBody = await batchResponse.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogError("Batch fetch failed: HTTP {StatusCode}, Response: {ErrorBody}", 
+                _logger.LogError("Batch fetch failed: HTTP {StatusCode}, Response: {ErrorBody}",
                     batchResponse.StatusCode, errorBody);
                 return Enumerable.Empty<WorkItemDto>();
             }
@@ -152,7 +152,7 @@ public sealed class GetGoalsFromTfsQueryHandler : IQueryHandler<GetGoalsFromTfsQ
             }
 
             _logger.LogInformation("Successfully fetched {Count} Goals from TFS", goals.Count);
-            
+
             return goals;
         }
         catch (OperationCanceledException)

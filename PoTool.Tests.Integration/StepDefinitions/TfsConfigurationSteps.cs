@@ -72,7 +72,7 @@ public class TfsConfigurationSteps
     {
         _response = await _client.GetAsync("/api/tfsconfig");
         _scenarioContext["Response"] = _response;
-        
+
         if (_response.StatusCode == HttpStatusCode.OK)
         {
             _returnedConfig = await _response.Content.ReadFromJsonAsync<TfsConfigDto>();

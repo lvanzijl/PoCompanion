@@ -6,7 +6,7 @@ namespace PoTool.Shared.Exceptions;
 /// </summary>
 public class TfsResourceNotFoundException : TfsException
 {
-    public TfsResourceNotFoundException(string message, string? errorContent) 
+    public TfsResourceNotFoundException(string message, string? errorContent)
         : base(message, 404, errorContent)
     {
     }

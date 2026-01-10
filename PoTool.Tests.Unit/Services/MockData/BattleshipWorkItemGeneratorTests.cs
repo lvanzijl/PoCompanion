@@ -107,10 +107,10 @@ public class BattleshipWorkItemGeneratorTests
         var goals = workItems.Where(w => w.Type == WorkItemType.Goal).ToList();
 
         // Battleship keywords
-        var battleshipKeywords = new[] 
-        { 
-            "incident", "damage", "crew", "hull", "emergency", 
-            "response", "safety", "control", "monitoring", "command" 
+        var battleshipKeywords = new[]
+        {
+            "incident", "damage", "crew", "hull", "emergency",
+            "response", "safety", "control", "monitoring", "command"
         };
 
         // Assert - at least 70% of goals should contain battleship keywords

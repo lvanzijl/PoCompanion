@@ -51,7 +51,7 @@ public class WorkItemHub : Hub
         // Read DefaultAreaPath from configuration (ignore the provided parameter)
         var config = await _configService.GetConfigAsync();
         var configuredAreaPath = config?.DefaultAreaPath;
-        
+
         if (string.IsNullOrWhiteSpace(configuredAreaPath))
         {
             _logger.LogError("Sync requested but Default Area Path is not configured");

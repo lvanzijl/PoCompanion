@@ -11,7 +11,7 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetMultiIterationBacklogHealthQuery.
 /// Aggregates backlog health across multiple iterations and provides trend analysis.
 /// </summary>
-public sealed class GetMultiIterationBacklogHealthQueryHandler 
+public sealed class GetMultiIterationBacklogHealthQueryHandler
     : IQueryHandler<GetMultiIterationBacklogHealthQuery, MultiIterationBacklogHealthDto>
 {
     private readonly IWorkItemRepository _repository;
@@ -33,12 +33,12 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
         CancellationToken cancellationToken)
     {
         _logger.LogDebug(
-            "Handling GetMultiIterationBacklogHealthQuery with AreaPath: {AreaPath}, MaxIterations: {MaxIterations}", 
-            query.AreaPath ?? "All", 
+            "Handling GetMultiIterationBacklogHealthQuery with AreaPath: {AreaPath}, MaxIterations: {MaxIterations}",
+            query.AreaPath ?? "All",
             query.MaxIterations);
 
         var allWorkItems = await _repository.GetAllAsync(cancellationToken);
-        
+
         // Filter by area path if specified
         if (!string.IsNullOrWhiteSpace(query.AreaPath))
         {
@@ -74,9 +74,9 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
 
         // Calculate totals
         var totalWorkItems = iterationHealthList.Sum(h => h.TotalWorkItems);
-        var totalIssues = iterationHealthList.Sum(h => 
-            h.WorkItemsWithoutEffort + 
-            h.ParentProgressIssues + 
+        var totalIssues = iterationHealthList.Sum(h =>
+            h.WorkItemsWithoutEffort +
+            h.ParentProgressIssues +
             h.BlockedItems);
 
         return new MultiIterationBacklogHealthDto(
@@ -114,9 +114,9 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
         var workItemsWithoutEffort = iterationWorkItems.Count(wi => !wi.Effort.HasValue);
         var workItemsInProgressWithoutEffort = iterationWorkItems
             .Count(wi => wi.State.Equals("In Progress", StringComparison.OrdinalIgnoreCase) && !wi.Effort.HasValue);
-        
+
         var allIssues = validationResults.Values.SelectMany(issues => issues).ToList();
-        var parentProgressIssues = allIssues.Count(issue => 
+        var parentProgressIssues = allIssues.Count(issue =>
             issue.Message.Contains("Parent", StringComparison.OrdinalIgnoreCase) ||
             issue.Message.Contains("Ancestor", StringComparison.OrdinalIgnoreCase));
         var blockedItems = CountBlockedItems(iterationWorkItems);
@@ -250,7 +250,7 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
 
     private static int CountBlockedItems(List<WorkItemDto> workItems)
     {
-        return workItems.Count(wi => 
+        return workItems.Count(wi =>
             wi.State.Contains("Blocked", StringComparison.OrdinalIgnoreCase) ||
             wi.State.Contains("On Hold", StringComparison.OrdinalIgnoreCase));
     }
@@ -262,7 +262,7 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
             return 0;
         }
 
-        return workItems.Count(wi => 
+        return workItems.Count(wi =>
             wi.State.Equals("In Progress", StringComparison.OrdinalIgnoreCase) ||
             wi.State.Equals("Active", StringComparison.OrdinalIgnoreCase));
     }
@@ -272,7 +272,7 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
     {
         // Group by severity since we don't have a status property
         var issuesBySeverity = new Dictionary<string, HashSet<int>>();
-        
+
         foreach (var (workItemId, issues) in validationResults)
         {
             foreach (var issue in issues)

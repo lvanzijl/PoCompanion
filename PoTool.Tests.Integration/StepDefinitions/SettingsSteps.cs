@@ -85,7 +85,7 @@ public class SettingsSteps
     {
         _response = await _client.GetAsync("/api/settings");
         _scenarioContext["Response"] = _response;
-        
+
         if (_response.StatusCode == HttpStatusCode.OK)
         {
             _returnedSettings = await _response.Content.ReadFromJsonAsync<SettingsDto>();
@@ -102,7 +102,7 @@ public class SettingsSteps
         //     DataMode = (int)_settings!.DataMode,  // Send as int for enum
         //     ConfiguredGoalIds = _settings.ConfiguredGoalIds
         // };
-        
+
         // _response = await _client.PutAsJsonAsync("/api/settings", request);
         _response = new HttpResponseMessage(HttpStatusCode.NotFound);  // Stub for removed endpoint
         _scenarioContext["Response"] = _response;

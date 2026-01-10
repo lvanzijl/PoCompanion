@@ -10,7 +10,7 @@ namespace PoTool.Api.Handlers.Settings;
 /// Handler for GetEffortEstimationSettingsQuery.
 /// Returns effort estimation settings or defaults if not configured.
 /// </summary>
-public sealed class GetEffortEstimationSettingsQueryHandler 
+public sealed class GetEffortEstimationSettingsQueryHandler
     : IQueryHandler<GetEffortEstimationSettingsQuery, EffortEstimationSettingsDto>
 {
     private readonly PoToolDbContext _dbContext;

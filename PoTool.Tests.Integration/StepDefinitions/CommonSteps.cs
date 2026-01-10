@@ -28,7 +28,7 @@ public class CommonSteps
     {
         var response = _scenarioContext.Get<HttpResponseMessage>("Response");
         Assert.IsNotNull(response);
-        Assert.AreEqual(expected, response.StatusCode, 
+        Assert.AreEqual(expected, response.StatusCode,
             $"Expected {expected} but got {response.StatusCode}");
     }
 
@@ -109,7 +109,7 @@ public class CommonSteps
     {
         var response = _scenarioContext.Get<HttpResponseMessage>("Response");
         Assert.IsNotNull(response);
-        Assert.IsTrue(response.IsSuccessStatusCode, 
+        Assert.IsTrue(response.IsSuccessStatusCode,
             $"Expected success status but got {response.StatusCode}");
     }
 }

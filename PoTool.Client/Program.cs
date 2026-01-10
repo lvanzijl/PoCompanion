@@ -14,8 +14,8 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Get API base URL from configuration (empty = same origin)
 var apiBaseUrlConfig = builder.Configuration["ApiBaseUrl"];
-var apiBaseUrl = string.IsNullOrEmpty(apiBaseUrlConfig) 
-    ? builder.HostEnvironment.BaseAddress 
+var apiBaseUrl = string.IsNullOrEmpty(apiBaseUrlConfig)
+    ? builder.HostEnvironment.BaseAddress
     : apiBaseUrlConfig;
 
 // Configure HttpClient with API base address (WASM-compatible, no HttpMessageHandler)
@@ -115,6 +115,22 @@ builder.Services.AddScoped<IPipelinesClient>(sp =>
     return client;
 });
 
+builder.Services.AddScoped<IProductsClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new ProductsClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
+builder.Services.AddScoped<ITeamsClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new TeamsClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
 // Register client services
 builder.Services.AddScoped<WorkItemService>();
 builder.Services.AddScoped<PullRequestService>();
@@ -124,6 +140,8 @@ builder.Services.AddScoped<ITreeBuilderService, TreeBuilderService>();
 builder.Services.AddScoped<ICorrelationIdService, CorrelationIdService>();
 builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<ProfileService>();
+builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<TeamService>();
 builder.Services.AddScoped<TfsConfigService>();
 builder.Services.AddScoped<ModeIsolatedStateService>();
 builder.Services.AddScoped<ErrorMessageService>();

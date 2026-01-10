@@ -10,7 +10,7 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetSprintCapacityPlanQuery.
 /// Calculates sprint capacity utilization and identifies overcommitments.
 /// </summary>
-public sealed class GetSprintCapacityPlanQueryHandler 
+public sealed class GetSprintCapacityPlanQueryHandler
     : IQueryHandler<GetSprintCapacityPlanQuery, SprintCapacityPlanDto?>
 {
     private readonly IWorkItemRepository _repository;
@@ -46,10 +46,10 @@ public sealed class GetSprintCapacityPlanQueryHandler
 
         // Calculate team member capacities (simplified - using assigned to field)
         var teamCapacities = CalculateTeamCapacities(iterationWorkItems, query.DefaultCapacityPerPerson);
-        
+
         var totalCapacity = teamCapacities.Sum(tc => tc.AvailableCapacity);
-        var utilizationPercentage = totalCapacity > 0 
-            ? (double)totalPlannedEffort / totalCapacity * 100 
+        var utilizationPercentage = totalCapacity > 0
+            ? (double)totalPlannedEffort / totalCapacity * 100
             : 0;
 
         var status = DetermineCapacityStatus(totalPlannedEffort, totalCapacity);

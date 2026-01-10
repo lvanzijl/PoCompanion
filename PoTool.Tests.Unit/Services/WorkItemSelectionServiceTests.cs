@@ -59,7 +59,7 @@ public class WorkItemSelectionServiceTests
 
         // Assert
         Assert.HasCount(1, newState.SelectedIds);
-        
+
 #pragma warning disable MSTEST0037
         Assert.IsTrue(newState.SelectedIds.Contains(1));
         Assert.HasCount(1, newState.SelectedWorkItems);

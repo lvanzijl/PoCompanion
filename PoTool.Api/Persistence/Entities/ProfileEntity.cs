@@ -70,4 +70,9 @@ public class ProfileEntity
     /// </summary>
     [Required]
     public DateTimeOffset LastModified { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>
+    /// Navigation property to products owned by this Product Owner.
+    /// </summary>
+    public virtual ICollection<ProductEntity> Products { get; set; } = new List<ProductEntity>();
 }

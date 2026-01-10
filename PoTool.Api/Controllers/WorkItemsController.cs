@@ -110,7 +110,7 @@ public class WorkItemsController : ControllerBase
         try
         {
             var workItem = await _mediator.Send(new GetWorkItemByIdQuery(tfsId), cancellationToken);
-            
+
             if (workItem == null)
             {
                 return NotFound();
@@ -258,7 +258,7 @@ public class WorkItemsController : ControllerBase
         try
         {
             var timeline = await _mediator.Send(new GetWorkItemStateTimelineQuery(id), cancellationToken);
-            
+
             if (timeline == null)
             {
                 return NotFound($"Work item with ID {id} not found");
@@ -342,7 +342,7 @@ public class WorkItemsController : ControllerBase
         try
         {
             IReadOnlyList<int>? ids = null;
-            
+
             if (!string.IsNullOrWhiteSpace(workItemIds))
             {
                 try
@@ -367,7 +367,7 @@ public class WorkItemsController : ControllerBase
 
             var query = new GetDependencyGraphQuery(areaPathFilter, ids, types);
             var graph = await _mediator.Send(query, cancellationToken);
-            
+
             return Ok(graph);
         }
         catch (Exception ex)

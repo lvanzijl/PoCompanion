@@ -31,7 +31,7 @@ public class WorkItemRepository : IWorkItemRepository
     public async Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter, CancellationToken cancellationToken = default)
     {
         var sanitizedFilter = InputValidator.SanitizeFilter(filter);
-        
+
         var q = _context.WorkItems.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(sanitizedFilter))
         {
@@ -62,8 +62,8 @@ public class WorkItemRepository : IWorkItemRepository
             .ToListAsync(cancellationToken);
 
         // Filter using hierarchical area path matching
-        var filtered = entities.Where(e => 
-            areaPaths.Any(profilePath => 
+        var filtered = entities.Where(e =>
+            areaPaths.Any(profilePath =>
                 e.AreaPath.Equals(profilePath, StringComparison.OrdinalIgnoreCase) ||
                 e.AreaPath.StartsWith(profilePath + "\\", StringComparison.OrdinalIgnoreCase)));
 
@@ -83,13 +83,13 @@ public class WorkItemRepository : IWorkItemRepository
     {
         // Check if we're using InMemory database (for testing)
         var isInMemory = _context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory";
-        
+
         if (isInMemory)
         {
             // InMemory doesn't support transactions or ExecuteDelete
             var existingItems = await _context.WorkItems.ToListAsync(cancellationToken);
             _context.WorkItems.RemoveRange(existingItems);
-            
+
             var entities = workItems.Select(MapToEntity);
             await _context.WorkItems.AddRangeAsync(entities, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
@@ -98,7 +98,7 @@ public class WorkItemRepository : IWorkItemRepository
         {
             // Use transaction for real databases
             await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
-            
+
             try
             {
                 await _context.WorkItems.ExecuteDeleteAsync(cancellationToken);

@@ -9,7 +9,7 @@ namespace PoTool.Api.Handlers.PullRequests;
 /// Handler for GetPRReviewBottleneckQuery.
 /// Analyzes PR review performance and identifies bottlenecks.
 /// </summary>
-public sealed class GetPRReviewBottleneckQueryHandler 
+public sealed class GetPRReviewBottleneckQueryHandler
     : IQueryHandler<GetPRReviewBottleneckQuery, PRReviewBottleneckDto>
 {
     private readonly IPullRequestRepository _repository;
@@ -28,12 +28,12 @@ public sealed class GetPRReviewBottleneckQueryHandler
         CancellationToken cancellationToken)
     {
         _logger.LogDebug(
-            "Handling GetPRReviewBottleneckQuery with MaxPRs: {MaxPRs}, DaysBack: {DaysBack}", 
-            query.MaxPRsToAnalyze, 
+            "Handling GetPRReviewBottleneckQuery with MaxPRs: {MaxPRs}, DaysBack: {DaysBack}",
+            query.MaxPRsToAnalyze,
             query.DaysBack);
 
         var allPRs = await _repository.GetAllAsync(cancellationToken);
-        
+
         // Filter to recent PRs
         var cutoffDate = DateTimeOffset.UtcNow.AddDays(-query.DaysBack);
         var recentPRs = allPRs
@@ -69,7 +69,7 @@ public sealed class GetPRReviewBottleneckQueryHandler
             .Select(group =>
             {
                 var completedPRs = group.Where(pr => pr.Status == "completed").ToList();
-                var avgResponseTime = completedPRs.Any() 
+                var avgResponseTime = completedPRs.Any()
                     ? completedPRs.Average(pr => (pr.CompletedDate ?? pr.CreatedDate).Subtract(pr.CreatedDate).TotalHours)
                     : 0;
 
@@ -121,7 +121,7 @@ public sealed class GetPRReviewBottleneckQueryHandler
         List<ReviewerPerformance> reviewers)
     {
         var completedPRs = prs.Where(pr => pr.Status == "completed" && pr.CompletedDate.HasValue).ToList();
-        
+
         var avgTimeToComplete = completedPRs.Any()
             ? completedPRs.Average(pr => (pr.CompletedDate!.Value - pr.CreatedDate).TotalHours)
             : 0;

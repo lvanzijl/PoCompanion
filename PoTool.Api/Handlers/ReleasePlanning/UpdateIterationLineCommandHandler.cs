@@ -47,9 +47,9 @@ public sealed class UpdateIterationLineCommandHandler : ICommandHandler<UpdateIt
         }
 
         var updated = await _repository.UpdateIterationLineAsync(
-            command.LineId, 
-            command.Label, 
-            command.VerticalPosition, 
+            command.LineId,
+            command.Label,
+            command.VerticalPosition,
             cancellationToken);
 
         return new LineOperationResultDto

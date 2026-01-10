@@ -70,8 +70,8 @@ public class PullRequestRepository : IPullRequestRepository
         {
             var existing = await _context.PullRequestIterations
                 .FirstOrDefaultAsync(
-                    i => i.PullRequestId == iteration.PullRequestId && 
-                         i.IterationNumber == iteration.IterationNumber, 
+                    i => i.PullRequestId == iteration.PullRequestId &&
+                         i.IterationNumber == iteration.IterationNumber,
                     cancellationToken);
 
             if (existing != null)

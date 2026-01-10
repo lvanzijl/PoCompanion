@@ -13,7 +13,7 @@ namespace PoTool.Tests.Integration.Support;
 /// </summary>
 public class SharedTestContext
 {
-    private readonly Lazy<IntegrationTestWebApplicationFactory> _lazyFactory = 
+    private readonly Lazy<IntegrationTestWebApplicationFactory> _lazyFactory =
         new(() => new IntegrationTestWebApplicationFactory());
 
     /// <summary>

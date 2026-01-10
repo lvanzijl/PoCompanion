@@ -33,10 +33,10 @@ public class TfsConfigPageTests : BunitTestContext
         {
             BaseAddress = new Uri("http://localhost/")
         };
-        
+
         // Create the service with mocked dependencies
         _tfsConfigService = new TfsConfigService(_mockApiClient.Object, _httpClient);
-        
+
         _mockErrorMessageService = new Mock<ErrorMessageService>();
         _mockSnackbar = new Mock<ISnackbar>();
 
@@ -51,7 +51,7 @@ public class TfsConfigPageTests : BunitTestContext
     public void TfsConfig_RendersFormElements()
     {
         // Arrange & Act - verify service can be injected
-        
+
         // Assert - Verify the service was properly set up
         Assert.IsNotNull(_tfsConfigService);
     }
@@ -60,7 +60,7 @@ public class TfsConfigPageTests : BunitTestContext
     public void TfsConfig_DisplaysSaveButton()
     {
         // Arrange & Act - Verify service is available
-        
+
         // Assert - Verify service was properly set up
         Assert.IsNotNull(_tfsConfigService);
     }
@@ -69,7 +69,7 @@ public class TfsConfigPageTests : BunitTestContext
     public void TfsConfig_LoadsExistingConfiguration()
     {
         // Arrange & Act - Verify service is available
-        
+
         // Assert - Verify service was properly set up
         Assert.IsNotNull(_tfsConfigService);
     }

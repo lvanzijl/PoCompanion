@@ -12,7 +12,7 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// Retrieves all work items and attaches validation results.
 /// Automatically filters by active profile's area paths if a profile is set.
 /// </summary>
-public sealed class GetAllWorkItemsWithValidationQueryHandler 
+public sealed class GetAllWorkItemsWithValidationQueryHandler
     : IQueryHandler<GetAllWorkItemsWithValidationQuery, IEnumerable<WorkItemWithValidationDto>>
 {
     private readonly IWorkItemRepository _repository;
@@ -37,9 +37,9 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetAllWorkItemsWithValidationQuery");
-        
+
         var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
-        
+
         IEnumerable<WorkItemDto> workItems;
         if (profileAreaPaths != null && profileAreaPaths.Count > 0)
         {
@@ -50,7 +50,7 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
         {
             workItems = await _repository.GetAllAsync(cancellationToken);
         }
-        
+
         var workItemsList = workItems.ToList();
         var validationResults = _validator.ValidateWorkItems(workItemsList);
 
@@ -65,8 +65,8 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
             wi.JsonPayload,
             wi.RetrievedAt,
             wi.Effort,
-            validationResults.TryGetValue(wi.TfsId, out var issues) 
-                ? issues 
+            validationResults.TryGetValue(wi.TfsId, out var issues)
+                ? issues
                 : new List<ValidationIssue>()
         )).ToList();
     }

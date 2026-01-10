@@ -2,12 +2,12 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using ProfilePictureType = PoTool.Shared.Settings.ProfilePictureType
+@inject NavigationManager NavigationManager
 
 <MudCard Class="@GetCardClass()" 
          Elevation="@(IsActive ? 6 : 2)"
-         Style="cursor: pointer; transition: all 0.3s ease;"
-         @onclick="HandleClick">
-    <MudCardContent Class="d-flex flex-column align-center pa-4">
+         Style="cursor: pointer; transition: all 0.3s ease;">
+    <MudCardContent Class="d-flex flex-column align-center pa-4" @onclick="HandleClick">
         @* Profile Picture *@
         <div style="width: 80px; height: 80px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
             <img src="@GetProfileImagePath()" 
@@ -38,6 +38,13 @@
                      Class="mt-2" />
         }
     </MudCardContent>
+    <MudCardActions Class="justify-center">
+        <CompactIconButton Icon="@Icons.Material.Filled.Inventory2" 
+                       Size="Size.Small"
+                       Color="Color.Primary" 
+                       OnClick="@ManageProducts"
+                       Title="Manage Products" />
+    </MudCardActions>
 </MudCard>
 
 @code {
@@ -114,6 +121,14 @@
         if (Profile != null)
         {
             await OnClick.InvokeAsync(Profile);
+        }
+    }
+
+    private void ManageProducts()
+    {
+        if (Profile != null)
+        {
+            NavigationManager.NavigateTo($"/settings/productowner/{Profile.Id}");
         }
     }
 }

@@ -47,10 +47,10 @@ public sealed class UpdateMilestoneLineCommandHandler : ICommandHandler<UpdateMi
         }
 
         var updated = await _repository.UpdateMilestoneLineAsync(
-            command.LineId, 
-            command.Label, 
-            command.VerticalPosition, 
-            command.Type, 
+            command.LineId,
+            command.Label,
+            command.VerticalPosition,
+            command.Type,
             cancellationToken);
 
         return new LineOperationResultDto

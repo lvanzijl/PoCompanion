@@ -174,10 +174,10 @@ public class ProfilesControllerSteps
     public async Task WhenISetTheProfileAsActive()
     {
         Assert.IsNotNull(_currentProfileId);
-        
+
         var request = new { ProfileId = _currentProfileId };
         _response = await _client.PostAsJsonAsync("/api/profiles/active", request);
-        
+
         if (_response.StatusCode != HttpStatusCode.OK)
         {
             _scenarioContext["Response"] = _response;
@@ -279,7 +279,7 @@ public class ProfilesControllerSteps
     {
         var settingsResponse = await _client.GetAsync("/api/settings");
         Assert.AreEqual(HttpStatusCode.OK, settingsResponse.StatusCode);
-        
+
         var settings = await settingsResponse.Content.ReadFromJsonAsync<SettingsDto>();
         Assert.IsNotNull(settings);
         Assert.IsNotNull(settings.ActiveProfileId);
@@ -291,7 +291,7 @@ public class ProfilesControllerSteps
     {
         Assert.IsNotNull(_createdProfile);
         Assert.IsTrue(_createdProfile.AreaPaths.Count > 0);
-        
+
         // Check that at least one path is a parent of another
         var hasHierarchy = false;
         for (int i = 0; i < _createdProfile.AreaPaths.Count; i++)
@@ -306,7 +306,7 @@ public class ProfilesControllerSteps
             }
             if (hasHierarchy) break;
         }
-        
+
         Assert.IsTrue(hasHierarchy, "Area paths should have hierarchical relationship");
     }
 }

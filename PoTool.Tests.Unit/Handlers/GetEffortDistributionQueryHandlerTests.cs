@@ -189,9 +189,9 @@ public class GetEffortDistributionQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.IsNotEmpty(result.HeatMapData);
-        
+
         // Check specific cell
-        var area1Sprint1 = result.HeatMapData.FirstOrDefault(c => 
+        var area1Sprint1 = result.HeatMapData.FirstOrDefault(c =>
             c.AreaPath == "Area1" && c.IterationPath == "Sprint 1");
         Assert.IsNotNull(area1Sprint1);
         Assert.AreEqual(30, area1Sprint1.Effort);
@@ -220,13 +220,13 @@ public class GetEffortDistributionQueryHandlerTests
         Assert.IsNotNull(result);
         var area1Cell = result.HeatMapData.First(c => c.AreaPath == "Area1" && c.IterationPath == "Sprint 1");
         Assert.AreEqual(CapacityStatus.Underutilized, area1Cell.Status);
-        
+
         var area2Cell = result.HeatMapData.First(c => c.AreaPath == "Area2" && c.IterationPath == "Sprint 1");
         Assert.AreEqual(CapacityStatus.Normal, area2Cell.Status);
-        
+
         var area3Cell = result.HeatMapData.First(c => c.AreaPath == "Area3" && c.IterationPath == "Sprint 1");
         Assert.AreEqual(CapacityStatus.NearCapacity, area3Cell.Status);
-        
+
         var area4Cell = result.HeatMapData.First(c => c.AreaPath == "Area4" && c.IterationPath == "Sprint 1");
         Assert.AreEqual(CapacityStatus.OverCapacity, area4Cell.Status);
     }

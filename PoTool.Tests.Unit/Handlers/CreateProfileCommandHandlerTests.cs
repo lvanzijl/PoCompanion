@@ -131,13 +131,13 @@ public class CreateProfileCommandHandlerTests
     public async Task Handle_WithMultipleAreaPaths_PreservesOrder()
     {
         // Arrange
-        var areaPaths = new List<string> 
-        { 
+        var areaPaths = new List<string>
+        {
             "Project\\ProductA",
             "Project\\ProductA\\Mobile",
             "Project\\ProductB"
         };
-        
+
         var command = new CreateProfileCommand(
             Name: "Multi-Path Profile",
             AreaPaths: areaPaths,

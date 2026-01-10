@@ -30,7 +30,7 @@ public class ProfileFilterService
         try
         {
             var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
-            
+
             if (settings?.ActiveProfileId == null)
             {
                 _logger.LogDebug("No active profile set, skipping area path filtering");
@@ -38,7 +38,7 @@ public class ProfileFilterService
             }
 
             var profile = await _profileRepository.GetProfileByIdAsync(settings.ActiveProfileId.Value, cancellationToken);
-            
+
             if (profile == null)
             {
                 _logger.LogWarning("Active profile ID {ProfileId} not found", settings.ActiveProfileId.Value);
@@ -51,9 +51,9 @@ public class ProfileFilterService
                 return null;
             }
 
-            _logger.LogDebug("Using area path filter from profile {ProfileName}: {AreaPaths}", 
+            _logger.LogDebug("Using area path filter from profile {ProfileName}: {AreaPaths}",
                 profile.Name, string.Join(", ", profile.AreaPaths));
-            
+
             return profile.AreaPaths.ToList();
         }
         catch (Exception ex)
@@ -77,7 +77,7 @@ public class ProfileFilterService
 
         // Check if work item area path starts with any of the profile's area paths
         // This allows hierarchical matching (e.g., "Project\Product" matches "Project\Product\Feature")
-        return profileAreaPaths.Any(profilePath => 
+        return profileAreaPaths.Any(profilePath =>
             workItemAreaPath.Equals(profilePath, StringComparison.OrdinalIgnoreCase) ||
             workItemAreaPath.StartsWith(profilePath + "\\", StringComparison.OrdinalIgnoreCase));
     }

@@ -91,7 +91,7 @@ public class ProfileRepository : IProfileRepository
         entity.AreaPaths = string.Join(",", areaPaths);
         entity.TeamName = teamName;
         entity.GoalIds = string.Join(",", goalIds);
-        
+
         if (pictureType.HasValue)
         {
             entity.PictureType = (int)pictureType.Value;
@@ -104,7 +104,7 @@ public class ProfileRepository : IProfileRepository
         {
             entity.CustomPicturePath = customPicturePath;
         }
-        
+
         entity.LastModified = DateTimeOffset.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);

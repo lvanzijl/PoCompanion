@@ -156,7 +156,7 @@ public class BattleshipPipelineGenerator
             var durationVariance = avgDuration.TotalMinutes * 0.3; // 30% variance
 
             var runCount = _random.Next(runsPerPipeline - 10, runsPerPipeline + 10);
-            
+
             // For problematic pipelines, force consecutive failures at the end (most recent runs)
             var forceFailuresForLastN = GetForcedConsecutiveFailures(pipeline.Name);
 
@@ -179,7 +179,7 @@ public class BattleshipPipelineGenerator
                     // Rest spread over last 90 days
                     startTime = DateTimeOffset.UtcNow.AddDays(-_random.Next(7, 90)).AddHours(-_random.Next(0, 24));
                 }
-                
+
                 var duration = TimeSpan.FromMinutes(avgDuration.TotalMinutes + (_random.NextDouble() - 0.5) * durationVariance * 2);
                 if (duration < TimeSpan.FromMinutes(1)) duration = TimeSpan.FromMinutes(1);
 
@@ -195,7 +195,7 @@ public class BattleshipPipelineGenerator
                 }
 
                 var trigger = DetermineTrigger(pipeline.Type);
-                var finishTime = result == PipelineRunResult.Canceled 
+                var finishTime = result == PipelineRunResult.Canceled
                     ? startTime.Add(TimeSpan.FromMinutes(_random.Next(1, Math.Max(2, (int)duration.TotalMinutes))))
                     : startTime.Add(duration);
 
@@ -238,7 +238,7 @@ public class BattleshipPipelineGenerator
             return 0.40; // Deployment environment issues
         if (pipelineName.Contains("Integration.Deploy"))
             return 0.35; // Integration test failures
-            
+
         // FLAKY PIPELINES - Intermittent issues
         if (pipelineName.Contains("Mobile.Android"))
             return 0.25; // Android emulator flakiness
@@ -248,7 +248,7 @@ public class BattleshipPipelineGenerator
             return 0.20; // Hardware timing issues
         if (pipelineName.Contains("Production.Release"))
             return 0.18; // Approval bottlenecks
-            
+
         // NORMAL PIPELINES - Acceptable failure rate
         if (pipelineName.Contains("IncidentDetection") || pipelineName.Contains("DamageControl.CI"))
             return 0.10;
@@ -256,7 +256,7 @@ public class BattleshipPipelineGenerator
             return 0.08;
         if (pipelineName.Contains("AlertManagement") || pipelineName.Contains("Staging"))
             return 0.07;
-            
+
         // STABLE PIPELINES - Very low failure rate
         if (pipelineName.Contains("Core"))
             return 0.03; // Core is rock solid
@@ -266,7 +266,7 @@ public class BattleshipPipelineGenerator
             return 0.05; // Stable UI
         if (pipelineName.Contains("QA.Deploy"))
             return 0.05; // QA environment is stable
-            
+
         return 0.08; // Default moderate failure rate
     }
 
@@ -285,13 +285,13 @@ public class BattleshipPipelineGenerator
             return 4; // 4 consecutive failures
         if (pipelineName.Contains("CommunicationSystems"))
             return 3; // 3 consecutive failures
-            
+
         // Moderate issues
         if (pipelineName.Contains("DamageControl.Deploy"))
             return 2;
         if (pipelineName.Contains("Integration.Deploy"))
             return 2;
-            
+
         return 0; // No forced failures
     }
 
@@ -312,7 +312,7 @@ public class BattleshipPipelineGenerator
             return TimeSpan.FromMinutes(60); // Full production deployment
         if (pipelineName.Contains("Integration"))
             return TimeSpan.FromMinutes(40); // Integration tests
-            
+
         return type switch
         {
             PipelineType.Build => TimeSpan.FromMinutes(_random.Next(8, 20)),

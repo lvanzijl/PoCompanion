@@ -197,7 +197,7 @@ public class GetEffortImbalanceQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         // Sprint 1 has 50 points with 40 capacity = over capacity
-        Assert.IsTrue(result.SprintImbalances.Any(s => 
+        Assert.IsTrue(result.SprintImbalances.Any(s =>
             s.IterationPath == "Sprint 1" && s.TotalEffort > s.AverageEffortAcrossSprints));
     }
 

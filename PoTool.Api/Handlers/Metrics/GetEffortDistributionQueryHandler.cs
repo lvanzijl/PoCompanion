@@ -10,7 +10,7 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetEffortDistributionQuery.
 /// Calculates effort distribution across area paths and iterations for heat map visualization.
 /// </summary>
-public sealed class GetEffortDistributionQueryHandler 
+public sealed class GetEffortDistributionQueryHandler
     : IQueryHandler<GetEffortDistributionQuery, EffortDistributionDto>
 {
     private readonly IWorkItemRepository _repository;
@@ -29,12 +29,12 @@ public sealed class GetEffortDistributionQueryHandler
         CancellationToken cancellationToken)
     {
         _logger.LogDebug(
-            "Handling GetEffortDistributionQuery with AreaPathFilter: {AreaPathFilter}, MaxIterations: {MaxIterations}", 
-            query.AreaPathFilter ?? "All", 
+            "Handling GetEffortDistributionQuery with AreaPathFilter: {AreaPathFilter}, MaxIterations: {MaxIterations}",
+            query.AreaPathFilter ?? "All",
             query.MaxIterations);
 
         var allWorkItems = await _repository.GetAllAsync(cancellationToken);
-        
+
         // Filter by area path if specified
         if (!string.IsNullOrWhiteSpace(query.AreaPathFilter))
         {
@@ -70,14 +70,14 @@ public sealed class GetEffortDistributionQueryHandler
 
         // Calculate effort by iteration
         var effortByIteration = CalculateEffortByIteration(
-            workItemsWithEffort, 
-            iterationPaths, 
+            workItemsWithEffort,
+            iterationPaths,
             query.DefaultCapacityPerIteration);
 
         // Calculate heat map cells
         var heatMapData = CalculateHeatMapCells(
-            workItemsWithEffort, 
-            areaPathsByVolume, 
+            workItemsWithEffort,
+            areaPathsByVolume,
             iterationPaths,
             query.DefaultCapacityPerIteration);
 
@@ -153,7 +153,7 @@ public sealed class GetEffortDistributionQueryHandler
             foreach (var iterationPath in iterationPaths)
             {
                 var itemsInCell = workItems
-                    .Where(wi => 
+                    .Where(wi =>
                         wi.AreaPath.Equals(areaPath, StringComparison.OrdinalIgnoreCase) &&
                         wi.IterationPath.Equals(iterationPath, StringComparison.OrdinalIgnoreCase))
                     .ToList();

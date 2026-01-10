@@ -1,0 +1,222 @@
+@page "/settings/teams"
+@using PoTool.Client.Services
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Components.Settings
+@using PoTool.Client.ApiClient
+@inject TeamService TeamService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject ErrorMessageService ErrorMessageService
+
+<PageTitle>Manage Teams</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudStack Spacing="4">
+        @* Header *@
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h4">Manage Teams</MudText>
+            <MudStack Row="true" Spacing="2">
+                <MudSwitch @bind-Value="_showArchived" 
+                           Label="Show Archived" 
+                           Color="Color.Secondary" />
+                <CompactButton Variant="Variant.Filled" 
+                               Color="Color.Primary"
+                               OnClick="OpenAddTeam"
+                               StartIcon="@Icons.Material.Filled.Add">
+                    Add Team
+                </CompactButton>
+            </MudStack>
+        </MudStack>
+
+        @if (_isLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        }
+        else if (_errorResponse != null)
+        {
+            <ErrorDisplay ErrorResponse="@_errorResponse" OnDismiss="ClearError" />
+        }
+        else
+        {
+            @* Team List *@
+            @if (_teams != null && _teams.Any())
+            {
+                <MudPaper Elevation="1" Class="pa-2">
+                    <CompactList T="string">
+                        @foreach (var team in GetFilteredTeams())
+                        {
+                            <MudListItem T="string">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                        <MudAvatar Size="Size.Medium">
+                                            <MudImage Src="@GetTeamImagePath(team)" Alt="@team.Name" />
+                                        </MudAvatar>
+                                        <MudStack Spacing="0">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                <MudText Typo="Typo.body1"><strong>@team.Name</strong></MudText>
+                                                @if (team.IsArchived)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">Archived</MudChip>
+                                                }
+                                            </MudStack>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                Area Path: @team.TeamAreaPath
+                                            </MudText>
+                                        </MudStack>
+                                    </MudStack>
+                                    <MudStack Row="true" Spacing="1">
+                                        <CompactIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                       Color="Color.Primary" 
+                                                       OnClick="@(() => EditTeam(team))" />
+                                        @if (!team.IsArchived)
+                                        {
+                                            <CompactIconButton Icon="@Icons.Material.Filled.Archive" 
+                                                           Color="Color.Warning" 
+                                                           OnClick="@(() => ArchiveTeam(team))"
+                                                           Title="Archive team" />
+                                        }
+                                        else
+                                        {
+                                            <CompactIconButton Icon="@Icons.Material.Filled.Unarchive" 
+                                                           Color="Color.Success" 
+                                                           OnClick="@(() => UnarchiveTeam(team))"
+                                                           Title="Unarchive team" />
+                                        }
+                                    </MudStack>
+                                </MudStack>
+                            </MudListItem>
+                            <MudDivider />
+                        }
+                    </CompactList>
+                </MudPaper>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    No teams yet. Create your first team to get started.
+                </MudAlert>
+            }
+
+            @* Editor Panel *@
+            @if (_showEditor)
+            {
+                <TeamEditor Team="@_editingTeam" 
+                            OnSaved="OnTeamSaved" 
+                            OnCancelled="CloseEditor" />
+            }
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private IEnumerable<TeamDto>? _teams;
+    private bool _isLoading = true;
+    private bool _showArchived = false;
+    private bool _showEditor = false;
+    private TeamDto? _editingTeam;
+    private ErrorResponse? _errorResponse;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTeamsAsync();
+    }
+
+    private async Task LoadTeamsAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            ClearError();
+            _teams = await TeamService.GetAllTeamsAsync(includeArchived: true);
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error loading teams");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private IEnumerable<TeamDto> GetFilteredTeams()
+    {
+        if (_teams == null) return Enumerable.Empty<TeamDto>();
+        
+        return _showArchived 
+            ? _teams 
+            : _teams.Where(t => !t.IsArchived);
+    }
+
+    private void OpenAddTeam()
+    {
+        _editingTeam = null;
+        _showEditor = true;
+    }
+
+    private void EditTeam(TeamDto team)
+    {
+        _editingTeam = team;
+        _showEditor = true;
+    }
+
+    private async Task ArchiveTeam(TeamDto team)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Archive Team",
+            $"Are you sure you want to archive the team '{team.Name}'? Archived teams are hidden from selection lists.",
+            yesText: "Archive",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try
+            {
+                await TeamService.ArchiveTeamAsync(team.Id, true);
+                Snackbar.Add($"Team '{team.Name}' archived", Severity.Success);
+                await LoadTeamsAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error archiving team: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task UnarchiveTeam(TeamDto team)
+    {
+        try
+        {
+            await TeamService.ArchiveTeamAsync(team.Id, false);
+            Snackbar.Add($"Team '{team.Name}' restored", Severity.Success);
+            await LoadTeamsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error restoring team: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OnTeamSaved()
+    {
+        _showEditor = false;
+        _editingTeam = null;
+        await LoadTeamsAsync();
+    }
+
+    private void CloseEditor()
+    {
+        _showEditor = false;
+        _editingTeam = null;
+    }
+
+    private string GetTeamImagePath(TeamDto team)
+    {
+        return $"images/profiles/profile-{team.DefaultPictureId}.png";
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+}

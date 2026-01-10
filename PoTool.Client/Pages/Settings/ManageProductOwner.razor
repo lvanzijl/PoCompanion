@@ -1,0 +1,293 @@
+@page "/settings/productowner/{ProfileId:int}"
+@using PoTool.Client.Services
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Components.Settings
+@using PoTool.Client.ApiClient
+@inject ProfileService ProfileService
+@inject ProductService ProductService
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ErrorMessageService ErrorMessageService
+
+<PageTitle>Manage Product Owner</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudStack Spacing="4">
+        @if (_isLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        }
+        else if (_errorResponse != null)
+        {
+            <ErrorDisplay ErrorResponse="@_errorResponse" OnDismiss="ClearError" />
+        }
+        else if (_profile != null)
+        {
+            @* Header *@
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                    <MudAvatar Size="Size.Large">
+                        <MudImage Src="@GetProfileImagePath()" Alt="@_profile.Name" />
+                    </MudAvatar>
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.h4">@_profile.Name</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Product Owner | @(_products?.Count() ?? 0) Product(s)
+                        </MudText>
+                    </MudStack>
+                </MudStack>
+                <CompactButton Variant="Variant.Outlined" 
+                               Color="Color.Default"
+                               OnClick="GoBack"
+                               StartIcon="@Icons.Material.Filled.ArrowBack">
+                    Back to Profiles
+                </CompactButton>
+            </MudStack>
+
+            <MudDivider />
+
+            @* Products Section *@
+            <MudStack Spacing="3">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.h5">Products</MudText>
+                    <CompactButton Variant="Variant.Filled" 
+                                   Color="Color.Primary"
+                                   OnClick="OpenAddProduct"
+                                   StartIcon="@Icons.Material.Filled.Add">
+                        Add Product
+                    </CompactButton>
+                </MudStack>
+
+                @if (_products != null && _products.Any())
+                {
+                    <MudPaper Elevation="1" Class="pa-2">
+                        <CompactList T="string">
+                            @foreach (var product in _products.OrderBy(p => p.Order))
+                            {
+                                <MudListItem T="string">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                            <MudAvatar Size="Size.Medium">
+                                                <MudImage Src="@GetProductImagePath(product)" Alt="@product.Name" />
+                                            </MudAvatar>
+                                            <MudStack Spacing="0">
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                    <MudText Typo="Typo.body1"><strong>@product.Name</strong></MudText>
+                                                    @if (product.BacklogRootWorkItemId == null)
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">Backlog-less</MudChip>
+                                                    }
+                                                </MudStack>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                    Area Path: @product.ProductAreaPath
+                                                </MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @product.TeamIds.Count team(s) linked
+                                                </MudText>
+                                            </MudStack>
+                                        </MudStack>
+                                        <MudStack Row="true" Spacing="1">
+                                            <CompactIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp" 
+                                                           Color="Color.Default" 
+                                                           OnClick="@(() => MoveProductUp(product))"
+                                                           Disabled="@(product.Order == 0)"
+                                                           Title="Move up" />
+                                            <CompactIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown" 
+                                                           Color="Color.Default" 
+                                                           OnClick="@(() => MoveProductDown(product))"
+                                                           Disabled="@(product.Order == _products.Count() - 1)"
+                                                           Title="Move down" />
+                                            <CompactIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                           Color="Color.Primary" 
+                                                           OnClick="@(() => EditProduct(product))" />
+                                            <CompactIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                           Color="Color.Error" 
+                                                           OnClick="@(() => DeleteProduct(product))" />
+                                        </MudStack>
+                                    </MudStack>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </CompactList>
+                    </MudPaper>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        No products yet. Create your first product for this Product Owner.
+                    </MudAlert>
+                }
+
+                @* Editor Panel *@
+                @if (_showEditor)
+                {
+                    <ProductEditor ProductOwnerId="@ProfileId" 
+                                   Product="@_editingProduct" 
+                                   OnSaved="OnProductSaved" 
+                                   OnCancelled="CloseEditor" />
+                }
+            </MudStack>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Error">
+                Profile not found.
+            </MudAlert>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public int ProfileId { get; set; }
+
+    private ProfileDto? _profile;
+    private IEnumerable<ProductDto>? _products;
+    private bool _isLoading = true;
+    private bool _showEditor = false;
+    private ProductDto? _editingProduct;
+    private ErrorResponse? _errorResponse;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            ClearError();
+
+            _profile = await ProfileService.GetProfileByIdAsync(ProfileId);
+            if (_profile != null)
+            {
+                _products = await ProductService.GetProductsByOwnerAsync(ProfileId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error loading data");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void OpenAddProduct()
+    {
+        _editingProduct = null;
+        _showEditor = true;
+    }
+
+    private void EditProduct(ProductDto product)
+    {
+        _editingProduct = product;
+        _showEditor = true;
+    }
+
+    private async Task DeleteProduct(ProductDto product)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Delete Product",
+            $"Are you sure you want to delete the product '{product.Name}'? This action cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try
+            {
+                var deleted = await ProductService.DeleteProductAsync(product.Id);
+                if (deleted)
+                {
+                    Snackbar.Add($"Product '{product.Name}' deleted", Severity.Success);
+                    await LoadDataAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting product: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task MoveProductUp(ProductDto product)
+    {
+        var productList = _products?.OrderBy(p => p.Order).ToList();
+        if (productList == null) return;
+
+        var currentIndex = productList.IndexOf(product);
+        if (currentIndex <= 0) return;
+
+        // Swap with previous item
+        var newOrder = productList.Select(p => p.Id).ToList();
+        (newOrder[currentIndex], newOrder[currentIndex - 1]) = (newOrder[currentIndex - 1], newOrder[currentIndex]);
+
+        await ReorderProducts(newOrder);
+    }
+
+    private async Task MoveProductDown(ProductDto product)
+    {
+        var productList = _products?.OrderBy(p => p.Order).ToList();
+        if (productList == null) return;
+
+        var currentIndex = productList.IndexOf(product);
+        if (currentIndex >= productList.Count - 1) return;
+
+        // Swap with next item
+        var newOrder = productList.Select(p => p.Id).ToList();
+        (newOrder[currentIndex], newOrder[currentIndex + 1]) = (newOrder[currentIndex + 1], newOrder[currentIndex]);
+
+        await ReorderProducts(newOrder);
+    }
+
+    private async Task ReorderProducts(List<int> productIds)
+    {
+        try
+        {
+            await ProductService.ReorderProductsAsync(ProfileId, productIds);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error reordering products: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OnProductSaved()
+    {
+        _showEditor = false;
+        _editingProduct = null;
+        await LoadDataAsync();
+    }
+
+    private void CloseEditor()
+    {
+        _showEditor = false;
+        _editingProduct = null;
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/profiles");
+    }
+
+    private string GetProfileImagePath()
+    {
+        return $"images/profiles/profile-{_profile?.DefaultPictureId ?? 0}.png";
+    }
+
+    private string GetProductImagePath(ProductDto product)
+    {
+        return $"images/profiles/profile-{product.DefaultPictureId}.png";
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+}

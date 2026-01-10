@@ -16,7 +16,7 @@ public class PRChartComponentsTests : BunitTestContext
     {
         // Add MudBlazor services
         Services.AddMudServices();
-        
+
         // Configure JSInterop in Loose mode
         JSInterop.Mode = JSRuntimeMode.Loose;
     }

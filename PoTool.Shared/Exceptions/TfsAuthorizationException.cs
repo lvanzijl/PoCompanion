@@ -6,7 +6,7 @@ namespace PoTool.Shared.Exceptions;
 /// </summary>
 public class TfsAuthorizationException : TfsException
 {
-    public TfsAuthorizationException(string message, string? errorContent) 
+    public TfsAuthorizationException(string message, string? errorContent)
         : base(message, 403, errorContent)
     {
     }

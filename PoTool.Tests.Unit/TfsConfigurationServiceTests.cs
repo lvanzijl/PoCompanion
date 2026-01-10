@@ -29,9 +29,9 @@ public class TfsConfigurationServiceTests
             .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
             .Options;
         _context = new PoToolDbContext(options);
-        
+
         _loggerMock = new Mock<ILogger<TfsConfigurationService>>();
-        
+
         // Note: TfsConfigurationService no longer requires IDataProtectionProvider
         // PAT is stored client-side using MAUI SecureStorage
         _service = new TfsConfigurationService(_context, _loggerMock.Object);
@@ -79,7 +79,7 @@ public class TfsConfigurationServiceTests
         // Assert
         var configs = await _context.TfsConfigs.ToListAsync();
         Assert.HasCount(1, configs, "Should only have one config");
-        
+
         var config = configs[0];
         Assert.AreEqual(newUrl, config.Url);
         Assert.AreEqual(newProject, config.Project);
@@ -185,7 +185,7 @@ public class TfsConfigurationServiceTests
         await _service.SaveConfigAsync("url", "project", "TestProject\\Team");
         var entity = await _service.GetConfigEntityAsync();
         Assert.IsNotNull(entity);
-        
+
         entity.Url = "updated-url";
         entity.Project = "updated-project";
 

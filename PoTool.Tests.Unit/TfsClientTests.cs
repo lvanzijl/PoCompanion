@@ -29,34 +29,34 @@ public class TfsClientTests
     {
         _responseIndex = 0;
         _responses.Clear();
-        
+
         _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
         _httpClient = new HttpClient(_httpMessageHandlerMock.Object);
-        
+
         // Create in-memory database for config service
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
             .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
             .Options;
         _dbContext = new PoToolDbContext(options);
-        
+
         // Create config service (no longer requires data protection)
         var configLogger = new Mock<ILogger<TfsConfigurationService>>();
         _configService = new TfsConfigurationService(_dbContext, configLogger.Object);
-        
+
         _loggerMock = new Mock<ILogger<RealTfsClient>>();
-        
+
         // Create throttler (use real implementation for tests)
         var throttlerLogger = new Mock<ILogger<TfsRequestThrottler>>();
         var throttler = new TfsRequestThrottler(throttlerLogger.Object, readConcurrency: 10, writeConcurrency: 10);
-        
+
         // Create request sender (use real implementation for tests)
         var senderLogger = new Mock<ILogger<TfsRequestSender>>();
         var requestSender = new TfsRequestSender(senderLogger.Object);
-        
+
         // Create mock IHttpClientFactory
         var mockFactory = new Mock<IHttpClientFactory>();
         mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
-        
+
         _client = new RealTfsClient(
             mockFactory.Object,
             _configService,
@@ -143,11 +143,11 @@ public class TfsClientTests
 
         // Assert
         Assert.HasCount(2, results);
-        
+
         var parentItem = results.First(x => x.TfsId == 100);
         Assert.IsNull(parentItem.ParentTfsId, "Root item should have no parent");
         Assert.AreEqual("Parent Feature", parentItem.Title);
-        
+
         var childItem = results.First(x => x.TfsId == 200);
         Assert.IsNotNull(childItem.ParentTfsId, "Child item should have parent");
         Assert.AreEqual(100, childItem.ParentTfsId.Value);
@@ -244,13 +244,13 @@ public class TfsClientTests
 
         // Assert
         Assert.HasCount(3, results);
-        
+
         var epic = results.First(x => x.TfsId == 1);
         Assert.IsNull(epic.ParentTfsId, "Epic should have no parent");
-        
+
         var feature = results.First(x => x.TfsId == 2);
         Assert.AreEqual(1, feature.ParentTfsId, "Feature should be child of Epic");
-        
+
         var story = results.First(x => x.TfsId == 3);
         Assert.AreEqual(2, story.ParentTfsId, "Story should be child of Feature");
     }
@@ -443,7 +443,7 @@ public class TfsClientTests
         // Simulate large batch of work items response
         // The implementation uses batch size of 200, so 500 items = 3 batches (200 + 200 + 100)
         // Setup 3 batch responses using the helper method
-        
+
         // Batch 1: items 1-200
         var batch1Items = CreateMockWorkItemBatch(1, RealTfsClient.WorkItemBatchSize);
         var batch1Response = new { count = batch1Items.Length, value = batch1Items };
@@ -592,7 +592,7 @@ public class TfsClientTests
     private void SetupHttpResponse(HttpStatusCode statusCode, string content)
     {
         _responses.Add((statusCode, content));
-        
+
         _httpMessageHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(

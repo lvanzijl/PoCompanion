@@ -74,9 +74,9 @@ public class FilteringControllerSteps
     {
         var targetIds = targetIdsString.Split(',').Select(int.Parse).ToHashSet();
         var request = new FilterByValidationRequest { TargetIds = targetIds };
-        
+
         _response = await _client.PostAsJsonAsync("/api/filtering/by-validation-with-ancestors", request);
-        
+
         if (_response.IsSuccessStatusCode)
         {
             _filterByValidationResponse = await _response.Content.ReadFromJsonAsync<FilterByValidationResponse>();
@@ -87,9 +87,9 @@ public class FilteringControllerSteps
     public async Task WhenIRequestWorkItemIDsByValidationFilter(string filterId)
     {
         var request = new GetWorkItemIdsByValidationFilterRequest { FilterId = filterId };
-        
+
         _response = await _client.PostAsJsonAsync("/api/filtering/ids-by-validation-filter", request);
-        
+
         if (_response.IsSuccessStatusCode)
         {
             _getIdsResponse = await _response.Content.ReadFromJsonAsync<GetWorkItemIdsByValidationFilterResponse>();
@@ -100,9 +100,9 @@ public class FilteringControllerSteps
     public async Task WhenICountWorkItemsByValidationFilter(string filterId)
     {
         var request = new CountWorkItemsByValidationFilterRequest { FilterId = filterId };
-        
+
         _response = await _client.PostAsJsonAsync("/api/filtering/count-by-validation-filter", request);
-        
+
         if (_response.IsSuccessStatusCode)
         {
             _countResponse = await _response.Content.ReadFromJsonAsync<CountWorkItemsByValidationFilterResponse>();
@@ -118,9 +118,9 @@ public class FilteringControllerSteps
             WorkItemId = workItemId,
             GoalIds = goalIds
         };
-        
+
         _response = await _client.PostAsJsonAsync("/api/filtering/is-descendant-of-goals", request);
-        
+
         if (_response.IsSuccessStatusCode)
         {
             _descendantResponse = await _response.Content.ReadFromJsonAsync<IsDescendantOfGoalsResponse>();
@@ -138,15 +138,15 @@ public class FilteringControllerSteps
     public void ThenTheFilteredIDsShouldInclude(string expectedIdsString)
     {
         var expectedIds = expectedIdsString.Split(',').Select(int.Parse).ToHashSet();
-        
+
         if (_filterByValidationResponse != null)
         {
             Assert.IsNotNull(_filterByValidationResponse.WorkItemIds);
             var actualIds = _filterByValidationResponse.WorkItemIds.ToHashSet();
-            
+
             foreach (var expectedId in expectedIds)
             {
-                Assert.IsTrue(actualIds.Contains(expectedId), 
+                Assert.IsTrue(actualIds.Contains(expectedId),
                     $"Expected ID {expectedId} not found in filtered results");
             }
         }
@@ -154,10 +154,10 @@ public class FilteringControllerSteps
         {
             Assert.IsNotNull(_getIdsResponse.WorkItemIds);
             var actualIds = _getIdsResponse.WorkItemIds.ToHashSet();
-            
+
             foreach (var expectedId in expectedIds)
             {
-                Assert.IsTrue(actualIds.Contains(expectedId), 
+                Assert.IsTrue(actualIds.Contains(expectedId),
                     $"Expected ID {expectedId} not found in filtered results");
             }
         }

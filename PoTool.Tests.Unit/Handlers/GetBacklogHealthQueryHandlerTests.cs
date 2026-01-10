@@ -62,7 +62,7 @@ public class GetBacklogHealthQueryHandlerTests
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
-        
+
         var query = new GetBacklogHealthQuery("Sprint 1");
 
         // Act
@@ -92,7 +92,7 @@ public class GetBacklogHealthQueryHandlerTests
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
-        
+
         var query = new GetBacklogHealthQuery("Sprint 1");
 
         // Act
@@ -115,16 +115,16 @@ public class GetBacklogHealthQueryHandlerTests
 
         var validationResults = new Dictionary<int, List<ValidationIssue>>
         {
-            { 1, new List<ValidationIssue> 
-                { 
+            { 1, new List<ValidationIssue>
+                {
                     new ValidationIssue("Error", "Work item in progress without effort")
-                } 
+                }
             },
-            { 2, new List<ValidationIssue> 
-                { 
+            { 2, new List<ValidationIssue>
+                {
                     new ValidationIssue("Warning", "Parent progress issue"),
                     new ValidationIssue("Warning", "Another parent issue")
-                } 
+                }
             }
         };
 
@@ -132,7 +132,7 @@ public class GetBacklogHealthQueryHandlerTests
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(validationResults);
-        
+
         var query = new GetBacklogHealthQuery("Sprint 1");
 
         // Act
@@ -155,15 +155,15 @@ public class GetBacklogHealthQueryHandlerTests
 
         var validationResults = new Dictionary<int, List<ValidationIssue>>
         {
-            { 1, new List<ValidationIssue> 
-                { 
+            { 1, new List<ValidationIssue>
+                {
                     new ValidationIssue("Warning", "Parent work item progress mismatch")
-                } 
+                }
             },
-            { 2, new List<ValidationIssue> 
-                { 
+            { 2, new List<ValidationIssue>
+                {
                     new ValidationIssue("Warning", "Ancestor progress inconsistency")
-                } 
+                }
             }
         };
 
@@ -171,7 +171,7 @@ public class GetBacklogHealthQueryHandlerTests
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(validationResults);
-        
+
         var query = new GetBacklogHealthQuery("Sprint 1");
 
         // Act
@@ -197,7 +197,7 @@ public class GetBacklogHealthQueryHandlerTests
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
-        
+
         var query = new GetBacklogHealthQuery("Sprint 1");
 
         // Act
@@ -223,7 +223,7 @@ public class GetBacklogHealthQueryHandlerTests
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
-        
+
         var query = new GetBacklogHealthQuery("sprint 1");
 
         // Act
@@ -247,7 +247,7 @@ public class GetBacklogHealthQueryHandlerTests
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
-        
+
         var query = new GetBacklogHealthQuery("Project\\Team A\\2024\\Sprint 5");
 
         // Act
@@ -274,7 +274,7 @@ public class GetBacklogHealthQueryHandlerTests
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
-        
+
         var query = new GetBacklogHealthQuery("Sprint 1");
 
         // Act

@@ -11,7 +11,7 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// Applies automated fixes to validation violations by updating work item states in TFS.
 /// Uses bulk update method to prevent N+1 query pattern.
 /// </summary>
-public sealed class FixValidationViolationBatchCommandHandler 
+public sealed class FixValidationViolationBatchCommandHandler
     : ICommandHandler<FixValidationViolationBatchCommand, FixValidationViolationResultDto>
 {
     private readonly ITfsClient _tfsClient;
@@ -74,7 +74,7 @@ public sealed class FixValidationViolationBatchCommandHandler
         var allResults = new List<FixResult>(validationResults);
         foreach (var updateResult in bulkResult.Results)
         {
-            var successMsg = updateResult.Success 
+            var successMsg = updateResult.Success
                 ? $"Successfully updated work item {updateResult.WorkItemId}"
                 : updateResult.ErrorMessage ?? $"Failed to update work item {updateResult.WorkItemId}";
             allResults.Add(new FixResult(updateResult.WorkItemId, updateResult.Success, successMsg));

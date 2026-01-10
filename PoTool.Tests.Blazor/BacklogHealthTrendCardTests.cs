@@ -20,14 +20,14 @@ public class BacklogHealthTrendCardTests : BunitTestContext
     {
         // Add MudBlazor services
         Services.AddMudServices();
-        
+
         // Mock IHealthCalculationClient for BacklogHealthCalculationService
         var mockHealthCalculationClient = new Mock<IHealthCalculationClient>();
         Services.AddSingleton(mockHealthCalculationClient.Object);
-        
+
         // Register BacklogHealthCalculationService with mocked dependency
         Services.AddSingleton<BacklogHealthCalculationService>();
-        
+
         // Configure JSInterop in Loose mode
         JSInterop.Mode = JSRuntimeMode.Loose;
     }

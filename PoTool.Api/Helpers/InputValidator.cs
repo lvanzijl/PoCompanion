@@ -41,7 +41,7 @@ public static class InputValidator
 
         // Area paths should only contain alphanumeric, backslash, space, dash, underscore
         return System.Text.RegularExpressions.Regex.IsMatch(
-            areaPath, 
+            areaPath,
             @"^[a-zA-Z0-9\\\s\-_]+$"
         );
     }

@@ -191,7 +191,7 @@ public class FilteringController : ControllerBase
             var filteredIds = new HashSet<int>();
             foreach (var workItem in wrappedAll)
             {
-                if (goalIdsSet.Contains(workItem.TfsId) || 
+                if (goalIdsSet.Contains(workItem.TfsId) ||
                     _filterer.IsDescendantOfGoals(workItem, request.GoalIds, wrappedAll))
                 {
                     filteredIds.Add(workItem.TfsId);

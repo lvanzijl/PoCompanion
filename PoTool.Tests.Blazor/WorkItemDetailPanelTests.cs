@@ -20,33 +20,33 @@ public class WorkItemDetailPanelTests : BunitTestContext
     {
         // Add MudBlazor services
         Services.AddMudServices();
-        
+
         // Add required mock services
         var mockSnackbar = new Mock<ISnackbar>();
         Services.AddSingleton(mockSnackbar.Object);
-        
+
         // Mock IWorkItemsClient for WorkItemService
         var mockWorkItemsClient = new Mock<IWorkItemsClient>();
         var mockHttpClient = new HttpClient { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(mockWorkItemsClient.Object);
         Services.AddSingleton(mockHttpClient);
         Services.AddSingleton<WorkItemService>();
-        
+
         // Mock IClient for TfsConfigService
         var mockApiClient = new Mock<Client.ApiClient.IClient>();
         var mockTfsHttpClient = new HttpClient { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(mockApiClient.Object);
         Services.AddSingleton<TfsConfigService>(sp => new TfsConfigService(mockApiClient.Object, mockTfsHttpClient));
-        
+
         // Mock IClipboardService for WorkItemDetailPanel
         var mockClipboardService = new Mock<Shared.Contracts.IClipboardService>();
         mockClipboardService.Setup(x => x.CopyToClipboardAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
         Services.AddSingleton(mockClipboardService.Object);
-        
+
         // Add BrowserNavigationService (required by WorkItemDetailPanel)
         Services.AddSingleton<BrowserNavigationService>();
-        
+
         // Configure JSInterop in Loose mode
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
@@ -168,7 +168,7 @@ public class WorkItemDetailPanelTests : BunitTestContext
         // Assert
         // Should show node details but not parent section
         Assert.Contains("Top level epic", cut.Markup);
-        Assert.DoesNotContain("Parent ID", cut.Markup, 
+        Assert.DoesNotContain("Parent ID", cut.Markup,
             "Should not show parent section for top-level items");
     }
 }

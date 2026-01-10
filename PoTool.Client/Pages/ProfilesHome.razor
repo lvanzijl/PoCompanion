@@ -82,6 +82,12 @@
                                StartIcon="@Icons.Material.Filled.Settings">
                     Manage Profiles
                 </CompactButton>
+                <CompactButton Variant="Variant.Outlined" 
+                               Color="Color.Default"
+                               OnClick="ManageTeams"
+                               StartIcon="@Icons.Material.Filled.Groups">
+                    Manage Teams
+                </CompactButton>
             </MudStack>
         }
     </MudStack>
@@ -165,6 +171,11 @@
         
         // Refresh profiles after dialog closes
         await LoadProfilesAsync();
+    }
+
+    private void ManageTeams()
+    {
+        NavigationManager.NavigateTo("/settings/teams");
     }
 
     private void ClearError()

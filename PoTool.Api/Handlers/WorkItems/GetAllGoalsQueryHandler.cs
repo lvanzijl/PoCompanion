@@ -32,9 +32,9 @@ public sealed class GetAllGoalsQueryHandler : IQueryHandler<GetAllGoalsQuery, IE
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetAllGoalsQuery");
-        
+
         var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
-        
+
         IEnumerable<WorkItemDto> allWorkItems;
         if (profileAreaPaths != null && profileAreaPaths.Count > 0)
         {
@@ -45,7 +45,7 @@ public sealed class GetAllGoalsQueryHandler : IQueryHandler<GetAllGoalsQuery, IE
         {
             allWorkItems = await _repository.GetAllAsync(cancellationToken);
         }
-        
+
         return allWorkItems.Where(wi => wi.Type == WorkItemType.Goal).ToList();
     }
 }

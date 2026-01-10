@@ -59,9 +59,9 @@ public class BacklogHealthCalculationServiceClientTests
 
         // Assert
         Assert.AreEqual(100, score);
-        
+
         _mockHealthCalculationClient.Verify(x => x.CalculateHealthScoreAsync(
-            It.Is<CalculateHealthScoreRequest>(r => 
+            It.Is<CalculateHealthScoreRequest>(r =>
                 r.TotalWorkItems == 0 &&
                 r.WorkItemsWithoutEffort == 0 &&
                 r.WorkItemsInProgressWithoutEffort == 0 &&
@@ -111,9 +111,9 @@ public class BacklogHealthCalculationServiceClientTests
 
         // Assert
         Assert.AreEqual(70, score);
-        
+
         _mockHealthCalculationClient.Verify(x => x.CalculateHealthScoreAsync(
-            It.Is<CalculateHealthScoreRequest>(r => 
+            It.Is<CalculateHealthScoreRequest>(r =>
                 r.TotalWorkItems == 10 &&
                 r.WorkItemsWithoutEffort == 2 &&
                 r.ParentProgressIssues == 1)), Times.Once);
@@ -166,7 +166,7 @@ public class BacklogHealthCalculationServiceClientTests
 
         // Assert
         _mockHealthCalculationClient.Verify(x => x.CalculateHealthScoreAsync(
-            It.Is<CalculateHealthScoreRequest>(r => 
+            It.Is<CalculateHealthScoreRequest>(r =>
                 r.TotalWorkItems == 15 &&
                 r.WorkItemsWithoutEffort == 3 &&
                 r.WorkItemsInProgressWithoutEffort == 2 &&

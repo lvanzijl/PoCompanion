@@ -24,7 +24,7 @@ public class BulkAssignEffortCommandHandlerTests
         _mockTfsClient = new Mock<ITfsClient>();
         _mockRepository = new Mock<IWorkItemRepository>();
         _mockLogger = new Mock<ILogger<BulkAssignEffortCommandHandler>>();
-        
+
         _handler = new BulkAssignEffortCommandHandler(
             _mockTfsClient.Object,
             _mockRepository.Object,
@@ -44,7 +44,7 @@ public class BulkAssignEffortCommandHandlerTests
 
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItem);
-        
+
         // Mock the bulk update method - uses new bulk API to prevent N+1
         _mockTfsClient.Setup(t => t.UpdateWorkItemsEffortAsync(It.IsAny<IEnumerable<WorkItemEffortUpdate>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BulkUpdateResult(
@@ -80,7 +80,7 @@ public class BulkAssignEffortCommandHandlerTests
 
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItem);
-        
+
         // Mock the bulk update method returning failure
         _mockTfsClient.Setup(t => t.UpdateWorkItemsEffortAsync(It.IsAny<IEnumerable<WorkItemEffortUpdate>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BulkUpdateResult(
@@ -114,7 +114,7 @@ public class BulkAssignEffortCommandHandlerTests
 
         _mockRepository.Setup(r => r.GetByTfsIdAsync(999, It.IsAny<CancellationToken>()))
             .ReturnsAsync((WorkItemDto?)null);
-        
+
         // Mock bulk update returning empty result since nothing is valid
         _mockTfsClient.Setup(t => t.UpdateWorkItemsEffortAsync(It.IsAny<IEnumerable<WorkItemEffortUpdate>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BulkUpdateResult(
@@ -150,7 +150,7 @@ public class BulkAssignEffortCommandHandlerTests
 
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItem);
-        
+
         // Mock bulk update returning empty result since negative effort is filtered out during validation
         _mockTfsClient.Setup(t => t.UpdateWorkItemsEffortAsync(It.IsAny<IEnumerable<WorkItemEffortUpdate>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BulkUpdateResult(
@@ -180,7 +180,7 @@ public class BulkAssignEffortCommandHandlerTests
         // Arrange
         var workItem1 = CreateWorkItem(1, "Task", "In Progress", null);
         var workItem2 = CreateWorkItem(2, "Task", "In Progress", null);
-        
+
         var assignments = new List<BulkEffortAssignmentDto>
         {
             new BulkEffortAssignmentDto(WorkItemId: 1, EffortValue: 3),
@@ -191,17 +191,17 @@ public class BulkAssignEffortCommandHandlerTests
             .ReturnsAsync(workItem1);
         _mockRepository.Setup(r => r.GetByTfsIdAsync(2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItem2);
-        
+
         // Mock the bulk update method - uses new bulk API to prevent N+1
         _mockTfsClient.Setup(t => t.UpdateWorkItemsEffortAsync(It.IsAny<IEnumerable<WorkItemEffortUpdate>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BulkUpdateResult(
                 TotalRequested: 2,
                 SuccessfulUpdates: 2,
                 FailedUpdates: 0,
-                Results: new List<BulkUpdateItemResult> 
-                { 
+                Results: new List<BulkUpdateItemResult>
+                {
                     new BulkUpdateItemResult(1, true),
-                    new BulkUpdateItemResult(2, true) 
+                    new BulkUpdateItemResult(2, true)
                 },
                 TfsCallCount: 1));
 
@@ -224,7 +224,7 @@ public class BulkAssignEffortCommandHandlerTests
         // Arrange
         var workItem1 = CreateWorkItem(1, "Task", "In Progress", null);
         var workItem2 = CreateWorkItem(2, "Task", "In Progress", null);
-        
+
         var assignments = new List<BulkEffortAssignmentDto>
         {
             new BulkEffortAssignmentDto(WorkItemId: 1, EffortValue: 3),
@@ -235,17 +235,17 @@ public class BulkAssignEffortCommandHandlerTests
             .ReturnsAsync(workItem1);
         _mockRepository.Setup(r => r.GetByTfsIdAsync(2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItem2);
-        
+
         // Mock the bulk update method returning mixed results
         _mockTfsClient.Setup(t => t.UpdateWorkItemsEffortAsync(It.IsAny<IEnumerable<WorkItemEffortUpdate>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BulkUpdateResult(
                 TotalRequested: 2,
                 SuccessfulUpdates: 1,
                 FailedUpdates: 1,
-                Results: new List<BulkUpdateItemResult> 
-                { 
+                Results: new List<BulkUpdateItemResult>
+                {
                     new BulkUpdateItemResult(1, true),
-                    new BulkUpdateItemResult(2, false, "TFS update failed") 
+                    new BulkUpdateItemResult(2, false, "TFS update failed")
                 },
                 TfsCallCount: 1));
 
@@ -267,7 +267,7 @@ public class BulkAssignEffortCommandHandlerTests
         // Arrange
         var workItem1 = CreateWorkItem(1, "Task", "In Progress", null);
         var workItem2 = CreateWorkItem(2, "Task", "In Progress", null);
-        
+
         var assignments = new List<BulkEffortAssignmentDto>
         {
             new BulkEffortAssignmentDto(WorkItemId: 1, EffortValue: 3),
@@ -278,7 +278,7 @@ public class BulkAssignEffortCommandHandlerTests
             .ReturnsAsync(workItem1);
         _mockRepository.Setup(r => r.GetByTfsIdAsync(2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItem2);
-        
+
         // Mock the bulk update method throwing an exception
         _mockTfsClient.Setup(t => t.UpdateWorkItemsEffortAsync(It.IsAny<IEnumerable<WorkItemEffortUpdate>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("TFS bulk update error"));
@@ -310,7 +310,7 @@ public class BulkAssignEffortCommandHandlerTests
 
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItem);
-        
+
         // Mock the bulk update method
         _mockTfsClient.Setup(t => t.UpdateWorkItemsEffortAsync(It.IsAny<IEnumerable<WorkItemEffortUpdate>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BulkUpdateResult(

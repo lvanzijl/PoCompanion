@@ -12,7 +12,7 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetEffortEstimationQualityQuery.
 /// Analyzes historical effort estimation accuracy by comparing estimates with completion patterns.
 /// </summary>
-public sealed class GetEffortEstimationQualityQueryHandler 
+public sealed class GetEffortEstimationQualityQueryHandler
     : IQueryHandler<GetEffortEstimationQualityQuery, EffortEstimationQualityDto>
 {
     private readonly IWorkItemRepository _repository;
@@ -96,7 +96,7 @@ public sealed class GetEffortEstimationQualityQueryHandler
         foreach (var group in groupedByType)
         {
             var efforts = group.Select(wi => wi.Effort!.Value).ToList();
-            
+
             if (efforts.Count == 0)
                 continue;
 
@@ -108,7 +108,7 @@ public sealed class GetEffortEstimationQualityQueryHandler
             // Lower variance = higher accuracy/consistency
             var variance = CalculateVariance(efforts);
             var coefficientOfVariation = avg > 0 ? Math.Sqrt(variance) / avg : 0;
-            
+
             // Convert to accuracy score (0-1, where 1 is perfect consistency)
             var accuracy = Math.Max(0, 1.0 - Math.Min(1.0, coefficientOfVariation));
 

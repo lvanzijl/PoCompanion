@@ -40,7 +40,7 @@ public class ProfilesController : ControllerBase
     public async Task<ActionResult<ProfileDto>> GetProfileById(int id, CancellationToken cancellationToken)
     {
         var profile = await _mediator.Send(new GetProfileByIdQuery(id), cancellationToken);
-        
+
         if (profile == null)
         {
             return NotFound();
@@ -58,7 +58,7 @@ public class ProfilesController : ControllerBase
     public async Task<ActionResult<ProfileDto>> GetActiveProfile(CancellationToken cancellationToken)
     {
         var profile = await _mediator.Send(new GetActiveProfileQuery(), cancellationToken);
-        
+
         if (profile == null)
         {
             return NotFound();
@@ -133,7 +133,7 @@ public class ProfilesController : ControllerBase
     public async Task<IActionResult> DeleteProfile(int id, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new DeleteProfileCommand(id), cancellationToken);
-        
+
         if (!result)
         {
             return NotFound();

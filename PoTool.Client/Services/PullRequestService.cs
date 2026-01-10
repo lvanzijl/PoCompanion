@@ -55,7 +55,7 @@ public class PullRequestService
         DateTimeOffset? toDate = null,
         string? status = null)
     {
-        return await _pullRequestsClient.GetFilteredAsync(iterationPath, createdBy, fromDate, toDate, status) 
+        return await _pullRequestsClient.GetFilteredAsync(iterationPath, createdBy, fromDate, toDate, status)
             ?? Array.Empty<PullRequestDto>();
     }
 

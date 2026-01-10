@@ -31,7 +31,7 @@ public class HealthCalculationControllerSteps
     public async Task WhenIRequestHealthScoreCalculationWith(Table table)
     {
         var row = table.Rows[0];
-        
+
         var request = new CalculateHealthScoreRequest
         {
             TotalWorkItems = int.Parse(row["TotalWorkItems"]),
@@ -40,9 +40,9 @@ public class HealthCalculationControllerSteps
             ParentProgressIssues = int.Parse(row["ParentProgressIssues"]),
             BlockedItems = int.Parse(row["BlockedItems"])
         };
-        
+
         _response = await _client.PostAsJsonAsync("/api/healthcalculation/calculate-score", request);
-        
+
         if (_response.IsSuccessStatusCode)
         {
             _healthScoreResponse = await _response.Content.ReadFromJsonAsync<CalculateHealthScoreResponse>();
@@ -67,7 +67,7 @@ public class HealthCalculationControllerSteps
     public void ThenTheHealthScoreShouldBeGreaterThanOrEqualTo(int minScore)
     {
         Assert.IsNotNull(_healthScoreResponse);
-        Assert.IsTrue(_healthScoreResponse.HealthScore >= minScore, 
+        Assert.IsTrue(_healthScoreResponse.HealthScore >= minScore,
             $"Health score {_healthScoreResponse.HealthScore} is less than {minScore}");
     }
 }

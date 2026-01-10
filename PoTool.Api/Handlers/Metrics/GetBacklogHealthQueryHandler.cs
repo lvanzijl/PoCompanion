@@ -11,7 +11,7 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetBacklogHealthQuery.
 /// Calculates backlog health metrics for a specific iteration.
 /// </summary>
-public sealed class GetBacklogHealthQueryHandler 
+public sealed class GetBacklogHealthQueryHandler
     : IQueryHandler<GetBacklogHealthQuery, BacklogHealthDto?>
 {
     private readonly IWorkItemRepository _repository;
@@ -57,16 +57,16 @@ public sealed class GetBacklogHealthQueryHandler
         var workItemsWithoutEffort = iterationWorkItems.Count(wi => !wi.Effort.HasValue);
         var workItemsInProgressWithoutEffort = iterationWorkItems
             .Count(wi => wi.State.Equals("In Progress", StringComparison.OrdinalIgnoreCase) && !wi.Effort.HasValue);
-        
+
         // Count validation issues by type
         var allIssues = validationResults.Values.SelectMany(issues => issues).ToList();
-        var parentProgressIssues = allIssues.Count(issue => 
+        var parentProgressIssues = allIssues.Count(issue =>
             issue.Message.Contains("Parent", StringComparison.OrdinalIgnoreCase) ||
             issue.Message.Contains("Ancestor", StringComparison.OrdinalIgnoreCase));
-        
+
         // Count blocked items (from JSON payload if possible, otherwise estimate)
         var blockedItems = CountBlockedItems(iterationWorkItems);
-        
+
         // Count items still in progress at iteration end (if iteration has ended)
         var inProgressAtIterationEnd = CountInProgressAtEnd(iterationWorkItems, endDate);
 
@@ -105,7 +105,7 @@ public sealed class GetBacklogHealthQueryHandler
     private static int CountBlockedItems(List<WorkItemDto> workItems)
     {
         // Count items with "Blocked" state or similar
-        return workItems.Count(wi => 
+        return workItems.Count(wi =>
             wi.State.Contains("Blocked", StringComparison.OrdinalIgnoreCase) ||
             wi.State.Contains("On Hold", StringComparison.OrdinalIgnoreCase));
     }
@@ -119,7 +119,7 @@ public sealed class GetBacklogHealthQueryHandler
         }
 
         // Count items still in "In Progress" state
-        return workItems.Count(wi => 
+        return workItems.Count(wi =>
             wi.State.Equals("In Progress", StringComparison.OrdinalIgnoreCase) ||
             wi.State.Equals("Active", StringComparison.OrdinalIgnoreCase));
     }
@@ -129,7 +129,7 @@ public sealed class GetBacklogHealthQueryHandler
     {
         // Group by severity since we don't have a status property
         var issuesBySeverity = new Dictionary<string, HashSet<int>>();
-        
+
         foreach (var (workItemId, issues) in validationResults)
         {
             foreach (var issue in issues)

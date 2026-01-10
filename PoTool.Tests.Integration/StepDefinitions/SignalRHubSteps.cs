@@ -110,7 +110,7 @@ public class SignalRHubSteps : IDisposable
     {
         Assert.IsNotNull(_hubConnection, "Hub connection must be established first");
         await _hubConnection.InvokeAsync("RequestSync", areaPath);
-        
+
         // Give time for async processing and notifications
         await Task.Delay(StandardDelayMs);
     }
@@ -150,7 +150,7 @@ public class SignalRHubSteps : IDisposable
     {
         Assert.IsTrue(_multipleConnections.Count > 0, "Multiple connections must be established");
         await _multipleConnections[0].InvokeAsync("RequestSync", areaPath);
-        
+
         // Give time for all clients to receive notifications
         await Task.Delay(StandardDelayMs);
     }
@@ -213,10 +213,10 @@ public class SignalRHubSteps : IDisposable
     {
         // Get all messages and check if any contains the expected text
         Assert.IsTrue(_receivedMessages.Count > 0, "Expected to have received at least one notification");
-        
-        var matchingMessage = _receivedMessages.FirstOrDefault(m => 
+
+        var matchingMessage = _receivedMessages.FirstOrDefault(m =>
             m.Message.Contains(expectedText, StringComparison.OrdinalIgnoreCase));
-        
+
         Assert.IsNotNull(matchingMessage,
             $"Expected to find a message containing '{expectedText}', but got messages: {string.Join("; ", _receivedMessages.Select(m => m.Message))}");
     }
@@ -225,7 +225,7 @@ public class SignalRHubSteps : IDisposable
     public void ThenIShouldReceiveSyncNotificationsInOrder(string expectedOrder)
     {
         var expectedStatuses = expectedOrder.Split(',').Select(s => s.Trim()).ToList();
-        
+
         Assert.IsTrue(_receivedMessages.Count >= expectedStatuses.Count,
             $"Expected at least {expectedStatuses.Count} notifications, but received {_receivedMessages.Count}");
 
@@ -262,7 +262,7 @@ public class SignalRHubSteps : IDisposable
     {
         // Verify that both clients received notifications
         Assert.AreEqual(2, _clientMessages.Count, "Expected 2 clients to be tracked");
-        
+
         foreach (var clientId in _clientMessages.Keys)
         {
             Assert.IsTrue(_clientMessages[clientId].Count > 0,
@@ -294,11 +294,11 @@ public class SignalRHubSteps : IDisposable
         {
             return value.GetString();
         }
-        
+
         // Try case-insensitive match
-        var key = dictionary.Keys.FirstOrDefault(k => 
+        var key = dictionary.Keys.FirstOrDefault(k =>
             k.Equals(propertyName, StringComparison.OrdinalIgnoreCase));
-        
+
         return key != null ? dictionary[key].GetString() : null;
     }
 
@@ -323,12 +323,12 @@ public class SignalRHubSteps : IDisposable
                 // Parse the message object (it's sent as an anonymous object with Status and Message properties)
                 var json = JsonSerializer.Serialize(message);
                 var syncMessage = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
-                
+
                 if (syncMessage != null)
                 {
                     var status = GetPropertyValue(syncMessage, "Status") ?? string.Empty;
                     var msg = GetPropertyValue(syncMessage, "Message") ?? string.Empty;
-                    
+
                     var statusMessage = new SyncStatusMessage
                     {
                         Status = status,
@@ -379,7 +379,7 @@ public class SignalRHubSteps : IDisposable
                 // Ignore disposal errors
             }
         }
-        
+
         // Dispose multiple connections
         foreach (var connection in _multipleConnections)
         {
@@ -393,7 +393,7 @@ public class SignalRHubSteps : IDisposable
             }
         }
         _multipleConnections.Clear();
-        
+
         // Dispose factory
         try
         {
