@@ -79,12 +79,6 @@
             <MudStack Row="true" Spacing="2" Class="mt-4">
                 <CompactButton Variant="Variant.Outlined" 
                                Color="Color.Default"
-                               OnClick="ManageProfiles"
-                               StartIcon="@Icons.Material.Filled.Settings">
-                    Manage Profiles
-                </CompactButton>
-                <CompactButton Variant="Variant.Outlined" 
-                               Color="Color.Default"
                                OnClick="ManageTeams"
                                StartIcon="@Icons.Material.Filled.Groups">
                     Manage Teams
@@ -167,12 +161,6 @@
         {
             _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error creating profile");
         }
-    }
-
-    private void ManageProfiles()
-    {
-        // Since each profile has a "Manage Products" button, inform the user
-        Snackbar.Add("Click 'Manage Products' on any profile tile to configure it", Severity.Info);
     }
 
     private void ManageTeams()
