@@ -44,8 +44,7 @@ public class ProductRepository : IProductRepository
     public async Task<ProductDto> CreateProductAsync(
         int productOwnerId,
         string name,
-        string productAreaPath,
-        int? backlogRootWorkItemId,
+        int backlogRootWorkItemId,
         ProductPictureType pictureType,
         int defaultPictureId,
         string? customPicturePath,
@@ -60,7 +59,6 @@ public class ProductRepository : IProductRepository
         {
             ProductOwnerId = productOwnerId,
             Name = name,
-            ProductAreaPath = productAreaPath,
             BacklogRootWorkItemId = backlogRootWorkItemId,
             Order = maxOrder + 1,
             PictureType = (int)pictureType,
@@ -80,8 +78,7 @@ public class ProductRepository : IProductRepository
     public async Task<ProductDto> UpdateProductAsync(
         int id,
         string name,
-        string productAreaPath,
-        int? backlogRootWorkItemId,
+        int backlogRootWorkItemId,
         ProductPictureType? pictureType,
         int? defaultPictureId,
         string? customPicturePath,
@@ -97,7 +94,6 @@ public class ProductRepository : IProductRepository
         }
 
         entity.Name = name;
-        entity.ProductAreaPath = productAreaPath;
         entity.BacklogRootWorkItemId = backlogRootWorkItemId;
 
         if (pictureType.HasValue)
@@ -209,7 +205,6 @@ public class ProductRepository : IProductRepository
             entity.Id,
             entity.ProductOwnerId,
             entity.Name,
-            entity.ProductAreaPath,
             entity.BacklogRootWorkItemId,
             entity.Order,
             (ProductPictureType)entity.PictureType,

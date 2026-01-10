@@ -22,7 +22,6 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
         return await _repository.CreateProductAsync(
             command.ProductOwnerId,
             command.Name,
-            command.ProductAreaPath,
             command.BacklogRootWorkItemId,
             command.PictureType,
             command.DefaultPictureId,

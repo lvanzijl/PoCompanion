@@ -27,17 +27,11 @@ public class ProductEntity
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// The area path that defines the backlog scope.
+    /// The root work item ID that defines the product backlog.
+    /// This is the backlog root work item.
     /// </summary>
     [Required]
-    [MaxLength(500)]
-    public string ProductAreaPath { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Optional root work item ID for the backlog.
-    /// Null means the product is "backlog-less" while being configured.
-    /// </summary>
-    public int? BacklogRootWorkItemId { get; set; }
+    public int BacklogRootWorkItemId { get; set; }
 
     /// <summary>
     /// Explicit ordering of products within a Product Owner's list.

@@ -79,8 +79,6 @@ public class ProfilesController : ControllerBase
     {
         var command = new CreateProfileCommand(
             request.Name,
-            request.AreaPaths,
-            request.TeamName,
             request.GoalIds,
             request.PictureType,
             request.DefaultPictureId,
@@ -107,8 +105,6 @@ public class ProfilesController : ControllerBase
             var command = new UpdateProfileCommand(
                 id,
                 request.Name,
-                request.AreaPaths,
-                request.TeamName,
                 request.GoalIds,
                 request.PictureType,
                 request.DefaultPictureId,
@@ -159,12 +155,10 @@ public class ProfilesController : ControllerBase
 }
 
 /// <summary>
-/// Request model for creating a profile.
+/// Request model for creating a profile (Product Owner).
 /// </summary>
 public record CreateProfileRequest(
     string Name,
-    List<string> AreaPaths,
-    string TeamName,
     List<int> GoalIds,
     ProfilePictureType PictureType = ProfilePictureType.Default,
     int DefaultPictureId = 0,
@@ -172,12 +166,10 @@ public record CreateProfileRequest(
 );
 
 /// <summary>
-/// Request model for updating a profile.
+/// Request model for updating a profile (Product Owner).
 /// </summary>
 public record UpdateProfileRequest(
     string Name,
-    List<string> AreaPaths,
-    string TeamName,
     List<int> GoalIds,
     ProfilePictureType? PictureType = null,
     int? DefaultPictureId = null,

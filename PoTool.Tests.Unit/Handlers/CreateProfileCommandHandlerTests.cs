@@ -31,16 +31,12 @@ public class CreateProfileCommandHandlerTests
         // Arrange
         var command = new CreateProfileCommand(
             Name: "Test Profile",
-            AreaPaths: new List<string> { "Project\\ProductA", "Project\\ProductB" },
-            TeamName: "Team Alpha",
             GoalIds: new List<int> { 1, 2, 3 }
         );
 
         var createdProfile = new ProfileDto(
             Id: 1,
             Name: command.Name,
-            AreaPaths: command.AreaPaths,
-            TeamName: command.TeamName,
             GoalIds: command.GoalIds,
             PictureType: ProfilePictureType.Default,
             DefaultPictureId: 0,
@@ -50,8 +46,6 @@ public class CreateProfileCommandHandlerTests
         );
 
         _mockRepository.Setup(r => r.CreateProfileAsync(
-            It.IsAny<string>(),
-            It.IsAny<List<string>>(),
             It.IsAny<string>(),
             It.IsAny<List<int>>(),
             It.IsAny<ProfilePictureType>(),
@@ -67,14 +61,10 @@ public class CreateProfileCommandHandlerTests
         Assert.IsNotNull(result);
         Assert.AreEqual(1, result.Id);
         Assert.AreEqual("Test Profile", result.Name);
-        Assert.HasCount(2, result.AreaPaths);
-        Assert.AreEqual("Team Alpha", result.TeamName);
         Assert.HasCount(3, result.GoalIds);
 
         _mockRepository.Verify(r => r.CreateProfileAsync(
             "Test Profile",
-            It.Is<List<string>>(list => list.Count == 2),
-            "Team Alpha",
             It.Is<List<int>>(list => list.Count == 3),
             It.IsAny<ProfilePictureType>(),
             It.IsAny<int>(),
@@ -88,16 +78,12 @@ public class CreateProfileCommandHandlerTests
         // Arrange
         var command = new CreateProfileCommand(
             Name: "Minimal Profile",
-            AreaPaths: new List<string>(),
-            TeamName: "Team Beta",
             GoalIds: new List<int>()
         );
 
         var createdProfile = new ProfileDto(
             Id: 2,
             Name: command.Name,
-            AreaPaths: command.AreaPaths,
-            TeamName: command.TeamName,
             GoalIds: command.GoalIds,
             PictureType: ProfilePictureType.Default,
             DefaultPictureId: 0,
@@ -107,8 +93,6 @@ public class CreateProfileCommandHandlerTests
         );
 
         _mockRepository.Setup(r => r.CreateProfileAsync(
-            It.IsAny<string>(),
-            It.IsAny<List<string>>(),
             It.IsAny<string>(),
             It.IsAny<List<int>>(),
             It.IsAny<ProfilePictureType>(),
@@ -123,34 +107,24 @@ public class CreateProfileCommandHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual("Minimal Profile", result.Name);
-        Assert.IsEmpty(result.AreaPaths);
-        Assert.IsEmpty(result.GoalIds);
+        Assert.HasCount(0, result.GoalIds);
     }
 
     [TestMethod]
-    public async Task Handle_WithMultipleAreaPaths_PreservesOrder()
+    public async Task Handle_WithMultipleGoals_PreservesOrder()
     {
         // Arrange
-        var areaPaths = new List<string>
-        {
-            "Project\\ProductA",
-            "Project\\ProductA\\Mobile",
-            "Project\\ProductB"
-        };
+        var goalIds = new List<int> { 10, 20, 30 };
 
         var command = new CreateProfileCommand(
-            Name: "Multi-Path Profile",
-            AreaPaths: areaPaths,
-            TeamName: "Team Gamma",
-            GoalIds: new List<int> { 10, 20 }
+            Name: "Multi-Goal Profile",
+            GoalIds: goalIds
         );
 
         var createdProfile = new ProfileDto(
             Id: 3,
             Name: command.Name,
-            AreaPaths: command.AreaPaths,
-            TeamName: command.TeamName,
-            GoalIds: command.GoalIds,
+            GoalIds: goalIds,
             PictureType: ProfilePictureType.Default,
             DefaultPictureId: 0,
             CustomPicturePath: null,
@@ -159,8 +133,6 @@ public class CreateProfileCommandHandlerTests
         );
 
         _mockRepository.Setup(r => r.CreateProfileAsync(
-            It.IsAny<string>(),
-            It.IsAny<List<string>>(),
             It.IsAny<string>(),
             It.IsAny<List<int>>(),
             It.IsAny<ProfilePictureType>(),
@@ -174,9 +146,9 @@ public class CreateProfileCommandHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.HasCount(3, result.AreaPaths);
-        Assert.AreEqual("Project\\ProductA", result.AreaPaths[0]);
-        Assert.AreEqual("Project\\ProductA\\Mobile", result.AreaPaths[1]);
-        Assert.AreEqual("Project\\ProductB", result.AreaPaths[2]);
+        Assert.HasCount(3, result.GoalIds);
+        Assert.AreEqual(10, result.GoalIds[0]);
+        Assert.AreEqual(20, result.GoalIds[1]);
+        Assert.AreEqual(30, result.GoalIds[2]);
     }
 }

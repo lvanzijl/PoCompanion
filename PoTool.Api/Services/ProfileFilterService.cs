@@ -24,6 +24,8 @@ public class ProfileFilterService
 
     /// <summary>
     /// Gets the area paths from the active profile, or null if no profile is active.
+    /// NOTE: Profiles no longer have direct area paths. Area paths are now defined through Products and Teams.
+    /// This method returns null to disable profile-based area path filtering.
     /// </summary>
     public async Task<List<string>?> GetActiveProfileAreaPathsAsync(CancellationToken cancellationToken = default)
     {
@@ -45,16 +47,9 @@ public class ProfileFilterService
                 return null;
             }
 
-            if (profile.AreaPaths == null || profile.AreaPaths.Count == 0)
-            {
-                _logger.LogDebug("Active profile {ProfileName} has no area paths defined", profile.Name);
-                return null;
-            }
-
-            _logger.LogDebug("Using area path filter from profile {ProfileName}: {AreaPaths}",
-                profile.Name, string.Join(", ", profile.AreaPaths));
-
-            return profile.AreaPaths.ToList();
+            // Profiles no longer have area paths - they are now defined through Products and Teams
+            _logger.LogDebug("Profile-based area path filtering is disabled. Use Product/Team filtering instead.");
+            return null;
         }
         catch (Exception ex)
         {

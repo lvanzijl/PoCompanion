@@ -15,29 +15,14 @@ public class ProfileEntity
     public int Id { get; set; }
 
     /// <summary>
-    /// Profile name (user-defined, e.g., "Product A - Team Alpha").
+    /// Product Owner name (user-defined, e.g., "John Smith").
     /// </summary>
     [Required]
     [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Comma-separated list of area paths for this profile.
-    /// User can select one or more area paths representing their products.
-    /// </summary>
-    [Required]
-    [MaxLength(2000)]
-    public string AreaPaths { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The team responsible for the area paths in this profile.
-    /// </summary>
-    [Required]
-    [MaxLength(200)]
-    public string TeamName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Comma-separated list of Goal IDs applicable to this profile.
+    /// Comma-separated list of Goal IDs applicable to this Product Owner.
     /// Empty string means all goals are applicable.
     /// </summary>
     [MaxLength(1000)]

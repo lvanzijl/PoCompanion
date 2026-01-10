@@ -21,8 +21,6 @@ public class CreateProfileCommandHandler : ICommandHandler<CreateProfileCommand,
     {
         return await _repository.CreateProfileAsync(
             command.Name,
-            command.AreaPaths,
-            command.TeamName,
             command.GoalIds,
             command.PictureType,
             command.DefaultPictureId,

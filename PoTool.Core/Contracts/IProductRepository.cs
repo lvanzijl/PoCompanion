@@ -23,8 +23,7 @@ public interface IProductRepository
     Task<ProductDto> CreateProductAsync(
         int productOwnerId,
         string name,
-        string productAreaPath,
-        int? backlogRootWorkItemId,
+        int backlogRootWorkItemId,
         ProductPictureType pictureType,
         int defaultPictureId,
         string? customPicturePath,
@@ -36,8 +35,7 @@ public interface IProductRepository
     Task<ProductDto> UpdateProductAsync(
         int id,
         string name,
-        string productAreaPath,
-        int? backlogRootWorkItemId,
+        int backlogRootWorkItemId,
         ProductPictureType? pictureType,
         int? defaultPictureId,
         string? customPicturePath,
