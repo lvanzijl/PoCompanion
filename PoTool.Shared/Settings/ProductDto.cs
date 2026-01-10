@@ -23,7 +23,7 @@ public enum ProductPictureType
 /// </summary>
 public sealed record ProductDto(
     int Id,
-    int ProductOwnerId,
+    int? ProductOwnerId,
     string Name,
     int BacklogRootWorkItemId,
     int Order,

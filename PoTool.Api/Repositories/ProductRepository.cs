@@ -42,7 +42,7 @@ public class ProductRepository : IProductRepository
 
     /// <inheritdoc />
     public async Task<ProductDto> CreateProductAsync(
-        int productOwnerId,
+        int? productOwnerId,
         string name,
         int backlogRootWorkItemId,
         ProductPictureType pictureType,
@@ -50,10 +50,14 @@ public class ProductRepository : IProductRepository
         string? customPicturePath,
         CancellationToken cancellationToken = default)
     {
-        // Get max order for this product owner
-        var maxOrder = await _context.Products
-            .Where(p => p.ProductOwnerId == productOwnerId)
-            .MaxAsync(p => (int?)p.Order, cancellationToken) ?? -1;
+        // Get max order for this product owner (or 0 if no owner)
+        var maxOrder = -1;
+        if (productOwnerId.HasValue)
+        {
+            maxOrder = await _context.Products
+                .Where(p => p.ProductOwnerId == productOwnerId.Value)
+                .MaxAsync(p => (int?)p.Order, cancellationToken) ?? -1;
+        }
 
         var entity = new ProductEntity
         {
@@ -195,6 +199,75 @@ public class ProductRepository : IProductRepository
         await _context.SaveChangesAsync(cancellationToken);
 
         return true;
+    }
+
+    /// <inheritdoc />
+    public async Task<ProductDto> ChangeProductOwnerAsync(int productId, int? newProductOwnerId, CancellationToken cancellationToken = default)
+    {
+        var entity = await _context.Products
+            .Include(p => p.ProductTeamLinks)
+            .FirstOrDefaultAsync(p => p.Id == productId, cancellationToken);
+
+        if (entity == null)
+        {
+            throw new InvalidOperationException($"Product with ID {productId} not found.");
+        }
+
+        entity.ProductOwnerId = newProductOwnerId;
+        entity.LastModified = DateTimeOffset.UtcNow;
+
+        // If assigning to a new owner, update order to be at the end
+        if (newProductOwnerId.HasValue)
+        {
+            var maxOrder = await _context.Products
+                .Where(p => p.ProductOwnerId == newProductOwnerId.Value)
+                .MaxAsync(p => (int?)p.Order, cancellationToken) ?? -1;
+            entity.Order = maxOrder + 1;
+        }
+        else
+        {
+            entity.Order = 0; // Orphans don't need ordering
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return MapToDto(entity);
+    }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<ProductDto>> GetAllProductsAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _context.Products
+            .Include(p => p.ProductTeamLinks)
+            .OrderBy(p => p.Name)
+            .ToListAsync(cancellationToken);
+
+        return entities.Select(MapToDto);
+    }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<ProductDto>> GetOrphanProductsAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _context.Products
+            .Include(p => p.ProductTeamLinks)
+            .Where(p => p.ProductOwnerId == null)
+            .OrderBy(p => p.Name)
+            .ToListAsync(cancellationToken);
+
+        return entities.Select(MapToDto);
+    }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<ProductDto>> GetSelectableProductsAsync(int productOwnerId, CancellationToken cancellationToken = default)
+    {
+        var entities = await _context.Products
+            .Include(p => p.ProductTeamLinks)
+            .Where(p => p.ProductOwnerId == productOwnerId || p.ProductOwnerId == null)
+            .OrderBy(p => p.Order)
+            .ThenBy(p => p.Name)
+            .ToListAsync(cancellationToken);
+
+        return entities.Select(MapToDto);
     }
 
     private static ProductDto MapToDto(ProductEntity entity)
