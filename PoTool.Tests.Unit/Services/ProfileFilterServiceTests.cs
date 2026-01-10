@@ -52,13 +52,11 @@ public class ProfileFilterServiceTests
     }
 
     [TestMethod]
-    public async Task GetActiveProfileAreaPathsAsync_WithActiveProfile_ReturnsAreaPaths()
+    public async Task GetActiveProfileAreaPathsAsync_WithActiveProfile_ReturnsNull()
     {
-        // Arrange
+        // Arrange - Profiles no longer have area paths, so method always returns null
         var settings = new SettingsDto(
             Id: 1,
-            // DataMode: DataMode.Tfs, // OBSOLETE
-            // ConfiguredGoalIds: new List<int>(), // OBSOLETE
             ActiveProfileId: 10,
             LastModified: DateTimeOffset.UtcNow
         );
@@ -66,8 +64,6 @@ public class ProfileFilterServiceTests
         var profile = new ProfileDto(
             Id: 10,
             Name: "Test Profile",
-            AreaPaths: new List<string> { "Project\\ProductA", "Project\\ProductB" },
-            TeamName: "Team Alpha",
             GoalIds: new List<int>(),
             PictureType: ProfilePictureType.Default,
             DefaultPictureId: 0,
@@ -84,11 +80,8 @@ public class ProfileFilterServiceTests
         // Act
         var result = await _service.GetActiveProfileAreaPathsAsync();
 
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.HasCount(2, result);
-        Assert.AreEqual("Project\\ProductA", result[0]);
-        Assert.AreEqual("Project\\ProductB", result[1]);
+        // Assert - Area path filtering is disabled since profiles don't have area paths
+        Assert.IsNull(result);
     }
 
     [TestMethod]
@@ -116,13 +109,11 @@ public class ProfileFilterServiceTests
     }
 
     [TestMethod]
-    public async Task GetActiveProfileAreaPathsAsync_WithEmptyAreaPaths_ReturnsNull()
+    public async Task GetActiveProfileAreaPathsAsync_WithEmptyProfile_ReturnsNull()
     {
-        // Arrange
+        // Arrange - Profiles no longer have area paths
         var settings = new SettingsDto(
             Id: 1,
-            // DataMode: DataMode.Tfs, // OBSOLETE
-            // ConfiguredGoalIds: new List<int>(), // OBSOLETE
             ActiveProfileId: 10,
             LastModified: DateTimeOffset.UtcNow
         );
@@ -130,8 +121,6 @@ public class ProfileFilterServiceTests
         var profile = new ProfileDto(
             Id: 10,
             Name: "Empty Profile",
-            AreaPaths: new List<string>(),
-            TeamName: "Team Alpha",
             GoalIds: new List<int>(),
             PictureType: ProfilePictureType.Default,
             DefaultPictureId: 0,

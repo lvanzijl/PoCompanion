@@ -50,8 +50,6 @@ public class GetAllProfilesQueryHandlerTests
             new ProfileDto(
                 Id: 1,
                 Name: "Profile 1",
-                AreaPaths: new List<string> { "Project\\A" },
-                TeamName: "Team Alpha",
                 GoalIds: new List<int> { 1 },
                 PictureType: ProfilePictureType.Default,
                 DefaultPictureId: 0,
@@ -62,8 +60,6 @@ public class GetAllProfilesQueryHandlerTests
             new ProfileDto(
                 Id: 2,
                 Name: "Profile 2",
-                AreaPaths: new List<string> { "Project\\B" },
-                TeamName: "Team Beta",
                 GoalIds: new List<int> { 2, 3 },
                 PictureType: ProfilePictureType.Default,
                 DefaultPictureId: 0,
@@ -74,8 +70,6 @@ public class GetAllProfilesQueryHandlerTests
             new ProfileDto(
                 Id: 3,
                 Name: "Profile 3",
-                AreaPaths: new List<string> { "Project\\C", "Project\\D" },
-                TeamName: "Team Gamma",
                 GoalIds: new List<int>(),
                 PictureType: ProfilePictureType.Default,
                 DefaultPictureId: 0,
@@ -110,8 +104,6 @@ public class GetAllProfilesQueryHandlerTests
             new ProfileDto(
                 Id: 100,
                 Name: "Complete Profile",
-                AreaPaths: new List<string> { "Project\\ProductA", "Project\\ProductB" },
-                TeamName: "Complete Team",
                 GoalIds: new List<int> { 10, 20, 30 },
                 PictureType: ProfilePictureType.Default,
                 DefaultPictureId: 0,
@@ -132,9 +124,6 @@ public class GetAllProfilesQueryHandlerTests
         var profile = result.First();
         Assert.AreEqual(100, profile.Id);
         Assert.AreEqual("Complete Profile", profile.Name);
-        Assert.HasCount(2, profile.AreaPaths);
-        Assert.AreEqual("Project\\ProductA", profile.AreaPaths[0]);
-        Assert.AreEqual("Complete Team", profile.TeamName);
         Assert.HasCount(3, profile.GoalIds);
     }
 }
