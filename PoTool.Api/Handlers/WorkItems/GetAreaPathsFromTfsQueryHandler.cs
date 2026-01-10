@@ -32,8 +32,8 @@ public sealed class GetAreaPathsFromTfsQueryHandler : IQueryHandler<GetAreaPaths
         {
             // Fetch area paths directly from TFS Classification Nodes API
             // This bypasses the work item cache and provides the current area path structure
-            var areaPaths = await _tfsClient.GetAreaPathsAsync(depth: null, cancellationToken);
-
+            var areaPaths = await _tfsClient.GetAreaPathsAsync(depth: 5, cancellationToken); // hardcoded depth to 5 for now.
+            
             var areaPathsList = areaPaths.ToList();
             _logger.LogDebug("Retrieved {Count} area paths from TFS Classification Nodes API", areaPathsList.Count);
 

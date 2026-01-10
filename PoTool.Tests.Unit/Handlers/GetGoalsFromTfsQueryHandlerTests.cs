@@ -8,6 +8,7 @@ using PoTool.Api.Handlers.WorkItems;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Tests.Unit.Handlers;
@@ -116,7 +117,7 @@ public class GetGoalsFromTfsQueryHandlerTests
                     {
                         ["System.Id"] = 100,
                         ["System.Title"] = "Goal Alpha",
-                        ["System.WorkItemType"] = "Goal"
+                        ["System.WorkItemType"] = WorkItemType.Goal
                     }
                 },
                 new
@@ -126,7 +127,7 @@ public class GetGoalsFromTfsQueryHandlerTests
                     {
                         ["System.Id"] = 200,
                         ["System.Title"] = "Goal Beta",
-                        ["System.WorkItemType"] = "Goal"
+                        ["System.WorkItemType"] = WorkItemType.Goal
                     }
                 },
                 new
@@ -136,7 +137,7 @@ public class GetGoalsFromTfsQueryHandlerTests
                     {
                         ["System.Id"] = 300,
                         ["System.Title"] = "Goal Gamma",
-                        ["System.WorkItemType"] = "Goal"
+                        ["System.WorkItemType"] = WorkItemType.Goal
                     }
                 }
             }
@@ -169,7 +170,7 @@ public class GetGoalsFromTfsQueryHandlerTests
         var query = new GetGoalsFromTfsQuery();
 
         // Mock WIQL response failure (e.g., work item type not found)
-        SetupHttpResponse(HttpStatusCode.BadRequest, "Work item type 'Goal' does not exist");
+        SetupHttpResponse(HttpStatusCode.BadRequest, $"Work item type '{WorkItemType.Goal}' does not exist");
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);

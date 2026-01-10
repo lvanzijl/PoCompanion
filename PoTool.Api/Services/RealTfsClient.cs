@@ -303,7 +303,7 @@ public class RealTfsClient : ITfsClient
 
             // Build Classification Nodes API URL
             // Format: GET {organization}/{project}/_apis/wit/classificationnodes/areas?$depth={depth}&api-version=5.1
-            var depthParam = depth.HasValue ? $"&$depth={depth.Value}" : "";
+            var depthParam = depth.HasValue ? $"$depth={depth.Value}" : "";
             var url = ProjectUrl(config, $"_apis/wit/classificationnodes/areas?{depthParam}");
 
             _logger.LogDebug("Calling Classification Nodes API: {Url}", url);

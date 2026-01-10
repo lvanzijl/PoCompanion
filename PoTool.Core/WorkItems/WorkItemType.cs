@@ -5,7 +5,7 @@ namespace PoTool.Core.WorkItems;
 /// </summary>
 public static class WorkItemType
 {
-    public const string Goal = "Goal";
+    public const string Goal = "goal"; // someone made a typo when introducing the goal work item type
     public const string Objective = "Objective";
     public const string Epic = "Epic";
     public const string Feature = "Feature";
