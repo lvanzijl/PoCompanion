@@ -24,7 +24,7 @@
             <!-- List of existing profiles -->
             @if (_profiles != null && _profiles.Any())
             {
-                <MudText Typo="Typo.subtitle1" Class="mb-2">Your Profiles</MudText>
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Your Product Owners</MudText>
                 <CompactList T="string" Class="mb-4">
                     @foreach (var profile in _profiles)
                     {
@@ -33,7 +33,7 @@
                                 <MudStack Spacing="0">
                                     <MudText Typo="Typo.body1"><strong>@profile.Name</strong></MudText>
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                        Team: @profile.TeamName | @profile.AreaPaths.Count area path(s) | @profile.GoalIds.Count goal(s)
+                                        @profile.GoalIds.Count goal(s)
                                     </MudText>
                                 </MudStack>
                                 <MudStack Row="true" Spacing="1">
@@ -53,38 +53,20 @@
             else
             {
                 <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
-                    No profiles yet. Create your first profile to get started.
+                    No product owners yet. Create your first product owner to get started.
                 </MudAlert>
             }
 
             <!-- Create/Edit Profile Form -->
             <MudText Typo="Typo.subtitle1" Class="mb-2">
-                @(_isEditing ? "Edit Profile" : "Create New Profile")
+                @(_isEditing ? "Edit Product Owner" : "Create New Product Owner")
             </MudText>
 
             <MudForm @ref="_form">
                 <CompactTextField @bind-Value="_profileName" 
-                              Label="Profile Name" 
+                              Label="Product Owner Name" 
                               Required="true"
-                              HelperText="e.g., 'Product A - Team Alpha'" />
-
-                <CompactTextField @bind-Value="_teamName" 
-                              Label="Team Name" 
-                              Required="true"
-                              HelperText="The team responsible for these area paths" />
-
-                <CompactSelect T="string"
-                               Label="Area Paths"
-                               @bind-SelectedValues="_selectedAreaPaths"
-                               MultiSelection="true"
-                               HelperText="Click to open and select multiple area paths using checkboxes"
-                               Required="true"
-                               Class="mt-2">
-                    @foreach (var areaPath in _allAreaPaths)
-                    {
-                        <MudSelectItem T="string" Value="@areaPath">@areaPath</MudSelectItem>
-                    }
-                </CompactSelect>
+                              HelperText="e.g., 'John Smith', 'Jane Doe'" />
 
                 <CompactSelect T="int"
                                Label="Goals (Optional)"
@@ -150,7 +132,6 @@
     private MudForm _form = null!;
 
     private IEnumerable<ProfileDto> _profiles = Enumerable.Empty<ProfileDto>();
-    private List<string> _allAreaPaths = new();
     private List<WorkItemDto> _availableGoals = new();
     
     private bool _isLoading = true;
@@ -159,9 +140,7 @@
     private int? _editingProfileId;
 
     private string _profileName = string.Empty;
-    private string _teamName = string.Empty;
     
-    private IEnumerable<string> _selectedAreaPaths = new List<string>();
     private IEnumerable<int> _selectedGoalIds = new List<int>();
     
     private int _selectedImageId = 0;
@@ -174,7 +153,6 @@
         _selectedImageId = Random.Shared.Next(0, 64);
         
         await LoadProfiles();
-        await LoadAreaPaths();
         await LoadGoals();
     }
 
@@ -193,21 +171,6 @@
         finally
         {
             _isLoading = false;
-        }
-    }
-
-    private async Task LoadAreaPaths()
-    {
-        try
-        {
-            // Fetch area paths directly from TFS instead of cache
-            // Cache is intentionally bypassed here because it's not yet populated in the Add Profile flow
-            var areaPaths = await WorkItemService.GetAreaPathsFromTfsAsync();
-            _allAreaPaths = areaPaths.ToList();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading area paths: {ex.Message}");
         }
     }
 
@@ -231,8 +194,6 @@
         _isEditing = true;
         _editingProfileId = profile.Id;
         _profileName = profile.Name;
-        _teamName = profile.TeamName;
-        _selectedAreaPaths = profile.AreaPaths.ToList();
         _selectedGoalIds = profile.GoalIds.ToList();
         _selectedImageId = profile.DefaultPictureId;
     }
@@ -241,7 +202,7 @@
     {
         var result = await DialogService.ShowMessageBox(
             "Confirm Delete",
-            $"Are you sure you want to delete the profile '{profile.Name}'?",
+            $"Are you sure you want to delete the product owner '{profile.Name}'?",
             yesText: "Delete",
             cancelText: "Cancel");
 
@@ -252,14 +213,14 @@
                 var deleted = await ProfileService.DeleteProfileAsync(profile.Id);
                 if (deleted)
                 {
-                    Snackbar.Add($"Profile '{profile.Name}' deleted successfully", Severity.Success);
+                    Snackbar.Add($"Product owner '{profile.Name}' deleted successfully", Severity.Success);
                     await LoadProfiles();
                     ClearForm();
                 }
             }
             catch (Exception ex)
             {
-                ShowError(ex, "Error deleting profile");
+                ShowError(ex, "Error deleting product owner");
             }
         }
     }
@@ -272,18 +233,11 @@
             return;
         }
 
-        if (!_selectedAreaPaths.Any())
-        {
-            Snackbar.Add("Please add at least one area path", Severity.Warning);
-            return;
-        }
-
         try
         {
             _isSaving = true;
             ClearError();
 
-            var areaPaths = _selectedAreaPaths.ToList();
             var goalIds = _selectedGoalIds.ToList();
 
             if (_isEditing && _editingProfileId.HasValue)
@@ -291,25 +245,21 @@
                 await ProfileService.UpdateProfileAsync(
                     _editingProfileId.Value,
                     _profileName,
-                    areaPaths,
-                    _teamName,
                     goalIds,
                     ProfilePictureType.Default,
                     _selectedImageId,
                     null);
-                Snackbar.Add("Profile updated successfully", Severity.Success);
+                Snackbar.Add("Product owner updated successfully", Severity.Success);
             }
             else
             {
                 await ProfileService.CreateProfileAsync(
                     _profileName,
-                    areaPaths,
-                    _teamName,
                     goalIds,
                     ProfilePictureType.Default,
                     _selectedImageId,
                     null);
-                Snackbar.Add("Profile created successfully", Severity.Success);
+                Snackbar.Add("Product owner created successfully", Severity.Success);
                 
                 // Close dialog after successful creation
                 MudDialog.Close(DialogResult.Ok(true));
@@ -321,7 +271,7 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex, _isEditing ? "Error updating profile" : "Error creating profile");
+            ShowError(ex, _isEditing ? "Error updating product owner" : "Error creating product owner");
         }
         finally
         {
@@ -339,8 +289,6 @@
         _isEditing = false;
         _editingProfileId = null;
         _profileName = string.Empty;
-        _teamName = string.Empty;
-        _selectedAreaPaths = new List<string>();
         _selectedGoalIds = new List<int>();
         _selectedImageId = Random.Shared.Next(0, 64);
         _form?.ResetValidation();

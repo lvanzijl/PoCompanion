@@ -54,12 +54,10 @@ public class ProfileService
     }
 
     /// <summary>
-    /// Creates a new profile.
+    /// Creates a new profile (Product Owner).
     /// </summary>
     public async Task<ProfileDto> CreateProfileAsync(
         string name,
-        List<string> areaPaths,
-        string teamName,
         List<int> goalIds,
         ProfilePictureType pictureType = ProfilePictureType.Default,
         int? defaultPictureId = null,
@@ -72,8 +70,6 @@ public class ProfileService
         var request = new CreateProfileRequest
         {
             Name = name,
-            AreaPaths = areaPaths,
-            TeamName = teamName,
             GoalIds = goalIds,
             PictureType = (ApiClient.ProfilePictureType)pictureType,
             DefaultPictureId = pictureId,
@@ -84,13 +80,11 @@ public class ProfileService
     }
 
     /// <summary>
-    /// Updates an existing profile.
+    /// Updates an existing profile (Product Owner).
     /// </summary>
     public async Task<ProfileDto> UpdateProfileAsync(
         int id,
         string name,
-        List<string> areaPaths,
-        string teamName,
         List<int> goalIds,
         ProfilePictureType? pictureType = null,
         int? defaultPictureId = null,
@@ -100,8 +94,6 @@ public class ProfileService
         var request = new UpdateProfileRequest
         {
             Name = name,
-            AreaPaths = areaPaths,
-            TeamName = teamName,
             GoalIds = goalIds,
             PictureType = pictureType.HasValue ? (ApiClient.ProfilePictureType?)pictureType.Value : null,
             DefaultPictureId = defaultPictureId,
@@ -141,12 +133,10 @@ public class ProfileService
     }
 
     /// <summary>
-    /// Creates a profile and sets it as active.
+    /// Creates a profile (Product Owner) and sets it as active.
     /// </summary>
     public async Task<ProfileDto> CreateAndActivateProfileAsync(
         string name,
-        List<string> areaPaths,
-        string teamName,
         List<int> goalIds,
         ProfilePictureType pictureType = ProfilePictureType.Default,
         int? defaultPictureId = null,
@@ -154,7 +144,7 @@ public class ProfileService
         CancellationToken cancellationToken = default)
     {
         // Create the profile
-        var profile = await CreateProfileAsync(name, areaPaths, teamName, goalIds,
+        var profile = await CreateProfileAsync(name, goalIds,
             pictureType, defaultPictureId, customPicturePath, cancellationToken);
 
         // Set it as active

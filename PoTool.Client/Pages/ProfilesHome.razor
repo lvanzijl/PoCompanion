@@ -152,8 +152,6 @@
             // Create a basic profile with minimal data
             var newProfile = await ProfileService.CreateProfileAsync(
                 "New Product Owner",
-                new List<string>(),  // Empty area paths - to be configured in management page
-                "Default Team",      // Default team name - to be configured
                 new List<int>(),     // No goals initially
                 ProfilePictureType.Default,
                 Random.Shared.Next(0, 64),  // Random picture

@@ -19,36 +19,11 @@
                           Required="true"
                           HelperText="e.g., 'Customer Portal', 'Mobile App'" />
 
-            <CompactSelect T="string"
-                           Label="Product Area Path"
-                           @bind-Value="_productAreaPath"
-                           Required="true"
-                           HelperText="The area path that defines this product's scope">
-                @foreach (var areaPath in _allAreaPaths)
-                {
-                    <MudSelectItem T="string" Value="@areaPath">@areaPath</MudSelectItem>
-                }
-            </CompactSelect>
-
-            <CompactSelect T="int?"
-                           Label="Backlog Root Work Item (Optional)"
-                           @bind-Value="_backlogRootWorkItemId"
-                           HelperText="The root Epic or Feature for the product backlog. Leave empty for backlog-less products.">
-                <MudSelectItem T="int?" Value="@((int?)null)">-- None (Backlog-less) --</MudSelectItem>
-                @foreach (var goal in _availableGoals)
-                {
-                    <MudSelectItem T="int?" Value="@goal.TfsId">@goal.Title (ID: @goal.TfsId)</MudSelectItem>
-                }
-            </CompactSelect>
-
-            @if (_backlogRootWorkItemId == null)
-            {
-                <MudAlert Severity="Severity.Warning" Dense="true">
-                    <MudText Typo="Typo.caption">
-                        This product has no backlog root. Work items will not be filtered by backlog hierarchy.
-                    </MudText>
-                </MudAlert>
-            }
+            <CompactTextField @bind-Value="_backlogRootWorkItemIdText" 
+                          Label="Backlog Root Work Item ID" 
+                          Required="true"
+                          HelperText="Enter the work item ID that defines the product backlog"
+                          InputType="InputType.Number" />
 
             <CompactSelect T="int"
                            Label="Linked Teams"
@@ -61,11 +36,11 @@
                 }
             </CompactSelect>
 
-            @if (HasAreaPathMismatch())
+            @if (!_availableTeams.Any())
             {
                 <MudAlert Severity="Severity.Info" Dense="true">
                     <MudText Typo="Typo.caption">
-                        Note: Some linked teams have area paths outside this product's area path scope.
+                        No teams available. Create a team first before linking it to products.
                     </MudText>
                 </MudAlert>
             }
@@ -129,13 +104,11 @@
     private ErrorResponse? _errorResponse;
 
     private string _name = string.Empty;
-    private string _productAreaPath = string.Empty;
-    private int? _backlogRootWorkItemId;
+    private string _backlogRootWorkItemIdText = string.Empty;
+    private int _backlogRootWorkItemId = 0;
     private int _selectedImageId = 0;
     private IEnumerable<int> _selectedTeamIds = new List<int>();
 
-    private List<string> _allAreaPaths = new();
-    private List<WorkItemDto> _availableGoals = new();
     private List<TeamDto> _availableTeams = new();
 
     protected override async Task OnInitializedAsync()
@@ -147,8 +120,8 @@
         if (Product != null)
         {
             _name = Product.Name;
-            _productAreaPath = Product.ProductAreaPath;
             _backlogRootWorkItemId = Product.BacklogRootWorkItemId;
+            _backlogRootWorkItemIdText = Product.BacklogRootWorkItemId.ToString();
             _selectedImageId = Product.DefaultPictureId;
             _selectedTeamIds = Product.TeamIds.ToList();
         }
@@ -158,14 +131,8 @@
     {
         try
         {
-            var areaPathsTask = WorkItemService.GetAreaPathsFromTfsAsync();
-            var goalsTask = WorkItemService.GetGoalsFromTfsAsync();
             var teamsTask = TeamService.GetAllTeamsAsync();
-
-            await Task.WhenAll(areaPathsTask, goalsTask, teamsTask);
-
-            _allAreaPaths = (await areaPathsTask).ToList();
-            _availableGoals = (await goalsTask).ToList();
+            await teamsTask;
             _availableTeams = (await teamsTask).ToList();
         }
         catch (Exception ex)
@@ -182,9 +149,9 @@
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_productAreaPath))
+        if (string.IsNullOrWhiteSpace(_backlogRootWorkItemIdText) || !int.TryParse(_backlogRootWorkItemIdText, out _backlogRootWorkItemId) || _backlogRootWorkItemId <= 0)
         {
-            Snackbar.Add("Please select a product area path", Severity.Warning);
+            Snackbar.Add("Please enter a valid work item ID", Severity.Warning);
             return;
         }
 
@@ -198,7 +165,6 @@
                 var updated = await ProductService.UpdateProductAsync(
                     Product.Id,
                     _name,
-                    _productAreaPath,
                     _backlogRootWorkItemId,
                     ProductPictureType.Default,
                     _selectedImageId,
@@ -214,7 +180,6 @@
                 var created = await ProductService.CreateProductAsync(
                     ProductOwnerId,
                     _name,
-                    _productAreaPath,
                     _backlogRootWorkItemId,
                     ProductPictureType.Default,
                     _selectedImageId,
@@ -266,27 +231,5 @@
     private void ClearError()
     {
         _errorResponse = null;
-    }
-
-    private bool HasAreaPathMismatch()
-    {
-        if (string.IsNullOrWhiteSpace(_productAreaPath) || !_selectedTeamIds.Any())
-        {
-            return false;
-        }
-
-        // Check if any selected team's area path is not under the product's area path
-        var selectedTeams = _availableTeams.Where(t => _selectedTeamIds.Contains(t.Id));
-        foreach (var team in selectedTeams)
-        {
-            // Team area path should be same as or under product area path
-            if (!team.TeamAreaPath.StartsWith(_productAreaPath, StringComparison.OrdinalIgnoreCase) &&
-                !_productAreaPath.StartsWith(team.TeamAreaPath, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

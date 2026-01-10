@@ -469,20 +469,11 @@
         
         try
         {
-            var areaPaths = InputParsingHelper.ParseCommaSeparatedStrings(_profileAreaPaths);
             var goalIds = InputParsingHelper.ParseCommaSeparatedInts(_profileGoalIds);
-
-            if (areaPaths.Count == 0)
-            {
-                _profileSaveResult = new ConnectionTestResult(false, "Please specify at least one area path.");
-                return;
-            }
 
             // Create and activate the profile
             await ProfileService.CreateAndActivateProfileAsync(
                 _profileName,
-                areaPaths,
-                _profileTeamName,
                 goalIds);
             
             _profileSaveResult = new ConnectionTestResult(true, "Profile created and activated successfully!");
