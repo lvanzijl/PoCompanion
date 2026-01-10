@@ -85,8 +85,7 @@ Create persistence layer for ProductOwner (extends Profile), Product, Team entit
   - `Id` (int, PK)
   - `ProductOwnerId` (int, FK to ProfileEntity)
   - `Name` (string, required, max 200)
-  - `ProductAreaPath` (string, required, max 500)
-  - `BacklogRootWorkItemId` (int?, nullable - backlog-less support)
+  - `BacklogRootWorkItemId` (int, required - defines product backlog)
   - `Order` (int, required - explicit ordering)
   - `PictureType` (int, default/custom)
   - `DefaultPictureId` (int, 0-63)
@@ -168,7 +167,7 @@ Create data transfer objects in `PoTool.Shared` for cross-boundary communication
   - Maintained backward compatibility
 - [x] Create `PoTool.Shared/Settings/ProductDto.cs`
   - Immutable record type with ProductPictureType enum
-  - Fields: Id, ProductOwnerId, Name, ProductAreaPath, BacklogRootWorkItemId, Order, PictureType, DefaultPictureId, CustomPicturePath, CreatedAt, LastModified
+  - Fields: Id, ProductOwnerId, Name, BacklogRootWorkItemId, Order, PictureType, DefaultPictureId, CustomPicturePath, CreatedAt, LastModified
   - Includes `List<int> TeamIds` for linked teams
 - [x] Create `PoTool.Shared/Settings/TeamDto.cs`
   - Immutable record type with TeamPictureType enum
@@ -556,11 +555,13 @@ Create Blazor pages for creating, editing, reordering, archiving, and linking Pr
 - [ ] Create `PoTool.Client/Pages/Settings/ManageProductOwner.razor`
   - Form: Name, Picture, Products list
   - Inline add Product/Team buttons
-- [ ] Create `PoTool.Client/Components/Settings/ProductEditor.razor`
-  - Fields: Name, Area Path, Backlog Root, Picture, Teams (multi-select)
-  - Warning: "Backlog-less" if no Backlog Root
-  - Warning: "Area Path mismatch" (info only)
+- [x] Create `PoTool.Client/Components/Settings/ProductEditor.razor`
+  - Fields: Name, Backlog Root Work Item ID (required), Picture, Teams (multi-select)
+  - Inline team creation button
   - Order field
+- [x] Create `PoTool.Client/Components/Settings/InlineTeamCreationDialog.razor`
+  - Inline dialog for creating teams without navigation
+  - Auto-selects newly created team
 - [ ] Create `PoTool.Client/Components/Settings/TeamEditor.razor`
   - Fields: Name, Team Area Path, Picture, IsArchived
 - [ ] Create `PoTool.Client/Pages/Settings/ManageTeams.razor`
@@ -598,32 +599,13 @@ Delete newly created pages and components.
 
 ---
 
-## Phase 10 – Cache Invalidation & Warnings
+## Phase 10 – Cache Invalidation (No Longer Applicable)
 
 ### Purpose
-Ensure changes to Product Area Paths trigger cache invalidation. Implement warnings.
+This phase was originally intended for Product Area Path changes. Since Product Area Path has been removed, this phase is no longer applicable. Cache invalidation for work item hierarchy changes is handled by the work item service.
 
-### Output Artifacts
-- Cache invalidation hook
-- Warning logic
-
-### Tasks
-- [ ] Identify cache invalidation points in existing code
-- [ ] Add cache invalidation logic to `UpdateProductCommandHandler`
-  - If `ProductAreaPath` changes, trigger work item cache reload
-- [ ] Implement warning logic in ProductEditor component
-  - Check if `BacklogRootWorkItemId` is null → show "Backlog-less" warning
-  - Check if `ProductAreaPath` does not match any linked `TeamAreaPath` → show info
-- [ ] Test cache invalidation manually
-
-### Files to Change/Create
-- `PoTool.Api/Handlers/Settings/Products/UpdateProductCommandHandler.cs` (modify)
-- `PoTool.Client/Components/Settings/ProductEditor.razor` (modify)
-
-### Commands to Run
-```bash
-cd /home/runner/work/PoCompanion/PoCompanion
-dotnet build
+### Status
+- **SKIPPED** - Product Area Path removed from design
 # Manual: Test cache invalidation
 ```
 
@@ -690,7 +672,7 @@ Revert refactorings if errors introduced.
 - [ ] Products and Teams can be linked/unlinked
 - [ ] Work items can be classified by Team based on area path
 - [ ] Unassigned work items are identifiable
-- [ ] Backlog-less products handled without errors
+- [x] Products require backlog root work item (no backlog-less products)
 - [ ] Warnings displayed for inconsistent configurations
 - [ ] All handlers, repositories, services implemented
 - [ ] All unit tests pass

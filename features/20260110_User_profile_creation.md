@@ -41,29 +41,22 @@ Functional rules:
 - A Product has **exactly one Product Backlog**.
 - A Product is defined by:
   - a name
-  - a **Product Area Path** (defines backlog scope)
-  - optionally a **Backlog Root Work Item**
+  - a **Backlog Root Work Item** (required - defines the product backlog)
   - an explicit **order** relative to other Products of the same Product Owner
   - an optional picture
 
 Backlog rules:
-- The Product Backlog consists of **all work items under the Product Area Path**.
+- The Product Backlog is defined by the **Backlog Root Work Item**.
 - The Backlog Root Work Item:
-  - serves as the conceptual entry point of the backlog
-  - can be any work item type
-  - may be outside the Product Area Path
-  - is optional while the Product is being configured
-- A Product without a Backlog Root is considered **Backlog-less**.
+  - serves as the root entry point of the backlog
+  - can be any work item type (Epic, Feature, etc.)
+  - is **required** for a product to be valid
+  - defines the scope of the product backlog hierarchically
 
 Lifecycle rules:
-- Products may temporarily exist without:
-  - a backlog root
-  - linked teams
+- Products require a backlog root work item to be created.
+- Products may temporarily exist without linked teams.
 - This supports incomplete or evolving organizational setups.
-
-Visibility rules:
-- Backlog-less Products may be hidden or disabled in backlog-driven views.
-- They must remain visible in management and configuration contexts.
 
 Ordering:
 - Products are explicitly ordered by the Product Owner.
@@ -134,12 +127,13 @@ The system is **read-only** with respect to assignment for now, but must not pre
 ### 2.6 Area Path flexibility
 
 There is no enforced hierarchy requirement between:
-- Product Area Path
 - Team Area Paths
 - Backlog Root Work Item location
 
 Rules:
 - These elements may be structurally unrelated.
+- Mismatches result in **warnings**, never errors.
+- The system must remain usable even in imperfect or inconsistent TFS setups.
 - Mismatches result in **warnings**, never errors.
 - The system must remain usable even in imperfect or inconsistent TFS setups.
 
@@ -164,7 +158,7 @@ Pictures must never affect logic, filtering, or behavior.
 ## 3. Product backlog behavior (functional)
 
 For a selected Product, the Product Backlog shows:
-- All work items under the Product Area Path.
+- All work items hierarchically under the Backlog Root Work Item.
 - Work items that match a linked Team Area Path are shown as **assigned to that Team**.
 - Work items that do not match any linked Team Area Path are shown as **Unassigned backlog debt**.
 
@@ -188,7 +182,8 @@ The user must be able to:
 - Add, edit, reorder, and archive Products
 - Add, edit, and archive Teams
 - Link and unlink Teams to Products
-- Configure Product Area Paths and Backlog Roots
+- Create Teams inline while editing a Product
+- Configure Product Backlog Roots (required work item IDs)
 - See warnings for inconsistent configurations without being blocked
 
 ---
@@ -223,15 +218,15 @@ Whenever the user must select **one or more items**:
 - Ordering must persist.
 - Do not derive ordering from name or creation date.
 
-### 6.4 Backlog-less Products
-- Products may exist without backlog roots or teams.
-- Views that require backlog data must handle this explicitly.
-- Backlog-less Products must not break the system.
+### 6.4 Products and Backlog Roots
+- All products require a backlog root work item.
+- Views must validate that the backlog root exists and is accessible.
+- Missing or inaccessible backlog roots should be reported as configuration errors.
 
-### 6.5 Area Path changes
-- Product Area Paths may change.
-- Such changes require cache invalidation and reload.
-- Do not assume Area Paths are immutable.
+### 6.5 Cache invalidation
+- Backlog data may be cached for performance.
+- Changes to work item hierarchies require cache invalidation and reload.
+- Do not assume work item structures are immutable.
 
 ### 6.6 Read-only today, writable tomorrow
 - Assignment and classification are read-only for now.
