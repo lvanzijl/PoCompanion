@@ -42,20 +42,12 @@ public class ProfilesControllerSteps
         }
     }
 
-    [When(@"I create a profile with name ""(.*)"" and area paths ""(.*)""")]
-    public async Task WhenICreateAProfileWithNameAndAreaPaths(string name, string areaPaths)
+    [When(@"I create a profile with name ""(.*)""")]
+    public async Task WhenICreateAProfileWithName(string name)
     {
-        var areaPathList = string.IsNullOrEmpty(areaPaths)
-            ? new List<string>()
-            : areaPaths.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(p => p.Trim())
-                .ToList();
-
         var request = new
         {
             Name = name,
-            AreaPaths = areaPathList,
-            TeamName = string.Empty,
             GoalIds = new List<int>()
         };
 
@@ -69,8 +61,8 @@ public class ProfilesControllerSteps
         }
     }
 
-    [When(@"I create a profile with name ""(.*)"" team ""(.*)"" and goals ""(.*)""")]
-    public async Task WhenICreateAProfileWithNameTeamAndGoals(string name, string teamName, string goals)
+    [When(@"I create a profile with name ""(.*)"" and goals ""(.*)""")]
+    public async Task WhenICreateAProfileWithNameAndGoals(string name, string goals)
     {
         var goalIds = string.IsNullOrEmpty(goals)
             ? new List<int>()
@@ -81,8 +73,6 @@ public class ProfilesControllerSteps
         var request = new
         {
             Name = name,
-            AreaPaths = new List<string>(),
-            TeamName = teamName,
             GoalIds = goalIds
         };
 
@@ -96,50 +86,23 @@ public class ProfilesControllerSteps
         }
     }
 
-    [When(@"I create a profile with name ""(.*)"" and empty area paths")]
-    public async Task WhenICreateAProfileWithNameAndEmptyAreaPaths(string name)
+    [Given(@"a profile exists with name ""(.*)""")]
+    public async Task GivenAProfileExistsWithName(string name)
     {
-        await WhenICreateAProfileWithNameAndAreaPaths(name, string.Empty);
-    }
-
-    [Given(@"a profile exists with name ""(.*)"" and area paths ""(.*)""")]
-    public async Task GivenAProfileExistsWithNameAndAreaPaths(string name, string areaPaths)
-    {
-        await WhenICreateAProfileWithNameAndAreaPaths(name, areaPaths);
+        await WhenICreateAProfileWithName(name);
         Assert.IsNotNull(_createdProfile);
         _currentProfileId = _createdProfile.Id;
     }
 
-    [When(@"I request the profile by its ID")]
-    public async Task WhenIRequestTheProfileByItsID()
+    [When(@"I update the profile with name ""(.*)""")]
+    public async Task WhenIUpdateTheProfileWithName(string name)
     {
         Assert.IsNotNull(_currentProfileId);
-        _response = await _client.GetAsync($"/api/profiles/{_currentProfileId}");
-        _scenarioContext["Response"] = _response;
-
-        if (_response.IsSuccessStatusCode)
-        {
-            _returnedProfile = await _response.Content.ReadFromJsonAsync<ProfileDto>();
-        }
-    }
-
-    [When(@"I update the profile with name ""(.*)"" and area paths ""(.*)""")]
-    public async Task WhenIUpdateTheProfileWithNameAndAreaPaths(string name, string areaPaths)
-    {
-        Assert.IsNotNull(_currentProfileId);
-
-        var areaPathList = string.IsNullOrEmpty(areaPaths)
-            ? new List<string>()
-            : areaPaths.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(p => p.Trim())
-                .ToList();
 
         var request = new
         {
             ProfileId = _currentProfileId.Value,
             Name = name,
-            AreaPaths = areaPathList,
-            TeamName = string.Empty,
             GoalIds = new List<int>()
         };
 
@@ -150,15 +113,6 @@ public class ProfilesControllerSteps
         {
             _createdProfile = await _response.Content.ReadFromJsonAsync<ProfileDto>();
         }
-    }
-
-    [When(@"I update the profile with area paths ""(.*)""")]
-    public async Task WhenIUpdateTheProfileWithAreaPaths(string areaPaths)
-    {
-        Assert.IsNotNull(_currentProfileId);
-        Assert.IsNotNull(_createdProfile);
-
-        await WhenIUpdateTheProfileWithNameAndAreaPaths(_createdProfile.Name, areaPaths);
     }
 
     [When(@"I delete the profile by its ID")]
@@ -217,20 +171,6 @@ public class ProfilesControllerSteps
         Assert.AreEqual(name, _createdProfile.Name);
     }
 
-    [Then(@"the created profile should have (.*) area paths")]
-    public void ThenTheCreatedProfileShouldHaveAreaPaths(int count)
-    {
-        Assert.IsNotNull(_createdProfile);
-        Assert.AreEqual(count, _createdProfile.AreaPaths.Count);
-    }
-
-    [Then(@"the created profile should have team name ""(.*)""")]
-    public void ThenTheCreatedProfileShouldHaveTeamName(string teamName)
-    {
-        Assert.IsNotNull(_createdProfile);
-        Assert.AreEqual(teamName, _createdProfile.TeamName);
-    }
-
     [Then(@"the created profile should have (.*) goal IDs")]
     public void ThenTheCreatedProfileShouldHaveGoalIDs(int count)
     {
@@ -252,20 +192,6 @@ public class ProfilesControllerSteps
         Assert.AreEqual(name, _createdProfile.Name);
     }
 
-    [Then(@"the updated profile should have area path ""(.*)""")]
-    public void ThenTheUpdatedProfileShouldHaveAreaPath(string areaPath)
-    {
-        Assert.IsNotNull(_createdProfile);
-        Assert.IsTrue(_createdProfile.AreaPaths.Contains(areaPath));
-    }
-
-    [Then(@"the updated profile should have (.*) area paths")]
-    public void ThenTheUpdatedProfileShouldHaveAreaPaths(int count)
-    {
-        Assert.IsNotNull(_createdProfile);
-        Assert.AreEqual(count, _createdProfile.AreaPaths.Count);
-    }
-
     [Then(@"the profile should not exist anymore")]
     public async Task ThenTheProfileShouldNotExistAnymore()
     {
@@ -284,29 +210,5 @@ public class ProfilesControllerSteps
         Assert.IsNotNull(settings);
         Assert.IsNotNull(settings.ActiveProfileId);
         Assert.AreEqual(_currentProfileId, settings.ActiveProfileId);
-    }
-
-    [Then(@"the area paths should be hierarchical")]
-    public void ThenTheAreaPathsShouldBeHierarchical()
-    {
-        Assert.IsNotNull(_createdProfile);
-        Assert.IsTrue(_createdProfile.AreaPaths.Count > 0);
-
-        // Check that at least one path is a parent of another
-        var hasHierarchy = false;
-        for (int i = 0; i < _createdProfile.AreaPaths.Count; i++)
-        {
-            for (int j = 0; j < _createdProfile.AreaPaths.Count; j++)
-            {
-                if (i != j && _createdProfile.AreaPaths[j].StartsWith(_createdProfile.AreaPaths[i] + "\\"))
-                {
-                    hasHierarchy = true;
-                    break;
-                }
-            }
-            if (hasHierarchy) break;
-        }
-
-        Assert.IsTrue(hasHierarchy, "Area paths should have hierarchical relationship");
     }
 }
