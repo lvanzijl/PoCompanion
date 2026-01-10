@@ -68,7 +68,7 @@ public class ProfileService
     {
         // If no picture ID is specified and using default type, randomize it
         var pictureId = defaultPictureId ?? Random.Shared.Next(0, 64);
-        
+
         var request = new CreateProfileRequest
         {
             Name = name,
@@ -154,7 +154,7 @@ public class ProfileService
         CancellationToken cancellationToken = default)
     {
         // Create the profile
-        var profile = await CreateProfileAsync(name, areaPaths, teamName, goalIds, 
+        var profile = await CreateProfileAsync(name, areaPaths, teamName, goalIds,
             pictureType, defaultPictureId, customPicturePath, cancellationToken);
 
         // Set it as active

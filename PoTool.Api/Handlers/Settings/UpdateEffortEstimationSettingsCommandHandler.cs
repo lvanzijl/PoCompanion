@@ -10,7 +10,7 @@ namespace PoTool.Api.Handlers.Settings;
 /// Handler for UpdateEffortEstimationSettingsCommand.
 /// Updates or creates effort estimation settings.
 /// </summary>
-public sealed class UpdateEffortEstimationSettingsCommandHandler 
+public sealed class UpdateEffortEstimationSettingsCommandHandler
     : ICommandHandler<UpdateEffortEstimationSettingsCommand>
 {
     private readonly PoToolDbContext _dbContext;

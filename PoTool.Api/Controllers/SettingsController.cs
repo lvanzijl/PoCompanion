@@ -29,7 +29,7 @@ public class SettingsController : ControllerBase
     public async Task<ActionResult<SettingsDto>> GetSettings(CancellationToken cancellationToken)
     {
         var settings = await _mediator.Send(new GetSettingsQuery(), cancellationToken);
-        
+
         if (settings == null)
         {
             return NotFound();

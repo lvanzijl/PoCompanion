@@ -9,17 +9,17 @@ public enum CleanupStatus
     /// Cleanup was successful.
     /// </summary>
     CleanedUp,
-    
+
     /// <summary>
     /// Cleanup was not required (read-only check or user-provided work item).
     /// </summary>
     NotRequired,
-    
+
     /// <summary>
     /// Cleanup failed - manual intervention may be needed.
     /// </summary>
     Failed,
-    
+
     /// <summary>
     /// Cleanup was skipped (verification failed before write).
     /// </summary>

@@ -20,14 +20,14 @@ public class ReportService
 
         var items = workItems.ToList();
         var sb = new StringBuilder();
-        
+
         AppendHeader(sb, items.Count);
         AppendSummaryByType(sb, items);
         AppendSummaryByState(sb, items);
         AppendEffortSummary(sb, items);
         AppendSummaryByAreaPath(sb, items);
         AppendDetailedList(sb, items);
-        
+
         return sb.ToString();
     }
 
@@ -44,10 +44,10 @@ public class ReportService
     {
         sb.AppendLine("## Summary by Type");
         sb.AppendLine();
-        
+
         var typeGroups = items.GroupBy(w => w.Type ?? "Unknown")
             .OrderBy(g => g.Key);
-        
+
         foreach (var group in typeGroups)
         {
             sb.AppendLine($"- **{group.Key}:** {group.Count()} items");
@@ -59,10 +59,10 @@ public class ReportService
     {
         sb.AppendLine("## Summary by State");
         sb.AppendLine();
-        
+
         var stateGroups = items.GroupBy(w => w.State ?? "Unknown")
             .OrderBy(g => g.Key);
-        
+
         foreach (var group in stateGroups)
         {
             sb.AppendLine($"- **{group.Key}:** {group.Count()} items");
@@ -88,11 +88,11 @@ public class ReportService
     {
         sb.AppendLine("## Summary by Area Path");
         sb.AppendLine();
-        
+
         var areaGroups = items.GroupBy(w => w.AreaPath ?? "Unknown")
             .OrderByDescending(g => g.Count())
             .Take(10); // Top 10 area paths
-        
+
         foreach (var group in areaGroups)
         {
             sb.AppendLine($"- **{group.Key}:** {group.Count()} items");
@@ -106,7 +106,7 @@ public class ReportService
         sb.AppendLine();
         sb.AppendLine("| ID | Type | State | Title | Effort |");
         sb.AppendLine("|---|---|---|---|---|");
-        
+
         foreach (var item in items.OrderBy(w => w.TfsId))
         {
             var effort = item.Effort.HasValue ? $"{item.Effort.Value}h" : "-";

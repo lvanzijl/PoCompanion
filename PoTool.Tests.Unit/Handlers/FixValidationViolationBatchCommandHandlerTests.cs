@@ -24,7 +24,7 @@ public class FixValidationViolationBatchCommandHandlerTests
         _mockTfsClient = new Mock<ITfsClient>();
         _mockRepository = new Mock<IWorkItemRepository>();
         _mockLogger = new Mock<ILogger<FixValidationViolationBatchCommandHandler>>();
-        
+
         _handler = new FixValidationViolationBatchCommandHandler(
             _mockTfsClient.Object,
             _mockRepository.Object,
@@ -50,7 +50,7 @@ public class FixValidationViolationBatchCommandHandlerTests
 
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItem);
-        
+
         // Mock the bulk update method - uses new bulk API to prevent N+1
         _mockTfsClient.Setup(t => t.UpdateWorkItemsStateAsync(It.IsAny<IEnumerable<WorkItemStateUpdate>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BulkUpdateResult(
@@ -92,7 +92,7 @@ public class FixValidationViolationBatchCommandHandlerTests
 
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItem);
-        
+
         // Mock the bulk update method returning failure
         _mockTfsClient.Setup(t => t.UpdateWorkItemsStateAsync(It.IsAny<IEnumerable<WorkItemStateUpdate>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BulkUpdateResult(
@@ -132,7 +132,7 @@ public class FixValidationViolationBatchCommandHandlerTests
 
         _mockRepository.Setup(r => r.GetByTfsIdAsync(999, It.IsAny<CancellationToken>()))
             .ReturnsAsync((WorkItemDto?)null);
-        
+
         // Mock bulk update returning empty result since nothing is valid
         _mockTfsClient.Setup(t => t.UpdateWorkItemsStateAsync(It.IsAny<IEnumerable<WorkItemStateUpdate>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BulkUpdateResult(
@@ -162,7 +162,7 @@ public class FixValidationViolationBatchCommandHandlerTests
         // Arrange
         var workItem1 = CreateWorkItem(1, "Goal", "New", null);
         var workItem2 = CreateWorkItem(2, "Epic", "New", 1);
-        
+
         var fixes = new List<FixValidationViolationDto>
         {
             new FixValidationViolationDto(
@@ -185,17 +185,17 @@ public class FixValidationViolationBatchCommandHandlerTests
             .ReturnsAsync(workItem1);
         _mockRepository.Setup(r => r.GetByTfsIdAsync(2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItem2);
-        
+
         // Mock the bulk update method - uses new bulk API to prevent N+1
         _mockTfsClient.Setup(t => t.UpdateWorkItemsStateAsync(It.IsAny<IEnumerable<WorkItemStateUpdate>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BulkUpdateResult(
                 TotalRequested: 2,
                 SuccessfulUpdates: 2,
                 FailedUpdates: 0,
-                Results: new List<BulkUpdateItemResult> 
-                { 
+                Results: new List<BulkUpdateItemResult>
+                {
                     new BulkUpdateItemResult(1, true),
-                    new BulkUpdateItemResult(2, true) 
+                    new BulkUpdateItemResult(2, true)
                 },
                 TfsCallCount: 1));
 
@@ -218,7 +218,7 @@ public class FixValidationViolationBatchCommandHandlerTests
         // Arrange
         var workItem1 = CreateWorkItem(1, "Goal", "New", null);
         var workItem2 = CreateWorkItem(2, "Epic", "New", 1);
-        
+
         var fixes = new List<FixValidationViolationDto>
         {
             new FixValidationViolationDto(1, "SetToInProgress", "Fix 1", "In Progress", "Reason 1"),
@@ -229,17 +229,17 @@ public class FixValidationViolationBatchCommandHandlerTests
             .ReturnsAsync(workItem1);
         _mockRepository.Setup(r => r.GetByTfsIdAsync(2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItem2);
-        
+
         // Mock the bulk update method returning mixed results
         _mockTfsClient.Setup(t => t.UpdateWorkItemsStateAsync(It.IsAny<IEnumerable<WorkItemStateUpdate>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BulkUpdateResult(
                 TotalRequested: 2,
                 SuccessfulUpdates: 1,
                 FailedUpdates: 1,
-                Results: new List<BulkUpdateItemResult> 
-                { 
+                Results: new List<BulkUpdateItemResult>
+                {
                     new BulkUpdateItemResult(1, true),
-                    new BulkUpdateItemResult(2, false, "TFS update failed") 
+                    new BulkUpdateItemResult(2, false, "TFS update failed")
                 },
                 TfsCallCount: 1));
 
@@ -261,7 +261,7 @@ public class FixValidationViolationBatchCommandHandlerTests
         // Arrange
         var workItem1 = CreateWorkItem(1, "Goal", "New", null);
         var workItem2 = CreateWorkItem(2, "Epic", "New", 1);
-        
+
         var fixes = new List<FixValidationViolationDto>
         {
             new FixValidationViolationDto(1, "SetToInProgress", "Fix 1", "In Progress", "Reason 1"),
@@ -272,7 +272,7 @@ public class FixValidationViolationBatchCommandHandlerTests
             .ReturnsAsync(workItem1);
         _mockRepository.Setup(r => r.GetByTfsIdAsync(2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItem2);
-        
+
         // Mock the bulk update method throwing an exception
         _mockTfsClient.Setup(t => t.UpdateWorkItemsStateAsync(It.IsAny<IEnumerable<WorkItemStateUpdate>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("TFS bulk update error"));

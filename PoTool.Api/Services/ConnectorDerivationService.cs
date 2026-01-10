@@ -18,7 +18,7 @@ public class ConnectorDerivationService
         if (placements.Count == 0) return [];
 
         var connectors = new List<ConnectorDto>();
-        
+
         // Group placements by RowIndex
         var rowGroups = placements
             .GroupBy(p => p.RowIndex)

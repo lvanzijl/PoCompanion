@@ -40,11 +40,11 @@ public class BacklogHealthTests : BunitTestContext
         mockHealthCalculationClient.Setup(x => x.CalculateHealthScoreAsync(
                 It.IsAny<CalculateHealthScoreRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CalculateHealthScoreResponse { HealthScore = 80 });
-        
+
         // Mock IWorkItemsClient for WorkItemService (needed by BacklogHealthFilters child component)
         var mockWorkItemsClient = new Mock<IWorkItemsClient>();
         var mockHttpClient = new HttpClient { BaseAddress = new Uri("http://localhost/") };
-        
+
         // Register mock services
         Services.AddSingleton(_mockMetricsClient.Object);
         Services.AddSingleton(mockHealthCalculationClient.Object);

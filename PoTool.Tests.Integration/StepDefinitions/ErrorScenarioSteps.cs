@@ -61,7 +61,7 @@ public class ErrorScenarioSteps
     {
         _stopwatch.Start();
         var tasks = new List<Task<HttpResponseMessage>>();
-        
+
         for (int i = 0; i < count; i++)
         {
             tasks.Add(_client.GetAsync("/api/workitems"));
@@ -69,7 +69,7 @@ public class ErrorScenarioSteps
 
         _responses = (await Task.WhenAll(tasks)).ToList();
         _stopwatch.Stop();
-        
+
         _scenarioContext["Responses"] = _responses;
         _scenarioContext["Elapsed"] = _stopwatch.Elapsed;
     }
@@ -134,9 +134,9 @@ public class ErrorScenarioSteps
     {
         var response = _scenarioContext.Get<HttpResponseMessage>("Response");
         Assert.IsNotNull(response);
-        
+
         var content = await response.Content.ReadAsStringAsync();
-        Assert.IsTrue(content.Contains(expectedText), 
+        Assert.IsTrue(content.Contains(expectedText),
             $"Error message should mention '{expectedText}'");
     }
 
@@ -146,7 +146,7 @@ public class ErrorScenarioSteps
         var response = _scenarioContext.Get<HttpResponseMessage>("Response");
         Assert.IsNotNull(response);
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-        
+
         var content = await response.Content.ReadAsStringAsync();
         // Check that response is a non-empty JSON array
         Assert.IsTrue(content.Contains("[") && content.Contains("]"),

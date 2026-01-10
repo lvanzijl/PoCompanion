@@ -34,7 +34,7 @@ public class TfsVerificationSteps
         );
 
         _response = await _client.PostAsJsonAsync("/api/tfsverify", _verifyRequest);
-        
+
         if (_response.IsSuccessStatusCode)
         {
             _verificationReport = await _response.Content.ReadFromJsonAsync<TfsVerificationReport>();
@@ -50,7 +50,7 @@ public class TfsVerificationSteps
         );
 
         _response = await _client.PostAsJsonAsync("/api/tfsverify", _verifyRequest);
-        
+
         if (_response.IsSuccessStatusCode)
         {
             _verificationReport = await _response.Content.ReadFromJsonAsync<TfsVerificationReport>();
@@ -66,7 +66,7 @@ public class TfsVerificationSteps
         );
 
         _response = await _client.PostAsJsonAsync("/api/tfsverify", _verifyRequest);
-        
+
         if (_response.IsSuccessStatusCode)
         {
             _verificationReport = await _response.Content.ReadFromJsonAsync<TfsVerificationReport>();
@@ -85,7 +85,7 @@ public class TfsVerificationSteps
     {
         Assert.IsNotNull(_verificationReport);
         Assert.IsFalse(_verificationReport.IncludedWriteChecks);
-        
+
         var checkCount = _verificationReport.Checks.Count;
         var checkIds = string.Join(", ", _verificationReport.Checks.Select(c => c.CapabilityId));
         Assert.IsTrue(checkCount >= 7, $"Expected at least 7 read-only checks, but found {checkCount}. Checks: {checkIds}");

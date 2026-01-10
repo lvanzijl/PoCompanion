@@ -40,7 +40,7 @@ public sealed class DeleteLaneCommandHandler : ICommandHandler<DeleteLaneCommand
 
         // Delete placements first (cascade should handle this, but be explicit)
         await _repository.DeletePlacementsByLaneIdAsync(command.LaneId, cancellationToken);
-        
+
         // Delete the lane
         var deleted = await _repository.DeleteLaneAsync(command.LaneId, cancellationToken);
 

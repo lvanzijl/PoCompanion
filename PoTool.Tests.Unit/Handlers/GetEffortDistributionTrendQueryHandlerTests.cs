@@ -217,10 +217,10 @@ public class GetEffortDistributionTrendQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.HasCount(3, result.TrendBySprint);
-        
+
         var sprint2 = result.TrendBySprint[1];
         Assert.IsTrue(sprint2.ChangeFromPrevious > 20 && sprint2.ChangeFromPrevious < 30);
-        
+
         var sprint3 = result.TrendBySprint[2];
         Assert.IsTrue(sprint3.ChangeFromPrevious < -15 && sprint3.ChangeFromPrevious > -25);
     }
@@ -247,11 +247,11 @@ public class GetEffortDistributionTrendQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.IsGreaterThanOrEqualTo(result.TrendByAreaPath.Count, 2);
-        
+
         var teamATrend = result.TrendByAreaPath.FirstOrDefault(t => t.AreaPath == "TeamA");
         Assert.IsNotNull(teamATrend);
         Assert.AreEqual(EffortTrendDirection.Increasing, teamATrend.Direction);
-        
+
         var teamBTrend = result.TrendByAreaPath.FirstOrDefault(t => t.AreaPath == "TeamB");
         Assert.IsNotNull(teamBTrend);
         Assert.AreEqual(EffortTrendDirection.Stable, teamBTrend.Direction);

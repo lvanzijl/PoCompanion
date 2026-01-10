@@ -61,7 +61,7 @@ public class ModeIsolatedStateService
         {
             var key = GetExpandedStateKey();
             var json = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", key);
-            
+
             if (!string.IsNullOrEmpty(json))
             {
                 var dict = JsonSerializer.Deserialize<Dictionary<string, bool>>(json);
@@ -115,7 +115,7 @@ public class ModeIsolatedStateService
         {
             var key = GetSelectedItemsKey();
             var json = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", key);
-            
+
             if (!string.IsNullOrEmpty(json))
             {
                 var list = JsonSerializer.Deserialize<List<int>>(json);

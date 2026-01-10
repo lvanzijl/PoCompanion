@@ -33,9 +33,9 @@ public class TfsConfigurationServiceSqliteTests
         // Important: Keep connection open for in-memory database to persist
         _context.Database.OpenConnection();
         _context.Database.EnsureCreated();
-        
+
         _loggerMock = new Mock<ILogger<TfsConfigurationService>>();
-        
+
         // Note: TfsConfigurationService no longer requires IDataProtectionProvider
         _service = new TfsConfigurationService(_context, _loggerMock.Object);
     }

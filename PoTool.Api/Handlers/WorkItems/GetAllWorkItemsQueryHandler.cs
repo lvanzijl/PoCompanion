@@ -31,16 +31,16 @@ public sealed class GetAllWorkItemsQueryHandler : IQueryHandler<GetAllWorkItemsQ
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetAllWorkItemsQuery");
-        
+
         var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
-        
+
         if (profileAreaPaths != null && profileAreaPaths.Count > 0)
         {
-            _logger.LogDebug("Filtering work items by active profile area paths: {AreaPaths}", 
+            _logger.LogDebug("Filtering work items by active profile area paths: {AreaPaths}",
                 string.Join(", ", profileAreaPaths));
             return await _repository.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
         }
-        
+
         return await _repository.GetAllAsync(cancellationToken);
     }
 }

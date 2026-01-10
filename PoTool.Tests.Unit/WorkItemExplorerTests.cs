@@ -26,7 +26,7 @@ public class WorkItemExplorerTests
         var pipelineGenerator = new BattleshipPipelineGenerator(pipelineGeneratorLogger);
         var validator = new MockDataValidator();
         var logger = Mock.Of<ILogger<BattleshipMockDataFacade>>();
-        
+
         return new BattleshipMockDataFacade(
             workItemGenerator,
             dependencyGenerator,
@@ -58,7 +58,7 @@ public class WorkItemExplorerTests
         // Verify the loaded state matches
         Assert.IsNotNull(loaded);
         Assert.HasCount(1, loaded);
-        
+
 #pragma warning disable MSTEST0037
         Assert.IsTrue(loaded.ContainsKey(items.First().TfsId));
         Assert.IsTrue(loaded[items.First().TfsId]);
@@ -114,7 +114,7 @@ public class WorkItemExplorerTests
 
         // Verify we have exactly 10 goals
         Assert.AreEqual(10, goals.Count, "Should have exactly 10 goals");
-        
+
         // Verify all goals are root nodes (no parent)
         foreach (var goal in goals)
         {
@@ -138,7 +138,7 @@ public class WorkItemExplorerTests
 
         // Verify we have exactly 10 root nodes (the goals)
         Assert.AreEqual(10, roots.Count, "Should have exactly 10 root nodes when no filtering is applied");
-        
+
         // Verify all roots are goals
         foreach (var root in roots)
         {

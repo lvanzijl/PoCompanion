@@ -51,9 +51,9 @@ public sealed class MoveEpicCommandHandler : ICommandHandler<MoveEpicCommand, Ep
         // Note: Cross-lane moves are forbidden by spec. 
         // The Lane is not changed in this command.
         var updated = await _repository.UpdatePlacementAsync(
-            command.PlacementId, 
-            command.NewRowIndex, 
-            command.NewOrderInRow, 
+            command.PlacementId,
+            command.NewRowIndex,
+            command.NewOrderInRow,
             cancellationToken);
 
         return new EpicPlacementResultDto

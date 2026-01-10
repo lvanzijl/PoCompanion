@@ -19,7 +19,7 @@ public class IterationHealthTableTests : BunitTestContext
     {
         // Add MudBlazor services
         Services.AddMudServices();
-        
+
         // Mock IHealthCalculationClient for BacklogHealthCalculationService
         var mockHealthCalculationClient = new Mock<IHealthCalculationClient>();
         // Setup mock to return a health score response - match any call signature
@@ -29,12 +29,12 @@ public class IterationHealthTableTests : BunitTestContext
         mockHealthCalculationClient.Setup(x => x.CalculateHealthScoreAsync(
                 It.IsAny<CalculateHealthScoreRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CalculateHealthScoreResponse { HealthScore = 80 });
-        
+
         Services.AddSingleton(mockHealthCalculationClient.Object);
-        
+
         // Register BacklogHealthCalculationService with mocked dependency
         Services.AddSingleton<BacklogHealthCalculationService>();
-        
+
         // Configure JSInterop in Loose mode
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
@@ -184,7 +184,7 @@ public class IterationHealthTableTests : BunitTestContext
         var iteration = CreateTestIteration(
             sprintName, iterationPath, totalWorkItems, withoutEffort,
             inProgressWithoutEffort, parentProgressIssues, blockedItems);
-        
+
         iteration.ValidationIssues = new List<ValidationIssueSummary>
         {
             new ValidationIssueSummary

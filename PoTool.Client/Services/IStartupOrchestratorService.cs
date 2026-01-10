@@ -25,12 +25,12 @@ public enum StartupRoute
     /// Route to Profiles Home (user is ready to use the app).
     /// </summary>
     ProfilesHome,
-    
+
     /// <summary>
     /// Route to TFS Configuration page.
     /// </summary>
     Configuration,
-    
+
     /// <summary>
     /// Route to Create First Profile page.
     /// </summary>
@@ -55,12 +55,12 @@ public interface IStartupOrchestratorService
     /// Gets the startup readiness state from the backend.
     /// </summary>
     Task<StartupReadinessDto?> GetStartupReadinessAsync(CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Determines where to route the user based on startup readiness state.
     /// </summary>
     StartupRoutingResult DetermineRoute(StartupReadinessDto readiness);
-    
+
     /// <summary>
     /// Checks if a given feature page should be accessible based on the current readiness state.
     /// Returns true if accessible, false if should be blocked.

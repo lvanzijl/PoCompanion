@@ -29,11 +29,11 @@ public sealed class GetVelocityTrendQueryHandler : IQueryHandler<GetVelocityTren
         GetVelocityTrendQuery query,
         CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Handling GetVelocityTrendQuery for AreaPath: {AreaPath}, MaxSprints: {MaxSprints}", 
+        _logger.LogDebug("Handling GetVelocityTrendQuery for AreaPath: {AreaPath}, MaxSprints: {MaxSprints}",
             query.AreaPath ?? "All", query.MaxSprints);
 
         var allWorkItems = await _repository.GetAllAsync(cancellationToken);
-        
+
         // Filter by area path if specified
         if (!string.IsNullOrWhiteSpace(query.AreaPath))
         {
@@ -58,9 +58,9 @@ public sealed class GetVelocityTrendQueryHandler : IQueryHandler<GetVelocityTren
         foreach (var iterationPath in iterationPaths)
         {
             var sprintMetrics = await _mediator.Send(
-                new GetSprintMetricsQuery(iterationPath), 
+                new GetSprintMetricsQuery(iterationPath),
                 cancellationToken);
-            
+
             if (sprintMetrics != null)
             {
                 sprintMetricsList.Add(sprintMetrics);
@@ -72,8 +72,8 @@ public sealed class GetVelocityTrendQueryHandler : IQueryHandler<GetVelocityTren
             .Select(s => s.CompletedStoryPoints)
             .ToList();
 
-        var averageVelocity = completedPoints.Any() 
-            ? Math.Round(completedPoints.Average(), 2) 
+        var averageVelocity = completedPoints.Any()
+            ? Math.Round(completedPoints.Average(), 2)
             : 0;
 
         var threeSprintAverage = completedPoints.Count >= 3

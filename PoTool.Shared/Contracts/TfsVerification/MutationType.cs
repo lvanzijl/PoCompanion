@@ -9,22 +9,22 @@ public enum MutationType
     /// Creating a new work item.
     /// </summary>
     Create,
-    
+
     /// <summary>
     /// Updating an existing work item.
     /// </summary>
     Update,
-    
+
     /// <summary>
     /// Creating or updating work item links.
     /// </summary>
     Link,
-    
+
     /// <summary>
     /// Closing or completing a work item.
     /// </summary>
     Close,
-    
+
     /// <summary>
     /// Other mutation type.
     /// </summary>

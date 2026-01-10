@@ -20,10 +20,10 @@ public class ExportService
             return string.Empty;
 
         var sb = new StringBuilder();
-        
+
         // Header row
         sb.AppendLine("ID,Title,Type,State,Area Path,Iteration Path,Parent ID,Effort,Retrieved At");
-        
+
         // Data rows
         foreach (var item in workItems)
         {
@@ -37,7 +37,7 @@ public class ExportService
                          $"{EscapeCsv(item.Effort?.ToString() ?? string.Empty)}," +
                          $"{EscapeCsv(item.RetrievedAt.ToString("yyyy-MM-dd HH:mm:ss"))}");
         }
-        
+
         return sb.ToString();
     }
 
@@ -56,7 +56,7 @@ public class ExportService
             WriteIndented = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
-        
+
         return JsonSerializer.Serialize(workItems, options);
     }
 

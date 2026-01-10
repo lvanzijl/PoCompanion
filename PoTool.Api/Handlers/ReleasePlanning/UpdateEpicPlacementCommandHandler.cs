@@ -49,9 +49,9 @@ public sealed class UpdateEpicPlacementCommandHandler : ICommandHandler<UpdateEp
         }
 
         var updated = await _repository.UpdatePlacementAsync(
-            command.PlacementId, 
-            command.RowIndex, 
-            command.OrderInRow, 
+            command.PlacementId,
+            command.RowIndex,
+            command.OrderInRow,
             cancellationToken);
 
         return new EpicPlacementResultDto

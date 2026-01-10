@@ -76,15 +76,15 @@ public class PRInsightTests : BunitTestContext
 
         // Act
         var cut = RenderPRInsightWithMudProvider();
-        
+
         // The component should render loading state first, then data after async completes
         // We need to wait for the component to finish its OnInitializedAsync
-        cut.WaitForAssertion(() => 
+        cut.WaitForAssertion(() =>
         {
             // After async completes, _isLoading should be false and metrics should be loaded
             // This means the progress bar should be gone
             var markup = cut.Markup;
-            Assert.DoesNotContain("mud-progress-linear", markup, 
+            Assert.DoesNotContain("mud-progress-linear", markup,
                 "Loading indicator should be gone after data loads");
         }, timeout: TimeSpan.FromSeconds(5));
 
@@ -127,7 +127,7 @@ public class PRInsightTests : BunitTestContext
         // Assert
         var progressBar = cut.FindAll("div.mud-progress-linear");
         Assert.AreNotEqual(0, progressBar.Count, "Loading state should display progress bar");
-        
+
         // Complete the async operation to prevent hanging
         tcs.SetResult(new List<PullRequestMetricsDto>());
     }
@@ -169,9 +169,9 @@ public class PRInsightTests : BunitTestContext
 
         // Act
         var cut = RenderPRInsightWithMudProvider();
-        
+
         // Wait for async rendering to complete
-        cut.WaitForAssertion(() => 
+        cut.WaitForAssertion(() =>
         {
             Assert.DoesNotContain("No Pull Request Data Available", cut.Markup);
         }, timeout: TimeSpan.FromSeconds(5));
@@ -199,9 +199,9 @@ public class PRInsightTests : BunitTestContext
 
         // Act
         var cut = RenderPRInsightWithMudProvider();
-        
+
         // Wait for async rendering to complete
-        cut.WaitForAssertion(() => 
+        cut.WaitForAssertion(() =>
         {
             Assert.DoesNotContain("No Pull Request Data Available", cut.Markup);
         }, timeout: TimeSpan.FromSeconds(5));
@@ -225,9 +225,9 @@ public class PRInsightTests : BunitTestContext
 
         // Act
         var cut = RenderPRInsightWithMudProvider();
-        
+
         // Wait for async rendering to complete
-        cut.WaitForAssertion(() => 
+        cut.WaitForAssertion(() =>
         {
             Assert.DoesNotContain("No Pull Request Data Available", cut.Markup);
         }, timeout: TimeSpan.FromSeconds(5));
@@ -251,9 +251,9 @@ public class PRInsightTests : BunitTestContext
 
         // Act
         var cut = RenderPRInsightWithMudProvider();
-        
+
         // Wait for async rendering to complete
-        cut.WaitForAssertion(() => 
+        cut.WaitForAssertion(() =>
         {
             Assert.DoesNotContain("No Pull Request Data Available", cut.Markup);
         }, timeout: TimeSpan.FromSeconds(5));
@@ -278,9 +278,9 @@ public class PRInsightTests : BunitTestContext
 
         // Act
         var cut = RenderPRInsightWithMudProvider();
-        
+
         // Wait for async rendering to complete and verify data is loaded
-        cut.WaitForAssertion(() => 
+        cut.WaitForAssertion(() =>
         {
             var markup = cut.Markup;
             Assert.DoesNotContain("No Pull Request Data Available", markup);
@@ -298,9 +298,9 @@ public class PRInsightTests : BunitTestContext
 
     // Helper method to create test metrics
     private PullRequestMetricsDto CreateMetric(
-        int id, 
-        string title, 
-        string createdBy, 
+        int id,
+        string title,
+        string createdBy,
         string status,
         int iterationCount,
         int fileCount,

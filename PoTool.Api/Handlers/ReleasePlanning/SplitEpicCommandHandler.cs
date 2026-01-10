@@ -88,7 +88,7 @@ public sealed class SplitEpicCommandHandler : ICommandHandler<SplitEpicCommand, 
             // 4. Get all Features of the original Epic
             var allWorkItems = await _workItemRepository.GetAllAsync(cancellationToken);
             var epicFeatures = allWorkItems
-                .Where(w => w.ParentTfsId == command.OriginalEpicId 
+                .Where(w => w.ParentTfsId == command.OriginalEpicId
                             && w.Type.Equals("Feature", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
@@ -156,7 +156,7 @@ public sealed class SplitEpicCommandHandler : ICommandHandler<SplitEpicCommand, 
                 var moveResult = await _tfsClient.UpdateWorkItemParentAsync(featureId, extractedEpicId, cancellationToken);
                 if (!moveResult)
                 {
-                    _logger.LogWarning("Failed to move Feature {FeatureId} to extracted Epic {ExtractedEpicId}", 
+                    _logger.LogWarning("Failed to move Feature {FeatureId} to extracted Epic {ExtractedEpicId}",
                         featureId, extractedEpicId);
                     moveFailures.Add(featureId);
                 }
@@ -225,7 +225,7 @@ public sealed class SplitEpicCommandHandler : ICommandHandler<SplitEpicCommand, 
 
         // Case A: Features have effort - calculate ratios based on Feature effort
         var totalFeatureEffort = allFeatures.Sum(f => f.Effort ?? 0);
-        
+
         if (totalFeatureEffort > 0)
         {
             var originalFeatureEffort = originalFeatures.Sum(f => f.Effort ?? 0);

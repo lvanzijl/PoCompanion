@@ -57,7 +57,7 @@ public class VelocityDashboardTests : BunitTestContext
         var cut = RenderVelocityDashboardWithMudProvider();
 
         // Wait for empty state to display
-        cut.WaitForState(() => cut.Markup.Contains("No Velocity Data Available"), 
+        cut.WaitForState(() => cut.Markup.Contains("No Velocity Data Available"),
             timeout: TimeSpan.FromSeconds(10));
 
         // Assert

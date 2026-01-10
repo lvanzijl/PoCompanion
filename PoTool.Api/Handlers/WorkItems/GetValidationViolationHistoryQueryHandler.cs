@@ -10,11 +10,11 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// Handler for GetValidationViolationHistoryQuery.
 /// Retrieves historical validation violations for tracking patterns over time.
 /// </summary>
-public sealed class GetValidationViolationHistoryQueryHandler 
+public sealed class GetValidationViolationHistoryQueryHandler
     : IQueryHandler<GetValidationViolationHistoryQuery, IEnumerable<ValidationViolationHistoryDto>>
 {
     private const string ParentProgressValidationType = "ParentProgress";
-    
+
     private readonly IWorkItemRepository _repository;
     private readonly IWorkItemValidator _validator;
     private readonly ILogger<GetValidationViolationHistoryQueryHandler> _logger;
@@ -53,7 +53,7 @@ public sealed class GetValidationViolationHistoryQueryHandler
 
         // Convert validation results to history records
         var historyRecords = new List<ValidationViolationHistoryDto>();
-        
+
         foreach (var (workItemId, issues) in validationResults)
         {
             var workItem = workItemsList.FirstOrDefault(wi => wi.TfsId == workItemId);

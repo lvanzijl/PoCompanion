@@ -10,32 +10,32 @@ public sealed record StartupReadinessDto(
     /// When true, the app is usable without a real TFS connection.
     /// </summary>
     bool IsMockDataEnabled,
-    
+
     /// <summary>
     /// Whether TFS configuration has been saved.
     /// </summary>
     bool HasSavedTfsConfig,
-    
+
     /// <summary>
     /// Whether Test Connection has succeeded at least once.
     /// </summary>
     bool HasTestedConnectionSuccessfully,
-    
+
     /// <summary>
     /// Whether Verify TFS API has passed (all checks).
     /// </summary>
     bool HasVerifiedTfsApiSuccessfully,
-    
+
     /// <summary>
     /// Whether at least one profile exists.
     /// </summary>
     bool HasAnyProfile,
-    
+
     /// <summary>
     /// The ID of the currently active profile (null if none selected).
     /// </summary>
     int? ActiveProfileId,
-    
+
     /// <summary>
     /// A message explaining what's missing, if the app is not ready.
     /// </summary>

@@ -37,7 +37,7 @@ public sealed class TfsRequestSender
         {
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
-        
+
         if (!request.Headers.Contains("User-Agent"))
         {
             request.Headers.UserAgent.ParseAdd(UserAgent);
@@ -57,7 +57,7 @@ public sealed class TfsRequestSender
             {
                 _logger.LogDebug("TFS Session ID: {SessionId}", string.Join(", ", sessionValues));
             }
-            
+
             if (response.Headers.TryGetValues("ActivityId", out var activityValues))
             {
                 _logger.LogDebug("TFS Activity ID: {ActivityId}", string.Join(", ", activityValues));

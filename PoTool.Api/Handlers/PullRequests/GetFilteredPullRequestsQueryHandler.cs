@@ -26,7 +26,7 @@ public sealed class GetFilteredPullRequestsQueryHandler : IQueryHandler<GetFilte
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetFilteredPullRequestsQuery");
-        
+
         var allPrs = await _repository.GetAllAsync(cancellationToken);
 
         // Apply filters

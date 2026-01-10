@@ -11,7 +11,7 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// Assigns effort estimates to multiple work items in batch via TFS updates.
 /// Uses bulk update method to prevent N+1 query pattern.
 /// </summary>
-public sealed class BulkAssignEffortCommandHandler 
+public sealed class BulkAssignEffortCommandHandler
     : ICommandHandler<BulkAssignEffortCommand, BulkEffortAssignmentResultDto>
 {
     private readonly ITfsClient _tfsClient;

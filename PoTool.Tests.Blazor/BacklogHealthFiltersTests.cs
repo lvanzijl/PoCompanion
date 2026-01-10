@@ -20,14 +20,14 @@ public class BacklogHealthFiltersTests : BunitTestContext
     {
         // Add MudBlazor services
         Services.AddMudServices();
-        
+
         // Mock IWorkItemsClient for WorkItemService
         var mockWorkItemsClient = new Mock<IWorkItemsClient>();
         var mockHttpClient = new HttpClient { BaseAddress = new Uri("http://localhost/") };
         Services.AddSingleton(mockWorkItemsClient.Object);
         Services.AddSingleton(mockHttpClient);
         Services.AddSingleton<WorkItemService>();
-        
+
         // Configure JSInterop in Loose mode
         JSInterop.Mode = JSRuntimeMode.Loose;
     }

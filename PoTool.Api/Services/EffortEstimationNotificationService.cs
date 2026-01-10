@@ -74,7 +74,7 @@ public class EffortEstimationNotificationService : BackgroundService
 
         if (workItemsWithoutEffort.Count > 0)
         {
-            _logger.LogInformation("Found {Count} work items in progress without effort, sending notification", 
+            _logger.LogInformation("Found {Count} work items in progress without effort, sending notification",
                 workItemsWithoutEffort.Count);
 
             // Broadcast notification to all connected clients

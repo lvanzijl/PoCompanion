@@ -51,9 +51,9 @@ public class GetDependencyGraphQueryHandlerTests
         // Arrange
         var workItems = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Epic", "New", "Project\\TeamA", 20, 
+            CreateWorkItem(1, "Epic", "New", "Project\\TeamA", 20,
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Forward"",""url"":""http://tfs/workItems/2""}]}"),
-            CreateWorkItem(2, "Feature", "New", "Project\\TeamA", 10, 
+            CreateWorkItem(2, "Feature", "New", "Project\\TeamA", 10,
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Reverse"",""url"":""http://tfs/workItems/1""}]}")
         };
 
@@ -68,7 +68,7 @@ public class GetDependencyGraphQueryHandlerTests
         Assert.IsNotNull(result);
         Assert.HasCount(2, result.Nodes);
         Assert.HasCount(2, result.Links);
-        
+
         var node1 = result.Nodes.FirstOrDefault(n => n.WorkItemId == 1);
         Assert.IsNotNull(node1);
         Assert.AreEqual(1, node1.DependencyCount);
@@ -160,11 +160,11 @@ public class GetDependencyGraphQueryHandlerTests
         // Arrange
         var workItems = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Task", "New", "Project\\TeamA", 5, 
+            CreateWorkItem(1, "Task", "New", "Project\\TeamA", 5,
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Forward"",""url"":""http://tfs/workItems/2""}]}"),
-            CreateWorkItem(2, "Task", "New", "Project\\TeamA", 5, 
+            CreateWorkItem(2, "Task", "New", "Project\\TeamA", 5,
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Forward"",""url"":""http://tfs/workItems/3""}]}"),
-            CreateWorkItem(3, "Task", "New", "Project\\TeamA", 5, 
+            CreateWorkItem(3, "Task", "New", "Project\\TeamA", 5,
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Forward"",""url"":""http://tfs/workItems/1""}]}")
         };
 
@@ -187,11 +187,11 @@ public class GetDependencyGraphQueryHandlerTests
         // Arrange
         var workItems = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Task", "New", "Project\\TeamA", 5, 
+            CreateWorkItem(1, "Task", "New", "Project\\TeamA", 5,
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Forward"",""url"":""http://tfs/workItems/2""}]}"),
-            CreateWorkItem(2, "Task", "New", "Project\\TeamA", 8, 
+            CreateWorkItem(2, "Task", "New", "Project\\TeamA", 8,
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Forward"",""url"":""http://tfs/workItems/3""}]}"),
-            CreateWorkItem(3, "Task", "New", "Project\\TeamA", 10, 
+            CreateWorkItem(3, "Task", "New", "Project\\TeamA", 10,
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Forward"",""url"":""http://tfs/workItems/4""}]}"),
             CreateWorkItem(4, "Task", "New", "Project\\TeamA", 15, "{}"),
         };
@@ -207,7 +207,7 @@ public class GetDependencyGraphQueryHandlerTests
         Assert.IsNotNull(result);
         Assert.HasCount(4, result.Nodes);
         Assert.IsNotEmpty(result.CriticalPaths, "Should find critical paths");
-        
+
         var longestPath = result.CriticalPaths.OrderByDescending(p => p.ChainLength).First();
         Assert.AreEqual(4, longestPath.ChainLength);
         Assert.AreEqual(38, longestPath.TotalEffort); // 5 + 8 + 10 + 15
@@ -219,9 +219,9 @@ public class GetDependencyGraphQueryHandlerTests
         // Arrange
         var workItems = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Task", "New", "Project\\TeamA", 10, 
+            CreateWorkItem(1, "Task", "New", "Project\\TeamA", 10,
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Reverse"",""url"":""http://tfs/workItems/2""}]}"),
-            CreateWorkItem(2, "Task", "New", "Project\\TeamA", 5, 
+            CreateWorkItem(2, "Task", "New", "Project\\TeamA", 5,
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Forward"",""url"":""http://tfs/workItems/1""}]}")
         };
 
@@ -235,7 +235,7 @@ public class GetDependencyGraphQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.IsNotEmpty(result.BlockedWorkItemIds, "Should identify blocking work items");
-        
+
 #pragma warning disable MSTEST0037
         Assert.IsTrue(result.BlockedWorkItemIds.Contains(1), "Work item 1 should be marked as blocking");
     }
@@ -246,9 +246,9 @@ public class GetDependencyGraphQueryHandlerTests
         // Arrange
         var workItems = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Epic", "New", "Project\\TeamA", 20, 
+            CreateWorkItem(1, "Epic", "New", "Project\\TeamA", 20,
                 @"{""relations"":[{""rel"":""System.LinkTypes.Hierarchy-Forward"",""url"":""http://tfs/workItems/2""}]}"),
-            CreateWorkItem(2, "Feature", "New", "Project\\TeamA", 10, 
+            CreateWorkItem(2, "Feature", "New", "Project\\TeamA", 10,
                 @"{""relations"":[{""rel"":""System.LinkTypes.Hierarchy-Reverse"",""url"":""http://tfs/workItems/1""}]}")
         };
 
@@ -263,7 +263,7 @@ public class GetDependencyGraphQueryHandlerTests
         Assert.IsNotNull(result);
         Assert.HasCount(2, result.Nodes);
         Assert.HasCount(2, result.Links);
-        
+
         // Hierarchy links are mapped as RelatedTo since they don't contain "parent" or "child" keywords
         var hierarchyLink = result.Links.FirstOrDefault(l => l.LinkType == DependencyLinkType.RelatedTo);
         Assert.IsNotNull(hierarchyLink, "Should have hierarchy link mapped as RelatedTo");
@@ -289,7 +289,7 @@ public class GetDependencyGraphQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.HasCount(2, result.Nodes);
-        
+
         var node1 = result.Nodes.FirstOrDefault(n => n.WorkItemId == 1);
         Assert.IsNotNull(node1);
         Assert.AreEqual(0, node1.DependencyCount, "Should have no dependencies when JSON is invalid");
@@ -301,7 +301,7 @@ public class GetDependencyGraphQueryHandlerTests
         // Arrange
         var workItems = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Epic", "New", "Project\\TeamA", 20, 
+            CreateWorkItem(1, "Epic", "New", "Project\\TeamA", 20,
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Forward"",""url"":""http://tfs/workItems/999""}]}")
         };
 

@@ -10,7 +10,7 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// Handler for GetDependencyGraphQuery.
 /// Builds a dependency graph from work item relationships.
 /// </summary>
-public sealed class GetDependencyGraphQueryHandler 
+public sealed class GetDependencyGraphQueryHandler
     : IQueryHandler<GetDependencyGraphQuery, DependencyGraphDto>
 {
     private readonly IWorkItemRepository _repository;
@@ -38,8 +38,8 @@ public sealed class GetDependencyGraphQueryHandler
 
         if (!string.IsNullOrWhiteSpace(query.AreaPathFilter))
         {
-            filteredItems = filteredItems.Where(wi => 
-                wi.AreaPath != null && 
+            filteredItems = filteredItems.Where(wi =>
+                wi.AreaPath != null &&
                 wi.AreaPath.Contains(query.AreaPathFilter, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -50,7 +50,7 @@ public sealed class GetDependencyGraphQueryHandler
 
         if (query.WorkItemTypes != null && query.WorkItemTypes.Any())
         {
-            filteredItems = filteredItems.Where(wi => 
+            filteredItems = filteredItems.Where(wi =>
                 query.WorkItemTypes.Contains(wi.Type, StringComparer.OrdinalIgnoreCase));
         }
 
@@ -197,7 +197,7 @@ public sealed class GetDependencyGraphQueryHandler
         {
             if (!adjacency.ContainsKey(link.SourceWorkItemId))
                 adjacency[link.SourceWorkItemId] = new List<int>();
-            
+
             adjacency[link.SourceWorkItemId].Add(link.TargetWorkItemId);
         }
 
@@ -275,14 +275,14 @@ public sealed class GetDependencyGraphQueryHandler
     {
         var circularDependencies = new List<CircularDependency>();
         var seenCycles = new HashSet<string>(); // Use normalized string representation for O(1) lookup
-        
+
         // Build adjacency list for dependency links only (not parent-child)
         var adjacency = new Dictionary<int, List<int>>();
         foreach (var link in links.Where(l => l.LinkType == DependencyLinkType.DependsOn || l.LinkType == DependencyLinkType.Blocks))
         {
             if (!adjacency.ContainsKey(link.SourceWorkItemId))
                 adjacency[link.SourceWorkItemId] = new List<int>();
-            
+
             adjacency[link.SourceWorkItemId].Add(link.TargetWorkItemId);
         }
 
@@ -295,11 +295,11 @@ public sealed class GetDependencyGraphQueryHandler
             if (!visited.Contains(node.WorkItemId))
             {
                 DetectCyclesFromNode(
-                    node.WorkItemId, 
-                    adjacency, 
-                    visited, 
-                    recursionStack, 
-                    currentPath, 
+                    node.WorkItemId,
+                    adjacency,
+                    visited,
+                    recursionStack,
+                    currentPath,
                     circularDependencies,
                     seenCycles);
             }
@@ -335,15 +335,15 @@ public sealed class GetDependencyGraphQueryHandler
                     var cycleStartIndex = currentPath.IndexOf(neighbor);
                     var cycleIds = currentPath.Skip(cycleStartIndex).ToList();
                     cycleIds.Add(neighbor); // Close the cycle
-                    
+
                     // Create normalized cycle key (sorted IDs joined as string) for O(1) duplicate detection
                     var normalizedKey = string.Join(",", cycleIds.OrderBy(id => id));
-                    
+
                     if (!seenCycles.Contains(normalizedKey))
                     {
                         seenCycles.Add(normalizedKey);
                         var description = $"Circular dependency detected: {string.Join(" → ", cycleIds)}";
-                        
+
                         circularDependencies.Add(new CircularDependency(
                             CycleWorkItemIds: cycleIds,
                             Description: description));

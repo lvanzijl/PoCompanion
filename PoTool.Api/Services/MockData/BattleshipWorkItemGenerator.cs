@@ -29,7 +29,7 @@ public class BattleshipWorkItemGenerator
 
         // Define team structure (10-15 teams)
         var teams = GetTeamStructure();
-        
+
         // Define Goals (exactly 10)
         var goalTitles = new[]
         {
@@ -46,13 +46,13 @@ public class BattleshipWorkItemGenerator
         };
 
         var quarters = new[] { "Q1", "Q2", "Q3", "Q4" };
-        
+
         // Generate 10 Goals
         for (var g = 0; g < 10; g++)
         {
             var goalId = idCounter++;
             var goalState = GetGoalState();
-            
+
             items.Add(new WorkItemDto(
                 TfsId: goalId,
                 Type: WorkItemType.Goal,
@@ -69,14 +69,14 @@ public class BattleshipWorkItemGenerator
             // Each goal has 2-4 objectives (average 3, total ~30)
             var objectiveCount = g < 5 ? 3 : (g < 8 ? 3 : 2); // 5*3 + 3*3 + 2*2 = 28, adjusted to 30
             if (g < 2) objectiveCount = 4; // First 2 goals get 4 objectives each: 2*4 + 3*3 + 3*3 + 2*2 = 31, close to 30
-            
+
             for (var o = 0; o < objectiveCount; o++)
             {
                 var objectiveId = idCounter++;
                 var quarter = quarters[_random.Next(quarters.Length)];
                 var program = GetProgramForGoal(g);
                 var objectiveTitle = GetObjectiveTitle(g, o);
-                
+
                 items.Add(new WorkItemDto(
                     TfsId: objectiveId,
                     Type: WorkItemType.Objective,
@@ -92,13 +92,13 @@ public class BattleshipWorkItemGenerator
 
                 // Each objective has 2-5 epics (average ~3.3, total ~100)
                 var epicCount = _random.Next(2, 6); // 2-5 epics per objective
-                
+
                 for (var e = 0; e < epicCount; e++)
                 {
                     var epicId = idCounter++;
                     var team = GetRandomTeam(teams, program);
                     var epicTitle = GetEpicTitle(objectiveTitle, e);
-                    
+
                     items.Add(new WorkItemDto(
                         TfsId: epicId,
                         Type: WorkItemType.Epic,
@@ -114,13 +114,13 @@ public class BattleshipWorkItemGenerator
 
                     // Each epic has 3-7 features (average 5, total ~500)
                     var featureCount = _random.Next(3, 8);
-                    
+
                     for (var f = 0; f < featureCount; f++)
                     {
                         var featureId = idCounter++;
                         var featureTitle = GetFeatureTitle(epicTitle, f);
                         var sprint = GetSprintPath(quarter);
-                        
+
                         items.Add(new WorkItemDto(
                             TfsId: featureId,
                             Type: WorkItemType.Feature,
@@ -136,14 +136,14 @@ public class BattleshipWorkItemGenerator
 
                         // Each feature has 5-10 PBIs (average ~6, total ~3,000)
                         var pbiCount = _random.Next(5, 11);
-                        
+
                         for (var p = 0; p < pbiCount; p++)
                         {
                             var pbiId = idCounter++;
                             var pbiTitle = GetPbiTitle(featureTitle, p);
                             var pbiSprint = GetWorkItemSprintPath(quarter);
                             var effort = GetFibonacciEffort();
-                            
+
                             items.Add(new WorkItemDto(
                                 TfsId: pbiId,
                                 Type: WorkItemType.Pbi,
@@ -159,12 +159,12 @@ public class BattleshipWorkItemGenerator
 
                             // Each PBI has 2-5 tasks (average ~3.75, targeting ~15,000 total)
                             var taskCount = _random.Next(2, 6);
-                            
+
                             for (var t = 0; t < taskCount; t++)
                             {
                                 var taskId = idCounter++;
                                 var taskTitle = GetTaskTitle(pbiTitle, t);
-                                
+
                                 items.Add(new WorkItemDto(
                                     TfsId: taskId,
                                     Type: WorkItemType.Task,
@@ -182,14 +182,14 @@ public class BattleshipWorkItemGenerator
 
                         // Each feature has 1-3 bugs (average ~2, total ~1,000)
                         var bugCount = _random.Next(1, 4);
-                        
+
                         for (var b = 0; b < bugCount; b++)
                         {
                             var bugId = idCounter++;
                             var bugTitle = GetBugTitle(featureTitle, b);
                             var bugSprint = GetWorkItemSprintPath(quarter);
                             var bugEffort = GetBugEffort();
-                            
+
                             items.Add(new WorkItemDto(
                                 TfsId: bugId,
                                 Type: WorkItemType.Bug,
@@ -205,12 +205,12 @@ public class BattleshipWorkItemGenerator
 
                             // Each bug has 2-5 tasks
                             var bugTaskCount = _random.Next(2, 6);
-                            
+
                             for (var t = 0; t < bugTaskCount; t++)
                             {
                                 var taskId = idCounter++;
                                 var taskTitle = GetTaskTitle(bugTitle, t);
-                                
+
                                 items.Add(new WorkItemDto(
                                     TfsId: taskId,
                                     Type: WorkItemType.Task,
@@ -380,7 +380,7 @@ public class BattleshipWorkItemGenerator
     {
         if (_random.NextDouble() < 0.6) // 60% in backlog
             return "\\Battleship Systems\\Backlog";
-        
+
         var sprint = _random.Next(1, 101); // Sprints 1-100
         return $"\\Battleship Systems\\2025\\{quarter}\\Sprint {sprint}";
     }
@@ -410,7 +410,7 @@ public class BattleshipWorkItemGenerator
 
         var fibonacci = new[] { 1, 2, 3, 5, 8, 13, 21 };
         var weights = new[] { 0.20, 0.15, 0.25, 0.20, 0.12, 0.05, 0.03 };
-        
+
         var rand = _random.NextDouble();
         var cumulative = 0.0;
         for (var i = 0; i < weights.Length; i++)
@@ -430,7 +430,7 @@ public class BattleshipWorkItemGenerator
 
         var fibonacci = new[] { 1, 2, 3, 5, 8 };
         var weights = new[] { 0.30, 0.25, 0.25, 0.15, 0.05 };
-        
+
         var rand = _random.NextDouble();
         var cumulative = 0.0;
         for (var i = 0; i < weights.Length; i++)

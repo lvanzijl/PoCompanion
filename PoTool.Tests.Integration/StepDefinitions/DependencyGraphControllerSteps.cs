@@ -117,7 +117,7 @@ public class DependencyGraphControllerSteps
     public void ThenTheDependencyGraphShouldHaveNodes(int expectedNodeCount)
     {
         Assert.IsNotNull(_dependencyGraph, "Dependency graph should not be null");
-        Assert.AreEqual(expectedNodeCount, _dependencyGraph.Nodes.Count, 
+        Assert.AreEqual(expectedNodeCount, _dependencyGraph.Nodes.Count,
             $"Expected {expectedNodeCount} nodes but got {_dependencyGraph.Nodes.Count}");
     }
 
@@ -132,7 +132,7 @@ public class DependencyGraphControllerSteps
     public void ThenTheDependencyGraphShouldHaveCircularDependencies()
     {
         Assert.IsNotNull(_dependencyGraph, "Dependency graph should not be null");
-        Assert.IsTrue(_dependencyGraph.CircularDependencies.Count > 0, 
+        Assert.IsTrue(_dependencyGraph.CircularDependencies.Count > 0,
             "Dependency graph should have at least one circular dependency");
     }
 
@@ -140,7 +140,7 @@ public class DependencyGraphControllerSteps
     public void ThenTheDependencyGraphShouldHaveCriticalPaths()
     {
         Assert.IsNotNull(_dependencyGraph, "Dependency graph should not be null");
-        Assert.IsTrue(_dependencyGraph.CriticalPaths.Count > 0, 
+        Assert.IsTrue(_dependencyGraph.CriticalPaths.Count > 0,
             "Dependency graph should have at least one critical path");
     }
 
@@ -148,7 +148,7 @@ public class DependencyGraphControllerSteps
     public void ThenTheDependencyGraphShouldHaveBlockedWorkItems()
     {
         Assert.IsNotNull(_dependencyGraph, "Dependency graph should not be null");
-        Assert.IsTrue(_dependencyGraph.BlockedWorkItemIds.Count > 0, 
+        Assert.IsTrue(_dependencyGraph.BlockedWorkItemIds.Count > 0,
             "Dependency graph should have at least one blocked work item");
     }
 }

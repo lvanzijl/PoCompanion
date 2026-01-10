@@ -25,7 +25,7 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Progra
     {
         // Use Testing environment to trigger special configuration in Program.cs
         builder.UseEnvironment("Testing");
-        
+
         builder.ConfigureServices(services =>
         {
             // Add in-memory database for testing with a unique name per test

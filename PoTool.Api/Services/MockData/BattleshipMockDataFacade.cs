@@ -458,19 +458,19 @@ public class BattleshipMockDataFacade : ITfsClient
     {
         IncrementAndGetApiCallCount();
         _logger.LogInformation("Mock TFS client: GetAreaPathsAsync with depth={Depth}", depth);
-        
+
         // Get all mock work items to extract area paths
         var allWorkItems = GetMockHierarchy();
-        
+
         // Extract distinct area paths from mock data
         var areaPaths = allWorkItems
             .Select(wi => wi.AreaPath)
             .Distinct()
             .OrderBy(ap => ap)
             .ToList();
-        
+
         _logger.LogInformation("Mock TFS client: Returning {Count} area paths", areaPaths.Count);
-        
+
         return Task.FromResult<IEnumerable<string>>(areaPaths);
     }
 
@@ -483,18 +483,18 @@ public class BattleshipMockDataFacade : ITfsClient
     {
         IncrementAndGetApiCallCount();
         _logger.LogInformation("Mock TFS client: GetWorkItemsAsync called for areaPath={AreaPath}, since={Since}", areaPath, since);
-        
+
         var allWorkItems = GetMockHierarchy();
         var filtered = allWorkItems.Where(wi => wi.AreaPath.Contains(areaPath, StringComparison.OrdinalIgnoreCase));
-        
+
         if (since.HasValue)
         {
             filtered = filtered.Where(wi => wi.RetrievedAt >= since.Value);
         }
-        
+
         var result = filtered.ToList();
         _logger.LogInformation("Mock TFS client: Returning {Count} work items", result.Count);
-        
+
         return Task.FromResult<IEnumerable<WorkItemDto>>(result);
     }
 
@@ -506,7 +506,7 @@ public class BattleshipMockDataFacade : ITfsClient
     {
         IncrementAndGetApiCallCount();
         _logger.LogInformation("Mock TFS client: GetPullRequestsAsync called for repository={Repository}", repositoryName);
-        
+
         var allPullRequests = GetMockPullRequests();
         var filtered = allPullRequests.AsEnumerable();
 
@@ -527,7 +527,7 @@ public class BattleshipMockDataFacade : ITfsClient
 
         var result = filtered.ToList();
         _logger.LogInformation("Mock TFS client: Returning {Count} pull requests", result.Count);
-        
+
         return Task.FromResult<IEnumerable<PullRequestDto>>(result);
     }
 
@@ -540,10 +540,10 @@ public class BattleshipMockDataFacade : ITfsClient
         // Use GetPullRequestsWithDetailsAsync for efficient bulk fetching.
         IncrementAndGetApiCallCount();
         _logger.LogInformation("Mock TFS client: GetPullRequestIterationsAsync called for PR {PullRequestId} (N+1 pattern - prefer GetPullRequestsWithDetailsAsync)", pullRequestId);
-        
+
         var allIterations = GetMockIterations();
         var filtered = allIterations.Where(i => i.PullRequestId == pullRequestId);
-        
+
         var result = filtered.ToList();
         _logger.LogInformation("Mock TFS client: Returning {Count} iterations", result.Count);
         return Task.FromResult<IEnumerable<PullRequestIterationDto>>(result);
@@ -558,10 +558,10 @@ public class BattleshipMockDataFacade : ITfsClient
         // Use GetPullRequestsWithDetailsAsync for efficient bulk fetching.
         IncrementAndGetApiCallCount();
         _logger.LogInformation("Mock TFS client: GetPullRequestCommentsAsync called for PR {PullRequestId} (N+1 pattern - prefer GetPullRequestsWithDetailsAsync)", pullRequestId);
-        
+
         var allComments = GetMockComments();
         var filtered = allComments.Where(c => c.PullRequestId == pullRequestId);
-        
+
         var result = filtered.ToList();
         _logger.LogInformation("Mock TFS client: Returning {Count} comments", result.Count);
         return Task.FromResult<IEnumerable<PullRequestCommentDto>>(result);
@@ -577,10 +577,10 @@ public class BattleshipMockDataFacade : ITfsClient
         // Use GetPullRequestsWithDetailsAsync for efficient bulk fetching.
         IncrementAndGetApiCallCount();
         _logger.LogInformation("Mock TFS client: GetPullRequestFileChangesAsync called for PR {PullRequestId}, iteration {IterationId} (N+1 pattern)", pullRequestId, iterationId);
-        
+
         var allFileChanges = GetMockFileChanges();
         var filtered = allFileChanges.Where(fc => fc.PullRequestId == pullRequestId && fc.IterationId == iterationId);
-        
+
         var result = filtered.ToList();
         _logger.LogInformation("Mock TFS client: Returning {Count} file changes", result.Count);
         return Task.FromResult<IEnumerable<PullRequestFileChangeDto>>(result);
@@ -594,7 +594,7 @@ public class BattleshipMockDataFacade : ITfsClient
         // Use GetWorkItemRevisionsBatchAsync for efficient bulk fetching.
         IncrementAndGetApiCallCount();
         _logger.LogInformation("Mock TFS client: GetWorkItemRevisionsAsync called for work item {WorkItemId} (N+1 pattern - prefer GetWorkItemRevisionsBatchAsync)", workItemId);
-        
+
         // Return sample revision history for the requested work item
         var mockRevisions = new List<WorkItemRevisionDto>
         {
@@ -633,18 +633,18 @@ public class BattleshipMockDataFacade : ITfsClient
         // N+1 WARNING: This method is called once per work item in the old pattern.
         // Use UpdateWorkItemsStateAsync for efficient bulk updates.
         IncrementAndGetApiCallCount();
-        _logger.LogInformation("Mock TFS client: UpdateWorkItemStateAsync called for workItemId={WorkItemId}, newState={NewState} (N+1 pattern - prefer UpdateWorkItemsStateAsync)", 
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemStateAsync called for workItemId={WorkItemId}, newState={NewState} (N+1 pattern - prefer UpdateWorkItemsStateAsync)",
             workItemId, newState);
-        
+
         var validStates = new[] { "New", "Active", "In Progress", "Resolved", "Closed", "Done", "Removed", "Proposed", "Completed", "Approved", "Committed", "To Do" };
         var isValidState = validStates.Contains(newState, StringComparer.OrdinalIgnoreCase);
-        
+
         if (!isValidState)
         {
             _logger.LogWarning("Mock TFS client: Invalid state '{NewState}' provided", newState);
             return Task.FromResult(false);
         }
-        
+
         _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} to state '{NewState}'", workItemId, newState);
         return Task.FromResult(true);
     }
@@ -654,15 +654,15 @@ public class BattleshipMockDataFacade : ITfsClient
         // N+1 WARNING: This method is called once per work item in the old pattern.
         // Use UpdateWorkItemsEffortAsync for efficient bulk updates.
         IncrementAndGetApiCallCount();
-        _logger.LogInformation("Mock TFS client: UpdateWorkItemEffortAsync called for workItemId={WorkItemId}, effort={Effort} (N+1 pattern - prefer UpdateWorkItemsEffortAsync)", 
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemEffortAsync called for workItemId={WorkItemId}, effort={Effort} (N+1 pattern - prefer UpdateWorkItemsEffortAsync)",
             workItemId, effort);
-        
+
         if (effort < 0)
         {
             _logger.LogWarning("Mock TFS client: Invalid effort value {Effort} provided (must be >= 0)", effort);
             return Task.FromResult(false);
         }
-        
+
         _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} effort to {Effort}", workItemId, effort);
         return Task.FromResult(true);
     }
@@ -884,7 +884,7 @@ public class BattleshipMockDataFacade : ITfsClient
 
         var validStates = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "New", "Active", "In Progress", "Resolved", "Closed", "Done", "Removed", 
+            "New", "Active", "In Progress", "Resolved", "Closed", "Done", "Removed",
             "Proposed", "Completed", "Approved", "Committed", "To Do"
         };
 
@@ -1006,10 +1006,10 @@ public class BattleshipMockDataFacade : ITfsClient
     {
         IncrementAndGetApiCallCount();
         _logger.LogInformation("Mock TFS client: GetPipelinesAsync called");
-        
+
         var pipelines = GetMockPipelines();
         _logger.LogInformation("Mock TFS client: Returning {Count} pipelines", pipelines.Count);
-        
+
         return Task.FromResult<IEnumerable<PipelineDto>>(pipelines);
     }
 
@@ -1020,10 +1020,10 @@ public class BattleshipMockDataFacade : ITfsClient
     {
         IncrementAndGetApiCallCount();
         _logger.LogInformation("Mock TFS client: GetPipelineRunsAsync called for pipeline {PipelineId}", pipelineId);
-        
+
         var allRuns = GetMockPipelineRuns();
         var filtered = allRuns.Where(r => r.PipelineId == pipelineId).Take(top);
-        
+
         var result = filtered.ToList();
         _logger.LogInformation("Mock TFS client: Returning {Count} pipeline runs", result.Count);
         return Task.FromResult<IEnumerable<PipelineRunDto>>(result);

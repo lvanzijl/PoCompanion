@@ -27,7 +27,7 @@ public sealed class GetPullRequestMetricsQueryHandler : IQueryHandler<GetPullReq
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetPullRequestMetricsQuery");
-        
+
         var allPrs = await _repository.GetAllAsync(cancellationToken);
         var metrics = new List<PullRequestMetricsDto>();
 
@@ -83,7 +83,7 @@ public sealed class GetPullRequestMetricsQueryHandler : IQueryHandler<GetPullReq
         // Effective work time excludes waiting periods between iterations
         // This is a simplified calculation: sum of time between iteration creation dates
         TimeSpan effectiveTime = TimeSpan.Zero;
-        
+
         for (int i = 0; i < iterations.Count; i++)
         {
             if (i == 0)

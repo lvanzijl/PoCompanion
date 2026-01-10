@@ -185,7 +185,7 @@ public class MockTfsClient : ITfsClient
             .Distinct()
             .OrderBy(ap => ap)
             .ToList();
-        
+
         return Task.FromResult<IEnumerable<string>>(areaPaths);
     }
 
@@ -200,7 +200,7 @@ public class MockTfsClient : ITfsClient
         var filtered = since.HasValue
             ? _mockWorkItems.Where(wi => wi.RetrievedAt >= since.Value)
             : _mockWorkItems;
-        
+
         return Task.FromResult<IEnumerable<WorkItemDto>>(filtered);
     }
 
@@ -360,12 +360,12 @@ public class MockTfsClient : ITfsClient
         // Always return true for valid state values to simulate successful TFS update
         var validStates = new[] { "New", "Active", "In Progress", "Resolved", "Closed", "Done", "Removed" };
         var isValidState = validStates.Contains(newState, StringComparer.OrdinalIgnoreCase);
-        
+
         if (!isValidState)
         {
             return Task.FromResult(false);
         }
-        
+
         // Find and update the work item if it exists in our mock list
         var workItem = _mockWorkItems.FirstOrDefault(wi => wi.TfsId == workItemId);
         if (workItem != null)
@@ -375,7 +375,7 @@ public class MockTfsClient : ITfsClient
             var updatedWorkItem = workItem with { State = newState };
             _mockWorkItems.Add(updatedWorkItem);
         }
-        
+
         // Return true regardless of whether work item is in our mock list
         // The handler will check the database repository, not our internal list
         return Task.FromResult(true);
@@ -389,7 +389,7 @@ public class MockTfsClient : ITfsClient
         {
             return Task.FromResult(false);
         }
-        
+
         // Find and update the work item if it exists in our mock list
         var workItem = _mockWorkItems.FirstOrDefault(wi => wi.TfsId == workItemId);
         if (workItem != null)
@@ -399,7 +399,7 @@ public class MockTfsClient : ITfsClient
             var updatedWorkItem = workItem with { Effort = effort };
             _mockWorkItems.Add(updatedWorkItem);
         }
-        
+
         // Return true regardless of whether work item is in our mock list
         // The handler will check the database repository, not our internal list
         return Task.FromResult(true);

@@ -10,7 +10,7 @@ namespace PoTool.Client.Services;
 public class StartupOrchestratorService : IStartupOrchestratorService
 {
     private readonly HttpClient _httpClient;
-    
+
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -27,12 +27,12 @@ public class StartupOrchestratorService : IStartupOrchestratorService
         try
         {
             var response = await _httpClient.GetAsync("/api/startup/readiness", cancellationToken);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 return null;
             }
-            
+
             return await response.Content.ReadFromJsonAsync<StartupReadinessDto>(_jsonOptions, cancellationToken);
         }
         catch (Exception)
@@ -134,8 +134,8 @@ public class StartupOrchestratorService : IStartupOrchestratorService
         // - HasVerifiedTfsApiSuccessfully
         // - HasAnyProfile
         // - ActiveProfileId != null
-        return readiness.HasVerifiedTfsApiSuccessfully 
-               && readiness.HasAnyProfile 
+        return readiness.HasVerifiedTfsApiSuccessfully
+               && readiness.HasAnyProfile
                && readiness.ActiveProfileId != null;
     }
 }

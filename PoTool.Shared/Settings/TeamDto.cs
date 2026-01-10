@@ -9,7 +9,7 @@ public enum TeamPictureType
     /// Uses a default picture (0-63).
     /// </summary>
     Default = 0,
-    
+
     /// <summary>
     /// Uses a custom user-provided picture.
     /// </summary>

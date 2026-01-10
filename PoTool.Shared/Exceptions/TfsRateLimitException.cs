@@ -11,7 +11,7 @@ public class TfsRateLimitException : TfsException
     /// </summary>
     public TimeSpan? RetryAfter { get; }
 
-    public TfsRateLimitException(string message, string? errorContent, TimeSpan? retryAfter = null) 
+    public TfsRateLimitException(string message, string? errorContent, TimeSpan? retryAfter = null)
         : base(message, 429, errorContent)
     {
         RetryAfter = retryAfter;

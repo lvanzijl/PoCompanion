@@ -10,7 +10,7 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetEffortConcentrationRiskQuery.
 /// Identifies concentration risks where effort is focused in single features or areas.
 /// </summary>
-public sealed class GetEffortConcentrationRiskQueryHandler 
+public sealed class GetEffortConcentrationRiskQueryHandler
     : IQueryHandler<GetEffortConcentrationRiskQuery, EffortConcentrationRiskDto>
 {
     private readonly IWorkItemRepository _repository;
@@ -29,12 +29,12 @@ public sealed class GetEffortConcentrationRiskQueryHandler
         CancellationToken cancellationToken)
     {
         _logger.LogDebug(
-            "Handling GetEffortConcentrationRiskQuery with AreaPathFilter: {AreaPathFilter}, Threshold: {Threshold}", 
-            query.AreaPathFilter ?? "All", 
+            "Handling GetEffortConcentrationRiskQuery with AreaPathFilter: {AreaPathFilter}, Threshold: {Threshold}",
+            query.AreaPathFilter ?? "All",
             query.ConcentrationThreshold);
 
         var allWorkItems = await _repository.GetAllAsync(cancellationToken);
-        
+
         // Filter by area path if specified
         if (!string.IsNullOrWhiteSpace(query.AreaPathFilter))
         {
@@ -79,13 +79,13 @@ public sealed class GetEffortConcentrationRiskQueryHandler
 
         // Calculate overall concentration risk
         var (overallRisk, concentrationIndex) = CalculateOverallConcentrationRisk(
-            areaPathRisks, 
+            areaPathRisks,
             iterationRisks);
 
         // Generate mitigation recommendations
         var recommendations = GenerateMitigationRecommendations(
-            areaPathRisks, 
-            iterationRisks, 
+            areaPathRisks,
+            iterationRisks,
             overallRisk);
 
         return new EffortConcentrationRiskDto(
@@ -202,12 +202,12 @@ public sealed class GetEffortConcentrationRiskQueryHandler
         }
 
         var maxConcentration = allRisks.Max(r => r.PercentageOfTotal);
-        
+
         // Herfindahl-Hirschman Index (HHI) for concentration
         // HHI = Σ(market share as decimal)² × 10,000
         // Convert percentages to decimals (0-1 range) before squaring
         var hhi = allRisks.Sum(r => Math.Pow(r.PercentageOfTotal / 100.0, 2)) * 10000;
-        
+
         // HHI ranges: 0-1500 (unconcentrated), 1500-2500 (moderate), 2500+ (high concentration)
         // Normalize to 0-100 scale for UI display
         var concentrationIndex = Math.Min(100, hhi / 100);

@@ -40,19 +40,19 @@ public class MockTfsClient : ITfsClient
     public Task<IEnumerable<string>> GetAreaPathsAsync(int? depth = null, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Mock TFS client: GetAreaPathsAsync called with depth={Depth}", depth);
-        
+
         // Get all mock work items to extract area paths
         var allWorkItems = _mockDataFacade.GetMockHierarchy();
-        
+
         // Extract distinct area paths from mock data
         var areaPaths = allWorkItems
             .Select(wi => wi.AreaPath)
             .Distinct()
             .OrderBy(ap => ap)
             .ToList();
-        
+
         _logger.LogInformation("Mock TFS client: Returning {Count} area paths", areaPaths.Count);
-        
+
         return Task.FromResult<IEnumerable<string>>(areaPaths);
     }
 
@@ -64,22 +64,22 @@ public class MockTfsClient : ITfsClient
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, DateTimeOffset? since, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Mock TFS client: GetWorkItemsAsync called for areaPath={AreaPath}, since={Since}", areaPath, since);
-        
+
         // Get all mock work items from the new Battleship system
         var allWorkItems = _mockDataFacade.GetMockHierarchy();
-        
+
         // Filter by area path (simple contains check for mock purposes)
         var filtered = allWorkItems.Where(wi => wi.AreaPath.Contains(areaPath, StringComparison.OrdinalIgnoreCase));
-        
+
         // Filter by date if specified (incremental sync)
         if (since.HasValue)
         {
             filtered = filtered.Where(wi => wi.RetrievedAt >= since.Value);
         }
-        
+
         var result = filtered.ToList();
         _logger.LogInformation("Mock TFS client: Returning {Count} work items", result.Count);
-        
+
         return Task.FromResult<IEnumerable<WorkItemDto>>(result);
     }
 
@@ -90,10 +90,10 @@ public class MockTfsClient : ITfsClient
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Mock TFS client: GetPullRequestsAsync called for repository={Repository}", repositoryName);
-        
+
         // Get all mock pull requests from the new Battleship system
         var allPullRequests = _mockDataFacade.GetMockPullRequests();
-        
+
         var filtered = allPullRequests.AsEnumerable();
 
         if (!string.IsNullOrEmpty(repositoryName))
@@ -113,7 +113,7 @@ public class MockTfsClient : ITfsClient
 
         var result = filtered.ToList();
         _logger.LogInformation("Mock TFS client: Returning {Count} pull requests", result.Count);
-        
+
         return Task.FromResult<IEnumerable<PullRequestDto>>(result);
     }
 
@@ -123,10 +123,10 @@ public class MockTfsClient : ITfsClient
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Mock TFS client: GetPullRequestIterationsAsync called for PR {PullRequestId}", pullRequestId);
-        
+
         var allIterations = _mockDataFacade.GetMockIterations();
         var filtered = allIterations.Where(i => i.PullRequestId == pullRequestId);
-        
+
         var result = filtered.ToList();
         _logger.LogInformation("Mock TFS client: Returning {Count} iterations", result.Count);
         return Task.FromResult<IEnumerable<PullRequestIterationDto>>(result);
@@ -138,10 +138,10 @@ public class MockTfsClient : ITfsClient
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Mock TFS client: GetPullRequestCommentsAsync called for PR {PullRequestId}", pullRequestId);
-        
+
         var allComments = _mockDataFacade.GetMockComments();
         var filtered = allComments.Where(c => c.PullRequestId == pullRequestId);
-        
+
         var result = filtered.ToList();
         _logger.LogInformation("Mock TFS client: Returning {Count} comments", result.Count);
         return Task.FromResult<IEnumerable<PullRequestCommentDto>>(result);
@@ -153,12 +153,12 @@ public class MockTfsClient : ITfsClient
         int iterationId,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Mock TFS client: GetPullRequestFileChangesAsync called for PR {PullRequestId}, iteration {IterationId}", 
+        _logger.LogInformation("Mock TFS client: GetPullRequestFileChangesAsync called for PR {PullRequestId}, iteration {IterationId}",
             pullRequestId, iterationId);
-        
+
         var allFileChanges = _mockDataFacade.GetMockFileChanges();
         var filtered = allFileChanges.Where(fc => fc.PullRequestId == pullRequestId && fc.IterationId == iterationId);
-        
+
         var result = filtered.ToList();
         _logger.LogInformation("Mock TFS client: Returning {Count} file changes", result.Count);
         return Task.FromResult<IEnumerable<PullRequestFileChangeDto>>(result);
@@ -169,7 +169,7 @@ public class MockTfsClient : ITfsClient
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Mock TFS client: GetWorkItemRevisionsAsync called for work item {WorkItemId}", workItemId);
-        
+
         // Return sample revision history - simplified mock data
         var mockRevisions = new List<WorkItemRevisionDto>
         {
@@ -205,37 +205,37 @@ public class MockTfsClient : ITfsClient
 
     public Task<bool> UpdateWorkItemStateAsync(int workItemId, string newState, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Mock TFS client: UpdateWorkItemStateAsync called for workItemId={WorkItemId}, newState={NewState}", 
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemStateAsync called for workItemId={WorkItemId}, newState={NewState}",
             workItemId, newState);
-        
+
         // Mock implementation always succeeds for valid state values
         var validStates = new[] { "New", "Active", "In Progress", "Resolved", "Closed", "Done", "Removed", "Proposed", "Completed", "Approved", "Committed", "To Do" };
         var isValidState = validStates.Contains(newState, StringComparer.OrdinalIgnoreCase);
-        
+
         if (!isValidState)
         {
             _logger.LogWarning("Mock TFS client: Invalid state '{NewState}' provided", newState);
             return Task.FromResult(false);
         }
-        
-        _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} to state '{NewState}'", 
+
+        _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} to state '{NewState}'",
             workItemId, newState);
         return Task.FromResult(true);
     }
 
     public Task<bool> UpdateWorkItemEffortAsync(int workItemId, int effort, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Mock TFS client: UpdateWorkItemEffortAsync called for workItemId={WorkItemId}, effort={Effort}", 
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemEffortAsync called for workItemId={WorkItemId}, effort={Effort}",
             workItemId, effort);
-        
+
         // Mock implementation always succeeds for valid effort values
         if (effort < 0)
         {
             _logger.LogWarning("Mock TFS client: Invalid effort value {Effort} provided (must be >= 0)", effort);
             return Task.FromResult(false);
         }
-        
-        _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} effort to {Effort}", 
+
+        _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} effort to {Effort}",
             workItemId, effort);
         return Task.FromResult(true);
     }
@@ -245,7 +245,7 @@ public class MockTfsClient : ITfsClient
         int? workItemIdForWriteCheck = null,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Mock TFS client: VerifyCapabilitiesAsync called. WriteChecks: {IncludeWriteChecks}", 
+        _logger.LogInformation("Mock TFS client: VerifyCapabilitiesAsync called. WriteChecks: {IncludeWriteChecks}",
             includeWriteChecks);
 
         var checks = new List<TfsCapabilityCheckResult>

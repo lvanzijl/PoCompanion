@@ -14,8 +14,8 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Get API base URL from configuration (empty = same origin)
 var apiBaseUrlConfig = builder.Configuration["ApiBaseUrl"];
-var apiBaseUrl = string.IsNullOrEmpty(apiBaseUrlConfig) 
-    ? builder.HostEnvironment.BaseAddress 
+var apiBaseUrl = string.IsNullOrEmpty(apiBaseUrlConfig)
+    ? builder.HostEnvironment.BaseAddress
     : apiBaseUrlConfig;
 
 // Configure HttpClient with API base address (WASM-compatible, no HttpMessageHandler)

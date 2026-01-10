@@ -240,8 +240,8 @@ public class ProfileFilterServiceTests
     {
         // Arrange
         var workItemAreaPath = "Project\\ProductB\\Feature1";
-        var filter = new List<string> 
-        { 
+        var filter = new List<string>
+        {
             "Project\\ProductA",
             "Project\\ProductB",
             "Project\\ProductC"

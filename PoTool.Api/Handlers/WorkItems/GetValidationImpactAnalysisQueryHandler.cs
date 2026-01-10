@@ -10,7 +10,7 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// Handler for GetValidationImpactAnalysisQuery.
 /// Analyzes the impact of validation violations on work item hierarchy and workflow.
 /// </summary>
-public sealed class GetValidationImpactAnalysisQueryHandler 
+public sealed class GetValidationImpactAnalysisQueryHandler
     : IQueryHandler<GetValidationImpactAnalysisQuery, ValidationImpactAnalysisDto>
 {
     private readonly IWorkItemRepository _repository;
@@ -69,7 +69,7 @@ public sealed class GetValidationImpactAnalysisQueryHandler
             // Skip work items that were filtered out
             if (!workItemLookup.TryGetValue(workItemId, out var workItem))
                 continue;
-            
+
             // Find blocked children (direct children that cannot progress)
             var blockedChildren = GetBlockedChildren(workItemId, childrenLookup, workItemLookup);
             var blockedDescendants = GetAllDescendants(workItemId, childrenLookup);
@@ -111,7 +111,7 @@ public sealed class GetValidationImpactAnalysisQueryHandler
     private Dictionary<int, List<int>> BuildChildrenLookup(List<WorkItemDto> workItems)
     {
         var lookup = new Dictionary<int, List<int>>();
-        
+
         foreach (var wi in workItems)
         {
             if (wi.ParentTfsId.HasValue)
@@ -123,7 +123,7 @@ public sealed class GetValidationImpactAnalysisQueryHandler
                 lookup[wi.ParentTfsId.Value].Add(wi.TfsId);
             }
         }
-        
+
         return lookup;
     }
 
@@ -155,7 +155,7 @@ public sealed class GetValidationImpactAnalysisQueryHandler
     {
         var descendants = new List<int>();
         var queue = new Queue<int>();
-        
+
         if (childrenLookup.ContainsKey(parentId))
         {
             foreach (var childId in childrenLookup[parentId])
@@ -185,13 +185,13 @@ public sealed class GetValidationImpactAnalysisQueryHandler
     {
         var current = workItemId;
         var visited = new HashSet<int>();
-        
+
         while (workItemLookup.TryGetValue(current, out var workItem) && workItem.ParentTfsId.HasValue)
         {
             // Prevent infinite loop in case of circular references
             if (visited.Contains(current))
                 break;
-                
+
             visited.Add(current);
             current = workItem.ParentTfsId.Value;
         }

@@ -120,8 +120,8 @@ public class WorkItemTreeNodeTests : BunitTestContext
             .Add(p => p.Node, node)
             .Add(p => p.SelectedId, (int?)null)
             .Add(p => p.Level, 0)
-            .Add(p => p.OnNodeSelected, EventCallback.Factory.Create<TreeNode>(this, (n) => 
-            { 
+            .Add(p => p.OnNodeSelected, EventCallback.Factory.Create<TreeNode>(this, (n) =>
+            {
                 selectionChanged = true;
                 selectedNode = n;
             })));

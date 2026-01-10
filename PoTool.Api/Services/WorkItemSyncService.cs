@@ -49,15 +49,15 @@ public class WorkItemSyncService : BackgroundService
         {
             var errorMessage = "Default Area Path is not configured. Configure this in TFS settings.";
             _logger.LogError(errorMessage);
-            
+
             await _hubContext.Clients.All.SendAsync(
                 "SyncStatus",
                 new { Status = "Failed", Message = errorMessage },
                 cancellationToken);
-            
+
             throw new InvalidOperationException(errorMessage);
         }
-        
+
         _logger.LogInformation("Manual sync triggered for area path: {AreaPath}", areaPath);
 
         using var scope = _serviceProvider.CreateScope();

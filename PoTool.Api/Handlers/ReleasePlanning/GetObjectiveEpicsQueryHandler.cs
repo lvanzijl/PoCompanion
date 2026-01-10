@@ -35,7 +35,7 @@ public sealed class GetObjectiveEpicsQueryHandler : IQueryHandler<GetObjectiveEp
         // Get all work items to find Epics with the specified Objective as parent
         var allWorkItems = await _workItemRepository.GetAllAsync(cancellationToken);
         var epics = allWorkItems
-            .Where(w => w.Type.Equals("Epic", StringComparison.OrdinalIgnoreCase) 
+            .Where(w => w.Type.Equals("Epic", StringComparison.OrdinalIgnoreCase)
                         && w.ParentTfsId == query.ObjectiveId)
             .ToList();
 

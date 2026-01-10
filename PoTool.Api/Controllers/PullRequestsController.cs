@@ -54,7 +54,7 @@ public class PullRequestsController : ControllerBase
         try
         {
             var pullRequest = await _mediator.Send(new GetPullRequestByIdQuery(id), cancellationToken);
-            
+
             if (pullRequest == null)
             {
                 return NotFound();
@@ -216,7 +216,7 @@ public class PullRequestsController : ControllerBase
             }
 
             var analysis = await _mediator.Send(
-                new GetPRReviewBottleneckQuery(maxPRs, daysBack), 
+                new GetPRReviewBottleneckQuery(maxPRs, daysBack),
                 cancellationToken);
 
             return Ok(analysis);

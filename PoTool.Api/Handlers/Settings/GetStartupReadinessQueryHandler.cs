@@ -45,7 +45,7 @@ public class GetStartupReadinessQueryHandler : IQueryHandler<GetStartupReadiness
 
         // Determine the missing requirement message based on the startup routing logic
         string? missingMessage = null;
-        
+
         if (!_isMockDataEnabled)
         {
             if (!hasSavedTfsConfig)

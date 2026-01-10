@@ -108,9 +108,9 @@ public class PoToolDbContext : DbContext
         {
             entity.HasIndex(e => e.TfsId)
                 .IsUnique();
-            
+
             entity.HasIndex(e => e.Type);
-            
+
             entity.HasIndex(e => e.Title);
         });
 
@@ -140,13 +140,13 @@ public class PoToolDbContext : DbContext
         {
             entity.HasIndex(e => e.Id)
                 .IsUnique();
-            
+
             entity.HasIndex(e => e.RepositoryName);
-            
+
             entity.HasIndex(e => e.CreatedBy);
-            
+
             entity.HasIndex(e => e.IterationPath);
-            
+
             entity.HasIndex(e => e.Status);
         });
 
@@ -159,7 +159,7 @@ public class PoToolDbContext : DbContext
         modelBuilder.Entity<PullRequestCommentEntity>(entity =>
         {
             entity.HasIndex(e => e.PullRequestId);
-            
+
             entity.HasIndex(e => e.ThreadId);
         });
 
@@ -178,7 +178,7 @@ public class PoToolDbContext : DbContext
         {
             entity.HasIndex(e => e.ObjectiveId)
                 .IsUnique();
-            
+
             entity.HasMany(e => e.Placements)
                 .WithOne(p => p.Lane)
                 .HasForeignKey(p => p.LaneId)
@@ -189,7 +189,7 @@ public class PoToolDbContext : DbContext
         {
             entity.HasIndex(e => e.EpicId)
                 .IsUnique();
-            
+
             entity.HasIndex(e => new { e.LaneId, e.RowIndex, e.OrderInRow });
         });
 

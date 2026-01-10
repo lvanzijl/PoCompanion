@@ -10,7 +10,7 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetEpicCompletionForecastQuery.
 /// Calculates completion forecast for an Epic/Feature based on historical velocity.
 /// </summary>
-public sealed class GetEpicCompletionForecastQueryHandler 
+public sealed class GetEpicCompletionForecastQueryHandler
     : IQueryHandler<GetEpicCompletionForecastQuery, EpicCompletionForecastDto?>
 {
     private readonly IWorkItemRepository _repository;
@@ -62,10 +62,10 @@ public sealed class GetEpicCompletionForecastQueryHandler
             cancellationToken);
 
         var estimatedVelocity = velocityTrend.AverageVelocity;
-        
+
         // Calculate forecast
-        var sprintsRemaining = estimatedVelocity > 0 
-            ? (int)Math.Ceiling(remainingEffort / estimatedVelocity) 
+        var sprintsRemaining = estimatedVelocity > 0
+            ? (int)Math.Ceiling(remainingEffort / estimatedVelocity)
             : 0;
 
         // Determine confidence based on data availability
@@ -110,7 +110,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
     {
         var descendants = new List<WorkItemDto>();
         var directChildren = allWorkItems.Where(wi => wi.ParentTfsId == parent.TfsId).ToList();
-        
+
         foreach (var child in directChildren)
         {
             descendants.Add(child);
@@ -145,7 +145,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
         double estimatedVelocity)
     {
         var forecasts = new List<SprintForecast>();
-        
+
         if (!historicalSprints.Any() || estimatedVelocity <= 0)
             return forecasts;
 
@@ -160,7 +160,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
         {
             var sprintStart = lastSprint.EndDate.Value.AddDays((sprintNumber - 1) * 14);
             var sprintEnd = sprintStart.AddDays(14);
-            
+
             var expectedCompleted = Math.Min(currentRemaining, (int)Math.Round(estimatedVelocity));
             currentRemaining -= expectedCompleted;
 

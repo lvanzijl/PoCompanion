@@ -32,7 +32,7 @@ public class HealthSteps
     {
         _response = await _client.GetAsync("/health");
         _scenarioContext["Response"] = _response;
-        
+
         if (_response.StatusCode == HttpStatusCode.OK)
         {
             _healthResponse = await _response.Content.ReadFromJsonAsync<HealthResponse>();
@@ -50,7 +50,7 @@ public class HealthSteps
     public void ThenTheResponseShouldIncludeATimestamp()
     {
         Assert.IsNotNull(_healthResponse);
-        Assert.IsTrue(_healthResponse.Timestamp > DateTime.MinValue, 
+        Assert.IsTrue(_healthResponse.Timestamp > DateTime.MinValue,
             "Health response should include a valid timestamp");
     }
 

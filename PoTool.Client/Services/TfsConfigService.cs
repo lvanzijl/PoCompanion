@@ -12,7 +12,7 @@ public class TfsConfigService
 {
     private readonly IClient _apiClient;
     private readonly HttpClient _httpClient;
-    
+
     // JSON options for case-insensitive deserialization of API responses (camelCase to PascalCase)
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -34,12 +34,12 @@ public class TfsConfigService
         {
             // Use HttpClient directly since the generated client doesn't return the response
             var response = await _httpClient.GetAsync("/api/tfsconfig", cancellationToken);
-            
+
             if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
             {
                 return null;
             }
-            
+
             response.EnsureSuccessStatusCode();
             var config = await response.Content.ReadFromJsonAsync<TfsConfigDto>(_jsonOptions, cancellationToken);
             return config;
@@ -54,7 +54,7 @@ public class TfsConfigService
     /// Saves the TFS configuration.
     /// Authentication uses Windows credentials (NTLM).
     /// </summary>
-    public virtual async Task SaveConfigAsync(string url, string project, string defaultAreaPath, 
+    public virtual async Task SaveConfigAsync(string url, string project, string defaultAreaPath,
         bool useDefaultCredentials = true, int timeoutSeconds = 30, string apiVersion = "7.0", CancellationToken cancellationToken = default)
     {
         // Send config to API
@@ -67,7 +67,7 @@ public class TfsConfigService
             TimeoutSeconds = timeoutSeconds,
             ApiVersion = apiVersion
         };
-        
+
         await _apiClient.PostApiTfsconfigAsync(request, cancellationToken);
     }
 
@@ -80,7 +80,7 @@ public class TfsConfigService
         {
             // Call the validation endpoint
             var response = await _httpClient.GetAsync("/api/tfsvalidate", cancellationToken);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 return true;
@@ -90,7 +90,7 @@ public class TfsConfigService
                 // Try to read error details from response
                 string errorMessage = $"Connection test failed with HTTP {(int)response.StatusCode} ({response.StatusCode})";
                 string? detailsText = null;
-                
+
                 try
                 {
                     var errorJson = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -115,10 +115,10 @@ public class TfsConfigService
                 {
                     // Failed to parse error response, use generic message with status code
                 }
-                
+
                 // Always throw an exception with details so the UI can display them
-                var fullMessage = !string.IsNullOrWhiteSpace(detailsText) 
-                    ? $"{errorMessage}. {detailsText}" 
+                var fullMessage = !string.IsNullOrWhiteSpace(detailsText)
+                    ? $"{errorMessage}. {detailsText}"
                     : errorMessage;
                 throw new InvalidOperationException(fullMessage);
             }
@@ -193,7 +193,7 @@ public class TfsConfigService
 
             var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
             response.EnsureSuccessStatusCode();
-            
+
             var report = await response.Content.ReadFromJsonAsync<TfsVerificationReport>(_jsonOptions, cancellationToken);
             return report;
         }

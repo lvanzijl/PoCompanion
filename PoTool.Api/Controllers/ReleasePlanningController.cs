@@ -93,7 +93,7 @@ public class ReleasePlanningController : ControllerBase
         try
         {
             var result = await _mediator.Send(command, cancellationToken);
-            
+
             if (!result.Success)
             {
                 return BadRequest(result);
@@ -119,7 +119,7 @@ public class ReleasePlanningController : ControllerBase
         try
         {
             var result = await _mediator.Send(new DeleteLaneCommand(laneId), cancellationToken);
-            
+
             if (!result.Success)
             {
                 return NotFound(result);
@@ -149,7 +149,7 @@ public class ReleasePlanningController : ControllerBase
         try
         {
             var result = await _mediator.Send(command, cancellationToken);
-            
+
             if (!result.Success)
             {
                 return BadRequest(result);
@@ -177,7 +177,7 @@ public class ReleasePlanningController : ControllerBase
         {
             var command = new UpdateEpicPlacementCommand(placementId, request.RowIndex, request.OrderInRow);
             var result = await _mediator.Send(command, cancellationToken);
-            
+
             if (!result.Success)
             {
                 return NotFound(result);
@@ -205,7 +205,7 @@ public class ReleasePlanningController : ControllerBase
         {
             var command = new MoveEpicCommand(placementId, request.NewRowIndex, request.NewOrderInRow);
             var result = await _mediator.Send(command, cancellationToken);
-            
+
             if (!result.Success)
             {
                 return BadRequest(result);
@@ -231,7 +231,7 @@ public class ReleasePlanningController : ControllerBase
         try
         {
             var result = await _mediator.Send(command, cancellationToken);
-            
+
             if (!result.Success)
             {
                 return BadRequest(result);
@@ -261,7 +261,7 @@ public class ReleasePlanningController : ControllerBase
         try
         {
             var result = await _mediator.Send(command, cancellationToken);
-            
+
             if (!result.Success)
             {
                 return BadRequest(result);
@@ -289,7 +289,7 @@ public class ReleasePlanningController : ControllerBase
         {
             var command = new UpdateMilestoneLineCommand(lineId, request.Label, request.VerticalPosition, request.Type);
             var result = await _mediator.Send(command, cancellationToken);
-            
+
             if (!result.Success)
             {
                 return NotFound(result);
@@ -315,7 +315,7 @@ public class ReleasePlanningController : ControllerBase
         try
         {
             var result = await _mediator.Send(new DeleteMilestoneLineCommand(lineId), cancellationToken);
-            
+
             if (!result.Success)
             {
                 return NotFound(result);
@@ -345,7 +345,7 @@ public class ReleasePlanningController : ControllerBase
         try
         {
             var result = await _mediator.Send(command, cancellationToken);
-            
+
             if (!result.Success)
             {
                 return BadRequest(result);
@@ -373,7 +373,7 @@ public class ReleasePlanningController : ControllerBase
         {
             var command = new UpdateIterationLineCommand(lineId, request.Label, request.VerticalPosition);
             var result = await _mediator.Send(command, cancellationToken);
-            
+
             if (!result.Success)
             {
                 return NotFound(result);
@@ -399,7 +399,7 @@ public class ReleasePlanningController : ControllerBase
         try
         {
             var result = await _mediator.Send(new DeleteIterationLineCommand(lineId), cancellationToken);
-            
+
             if (!result.Success)
             {
                 return NotFound(result);

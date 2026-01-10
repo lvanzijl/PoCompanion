@@ -126,7 +126,7 @@ public class WorkItemsControllerSteps
     {
         _response = await _client.GetAsync(endpoint);
         _scenarioContext["Response"] = _response;
-        
+
         if (_response.StatusCode == HttpStatusCode.OK)
         {
             _workItems = await _response.Content.ReadFromJsonAsync<List<WorkItemDto>>();
@@ -138,7 +138,7 @@ public class WorkItemsControllerSteps
     {
         _response = await _client.GetAsync($"/api/workitems/{tfsId}");
         _scenarioContext["Response"] = _response;
-        
+
         if (_response.StatusCode == HttpStatusCode.OK)
         {
             _workItem = await _response.Content.ReadFromJsonAsync<WorkItemDto>();
@@ -150,7 +150,7 @@ public class WorkItemsControllerSteps
     {
         _response = await _client.GetAsync($"/api/workitems/filter/{filter}");
         _scenarioContext["Response"] = _response;
-        
+
         if (_response.StatusCode == HttpStatusCode.OK)
         {
             _workItems = await _response.Content.ReadFromJsonAsync<List<WorkItemDto>>();
@@ -162,7 +162,7 @@ public class WorkItemsControllerSteps
     {
         _response = await _client.GetAsync($"/api/workitems/goals?goalIds={goalIds}");
         _scenarioContext["Response"] = _response;
-        
+
         if (_response.StatusCode == HttpStatusCode.OK)
         {
             _workItems = await _response.Content.ReadFromJsonAsync<List<WorkItemDto>>();
@@ -173,7 +173,7 @@ public class WorkItemsControllerSteps
     public void ThenIShouldReceiveAtLeastWorkItems(int minCount)
     {
         Assert.IsNotNull(_workItems);
-        Assert.IsTrue(_workItems.Count >= minCount, 
+        Assert.IsTrue(_workItems.Count >= minCount,
             $"Expected at least {minCount} work items, but got {_workItems.Count}");
     }
 
@@ -202,7 +202,7 @@ public class WorkItemsControllerSteps
     public void ThenTheHierarchyShouldIncludeDescendants(int goalId)
     {
         Assert.IsNotNull(_workItems);
-        Assert.IsTrue(_workItems.Any(w => w.TfsId == goalId), 
+        Assert.IsTrue(_workItems.Any(w => w.TfsId == goalId),
             $"Expected goal {goalId} in hierarchy");
     }
 
@@ -211,7 +211,7 @@ public class WorkItemsControllerSteps
     {
         _response = await _client.GetAsync(endpoint);
         _scenarioContext["Response"] = _response;
-        
+
         if (_response.StatusCode == HttpStatusCode.OK)
         {
             _workItemsWithValidation = await _response.Content.ReadFromJsonAsync<List<WorkItemWithValidationDto>>();
@@ -225,8 +225,8 @@ public class WorkItemsControllerSteps
         var workItem = _workItemsWithValidation.FirstOrDefault(w => w.TfsId == tfsId);
         Assert.IsNotNull(workItem, $"Work item {tfsId} not found");
         Assert.IsTrue(workItem.ValidationIssues.Count > 0, "Expected validation issues");
-        Assert.IsTrue(workItem.ValidationIssues.Any(i => 
-            i.Severity == "Error" && i.Message.Contains("Parent")), 
+        Assert.IsTrue(workItem.ValidationIssues.Any(i =>
+            i.Severity == "Error" && i.Message.Contains("Parent")),
             "Expected error about parent not in progress");
     }
 
@@ -244,7 +244,7 @@ public class WorkItemsControllerSteps
     {
         _response = await _client.GetAsync(endpoint);
         _scenarioContext["Response"] = _response;
-        
+
         if (_response.StatusCode == HttpStatusCode.OK)
         {
             _workItems = await _response.Content.ReadFromJsonAsync<List<WorkItemDto>>();
@@ -278,7 +278,7 @@ public class WorkItemsControllerSteps
         foreach (var row in table.Rows)
         {
             var workItemId = int.Parse(row["WorkItemId"]);
-            
+
             // Ensure the work item exists in the database
             if (!dbContext.WorkItems.Any(w => w.TfsId == workItemId))
             {
@@ -389,7 +389,7 @@ public class WorkItemsControllerSteps
 
         var command = new Core.WorkItems.Commands.BulkAssignEffortCommand(assignments);
         _scenarioContext["Response"] = _response = await _client.PostAsJsonAsync("/api/workitems/bulk-assign-effort", command);
-        
+
         if (_response.IsSuccessStatusCode)
         {
             _bulkAssignmentResult = await _response.Content.ReadFromJsonAsync<BulkEffortAssignmentResultDto>();

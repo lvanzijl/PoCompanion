@@ -109,12 +109,12 @@ public class RealTfsClient : ITfsClient
     {
         // Get NTLM-configured client (with UseDefaultCredentials=true in handler)
         var client = _httpClientFactory.CreateClient("TfsClient.NTLM");
-        
+
         // NOTE: Do NOT set client.Timeout here - factory-managed clients should not have their
         // timeout mutated. Per-request timeouts are handled via CancellationTokenSource.
-        
+
         _logger.LogDebug("Using NTLM-authenticated HttpClient for TFS request");
-        
+
         return client;
     }
 
@@ -128,7 +128,7 @@ public class RealTfsClient : ITfsClient
     private string CollectionUrl(TfsConfigEntity config, string relativePath)
     {
         ValidateCollectionUrl(config.Url);
-        
+
         // Ensure relativePath doesn't start with /
         var path = relativePath.TrimStart('/');
         var separator = path.Contains('?') ? "&" : "?";
@@ -146,7 +146,7 @@ public class RealTfsClient : ITfsClient
     private string ProjectUrl(TfsConfigEntity config, string relativePath)
     {
         ValidateCollectionUrl(config.Url);
-        
+
         // URL-encode project name to support spaces and special characters
         var encodedProject = Uri.EscapeDataString(config.Project);
         // Ensure relativePath doesn't start with /
@@ -209,23 +209,23 @@ public class RealTfsClient : ITfsClient
         {
             // Use auth-mode-specific HttpClient to avoid credential conflicts
             var httpClient = GetAuthenticatedHttpClient();
-            
+
             // Create per-request timeout token
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(entity.TimeoutSeconds));
-            
+
             // Step 1: Validate server connectivity using collection-scoped projects endpoint
             var projectsUrl = CollectionUrl(entity, "_apis/projects");
             _logger.LogInformation("Validating TFS connection: GET {Url} (using NTLM authentication)", projectsUrl);
-            
+
             var resp = await httpClient.GetAsync(projectsUrl, timeoutCts.Token);
-            
+
             _logger.LogInformation("Validation GET {Url} returned {StatusCode}", projectsUrl, resp.StatusCode);
-            
+
             if (!resp.IsSuccessStatusCode)
             {
                 var errorBody = await resp.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogError("TFS connection validation failed: HTTP {StatusCode}, Response: {ErrorBody}", 
+                _logger.LogError("TFS connection validation failed: HTTP {StatusCode}, Response: {ErrorBody}",
                     resp.StatusCode, errorBody);
                 return false;
             }
@@ -234,9 +234,9 @@ public class RealTfsClient : ITfsClient
             var encodedProject = Uri.EscapeDataString(entity.Project);
             var projectUrl = CollectionUrl(entity, $"_apis/projects/{encodedProject}");
             _logger.LogInformation("Validating project access: GET {Url}", projectUrl);
-            
+
             var projectResp = await httpClient.GetAsync(projectUrl, timeoutCts.Token);
-            
+
             if (!projectResp.IsSuccessStatusCode)
             {
                 if (projectResp.StatusCode == HttpStatusCode.NotFound)
@@ -246,7 +246,7 @@ public class RealTfsClient : ITfsClient
                 else
                 {
                     var errorBody = await projectResp.Content.ReadAsStringAsync(cancellationToken);
-                    _logger.LogError("Project validation failed: HTTP {StatusCode}, Response: {ErrorBody}", 
+                    _logger.LogError("Project validation failed: HTTP {StatusCode}, Response: {ErrorBody}",
                         projectResp.StatusCode, errorBody);
                 }
                 return false;
@@ -290,7 +290,7 @@ public class RealTfsClient : ITfsClient
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
         ValidateTfsConfiguration(entity);
-        
+
         // Null assertion after validation - entity is guaranteed non-null here
         var config = entity!;
 
@@ -305,9 +305,9 @@ public class RealTfsClient : ITfsClient
             // Format: GET {organization}/{project}/_apis/wit/classificationnodes/areas?$depth={depth}&api-version=5.1
             var depthParam = depth.HasValue ? $"&$depth={depth.Value}" : "";
             var url = ProjectUrl(config, $"_apis/wit/classificationnodes/areas?{depthParam}");
-            
+
             _logger.LogDebug("Calling Classification Nodes API: {Url}", url);
-            
+
             var response = await httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
@@ -316,14 +316,14 @@ public class RealTfsClient : ITfsClient
 
             // Parse the hierarchical area path tree and flatten it to a list of full paths
             var areaPaths = new List<string>();
-            
+
             if (doc.RootElement.TryGetProperty("name", out var rootName))
             {
                 var rootPath = rootName.GetString() ?? "";
-                
+
                 // Add root area path
                 areaPaths.Add(rootPath);
-                
+
                 // Recursively extract child area paths
                 if (doc.RootElement.TryGetProperty("children", out var children))
                 {
@@ -332,7 +332,7 @@ public class RealTfsClient : ITfsClient
             }
 
             _logger.LogInformation("Retrieved {Count} area paths from TFS Classification Nodes API", areaPaths.Count);
-            
+
             return areaPaths.OrderBy(ap => ap).AsEnumerable();
         }, cancellationToken);
     }
@@ -356,9 +356,9 @@ public class RealTfsClient : ITfsClient
             {
                 var name = childName.GetString() ?? "";
                 var fullPath = $"{parentPath}\\{name}";
-                
+
                 areaPaths.Add(fullPath);
-                
+
                 // Recursively process children of this node
                 if (child.TryGetProperty("children", out var grandchildren))
                 {
@@ -377,7 +377,7 @@ public class RealTfsClient : ITfsClient
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
         ValidateTfsConfiguration(entity);
-        
+
         // Null assertion after validation - entity is guaranteed non-null here
         var config = entity!;
 
@@ -392,8 +392,8 @@ public class RealTfsClient : ITfsClient
             // Use UNDER operator for area path to support deeper hierarchies (requirement #3)
             // Note: WIQL Select only needs System.Id since we fetch full work items in a separate batch call
             // with all RequiredWorkItemFields. The other fields here are for debugging/logging purposes.
-            var dateFilter = since.HasValue 
-                ? $" AND [System.ChangedDate] >= '{since.Value:yyyy-MM-ddTHH:mm:ssZ}'" 
+            var dateFilter = since.HasValue
+                ? $" AND [System.ChangedDate] >= '{since.Value:yyyy-MM-ddTHH:mm:ssZ}'"
                 : "";
 
             var wiql = new
@@ -407,7 +407,7 @@ public class RealTfsClient : ITfsClient
 
             // Phase 4: Enhanced logging
             _logger.LogDebug("Executing WIQL query: {Query}", wiql.query);
-            
+
             var wiqlResponse = await httpClient.PostAsync(wiqlUrl, content, cancellationToken);
             await HandleHttpErrorsAsync(wiqlResponse, cancellationToken);
 
@@ -447,9 +447,9 @@ public class RealTfsClient : ITfsClient
             // FUTURE OPTIMIZATION: Make Phase 1 conditional based on work item types
             // that actually use parent relationships (Epic, Feature, User Story, Task).
             // Would require: Type detection in WIQL results, conditional Phase 1 execution.
-            
+
             var totalBatches = (int)Math.Ceiling((double)ids.Length / WorkItemBatchSize);
-            _logger.LogInformation("Fetching {TotalIds} work items in {BatchCount} batches of {BatchSize} (two-phase retrieval)", 
+            _logger.LogInformation("Fetching {TotalIds} work items in {BatchCount} batches of {BatchSize} (two-phase retrieval)",
                 ids.Length, totalBatches, WorkItemBatchSize);
 
             // Phase 1: Fetch relations to get parent IDs
@@ -461,8 +461,8 @@ public class RealTfsClient : ITfsClient
             for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++)
             {
                 var batchIds = ids.Skip(batchIndex * WorkItemBatchSize).Take(WorkItemBatchSize).ToArray();
-                
-                _logger.LogDebug("Phase 1 (relations): Processing batch {BatchIndex}/{TotalBatches} with {IdCount} IDs", 
+
+                _logger.LogDebug("Phase 1 (relations): Processing batch {BatchIndex}/{TotalBatches} with {IdCount} IDs",
                     batchIndex + 1, totalBatches, batchIds.Length);
 
                 var relationsRequest = new WorkItemBatchRequest
@@ -473,8 +473,8 @@ public class RealTfsClient : ITfsClient
 
                 var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
                 using var relationsContent = new StringContent(
-                    JsonSerializer.Serialize(relationsRequest), 
-                    System.Text.Encoding.UTF8, 
+                    JsonSerializer.Serialize(relationsRequest),
+                    System.Text.Encoding.UTF8,
                     "application/json");
 
                 var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
@@ -487,12 +487,12 @@ public class RealTfsClient : ITfsClient
                 foreach (var item in relationsDoc.RootElement.GetProperty("value").EnumerateArray())
                 {
                     var id = item.GetProperty("id").GetInt32();
-                    
+
                     // Check if relations are present
                     if (item.TryGetProperty("relations", out var relations) && relations.ValueKind == JsonValueKind.Array)
                     {
                         relationsPresent++;
-                        
+
                         // Count reverse hierarchy links
                         foreach (var rel in relations.EnumerateArray())
                         {
@@ -507,10 +507,10 @@ public class RealTfsClient : ITfsClient
                             }
                         }
                     }
-                    
+
                     var parentId = ExtractParentIdFromRelations(item);
                     relationsMap[id] = parentId;
-                    
+
                     if (parentId.HasValue)
                     {
                         parentIdsExtracted++;
@@ -533,8 +533,8 @@ public class RealTfsClient : ITfsClient
             {
                 var batchStartTime = DateTimeOffset.UtcNow;
                 var batchIds = ids.Skip(batchIndex * WorkItemBatchSize).Take(WorkItemBatchSize).ToArray();
-                
-                _logger.LogDebug("Phase 2 (fields): Processing batch {BatchIndex}/{TotalBatches} with {IdCount} IDs", 
+
+                _logger.LogDebug("Phase 2 (fields): Processing batch {BatchIndex}/{TotalBatches} with {IdCount} IDs",
                     batchIndex + 1, totalBatches, batchIds.Length);
 
                 var fieldsRequest = new WorkItemBatchRequest
@@ -545,8 +545,8 @@ public class RealTfsClient : ITfsClient
 
                 var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
                 using var fieldsContent = new StringContent(
-                    JsonSerializer.Serialize(fieldsRequest), 
-                    System.Text.Encoding.UTF8, 
+                    JsonSerializer.Serialize(fieldsRequest),
+                    System.Text.Encoding.UTF8,
                     "application/json");
 
                 var fieldsResponse = await httpClient.PostAsync(batchUrl, fieldsContent, cancellationToken);
@@ -565,7 +565,7 @@ public class RealTfsClient : ITfsClient
                     var state = fields.TryGetProperty("System.State", out var s) ? s.GetString() ?? "" : "";
                     var area = fields.TryGetProperty("System.AreaPath", out var a) ? a.GetString() ?? "" : "";
                     var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
-                    
+
                     // Get parent ID from relations map (populated in Phase 1)
                     var parentId = relationsMap.TryGetValue(id, out var pid) ? pid : null;
 
@@ -600,7 +600,7 @@ public class RealTfsClient : ITfsClient
                 "Hierarchy stats: Relations={RelationsCount}, ReverseLinks={ReverseLinksCount}, ParentIDs={ParentIdsCount}",
                 results.Count, areaPath, since, elapsed.TotalMilliseconds,
                 relationsPresent, reverseLinksPresent, parentIdsExtracted);
-            
+
             return results;
         }, cancellationToken);
     }
@@ -620,7 +620,7 @@ public class RealTfsClient : ITfsClient
         {
             if (!relation.TryGetProperty("rel", out var rel))
                 continue;
-            
+
             var relType = rel.GetString();
             // Case-insensitive match for relation type
             if (!string.Equals(relType, "System.LinkTypes.Hierarchy-Reverse", StringComparison.OrdinalIgnoreCase))
@@ -749,9 +749,9 @@ public class RealTfsClient : ITfsClient
                 // Git PRs are project-scoped (requirement #1)
                 var encodedRepoName = Uri.EscapeDataString(repo.Name);
                 var url = ProjectUrl(config, $"_apis/git/repositories/{encodedRepoName}/pullrequests?{string.Join("&", queryParams)}");
-                
+
                 _logger.LogDebug("Fetching PRs from repository {Repository}", repo.Name);
-                
+
                 var response = await httpClient.GetAsync(url, cancellationToken);
                 await HandleHttpErrorsAsync(response, cancellationToken);
 
@@ -768,7 +768,7 @@ public class RealTfsClient : ITfsClient
                     var status = pr.TryGetProperty("status", out var s) ? s.GetString() ?? "" : "";
                     var sourceBranch = pr.TryGetProperty("sourceRefName", out var src) ? src.GetString() ?? "" : "";
                     var targetBranch = pr.TryGetProperty("targetRefName", out var tgt) ? tgt.GetString() ?? "" : "";
-                    
+
                     var createdBy = "";
                     if (pr.TryGetProperty("createdBy", out var creator))
                     {
@@ -776,8 +776,8 @@ public class RealTfsClient : ITfsClient
                     }
 
                     var createdDate = pr.TryGetProperty("creationDate", out var cd) ? cd.GetDateTimeOffset() : DateTimeOffset.UtcNow;
-                    var completedDate = pr.TryGetProperty("closedDate", out var cld) && cld.ValueKind != JsonValueKind.Null 
-                        ? (DateTimeOffset?)cld.GetDateTimeOffset() 
+                    var completedDate = pr.TryGetProperty("closedDate", out var cld) && cld.ValueKind != JsonValueKind.Null
+                        ? (DateTimeOffset?)cld.GetDateTimeOffset()
                         : null;
 
                     // Determine iteration path from work items or use default
@@ -801,9 +801,9 @@ public class RealTfsClient : ITfsClient
 
             // Phase 4: Performance metrics
             var elapsed = DateTimeOffset.UtcNow - startTime;
-            _logger.LogInformation("Retrieved {Count} pull requests across {RepoCount} repositories in {ElapsedMs}ms", 
+            _logger.LogInformation("Retrieved {Count} pull requests across {RepoCount} repositories in {ElapsedMs}ms",
                 allPRs.Count, repositories.Count, elapsed.TotalMilliseconds);
-            
+
             return allPRs;
         }, cancellationToken);
     }
@@ -825,7 +825,7 @@ public class RealTfsClient : ITfsClient
             // Git PRs are project-scoped (requirement #1)
             var encodedRepoName = Uri.EscapeDataString(repositoryName);
             var url = ProjectUrl(config, $"_apis/git/repositories/{encodedRepoName}/pullrequests/{pullRequestId}/iterations");
-            
+
             var response = await httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
@@ -842,7 +842,7 @@ public class RealTfsClient : ITfsClient
                 var iterationId = iteration.GetProperty("id").GetInt32();
                 var createdDate = iteration.TryGetProperty("createdDate", out var cd) ? cd.GetDateTimeOffset() : DateTimeOffset.UtcNow;
                 var updatedDate = iteration.TryGetProperty("updatedDate", out var ud) ? ud.GetDateTimeOffset() : createdDate;
-                
+
                 // Count commits and changes
                 var commitCount = 0;
                 if (iteration.TryGetProperty("commits", out var commits) && commits.ValueKind == JsonValueKind.Array)
@@ -888,7 +888,7 @@ public class RealTfsClient : ITfsClient
             // Git PRs are project-scoped (requirement #1)
             var encodedRepoName = Uri.EscapeDataString(repositoryName);
             var url = ProjectUrl(config, $"_apis/git/repositories/{encodedRepoName}/pullrequests/{pullRequestId}/threads");
-            
+
             var response = await httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
@@ -904,7 +904,7 @@ public class RealTfsClient : ITfsClient
             {
                 var threadId = thread.GetProperty("id").GetInt32();
                 var threadStatus = thread.TryGetProperty("status", out var ts) ? ts.GetString() ?? "" : "";
-                var isResolved = threadStatus.Equals("fixed", StringComparison.OrdinalIgnoreCase) || 
+                var isResolved = threadStatus.Equals("fixed", StringComparison.OrdinalIgnoreCase) ||
                                 threadStatus.Equals("closed", StringComparison.OrdinalIgnoreCase);
 
                 if (!thread.TryGetProperty("comments", out var threadComments) || threadComments.ValueKind != JsonValueKind.Array)
@@ -973,7 +973,7 @@ public class RealTfsClient : ITfsClient
             // Git PRs are project-scoped (requirement #1)
             var encodedRepoName = Uri.EscapeDataString(repositoryName);
             var url = ProjectUrl(config, $"_apis/git/repositories/{encodedRepoName}/pullrequests/{pullRequestId}/iterations/{iterationId}/changes");
-            
+
             var response = await httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
@@ -1012,7 +1012,7 @@ public class RealTfsClient : ITfsClient
                 ));
             }
 
-            _logger.LogInformation("Retrieved {Count} file changes for PR {PullRequestId} iteration {IterationId}", 
+            _logger.LogInformation("Retrieved {Count} file changes for PR {PullRequestId} iteration {IterationId}",
                 fileChanges.Count, pullRequestId, iterationId);
             return fileChanges;
         }, cancellationToken);
@@ -1033,7 +1033,7 @@ public class RealTfsClient : ITfsClient
         {
             // Work item revisions are collection-scoped (work item IDs are unique across collection)
             var url = CollectionUrl(config, $"_apis/wit/workitems/{workItemId}/revisions");
-            
+
             var response = await httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
@@ -1051,7 +1051,7 @@ public class RealTfsClient : ITfsClient
             foreach (var revision in revisionsArray.EnumerateArray())
             {
                 var revNumber = revision.TryGetProperty("rev", out var rev) ? rev.GetInt32() : 0;
-                
+
                 var changedBy = "";
                 if (revision.TryGetProperty("fields", out var fields))
                 {
@@ -1088,7 +1088,7 @@ public class RealTfsClient : ITfsClient
 
                 // Calculate field changes by comparing with previous revision
                 var fieldChanges = new Dictionary<string, WorkItemFieldChange>();
-                
+
                 if (previousRevisionFields != null && revision.TryGetProperty("fields", out var currentFields))
                 {
                     // Get all fields from current revision
@@ -1096,9 +1096,9 @@ public class RealTfsClient : ITfsClient
                     {
                         var fieldName = field.Name;
                         var newValue = GetFieldValueAsString(field.Value);
-                        
+
                         // Skip system fields that are noise in history
-                        if (fieldName.StartsWith("System.Watermark") || 
+                        if (fieldName.StartsWith("System.Watermark") ||
                             fieldName.StartsWith("System.Rev") ||
                             fieldName == "System.ChangedDate" ||
                             fieldName == "System.ChangedBy" ||
@@ -1124,14 +1124,14 @@ public class RealTfsClient : ITfsClient
                             );
                         }
                     }
-                    
+
                     // Also check for removed fields (present in previous but not in current)
                     foreach (var previousField in previousRevisionFields)
                     {
                         var fieldName = previousField.Key;
-                        
+
                         // Skip noise fields
-                        if (fieldName.StartsWith("System.Watermark") || 
+                        if (fieldName.StartsWith("System.Watermark") ||
                             fieldName.StartsWith("System.Rev") ||
                             fieldName == "System.ChangedDate" ||
                             fieldName == "System.ChangedBy" ||
@@ -1139,7 +1139,7 @@ public class RealTfsClient : ITfsClient
                         {
                             continue;
                         }
-                        
+
                         // If field not in current revision, it was removed
                         if (currentFields.TryGetProperty(fieldName, out _) == false)
                         {
@@ -1163,7 +1163,7 @@ public class RealTfsClient : ITfsClient
                 );
 
                 revisions.Add(revisionDto);
-                
+
                 // Store current revision fields for next iteration comparison
                 if (revision.TryGetProperty("fields", out var fieldsToStore))
                 {
@@ -1175,7 +1175,7 @@ public class RealTfsClient : ITfsClient
                 }
             }
 
-            _logger.LogInformation("Retrieved {Count} revisions for work item {WorkItemId}", 
+            _logger.LogInformation("Retrieved {Count} revisions for work item {WorkItemId}",
                 revisions.Count, workItemId);
             return revisions;
         }, cancellationToken);
@@ -1221,28 +1221,28 @@ public class RealTfsClient : ITfsClient
     /// Git repositories are project-scoped.
     /// </summary>
     private async Task<List<(string Name, string Id)>> GetRepositoriesInternalAsync(
-        TfsConfigEntity config, 
+        TfsConfigEntity config,
         HttpClient httpClient,
-        string? repositoryName, 
+        string? repositoryName,
         CancellationToken cancellationToken)
     {
         // If specific repository requested, resolve it to get the canonical ID
         if (!string.IsNullOrEmpty(repositoryName))
         {
             _logger.LogDebug("Resolving repository name '{RepositoryName}' to canonical ID", repositoryName);
-            
+
             // Call _apis/git/repositories/{repositoryName} to resolve canonical repo id/name
             var repoUrl = ProjectUrl(config, $"_apis/git/repositories/{Uri.EscapeDataString(repositoryName)}");
             var repoResponse = await httpClient.GetAsync(repoUrl, cancellationToken);
-            
+
             if (repoResponse.IsSuccessStatusCode)
             {
                 using var repoStream = await repoResponse.Content.ReadAsStreamAsync(cancellationToken);
                 using var repoDoc = await JsonDocument.ParseAsync(repoStream, cancellationToken: cancellationToken);
-                
+
                 var name = repoDoc.RootElement.TryGetProperty("name", out var n) ? n.GetString() ?? repositoryName : repositoryName;
                 var id = repoDoc.RootElement.TryGetProperty("id", out var i) ? i.GetString() ?? repositoryName : repositoryName;
-                
+
                 _logger.LogInformation("Resolved repository '{Name}' to ID '{Id}'", name, id);
                 return new List<(string Name, string Id)> { (name, id) };
             }
@@ -1269,7 +1269,7 @@ public class RealTfsClient : ITfsClient
             {
                 var name = repo.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
                 var id = repo.TryGetProperty("id", out var i) ? i.GetString() ?? "" : "";
-                
+
                 if (!string.IsNullOrEmpty(name))
                 {
                     repositories.Add((name, id));
@@ -1283,8 +1283,8 @@ public class RealTfsClient : ITfsClient
 
     // Legacy method kept for backward compatibility - forwards to internal implementation
     private async Task<List<(string Name, string Id)>> GetRepositoriesAsync(
-        TfsConfigEntity entity, 
-        string? repositoryName, 
+        TfsConfigEntity entity,
+        string? repositoryName,
         CancellationToken cancellationToken)
     {
         var httpClient = GetAuthenticatedHttpClient();
@@ -1303,7 +1303,7 @@ public class RealTfsClient : ITfsClient
         bool isIdempotent = true)
     {
         int attempt = 0;
-        
+
         while (true)
         {
             try
@@ -1322,11 +1322,11 @@ public class RealTfsClient : ITfsClient
 
                 // Use Retry-After header if provided, otherwise exponential backoff
                 var delay = rateLimitEx.RetryAfter ?? CalculateBackoffDelay(attempt);
-                
+
                 _logger.LogWarning(
                     "TFS rate limit hit (attempt {Attempt}/{MaxRetries}), retrying after {DelayMs}ms",
                     attempt, maxRetries, delay.TotalMilliseconds);
-                
+
                 await Task.Delay(delay, cancellationToken);
             }
             catch (Exception ex) when (isIdempotent && IsTransient(ex) && attempt < maxRetries)
@@ -1334,11 +1334,11 @@ public class RealTfsClient : ITfsClient
                 // Only retry transient errors for idempotent operations
                 attempt++;
                 var delay = CalculateBackoffDelay(attempt);
-                
-                _logger.LogWarning(ex, 
-                    "TFS request failed (attempt {Attempt}/{MaxRetries}), retrying after {DelayMs}ms", 
+
+                _logger.LogWarning(ex,
+                    "TFS request failed (attempt {Attempt}/{MaxRetries}), retrying after {DelayMs}ms",
                     attempt, maxRetries, delay.TotalMilliseconds);
-                
+
                 await Task.Delay(delay, cancellationToken);
             }
         }
@@ -1346,7 +1346,7 @@ public class RealTfsClient : ITfsClient
 
     private bool IsTransient(Exception ex)
     {
-        return ex is TfsRateLimitException 
+        return ex is TfsRateLimitException
             || ex is HttpRequestException
             || (ex is TfsException tfsEx && tfsEx.StatusCode >= 500);
     }
@@ -1365,7 +1365,7 @@ public class RealTfsClient : ITfsClient
             return;
 
         var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-        
+
         var exception = response.StatusCode switch
         {
             HttpStatusCode.Unauthorized => new TfsAuthenticationException(
@@ -1375,7 +1375,7 @@ public class RealTfsClient : ITfsClient
             HttpStatusCode.NotFound => new TfsResourceNotFoundException(
                 "TFS resource not found. Check project name and URL.", errorContent),
             HttpStatusCode.TooManyRequests => new TfsRateLimitException(
-                "TFS rate limit exceeded. Please try again later.", errorContent, 
+                "TFS rate limit exceeded. Please try again later.", errorContent,
                 GetRetryAfter(response)),
             _ when (int)response.StatusCode >= 500 => new TfsException(
                 $"TFS server error: {response.StatusCode}", (int)response.StatusCode, errorContent),
@@ -1435,15 +1435,15 @@ public class RealTfsClient : ITfsClient
             // Work item PATCH is collection-scoped (work item IDs are unique across collection)
             var updateUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}");
             using var content = new StringContent(
-                JsonSerializer.Serialize(patchDocument), 
-                System.Text.Encoding.UTF8, 
+                JsonSerializer.Serialize(patchDocument),
+                System.Text.Encoding.UTF8,
                 "application/json-patch+json");
 
             _logger.LogDebug("Sending PATCH request to update work item {WorkItemId}", workItemId);
-            
+
             // PATCH operations are NOT retried - they are non-idempotent
             var response = await httpClient.PatchAsync(updateUrl, content, timeoutCts.Token);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Successfully updated work item {WorkItemId} to state '{NewState}'", workItemId, newState);
@@ -1452,7 +1452,7 @@ public class RealTfsClient : ITfsClient
             else
             {
                 var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogWarning("Failed to update work item {WorkItemId}. Status: {StatusCode}, Response: {Response}", 
+                _logger.LogWarning("Failed to update work item {WorkItemId}. Status: {StatusCode}, Response: {Response}",
                     workItemId, response.StatusCode, responseBody);
                 return false;
             }
@@ -1503,15 +1503,15 @@ public class RealTfsClient : ITfsClient
             // Work item PATCH is collection-scoped (work item IDs are unique across collection)
             var updateUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}");
             using var content = new StringContent(
-                JsonSerializer.Serialize(patchDocument), 
-                System.Text.Encoding.UTF8, 
+                JsonSerializer.Serialize(patchDocument),
+                System.Text.Encoding.UTF8,
                 "application/json-patch+json");
 
             _logger.LogDebug("Sending PATCH request to update work item {WorkItemId} effort", workItemId);
-            
+
             // PATCH operations are NOT retried - they are non-idempotent
             var response = await httpClient.PatchAsync(updateUrl, content, timeoutCts.Token);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Successfully updated work item {WorkItemId} effort to {Effort}", workItemId, effort);
@@ -1520,7 +1520,7 @@ public class RealTfsClient : ITfsClient
             else
             {
                 var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogWarning("Failed to update work item {WorkItemId} effort. Status: {StatusCode}, Response: {Response}", 
+                _logger.LogWarning("Failed to update work item {WorkItemId} effort. Status: {StatusCode}, Response: {Response}",
                     workItemId, response.StatusCode, responseBody);
                 return false;
             }
@@ -1546,11 +1546,11 @@ public class RealTfsClient : ITfsClient
         ValidateTfsConfiguration(entity);
         var config = entity!; // Non-null after validation
 
-        _logger.LogInformation("Starting TFS API verification. WriteChecks: {IncludeWriteChecks}, WorkItemId: {WorkItemId}", 
+        _logger.LogInformation("Starting TFS API verification. WriteChecks: {IncludeWriteChecks}, WorkItemId: {WorkItemId}",
             includeWriteChecks, workItemIdForWriteCheck);
 
         var checks = new List<TfsCapabilityCheckResult>();
-        
+
         // Run read-only checks
         // Step 1: Server & authentication validation
         checks.Add(await VerifyServerReachabilityAsync(config, cancellationToken));
@@ -1570,7 +1570,7 @@ public class RealTfsClient : ITfsClient
         checks.Add(await VerifyPullRequestsAsync(config, cancellationToken));
         // Step 9: Pipelines (build + release)
         checks.Add(await VerifyPipelinesAsync(config, cancellationToken));
-        
+
         // Run write checks if requested
         if (includeWriteChecks)
         {
@@ -1595,25 +1595,25 @@ public class RealTfsClient : ITfsClient
             Checks = checks
         };
 
-        _logger.LogInformation("TFS verification completed. Success: {Success}, Passed: {Passed}/{Total}", 
+        _logger.LogInformation("TFS verification completed. Success: {Success}, Passed: {Passed}/{Total}",
             report.Success, checks.Count(c => c.Success), checks.Count);
 
         return report;
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyServerReachabilityAsync(
-        TfsConfigEntity config, 
+        TfsConfigEntity config,
         CancellationToken cancellationToken)
     {
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
             var httpClient = GetAuthenticatedHttpClient();
-            
+
             // Collection-scoped endpoint for server reachability
             var url = CollectionUrl(config, "_apis/projects");
             var response = await httpClient.GetAsync(url, cancellationToken);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 return new TfsCapabilityCheckResult
@@ -1625,7 +1625,7 @@ public class RealTfsClient : ITfsClient
                     ObservedBehavior = $"Server reachable, authentication successful (HTTP {(int)response.StatusCode})"
                 };
             }
-            
+
             return CreateFailureResult(
                 "server-reachability",
                 "All TFS integration features",
@@ -1647,25 +1647,25 @@ public class RealTfsClient : ITfsClient
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyProjectAccessAsync(
-        TfsConfigEntity config, 
+        TfsConfigEntity config,
         CancellationToken cancellationToken)
     {
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
             var httpClient = GetAuthenticatedHttpClient();
-            
+
             // Project access check is collection-scoped with project name in path
             var encodedProject = Uri.EscapeDataString(config.Project);
             var url = CollectionUrl(config, $"_apis/projects/{encodedProject}");
             var response = await httpClient.GetAsync(url, cancellationToken);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
                 var projectName = doc.RootElement.GetProperty("name").GetString();
-                
+
                 return new TfsCapabilityCheckResult
                 {
                     CapabilityId = "project-access",
@@ -1675,7 +1675,7 @@ public class RealTfsClient : ITfsClient
                     ObservedBehavior = $"Project found: {projectName}"
                 };
             }
-            
+
             return CreateFailureResult(
                 "project-access",
                 "Work item retrieval, project-specific operations",
@@ -1697,14 +1697,14 @@ public class RealTfsClient : ITfsClient
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyWorkItemQueryAsync(
-        TfsConfigEntity config, 
+        TfsConfigEntity config,
         CancellationToken cancellationToken)
     {
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
             var httpClient = GetAuthenticatedHttpClient();
-            
+
             var wiql = new
             {
                 query = "Select [System.Id] From WorkItems Where [System.WorkItemType] <> ''"
@@ -1713,9 +1713,9 @@ public class RealTfsClient : ITfsClient
             // WIQL is project-scoped (requirement #1)
             var url = ProjectUrl(config, "_apis/wit/wiql");
             using var content = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
-            
+
             var response = await httpClient.PostAsync(url, content, cancellationToken);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 return new TfsCapabilityCheckResult
@@ -1727,7 +1727,7 @@ public class RealTfsClient : ITfsClient
                     ObservedBehavior = "WIQL query executed successfully"
                 };
             }
-            
+
             return CreateFailureResult(
                 "work-item-query",
                 "Work item search and filtering",
@@ -1756,7 +1756,7 @@ public class RealTfsClient : ITfsClient
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
             var httpClient = GetAuthenticatedHttpClient();
-            
+
             // Step 1: Run WIQL query to get a few work items
             var wiql = new
             {
@@ -1765,9 +1765,9 @@ public class RealTfsClient : ITfsClient
 
             var wiqlUrl = ProjectUrl(config, "_apis/wit/wiql");
             using var wiqlContent = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
-            
+
             var wiqlResponse = await httpClient.PostAsync(wiqlUrl, wiqlContent, cancellationToken);
-            
+
             if (!wiqlResponse.IsSuccessStatusCode)
             {
                 return CreateFailureResult(
@@ -1811,8 +1811,8 @@ public class RealTfsClient : ITfsClient
 
             var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
             using var relationsContent = new StringContent(
-                JsonSerializer.Serialize(relationsRequest), 
-                System.Text.Encoding.UTF8, 
+                JsonSerializer.Serialize(relationsRequest),
+                System.Text.Encoding.UTF8,
                 "application/json");
 
             var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
@@ -1843,7 +1843,7 @@ public class RealTfsClient : ITfsClient
                 var itemId = item.GetProperty("id").GetInt32();
                 var parentId = ExtractParentIdFromRelations(item);
                 workItemsWithRelations[itemId] = parentId;
-                
+
                 if (parentId.HasValue)
                 {
                     itemsWithParent++;
@@ -1854,11 +1854,11 @@ public class RealTfsClient : ITfsClient
             foreach (var (itemId, parentId) in workItemsWithRelations)
             {
                 if (!parentId.HasValue) continue;
-                
+
                 var depth = 1;
                 var currentParentId = parentId;
                 var visitedIds = new HashSet<int> { itemId };
-                
+
                 while (currentParentId.HasValue && depth < 10 && !visitedIds.Contains(currentParentId.Value))
                 {
                     visitedIds.Add(currentParentId.Value);
@@ -1872,7 +1872,7 @@ public class RealTfsClient : ITfsClient
                         break;
                     }
                 }
-                
+
                 maxDepthFound = Math.Max(maxDepthFound, depth);
             }
 
@@ -1898,31 +1898,31 @@ public class RealTfsClient : ITfsClient
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyWorkItemFieldsAsync(
-        TfsConfigEntity config, 
+        TfsConfigEntity config,
         CancellationToken cancellationToken)
     {
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
             var httpClient = GetAuthenticatedHttpClient();
-            
+
             // Work item fields are collection-scoped (requirement #1)
             var url = CollectionUrl(config, "_apis/wit/fields");
             var response = await httpClient.GetAsync(url, cancellationToken);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-                
+
                 var fields = doc.RootElement.GetProperty("value").EnumerateArray()
                     .Select(f => f.GetProperty("referenceName").GetString())
                     .ToList();
-                
+
                 // Check for required fields
                 var requiredFields = new[] { "System.Id", "System.Title", "System.State", "System.WorkItemType" };
                 var missingFields = requiredFields.Where(rf => !fields.Contains(rf)).ToList();
-                
+
                 if (missingFields.Any())
                 {
                     return CreateFailureResult(
@@ -1933,7 +1933,7 @@ public class RealTfsClient : ITfsClient
                         FailureCategory.MissingField,
                         $"Found {fields.Count} fields but missing required fields");
                 }
-                
+
                 return new TfsCapabilityCheckResult
                 {
                     CapabilityId = "work-item-fields",
@@ -1943,7 +1943,7 @@ public class RealTfsClient : ITfsClient
                     ObservedBehavior = $"All required fields present ({fields.Count} total fields)"
                 };
             }
-            
+
             return CreateFailureResult(
                 "work-item-fields",
                 "Work item display and processing",
@@ -1965,14 +1965,14 @@ public class RealTfsClient : ITfsClient
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyBatchReadAsync(
-        TfsConfigEntity config, 
+        TfsConfigEntity config,
         CancellationToken cancellationToken)
     {
         try
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
             var httpClient = GetAuthenticatedHttpClient();
-            
+
             // Test Work Items Batch API (POST) which is the recommended approach
             // This is collection-scoped (work item IDs are unique across collection)
             var batchRequest = new WorkItemBatchRequest
@@ -1982,12 +1982,12 @@ public class RealTfsClient : ITfsClient
 
             var url = CollectionUrl(config, "_apis/wit/workitemsbatch");
             using var content = new StringContent(
-                JsonSerializer.Serialize(batchRequest), 
-                System.Text.Encoding.UTF8, 
+                JsonSerializer.Serialize(batchRequest),
+                System.Text.Encoding.UTF8,
                 "application/json");
 
             var response = await httpClient.PostAsync(url, content, cancellationToken);
-            
+
             // We expect 200 (with items) or 404 (no items found), both are acceptable
             if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound)
             {
@@ -2000,7 +2000,7 @@ public class RealTfsClient : ITfsClient
                     ObservedBehavior = "Work Items Batch API endpoint responded successfully"
                 };
             }
-            
+
             return CreateFailureResult(
                 "batch-read",
                 "Efficient work item synchronization",
@@ -2029,11 +2029,11 @@ public class RealTfsClient : ITfsClient
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
             var httpClient = GetAuthenticatedHttpClient();
-            
+
             // Work item revisions are collection-scoped (work item IDs are unique across collection)
             var url = CollectionUrl(config, "_apis/wit/workitems/1/revisions");
             var response = await httpClient.GetAsync(url, cancellationToken);
-            
+
             // We expect either 200 (work item exists with revisions) or 404 (work item doesn't exist)
             // Both indicate the API endpoint is available
             if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound)
@@ -2047,7 +2047,7 @@ public class RealTfsClient : ITfsClient
                     ObservedBehavior = "Revision history endpoint responded successfully"
                 };
             }
-            
+
             return CreateFailureResult(
                 "work-item-revisions",
                 "Work item history and change tracking",
@@ -2076,22 +2076,22 @@ public class RealTfsClient : ITfsClient
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
             var httpClient = GetAuthenticatedHttpClient();
-            
+
             // Git repositories are project-scoped (requirement #1)
             var url = ProjectUrl(config, "_apis/git/repositories");
             var response = await httpClient.GetAsync(url, cancellationToken);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-                
+
                 var repoCount = 0;
                 if (doc.RootElement.TryGetProperty("value", out var repos))
                 {
                     repoCount = repos.GetArrayLength();
                 }
-                
+
                 return new TfsCapabilityCheckResult
                 {
                     CapabilityId = "pull-requests",
@@ -2101,7 +2101,7 @@ public class RealTfsClient : ITfsClient
                     ObservedBehavior = $"Git repositories API accessible ({repoCount} repositories found)"
                 };
             }
-            
+
             return CreateFailureResult(
                 "pull-requests",
                 "Pull request retrieval and analysis",
@@ -2130,7 +2130,7 @@ public class RealTfsClient : ITfsClient
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
             var httpClient = GetAuthenticatedHttpClient();
-            
+
             var buildDefinitionsFound = 0;
             var buildRunsFound = 0;
             var releaseDefinitionsFound = 0;
@@ -2140,12 +2140,12 @@ public class RealTfsClient : ITfsClient
             // Step 1: Verify build definitions API
             var buildDefsUrl = ProjectUrl(config, "_apis/build/definitions");
             var buildDefsResponse = await httpClient.GetAsync(buildDefsUrl, cancellationToken);
-            
+
             if (buildDefsResponse.IsSuccessStatusCode)
             {
                 using var stream = await buildDefsResponse.Content.ReadAsStreamAsync(cancellationToken);
                 using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-                
+
                 if (doc.RootElement.TryGetProperty("value", out var defs))
                 {
                     buildDefinitionsFound = defs.GetArrayLength();
@@ -2167,12 +2167,12 @@ public class RealTfsClient : ITfsClient
             {
                 var buildRunsUrl = ProjectUrl(config, "_apis/build/builds?$top=5");
                 var buildRunsResponse = await httpClient.GetAsync(buildRunsUrl, cancellationToken);
-                
+
                 if (buildRunsResponse.IsSuccessStatusCode)
                 {
                     using var stream = await buildRunsResponse.Content.ReadAsStreamAsync(cancellationToken);
                     using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-                    
+
                     if (doc.RootElement.TryGetProperty("value", out var runs))
                     {
                         buildRunsFound = runs.GetArrayLength();
@@ -2185,13 +2185,13 @@ public class RealTfsClient : ITfsClient
             {
                 var releaseDefsUrl = ProjectUrl(config, "_apis/release/definitions");
                 var releaseDefsResponse = await httpClient.GetAsync(releaseDefsUrl, cancellationToken);
-                
+
                 if (releaseDefsResponse.IsSuccessStatusCode)
                 {
                     releaseApiAvailable = true;
                     using var stream = await releaseDefsResponse.Content.ReadAsStreamAsync(cancellationToken);
                     using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-                    
+
                     if (doc.RootElement.TryGetProperty("value", out var defs))
                     {
                         releaseDefinitionsFound = defs.GetArrayLength();
@@ -2255,13 +2255,13 @@ public class RealTfsClient : ITfsClient
         {
             // Use auth-mode-specific HttpClient (requirement #2, #8)
             var httpClient = GetAuthenticatedHttpClient();
-            
+
             _logger.LogInformation("Verifying work item update capability using work item {WorkItemId}", workItemId);
-            
+
             // Work item GET is collection-scoped (work item IDs are unique across collection)
             var getUrl = CollectionUrl(config, $"_apis/wit/workitems/{workItemId}");
             var getResponse = await httpClient.GetAsync(getUrl, cancellationToken);
-            
+
             if (!getResponse.IsSuccessStatusCode)
             {
                 return CreateFailureResult(
@@ -2292,12 +2292,12 @@ public class RealTfsClient : ITfsClient
             // Work item PATCH is collection-scoped
             var updateUrl = CollectionUrl(config, $"_apis/wit/workitems/{workItemId}");
             using var addContent = new StringContent(
-                JsonSerializer.Serialize(addTagPatch), 
-                System.Text.Encoding.UTF8, 
+                JsonSerializer.Serialize(addTagPatch),
+                System.Text.Encoding.UTF8,
                 "application/json-patch+json");
 
             var addResponse = await httpClient.PatchAsync(updateUrl, addContent, cancellationToken);
-            
+
             if (!addResponse.IsSuccessStatusCode)
             {
                 return CreateFailureResult(
@@ -2316,7 +2316,7 @@ public class RealTfsClient : ITfsClient
             // Get current tags to construct remove operation
             using var addResponseStream = await addResponse.Content.ReadAsStreamAsync(cancellationToken);
             using var addDoc = await JsonDocument.ParseAsync(addResponseStream, cancellationToken: cancellationToken);
-            
+
             var currentTags = "";
             if (addDoc.RootElement.TryGetProperty("fields", out var fields) &&
                 fields.TryGetProperty("System.Tags", out var tagsElement))
@@ -2325,7 +2325,7 @@ public class RealTfsClient : ITfsClient
             }
 
             // Remove the verification tag
-            var tagsWithoutVerification = string.Join("; ", 
+            var tagsWithoutVerification = string.Join("; ",
                 currentTags.Split(new[] { "; " }, StringSplitOptions.RemoveEmptyEntries)
                     .Where(t => t != verificationTag));
 
@@ -2340,14 +2340,14 @@ public class RealTfsClient : ITfsClient
             };
 
             using var removeContent = new StringContent(
-                JsonSerializer.Serialize(removeTagPatch), 
-                System.Text.Encoding.UTF8, 
+                JsonSerializer.Serialize(removeTagPatch),
+                System.Text.Encoding.UTF8,
                 "application/json-patch+json");
 
             var removeResponse = await httpClient.PatchAsync(updateUrl, removeContent, cancellationToken);
-            
+
             var cleanupSuccess = removeResponse.IsSuccessStatusCode;
-            
+
             return new TfsCapabilityCheckResult
             {
                 CapabilityId = "work-item-update",
@@ -2387,7 +2387,7 @@ public class RealTfsClient : ITfsClient
         CleanupStatus? cleanupStatus = null)
     {
         var (causes, guidance) = GetFailureGuidance(failureCategory, rawEvidence);
-        
+
         return new TfsCapabilityCheckResult
         {
             CapabilityId = capabilityId,
@@ -2420,84 +2420,84 @@ public class RealTfsClient : ITfsClient
     }
 
     private (List<string> Causes, List<string> Guidance) GetFailureGuidance(
-        FailureCategory category, 
+        FailureCategory category,
         string rawEvidence)
     {
         return category switch
         {
             FailureCategory.Authentication => (
-                new List<string> 
-                { 
+                new List<string>
+                {
                     "Windows authentication (NTLM) failed",
                     "TFS server does not have Windows authentication enabled",
                     "Current Windows user does not have access to the TFS server",
                     "Network connectivity issue preventing authentication"
                 },
-                new List<string> 
-                { 
+                new List<string>
+                {
                     "Verify TFS server has Windows authentication enabled",
                     "Confirm your Windows account has access to the TFS project",
                     "Check if you can access the TFS server URL in a web browser",
                     "Contact TFS administrator to grant your Windows account access"
                 }),
-            
+
             FailureCategory.Authorization => (
-                new List<string> 
-                { 
+                new List<string>
+                {
                     "Insufficient permissions for the operation",
                     "Project does not exist or user has no access",
                     "Area Path or Iteration Path access is restricted"
                 },
-                new List<string> 
-                { 
+                new List<string>
+                {
                     "Verify project name is correct",
                     "Check that your Windows account has appropriate permissions in TFS",
                     "Contact project administrator to grant access to required areas"
                 }),
-            
+
             FailureCategory.EndpointUnavailable => (
-                new List<string> 
-                { 
+                new List<string>
+                {
                     "TFS server is unreachable",
                     "Network connectivity issue",
                     "Server URL is incorrect",
                     "API endpoint not supported by server version"
                 },
-                new List<string> 
-                { 
+                new List<string>
+                {
                     "Verify server URL is correct and accessible",
                     "Check network connectivity and firewall settings",
                     "Confirm TFS/Azure DevOps Server version is 2019 or later (API 5.1+)",
                     "Try increasing timeout settings"
                 }),
-            
+
             FailureCategory.MissingField => (
-                new List<string> 
-                { 
+                new List<string>
+                {
                     "Process template does not include required field",
                     "Custom field configuration is incompatible",
                     "Work item type does not support the field"
                 },
-                new List<string> 
-                { 
+                new List<string>
+                {
                     "Verify process template includes required fields",
                     "Check if custom fields are properly configured",
                     "Review work item type definitions"
                 }),
-            
+
             FailureCategory.RateLimit => (
-                new List<string> 
-                { 
+                new List<string>
+                {
                     "Too many requests in short time period",
                     "Server throttling active"
                 },
-                new List<string> 
-                { 
+                new List<string>
+                {
                     "Wait a few minutes before retrying",
                     "Reduce sync frequency",
                     "Contact administrator about rate limit increases"
                 }),
-            
+
             _ => (
                 new List<string> { "Unexpected error occurred" },
                 new List<string> { "Review error details", "Contact support if issue persists" })
@@ -2519,7 +2519,7 @@ public class RealTfsClient : ITfsClient
         const int maxLength = 500;
         if (evidence.Length <= maxLength)
             return evidence;
-        
+
         return evidence.Substring(0, maxLength) + "... (truncated)";
     }
 
@@ -2542,17 +2542,17 @@ public class RealTfsClient : ITfsClient
         }
 
         var missingFields = new List<string>();
-        
+
         if (string.IsNullOrWhiteSpace(entity.Url))
         {
             missingFields.Add("Url");
         }
-        
+
         if (string.IsNullOrWhiteSpace(entity.Project))
         {
             missingFields.Add("Project");
         }
-        
+
         if (string.IsNullOrWhiteSpace(entity.DefaultAreaPath))
         {
             missingFields.Add("DefaultAreaPath");
@@ -2560,7 +2560,7 @@ public class RealTfsClient : ITfsClient
 
         if (missingFields.Count > 0)
         {
-            _logger.LogError("TFS configuration is incomplete. Missing fields: {MissingFields}", 
+            _logger.LogError("TFS configuration is incomplete. Missing fields: {MissingFields}",
                 string.Join(", ", missingFields));
             throw new TfsConfigurationException(
                 $"TFS configuration is incomplete. Missing required fields: {string.Join(", ", missingFields)}. " +
@@ -2629,7 +2629,7 @@ public class RealTfsClient : ITfsClient
         }
 
         var prResults = await Task.WhenAll(prTasks);
-        
+
         // Aggregate results and count calls
         foreach (var prResult in prResults)
         {
@@ -2661,7 +2661,7 @@ public class RealTfsClient : ITfsClient
 
         var fileChangeResults = await Task.WhenAll(fileChangeTasks);
         tfsCallCount += fileChangeResults.Length;
-        
+
         foreach (var fileChanges in fileChangeResults)
         {
             lock (allFileChanges)
@@ -2694,9 +2694,9 @@ public class RealTfsClient : ITfsClient
         // Fetch iterations and comments concurrently
         var iterationsTask = GetPullRequestIterationsAsync(prId, repo, cancellationToken);
         var commentsTask = GetPullRequestCommentsAsync(prId, repo, cancellationToken);
-        
+
         await Task.WhenAll(iterationsTask, commentsTask);
-        
+
         return (iterationsTask.Result.ToList(), commentsTask.Result.ToList(), prId, repo);
     }
 
@@ -2711,7 +2711,7 @@ public class RealTfsClient : ITfsClient
     {
         var updatesList = updates.ToList();
         var tfsCallCount = 0;
-        
+
         _logger.LogInformation("Starting bulk effort update for {Count} work items", updatesList.Count);
 
         var results = new List<BulkUpdateItemResult>();
@@ -2734,8 +2734,8 @@ public class RealTfsClient : ITfsClient
                     () => UpdateWorkItemEffortAsync(update.WorkItemId, update.EffortValue, cancellationToken),
                     cancellationToken);
                 Interlocked.Increment(ref tfsCallCount);
-                
-                return new BulkUpdateItemResult(update.WorkItemId, success, 
+
+                return new BulkUpdateItemResult(update.WorkItemId, success,
                     success ? null : $"TFS update failed for work item {update.WorkItemId}");
             }
             catch (Exception ex)
@@ -2772,7 +2772,7 @@ public class RealTfsClient : ITfsClient
     {
         var updatesList = updates.ToList();
         var tfsCallCount = 0;
-        
+
         _logger.LogInformation("Starting bulk state update for {Count} work items", updatesList.Count);
 
         var results = new List<BulkUpdateItemResult>();
@@ -2789,8 +2789,8 @@ public class RealTfsClient : ITfsClient
                     () => UpdateWorkItemStateAsync(update.WorkItemId, update.NewState, cancellationToken),
                     cancellationToken);
                 Interlocked.Increment(ref tfsCallCount);
-                
-                return new BulkUpdateItemResult(update.WorkItemId, success, 
+
+                return new BulkUpdateItemResult(update.WorkItemId, success,
                     success ? null : $"TFS update failed for work item {update.WorkItemId}");
             }
             catch (Exception ex)
@@ -2827,7 +2827,7 @@ public class RealTfsClient : ITfsClient
     {
         var idsList = workItemIds.ToList();
         var tfsCallCount = 0;
-        
+
         _logger.LogInformation("Starting bulk revision fetch for {Count} work items", idsList.Count);
 
         var results = new Dictionary<int, IEnumerable<WorkItemRevisionDto>>();
@@ -2843,7 +2843,7 @@ public class RealTfsClient : ITfsClient
                     () => GetWorkItemRevisionsAsync(workItemId, cancellationToken),
                     cancellationToken);
                 Interlocked.Increment(ref tfsCallCount);
-                
+
                 lock (lockObj)
                 {
                     results[workItemId] = revisions;
@@ -3019,7 +3019,7 @@ public class RealTfsClient : ITfsClient
             // Step 1: GET the child work item with $expand=relations to find existing parent
             var getUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}?$expand=relations");
             var getResponse = await httpClient.GetAsync(getUrl, timeoutCts.Token);
-            
+
             if (!getResponse.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Failed to get work item {WorkItemId} for parent update. Status: {StatusCode}",
@@ -3032,16 +3032,16 @@ public class RealTfsClient : ITfsClient
 
             // Step 2: Find and remove existing parent relations
             var patchOperations = new List<object>();
-            
+
             if (getDoc.RootElement.TryGetProperty("relations", out var relations))
             {
                 var relationsList = relations.EnumerateArray().ToList();
-                
+
                 // Find all parent relations (System.LinkTypes.Hierarchy-Reverse)
                 for (int i = 0; i < relationsList.Count; i++)
                 {
                     var relation = relationsList[i];
-                    if (relation.TryGetProperty("rel", out var rel) && 
+                    if (relation.TryGetProperty("rel", out var rel) &&
                         rel.GetString() == "System.LinkTypes.Hierarchy-Reverse")
                     {
                         // Remove existing parent relation by index
@@ -3050,8 +3050,8 @@ public class RealTfsClient : ITfsClient
                             op = "remove",
                             path = $"/relations/{i}"
                         });
-                        
-                        _logger.LogDebug("Removing existing parent relation at index {Index} for work item {WorkItemId}", 
+
+                        _logger.LogDebug("Removing existing parent relation at index {Index} for work item {WorkItemId}",
                             i, workItemId);
                     }
                 }
@@ -3077,7 +3077,7 @@ public class RealTfsClient : ITfsClient
                 System.Text.Encoding.UTF8,
                 "application/json-patch+json");
 
-            _logger.LogDebug("Sending PATCH request to update work item {WorkItemId} parent with {OpCount} operations", 
+            _logger.LogDebug("Sending PATCH request to update work item {WorkItemId} parent with {OpCount} operations",
                 workItemId, patchOperations.Count);
 
             // PATCH operations are NOT retried - they are non-idempotent
@@ -3104,7 +3104,7 @@ public class RealTfsClient : ITfsClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating work item {WorkItemId} parent to {NewParentId}", 
+            _logger.LogError(ex, "Error updating work item {WorkItemId} parent to {NewParentId}",
                 workItemId, newParentId);
             return false;
         }
@@ -3129,7 +3129,7 @@ public class RealTfsClient : ITfsClient
             // Build definitions are project-scoped (requirement #1)
             var buildUrl = ProjectUrl(config, "_apis/build/definitions");
             var buildResponse = await httpClient.GetAsync(buildUrl, cancellationToken);
-            
+
             var pipelines = new List<PipelineDto>();
 
             if (buildResponse.IsSuccessStatusCode)
@@ -3300,7 +3300,7 @@ public class RealTfsClient : ITfsClient
                 () => GetPipelineRunsAsync(pipeline.Id, runsPerPipeline, cancellationToken),
                 cancellationToken);
             Interlocked.Increment(ref tfsCallCount);
-            
+
             lock (lockObj)
             {
                 allRuns.AddRange(runs);
@@ -3343,8 +3343,8 @@ public class RealTfsClient : ITfsClient
             finishTime = ft.GetDateTimeOffset();
         }
 
-        var duration = (startTime.HasValue && finishTime.HasValue) 
-            ? (TimeSpan?)(finishTime.Value - startTime.Value) 
+        var duration = (startTime.HasValue && finishTime.HasValue)
+            ? (TimeSpan?)(finishTime.Value - startTime.Value)
             : null;
 
         var resultStr = run.TryGetProperty("result", out var r) ? r.GetString() ?? "" : "";
@@ -3354,7 +3354,7 @@ public class RealTfsClient : ITfsClient
         var trigger = ParseBuildTrigger(reasonStr);
 
         var branch = run.TryGetProperty("sourceBranch", out var b) ? b.GetString() : null;
-        
+
         var requestedFor = "";
         if (run.TryGetProperty("requestedFor", out var req))
         {
@@ -3398,8 +3398,8 @@ public class RealTfsClient : ITfsClient
             finishTime = ft.GetDateTimeOffset();
         }
 
-        var duration = (startTime.HasValue && finishTime.HasValue) 
-            ? (TimeSpan?)(finishTime.Value - startTime.Value) 
+        var duration = (startTime.HasValue && finishTime.HasValue)
+            ? (TimeSpan?)(finishTime.Value - startTime.Value)
             : null;
 
         var statusStr = run.TryGetProperty("status", out var s) ? s.GetString() ?? "" : "";

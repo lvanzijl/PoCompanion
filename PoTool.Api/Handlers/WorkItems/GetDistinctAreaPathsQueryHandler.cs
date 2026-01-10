@@ -26,17 +26,17 @@ public sealed class GetDistinctAreaPathsQueryHandler : IQueryHandler<GetDistinct
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetDistinctAreaPathsQuery");
-        
+
         var workItems = await _repository.GetAllAsync(cancellationToken);
-        
+
         var distinctAreaPaths = workItems
             .Select(wi => wi.AreaPath)
             .Distinct()
             .OrderBy(ap => ap)
             .ToList();
-        
+
         _logger.LogDebug("Found {Count} distinct area paths", distinctAreaPaths.Count);
-        
+
         return distinctAreaPaths;
     }
 }

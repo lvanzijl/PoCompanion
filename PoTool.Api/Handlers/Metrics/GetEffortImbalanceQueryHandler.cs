@@ -10,7 +10,7 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetEffortImbalanceQuery.
 /// Detects disproportionate effort allocations across teams and sprints.
 /// </summary>
-public sealed class GetEffortImbalanceQueryHandler 
+public sealed class GetEffortImbalanceQueryHandler
     : IQueryHandler<GetEffortImbalanceQuery, EffortImbalanceDto>
 {
     private readonly IWorkItemRepository _repository;
@@ -29,12 +29,12 @@ public sealed class GetEffortImbalanceQueryHandler
         CancellationToken cancellationToken)
     {
         _logger.LogDebug(
-            "Handling GetEffortImbalanceQuery with AreaPathFilter: {AreaPathFilter}, Threshold: {Threshold}", 
-            query.AreaPathFilter ?? "All", 
+            "Handling GetEffortImbalanceQuery with AreaPathFilter: {AreaPathFilter}, Threshold: {Threshold}",
+            query.AreaPathFilter ?? "All",
             query.ImbalanceThreshold);
 
         var allWorkItems = await _repository.GetAllAsync(cancellationToken);
-        
+
         // Filter by area path if specified
         if (!string.IsNullOrWhiteSpace(query.AreaPathFilter))
         {
@@ -79,14 +79,14 @@ public sealed class GetEffortImbalanceQueryHandler
 
         // Analyze team imbalances
         var teamImbalances = AnalyzeTeamImbalances(
-            workItemsWithEffort, 
-            topAreaPaths, 
+            workItemsWithEffort,
+            topAreaPaths,
             query.ImbalanceThreshold);
 
         // Analyze sprint imbalances
         var sprintImbalances = AnalyzeSprintImbalances(
-            workItemsWithEffort, 
-            iterationPaths, 
+            workItemsWithEffort,
+            iterationPaths,
             query.ImbalanceThreshold,
             query.DefaultCapacityPerIteration);
 
@@ -169,9 +169,9 @@ public sealed class GetEffortImbalanceQueryHandler
                 var deviation = Math.Abs(e.TotalEffort - averageEffort) / (averageEffort > 0 ? averageEffort : 1);
                 var riskLevel = DetermineImbalanceRisk(deviation, threshold);
                 var description = GenerateSprintImbalanceDescription(
-                    e.TotalEffort, 
-                    averageEffort, 
-                    deviation, 
+                    e.TotalEffort,
+                    averageEffort,
+                    deviation,
                     defaultCapacity);
 
                 return new SprintImbalance(
@@ -217,7 +217,7 @@ public sealed class GetEffortImbalanceQueryHandler
 
         var maxDeviation = allDeviations.Max() / 100.0;
         var avgDeviation = allDeviations.Average() / 100.0;
-        
+
         // Imbalance score: weighted average of max and mean deviation
         var imbalanceScore = (maxDeviation * 0.6 + avgDeviation * 0.4) * 100;
 

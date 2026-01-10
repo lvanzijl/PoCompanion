@@ -9,7 +9,7 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// Handler for GetWorkItemStateTimelineQuery.
 /// Analyzes work item revisions to build a state transition timeline and identify bottlenecks.
 /// </summary>
-public sealed class GetWorkItemStateTimelineQueryHandler 
+public sealed class GetWorkItemStateTimelineQueryHandler
     : IQueryHandler<GetWorkItemStateTimelineQuery, WorkItemStateTimelineDto?>
 {
     private readonly IWorkItemRepository _repository;
@@ -103,7 +103,7 @@ public sealed class GetWorkItemStateTimelineQueryHandler
             if (previousState != currentState)
             {
                 var timeInPreviousState = current.ChangedDate - previous.ChangedDate;
-                
+
                 history.Add(new StateTransition(
                     FromState: previousState,
                     ToState: currentState,

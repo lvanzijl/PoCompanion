@@ -104,13 +104,13 @@ public class WorkItemSyncHubService : IWorkItemSyncHubService, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _isDisposed = true;
-        
+
         if (_hubConnection != null)
         {
             await _hubConnection.DisposeAsync();
             _hubConnection = null;
         }
-        
+
         _connectionLock.Dispose();
     }
 

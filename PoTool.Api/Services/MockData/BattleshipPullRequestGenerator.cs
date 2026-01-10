@@ -23,10 +23,10 @@ public class BattleshipPullRequestGenerator
     {
         var pullRequests = new List<PullRequestDto>();
         var now = DateTimeOffset.UtcNow;
-        
+
         // Generate 100-200 PRs (target ~150)
         var prCount = 150;
-        
+
         var developers = GetDevelopers();
         var repositories = new[] { "Battleship-Incident-Backend", "Battleship-Web-UI", "Battleship-Mobile-App", "Battleship-Sensor-Integration" };
         var quarters = new[] { "Q1", "Q2", "Q3", "Q4" };
@@ -38,7 +38,7 @@ public class BattleshipPullRequestGenerator
             var developer = developers[_random.Next(developers.Length)];
             var quarter = quarters[i / 40]; // Distribute across quarters
             var sprint = _random.Next(1, 101); // Sprints 1-100
-            
+
             var createdDate = now.AddDays(-_random.Next(1, 365));
             var status = GetPrStatus();
             DateTimeOffset? completedDate = status == "completed" ? createdDate.AddDays(_random.Next(1, 15)) : null;
@@ -159,11 +159,11 @@ public class BattleshipPullRequestGenerator
         foreach (var pr in pullRequests)
         {
             var iterationCount = _random.Next(1, 6);
-            
+
             for (var iteration = 1; iteration <= iterationCount; iteration++)
             {
                 var fileCount = _random.Next(1, 51);
-                
+
                 for (var f = 0; f < fileCount; f++)
                 {
                     var fileName = GetFileName(pr.RepositoryName, f);
@@ -173,7 +173,7 @@ public class BattleshipPullRequestGenerator
                         < 0.80 => "add",
                         _ => "delete"
                     };
-                    
+
                     var linesAdded = changeType == "delete" ? 0 : _random.Next(5, 200);
                     var linesDeleted = changeType == "add" ? 0 : _random.Next(0, 150);
                     var linesModified = changeType == "edit" ? _random.Next(5, 100) : 0;
@@ -341,7 +341,7 @@ public class BattleshipPullRequestGenerator
             "Add inter-department messaging",
             "Fix incident log corruption issue"
         };
-        
+
         return titles[index % titles.Length];
     }
 

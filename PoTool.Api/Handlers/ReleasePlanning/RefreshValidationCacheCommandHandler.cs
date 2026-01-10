@@ -40,7 +40,7 @@ public sealed class RefreshValidationCacheCommandHandler : ICommandHandler<Refre
 
             // Get all placed Epic IDs
             var placedEpicIds = await _repository.GetPlacedEpicIdsAsync(cancellationToken);
-            
+
             int errorCount = 0;
             int warningCount = 0;
 
@@ -73,13 +73,13 @@ public sealed class RefreshValidationCacheCommandHandler : ICommandHandler<Refre
     }
 
     private async Task<ValidationIndicator> ComputeValidationIndicatorAsync(
-        int epicId, 
+        int epicId,
         CancellationToken cancellationToken)
     {
         // Get the Epic and its descendants
         var allWorkItems = await _workItemRepository.GetAllAsync(cancellationToken);
         var epic = allWorkItems.FirstOrDefault(w => w.TfsId == epicId);
-        
+
         if (epic == null)
         {
             return ValidationIndicator.Error;
@@ -87,7 +87,7 @@ public sealed class RefreshValidationCacheCommandHandler : ICommandHandler<Refre
 
         // Find all descendants of this Epic
         var descendants = GetDescendants(epicId, allWorkItems.ToList());
-        
+
         bool hasError = false;
         bool hasWarning = false;
 
@@ -102,12 +102,12 @@ public sealed class RefreshValidationCacheCommandHandler : ICommandHandler<Refre
         // 2. Epic is Active but has no active work
         if (epic.State.Equals("Active", StringComparison.OrdinalIgnoreCase))
         {
-            var activeDescendants = descendants.Where(d => 
+            var activeDescendants = descendants.Where(d =>
                 d.State.Equals("Active", StringComparison.OrdinalIgnoreCase) ||
                 d.State.Equals("In Progress", StringComparison.OrdinalIgnoreCase) ||
                 d.State.Equals("Committed", StringComparison.OrdinalIgnoreCase))
                 .ToList();
-            
+
             if (activeDescendants.Count == 0 && descendants.Count > 0)
             {
                 hasWarning = true;
@@ -142,12 +142,12 @@ public sealed class RefreshValidationCacheCommandHandler : ICommandHandler<Refre
     }
 
     private static List<WorkItemDto> GetDescendants(
-        int parentId, 
+        int parentId,
         List<WorkItemDto> allItems)
     {
         var descendants = new List<WorkItemDto>();
         var children = allItems.Where(w => w.ParentTfsId == parentId).ToList();
-        
+
         foreach (var child in children)
         {
             descendants.Add(child);

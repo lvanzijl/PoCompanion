@@ -61,6 +61,15 @@
                 }
             </CompactSelect>
 
+            @if (HasAreaPathMismatch())
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    <MudText Typo="Typo.caption">
+                        Note: Some linked teams have area paths outside this product's area path scope.
+                    </MudText>
+                </MudAlert>
+            }
+
             @* Picture Selector *@
             <div class="mt-2">
                 <PicturePicker Title="Product Picture" 
@@ -257,5 +266,27 @@
     private void ClearError()
     {
         _errorResponse = null;
+    }
+
+    private bool HasAreaPathMismatch()
+    {
+        if (string.IsNullOrWhiteSpace(_productAreaPath) || !_selectedTeamIds.Any())
+        {
+            return false;
+        }
+
+        // Check if any selected team's area path is not under the product's area path
+        var selectedTeams = _availableTeams.Where(t => _selectedTeamIds.Contains(t.Id));
+        foreach (var team in selectedTeams)
+        {
+            // Team area path should be same as or under product area path
+            if (!team.TeamAreaPath.StartsWith(_productAreaPath, StringComparison.OrdinalIgnoreCase) &&
+                !_productAreaPath.StartsWith(team.TeamAreaPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

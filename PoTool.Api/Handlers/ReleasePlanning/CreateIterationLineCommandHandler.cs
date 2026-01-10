@@ -37,8 +37,8 @@ public sealed class CreateIterationLineCommandHandler : ICommandHandler<CreateIt
         }
 
         var lineId = await _repository.CreateIterationLineAsync(
-            command.Label, 
-            command.VerticalPosition, 
+            command.Label,
+            command.VerticalPosition,
             cancellationToken);
 
         return new LineOperationResultDto

@@ -58,7 +58,7 @@ public class TfsConfigurationService
     /// Authentication uses Windows credentials (NTLM) - always enabled.
     /// </summary>
     public async Task SaveConfigAsync(
-        string url, 
+        string url,
         string project,
         string defaultAreaPath,
         bool useDefaultCredentials = true,
@@ -69,7 +69,7 @@ public class TfsConfigurationService
         // Use ToListAsync then LINQ to Objects for DateTimeOffset ordering (SQLite compatibility)
         var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
         var existing = entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
-        
+
         if (existing == null)
         {
             existing = new TfsConfigEntity

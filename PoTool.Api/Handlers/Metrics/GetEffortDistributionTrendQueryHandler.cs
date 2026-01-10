@@ -10,7 +10,7 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetEffortDistributionTrendQuery.
 /// Analyzes how effort distribution changes over time and forecasts future trends.
 /// </summary>
-public sealed class GetEffortDistributionTrendQueryHandler 
+public sealed class GetEffortDistributionTrendQueryHandler
     : IQueryHandler<GetEffortDistributionTrendQuery, EffortDistributionTrendDto>
 {
     private readonly IWorkItemRepository _repository;
@@ -29,12 +29,12 @@ public sealed class GetEffortDistributionTrendQueryHandler
         CancellationToken cancellationToken)
     {
         _logger.LogDebug(
-            "Handling GetEffortDistributionTrendQuery with AreaPathFilter: {AreaPathFilter}, MaxIterations: {MaxIterations}", 
-            query.AreaPathFilter ?? "All", 
+            "Handling GetEffortDistributionTrendQuery with AreaPathFilter: {AreaPathFilter}, MaxIterations: {MaxIterations}",
+            query.AreaPathFilter ?? "All",
             query.MaxIterations);
 
         var allWorkItems = await _repository.GetAllAsync(cancellationToken);
-        
+
         // Filter by area path if specified
         if (!string.IsNullOrWhiteSpace(query.AreaPathFilter))
         {
@@ -81,8 +81,8 @@ public sealed class GetEffortDistributionTrendQueryHandler
 
         // Analyze sprint trends
         var sprintTrends = AnalyzeSprintTrends(
-            workItemsWithEffort, 
-            iterationPaths, 
+            workItemsWithEffort,
+            iterationPaths,
             query.DefaultCapacityPerIteration);
 
         // Analyze area path trends
@@ -215,7 +215,7 @@ public sealed class GetEffortDistributionTrendQueryHandler
         {
             // Linear projection with trend - use forecast position (i), not cumulative sprint count
             var forecastedEffort = (int)(avgEffort + slope * i);
-            
+
             // Confidence interval (assuming 95% confidence ~ 2 standard deviations)
             var confidenceMargin = (int)(2 * stdDev);
             var lowEstimate = Math.Max(0, forecastedEffort - confidenceMargin);

@@ -52,7 +52,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
     {
         // Arrange
         var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        
+
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -84,7 +84,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
         var child1 = CreateWorkItem(2, "PBI", "Done", "TestArea", "Sprint 1", 1, 5);
         var child2 = CreateWorkItem(3, "PBI", "In Progress", "TestArea", "Sprint 2", 1, 8);
         var child3 = CreateWorkItem(4, "PBI", "New", "TestArea", "Sprint 3", 1, 13);
-        
+
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -117,7 +117,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
         var pbi1 = CreateWorkItem(3, "PBI", "Done", "TestArea", "Sprint 1", 2, 5);
         var pbi2 = CreateWorkItem(4, "PBI", "In Progress", "TestArea", "Sprint 2", 2, 8);
         var task = CreateWorkItem(5, "Task", "Done", "TestArea", "Sprint 1", 3, 2);
-        
+
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -145,7 +145,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
         // Arrange
         var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
         var child = CreateWorkItem(2, "PBI", "New", "TestArea", "Sprint 1", 1, 20);
-        
+
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -174,7 +174,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
         var child1 = CreateWorkItem(2, "PBI", "Done", "TestArea", "Sprint 1", 1, 5);
         var child2 = CreateWorkItem(3, "PBI", "New", "TestArea", "Sprint 2", 1, null);
         var child3 = CreateWorkItem(4, "PBI", "New", "TestArea", "Sprint 3", 1, 10);
-        
+
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -203,7 +203,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
         var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
         var child1 = CreateWorkItem(2, "PBI", "Done", "TestArea", "Sprint 1", 1, 5);
         var child2 = CreateWorkItem(3, "PBI", "Closed", "TestArea", "Sprint 2", 1, 8);
-        
+
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -232,7 +232,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
         // Arrange
         var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
         var child = CreateWorkItem(2, "PBI", "New", "TestArea", "Sprint 1", 1, 10);
-        
+
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -258,7 +258,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
         // Arrange
         var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
         var child = CreateWorkItem(2, "PBI", "New", "TestArea", "Sprint 1", 1, 10);
-        
+
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -284,7 +284,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
         // Arrange
         var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
         var child = CreateWorkItem(2, "PBI", "New", "TestArea", "Sprint 1", 1, 10);
-        
+
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -314,7 +314,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
         var child3 = CreateWorkItem(4, "PBI", "Completed", "TestArea", "Sprint 1", 1, 3);
         var child4 = CreateWorkItem(5, "PBI", "Removed", "TestArea", "Sprint 1", 1, 2);
         var child5 = CreateWorkItem(6, "PBI", "In Progress", "TestArea", "Sprint 1", 1, 10);
-        
+
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))

@@ -27,7 +27,7 @@ public class DevWorkItemRepository : IWorkItemRepository
     public Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter, CancellationToken cancellationToken = default)
     {
         var items = _mockDataFacade.GetMockHierarchy();
-        
+
         if (string.IsNullOrWhiteSpace(filter))
             return Task.FromResult(items.AsEnumerable());
 
@@ -39,13 +39,13 @@ public class DevWorkItemRepository : IWorkItemRepository
     public Task<IEnumerable<WorkItemDto>> GetByAreaPathsAsync(List<string> areaPaths, CancellationToken cancellationToken = default)
     {
         var items = _mockDataFacade.GetMockHierarchy();
-        
+
         if (areaPaths == null || areaPaths.Count == 0)
             return Task.FromResult(items.AsEnumerable());
 
         // Filter using hierarchical area path matching
-        var filtered = items.Where(item => 
-            areaPaths.Any(profilePath => 
+        var filtered = items.Where(item =>
+            areaPaths.Any(profilePath =>
                 item.AreaPath.Equals(profilePath, StringComparison.OrdinalIgnoreCase) ||
                 item.AreaPath.StartsWith(profilePath + "\\", StringComparison.OrdinalIgnoreCase)));
 

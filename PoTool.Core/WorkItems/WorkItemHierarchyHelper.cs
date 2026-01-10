@@ -17,12 +17,12 @@ public static class WorkItemHierarchyHelper
     {
         var itemsList = allItems as List<WorkItemDto> ?? allItems.ToList();
         var item = itemsList.FirstOrDefault(i => i.TfsId == itemId);
-        
+
         if (item == null) return;
 
         result.Add(itemId);
         var children = itemsList.Where(i => i.ParentTfsId == itemId);
-        
+
         foreach (var child in children)
         {
             AddItemAndDescendants(child.TfsId, itemsList, result);

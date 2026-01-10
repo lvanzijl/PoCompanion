@@ -27,11 +27,11 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
         _mockRepository = new Mock<IWorkItemRepository>();
         _mockMediator = new Mock<IMediator>();
         _mockLogger = new Mock<ILogger<GetEffortEstimationSuggestionsQueryHandler>>();
-        
+
         // Setup default effort estimation settings
         _mockMediator.Setup(m => m.Send(It.IsAny<GetEffortEstimationSettingsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EffortEstimationSettingsDto.Default);
-        
+
         _handler = new GetEffortEstimationSuggestionsQueryHandler(_mockRepository.Object, _mockMediator.Object, _mockLogger.Object);
     }
 
@@ -236,7 +236,7 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
         Assert.HasCount(2, result);
         var taskSuggestion = result.First(s => s.WorkItemType == "Task");
         var storySuggestion = result.First(s => s.WorkItemType == "User Story");
-        
+
         Assert.AreEqual(3, taskSuggestion.SuggestedEffort);
         Assert.AreEqual(8, storySuggestion.SuggestedEffort);
     }

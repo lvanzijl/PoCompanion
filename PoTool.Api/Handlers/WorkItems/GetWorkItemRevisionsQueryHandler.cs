@@ -27,12 +27,12 @@ public sealed class GetWorkItemRevisionsQueryHandler : IQueryHandler<GetWorkItem
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetWorkItemRevisionsQuery for WorkItemId={WorkItemId}", query.WorkItemId);
-        
+
         var revisions = await _tfsClient.GetWorkItemRevisionsAsync(query.WorkItemId, cancellationToken);
-        
-        _logger.LogInformation("Retrieved {Count} revisions for work item {WorkItemId}", 
+
+        _logger.LogInformation("Retrieved {Count} revisions for work item {WorkItemId}",
             revisions.Count(), query.WorkItemId);
-        
+
         return revisions;
     }
 }

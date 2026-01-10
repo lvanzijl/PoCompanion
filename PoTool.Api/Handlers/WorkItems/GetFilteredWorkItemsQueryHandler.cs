@@ -31,21 +31,21 @@ public sealed class GetFilteredWorkItemsQueryHandler : IQueryHandler<GetFiltered
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetFilteredWorkItemsQuery with filter={Filter}", query.Filter);
-        
+
         var allFiltered = await _repository.GetFilteredAsync(query.Filter, cancellationToken);
-        
+
         // Apply profile-based area path filtering
         var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
-        
+
         if (profileAreaPaths != null && profileAreaPaths.Count > 0)
         {
-            _logger.LogDebug("Applying active profile area path filter: {AreaPaths}", 
+            _logger.LogDebug("Applying active profile area path filter: {AreaPaths}",
                 string.Join(", ", profileAreaPaths));
-            
-            return allFiltered.Where(wi => 
+
+            return allFiltered.Where(wi =>
                 _profileFilterService.MatchesAreaPathFilter(wi.AreaPath, profileAreaPaths));
         }
-        
+
         return allFiltered;
     }
 }

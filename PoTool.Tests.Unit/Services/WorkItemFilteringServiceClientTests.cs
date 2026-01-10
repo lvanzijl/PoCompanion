@@ -50,7 +50,7 @@ public class WorkItemFilteringServiceClientTests
         Assert.IsTrue(resultList.Any(wi => wi.TfsId == 1));
         Assert.IsTrue(resultList.Any(wi => wi.TfsId == 2));
         Assert.IsTrue(resultList.Any(wi => wi.TfsId == 3));
-        
+
         _mockFilteringClient.Verify(x => x.FilterByValidationWithAncestorsAsync(
             It.Is<FilterByValidationRequest>(r => r.TargetIds.Count == targetIds.Count && targetIds.All(id => r.TargetIds.Contains(id)))),
             Times.Once);
@@ -82,7 +82,7 @@ public class WorkItemFilteringServiceClientTests
         Assert.HasCount(2, resultList);
         Assert.Contains(1, resultList);
         Assert.Contains(2, resultList);
-        
+
         _mockFilteringClient.Verify(x => x.GetWorkItemIdsByValidationFilterAsync(
             It.Is<GetWorkItemIdsByValidationFilterRequest>(r => r.FilterId == filterId)),
             Times.Once);
@@ -111,7 +111,7 @@ public class WorkItemFilteringServiceClientTests
 
         // Assert
         Assert.AreEqual(2, result);
-        
+
         _mockFilteringClient.Verify(x => x.CountWorkItemsByValidationFilterAsync(
             It.Is<CountWorkItemsByValidationFilterRequest>(r => r.FilterId == filterId)),
             Times.Once);
@@ -156,12 +156,12 @@ public class WorkItemFilteringServiceClientTests
     public async Task IsDescendantOfGoalsAsync_CallsApiAndReturnsResult()
     {
         // Arrange
-        var item = new WorkItemWithValidationDto 
-        { 
-            TfsId = 3, 
-            Title = "Story", 
-            ParentTfsId = 2, 
-            ValidationIssues = new List<ValidationIssue>() 
+        var item = new WorkItemWithValidationDto
+        {
+            TfsId = 3,
+            Title = "Story",
+            ParentTfsId = 2,
+            ValidationIssues = new List<ValidationIssue>()
         };
         var goalIds = new List<int> { 1 };
         var allWorkItems = new List<WorkItemWithValidationDto>
@@ -183,7 +183,7 @@ public class WorkItemFilteringServiceClientTests
 
         // Assert
         Assert.IsTrue(result);
-        
+
         _mockFilteringClient.Verify(x => x.IsDescendantOfGoalsAsync(
             It.Is<IsDescendantOfGoalsRequest>(r => r.WorkItemId == 3 && r.GoalIds.SequenceEqual(goalIds))),
             Times.Once);

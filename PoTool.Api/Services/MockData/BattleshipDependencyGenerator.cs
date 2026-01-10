@@ -171,7 +171,7 @@ public class BattleshipDependencyGenerator
         for (var i = 0; i < invalidCount; i++)
         {
             var invalidType = _random.Next(0, 4);
-            
+
             switch (invalidType)
             {
                 case 0: // Circular dependency (will be created in sets of 3)

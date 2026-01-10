@@ -55,7 +55,7 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
         foreach (var epic in unplannedEpics)
         {
             // Find parent Objective
-            var objective = epic.ParentTfsId.HasValue 
+            var objective = epic.ParentTfsId.HasValue
                 ? allWorkItems.FirstOrDefault(w => w.TfsId == epic.ParentTfsId.Value)
                 : null;
 

@@ -68,7 +68,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
     {
         var lane = await _context.Lanes
             .FirstOrDefaultAsync(l => l.ObjectiveId == objectiveId, cancellationToken);
-        
+
         if (lane == null) return null;
 
         var objective = await _workItemRepository.GetByTfsIdAsync(lane.ObjectiveId, cancellationToken);
@@ -91,7 +91,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
 
         _context.Lanes.Add(lane);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogDebug("Created lane {LaneId} for objective {ObjectiveId}", lane.Id, objectiveId);
         return lane.Id;
     }
@@ -103,7 +103,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
 
         _context.Lanes.Remove(lane);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogDebug("Deleted lane {LaneId}", laneId);
         return true;
     }
@@ -146,7 +146,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
     {
         var placement = await _context.EpicPlacements
             .FirstOrDefaultAsync(p => p.EpicId == epicId, cancellationToken);
-        
+
         if (placement == null) return null;
 
         return (await MapPlacementsAsync([placement], cancellationToken)).FirstOrDefault();
@@ -171,8 +171,8 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
 
         _context.EpicPlacements.Add(placement);
         await _context.SaveChangesAsync(cancellationToken);
-        
-        _logger.LogDebug("Created placement {PlacementId} for epic {EpicId} at ({LaneId}, {RowIndex}, {OrderInRow})", 
+
+        _logger.LogDebug("Created placement {PlacementId} for epic {EpicId} at ({LaneId}, {RowIndex}, {OrderInRow})",
             placement.Id, epicId, laneId, rowIndex, orderInRow);
         return placement.Id;
     }
@@ -185,7 +185,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
         placement.RowIndex = rowIndex;
         placement.OrderInRow = orderInRow;
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogDebug("Updated placement {PlacementId} to ({RowIndex}, {OrderInRow})", placementId, rowIndex, orderInRow);
         return true;
     }
@@ -197,7 +197,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
 
         _context.EpicPlacements.Remove(placement);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogDebug("Deleted placement {PlacementId}", placementId);
         return true;
     }
@@ -210,22 +210,22 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
 
         _context.EpicPlacements.RemoveRange(placements);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogDebug("Deleted {Count} placements for lane {LaneId}", placements.Count, laneId);
         return true;
     }
 
     private async Task<IReadOnlyList<EpicPlacementDto>> MapPlacementsAsync(
-        IEnumerable<EpicPlacementEntity> placements, 
+        IEnumerable<EpicPlacementEntity> placements,
         CancellationToken cancellationToken)
     {
         var result = new List<EpicPlacementDto>();
-        
+
         foreach (var placement in placements)
         {
             var epic = await _workItemRepository.GetByTfsIdAsync(placement.EpicId, cancellationToken);
             var validation = await GetCachedValidationAsync(placement.EpicId, cancellationToken);
-            
+
             result.Add(new EpicPlacementDto
             {
                 Id = placement.Id,
@@ -286,7 +286,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
 
         _context.MilestoneLines.Add(line);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogDebug("Created milestone line {LineId} at position {Position}", line.Id, verticalPosition);
         return line.Id;
     }
@@ -300,7 +300,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
         line.VerticalPosition = verticalPosition;
         line.Type = (int)type;
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogDebug("Updated milestone line {LineId}", lineId);
         return true;
     }
@@ -312,7 +312,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
 
         _context.MilestoneLines.Remove(line);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogDebug("Deleted milestone line {LineId}", lineId);
         return true;
     }
@@ -357,7 +357,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
 
         _context.IterationLines.Add(line);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogDebug("Created iteration line {LineId} at position {Position}", line.Id, verticalPosition);
         return line.Id;
     }
@@ -370,7 +370,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
         line.Label = label;
         line.VerticalPosition = verticalPosition;
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogDebug("Updated iteration line {LineId}", lineId);
         return true;
     }
@@ -382,7 +382,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
 
         _context.IterationLines.Remove(line);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogDebug("Deleted iteration line {LineId}", lineId);
         return true;
     }
@@ -395,7 +395,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
     {
         var cached = await _context.CachedValidationResults
             .FirstOrDefaultAsync(c => c.EpicId == epicId, cancellationToken);
-        
+
         return cached != null ? (ValidationIndicator)cached.Indicator : ValidationIndicator.None;
     }
 
@@ -428,7 +428,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
         var allCached = await _context.CachedValidationResults.ToListAsync(cancellationToken);
         _context.CachedValidationResults.RemoveRange(allCached);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogDebug("Cleared validation cache ({Count} entries)", allCached.Count);
     }
 

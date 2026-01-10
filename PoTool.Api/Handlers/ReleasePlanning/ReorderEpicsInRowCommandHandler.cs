@@ -26,7 +26,7 @@ public sealed class ReorderEpicsInRowCommandHandler : ICommandHandler<ReorderEpi
         ReorderEpicsInRowCommand command,
         CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Handling ReorderEpicsInRowCommand for Lane {LaneId}, Row {RowIndex}", 
+        _logger.LogDebug("Handling ReorderEpicsInRowCommand for Lane {LaneId}, Row {RowIndex}",
             command.LaneId, command.RowIndex);
 
         // Get all placements in the specified lane and row

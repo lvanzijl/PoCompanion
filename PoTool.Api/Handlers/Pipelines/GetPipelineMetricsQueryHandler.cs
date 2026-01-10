@@ -71,7 +71,7 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
                 avgDuration = TimeSpan.FromTicks((long)durations.Average(d => d.Ticks));
                 minDuration = durations.Min();
                 maxDuration = durations.Max();
-                
+
                 if (durations.Count > 1)
                 {
                     var avgTicks = durations.Average(d => d.Ticks);

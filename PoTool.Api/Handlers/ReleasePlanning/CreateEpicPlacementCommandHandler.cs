@@ -29,7 +29,7 @@ public sealed class CreateEpicPlacementCommandHandler : ICommandHandler<CreateEp
         CreateEpicPlacementCommand command,
         CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Handling CreateEpicPlacementCommand for Epic {EpicId} in Lane {LaneId}", 
+        _logger.LogDebug("Handling CreateEpicPlacementCommand for Epic {EpicId} in Lane {LaneId}",
             command.EpicId, command.LaneId);
 
         // Verify the Epic exists and is of type Epic
@@ -96,10 +96,10 @@ public sealed class CreateEpicPlacementCommandHandler : ICommandHandler<CreateEp
         }
 
         var placementId = await _repository.CreatePlacementAsync(
-            command.EpicId, 
-            command.LaneId, 
-            command.RowIndex, 
-            command.OrderInRow, 
+            command.EpicId,
+            command.LaneId,
+            command.RowIndex,
+            command.OrderInRow,
             cancellationToken);
 
         return new EpicPlacementResultDto
