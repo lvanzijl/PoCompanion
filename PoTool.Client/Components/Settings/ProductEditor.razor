@@ -1,0 +1,261 @@
+@using MudBlazor
+@using PoTool.Client.Services
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using ProductPictureType = PoTool.Shared.Settings.ProductPictureType
+@inject ProductService ProductService
+@inject TeamService TeamService
+@inject WorkItemService WorkItemService
+@inject ISnackbar Snackbar
+@inject ErrorMessageService ErrorMessageService
+
+<MudPaper Elevation="1" Class="pa-4">
+    <MudForm @ref="_form">
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.h6">@(IsEditing ? "Edit Product" : "Add Product")</MudText>
+
+            <CompactTextField @bind-Value="_name" 
+                          Label="Product Name" 
+                          Required="true"
+                          HelperText="e.g., 'Customer Portal', 'Mobile App'" />
+
+            <CompactSelect T="string"
+                           Label="Product Area Path"
+                           @bind-Value="_productAreaPath"
+                           Required="true"
+                           HelperText="The area path that defines this product's scope">
+                @foreach (var areaPath in _allAreaPaths)
+                {
+                    <MudSelectItem T="string" Value="@areaPath">@areaPath</MudSelectItem>
+                }
+            </CompactSelect>
+
+            <CompactSelect T="int?"
+                           Label="Backlog Root Work Item (Optional)"
+                           @bind-Value="_backlogRootWorkItemId"
+                           HelperText="The root Epic or Feature for the product backlog. Leave empty for backlog-less products.">
+                <MudSelectItem T="int?" Value="@((int?)null)">-- None (Backlog-less) --</MudSelectItem>
+                @foreach (var goal in _availableGoals)
+                {
+                    <MudSelectItem T="int?" Value="@goal.TfsId">@goal.Title (ID: @goal.TfsId)</MudSelectItem>
+                }
+            </CompactSelect>
+
+            @if (_backlogRootWorkItemId == null)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true">
+                    <MudText Typo="Typo.caption">
+                        This product has no backlog root. Work items will not be filtered by backlog hierarchy.
+                    </MudText>
+                </MudAlert>
+            }
+
+            <CompactSelect T="int"
+                           Label="Linked Teams"
+                           @bind-SelectedValues="_selectedTeamIds"
+                           MultiSelection="true"
+                           HelperText="Select teams that work on this product">
+                @foreach (var team in _availableTeams)
+                {
+                    <MudSelectItem T="int" Value="@team.Id">@team.Name</MudSelectItem>
+                }
+            </CompactSelect>
+
+            @* Picture Selector *@
+            <div class="mt-2">
+                <PicturePicker Title="Product Picture" 
+                               Category="Product" 
+                               @bind-SelectedImageId="_selectedImageId" />
+            </div>
+
+            @if (_errorResponse != null)
+            {
+                <ErrorDisplay ErrorResponse="@_errorResponse" 
+                              OnDismiss="ClearError" />
+            }
+
+            <MudStack Row="true" Spacing="2" Class="mt-2">
+                <CompactButton OnClick="SaveProduct" 
+                           Color="Color.Primary" 
+                           Variant="Variant.Filled" 
+                           Disabled="_isSaving"
+                           StartIcon="@Icons.Material.Filled.Save">
+                    @if (_isSaving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        <span>Saving...</span>
+                    }
+                    else
+                    {
+                        <span>@(IsEditing ? "Update" : "Create") Product</span>
+                    }
+                </CompactButton>
+                <CompactButton OnClick="Cancel" 
+                           Color="Color.Default" 
+                           Variant="Variant.Outlined">
+                    Cancel
+                </CompactButton>
+            </MudStack>
+        </MudStack>
+    </MudForm>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public int ProductOwnerId { get; set; }
+
+    [Parameter]
+    public ProductDto? Product { get; set; }
+
+    [Parameter]
+    public EventCallback OnSaved { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancelled { get; set; }
+
+    private MudForm _form = null!;
+    
+    private bool IsEditing => Product != null;
+    private bool _isSaving = false;
+    private ErrorResponse? _errorResponse;
+
+    private string _name = string.Empty;
+    private string _productAreaPath = string.Empty;
+    private int? _backlogRootWorkItemId;
+    private int _selectedImageId = 0;
+    private IEnumerable<int> _selectedTeamIds = new List<int>();
+
+    private List<string> _allAreaPaths = new();
+    private List<WorkItemDto> _availableGoals = new();
+    private List<TeamDto> _availableTeams = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedImageId = Random.Shared.Next(0, 64);
+        
+        await LoadDataAsync();
+
+        if (Product != null)
+        {
+            _name = Product.Name;
+            _productAreaPath = Product.ProductAreaPath;
+            _backlogRootWorkItemId = Product.BacklogRootWorkItemId;
+            _selectedImageId = Product.DefaultPictureId;
+            _selectedTeamIds = Product.TeamIds.ToList();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            var areaPathsTask = WorkItemService.GetAreaPathsFromTfsAsync();
+            var goalsTask = WorkItemService.GetGoalsFromTfsAsync();
+            var teamsTask = TeamService.GetAllTeamsAsync();
+
+            await Task.WhenAll(areaPathsTask, goalsTask, teamsTask);
+
+            _allAreaPaths = (await areaPathsTask).ToList();
+            _availableGoals = (await goalsTask).ToList();
+            _availableTeams = (await teamsTask).ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error loading data");
+        }
+    }
+
+    private async Task SaveProduct()
+    {
+        await _form.Validate();
+        if (!_form.IsValid)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_productAreaPath))
+        {
+            Snackbar.Add("Please select a product area path", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            _isSaving = true;
+            ClearError();
+
+            if (IsEditing && Product != null)
+            {
+                var updated = await ProductService.UpdateProductAsync(
+                    Product.Id,
+                    _name,
+                    _productAreaPath,
+                    _backlogRootWorkItemId,
+                    ProductPictureType.Default,
+                    _selectedImageId,
+                    null);
+
+                // Update team links
+                await UpdateTeamLinksAsync(Product.Id, Product.TeamIds.ToList(), _selectedTeamIds.ToList());
+
+                Snackbar.Add("Product updated successfully", Severity.Success);
+            }
+            else
+            {
+                var created = await ProductService.CreateProductAsync(
+                    ProductOwnerId,
+                    _name,
+                    _productAreaPath,
+                    _backlogRootWorkItemId,
+                    ProductPictureType.Default,
+                    _selectedImageId,
+                    null);
+
+                // Add team links for new product
+                foreach (var teamId in _selectedTeamIds)
+                {
+                    await ProductService.LinkTeamAsync(created.Id, teamId);
+                }
+
+                Snackbar.Add("Product created successfully", Severity.Success);
+            }
+
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, IsEditing ? "Error updating product" : "Error creating product");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task UpdateTeamLinksAsync(int productId, List<int> currentTeamIds, List<int> newTeamIds)
+    {
+        // Find teams to unlink (in current but not in new)
+        var teamsToUnlink = currentTeamIds.Except(newTeamIds);
+        foreach (var teamId in teamsToUnlink)
+        {
+            await ProductService.UnlinkTeamAsync(productId, teamId);
+        }
+
+        // Find teams to link (in new but not in current)
+        var teamsToLink = newTeamIds.Except(currentTeamIds);
+        foreach (var teamId in teamsToLink)
+        {
+            await ProductService.LinkTeamAsync(productId, teamId);
+        }
+    }
+
+    private async Task Cancel()
+    {
+        await OnCancelled.InvokeAsync();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+}

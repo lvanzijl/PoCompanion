@@ -1,0 +1,205 @@
+@using MudBlazor
+@using PoTool.Client.Services
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using TeamPictureType = PoTool.Shared.Settings.TeamPictureType
+@inject TeamService TeamService
+@inject WorkItemService WorkItemService
+@inject ISnackbar Snackbar
+@inject ErrorMessageService ErrorMessageService
+
+<MudPaper Elevation="1" Class="pa-4">
+    <MudForm @ref="_form">
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.h6">@(IsEditing ? "Edit Team" : "Add Team")</MudText>
+
+            <CompactTextField @bind-Value="_name" 
+                          Label="Team Name" 
+                          Required="true"
+                          HelperText="e.g., 'Alpha Team', 'Backend Squad'" />
+
+            <CompactSelect T="string"
+                           Label="Team Area Path"
+                           @bind-Value="_teamAreaPath"
+                           Required="true"
+                           HelperText="The area path that defines this team's scope">
+                @foreach (var areaPath in _allAreaPaths)
+                {
+                    <MudSelectItem T="string" Value="@areaPath">@areaPath</MudSelectItem>
+                }
+            </CompactSelect>
+
+            @if (IsEditing)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudSwitch @bind-Value="_isArchived" Label="Archived" Color="Color.Warning" />
+                    @if (_isArchived)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Warning">
+                            Archived teams are hidden from selection lists
+                        </MudText>
+                    }
+                </MudStack>
+            }
+
+            @* Picture Selector *@
+            <div class="mt-2">
+                <PicturePicker Title="Team Picture" 
+                               Category="Team" 
+                               @bind-SelectedImageId="_selectedImageId" />
+            </div>
+
+            @if (_errorResponse != null)
+            {
+                <ErrorDisplay ErrorResponse="@_errorResponse" 
+                              OnDismiss="ClearError" />
+            }
+
+            <MudStack Row="true" Spacing="2" Class="mt-2">
+                <CompactButton OnClick="SaveTeam" 
+                           Color="Color.Primary" 
+                           Variant="Variant.Filled" 
+                           Disabled="_isSaving"
+                           StartIcon="@Icons.Material.Filled.Save">
+                    @if (_isSaving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        <span>Saving...</span>
+                    }
+                    else
+                    {
+                        <span>@(IsEditing ? "Update" : "Create") Team</span>
+                    }
+                </CompactButton>
+                <CompactButton OnClick="Cancel" 
+                           Color="Color.Default" 
+                           Variant="Variant.Outlined">
+                    Cancel
+                </CompactButton>
+            </MudStack>
+        </MudStack>
+    </MudForm>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public TeamDto? Team { get; set; }
+
+    [Parameter]
+    public EventCallback OnSaved { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancelled { get; set; }
+
+    private MudForm _form = null!;
+    
+    private bool IsEditing => Team != null;
+    private bool _isSaving = false;
+    private ErrorResponse? _errorResponse;
+
+    private string _name = string.Empty;
+    private string _teamAreaPath = string.Empty;
+    private bool _isArchived = false;
+    private int _selectedImageId = 0;
+
+    private List<string> _allAreaPaths = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedImageId = Random.Shared.Next(0, 64);
+        
+        await LoadAreaPathsAsync();
+
+        if (Team != null)
+        {
+            _name = Team.Name;
+            _teamAreaPath = Team.TeamAreaPath;
+            _isArchived = Team.IsArchived;
+            _selectedImageId = Team.DefaultPictureId;
+        }
+    }
+
+    private async Task LoadAreaPathsAsync()
+    {
+        try
+        {
+            var areaPaths = await WorkItemService.GetAreaPathsFromTfsAsync();
+            _allAreaPaths = areaPaths.ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error loading area paths");
+        }
+    }
+
+    private async Task SaveTeam()
+    {
+        await _form.Validate();
+        if (!_form.IsValid)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_teamAreaPath))
+        {
+            Snackbar.Add("Please select a team area path", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            _isSaving = true;
+            ClearError();
+
+            if (IsEditing && Team != null)
+            {
+                await TeamService.UpdateTeamAsync(
+                    Team.Id,
+                    _name,
+                    _teamAreaPath,
+                    TeamPictureType.Default,
+                    _selectedImageId,
+                    null);
+
+                // Handle archive status change separately if needed
+                if (_isArchived != Team.IsArchived)
+                {
+                    await TeamService.ArchiveTeamAsync(Team.Id, _isArchived);
+                }
+
+                Snackbar.Add("Team updated successfully", Severity.Success);
+            }
+            else
+            {
+                await TeamService.CreateTeamAsync(
+                    _name,
+                    _teamAreaPath,
+                    TeamPictureType.Default,
+                    _selectedImageId,
+                    null);
+
+                Snackbar.Add("Team created successfully", Severity.Success);
+            }
+
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, IsEditing ? "Error updating team" : "Error creating team");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task Cancel()
+    {
+        await OnCancelled.InvokeAsync();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+}
