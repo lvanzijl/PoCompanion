@@ -120,8 +120,8 @@
         if (Product != null)
         {
             _name = Product.Name;
-            _backlogRootWorkItemId = Product.BacklogRootWorkItemId;
-            _backlogRootWorkItemIdText = Product.BacklogRootWorkItemId.ToString();
+            _backlogRootWorkItemId = Product.BacklogRootWorkItemId ?? 0;
+            _backlogRootWorkItemIdText = Product.BacklogRootWorkItemId?.ToString() ?? string.Empty;
             _selectedImageId = Product.DefaultPictureId;
             _selectedTeamIds = Product.TeamIds.ToList();
         }
