@@ -1,0 +1,151 @@
+@using MudBlazor
+@using PoTool.Client.Services
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using TeamPictureType = PoTool.Shared.Settings.TeamPictureType
+@inject TeamService TeamService
+@inject WorkItemService WorkItemService
+@inject ISnackbar Snackbar
+@inject ErrorMessageService ErrorMessageService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form">
+            <MudStack Spacing="3">
+                <CompactTextField @bind-Value="_name" 
+                              Label="Team Name" 
+                              Required="true"
+                              HelperText="e.g., 'Alpha Team', 'Backend Squad'" />
+
+                <CompactSelect T="string"
+                               Label="Team Area Path"
+                               @bind-Value="_teamAreaPath"
+                               Required="true"
+                               HelperText="The area path that defines this team's scope">
+                    @foreach (var areaPath in _allAreaPaths)
+                    {
+                        <MudSelectItem T="string" Value="@areaPath">@areaPath</MudSelectItem>
+                    }
+                </CompactSelect>
+
+                @* Picture Selector *@
+                <div class="mt-2">
+                    <PicturePicker Title="Team Picture" 
+                                   Category="Team" 
+                                   @bind-SelectedImageId="_selectedImageId" />
+                </div>
+
+                @if (_errorResponse != null)
+                {
+                    <ErrorDisplay ErrorResponse="@_errorResponse" 
+                                  OnDismiss="ClearError" />
+                }
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <CompactButton OnClick="Cancel" Color="Color.Default">Cancel</CompactButton>
+        <CompactButton OnClick="SaveTeam" 
+                   Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   Disabled="_isSaving"
+                   StartIcon="@Icons.Material.Filled.Save">
+            @if (_isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                <span>Creating...</span>
+            }
+            else
+            {
+                <span>Create Team</span>
+            }
+        </CompactButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public TeamDto? Team { get; set; }
+
+    private MudForm _form = null!;
+    
+    private bool _isSaving = false;
+    private ErrorResponse? _errorResponse;
+
+    private string _name = string.Empty;
+    private string _teamAreaPath = string.Empty;
+    private int _selectedImageId = 0;
+
+    private List<string> _allAreaPaths = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedImageId = Random.Shared.Next(0, 64);
+        
+        await LoadAreaPathsAsync();
+    }
+
+    private async Task LoadAreaPathsAsync()
+    {
+        try
+        {
+            var areaPaths = await WorkItemService.GetAreaPathsFromTfsAsync();
+            _allAreaPaths = areaPaths.ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error loading area paths");
+        }
+    }
+
+    private async Task SaveTeam()
+    {
+        await _form.Validate();
+        if (!_form.IsValid)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_teamAreaPath))
+        {
+            Snackbar.Add("Please select a team area path", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            _isSaving = true;
+            ClearError();
+
+            var createdTeam = await TeamService.CreateTeamAsync(
+                _name,
+                _teamAreaPath,
+                TeamPictureType.Default,
+                _selectedImageId,
+                null);
+
+            MudDialog.Close(DialogResult.Ok(createdTeam));
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error creating team");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+}

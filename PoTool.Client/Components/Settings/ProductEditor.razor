@@ -7,6 +7,7 @@
 @inject TeamService TeamService
 @inject WorkItemService WorkItemService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @inject ErrorMessageService ErrorMessageService
 
 <MudPaper Elevation="1" Class="pa-4">
@@ -25,22 +26,33 @@
                           HelperText="Enter the work item ID that defines the product backlog"
                           InputType="InputType.Number" />
 
-            <CompactSelect T="int"
-                           Label="Linked Teams"
-                           @bind-SelectedValues="_selectedTeamIds"
-                           MultiSelection="true"
-                           HelperText="Select teams that work on this product">
-                @foreach (var team in _availableTeams)
-                {
-                    <MudSelectItem T="int" Value="@team.Id">@team.Name</MudSelectItem>
-                }
-            </CompactSelect>
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudText Typo="Typo.body2" Style="flex: 0 0 auto;">Linked Teams</MudText>
+                    <CompactButton OnClick="OpenCreateTeamDialog" 
+                               Color="Color.Primary" 
+                               Variant="Variant.Text"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add">
+                        Create New Team
+                    </CompactButton>
+                </MudStack>
+                <CompactSelect T="int"
+                               @bind-SelectedValues="_selectedTeamIds"
+                               MultiSelection="true"
+                               HelperText="Select teams that work on this product">
+                    @foreach (var team in _availableTeams)
+                    {
+                        <MudSelectItem T="int" Value="@team.Id">@team.Name</MudSelectItem>
+                    }
+                </CompactSelect>
+            </MudStack>
 
             @if (!_availableTeams.Any())
             {
                 <MudAlert Severity="Severity.Info" Dense="true">
                     <MudText Typo="Typo.caption">
-                        No teams available. Create a team first before linking it to products.
+                        No teams available. Use the "Create New Team" button above to create one.
                     </MudText>
                 </MudAlert>
             }
@@ -226,6 +238,37 @@
     private async Task Cancel()
     {
         await OnCancelled.InvokeAsync();
+    }
+
+    private async Task OpenCreateTeamDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "Team", null }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<InlineTeamCreationDialog>("Create New Team", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is TeamDto newTeam)
+        {
+            // Reload teams to include the newly created one
+            await LoadDataAsync();
+            
+            // Auto-select the newly created team
+            var selectedList = _selectedTeamIds.ToList();
+            selectedList.Add(newTeam.Id);
+            _selectedTeamIds = selectedList;
+            
+            Snackbar.Add($"Team '{newTeam.Name}' created and linked", Severity.Success);
+        }
     }
 
     private void ClearError()
