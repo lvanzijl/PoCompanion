@@ -100,6 +100,17 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves a single work item by ID directly from TFS (bypasses cache).
+    /// Used for validation of work item existence.
+    /// </summary>
+    /// <param name="workItemId">The work item ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Work item DTO if found, null if not found.</returns>
+    Task<WorkItemDto?> GetWorkItemByIdAsync(
+        int workItemId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves the revision history for a specific work item.
     /// </summary>
     /// <param name="workItemId">The work item ID.</param>

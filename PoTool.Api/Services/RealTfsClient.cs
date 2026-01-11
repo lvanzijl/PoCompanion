@@ -368,6 +368,97 @@ public class RealTfsClient : ITfsClient
         }
     }
 
+    public async Task<WorkItemDto?> GetWorkItemByIdAsync(int workItemId, CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+
+        // Null assertion after validation - entity is guaranteed non-null here
+        var config = entity!;
+
+        // Get auth-mode-specific HttpClient to avoid credential conflicts
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            _logger.LogDebug("Fetching work item {WorkItemId} directly from TFS", workItemId);
+
+            // Use the Work Items Batch API to fetch a single work item
+            // Format: POST {collection}/_apis/wit/workitemsbatch?api-version={version}
+            var batchRequest = new WorkItemBatchRequest
+            {
+                Ids = new[] { workItemId },
+                Fields = RequiredWorkItemFields,
+                Expand = "relations" // Include relations to get parent ID
+            };
+
+            var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
+            using var content = new StringContent(
+                JsonSerializer.Serialize(batchRequest),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            var response = await httpClient.PostAsync(batchUrl, content, cancellationToken);
+            
+            // If work item not found, return null instead of throwing
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogDebug("Work item {WorkItemId} not found in TFS", workItemId);
+                return null;
+            }
+
+            await HandleHttpErrorsAsync(response, cancellationToken);
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            // Check if any work items were returned
+            if (!doc.RootElement.TryGetProperty("value", out var valueArray) || valueArray.ValueKind != JsonValueKind.Array)
+            {
+                _logger.LogDebug("Work item {WorkItemId} not found in TFS response", workItemId);
+                return null;
+            }
+
+            var items = valueArray.EnumerateArray().ToList();
+            if (items.Count == 0)
+            {
+                _logger.LogDebug("Work item {WorkItemId} not found in TFS", workItemId);
+                return null;
+            }
+
+            var item = items[0];
+            var id = item.GetProperty("id").GetInt32();
+            var fields = item.GetProperty("fields");
+            var type = fields.TryGetProperty("System.WorkItemType", out var t) ? t.GetString() ?? "" : "";
+            var title = fields.TryGetProperty("System.Title", out var ti) ? ti.GetString() ?? "" : "";
+            var state = fields.TryGetProperty("System.State", out var s) ? s.GetString() ?? "" : "";
+            var area = fields.TryGetProperty("System.AreaPath", out var a) ? a.GetString() ?? "" : "";
+            var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
+
+            // Extract parent ID from relations
+            var parentId = ExtractParentIdFromRelations(item);
+
+            // Extract effort field with robust parsing
+            int? effort = ParseEffortField(fields);
+
+            var workItem = new WorkItemDto(
+                TfsId: id,
+                Type: type,
+                Title: title,
+                ParentTfsId: parentId,
+                AreaPath: area,
+                IterationPath: iteration,
+                State: state,
+                JsonPayload: item.GetRawText(),
+                RetrievedAt: DateTimeOffset.UtcNow,
+                Effort: effort
+            );
+
+            _logger.LogInformation("Retrieved work item {WorkItemId} from TFS: {Title}", id, title);
+            return workItem;
+        }, cancellationToken);
+    }
+
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, CancellationToken cancellationToken = default)
     {
         return GetWorkItemsAsync(areaPath, since: null, cancellationToken);

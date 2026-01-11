@@ -479,6 +479,29 @@ public class BattleshipMockDataFacade : ITfsClient
         return GetWorkItemsAsync(areaPath, since: null, cancellationToken);
     }
 
+    public Task<WorkItemDto?> GetWorkItemByIdAsync(int workItemId, CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: GetWorkItemByIdAsync called for work item {WorkItemId}", workItemId);
+
+        // Get all mock work items
+        var allWorkItems = GetMockHierarchy();
+
+        // Find the work item by TFS ID
+        var workItem = allWorkItems.FirstOrDefault(wi => wi.TfsId == workItemId);
+
+        if (workItem != null)
+        {
+            _logger.LogInformation("Mock TFS client: Found work item {WorkItemId}: {Title}", workItemId, workItem.Title);
+        }
+        else
+        {
+            _logger.LogInformation("Mock TFS client: Work item {WorkItemId} not found", workItemId);
+        }
+
+        return Task.FromResult(workItem);
+    }
+
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, DateTimeOffset? since, CancellationToken cancellationToken = default)
     {
         IncrementAndGetApiCallCount();
