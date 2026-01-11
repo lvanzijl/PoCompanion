@@ -4,6 +4,8 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
 @inject ProfileService ProfileService
+@inject ProductService ProductService
+@inject WorkItemService WorkItemService
 @inject TfsConfigService TfsConfigService
 @inject IMetricsClient MetricsClient
 @inject IPullRequestsClient PullRequestsClient
@@ -27,16 +29,77 @@
     }
     else
     {
+        @* Product Selector Section - Only visible when multiple products exist *@
+        @if (_products.Count > 1)
+        {
+            <MudPaper Elevation="1" Class="pa-3 mb-3">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" />
+                    <MudSelect T="int" 
+                               Value="@_selectedProductId"
+                               ValueChanged="OnProductChanged"
+                               Label="Select Product"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Style="min-width: 300px;">
+                        @foreach (var product in _products)
+                        {
+                            <MudSelectItem T="int" Value="@product.Id">@product.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @_products.Count products available
+                    </MudText>
+                </MudStack>
+            </MudPaper>
+        }
+        
+        @* No Products Warning - Only shown when no products exist for this profile *@
+        @if (_products.Count == 0 && _activeProfile != null)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-3" Dense="true">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.body2">
+                        No products configured for this profile. Add products to enable product-scoped features.
+                    </MudText>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary"
+                               Href="@($"/settings/product-owners/{_activeProfile.Id}")"
+                               Size="Size.Small">
+                        Manage Products
+                    </MudButton>
+                </MudStack>
+            </MudAlert>
+        }
+
         @* Product Header Section *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.h4">
                         <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
-                        @(_activeProfile?.Name ?? "Product Overview")
+                        @(_selectedProduct?.Name ?? _activeProfile?.Name ?? "Product Overview")
                     </MudText>
                     
-                    @if (_activeProfile?.GoalIds?.Any() == true)
+                    @if (_selectedProduct != null)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" Class="mr-1" />
+                            Root Work Item: #@_selectedProduct.BacklogRootWorkItemId
+                            @if (!string.IsNullOrEmpty(_rootWorkItemTitle))
+                            {
+                                <span> — @_rootWorkItemTitle</span>
+                            }
+                        </MudText>
+                        @if (!string.IsNullOrEmpty(_rootWorkItemAreaPath))
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Class="mr-1" />
+                                Area Path: @_rootWorkItemAreaPath
+                            </MudText>
+                        }
+                    }
+                    else if (_activeProfile?.GoalIds?.Any() == true)
                     {
                         <MudText Typo="Typo.body2" Color="Color.Secondary">
                             <MudIcon Icon="@Icons.Material.Filled.Flag" Size="Size.Small" Class="mr-1" />
@@ -46,6 +109,46 @@
                 </MudStack>
                 
                 <MudStack AlignItems="AlignItems.End" Spacing="1">
+                    @* Cache Sync Controls *@
+                    <MudStack Row="true" Spacing="2">
+                        <MudTooltip Text="Downloads only changes since last sync (faster). Use for regular updates.">
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Primary" 
+                                       Size="Size.Small"
+                                       Disabled="@_isSyncing"
+                                       StartIcon="@Icons.Material.Filled.SyncAlt"
+                                       OnClick="RequestIncrementalSync">
+                                @if (_isSyncing && _syncType == "incremental")
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                                    <span>Syncing...</span>
+                                }
+                                else
+                                {
+                                    <span>Incremental Sync</span>
+                                }
+                            </MudButton>
+                        </MudTooltip>
+                        <MudTooltip Text="Downloads all work items from Azure DevOps. Use when syncing for the first time or after major changes.">
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       Size="Size.Small"
+                                       Disabled="@_isSyncing"
+                                       StartIcon="@Icons.Material.Filled.Sync"
+                                       OnClick="RequestFullSync">
+                                @if (_isSyncing && _syncType == "full")
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                                    <span>Syncing...</span>
+                                }
+                                else
+                                {
+                                    <span>Full Sync</span>
+                                }
+                            </MudButton>
+                        </MudTooltip>
+                    </MudStack>
+                    
                     @if (_lastSyncTime.HasValue)
                     {
                         <MudChip T="string" 
@@ -90,16 +193,33 @@
         @* Backlog Health Summary Section *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                <MudText Typo="Typo.h5">
-                    <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Class="mr-2" />
-                    Backlog Health Summary
-                </MudText>
-                <MudButton Variant="Variant.Text" 
-                           Color="Color.Primary" 
-                           EndIcon="@Icons.Material.Filled.ArrowForward"
-                           Href="/backlog-health">
-                    View Full Dashboard
-                </MudButton>
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.h5">
+                        <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Class="mr-2" />
+                        Backlog Health Summary
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                        Metrics shown are global (temporary) — product-scoped metrics coming soon
+                    </MudText>
+                </MudStack>
+                <MudStack Row="true" Spacing="2">
+                    @if (_selectedProduct != null)
+                    {
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.List"
+                                   OnClick="NavigateToExplorerForProduct">
+                            Open Work Item Explorer
+                        </MudButton>
+                    }
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               Href="/backlog-health">
+                        View Full Dashboard
+                    </MudButton>
+                </MudStack>
             </MudStack>
 
             @if (_healthData != null && _healthData.IterationHealth.Any())
@@ -445,7 +565,18 @@
     private bool _isLoading = true;
     private string? _errorMessage;
     
+    // Sync state
+    private bool _isSyncing = false;
+    private string _syncType = "";
+    
+    // Profile and products
     private ProfileDto? _activeProfile;
+    private List<ProductDto> _products = new();
+    private int _selectedProductId = 0;
+    private ProductDto? _selectedProduct;
+    private string? _rootWorkItemTitle;
+    private string? _rootWorkItemAreaPath;
+    
     private DateTimeOffset? _lastSyncTime;
     private MultiIterationBacklogHealthDto? _healthData;
     private VelocityTrendDto? _velocityData;
@@ -473,11 +604,15 @@
                 return;
             }
             
+            // Load products for this profile (Product Owner)
+            await LoadProductsAsync();
+            
             // Load last sync time
             var config = await TfsConfigService.GetConfigAsync();
             _lastSyncTime = config?.LastValidated;
             
             // Load health data (limit to 3 iterations for summary)
+            // Note: Health data is currently global, not product-scoped
             try
             {
                 _healthData = await MetricsClient.GetMultiIterationBacklogHealthAsync(null, 3);
@@ -517,6 +652,145 @@
         finally
         {
             _isLoading = false;
+        }
+    }
+    
+    private async Task LoadProductsAsync()
+    {
+        if (_activeProfile == null) return;
+        
+        try
+        {
+            var products = await ProductService.GetProductsByOwnerAsync(_activeProfile.Id);
+            _products = products.OrderBy(p => p.Order).ToList();
+            
+            // Auto-select first product if available
+            if (_products.Any())
+            {
+                if (_selectedProductId == 0 || !_products.Any(p => p.Id == _selectedProductId))
+                {
+                    _selectedProductId = _products.First().Id;
+                }
+                await LoadSelectedProductDetailsAsync();
+            }
+            else
+            {
+                _selectedProductId = 0;
+                _selectedProduct = null;
+                _rootWorkItemTitle = null;
+                _rootWorkItemAreaPath = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductHome] Error loading products: {ex.Message}");
+            _products = new List<ProductDto>();
+        }
+    }
+    
+    private async Task LoadSelectedProductDetailsAsync()
+    {
+        _selectedProduct = _products.FirstOrDefault(p => p.Id == _selectedProductId);
+        
+        if (_selectedProduct != null)
+        {
+            try
+            {
+                var rootWorkItem = await WorkItemService.GetByTfsIdAsync(_selectedProduct.BacklogRootWorkItemId);
+                if (rootWorkItem != null)
+                {
+                    _rootWorkItemTitle = rootWorkItem.Title;
+                    _rootWorkItemAreaPath = rootWorkItem.AreaPath;
+                }
+                else
+                {
+                    _rootWorkItemTitle = null;
+                    _rootWorkItemAreaPath = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ProductHome] Error loading root work item: {ex.Message}");
+                _rootWorkItemTitle = null;
+                _rootWorkItemAreaPath = null;
+            }
+        }
+    }
+    
+    private async Task OnProductChanged(int newProductId)
+    {
+        _selectedProductId = newProductId;
+        await LoadSelectedProductDetailsAsync();
+        // Switching product does NOT trigger a sync automatically to preserve user control
+        // over cache operations and avoid unexpected network calls when browsing products
+        StateHasChanged();
+    }
+    
+    private async Task RequestFullSync()
+    {
+        if (_isSyncing) return;
+        
+        _isSyncing = true;
+        _syncType = "full";
+        
+        try
+        {
+            var success = await TfsConfigService.RequestSyncAsync();
+            if (success)
+            {
+                Snackbar.Add("Full sync completed successfully", Severity.Success);
+                // Reload data after sync
+                var config = await TfsConfigService.GetConfigAsync();
+                _lastSyncTime = config?.LastValidated;
+            }
+            else
+            {
+                Snackbar.Add("Full sync failed", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Sync error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSyncing = false;
+            _syncType = "";
+            StateHasChanged();
+        }
+    }
+    
+    private async Task RequestIncrementalSync()
+    {
+        if (_isSyncing) return;
+        
+        _isSyncing = true;
+        _syncType = "incremental";
+        
+        try
+        {
+            var success = await TfsConfigService.RequestIncrementalSyncAsync();
+            if (success)
+            {
+                Snackbar.Add("Incremental sync completed successfully", Severity.Success);
+                // Reload data after sync
+                var config = await TfsConfigService.GetConfigAsync();
+                _lastSyncTime = config?.LastValidated;
+            }
+            else
+            {
+                Snackbar.Add("Incremental sync failed", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Sync error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSyncing = false;
+            _syncType = "";
+            StateHasChanged();
         }
     }
 
@@ -565,7 +839,26 @@
     {
         // Navigate to Work Item Explorer with validation filters enabled
         // The WorkItemExplorer will read query parameters to enable filters
-        NavigationManager.NavigateTo("/workitems?filter=issues");
+        // Include focus on the selected product's root work item if available
+        var url = "/workitems?filter=issues";
+        if (_selectedProduct != null)
+        {
+            url += $"&focusRoot={_selectedProduct.BacklogRootWorkItemId}";
+        }
+        NavigationManager.NavigateTo(url);
+    }
+    
+    private void NavigateToExplorerForProduct()
+    {
+        // Navigate to Work Item Explorer focused on the selected product's root work item
+        if (_selectedProduct != null)
+        {
+            NavigationManager.NavigateTo($"/workitems?focusRoot={_selectedProduct.BacklogRootWorkItemId}");
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/workitems");
+        }
     }
 
     // Phase 2: Planning Snapshot helpers
