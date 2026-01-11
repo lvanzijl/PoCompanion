@@ -132,6 +132,9 @@
     private List<WorkItemDto> _profileGoals = new();
     private IEnumerable<int> _selectedGoalIdsTyped = new HashSet<int>();
     private List<int> _profileGoalIds = new();
+    
+    // Focus root for product-aware navigation
+    private int? _focusRootId;
 
     // Resolved endpoints for debugging
     private string _apiBase = string.Empty;
@@ -184,6 +187,16 @@
             {
                 filter.IsEnabled = true;
             }
+        }
+        
+        // Check for "focusRoot" parameter (product-aware navigation from Home page)
+        if (queryParams.TryGetValue("focusRoot", out var focusRootValue) && 
+            int.TryParse(focusRootValue, out var focusRootId))
+        {
+            _focusRootId = focusRootId;
+            // Auto-expand the focus root node when tree is built
+            _expandedState[focusRootId] = true;
+            Console.WriteLine($"[WorkItemExplorer] Focus root set to: {focusRootId}");
         }
     }
 
