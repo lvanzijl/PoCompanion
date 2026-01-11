@@ -97,6 +97,8 @@
 </MudContainer>
 
 @code {
+    private const int TotalProfileImages = 64;
+    
     [Parameter]
     public int? ProfileId { get; set; }
 
@@ -117,7 +119,7 @@
         // Initialize with a random image for new profiles
         if (IsNewProfile)
         {
-            _selectedImageId = Random.Shared.Next(0, 64);
+            _selectedImageId = Random.Shared.Next(0, TotalProfileImages);
         }
         
         await LoadGoals();
@@ -139,7 +141,9 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading goals: {ex.Message}");
+            // Goals are optional, so we just log the error and continue
+            // This prevents blocking the profile creation flow if TFS is unavailable
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error loading goals (optional)");
         }
     }
 
