@@ -262,7 +262,7 @@
 
         var result = await DialogService.ShowMessageBox(
             "Delete Product Owner",
-            $"Are you sure you want to delete the Product Owner '{_profileName}'? This action cannot be undone.",
+            $"Are you sure you want to delete the Product Owner '{(!string.IsNullOrWhiteSpace(_profileName) ? _profileName : "this profile")}'? This action cannot be undone.",
             yesText: "Delete",
             cancelText: "Cancel");
 
