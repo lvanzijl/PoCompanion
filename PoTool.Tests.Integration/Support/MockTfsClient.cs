@@ -204,6 +204,13 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult<IEnumerable<WorkItemDto>>(filtered);
     }
 
+    public Task<WorkItemDto?> GetWorkItemByIdAsync(int workItemId, CancellationToken cancellationToken = default)
+    {
+        // Find work item by TFS ID
+        var workItem = _mockWorkItems.FirstOrDefault(wi => wi.TfsId == workItemId);
+        return Task.FromResult(workItem);
+    }
+
     /// <summary>
     /// Adds a mock work item for testing purposes.
     /// </summary>

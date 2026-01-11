@@ -1,6 +1,9 @@
 using PoTool.Client.ApiClient;
 using System.Net.Http.Json;
 using System.Text.Json;
+using SharedWorkItemDto = PoTool.Shared.WorkItems.WorkItemDto;
+using SharedValidateWorkItemResponse = PoTool.Shared.WorkItems.ValidateWorkItemResponse;
+using SharedValidateWorkItemRequest = PoTool.Shared.WorkItems.ValidateWorkItemRequest;
 
 namespace PoTool.Client.Services;
 
@@ -56,6 +59,26 @@ public class WorkItemService
     public async Task<WorkItemDto?> GetByTfsIdAsync(int tfsId)
     {
         return await _client.GetByTfsIdAsync(tfsId);
+    }
+
+    /// <summary>
+    /// Validates a work item by ID directly from TFS (bypasses cache).
+    /// Used specifically for validating backlog root work item IDs in product creation/editing.
+    /// </summary>
+    public async Task<SharedValidateWorkItemResponse> ValidateWorkItemAsync(int workItemId)
+    {
+        var request = new ValidateWorkItemRequest { WorkItemId = workItemId };
+        var response = await _client.ValidateWorkItemAsync(request);
+        
+        // Map from generated client type to shared type
+        return new SharedValidateWorkItemResponse
+        {
+            Exists = response.Exists,
+            Id = response.Id,
+            Title = response.Title,
+            Type = response.Type,
+            ErrorMessage = response.ErrorMessage
+        };
     }
 
     /// <summary>

@@ -45,7 +45,14 @@
                 else if (_workItemValidationSuccess)
                 {
                     <MudAlert Severity="Severity.Success" Dense="true" Class="mt-1">
-                        Work item validated successfully
+                        @if (!string.IsNullOrEmpty(_validatedWorkItemTitle))
+                        {
+                            <text>@_backlogRootWorkItemIdText – @_validatedWorkItemTitle</text>
+                        }
+                        else
+                        {
+                            <text>Work item validated successfully</text>
+                        }
                     </MudAlert>
                 }
             </MudStack>
@@ -146,6 +153,7 @@
     private bool _workItemValidationFailed = false;
     private bool _workItemValidationSuccess = false;
     private string _workItemValidationError = string.Empty;
+    private string? _validatedWorkItemTitle = null;
 
     private string _name = string.Empty;
     private string _backlogRootWorkItemIdText = string.Empty;
@@ -312,6 +320,7 @@
         _workItemValidationFailed = false;
         _workItemValidationSuccess = false;
         _workItemValidationError = string.Empty;
+        _validatedWorkItemTitle = null;
 
         // Parse the work item ID
         if (!int.TryParse(_backlogRootWorkItemIdText, out var workItemId) || workItemId <= 0)
@@ -326,18 +335,27 @@
             _isValidatingWorkItem = true;
             StateHasChanged();
 
-            // Call TFS to validate the work item exists
-            var workItem = await WorkItemService.GetByTfsIdAsync(workItemId);
+            // Call TFS to validate the work item exists (direct validation, not cache)
+            var response = await WorkItemService.ValidateWorkItemAsync(workItemId);
             
-            if (workItem == null)
-            {
-                _workItemValidationFailed = true;
-                _workItemValidationError = $"Work item {workItemId} not found in TFS";
-            }
-            else
+            if (response.Exists)
             {
                 _workItemValidationSuccess = true;
                 _backlogRootWorkItemId = workItemId;
+                _validatedWorkItemTitle = response.Title;
+                _workItemValidationError = string.Empty;
+            }
+            else
+            {
+                _workItemValidationFailed = true;
+                if (!string.IsNullOrEmpty(response.ErrorMessage))
+                {
+                    _workItemValidationError = response.ErrorMessage;
+                }
+                else
+                {
+                    _workItemValidationError = "Work item not found on TFS";
+                }
             }
         }
         catch (Exception ex)

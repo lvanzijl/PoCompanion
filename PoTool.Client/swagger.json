@@ -3562,6 +3562,38 @@
           }
         }
       }
+    },
+    "/api/WorkItems/validate": {
+      "post": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_ValidateWorkItem",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateWorkItemRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateWorkItemResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7508,6 +7540,43 @@
           "effortValue": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "ValidateWorkItemRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["workItemId"],
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ValidateWorkItemResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["exists", "id"],
+        "properties": {
+          "exists": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
           }
         }
       }

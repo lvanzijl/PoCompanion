@@ -126,6 +126,36 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Validates a work item by ID directly from TFS (bypasses cache).
+    /// Used specifically for validating backlog root work item IDs in product creation/editing.
+    /// </summary>
+    [HttpPost("validate")]
+    [ProducesResponseType(typeof(ValidateWorkItemResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ValidateWorkItemResponse>> ValidateWorkItem(
+        [FromBody] ValidateWorkItemRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _mediator.Send(new ValidateWorkItemQuery(request.WorkItemId), cancellationToken);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating work item {WorkItemId}", request.WorkItemId);
+            // Return a response with error instead of throwing
+            return Ok(new ValidateWorkItemResponse
+            {
+                Exists = false,
+                Id = request.WorkItemId,
+                Title = null,
+                Type = null,
+                ErrorMessage = $"Unexpected error: {ex.Message}"
+            });
+        }
+    }
+
+    /// <summary>
     /// Gets the revision history for a specific work item.
     /// </summary>
     [HttpGet("{workItemId:int}/revisions")]
