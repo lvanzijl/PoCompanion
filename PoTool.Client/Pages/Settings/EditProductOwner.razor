@@ -6,6 +6,7 @@
 @using ProfilePictureType = PoTool.Shared.Settings.ProfilePictureType
 @inject ProfileService ProfileService
 @inject WorkItemService WorkItemService
+@inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject ErrorMessageService ErrorMessageService
@@ -88,6 +89,18 @@
                                        Variant="Variant.Outlined">
                                 Cancel
                             </CompactButton>
+                            @if (!IsNewProfile)
+                            {
+                                <div style="margin-left: auto;">
+                                    <CompactButton OnClick="DeleteProfile" 
+                                               Color="Color.Error" 
+                                               Variant="Variant.Outlined"
+                                               Disabled="_isSaving"
+                                               StartIcon="@Icons.Material.Filled.Delete">
+                                        Delete Product Owner
+                                    </CompactButton>
+                                </div>
+                            }
                         </MudStack>
                     </MudStack>
                 </MudForm>
@@ -238,6 +251,50 @@
     private void Cancel()
     {
         GoBack();
+    }
+
+    private async Task DeleteProfile()
+    {
+        if (!ProfileId.HasValue)
+        {
+            return;
+        }
+
+        var result = await DialogService.ShowMessageBox(
+            "Delete Product Owner",
+            $"Are you sure you want to delete the Product Owner '{(!string.IsNullOrWhiteSpace(_profileName) ? _profileName : "this profile")}'? This action cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try
+            {
+                _isSaving = true;
+                ClearError();
+                
+                var deleted = await ProfileService.DeleteProfileAsync(ProfileId.Value);
+                if (deleted)
+                {
+                    Snackbar.Add($"Product Owner '{_profileName}' deleted successfully", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add("Product Owner not found", Severity.Warning);
+                }
+                
+                // Navigate back to profiles home in both cases
+                NavigationManager.NavigateTo("/profiles");
+            }
+            catch (Exception ex)
+            {
+                _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error deleting Product Owner");
+            }
+            finally
+            {
+                _isSaving = false;
+            }
+        }
     }
 
     private void GoBack()
