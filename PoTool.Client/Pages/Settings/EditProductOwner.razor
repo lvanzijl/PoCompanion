@@ -1,0 +1,255 @@
+@page "/settings/productowner/edit/{ProfileId:int?}"
+@using PoTool.Client.Services
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Components.Settings
+@using PoTool.Client.ApiClient
+@using ProfilePictureType = PoTool.Shared.Settings.ProfilePictureType
+@inject ProfileService ProfileService
+@inject WorkItemService WorkItemService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ErrorMessageService ErrorMessageService
+
+<PageTitle>@(IsNewProfile ? "Add Product Owner" : "Edit Product Owner")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudStack Spacing="4">
+        @* Header *@
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h4">@(IsNewProfile ? "Add Product Owner" : "Edit Product Owner")</MudText>
+            <CompactButton Variant="Variant.Outlined" 
+                           Color="Color.Default"
+                           OnClick="GoBack"
+                           StartIcon="@Icons.Material.Filled.ArrowBack">
+                Back
+            </CompactButton>
+        </MudStack>
+
+        @if (_isLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        }
+        else if (_errorResponse != null)
+        {
+            <ErrorDisplay ErrorResponse="@_errorResponse" OnDismiss="ClearError" />
+        }
+        else
+        {
+            <MudPaper Elevation="1" Class="pa-4">
+                <MudForm @ref="_form">
+                    <MudStack Spacing="3">
+                        <CompactTextField @bind-Value="_profileName" 
+                                      Label="Product Owner Name" 
+                                      Required="true"
+                                      HelperText="e.g., 'John Smith', 'Jane Doe'" />
+
+                        <CompactSelect T="int"
+                                       Label="Goals (Optional)"
+                                       @bind-SelectedValues="_selectedGoalIds"
+                                       MultiSelection="true"
+                                       HelperText="Click to open and select multiple goals using checkboxes">
+                            @foreach (var goal in _availableGoals)
+                            {
+                                <MudSelectItem T="int" Value="@goal.TfsId">@goal.Title (ID: @goal.TfsId)</MudSelectItem>
+                            }
+                        </CompactSelect>
+
+                        @* Picture Selector *@
+                        <div class="mt-2">
+                            <PicturePicker Title="Product Owner Picture" 
+                                           Category="Profile" 
+                                           @bind-SelectedImageId="_selectedImageId" />
+                        </div>
+
+                        @if (_errorResponse != null)
+                        {
+                            <ErrorDisplay ErrorResponse="@_errorResponse" 
+                                          OnDismiss="ClearError" />
+                        }
+
+                        <MudStack Row="true" Spacing="2" Class="mt-2">
+                            <CompactButton OnClick="SaveProfile" 
+                                       Color="Color.Primary" 
+                                       Variant="Variant.Filled" 
+                                       Disabled="_isSaving"
+                                       StartIcon="@Icons.Material.Filled.Save">
+                                @if (_isSaving)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                    <span>Saving...</span>
+                                }
+                                else
+                                {
+                                    <span>@(IsNewProfile ? "Create" : "Update") Product Owner</span>
+                                }
+                            </CompactButton>
+                            <CompactButton OnClick="Cancel" 
+                                       Color="Color.Default" 
+                                       Variant="Variant.Outlined">
+                                Cancel
+                            </CompactButton>
+                        </MudStack>
+                    </MudStack>
+                </MudForm>
+            </MudPaper>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public int? ProfileId { get; set; }
+
+    private MudForm _form = null!;
+    
+    private bool IsNewProfile => !ProfileId.HasValue || ProfileId.Value == 0;
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private ErrorResponse? _errorResponse;
+
+    private string _profileName = string.Empty;
+    private IEnumerable<int> _selectedGoalIds = new List<int>();
+    private int _selectedImageId = 0;
+    private List<WorkItemDto> _availableGoals = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize with a random image for new profiles
+        if (IsNewProfile)
+        {
+            _selectedImageId = Random.Shared.Next(0, 64);
+        }
+        
+        await LoadGoals();
+        
+        if (!IsNewProfile && ProfileId.HasValue)
+        {
+            await LoadProfile();
+        }
+        
+        _isLoading = false;
+    }
+
+    private async Task LoadGoals()
+    {
+        try
+        {
+            var goals = await WorkItemService.GetGoalsFromTfsAsync();
+            _availableGoals = goals.ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading goals: {ex.Message}");
+        }
+    }
+
+    private async Task LoadProfile()
+    {
+        try
+        {
+            ClearError();
+            var profile = await ProfileService.GetProfileByIdAsync(ProfileId!.Value);
+            if (profile != null)
+            {
+                _profileName = profile.Name;
+                _selectedGoalIds = profile.GoalIds.ToList();
+                _selectedImageId = profile.DefaultPictureId;
+            }
+            else
+            {
+                _errorResponse = new ErrorResponse 
+                { 
+                    UserMessage = "Profile not found",
+                    TechnicalDetails = new TechnicalErrorDetails { StatusCode = 404 }
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error loading profile");
+        }
+    }
+
+    private async Task SaveProfile()
+    {
+        await _form.Validate();
+        if (!_form.IsValid)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_profileName))
+        {
+            Snackbar.Add("Please enter a Product Owner name", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            _isSaving = true;
+            ClearError();
+
+            var goalIds = _selectedGoalIds.ToList();
+
+            if (IsNewProfile)
+            {
+                var newProfile = await ProfileService.CreateProfileAsync(
+                    _profileName,
+                    goalIds,
+                    ProfilePictureType.Default,
+                    _selectedImageId,
+                    null);
+                
+                Snackbar.Add("Product Owner created successfully", Severity.Success);
+                
+                // Navigate to the management page for the new profile
+                NavigationManager.NavigateTo($"/settings/productowner/{newProfile.Id}");
+            }
+            else
+            {
+                await ProfileService.UpdateProfileAsync(
+                    ProfileId!.Value,
+                    _profileName,
+                    goalIds,
+                    ProfilePictureType.Default,
+                    _selectedImageId,
+                    null);
+                
+                Snackbar.Add("Product Owner updated successfully", Severity.Success);
+                
+                // Navigate back to the management page
+                NavigationManager.NavigateTo($"/settings/productowner/{ProfileId.Value}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, IsNewProfile ? "Error creating Product Owner" : "Error updating Product Owner");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        GoBack();
+    }
+
+    private void GoBack()
+    {
+        if (IsNewProfile)
+        {
+            NavigationManager.NavigateTo("/profiles");
+        }
+        else
+        {
+            NavigationManager.NavigateTo($"/settings/productowner/{ProfileId!.Value}");
+        }
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+}

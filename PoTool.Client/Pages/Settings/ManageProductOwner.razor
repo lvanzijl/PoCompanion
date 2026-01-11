@@ -382,20 +382,10 @@
         NavigationManager.NavigateTo("/profiles");
     }
 
-    private async Task EditProfileInfo()
+    private void EditProfileInfo()
     {
-        // Open ProfileManagerDialog to edit the basic profile information
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Large,
-            FullWidth = true
-        };
-        
-        await DialogService.ShowAsync<ProfileManagerDialog>("Edit Profile Information", options);
-        
-        // Reload the profile data after editing
-        await LoadDataAsync();
+        // Navigate to the edit page for this product owner
+        NavigationManager.NavigateTo($"/settings/productowner/edit/{ProfileId}");
     }
 
     private string GetProfileImagePath()
