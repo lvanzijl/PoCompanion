@@ -138,29 +138,10 @@
         }
     }
 
-    private async Task OpenAddProfileDialog()
+    private void OpenAddProfileDialog()
     {
-        // Create a minimal profile and navigate to the management page
-        try
-        {
-            // Create a basic profile with minimal data
-            var newProfile = await ProfileService.CreateProfileAsync(
-                "New Product Owner",
-                new List<int>(),     // No goals initially
-                ProfilePictureType.Default,
-                Random.Shared.Next(0, 64),  // Random picture
-                null
-            );
-            
-            Snackbar.Add("Product Owner profile created. Configure products and details below.", Severity.Success);
-            
-            // Navigate to the management page for the new profile
-            NavigationManager.NavigateTo($"/settings/productowner/{newProfile.Id}");
-        }
-        catch (Exception ex)
-        {
-            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error creating profile");
-        }
+        // Navigate to the edit page in "new" mode (no profile ID)
+        NavigationManager.NavigateTo("/settings/productowner/edit");
     }
 
     private void ManageTeams()
