@@ -112,15 +112,13 @@
                     break;
                 case StartupRoute.CreateFirstProfile:
                 case StartupRoute.ProfilesHome:
-                    // If app is usable (active profile exists), go to Product Home
-                    if (routingResult.IsAppUsable && readiness.ActiveProfileId != null)
-                    {
-                        NavigationManager.NavigateTo("/product-home");
-                    }
-                    else
+                    // If app is usable (active profile exists), stay on Dashboard (root)
+                    // ProductHome now handles "/" route and will display product overview
+                    if (!routingResult.IsAppUsable || readiness.ActiveProfileId == null)
                     {
                         NavigationManager.NavigateTo("/profiles");
                     }
+                    // else: stay on root, ProductHome will handle it
                     break;
             }
         }

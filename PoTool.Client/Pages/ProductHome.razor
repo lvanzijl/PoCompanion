@@ -1,3 +1,4 @@
+@page "/"
 @page "/product-home"
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
@@ -5,7 +6,9 @@
 @inject ProfileService ProfileService
 @inject TfsConfigService TfsConfigService
 @inject IMetricsClient MetricsClient
+@inject IPullRequestsClient PullRequestsClient
 @inject BacklogHealthCalculationService HealthCalculationService
+@inject PullRequestMetricsService PrMetricsService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -209,6 +212,144 @@
             }
         </MudPaper>
 
+        @* Planning Snapshot Section (Phase 2) *@
+        @if (_velocityData != null && _velocityData.TotalSprints > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                    <MudText Typo="Typo.h5">
+                        <MudIcon Icon="@Icons.Material.Filled.Speed" Class="mr-2" />
+                        Planning Snapshot
+                    </MudText>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               Href="/velocity">
+                        View Velocity Dashboard
+                    </MudButton>
+                </MudStack>
+
+                <MudGrid>
+                    <MetricSummaryCard Label="Average Velocity"
+                                       Value="@_velocityData.AverageVelocity.ToString("F1")"
+                                       SubLabel="story points/sprint"
+                                       Icon="@Icons.Material.Filled.Speed"
+                                       IconColor="Color.Primary"
+                                       ColumnSize="3" />
+                    
+                    <MetricSummaryCard Label="3-Sprint Average"
+                                       Value="@_velocityData.ThreeSprintAverage.ToString("F1")"
+                                       SubLabel="recent velocity"
+                                       Icon="@Icons.Material.Filled.TrendingUp"
+                                       IconColor="Color.Info"
+                                       ColumnSize="3" />
+                    
+                    <MetricSummaryCard Label="Sprints Tracked"
+                                       Value="@_velocityData.TotalSprints.ToString()"
+                                       SubLabel="data points"
+                                       Icon="@Icons.Material.Filled.CalendarMonth"
+                                       IconColor="Color.Success"
+                                       ColumnSize="3" />
+                    
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Elevation="2">
+                            <MudCardContent>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Forecast Reliability</MudText>
+                                        <MudText Typo="Typo.h4">
+                                            @GetForecastReliability()
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@GetForecastReliabilityDescription()</MudText>
+                                    </div>
+                                    <MudIcon Icon="@GetForecastReliabilityIcon()" 
+                                             Size="Size.Large" 
+                                             Color="@GetForecastReliabilityColor()" />
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+
+                <MudStack Row="true" Spacing="2" Class="mt-4">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.ViewColumn"
+                               Href="/release-planning">
+                        Release Planning
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Timeline"
+                               Href="/epic-forecast">
+                        Epic Forecast
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        }
+
+        @* PR Insights Summary Section (Phase 3) *@
+        @if (_prMetrics != null && _prMetrics.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                    <MudText Typo="Typo.h5">
+                        <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" />
+                        PR Insights Summary
+                    </MudText>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               Href="/pr-insights">
+                        View Full PR Insights
+                    </MudButton>
+                </MudStack>
+
+                <MudGrid>
+                    <MetricSummaryCard Label="Total PRs"
+                                       Value="@_prMetrics.Count().ToString()"
+                                       SubLabel="tracked"
+                                       Icon="@Icons.Material.Filled.MergeType"
+                                       IconColor="Color.Primary"
+                                       ColumnSize="3" />
+                    
+                    <MetricSummaryCard Label="Avg Time Open"
+                                       Value="@PrMetricsService.CalculateAverageTimeOpen(_prMetrics)"
+                                       SubLabel="per PR"
+                                       Icon="@Icons.Material.Filled.Schedule"
+                                       IconColor="@GetPrTimeColor()"
+                                       ColumnSize="3" />
+                    
+                    <MetricSummaryCard Label="Avg Iterations"
+                                       Value="@PrMetricsService.CalculateAverageIterations(_prMetrics)"
+                                       SubLabel="review cycles"
+                                       Icon="@Icons.Material.Filled.Refresh"
+                                       IconColor="Color.Info"
+                                       ColumnSize="3" />
+                    
+                    <MetricSummaryCard Label="Avg Files Changed"
+                                       Value="@PrMetricsService.CalculateAverageFiles(_prMetrics)"
+                                       SubLabel="per PR"
+                                       Icon="@Icons.Material.Filled.Folder"
+                                       IconColor="Color.Secondary"
+                                       ColumnSize="3" />
+                </MudGrid>
+
+                @* PR Size Outliers Indicator *@
+                @{
+                    var largePrs = _prMetrics.Where(p => p.TotalFileCount > LargePrFileThreshold).ToList();
+                    if (largePrs.Any())
+                    {
+                        <MudAlert Severity="Severity.Warning" Class="mt-3" Dense="true">
+                            <MudText Typo="Typo.body2">
+                                <strong>@largePrs.Count large PR(s)</strong> with @LargePrFileThreshold+ files changed may need attention.
+                            </MudText>
+                        </MudAlert>
+                    }
+                }
+            </MudPaper>
+        }
+
         @* Quick Navigation Section *@
         <MudPaper Elevation="1" Class="pa-4">
             <MudText Typo="Typo.h6" Class="mb-3">
@@ -295,6 +436,12 @@
 </MudContainer>
 
 @code {
+    // Configuration constants for PR metrics thresholds
+    private const int LargePrFileThreshold = 50;
+    private const double PrTimeGoodDaysThreshold = 2.0;
+    private const double PrTimeInfoDaysThreshold = 5.0;
+    private const double PrTimeWarningDaysThreshold = 10.0;
+    
     private bool _isLoading = true;
     private string? _errorMessage;
     
@@ -302,6 +449,7 @@
     private DateTimeOffset? _lastSyncTime;
     private MultiIterationBacklogHealthDto? _healthData;
     private VelocityTrendDto? _velocityData;
+    private IEnumerable<PullRequestMetricsDto>? _prMetrics;
 
     protected override async Task OnInitializedAsync()
     {
@@ -349,6 +497,17 @@
             {
                 // Velocity data not available - not critical
                 _velocityData = null;
+            }
+            
+            // Load PR metrics (Phase 3)
+            try
+            {
+                _prMetrics = await PullRequestsClient.GetMetricsAsync();
+            }
+            catch (Exception)
+            {
+                // PR metrics not available - not critical
+                _prMetrics = null;
             }
         }
         catch (Exception ex)
@@ -407,5 +566,70 @@
         // Navigate to Work Item Explorer with validation filters enabled
         // The WorkItemExplorer will read query parameters to enable filters
         NavigationManager.NavigateTo("/workitems?filter=issues");
+    }
+
+    // Phase 2: Planning Snapshot helpers
+    private string GetForecastReliability()
+    {
+        if (_velocityData == null) return "N/A";
+        
+        return _velocityData.TotalSprints switch
+        {
+            >= 6 => "High",
+            >= 3 => "Medium",
+            _ => "Low"
+        };
+    }
+
+    private string GetForecastReliabilityDescription()
+    {
+        if (_velocityData == null) return "No data";
+        
+        return _velocityData.TotalSprints switch
+        {
+            >= 6 => "6+ sprints of data",
+            >= 3 => "3-5 sprints of data",
+            _ => "Limited data"
+        };
+    }
+
+    private string GetForecastReliabilityIcon()
+    {
+        if (_velocityData == null) return Icons.Material.Filled.HelpOutline;
+        
+        return _velocityData.TotalSprints switch
+        {
+            >= 6 => Icons.Material.Filled.CheckCircle,
+            >= 3 => Icons.Material.Filled.Info,
+            _ => Icons.Material.Filled.Warning
+        };
+    }
+
+    private Color GetForecastReliabilityColor()
+    {
+        if (_velocityData == null) return Color.Default;
+        
+        return _velocityData.TotalSprints switch
+        {
+            >= 6 => Color.Success,
+            >= 3 => Color.Info,
+            _ => Color.Warning
+        };
+    }
+
+    // Phase 3: PR Insights helpers
+    private Color GetPrTimeColor()
+    {
+        if (_prMetrics == null || !_prMetrics.Any()) return Color.Default;
+        
+        var avgDays = _prMetrics.Average(m => m.TotalTimeOpen.TotalDays);
+        
+        return avgDays switch
+        {
+            <= PrTimeGoodDaysThreshold => Color.Success,
+            <= PrTimeInfoDaysThreshold => Color.Info,
+            <= PrTimeWarningDaysThreshold => Color.Warning,
+            _ => Color.Error
+        };
     }
 }
