@@ -129,8 +129,8 @@
             _activeProfileId = profile.Id;
             Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
             
-            // Navigate to home after selecting profile
-            NavigationManager.NavigateTo("/");
+            // Navigate to product home after selecting profile
+            NavigationManager.NavigateTo("/product-home");
         }
         catch (Exception ex)
         {

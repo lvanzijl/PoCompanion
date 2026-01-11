@@ -149,10 +149,29 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Check for filter query parameter from Product Home navigation
+        ApplyQueryParameterFilters();
+        
         await InitializeSignalRAsync();
         await LoadExpandedStateAsync();
         await LoadLastSyncTimeAsync();
         await LoadWorkItems();
+    }
+
+    private void ApplyQueryParameterFilters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var query = uri.Query;
+        
+        // Simple query parameter parsing for "filter=issues"
+        if (!string.IsNullOrEmpty(query) && query.Contains("filter=issues", StringComparison.OrdinalIgnoreCase))
+        {
+            // Enable all validation filters when navigating from Product Home
+            foreach (var filter in _validationFilters)
+            {
+                filter.IsEnabled = true;
+            }
+        }
     }
 
     private async Task LoadLastSyncTimeAsync()
