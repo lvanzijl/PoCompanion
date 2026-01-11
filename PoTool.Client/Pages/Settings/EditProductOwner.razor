@@ -277,14 +277,14 @@
                 if (deleted)
                 {
                     Snackbar.Add($"Product Owner '{_profileName}' deleted successfully", Severity.Success);
-                    
-                    // Navigate back to profiles home
-                    NavigationManager.NavigateTo("/profiles");
                 }
                 else
                 {
                     Snackbar.Add("Product Owner not found", Severity.Warning);
                 }
+                
+                // Navigate back to profiles home in both cases
+                NavigationManager.NavigateTo("/profiles");
             }
             catch (Exception ex)
             {
