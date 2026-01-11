@@ -149,10 +149,42 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Check for filter query parameter from Product Home navigation
+        ApplyQueryParameterFilters();
+        
         await InitializeSignalRAsync();
         await LoadExpandedStateAsync();
         await LoadLastSyncTimeAsync();
         await LoadWorkItems();
+    }
+
+    private void ApplyQueryParameterFilters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var query = uri.Query;
+        
+        if (string.IsNullOrEmpty(query))
+        {
+            return;
+        }
+        
+        // Parse query string manually (remove leading '?' and split on '&')
+        var queryParams = query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Split('=', 2))
+            .Where(p => p.Length == 2)
+            .ToDictionary(p => p[0], p => p[1], StringComparer.OrdinalIgnoreCase);
+        
+        // Check for "filter=issues" parameter
+        if (queryParams.TryGetValue("filter", out var filterValue) && 
+            filterValue.Equals("issues", StringComparison.OrdinalIgnoreCase))
+        {
+            // Enable all validation filters when navigating from Product Home
+            foreach (var filter in _validationFilters)
+            {
+                filter.IsEnabled = true;
+            }
+        }
     }
 
     private async Task LoadLastSyncTimeAsync()

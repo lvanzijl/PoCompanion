@@ -129,7 +129,7 @@
             _activeProfileId = profile.Id;
             Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
             
-            // Navigate to home after selecting profile
+            // Navigate to dashboard after selecting profile
             NavigationManager.NavigateTo("/");
         }
         catch (Exception ex)

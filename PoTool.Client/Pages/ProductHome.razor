@@ -1,0 +1,635 @@
+@page "/"
+@page "/product-home"
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Services
+@inject ProfileService ProfileService
+@inject TfsConfigService TfsConfigService
+@inject IMetricsClient MetricsClient
+@inject IPullRequestsClient PullRequestsClient
+@inject BacklogHealthCalculationService HealthCalculationService
+@inject PullRequestMetricsService PrMetricsService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Product Overview - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else if (_errorMessage != null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @_errorMessage
+        </MudAlert>
+    }
+    else
+    {
+        @* Product Header Section *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.h4">
+                        <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
+                        @(_activeProfile?.Name ?? "Product Overview")
+                    </MudText>
+                    
+                    @if (_activeProfile?.GoalIds?.Any() == true)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <MudIcon Icon="@Icons.Material.Filled.Flag" Size="Size.Small" Class="mr-1" />
+                            @_activeProfile.GoalIds.Count Goal(s) configured
+                        </MudText>
+                    }
+                </MudStack>
+                
+                <MudStack AlignItems="AlignItems.End" Spacing="1">
+                    @if (_lastSyncTime.HasValue)
+                    {
+                        <MudChip T="string" 
+                                 Icon="@Icons.Material.Filled.Sync" 
+                                 Size="Size.Small"
+                                 Color="Color.Default">
+                            Last sync: @_lastSyncTime.Value.ToLocalTime().ToString("g")
+                        </MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" 
+                                 Icon="@Icons.Material.Filled.Warning" 
+                                 Size="Size.Small"
+                                 Color="Color.Warning">
+                            Never synced
+                        </MudChip>
+                    }
+                    
+                    @if (_velocityData != null && _velocityData.TotalSprints >= 3)
+                    {
+                        <MudChip T="string" 
+                                 Icon="@Icons.Material.Filled.Speed" 
+                                 Size="Size.Small"
+                                 Color="Color.Success">
+                            Velocity data available
+                        </MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" 
+                                 Icon="@Icons.Material.Filled.Speed" 
+                                 Size="Size.Small"
+                                 Color="Color.Warning">
+                            Velocity data limited
+                        </MudChip>
+                    }
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+
+        @* Backlog Health Summary Section *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Class="mr-2" />
+                    Backlog Health Summary
+                </MudText>
+                <MudButton Variant="Variant.Text" 
+                           Color="Color.Primary" 
+                           EndIcon="@Icons.Material.Filled.ArrowForward"
+                           Href="/backlog-health">
+                    View Full Dashboard
+                </MudButton>
+            </MudStack>
+
+            @if (_healthData != null && _healthData.IterationHealth.Any())
+            {
+                <MudGrid>
+                    <MetricSummaryCard Label="Total Work Items"
+                                       Value="@_healthData.TotalWorkItems.ToString()"
+                                       SubLabel="across iterations"
+                                       Icon="@Icons.Material.Filled.Assignment"
+                                       IconColor="Color.Primary"
+                                       ColumnSize="3" />
+                    
+                    <MetricSummaryCard Label="Total Issues"
+                                       Value="@_healthData.TotalIssues.ToString()"
+                                       SubLabel="validation problems"
+                                       Icon="@Icons.Material.Filled.Warning"
+                                       IconColor="@(_healthData.TotalIssues > 0 ? Color.Warning : Color.Success)"
+                                       ColumnSize="3" />
+                    
+                    <MetricSummaryCard Label="Health Score"
+                                       Value="@GetHealthPercentage()"
+                                       SubLabel="items without issues"
+                                       Icon="@Icons.Material.Filled.HealthAndSafety"
+                                       IconColor="@GetHealthColor()"
+                                       ColumnSize="3" />
+                    
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Elevation="2">
+                            <MudCardContent>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Health Trend</MudText>
+                                        <MudText Typo="Typo.h4">
+                                            @GetTrendText(_healthData.Trend.ValidationTrend)
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@_healthData.Trend.Summary</MudText>
+                                    </div>
+                                    <MudIcon Icon="@HealthCalculationService.GetTrendIcon(_healthData.Trend.ValidationTrend)" 
+                                             Size="Size.Large" 
+                                             Color="@HealthCalculationService.GetTrendColor(_healthData.Trend.ValidationTrend)" />
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+
+                @* Issue Breakdown *@
+                @if (_healthData.TotalIssues > 0)
+                {
+                    <MudDivider Class="my-4" />
+                    
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Issue Breakdown</MudText>
+                    
+                    <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" Class="mb-4">
+                        @{
+                            var latestIteration = _healthData.IterationHealth.FirstOrDefault();
+                            if (latestIteration != null)
+                            {
+                                if (latestIteration.ParentProgressIssues > 0)
+                                {
+                                    <MudChip T="string" 
+                                             Icon="@Icons.Material.Filled.AccountTree" 
+                                             Color="Color.Warning"
+                                             Size="Size.Small">
+                                        @latestIteration.ParentProgressIssues Parent Progress Issues
+                                    </MudChip>
+                                }
+                                if (latestIteration.WorkItemsWithoutEffort > 0)
+                                {
+                                    <MudChip T="string" 
+                                             Icon="@Icons.Material.Filled.Timer" 
+                                             Color="Color.Warning"
+                                             Size="Size.Small">
+                                        @latestIteration.WorkItemsWithoutEffort Missing Effort
+                                    </MudChip>
+                                }
+                                if (latestIteration.BlockedItems > 0)
+                                {
+                                    <MudChip T="string" 
+                                             Icon="@Icons.Material.Filled.Block" 
+                                             Color="Color.Error"
+                                             Size="Size.Small">
+                                        @latestIteration.BlockedItems Blocked Items
+                                    </MudChip>
+                                }
+                            }
+                        }
+                    </MudStack>
+                    
+                    @* Primary Action - Navigate to Work Item Explorer with filters *@
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.FilterList"
+                               OnClick="NavigateToExplorerWithIssues">
+                        View Issues in Work Item Explorer
+                    </MudButton>
+                }
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-2">
+                    <MudText>No backlog health data available. Please sync work items first.</MudText>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               Href="/workitems"
+                               Class="mt-2">
+                        Go to Work Items
+                    </MudButton>
+                </MudAlert>
+            }
+        </MudPaper>
+
+        @* Planning Snapshot Section (Phase 2) *@
+        @if (_velocityData != null && _velocityData.TotalSprints > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                    <MudText Typo="Typo.h5">
+                        <MudIcon Icon="@Icons.Material.Filled.Speed" Class="mr-2" />
+                        Planning Snapshot
+                    </MudText>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               Href="/velocity">
+                        View Velocity Dashboard
+                    </MudButton>
+                </MudStack>
+
+                <MudGrid>
+                    <MetricSummaryCard Label="Average Velocity"
+                                       Value="@_velocityData.AverageVelocity.ToString("F1")"
+                                       SubLabel="story points/sprint"
+                                       Icon="@Icons.Material.Filled.Speed"
+                                       IconColor="Color.Primary"
+                                       ColumnSize="3" />
+                    
+                    <MetricSummaryCard Label="3-Sprint Average"
+                                       Value="@_velocityData.ThreeSprintAverage.ToString("F1")"
+                                       SubLabel="recent velocity"
+                                       Icon="@Icons.Material.Filled.TrendingUp"
+                                       IconColor="Color.Info"
+                                       ColumnSize="3" />
+                    
+                    <MetricSummaryCard Label="Sprints Tracked"
+                                       Value="@_velocityData.TotalSprints.ToString()"
+                                       SubLabel="data points"
+                                       Icon="@Icons.Material.Filled.CalendarMonth"
+                                       IconColor="Color.Success"
+                                       ColumnSize="3" />
+                    
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Elevation="2">
+                            <MudCardContent>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Forecast Reliability</MudText>
+                                        <MudText Typo="Typo.h4">
+                                            @GetForecastReliability()
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@GetForecastReliabilityDescription()</MudText>
+                                    </div>
+                                    <MudIcon Icon="@GetForecastReliabilityIcon()" 
+                                             Size="Size.Large" 
+                                             Color="@GetForecastReliabilityColor()" />
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+
+                <MudStack Row="true" Spacing="2" Class="mt-4">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.ViewColumn"
+                               Href="/release-planning">
+                        Release Planning
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Timeline"
+                               Href="/epic-forecast">
+                        Epic Forecast
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        }
+
+        @* PR Insights Summary Section (Phase 3) *@
+        @if (_prMetrics != null && _prMetrics.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                    <MudText Typo="Typo.h5">
+                        <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" />
+                        PR Insights Summary
+                    </MudText>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               Href="/pr-insights">
+                        View Full PR Insights
+                    </MudButton>
+                </MudStack>
+
+                <MudGrid>
+                    <MetricSummaryCard Label="Total PRs"
+                                       Value="@_prMetrics.Count().ToString()"
+                                       SubLabel="tracked"
+                                       Icon="@Icons.Material.Filled.MergeType"
+                                       IconColor="Color.Primary"
+                                       ColumnSize="3" />
+                    
+                    <MetricSummaryCard Label="Avg Time Open"
+                                       Value="@PrMetricsService.CalculateAverageTimeOpen(_prMetrics)"
+                                       SubLabel="per PR"
+                                       Icon="@Icons.Material.Filled.Schedule"
+                                       IconColor="@GetPrTimeColor()"
+                                       ColumnSize="3" />
+                    
+                    <MetricSummaryCard Label="Avg Iterations"
+                                       Value="@PrMetricsService.CalculateAverageIterations(_prMetrics)"
+                                       SubLabel="review cycles"
+                                       Icon="@Icons.Material.Filled.Refresh"
+                                       IconColor="Color.Info"
+                                       ColumnSize="3" />
+                    
+                    <MetricSummaryCard Label="Avg Files Changed"
+                                       Value="@PrMetricsService.CalculateAverageFiles(_prMetrics)"
+                                       SubLabel="per PR"
+                                       Icon="@Icons.Material.Filled.Folder"
+                                       IconColor="Color.Secondary"
+                                       ColumnSize="3" />
+                </MudGrid>
+
+                @* PR Size Outliers Indicator *@
+                @{
+                    var largePrs = _prMetrics.Where(p => p.TotalFileCount > LargePrFileThreshold).ToList();
+                    if (largePrs.Any())
+                    {
+                        <MudAlert Severity="Severity.Warning" Class="mt-3" Dense="true">
+                            <MudText Typo="Typo.body2">
+                                <strong>@largePrs.Count large PR(s)</strong> with @LargePrFileThreshold+ files changed may need attention.
+                            </MudText>
+                        </MudAlert>
+                    }
+                }
+            </MudPaper>
+        }
+
+        @* Quick Navigation Section *@
+        <MudPaper Elevation="1" Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Navigation" Class="mr-2" />
+                Quick Navigation
+            </MudText>
+            
+            <MudGrid Spacing="2">
+                <MudItem xs="6" sm="4" md="3">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Href="/workitems"
+                               StartIcon="@Icons.Material.Filled.List">
+                        Work Items
+                    </MudButton>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="3">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Href="/backlog-health"
+                               StartIcon="@Icons.Material.Filled.HealthAndSafety">
+                        Backlog Health
+                    </MudButton>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="3">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Href="/velocity"
+                               StartIcon="@Icons.Material.Filled.TrendingUp">
+                        Velocity
+                    </MudButton>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="3">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Href="/release-planning"
+                               StartIcon="@Icons.Material.Filled.ViewColumn">
+                        Release Planning
+                    </MudButton>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="3">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Href="/pr-insights"
+                               StartIcon="@Icons.Material.Filled.Insights">
+                        PR Insights
+                    </MudButton>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="3">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Href="/effort-distribution"
+                               StartIcon="@Icons.Material.Filled.GridOn">
+                        Effort Distribution
+                    </MudButton>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="3">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Href="/dependency-graph"
+                               StartIcon="@Icons.Material.Filled.AccountTree">
+                        Dependencies
+                    </MudButton>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="3">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Href="/epic-forecast"
+                               StartIcon="@Icons.Material.Filled.Timeline">
+                        Epic Forecast
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    // Configuration constants for PR metrics thresholds
+    private const int LargePrFileThreshold = 50;
+    private const double PrTimeGoodDaysThreshold = 2.0;
+    private const double PrTimeInfoDaysThreshold = 5.0;
+    private const double PrTimeWarningDaysThreshold = 10.0;
+    
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    
+    private ProfileDto? _activeProfile;
+    private DateTimeOffset? _lastSyncTime;
+    private MultiIterationBacklogHealthDto? _healthData;
+    private VelocityTrendDto? _velocityData;
+    private IEnumerable<PullRequestMetricsDto>? _prMetrics;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        
+        try
+        {
+            // Load active profile
+            _activeProfile = await ProfileService.GetActiveProfileAsync();
+            
+            if (_activeProfile == null)
+            {
+                // No active profile - redirect to profiles home
+                NavigationManager.NavigateTo("/profiles");
+                return;
+            }
+            
+            // Load last sync time
+            var config = await TfsConfigService.GetConfigAsync();
+            _lastSyncTime = config?.LastValidated;
+            
+            // Load health data (limit to 3 iterations for summary)
+            try
+            {
+                _healthData = await MetricsClient.GetMultiIterationBacklogHealthAsync(null, 3);
+            }
+            catch (Exception)
+            {
+                // Health data not available - not critical
+                _healthData = null;
+            }
+            
+            // Load velocity data (limit to 6 sprints for averages)
+            try
+            {
+                _velocityData = await MetricsClient.GetVelocityTrendAsync(null, 6);
+            }
+            catch (Exception)
+            {
+                // Velocity data not available - not critical
+                _velocityData = null;
+            }
+            
+            // Load PR metrics (Phase 3)
+            try
+            {
+                _prMetrics = await PullRequestsClient.GetMetricsAsync();
+            }
+            catch (Exception)
+            {
+                // PR metrics not available - not critical
+                _prMetrics = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading product overview: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string GetHealthPercentage()
+    {
+        if (_healthData == null || _healthData.TotalWorkItems == 0)
+        {
+            return "N/A";
+        }
+        
+        var healthyItems = _healthData.TotalWorkItems - _healthData.TotalIssues;
+        var percentage = (healthyItems * 100.0) / _healthData.TotalWorkItems;
+        return $"{percentage:F0}%";
+    }
+
+    private Color GetHealthColor()
+    {
+        if (_healthData == null || _healthData.TotalWorkItems == 0)
+        {
+            return Color.Default;
+        }
+        
+        var healthyItems = _healthData.TotalWorkItems - _healthData.TotalIssues;
+        var percentage = (healthyItems * 100.0) / _healthData.TotalWorkItems;
+        
+        return percentage switch
+        {
+            >= 90 => Color.Success,
+            >= 70 => Color.Warning,
+            _ => Color.Error
+        };
+    }
+
+    private string GetTrendText(TrendDirection trend)
+    {
+        return trend switch
+        {
+            TrendDirection.Improving => "Improving",
+            TrendDirection.Stable => "Stable",
+            TrendDirection.Degrading => "Degrading",
+            _ => "Unknown"
+        };
+    }
+
+    private void NavigateToExplorerWithIssues()
+    {
+        // Navigate to Work Item Explorer with validation filters enabled
+        // The WorkItemExplorer will read query parameters to enable filters
+        NavigationManager.NavigateTo("/workitems?filter=issues");
+    }
+
+    // Phase 2: Planning Snapshot helpers
+    private string GetForecastReliability()
+    {
+        if (_velocityData == null) return "N/A";
+        
+        return _velocityData.TotalSprints switch
+        {
+            >= 6 => "High",
+            >= 3 => "Medium",
+            _ => "Low"
+        };
+    }
+
+    private string GetForecastReliabilityDescription()
+    {
+        if (_velocityData == null) return "No data";
+        
+        return _velocityData.TotalSprints switch
+        {
+            >= 6 => "6+ sprints of data",
+            >= 3 => "3-5 sprints of data",
+            _ => "Limited data"
+        };
+    }
+
+    private string GetForecastReliabilityIcon()
+    {
+        if (_velocityData == null) return Icons.Material.Filled.HelpOutline;
+        
+        return _velocityData.TotalSprints switch
+        {
+            >= 6 => Icons.Material.Filled.CheckCircle,
+            >= 3 => Icons.Material.Filled.Info,
+            _ => Icons.Material.Filled.Warning
+        };
+    }
+
+    private Color GetForecastReliabilityColor()
+    {
+        if (_velocityData == null) return Color.Default;
+        
+        return _velocityData.TotalSprints switch
+        {
+            >= 6 => Color.Success,
+            >= 3 => Color.Info,
+            _ => Color.Warning
+        };
+    }
+
+    // Phase 3: PR Insights helpers
+    private Color GetPrTimeColor()
+    {
+        if (_prMetrics == null || !_prMetrics.Any()) return Color.Default;
+        
+        var avgDays = _prMetrics.Average(m => m.TotalTimeOpen.TotalDays);
+        
+        return avgDays switch
+        {
+            <= PrTimeGoodDaysThreshold => Color.Success,
+            <= PrTimeInfoDaysThreshold => Color.Info,
+            <= PrTimeWarningDaysThreshold => Color.Warning,
+            _ => Color.Error
+        };
+    }
+}
