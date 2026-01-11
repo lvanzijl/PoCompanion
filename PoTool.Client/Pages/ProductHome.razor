@@ -721,7 +721,8 @@
     {
         _selectedProductId = newProductId;
         await LoadSelectedProductDetailsAsync();
-        // Note: Switching product does NOT trigger a sync automatically
+        // Switching product does NOT trigger a sync automatically to preserve user control
+        // over cache operations and avoid unexpected network calls when browsing products
         StateHasChanged();
     }
     
