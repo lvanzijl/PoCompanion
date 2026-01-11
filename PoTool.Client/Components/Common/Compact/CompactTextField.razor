@@ -21,6 +21,8 @@
               Validation="@Validation"
               Immediate="@Immediate"
               DebounceInterval="@DebounceInterval"
+              Error="@Error"
+              ErrorText="@ErrorText"
               OnBlur="@OnBlur"
               OnAdornmentClick="@OnAdornmentClick"
               Adornment="@Adornment"
@@ -47,6 +49,8 @@
     [Parameter] public object? Validation { get; set; }
     [Parameter] public bool Immediate { get; set; }
     [Parameter] public double DebounceInterval { get; set; } = 0;
+   [Parameter] public bool Error { get; set; }
+   [Parameter] public string? ErrorText { get; set; }
     [Parameter] public EventCallback<FocusEventArgs> OnBlur { get; set; }
     [Parameter] public EventCallback<MouseEventArgs> OnAdornmentClick { get; set; }
     [Parameter] public Adornment Adornment { get; set; } = Adornment.None;
