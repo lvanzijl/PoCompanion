@@ -24,11 +24,6 @@
             @(Profile?.Name ?? "Unknown")
         </MudText>
         
-        @* Team Name *@
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-center" Style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            @(Profile?.TeamName ?? "No Team")
-        </MudText>
-        
         @* Active indicator *@
         @if (IsActive)
         {

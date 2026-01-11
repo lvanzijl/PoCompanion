@@ -151,6 +151,7 @@ builder.Services.AddScoped<IStartupOrchestratorService, StartupOrchestratorServi
 // Register browser-based storage services
 builder.Services.AddScoped<IPreferencesService, BrowserPreferencesService>();
 builder.Services.AddScoped<ISecureStorageService, BrowserSecureStorageService>();
+builder.Services.AddScoped<DraftStorageService>();
 
 // Register business logic services (now using API)
 builder.Services.AddScoped<WorkItemFilteringService>();

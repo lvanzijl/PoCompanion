@@ -44,4 +44,9 @@ public interface ITeamRepository
     /// Archives or unarchives a team.
     /// </summary>
     Task<TeamDto> ArchiveTeamAsync(int id, bool isArchived, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Permanently deletes a team and all its product links.
+    /// </summary>
+    Task<bool> DeleteTeamAsync(int id, CancellationToken cancellationToken = default);
 }

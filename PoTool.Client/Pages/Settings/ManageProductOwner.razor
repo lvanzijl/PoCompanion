@@ -80,16 +80,7 @@
                                                 <MudImage Src="@GetProductImagePath(product)" Alt="@product.Name" />
                                             </MudAvatar>
                                             <MudStack Spacing="0">
-                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                    <MudText Typo="Typo.body1"><strong>@product.Name</strong></MudText>
-                                                    @if (product.BacklogRootWorkItemId == null)
-                                                    {
-                                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">Backlog-less</MudChip>
-                                                    }
-                                                </MudStack>
-                                                <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                    Area Path: @product.ProductAreaPath
-                                                </MudText>
+                                                <MudText Typo="Typo.body1"><strong>@product.Name</strong></MudText>
                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                     @product.TeamIds.Count team(s) linked
                                                 </MudText>
@@ -108,10 +99,16 @@
                                                            Title="Move down" />
                                             <CompactIconButton Icon="@Icons.Material.Filled.Edit" 
                                                            Color="Color.Primary" 
-                                                           OnClick="@(() => EditProduct(product))" />
+                                                           OnClick="@(() => EditProduct(product))" 
+                                                           Title="Edit product" />
+                                            <CompactIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline" 
+                                                           Color="Color.Warning" 
+                                                           OnClick="@(() => RemoveProductFromOwner(product))"
+                                                           Title="Remove from this owner (make orphan)" />
                                             <CompactIconButton Icon="@Icons.Material.Filled.Delete" 
                                                            Color="Color.Error" 
-                                                           OnClick="@(() => DeleteProduct(product))" />
+                                                           OnClick="@(() => DeleteProduct(product))" 
+                                                           Title="Delete product" />
                                         </MudStack>
                                     </MudStack>
                                 </MudListItem>
@@ -125,6 +122,55 @@
                     <MudAlert Severity="Severity.Info" Dense="true">
                         No products yet. Create your first product for this Product Owner.
                     </MudAlert>
+                }
+
+                @* Available Orphaned Products Section *@
+                @if (_availableOrphans != null && _availableOrphans.Any())
+                {
+                    <MudDivider Class="my-4" />
+                    
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.h6" Color="Color.Warning">
+                            Available Orphaned Products
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            These products have no owner. You can assign them to this Product Owner.
+                        </MudText>
+                        
+                        <MudPaper Elevation="1" Class="pa-2">
+                            <CompactList T="string">
+                                @foreach (var orphan in _availableOrphans)
+                                {
+                                    <MudListItem T="string">
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                                <MudAvatar Size="Size.Medium">
+                                                    <MudImage Src="@GetProductImagePath(orphan)" Alt="@orphan.Name" />
+                                                </MudAvatar>
+                                                <MudStack Spacing="0">
+                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                        <MudText Typo="Typo.body1"><strong>@orphan.Name</strong></MudText>
+                                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">Orphan</MudChip>
+                                                    </MudStack>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                        @orphan.TeamIds.Count team(s) linked
+                                                    </MudText>
+                                                </MudStack>
+                                            </MudStack>
+                                            <CompactButton Variant="Variant.Filled" 
+                                                       Color="Color.Success"
+                                                       OnClick="@(() => AssignOrphanToOwner(orphan))"
+                                                       StartIcon="@Icons.Material.Filled.AddCircle"
+                                                       Size="Size.Small">
+                                                Assign to Owner
+                                            </CompactButton>
+                                        </MudStack>
+                                    </MudListItem>
+                                    <MudDivider />
+                                }
+                            </CompactList>
+                        </MudPaper>
+                    </MudStack>
                 }
 
                 @* Editor Panel *@
@@ -152,6 +198,7 @@
 
     private ProfileDto? _profile;
     private IEnumerable<ProductDto>? _products;
+    private List<ProductDto> _availableOrphans = new();
     private bool _isLoading = true;
     private bool _showEditor = false;
     private ProductDto? _editingProduct;
@@ -172,7 +219,10 @@
             _profile = await ProfileService.GetProfileByIdAsync(ProfileId);
             if (_profile != null)
             {
-                _products = await ProductService.GetProductsByOwnerAsync(ProfileId);
+                // Get selectable products (owned by this owner + orphaned products)
+                var selectableProducts = await ProductService.GetSelectableProductsAsync(ProfileId);
+                _products = selectableProducts.Where(p => p.ProductOwnerId == ProfileId).ToList();
+                _availableOrphans = selectableProducts.Where(p => p.ProductOwnerId == null).ToList();
             }
         }
         catch (Exception ex)
@@ -219,6 +269,54 @@
             catch (Exception ex)
             {
                 Snackbar.Add($"Error deleting product: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task RemoveProductFromOwner(ProductDto product)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Remove Product from Owner",
+            $"Are you sure you want to remove '{product.Name}' from this Product Owner? The product will become orphaned and can be assigned to another owner later.",
+            yesText: "Remove",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try
+            {
+                // Change owner to null (make orphan)
+                await ProductService.ChangeProductOwnerAsync(product.Id, null);
+                Snackbar.Add($"Product '{product.Name}' removed from owner. It is now orphaned.", Severity.Success);
+                await LoadDataAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error removing product: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task AssignOrphanToOwner(ProductDto orphan)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Assign Product to Owner",
+            $"Assign '{orphan.Name}' to {_profile?.Name}?",
+            yesText: "Assign",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try
+            {
+                // Change owner from null to this owner
+                await ProductService.ChangeProductOwnerAsync(orphan.Id, ProfileId);
+                Snackbar.Add($"Product '{orphan.Name}' assigned to {_profile?.Name}", Severity.Success);
+                await LoadDataAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error assigning product: {ex.Message}", Severity.Error);
             }
         }
     }

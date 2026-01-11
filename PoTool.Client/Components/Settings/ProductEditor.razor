@@ -2,10 +2,13 @@
 @using PoTool.Client.Services
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Storage
+@using PoTool.Client.Models
 @using ProductPictureType = PoTool.Shared.Settings.ProductPictureType
 @inject ProductService ProductService
 @inject TeamService TeamService
 @inject WorkItemService WorkItemService
+@inject DraftStorageService DraftStorageService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject ErrorMessageService ErrorMessageService
@@ -18,13 +21,34 @@
             <CompactTextField @bind-Value="_name" 
                           Label="Product Name" 
                           Required="true"
-                          HelperText="e.g., 'Customer Portal', 'Mobile App'" />
+                          HelperText="e.g., 'Customer Portal', 'Mobile App'"
+                          @bind-Value:after="@(() => SaveDraftAsync())" />
 
-            <CompactTextField @bind-Value="_backlogRootWorkItemIdText" 
-                          Label="Backlog Root Work Item ID" 
-                          Required="true"
-                          HelperText="Enter the work item ID that defines the product backlog"
-                          InputType="InputType.Number" />
+            <MudStack Spacing="1">
+                <CompactTextField @bind-Value="_backlogRootWorkItemIdText" 
+                              Label="Backlog Root Work Item ID" 
+                              Required="true"
+                              HelperText="Enter the work item ID that defines the product backlog"
+                              InputType="InputType.Number"
+                              OnBlur="ValidateWorkItemId"
+                              Error="@_workItemValidationFailed"
+                              ErrorText="@_workItemValidationError"
+                              @bind-Value:after="@(() => SaveDraftAsync())" />
+                
+                @if (_isValidatingWorkItem)
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Validating work item...</MudText>
+                    </MudStack>
+                }
+                else if (_workItemValidationSuccess)
+                {
+                    <MudAlert Severity="Severity.Success" Dense="true" Class="mt-1">
+                        Work item validated successfully
+                    </MudAlert>
+                }
+            </MudStack>
 
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
@@ -40,7 +64,8 @@
                 <CompactSelect T="int"
                                @bind-SelectedValues="_selectedTeamIds"
                                MultiSelection="true"
-                               HelperText="Select teams that work on this product">
+                               HelperText="Select teams that work on this product"
+                               @bind-SelectedValues:after="@(() => SaveDraftAsync())">
                     @foreach (var team in _availableTeams)
                     {
                         <MudSelectItem T="int" Value="@team.Id">@team.Name</MudSelectItem>
@@ -61,7 +86,8 @@
             <div class="mt-2">
                 <PicturePicker Title="Product Picture" 
                                Category="Product" 
-                               @bind-SelectedImageId="_selectedImageId" />
+                               @bind-SelectedImageId="_selectedImageId"
+                               @bind-SelectedImageId:after="@(() => SaveDraftAsync())" />
             </div>
 
             @if (_errorResponse != null)
@@ -74,7 +100,7 @@
                 <CompactButton OnClick="SaveProduct" 
                            Color="Color.Primary" 
                            Variant="Variant.Filled" 
-                           Disabled="_isSaving"
+                           Disabled="@(_isSaving || _workItemValidationFailed || _isValidatingWorkItem)"
                            StartIcon="@Icons.Material.Filled.Save">
                     @if (_isSaving)
                     {
@@ -115,6 +141,12 @@
     private bool _isSaving = false;
     private ErrorResponse? _errorResponse;
 
+    // TFS Work Item validation state
+    private bool _isValidatingWorkItem = false;
+    private bool _workItemValidationFailed = false;
+    private bool _workItemValidationSuccess = false;
+    private string _workItemValidationError = string.Empty;
+
     private string _name = string.Empty;
     private string _backlogRootWorkItemIdText = string.Empty;
     private int _backlogRootWorkItemId = 0;
@@ -122,6 +154,8 @@
     private IEnumerable<int> _selectedTeamIds = new List<int>();
 
     private List<TeamDto> _availableTeams = new();
+
+    private string DraftKey => $"product_edit_{ProductOwnerId}_{(Product?.Id ?? 0)}";
 
     protected override async Task OnInitializedAsync()
     {
@@ -131,11 +165,17 @@
 
         if (Product != null)
         {
+            // Editing existing product - use product data
             _name = Product.Name;
-            _backlogRootWorkItemId = Product.BacklogRootWorkItemId ?? 0;
-            _backlogRootWorkItemIdText = Product.BacklogRootWorkItemId?.ToString() ?? string.Empty;
+            _backlogRootWorkItemId = Product.BacklogRootWorkItemId;
+            _backlogRootWorkItemIdText = Product.BacklogRootWorkItemId.ToString();
             _selectedImageId = Product.DefaultPictureId;
             _selectedTeamIds = Product.TeamIds.ToList();
+        }
+        else
+        {
+            // Creating new product - try to restore draft
+            await RestoreDraftAsync();
         }
     }
 
@@ -167,6 +207,23 @@
             return;
         }
 
+        // Check if validation passed
+        if (_workItemValidationFailed)
+        {
+            Snackbar.Add("Please fix the work item validation error before saving", Severity.Error);
+            return;
+        }
+
+        // Validate if not already validated
+        if (!_workItemValidationSuccess && !IsEditing)
+        {
+            await ValidateWorkItemId();
+            if (_workItemValidationFailed)
+            {
+                return;
+            }
+        }
+
         try
         {
             _isSaving = true;
@@ -189,8 +246,9 @@
             }
             else
             {
+                var ownerIdToUse = ProductOwnerId == 0 ? (int?)null : ProductOwnerId;
                 var created = await ProductService.CreateProductAsync(
-                    ProductOwnerId,
+                    ownerIdToUse,
                     _name,
                     _backlogRootWorkItemId,
                     ProductPictureType.Default,
@@ -204,6 +262,9 @@
                 }
 
                 Snackbar.Add("Product created successfully", Severity.Success);
+                
+                // Clear draft after successful creation
+                await ClearDraftAsync();
             }
 
             await OnSaved.InvokeAsync();
@@ -237,7 +298,58 @@
 
     private async Task Cancel()
     {
+        // Clear draft on cancel (user is abandoning changes)
+        if (!IsEditing)
+        {
+            await ClearDraftAsync();
+        }
         await OnCancelled.InvokeAsync();
+    }
+
+    private async Task ValidateWorkItemId()
+    {
+        // Reset validation state
+        _workItemValidationFailed = false;
+        _workItemValidationSuccess = false;
+        _workItemValidationError = string.Empty;
+
+        // Parse the work item ID
+        if (!int.TryParse(_backlogRootWorkItemIdText, out var workItemId) || workItemId <= 0)
+        {
+            _workItemValidationFailed = true;
+            _workItemValidationError = "Please enter a valid work item ID";
+            return;
+        }
+
+        try
+        {
+            _isValidatingWorkItem = true;
+            StateHasChanged();
+
+            // Call TFS to validate the work item exists
+            var workItem = await WorkItemService.GetByTfsIdAsync(workItemId);
+            
+            if (workItem == null)
+            {
+                _workItemValidationFailed = true;
+                _workItemValidationError = $"Work item {workItemId} not found in TFS";
+            }
+            else
+            {
+                _workItemValidationSuccess = true;
+                _backlogRootWorkItemId = workItemId;
+            }
+        }
+        catch (Exception ex)
+        {
+            _workItemValidationFailed = true;
+            _workItemValidationError = $"Error validating work item: {ex.Message}";
+        }
+        finally
+        {
+            _isValidatingWorkItem = false;
+            StateHasChanged();
+        }
     }
 
     private async Task OpenCreateTeamDialog()
@@ -274,5 +386,54 @@
     private void ClearError()
     {
         _errorResponse = null;
+    }
+
+    /// <summary>
+    /// Saves the current form state as a draft.
+    /// </summary>
+    private async Task SaveDraftAsync()
+    {
+        // Only save drafts for new products (not when editing existing ones)
+        if (IsEditing) return;
+
+        var draft = new ProductEditorDraft
+        {
+            Name = _name,
+            BacklogRootWorkItemIdText = _backlogRootWorkItemIdText,
+            SelectedImageId = _selectedImageId,
+            SelectedTeamIds = _selectedTeamIds.ToList()
+        };
+
+        await DraftStorageService.SaveDraftAsync(DraftKey, draft);
+    }
+
+    /// <summary>
+    /// Restores form state from a draft.
+    /// </summary>
+    private async Task RestoreDraftAsync()
+    {
+        var draft = await DraftStorageService.LoadDraftAsync<ProductEditorDraft>(DraftKey);
+        
+        if (draft != null)
+        {
+            _name = draft.Name;
+            _backlogRootWorkItemIdText = draft.BacklogRootWorkItemIdText;
+            _selectedImageId = draft.SelectedImageId;
+            _selectedTeamIds = draft.SelectedTeamIds;
+            
+            // Parse work item ID if present
+            if (int.TryParse(_backlogRootWorkItemIdText, out var workItemId))
+            {
+                _backlogRootWorkItemId = workItemId;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Clears the draft after successful save.
+    /// </summary>
+    private async Task ClearDraftAsync()
+    {
+        await DraftStorageService.ClearDraftAsync(DraftKey);
     }
 }

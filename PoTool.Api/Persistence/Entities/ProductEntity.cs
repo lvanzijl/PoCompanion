@@ -16,8 +16,9 @@ public class ProductEntity
 
     /// <summary>
     /// Foreign key to the Product Owner (ProfileEntity).
+    /// Null indicates an orphaned product (not currently owned by any Product Owner).
     /// </summary>
-    public int ProductOwnerId { get; set; }
+    public int? ProductOwnerId { get; set; }
 
     /// <summary>
     /// Product name.
@@ -68,8 +69,9 @@ public class ProductEntity
 
     /// <summary>
     /// Navigation property to the Product Owner.
+    /// Null if product is orphaned.
     /// </summary>
-    public virtual ProfileEntity ProductOwner { get; set; } = null!;
+    public virtual ProfileEntity? ProductOwner { get; set; }
 
     /// <summary>
     /// Navigation property to linked teams (many-to-many).

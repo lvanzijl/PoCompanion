@@ -179,13 +179,71 @@ public class ProductsController : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Gets all products in the system.
+    /// </summary>
+    [HttpGet("all")]
+    [ProducesResponseType(typeof(IEnumerable<ProductDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<ProductDto>>> GetAllProducts(CancellationToken cancellationToken)
+    {
+        var products = await _mediator.Send(new GetAllProductsQuery(), cancellationToken);
+        return Ok(products);
+    }
+
+    /// <summary>
+    /// Gets all orphaned products (products with no owner).
+    /// </summary>
+    [HttpGet("orphans")]
+    [ProducesResponseType(typeof(IEnumerable<ProductDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<ProductDto>>> GetOrphanProducts(CancellationToken cancellationToken)
+    {
+        var products = await _mediator.Send(new GetOrphanProductsQuery(), cancellationToken);
+        return Ok(products);
+    }
+
+    /// <summary>
+    /// Gets products selectable by a specific Product Owner (owned + orphaned).
+    /// </summary>
+    [HttpGet("selectable")]
+    [ProducesResponseType(typeof(IEnumerable<ProductDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<ProductDto>>> GetSelectableProducts(
+        [FromQuery] int productOwnerId,
+        CancellationToken cancellationToken)
+    {
+        var products = await _mediator.Send(new GetSelectableProductsQuery(productOwnerId), cancellationToken);
+        return Ok(products);
+    }
+
+    /// <summary>
+    /// Changes the Product Owner for a product.
+    /// </summary>
+    [HttpPatch("{productId}/owner")]
+    [ProducesResponseType(typeof(ProductDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ProductDto>> ChangeProductOwner(
+        int productId,
+        [FromBody] ChangeProductOwnerRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var command = new ChangeProductOwnerCommand(productId, request.NewProductOwnerId);
+            var result = await _mediator.Send(command, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound();
+        }
+    }
 }
 
 /// <summary>
 /// Request model for creating a product.
 /// </summary>
 public record CreateProductRequest(
-    int ProductOwnerId,
+    int? ProductOwnerId,
     string Name,
     int BacklogRootWorkItemId,
     ProductPictureType PictureType = ProductPictureType.Default,
@@ -210,4 +268,11 @@ public record UpdateProductRequest(
 public record ReorderProductsRequest(
     int ProductOwnerId,
     List<int> ProductIds
+);
+
+/// <summary>
+/// Request model for changing product owner.
+/// </summary>
+public record ChangeProductOwnerRequest(
+    int? NewProductOwnerId
 );
