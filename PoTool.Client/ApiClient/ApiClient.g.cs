@@ -9967,6 +9967,13 @@ namespace PoTool.Client.ApiClient
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<BulkEffortAssignmentResultDto> BulkAssignEffortAsync(BulkAssignEffortCommand command, System.Threading.CancellationToken cancellationToken);
 
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request, System.Threading.CancellationToken cancellationToken);
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -11401,6 +11408,89 @@ namespace PoTool.Client.ApiClient
                         if (status_ == 200)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<BulkEffortAssignmentResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request)
+        {
+            return ValidateWorkItemAsync(request, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request, System.Threading.CancellationToken cancellationToken)
+        {
+            if (request == null)
+                throw new System.ArgumentNullException("request");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.ByteArrayContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/WorkItems/validate"
+                    urlBuilder_.Append("api/WorkItems/validate");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ValidateWorkItemResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -14752,6 +14842,36 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("effortValue")]
         public int EffortValue { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ValidateWorkItemRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        public int WorkItemId { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ValidateWorkItemResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("exists")]
+        public bool Exists { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        public string? Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public string? Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
+        public string? ErrorMessage { get; set; } = default!;
 
     }
 

@@ -5,7 +5,7 @@
 @inject ProfileService ProfileService
 @inject SettingsService SettingsService
 @inject ISnackbar Snackbar
-@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
 
 <MudMenu Icon="@Icons.Material.Filled.AccountCircle" 
          Color="Color.Inherit" 
@@ -122,18 +122,8 @@
 
     private async Task ManageProfiles()
     {
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Large,
-            FullWidth = true
-        };
-        
-        await DialogService.ShowAsync<ProfileManagerDialog>("Manage Profiles", options);
-        
-        // Refresh profiles after dialog closes
-        await LoadProfilesAndActiveProfile();
-        StateHasChanged();
+        // Navigate to the product owners list page instead of showing dialog
+        NavigationManager.NavigateTo("/settings/products");
     }
 
     public async Task RefreshAsync()

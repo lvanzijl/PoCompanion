@@ -67,7 +67,18 @@ public class WorkItemService
     /// </summary>
     public async Task<SharedValidateWorkItemResponse> ValidateWorkItemAsync(int workItemId)
     {
-        return await _client.ValidateWorkItemAsync(new SharedValidateWorkItemRequest { WorkItemId = workItemId });
+        var request = new ValidateWorkItemRequest { WorkItemId = workItemId };
+        var response = await _client.ValidateWorkItemAsync(request);
+        
+        // Map from generated client type to shared type
+        return new SharedValidateWorkItemResponse
+        {
+            Exists = response.Exists,
+            Id = response.Id,
+            Title = response.Title,
+            Type = response.Type,
+            ErrorMessage = response.ErrorMessage
+        };
     }
 
     /// <summary>
