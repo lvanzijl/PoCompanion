@@ -100,7 +100,8 @@
             @* Editor Panel *@
             @if (_showEditor)
             {
-                <TeamEditor Team="@_editingTeam" 
+                <TeamEditor @key="@(_editingTeam?.Id ?? 0)" 
+                            Team="@_editingTeam" 
                             OnSaved="OnTeamSaved" 
                             OnCancelled="CloseEditor" />
             }
