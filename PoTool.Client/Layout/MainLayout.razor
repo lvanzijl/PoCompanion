@@ -36,16 +36,6 @@
                                   Title="Keyboard Shortcuts" 
                                   AriaLabel="Open keyboard shortcuts" />
                 </MudTooltip>
-                <CompactIconButton Icon="@Icons.Material.Filled.AccountCircle" 
-                              Color="Color.Inherit" 
-                              OnClick="@(() => NavigationManager.NavigateTo("/profiles"))" 
-                              Title="Profiles Home" 
-                              AriaLabel="Go to Profiles Home" />
-                <CompactIconButton Icon="@Icons.Material.Filled.AccountBox" 
-                              Color="Color.Inherit" 
-                              OnClick="OpenProfileManager" 
-                              Title="Manage Profiles" 
-                              AriaLabel="Manage profiles" />
                 <CompactIconButton Icon="@Icons.Material.Filled.Settings" 
                               Color="Color.Inherit" 
                               OnClick="OpenSettings" 
@@ -160,12 +150,6 @@
         };
         
         await DialogService.ShowAsync<KeyboardShortcutsDialog>("Keyboard Shortcuts", options);
-    }
-
-    private void OpenProfileManager()
-    {
-        // Navigate to profiles home where users can manage their Product Owner profiles
-        NavigationManager.NavigateTo("/profiles");
     }
 
     private void HandleProfileChanged()
