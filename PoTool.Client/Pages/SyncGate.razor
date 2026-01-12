@@ -200,15 +200,7 @@
             {
                 _syncCompleted = true;
                 StateHasChanged();
-                
-                // Navigate to Product Home after a brief delay
-                Task.Delay(1500).ContinueWith(_ =>
-                {
-                    if (!_disposed)
-                    {
-                        InvokeAsync(() => NavigationManager.NavigateTo("/", forceLoad: true));
-                    }
-                });
+                _ = NavigateToProductHomeAsync();
             }
             else if (progress.Status == "Failed")
             {
@@ -237,15 +229,7 @@
             {
                 _syncCompleted = true;
                 StateHasChanged();
-                
-                // Navigate to Product Home
-                Task.Delay(1500).ContinueWith(_ =>
-                {
-                    if (!_disposed)
-                    {
-                        InvokeAsync(() => NavigationManager.NavigateTo("/", forceLoad: true));
-                    }
-                });
+                _ = NavigateToProductHomeAsync();
             }
             else if (status == "Failed")
             {
@@ -253,6 +237,17 @@
                 StateHasChanged();
             }
         });
+    }
+
+    private async Task NavigateToProductHomeAsync()
+    {
+        // Brief delay to show success state
+        await Task.Delay(1500);
+        
+        if (!_disposed)
+        {
+            NavigationManager.NavigateTo("/", forceLoad: true);
+        }
     }
 
     private async Task RetrySync()

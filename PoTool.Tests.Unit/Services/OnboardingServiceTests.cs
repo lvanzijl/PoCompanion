@@ -124,7 +124,7 @@ public class OnboardingServiceTests
     /// </summary>
     private class MockPreferencesService : IPreferencesService
     {
-        private readonly Dictionary<string, object> _storage = new();
+        private readonly Dictionary<string, object?> _storage = new();
 
         public Task<bool> GetBoolAsync(string key, bool defaultValue)
         {
