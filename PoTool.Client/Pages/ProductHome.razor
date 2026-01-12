@@ -649,6 +649,7 @@
             
             if (_activeProfile == null)
             {
+                Console.WriteLine("[ProductHome] No active profile found, attempting restore from localStorage");
                 // Try to restore from localStorage (in case of page refresh)
                 var cachedProfileId = await PreferencesService.GetIntAsync("ActiveProfileId");
                 if (cachedProfileId.HasValue)
@@ -672,10 +673,15 @@
                     }
                 }
             }
+            else
+            {
+                Console.WriteLine($"[ProductHome] Active profile loaded: {_activeProfile.Name} (ID: {_activeProfile.Id})");
+            }
             
             if (_activeProfile == null)
             {
                 // No active profile and couldn't restore - redirect to profiles home
+                Console.WriteLine("[ProductHome] No active profile available, redirecting to /profiles");
                 NavigationManager.NavigateTo("/profiles");
                 return;
             }
