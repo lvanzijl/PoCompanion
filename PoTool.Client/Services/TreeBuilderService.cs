@@ -351,4 +351,201 @@ public class TreeBuilderService : ITreeBuilderService
             CollectNodesIntoMap(child, map);
         }
     }
+
+    /// <inheritdoc/>
+    public List<TreeNode> BuildProductBasedTreeWithValidation(
+        IEnumerable<WorkItemWithValidationDto> items,
+        IEnumerable<ProductDto> products,
+        Dictionary<int, bool> expandedState)
+    {
+        var topLevelNodes = new List<TreeNode>();
+        var itemsList = items.ToList();
+        var productsList = products.ToList();
+        
+        // Get all product root work item IDs
+        var productRootIds = new HashSet<int>(productsList.Select(p => p.BacklogRootWorkItemId));
+        
+        // Create node instances keyed by TfsId
+        var nodeMap = new Dictionary<int, TreeNode>();
+        foreach (var dto in itemsList)
+        {
+            var id = dto.TfsId;
+            if (!nodeMap.TryGetValue(id, out var node))
+            {
+                node = new TreeNode
+                {
+                    Id = id,
+                    Title = dto.Title,
+                    Type = dto.Type,
+                    State = dto.State,
+                    ParentId = dto.ParentTfsId,
+                    JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto
+                    {
+                        TfsId = dto.TfsId,
+                        Type = dto.Type,
+                        Title = dto.Title,
+                        ParentTfsId = dto.ParentTfsId,
+                        AreaPath = dto.AreaPath,
+                        IterationPath = dto.IterationPath,
+                        State = dto.State,
+                        JsonPayload = dto.JsonPayload,
+                        RetrievedAt = dto.RetrievedAt,
+                        Effort = dto.Effort
+                    })
+                };
+                nodeMap[id] = node;
+            }
+            else
+            {
+                node.Title = dto.Title;
+                node.Type = dto.Type;
+                node.State = dto.State;
+                node.JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto
+                {
+                    TfsId = dto.TfsId,
+                    Type = dto.Type,
+                    Title = dto.Title,
+                    ParentTfsId = dto.ParentTfsId,
+                    AreaPath = dto.AreaPath,
+                    IterationPath = dto.IterationPath,
+                    State = dto.State,
+                    JsonPayload = dto.JsonPayload,
+                    RetrievedAt = dto.RetrievedAt,
+                    Effort = dto.Effort
+                });
+            }
+
+            // Restore expanded state if available
+            if (expandedState.TryGetValue(id, out var isExpanded))
+            {
+                node.IsExpanded = isExpanded;
+            }
+
+            // Populate validation issues from API
+            node.ValidationIssues = dto.ValidationIssues
+                .Select(vi => $"{vi.Severity}: {vi.Message}")
+                .ToList();
+
+            // Set highest severity (Error > Warning)
+            if (dto.ValidationIssues.Any(vi => vi.Severity == "Error"))
+            {
+                node.HighestSeverity = "Error";
+            }
+            else if (dto.ValidationIssues.Any(vi => vi.Severity == "Warning"))
+            {
+                node.HighestSeverity = "Warning";
+            }
+
+            // Populate self error and warning counts
+            node.SelfErrorCount = dto.ValidationIssues.Count(vi => vi.Severity == "Error");
+            node.SelfWarningCount = dto.ValidationIssues.Count(vi => vi.Severity == "Warning");
+        }
+
+        // Build parent-child relationships
+        var unparentedWorkItems = new List<TreeNode>();
+        
+        foreach (var dto in itemsList)
+        {
+            var node = nodeMap[dto.TfsId];
+            var parentId = dto.ParentTfsId;
+
+            if (parentId.HasValue)
+            {
+                if (nodeMap.TryGetValue(parentId.Value, out var parentNode))
+                {
+                    parentNode.Children.Add(node);
+                }
+                else
+                {
+                    // Parent is missing - this is unparented unless it's a product root
+                    if (!productRootIds.Contains(dto.TfsId))
+                    {
+                        unparentedWorkItems.Add(node);
+                    }
+                }
+            }
+            else
+            {
+                // No parent at all - this is unparented unless it's a product root
+                if (!productRootIds.Contains(dto.TfsId))
+                {
+                    unparentedWorkItems.Add(node);
+                }
+            }
+        }
+
+        // Sort children for all nodes
+        foreach (var node in nodeMap.Values)
+        {
+            node.Children = node.Children.OrderBy(c => c.Title).ToList();
+        }
+
+        // Create Product nodes
+        foreach (var product in productsList.OrderBy(p => p.Order))
+        {
+            var productNode = new TreeNode
+            {
+                Id = -1000 - product.Id, // Use negative IDs to avoid conflicts with real work item IDs
+                Title = product.Name,
+                Type = "Product",
+                State = "",
+                ParentId = null,
+                IsExpanded = expandedState.TryGetValue(-1000 - product.Id, out var isExpanded) && isExpanded
+            };
+
+            // Find the root work item for this product
+            if (nodeMap.TryGetValue(product.BacklogRootWorkItemId, out var rootNode))
+            {
+                productNode.Children.Add(rootNode);
+            }
+
+            topLevelNodes.Add(productNode);
+        }
+
+        // Create Unparented node if there are any unparented items
+        if (unparentedWorkItems.Any())
+        {
+            var unparentedNode = new TreeNode
+            {
+                Id = -1, // Special ID for Unparented node
+                Title = "Unparented",
+                Type = "Unparented",
+                State = "",
+                ParentId = null,
+                Children = unparentedWorkItems.OrderBy(n => n.Title).ToList(),
+                IsExpanded = expandedState.TryGetValue(-1, out var isExpanded) && isExpanded
+            };
+
+            topLevelNodes.Add(unparentedNode);
+        }
+
+        // Populate ChildrenIds for all nodes
+        foreach (var node in nodeMap.Values)
+        {
+            node.ChildrenIds = node.Children.Select(c => c.Id).ToList();
+        }
+        
+        foreach (var topNode in topLevelNodes)
+        {
+            topNode.ChildrenIds = topNode.Children.Select(c => c.Id).ToList();
+        }
+
+        // Compute depth/level for all nodes
+        ComputeDepth(topLevelNodes, 0);
+
+        // Build global node map once for efficient lookups
+        var globalNodeMap = new Dictionary<int, TreeNode>();
+        foreach (var root in topLevelNodes)
+        {
+            CollectNodesIntoMap(root, globalNodeMap);
+        }
+
+        // Compute InvalidDescendantIds for all nodes
+        foreach (var root in topLevelNodes)
+        {
+            ComputeInvalidDescendantIds(root, globalNodeMap);
+        }
+
+        return topLevelNodes;
+    }
 }

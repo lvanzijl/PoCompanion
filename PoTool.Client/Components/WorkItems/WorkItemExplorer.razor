@@ -12,6 +12,7 @@
 @inject WorkItemFilteringService FilteringService
 @inject WorkItemSelectionService SelectionService
 @inject ProfileService ProfileService
+@inject ProductService ProductService
 @inject TfsConfigService TfsConfigService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
@@ -219,14 +220,25 @@
         _isLoading = true;
         try
         {
-            // Get active profile to determine which goals to load
-            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            // Load all products
+            var allProducts = (await ProductService.GetAllProductsAsync()).ToList();
+            Console.WriteLine($"[WorkItemExplorer] Loaded {allProducts.Count} products");
 
-            // Load hierarchy with validation - get all first
+            // Load all work items with validation
             var allWorkItems = (await WorkItemService.GetAllWithValidationAsync()).ToList();
             Console.WriteLine($"[WorkItemExplorer] Loaded {allWorkItems.Count} total work items");
             
-            // Then filter by profile goals if configured
+            // Ensure all product root work items exist in the database
+            await EnsureProductRootWorkItemsExist(allProducts, allWorkItems);
+            
+            // Reload work items after ensuring roots exist (in case new ones were added)
+            allWorkItems = (await WorkItemService.GetAllWithValidationAsync()).ToList();
+            Console.WriteLine($"[WorkItemExplorer] After ensuring roots: {allWorkItems.Count} total work items");
+
+            // Get active profile to determine which goals to load (for goal filter UI, not for tree building)
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+
+            // Prepare goal filtering UI (this doesn't affect tree structure)
             if (activeProfile != null && activeProfile.GoalIds.Any())
             {
                 _profileGoalIds = activeProfile.GoalIds.ToList();
@@ -280,7 +292,7 @@
             }
 
             Console.WriteLine($"[WorkItemExplorer] Final work item count: {_workItemsWithValidation.Count}");
-            await ApplyFilterAsync();
+            await ApplyFilterAsync(allProducts);
             await UpdateValidationFilterCountsAsync();
             await SaveExpandedStateAsync();
         }
@@ -292,6 +304,41 @@
         finally
         {
             _isLoading = false;
+        }
+    }
+
+    private async Task EnsureProductRootWorkItemsExist(List<ProductDto> products, List<WorkItemWithValidationDto> existingWorkItems)
+    {
+        var existingIds = new HashSet<int>(existingWorkItems.Select(wi => wi.TfsId));
+        var missingRootIds = new List<int>();
+
+        foreach (var product in products)
+        {
+            if (!existingIds.Contains(product.BacklogRootWorkItemId))
+            {
+                missingRootIds.Add(product.BacklogRootWorkItemId);
+                Console.WriteLine($"[WorkItemExplorer] Product '{product.Name}' root work item {product.BacklogRootWorkItemId} is missing from DB");
+            }
+        }
+
+        if (missingRootIds.Any())
+        {
+            Console.WriteLine($"[WorkItemExplorer] Fetching {missingRootIds.Count} missing product root work items...");
+            // Trigger a sync to fetch missing root work items
+            // The sync service will fetch the root items and their hierarchies
+            try
+            {
+                if (SyncHubService.IsConnected)
+                {
+                    await SyncHubService.RequestSyncAsync("");
+                    await Task.Delay(2000); // Wait for sync to complete
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WorkItemExplorer] Error syncing missing root work items: {ex.Message}");
+                Snackbar.Add($"Warning: Could not fetch missing product root work items. Some products may not display.", Severity.Warning);
+            }
         }
     }
 
@@ -312,8 +359,14 @@
         await LoadWorkItems();
     }
 
-    private async Task ApplyFilterAsync()
+    private async Task ApplyFilterAsync(List<ProductDto>? products = null)
     {
+        // Load products if not provided
+        if (products == null)
+        {
+            products = (await ProductService.GetAllProductsAsync()).ToList();
+        }
+
         // Get enabled filter IDs
         var enabledFilterIds = _validationFilters
             .Where(f => f.IsEnabled)
@@ -325,7 +378,8 @@
             _filterText,
             enabledFilterIds);
 
-        _treeRoots = TreeBuilderService.BuildTreeWithValidation(filteredItems, _expandedState);
+        // Use product-based tree building
+        _treeRoots = TreeBuilderService.BuildProductBasedTreeWithValidation(filteredItems, products, _expandedState);
         _flatNodeList = SelectionService.BuildFlatNodeList(_treeRoots);
         StateHasChanged();
     }
