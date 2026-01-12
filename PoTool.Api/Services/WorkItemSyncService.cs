@@ -246,7 +246,8 @@ public class WorkItemSyncService : BackgroundService
                     (step, total, label) => 
                     {
                         // This callback fires during TFS retrieval
-                        _logger.LogInformation(">>> TFS Fetch Progress: Step {Step}/{Total} - {Label}", step, total, label);
+                        // Log at Debug level since this can be frequent during large syncs
+                        _logger.LogDebug(">>> TFS Fetch Progress: Step {Step}/{Total} - {Label}", step, total, label);
                         _ = SendProgressAsync(new SyncProgressDto
                         {
                             Status = "InProgress",

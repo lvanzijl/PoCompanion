@@ -89,15 +89,23 @@
     
     private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
-        // Refresh profile selector when navigating to profiles page or back from profile edit
-        var path = NavigationManager.ToBaseRelativePath(e.Location).TrimStart('/');
-        if (path.StartsWith("profiles", StringComparison.OrdinalIgnoreCase) || 
-            path.StartsWith("settings/productowner", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            if (_profileSelector != null)
+            // Refresh profile selector when navigating to profiles page or back from profile edit
+            var path = NavigationManager.ToBaseRelativePath(e.Location).TrimStart('/');
+            if (path.StartsWith("profiles", StringComparison.OrdinalIgnoreCase) || 
+                path.StartsWith("settings/productowner", StringComparison.OrdinalIgnoreCase))
             {
-                await _profileSelector.RefreshAsync();
+                if (_profileSelector != null)
+                {
+                    await _profileSelector.RefreshAsync();
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't throw - navigation should continue
+            Console.WriteLine($"[MainLayout] Error refreshing profile selector: {ex.Message}");
         }
     }
     
