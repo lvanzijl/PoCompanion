@@ -77,12 +77,13 @@ else
     private StartupReadinessDto? _readiness;
     private string _lastCheckedLocation = string.Empty;
     
-    // Default exempt pages (configuration, profiles, help)
+    // Default exempt pages (configuration, profiles, help, profile management)
     private static readonly string[] DefaultExemptPages = new[]
     {
         "/tfsconfig",
         "/profiles",
-        "/help"
+        "/help",
+        "/settings/productowner/edit"
     };
 
     protected override async Task OnInitializedAsync()
