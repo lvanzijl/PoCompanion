@@ -200,16 +200,10 @@
         @* Backlog Health Summary Section *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                <MudStack Spacing="0">
-                    <MudText Typo="Typo.h5">
-                        <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Class="mr-2" />
-                        Backlog Health Summary
-                    </MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
-                        Metrics shown are global (temporary) — product-scoped metrics coming soon
-                    </MudText>
-                </MudStack>
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Class="mr-2" />
+                    Backlog Health Summary
+                </MudText>
                 <MudStack Row="true" Spacing="2">
                     @if (_selectedProduct != null)
                     {
@@ -694,10 +688,10 @@
             _lastSyncTime = config?.LastValidated;
             
             // Load health data (limit to 3 iterations for summary)
-            // Note: Health data is currently global, not product-scoped
+            // Use selected product if available, otherwise show global data
             try
             {
-                _healthData = await MetricsClient.GetMultiIterationBacklogHealthAsync(null, 3);
+                _healthData = await MetricsClient.GetMultiIterationBacklogHealthAsync(_selectedProductId > 0 ? _selectedProductId : null, null, 3);
             }
             catch (Exception)
             {

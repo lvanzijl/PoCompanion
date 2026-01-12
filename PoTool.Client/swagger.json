@@ -412,13 +412,23 @@
         "operationId": "Metrics_GetMultiIterationBacklogHealth",
         "parameters": [
           {
+            "name": "productId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
             "name": "areaPath",
             "in": "query",
             "schema": {
               "type": "string",
               "nullable": true
             },
-            "x-position": 1
+            "x-position": 2
           },
           {
             "name": "maxIterations",
@@ -428,7 +438,7 @@
               "format": "int32",
               "default": 5
             },
-            "x-position": 2
+            "x-position": 3
           }
         ],
         "responses": {
@@ -5580,11 +5590,11 @@
           }
         }
       },
-          "lastSyncedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
+      "lastSyncedAt": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true
+      },
       "ProfilePictureType": {
         "type": "integer",
         "description": "",
@@ -5676,11 +5686,6 @@
           }
         }
       },
-          "lastSyncedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
       "SetActiveProfileRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -6806,11 +6811,6 @@
           }
         }
       },
-          "lastSyncedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
       "TeamPictureType": {
         "type": "integer",
         "description": "",
@@ -7566,7 +7566,9 @@
       "ValidateWorkItemRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["workItemId"],
+        "required": [
+          "workItemId"
+        ],
         "properties": {
           "workItemId": {
             "type": "integer",
@@ -7577,7 +7579,10 @@
       "ValidateWorkItemResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["exists", "id"],
+        "required": [
+          "exists",
+          "id"
+        ],
         "properties": {
           "exists": {
             "type": "boolean"
