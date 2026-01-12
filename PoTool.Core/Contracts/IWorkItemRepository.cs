@@ -44,4 +44,12 @@ public interface IWorkItemRepository
     /// <param name="workItems">New collection of work items to store.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task ReplaceAllAsync(IEnumerable<WorkItemDto> workItems, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Upserts (inserts or updates) multiple work items.
+    /// Used for incremental sync to merge new items with existing ones.
+    /// </summary>
+    /// <param name="workItems">Work items to upsert.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task UpsertManyAsync(IEnumerable<WorkItemDto> workItems, CancellationToken cancellationToken = default);
 }

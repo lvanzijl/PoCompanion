@@ -150,12 +150,37 @@ public class TfsConfigService
     }
 
     /// <summary>
+    /// Requests a sync operation for specific root work item IDs.
+    /// This is the preferred method for product-scoped sync operations.
+    /// </summary>
+    /// <param name="rootWorkItemIds">Root work item IDs to sync.</param>
+    /// <param name="incremental">Whether to perform incremental sync (only changed items).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public virtual async Task<bool> RequestSyncByRootIdsAsync(
+        int[] rootWorkItemIds,
+        bool incremental = false,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("/api/workitems/sync/by-root-ids", new
+            {
+                rootWorkItemIds = rootWorkItemIds,
+                incremental = incremental
+            }, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch (HttpRequestException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Requests an incremental work item sync operation (only changed items since last sync).
     /// </summary>
     public virtual async Task<bool> RequestIncrementalSyncAsync(CancellationToken cancellationToken = default)
     {
-        // Note: The generated client doesn't support the incremental parameter yet
-        // This will need to be handled differently or the API needs to expose a separate endpoint
         try
         {
             await _apiClient.PostApiWorkitemsSyncAsync(cancellationToken);

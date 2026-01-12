@@ -12,6 +12,11 @@ public interface IWorkItemSyncHubService : IAsyncDisposable
     event Action<string, string>? OnSyncStatusChanged;
 
     /// <summary>
+    /// Raised when a detailed sync progress update is received from the server.
+    /// </summary>
+    event Action<PoTool.Shared.WorkItems.SyncProgressDto>? OnSyncProgressReceived;
+
+    /// <summary>
     /// Gets whether the SignalR connection is currently active.
     /// </summary>
     bool IsConnected { get; }

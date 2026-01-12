@@ -1,0 +1,123 @@
+@using PoTool.Shared.WorkItems
+
+@if (_progress != null && !string.IsNullOrEmpty(_progress.Status))
+{
+    <MudPaper Elevation="1" Class="pa-3 mb-3">
+        <MudStack Spacing="2">
+            @* Status Header *@
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                @if (_progress.Status == "InProgress")
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Syncing...</MudText>
+                }
+                else if (_progress.Status == "Completed")
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle2" Color="Color.Success">Sync Complete</MudText>
+                }
+                else if (_progress.Status == "Failed")
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle2" Color="Color.Error">Sync Failed</MudText>
+                }
+                else if (_progress.Status == "Cancelled")
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Warning" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle2" Color="Color.Warning">Sync Cancelled</MudText>
+                }
+                
+                <MudSpacer />
+                
+                @if (_progress.ProcessedCount > 0)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @_progress.ProcessedCount / @_progress.TotalCount items
+                    </MudText>
+                }
+            </MudStack>
+
+            @* Major Step Progress Bar *@
+            @if (_progress.MajorStepTotal > 0)
+            {
+                <MudStack Spacing="1">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.caption">
+                            @(_progress.MajorStepLabel ?? $"Step {_progress.MajorStep}")
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @_progress.MajorStep / @_progress.MajorStepTotal
+                        </MudText>
+                    </MudStack>
+                    <MudProgressLinear 
+                        Color="Color.Primary" 
+                        Value="@MajorProgressPercentage" 
+                        Size="Size.Medium"
+                        Rounded="true" />
+                </MudStack>
+            }
+
+            @* Minor Step Progress Bar (when available) *@
+            @if (_progress.MinorStepTotal > 0)
+            {
+                <MudStack Spacing="1">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.caption">
+                            @(_progress.MinorStepLabel ?? $"Batch {_progress.MinorStep}")
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @_progress.MinorStep / @_progress.MinorStepTotal
+                        </MudText>
+                    </MudStack>
+                    <MudProgressLinear 
+                        Color="Color.Secondary" 
+                        Value="@MinorProgressPercentage" 
+                        Size="Size.Small"
+                        Rounded="true" />
+                </MudStack>
+            }
+
+            @* Message *@
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @_progress.Message
+            </MudText>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private SyncProgressDto? _progress;
+
+    private double MajorProgressPercentage => 
+        _progress?.MajorStepTotal > 0 
+            ? Math.Min(100, (double)_progress.MajorStep / _progress.MajorStepTotal * 100)
+            : 0;
+
+    private double MinorProgressPercentage => 
+        _progress?.MinorStepTotal > 0 
+            ? Math.Min(100, (double)_progress.MinorStep / _progress.MinorStepTotal * 100)
+            : 0;
+
+    /// <summary>
+    /// Updates the progress display with new data.
+    /// </summary>
+    public void UpdateProgress(SyncProgressDto progress)
+    {
+        _progress = progress;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Clears the progress display.
+    /// </summary>
+    public void Clear()
+    {
+        _progress = null;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Gets whether a sync is currently in progress.
+    /// </summary>
+    public bool IsInProgress => _progress?.Status == "InProgress";
+}

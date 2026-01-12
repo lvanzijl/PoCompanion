@@ -115,6 +115,86 @@ public class WorkItemRepository : IWorkItemRepository
         }
     }
 
+    public async Task UpsertManyAsync(IEnumerable<WorkItemDto> workItems, CancellationToken cancellationToken = default)
+    {
+        var workItemList = workItems.ToList();
+        if (workItemList.Count == 0) return;
+
+        var isInMemory = _context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory";
+
+        if (isInMemory)
+        {
+            // InMemory: simpler approach
+            foreach (var dto in workItemList)
+            {
+                var existing = await _context.WorkItems.FirstOrDefaultAsync(w => w.TfsId == dto.TfsId, cancellationToken);
+                if (existing != null)
+                {
+                    // Update existing
+                    existing.ParentTfsId = dto.ParentTfsId;
+                    existing.Type = dto.Type;
+                    existing.Title = dto.Title;
+                    existing.AreaPath = dto.AreaPath;
+                    existing.IterationPath = dto.IterationPath;
+                    existing.State = dto.State;
+                    existing.JsonPayload = dto.JsonPayload;
+                    existing.RetrievedAt = dto.RetrievedAt;
+                }
+                else
+                {
+                    // Insert new
+                    await _context.WorkItems.AddAsync(MapToEntity(dto), cancellationToken);
+                }
+            }
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        else
+        {
+            // For SQLite: use upsert pattern
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                // Get existing IDs for this batch
+                var tfsIds = workItemList.Select(w => w.TfsId).ToList();
+                var existingIds = await _context.WorkItems
+                    .Where(w => tfsIds.Contains(w.TfsId))
+                    .Select(w => w.TfsId)
+                    .ToListAsync(cancellationToken);
+
+                var toUpdate = workItemList.Where(w => existingIds.Contains(w.TfsId)).ToList();
+                var toInsert = workItemList.Where(w => !existingIds.Contains(w.TfsId)).ToList();
+
+                // Update existing items
+                foreach (var dto in toUpdate)
+                {
+                    var entity = await _context.WorkItems.FirstAsync(w => w.TfsId == dto.TfsId, cancellationToken);
+                    entity.ParentTfsId = dto.ParentTfsId;
+                    entity.Type = dto.Type;
+                    entity.Title = dto.Title;
+                    entity.AreaPath = dto.AreaPath;
+                    entity.IterationPath = dto.IterationPath;
+                    entity.State = dto.State;
+                    entity.JsonPayload = dto.JsonPayload;
+                    entity.RetrievedAt = dto.RetrievedAt;
+                }
+
+                // Insert new items
+                if (toInsert.Count > 0)
+                {
+                    await _context.WorkItems.AddRangeAsync(toInsert.Select(MapToEntity), cancellationToken);
+                }
+
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        }
+    }
+
     private static WorkItemDto MapToDto(WorkItemEntity entity)
     {
         return new WorkItemDto(

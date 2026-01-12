@@ -7,10 +7,16 @@ using PoTool.Api.Repositories;
 namespace PoTool.Api.Services;
 
 /// <summary>
-/// Background service stub for work item synchronization.
+/// Background service for work item synchronization with two-level progress reporting.
 /// </summary>
 public class WorkItemSyncService : BackgroundService
 {
+    /// <summary>
+    /// Safety overlap in minutes for incremental sync to account for clock drift
+    /// and ensure no items are missed between syncs.
+    /// </summary>
+    private const int IncrementalSyncOverlapMinutes = 5;
+
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<WorkItemSyncService> _logger;
     private readonly IHubContext<WorkItemHub> _hubContext;
@@ -40,7 +46,7 @@ public class WorkItemSyncService : BackgroundService
     }
 
     /// <summary>
-    /// Triggers a manual sync of work items from TFS.
+    /// Triggers a manual sync of work items from TFS using area path.
     /// </summary>
     public async Task TriggerSyncAsync(string areaPath, CancellationToken cancellationToken = default)
     {
@@ -50,10 +56,13 @@ public class WorkItemSyncService : BackgroundService
             var errorMessage = "Default Area Path is not configured. Configure this in TFS settings.";
             _logger.LogError(errorMessage);
 
-            await _hubContext.Clients.All.SendAsync(
-                "SyncStatus",
-                new { Status = "Failed", Message = errorMessage },
-                cancellationToken);
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "Failed",
+                Message = errorMessage,
+                MajorStep = 0,
+                MajorStepTotal = 0
+            }, cancellationToken);
 
             throw new InvalidOperationException(errorMessage);
         }
@@ -66,10 +75,14 @@ public class WorkItemSyncService : BackgroundService
 
         try
         {
-            await _hubContext.Clients.All.SendAsync(
-                "SyncStatus",
-                new { Status = "InProgress", Message = "Retrieving work items..." },
-                cancellationToken);
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "InProgress",
+                Message = "Retrieving work items...",
+                MajorStep = 1,
+                MajorStepTotal = 2,
+                MajorStepLabel = "Querying TFS"
+            }, cancellationToken);
 
             IEnumerable<WorkItemDto> workItems;
 
@@ -84,23 +97,244 @@ public class WorkItemSyncService : BackgroundService
                 workItems = await repository.GetAllAsync(cancellationToken);
             }
 
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "InProgress",
+                Message = $"Saving {workItems.Count()} work items to cache...",
+                MajorStep = 2,
+                MajorStepTotal = 2,
+                MajorStepLabel = "Saving to Cache",
+                ProcessedCount = workItems.Count(),
+                TotalCount = workItems.Count()
+            }, cancellationToken);
+
             await repository.ReplaceAllAsync(workItems, cancellationToken);
 
-            await _hubContext.Clients.All.SendAsync(
-                "SyncStatus",
-                new { Status = "Completed", Message = $"Successfully synced {workItems.Count()} work items" },
-                cancellationToken);
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "Completed",
+                Message = $"Successfully synced {workItems.Count()} work items",
+                MajorStep = 2,
+                MajorStepTotal = 2,
+                MajorStepLabel = "Complete",
+                ProcessedCount = workItems.Count(),
+                TotalCount = workItems.Count()
+            }, cancellationToken);
 
             _logger.LogInformation("Sync completed successfully for area path: {AreaPath}", areaPath);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning("Sync was cancelled for area path: {AreaPath}", areaPath);
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "Cancelled",
+                Message = "Sync was cancelled"
+            }, cancellationToken);
+            throw;
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Timeout occurred (not user cancellation)
+            _logger.LogError(ex, "Sync timed out for area path: {AreaPath}", areaPath);
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "Failed",
+                Message = "Sync timed out. Try reducing scope or increasing timeout."
+            }, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during sync for area path: {AreaPath}", areaPath);
 
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "Failed",
+                Message = $"Sync failed: {ex.Message}"
+            }, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Triggers a sync of work items starting from specified root work item IDs.
+    /// This is the preferred method for product-scoped sync operations.
+    /// </summary>
+    public async Task TriggerSyncByRootIdsAsync(
+        int[] rootWorkItemIds,
+        bool incremental = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (rootWorkItemIds == null || rootWorkItemIds.Length == 0)
+        {
+            var errorMessage = "No root work items configured for this product/profile.";
+            _logger.LogError(errorMessage);
+
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "Failed",
+                Message = errorMessage,
+                MajorStep = 0,
+                MajorStepTotal = 0
+            }, cancellationToken);
+
+            throw new InvalidOperationException(errorMessage);
+        }
+
+        _logger.LogInformation("Sync triggered for {Count} root work items: [{Ids}], incremental={Incremental}",
+            rootWorkItemIds.Length, string.Join(", ", rootWorkItemIds), incremental);
+
+        using var scope = _serviceProvider.CreateScope();
+        var tfsClient = scope.ServiceProvider.GetService<ITfsClient>();
+        var repository = scope.ServiceProvider.GetRequiredService<IWorkItemRepository>();
+
+        try
+        {
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "InProgress",
+                Message = "Starting sync...",
+                MajorStep = 1,
+                MajorStepTotal = 3,
+                MajorStepLabel = "Initializing",
+                RootWorkItemIds = rootWorkItemIds
+            }, cancellationToken);
+
+            IEnumerable<WorkItemDto> workItems;
+            DateTimeOffset? since = null;
+
+            if (incremental)
+            {
+                // For incremental sync, get last sync time from repository
+                var existingItems = await repository.GetAllAsync(cancellationToken);
+                since = existingItems.Any() 
+                    ? existingItems.Max(wi => wi.RetrievedAt).AddMinutes(-IncrementalSyncOverlapMinutes)
+                    : null;
+            }
+
+            if (tfsClient != null)
+            {
+                // Use the new root-based sync method with progress callback
+                workItems = await tfsClient.GetWorkItemsByRootIdsAsync(
+                    rootWorkItemIds,
+                    since,
+                    (step, total, label) => 
+                    {
+                        // This callback fires during TFS retrieval
+                        _ = SendProgressAsync(new SyncProgressDto
+                        {
+                            Status = "InProgress",
+                            Message = label,
+                            MajorStep = 2,
+                            MajorStepTotal = 3,
+                            MajorStepLabel = "Fetching from TFS",
+                            MinorStep = step,
+                            MinorStepTotal = total,
+                            MinorStepLabel = label,
+                            RootWorkItemIds = rootWorkItemIds
+                        }, cancellationToken);
+                    },
+                    cancellationToken);
+            }
+            else
+            {
+                // No ITfsClient available (development scenario). Use repository contents.
+                _logger.LogInformation("No ITfsClient registered; using repository contents for sync");
+                workItems = await repository.GetAllAsync(cancellationToken);
+            }
+
+            var workItemList = workItems.ToList();
+
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "InProgress",
+                Message = $"Saving {workItemList.Count} work items to cache...",
+                MajorStep = 3,
+                MajorStepTotal = 3,
+                MajorStepLabel = "Saving to Cache",
+                ProcessedCount = workItemList.Count,
+                TotalCount = workItemList.Count,
+                RootWorkItemIds = rootWorkItemIds
+            }, cancellationToken);
+
+            if (incremental && since.HasValue)
+            {
+                // For incremental sync, merge with existing items
+                await repository.UpsertManyAsync(workItemList, cancellationToken);
+            }
+            else
+            {
+                // For full sync, replace all
+                await repository.ReplaceAllAsync(workItemList, cancellationToken);
+            }
+
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "Completed",
+                Message = $"Successfully synced {workItemList.Count} work items",
+                MajorStep = 3,
+                MajorStepTotal = 3,
+                MajorStepLabel = "Complete",
+                ProcessedCount = workItemList.Count,
+                TotalCount = workItemList.Count,
+                RootWorkItemIds = rootWorkItemIds
+            }, cancellationToken);
+
+            _logger.LogInformation("Sync completed successfully for {Count} root work items", rootWorkItemIds.Length);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning("Sync was cancelled for root work items: [{Ids}]", string.Join(", ", rootWorkItemIds));
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "Cancelled",
+                Message = "Sync was cancelled",
+                RootWorkItemIds = rootWorkItemIds
+            }, cancellationToken);
+            throw;
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Timeout occurred (not user cancellation)
+            _logger.LogError(ex, "Sync timed out for root work items: [{Ids}]", string.Join(", ", rootWorkItemIds));
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "Failed",
+                Message = "Sync timed out. The operation took too long. Try syncing with fewer products.",
+                RootWorkItemIds = rootWorkItemIds
+            }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during sync for root work items: [{Ids}]", string.Join(", ", rootWorkItemIds));
+
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "Failed",
+                Message = $"Sync failed: {ex.Message}",
+                RootWorkItemIds = rootWorkItemIds
+            }, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Sends a progress update to all connected clients via SignalR.
+    /// </summary>
+    private async Task SendProgressAsync(SyncProgressDto progress, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Send structured progress for two-level progress bars
+            await _hubContext.Clients.All.SendAsync("SyncProgress", progress, cancellationToken);
+
+            // Also send legacy SyncStatus for backward compatibility
             await _hubContext.Clients.All.SendAsync(
                 "SyncStatus",
-                new { Status = "Failed", Message = $"Sync failed: {ex.Message}" },
+                new { Status = progress.Status, Message = progress.Message },
                 cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send sync progress update");
         }
     }
 }

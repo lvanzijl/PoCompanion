@@ -83,6 +83,65 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult<IEnumerable<WorkItemDto>>(result);
     }
 
+    public Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsAsync(
+        int[] rootWorkItemIds,
+        DateTimeOffset? since = null,
+        Action<int, int, string>? progressCallback = null,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: GetWorkItemsByRootIdsAsync called for rootIds=[{RootIds}], since={Since}",
+            string.Join(", ", rootWorkItemIds), since);
+
+        // Get all mock work items
+        var allWorkItems = _mockDataFacade.GetMockHierarchy().ToList();
+
+        // Build hierarchy map to find descendants
+        var results = new List<WorkItemDto>();
+        var processedIds = new HashSet<int>();
+
+        void CollectHierarchy(int parentId)
+        {
+            if (processedIds.Contains(parentId)) return;
+
+            var item = allWorkItems.FirstOrDefault(wi => wi.TfsId == parentId);
+            if (item != null)
+            {
+                processedIds.Add(parentId);
+                results.Add(item);
+
+                // Find children
+                var children = allWorkItems.Where(wi => wi.ParentTfsId == parentId);
+                foreach (var child in children)
+                {
+                    CollectHierarchy(child.TfsId);
+                }
+            }
+        }
+
+        // Report progress
+        progressCallback?.Invoke(1, 3, "Finding root work items...");
+
+        foreach (var rootId in rootWorkItemIds)
+        {
+            CollectHierarchy(rootId);
+        }
+
+        progressCallback?.Invoke(2, 3, $"Processing {results.Count} work items...");
+
+        // Filter by date if specified
+        if (since.HasValue)
+        {
+            results = results.Where(wi => wi.RetrievedAt >= since.Value).ToList();
+        }
+
+        progressCallback?.Invoke(3, 3, "Complete");
+
+        _logger.LogInformation("Mock TFS client: Returning {Count} work items for root IDs [{RootIds}]",
+            results.Count, string.Join(", ", rootWorkItemIds));
+
+        return Task.FromResult<IEnumerable<WorkItemDto>>(results);
+    }
+
     public Task<WorkItemDto?> GetWorkItemByIdAsync(int workItemId, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Mock TFS client: GetWorkItemByIdAsync called for work item {WorkItemId}", workItemId);
