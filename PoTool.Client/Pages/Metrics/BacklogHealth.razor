@@ -7,6 +7,8 @@
 @inject IMetricsClient MetricsClient
 @inject BacklogHealthCalculationService HealthCalculationService
 @inject ErrorMessageService ErrorMessageService
+@inject ProfileService ProfileService
+@inject ProductService ProductService
 @inject ISnackbar Snackbar
 
 <PageTitle>Backlog Health Dashboard</PageTitle>
@@ -22,10 +24,25 @@
               CommonIssues="@_healthCommonIssues" />
     
     <MudText Typo="Typo.h4" GutterBottom="true">
-        <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Class="mr-2" /> Backlog Health Dashboard
+        <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Class="mr-2" /> 
+        @if (_selectedProduct != null)
+        {
+            <text>@_selectedProduct.Name - Backlog Health Dashboard</text>
+        }
+        else
+        {
+            <text>Backlog Health Dashboard</text>
+        }
     </MudText>
     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
-        Multi-iteration backlog health analysis showing validation issues, effort tracking, and trends
+        @if (_selectedProduct != null)
+        {
+            <text>Multi-iteration backlog health analysis for @_selectedProduct.Name showing validation issues, effort tracking, and trends</text>
+        }
+        else
+        {
+            <text>Multi-iteration backlog health analysis showing validation issues, effort tracking, and trends</text>
+        }
     </MudText>
 
     <LoadingIndicator IsLoading="@_isLoading" />
@@ -78,6 +95,10 @@
     private ErrorResponse? _errorResponse;
     private string? _areaPathFilter = null;
     private int _maxIterations = 5;
+    
+    // Product context
+    private ProfileDto? _activeProfile;
+    private ProductDto? _selectedProduct;
 
     private ChartOptions _chartOptions = new()
     {
@@ -88,7 +109,35 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Load active profile and selected product
+        await LoadProductContext();
         await LoadData();
+    }
+    
+    private async Task LoadProductContext()
+    {
+        try
+        {
+            _activeProfile = await ProfileService.GetActiveProfileAsync();
+            
+            if (_activeProfile != null)
+            {
+                // Get products for this profile
+                var products = await ProductService.GetProductsByOwnerAsync(_activeProfile.Id);
+                var productsList = products.OrderBy(p => p.Order).ToList();
+                
+                // Select the first product if available
+                if (productsList.Any())
+                {
+                    _selectedProduct = productsList.First();
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Continue without product context - will show global data
+            // Error is not critical as the view can still function without product context
+        }
     }
 
     private async Task LoadData()
@@ -98,6 +147,7 @@
         {
             ClearError();
             _healthData = await MetricsClient.GetMultiIterationBacklogHealthAsync(
+                _selectedProduct?.Id, 
                 _areaPathFilter, 
                 _maxIterations);
         }

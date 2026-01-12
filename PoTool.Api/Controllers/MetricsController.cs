@@ -133,12 +133,14 @@ public class MetricsController : ControllerBase
     /// <summary>
     /// Gets aggregated backlog health across multiple iterations with trend analysis.
     /// </summary>
-    /// <param name="areaPath">Optional area path to filter work items</param>
+    /// <param name="productId">Optional product ID to filter work items by product hierarchy</param>
+    /// <param name="areaPath">Optional area path to filter work items (used if productId is not specified)</param>
     /// <param name="maxIterations">Maximum number of iterations to include (default: 5)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Multi-iteration backlog health with trend analysis</returns>
     [HttpGet("multi-iteration-health")]
     public async Task<ActionResult<MultiIterationBacklogHealthDto>> GetMultiIterationBacklogHealth(
+        [FromQuery] int? productId = null,
         [FromQuery] string? areaPath = null,
         [FromQuery] int maxIterations = 5,
         CancellationToken cancellationToken = default)
@@ -151,14 +153,16 @@ public class MetricsController : ControllerBase
             }
 
             var health = await _mediator.Send(
-                new GetMultiIterationBacklogHealthQuery(areaPath, maxIterations),
+                new GetMultiIterationBacklogHealthQuery(productId, areaPath, maxIterations),
                 cancellationToken);
 
             return Ok(health);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving multi-iteration backlog health for area: {AreaPath}", areaPath ?? "All");
+            _logger.LogError(ex, "Error retrieving multi-iteration backlog health for product: {ProductId}, area: {AreaPath}", 
+                productId?.ToString() ?? "None", 
+                areaPath ?? "All");
             return StatusCode(500, "Error retrieving multi-iteration backlog health");
         }
     }

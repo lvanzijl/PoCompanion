@@ -4,26 +4,31 @@ using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Validators;
+using PoTool.Core.WorkItems;
 
 namespace PoTool.Api.Handlers.Metrics;
 
 /// <summary>
 /// Handler for GetMultiIterationBacklogHealthQuery.
 /// Aggregates backlog health across multiple iterations and provides trend analysis.
+/// Supports filtering by product (via root work item hierarchy) or area path.
 /// </summary>
 public sealed class GetMultiIterationBacklogHealthQueryHandler
     : IQueryHandler<GetMultiIterationBacklogHealthQuery, MultiIterationBacklogHealthDto>
 {
     private readonly IWorkItemRepository _repository;
+    private readonly IProductRepository _productRepository;
     private readonly IWorkItemValidator _validator;
     private readonly ILogger<GetMultiIterationBacklogHealthQueryHandler> _logger;
 
     public GetMultiIterationBacklogHealthQueryHandler(
         IWorkItemRepository repository,
+        IProductRepository productRepository,
         IWorkItemValidator validator,
         ILogger<GetMultiIterationBacklogHealthQueryHandler> logger)
     {
         _repository = repository;
+        _productRepository = productRepository;
         _validator = validator;
         _logger = logger;
     }
@@ -33,14 +38,47 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
         CancellationToken cancellationToken)
     {
         _logger.LogDebug(
-            "Handling GetMultiIterationBacklogHealthQuery with AreaPath: {AreaPath}, MaxIterations: {MaxIterations}",
+            "Handling GetMultiIterationBacklogHealthQuery with ProductId: {ProductId}, AreaPath: {AreaPath}, MaxIterations: {MaxIterations}",
+            query.ProductId?.ToString() ?? "None",
             query.AreaPath ?? "All",
             query.MaxIterations);
 
         var allWorkItems = await _repository.GetAllAsync(cancellationToken);
 
-        // Filter by area path if specified
-        if (!string.IsNullOrWhiteSpace(query.AreaPath))
+        // Filter by product hierarchy if ProductId is specified
+        if (query.ProductId.HasValue)
+        {
+            var product = await _productRepository.GetProductByIdAsync(query.ProductId.Value, cancellationToken);
+            if (product == null)
+            {
+                _logger.LogWarning("Product with ID {ProductId} not found", query.ProductId.Value);
+                // Return empty result if product not found
+                return new MultiIterationBacklogHealthDto(
+                    IterationHealth: new List<BacklogHealthDto>(),
+                    Trend: new BacklogHealthTrend(
+                        EffortTrend: TrendDirection.Unknown,
+                        ValidationTrend: TrendDirection.Unknown,
+                        BlockerTrend: TrendDirection.Unknown,
+                        Summary: "Product not found"
+                    ),
+                    TotalWorkItems: 0,
+                    TotalIssues: 0,
+                    AnalysisTimestamp: DateTimeOffset.UtcNow
+                );
+            }
+
+            // Filter to only work items in the product's hierarchy
+            allWorkItems = WorkItemHierarchyHelper.FilterDescendants(
+                new List<int> { product.BacklogRootWorkItemId },
+                allWorkItems);
+
+            _logger.LogDebug(
+                "Filtered to {Count} work items in product hierarchy (root: {RootId})",
+                allWorkItems.Count(),
+                product.BacklogRootWorkItemId);
+        }
+        // Otherwise, filter by area path if specified (legacy behavior)
+        else if (!string.IsNullOrWhiteSpace(query.AreaPath))
         {
             allWorkItems = allWorkItems
                 .Where(wi => wi.AreaPath.StartsWith(query.AreaPath, StringComparison.OrdinalIgnoreCase))

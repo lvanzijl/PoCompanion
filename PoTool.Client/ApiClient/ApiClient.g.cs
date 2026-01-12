@@ -1632,11 +1632,11 @@ namespace PoTool.Client.ApiClient
         System.Threading.Tasks.Task<BacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(string? areaPath, int? maxIterations);
+        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productId, string? areaPath, int? maxIterations);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productId, string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity);
@@ -1995,14 +1995,14 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(string? areaPath, int? maxIterations)
+        public virtual System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productId, string? areaPath, int? maxIterations)
         {
-            return GetMultiIterationBacklogHealthAsync(areaPath, maxIterations, System.Threading.CancellationToken.None);
+            return GetMultiIterationBacklogHealthAsync(productId, areaPath, maxIterations, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productId, string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -2018,6 +2018,10 @@ namespace PoTool.Client.ApiClient
                     // Operation Path: "api/Metrics/multi-iteration-health"
                     urlBuilder_.Append("api/Metrics/multi-iteration-health");
                     urlBuilder_.Append('?');
+                    if (productId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("productId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(productId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
                     if (areaPath != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("areaPath")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(areaPath, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
