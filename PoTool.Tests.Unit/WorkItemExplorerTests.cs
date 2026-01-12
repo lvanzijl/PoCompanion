@@ -1,6 +1,8 @@
 using Microsoft.JSInterop;
 using Moq;
 using SharedWorkItemDto = PoTool.Shared.WorkItems.WorkItemDto;
+using ClientWorkItemWithValidationDto = PoTool.Client.ApiClient.WorkItemWithValidationDto;
+using ClientValidationIssue = PoTool.Client.ApiClient.ValidationIssue;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services.MockData;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -156,9 +158,9 @@ public class WorkItemExplorerTests
         var expandedState = new Dictionary<int, bool>();
 
         // Create sample work items with validation - use Client.ApiClient types
-        var workItems = new List<PoTool.Client.ApiClient.WorkItemWithValidationDto>
+        var workItems = new List<ClientWorkItemWithValidationDto>
         {
-            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            new ClientWorkItemWithValidationDto
             {
                 TfsId = 100,
                 Title = "Product 1 Root",
@@ -167,7 +169,7 @@ public class WorkItemExplorerTests
                 ParentTfsId = null,
                 ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
             },
-            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            new ClientWorkItemWithValidationDto
             {
                 TfsId = 101,
                 Title = "Feature under Product 1",
@@ -176,7 +178,7 @@ public class WorkItemExplorerTests
                 ParentTfsId = 100,
                 ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
             },
-            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            new ClientWorkItemWithValidationDto
             {
                 TfsId = 200,
                 Title = "Product 2 Root",
@@ -226,9 +228,9 @@ public class WorkItemExplorerTests
         var expandedState = new Dictionary<int, bool>();
 
         // Create sample work items - one with missing parent, one product root
-        var workItems = new List<PoTool.Client.ApiClient.WorkItemWithValidationDto>
+        var workItems = new List<ClientWorkItemWithValidationDto>
         {
-            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            new ClientWorkItemWithValidationDto
             {
                 TfsId = 100,
                 Title = "Product Root",
@@ -237,7 +239,7 @@ public class WorkItemExplorerTests
                 ParentTfsId = null,
                 ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
             },
-            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            new ClientWorkItemWithValidationDto
             {
                 TfsId = 999,
                 Title = "Orphaned Item",
@@ -285,9 +287,9 @@ public class WorkItemExplorerTests
         var expandedState = new Dictionary<int, bool>();
 
         // Create product root without parent (should go under product, not Unparented)
-        var workItems = new List<PoTool.Client.ApiClient.WorkItemWithValidationDto>
+        var workItems = new List<ClientWorkItemWithValidationDto>
         {
-            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            new ClientWorkItemWithValidationDto
             {
                 TfsId = 100,
                 Title = "Product Root (No Parent)",
@@ -328,9 +330,9 @@ public class WorkItemExplorerTests
         var expandedState = new Dictionary<int, bool>();
 
         // Create complete hierarchy - no orphans
-        var workItems = new List<PoTool.Client.ApiClient.WorkItemWithValidationDto>
+        var workItems = new List<ClientWorkItemWithValidationDto>
         {
-            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            new ClientWorkItemWithValidationDto
             {
                 TfsId = 100,
                 Title = "Product Root",
@@ -339,7 +341,7 @@ public class WorkItemExplorerTests
                 ParentTfsId = null,
                 ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
             },
-            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            new ClientWorkItemWithValidationDto
             {
                 TfsId = 101,
                 Title = "Child of Root",

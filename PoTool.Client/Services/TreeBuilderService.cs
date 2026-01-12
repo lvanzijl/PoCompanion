@@ -8,6 +8,10 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class TreeBuilderService : ITreeBuilderService
 {
+    // Special node IDs for non-work-item nodes
+    private const int ProductNodeIdOffset = -1000;  // Product nodes get IDs like -1001, -1002, etc.
+    private const int UnparentedNodeId = -1;         // Unparented node gets ID -1
+
     /// <inheritdoc/>
     public List<TreeNode> BuildTree(IEnumerable<WorkItemDto> items, Dictionary<int, bool> expandedState)
     {
@@ -485,12 +489,12 @@ public class TreeBuilderService : ITreeBuilderService
         {
             var productNode = new TreeNode
             {
-                Id = -1000 - product.Id, // Use negative IDs to avoid conflicts with real work item IDs
+                Id = ProductNodeIdOffset - product.Id, // Use negative IDs to avoid conflicts with real work item IDs
                 Title = product.Name,
                 Type = "Product",
                 State = "",
                 ParentId = null,
-                IsExpanded = expandedState.TryGetValue(-1000 - product.Id, out var isExpanded) && isExpanded
+                IsExpanded = expandedState.TryGetValue(ProductNodeIdOffset - product.Id, out var isExpanded) && isExpanded
             };
 
             // Find the root work item for this product
@@ -507,13 +511,13 @@ public class TreeBuilderService : ITreeBuilderService
         {
             var unparentedNode = new TreeNode
             {
-                Id = -1, // Special ID for Unparented node
+                Id = UnparentedNodeId, // Special ID for Unparented node
                 Title = "Unparented",
                 Type = "Unparented",
                 State = "",
                 ParentId = null,
                 Children = unparentedWorkItems.OrderBy(n => n.Title).ToList(),
-                IsExpanded = expandedState.TryGetValue(-1, out var isExpanded) && isExpanded
+                IsExpanded = expandedState.TryGetValue(UnparentedNodeId, out var isExpanded) && isExpanded
             };
 
             topLevelNodes.Add(unparentedNode);
