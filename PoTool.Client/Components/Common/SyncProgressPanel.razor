@@ -80,8 +80,62 @@
                 </MudStack>
             }
 
-            @* Minor Step Progress Bar (when available) *@
-            @if (_progress.MinorStepTotal > 0)
+            @* Phase-Level Progress (Relations / Fields) *@
+            @if (!string.IsNullOrEmpty(_progress.Phase) && _progress.TotalBatches > 0)
+            {
+                <MudStack Spacing="1">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.caption" Style="font-weight: 500;">
+                            @_progress.Phase
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @(_progress.HttpStatusCode.HasValue ? $"HTTP {_progress.HttpStatusCode}" : "")
+                            @(_progress.ElapsedMs.HasValue ? $" • {_progress.ElapsedMs}ms" : "")
+                        </MudText>
+                    </MudStack>
+                    
+                    @* Batch Progress within Phase *@
+                    @if (_progress.TotalBatches > 0)
+                    {
+                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.caption">
+                                Batch @_progress.BatchIndex / @_progress.TotalBatches
+                                @(_progress.IdCount > 0 ? $" ({_progress.IdCount} IDs)" : "")
+                            </MudText>
+                        </MudStack>
+                        <MudProgressLinear 
+                            Color="Color.Info" 
+                            Value="@BatchProgressPercentage" 
+                            Size="Size.Small"
+                            Rounded="true" />
+                    }
+                </MudStack>
+            }
+            
+            @* Phase 1 Summary (if available) *@
+            @if (_progress.RelationsCount > 0 || _progress.ReverseLinksCount > 0 || _progress.ParentIdsCount > 0)
+            {
+                <MudPaper Outlined="true" Class="pa-2">
+                    <MudText Typo="Typo.caption" Style="font-weight: 500;" Class="mb-1">Phase 1 Summary</MudText>
+                    <MudStack Row="true" Spacing="3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            <MudIcon Icon="@Icons.Material.Filled.Link" Size="Size.Small" Class="mr-1" />
+                            @_progress.RelationsCount relations
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            <MudIcon Icon="@Icons.Material.Filled.LinkOff" Size="Size.Small" Class="mr-1" />
+                            @_progress.ReverseLinksCount reverse
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Class="mr-1" />
+                            @_progress.ParentIdsCount parents
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+            }
+
+            @* Minor Step Progress Bar (legacy, when available) *@
+            @if (_progress.MinorStepTotal > 0 && string.IsNullOrEmpty(_progress.Phase))
             {
                 <MudStack Spacing="1">
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
@@ -125,6 +179,11 @@
     private double MinorProgressPercentage => 
         _progress?.MinorStepTotal > 0 
             ? Math.Min(100, (double)_progress.MinorStep / _progress.MinorStepTotal * 100)
+            : 0;
+
+    private double BatchProgressPercentage => 
+        _progress?.TotalBatches > 0 
+            ? Math.Min(100, (double)_progress.BatchIndex / _progress.TotalBatches * 100)
             : 0;
 
     protected override void OnInitialized()

@@ -47,6 +47,21 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves work items starting from specified root work item IDs and their entire hierarchy.
+    /// This method is used for product-scoped sync operations with detailed progress reporting.
+    /// </summary>
+    /// <param name="rootWorkItemIds">The root work item IDs to start from.</param>
+    /// <param name="since">Optional date to retrieve only work items modified since this date (incremental sync).</param>
+    /// <param name="detailedProgressCallback">Optional callback for detailed structured progress reporting.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of work item DTOs including root items and their descendants.</returns>
+    Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsWithDetailedProgressAsync(
+        int[] rootWorkItemIds,
+        DateTimeOffset? since = null,
+        Action<SyncProgressDto>? detailedProgressCallback = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Validates that the TFS connection is working with the configured PAT.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
