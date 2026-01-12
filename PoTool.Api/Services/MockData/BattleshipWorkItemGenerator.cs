@@ -63,7 +63,8 @@ public class BattleshipWorkItemGenerator
                 State: goalState,
                 JsonPayload: "{}",
                 RetrievedAt: now,
-                Effort: null
+                Effort: null,
+                Description: $"This goal focuses on {goalTitles[g].ToLower()} for the Battleship Incident Handling System."
             ));
 
             // Each goal has 2-4 objectives (average 3, total ~30)
@@ -87,7 +88,8 @@ public class BattleshipWorkItemGenerator
                     State: GetObjectiveState(),
                     JsonPayload: "{}",
                     RetrievedAt: now,
-                    Effort: null
+                    Effort: null,
+                    Description: $"Objective to implement {objectiveTitle.ToLower()} as part of the overall system strategy."
                 ));
 
                 // Each objective has 2-5 epics (average ~3.3, total ~100)
@@ -109,7 +111,8 @@ public class BattleshipWorkItemGenerator
                         State: GetEpicState(),
                         JsonPayload: "{}",
                         RetrievedAt: now,
-                        Effort: null
+                        Effort: null,
+                        Description: $"Epic to deliver {epicTitle.ToLower()} capabilities for the system."
                     ));
 
                     // Each epic has 3-7 features (average 5, total ~500)
@@ -131,7 +134,8 @@ public class BattleshipWorkItemGenerator
                             State: GetFeatureState(),
                             JsonPayload: "{}",
                             RetrievedAt: now,
-                            Effort: null
+                            Effort: null,
+                            Description: $"Feature to implement {featureTitle.ToLower()} functionality."
                         ));
 
                         // Each feature has 5-10 PBIs (average ~6, total ~3,000)
@@ -154,7 +158,8 @@ public class BattleshipWorkItemGenerator
                                 State: GetPbiState(),
                                 JsonPayload: "{}",
                                 RetrievedAt: now,
-                                Effort: effort
+                                Effort: effort,
+                                Description: pbiTitle
                             ));
 
                             // Each PBI has 2-5 tasks (average ~3.75, targeting ~15,000 total)
@@ -175,7 +180,8 @@ public class BattleshipWorkItemGenerator
                                     State: GetTaskState(),
                                     JsonPayload: "{}",
                                     RetrievedAt: now,
-                                    Effort: _random.Next(1, 17) // 0-16 hours
+                                    Effort: _random.Next(1, 17), // 0-16 hours
+                                    Description: $"Task to {taskTitle.ToLower()}."
                                 ));
                             }
                         }
@@ -200,7 +206,8 @@ public class BattleshipWorkItemGenerator
                                 State: GetBugState(),
                                 JsonPayload: "{}",
                                 RetrievedAt: now,
-                                Effort: bugEffort
+                                Effort: bugEffort,
+                                Description: $"Bug fix: {bugTitle.ToLower()}."
                             ));
 
                             // Each bug has 2-5 tasks
@@ -221,7 +228,8 @@ public class BattleshipWorkItemGenerator
                                     State: GetTaskState(),
                                     JsonPayload: "{}",
                                     RetrievedAt: now,
-                                    Effort: _random.Next(1, 17)
+                                    Effort: _random.Next(1, 17),
+                                    Description: $"Task to {taskTitle.ToLower()}."
                                 ));
                             }
                         }

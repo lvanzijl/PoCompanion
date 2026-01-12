@@ -75,4 +75,9 @@ public class WorkItemEntity
     /// Effort estimate in hours (nullable).
     /// </summary>
     public int? Effort { get; set; }
+
+    /// <summary>
+    /// Work item description (nullable).
+    /// </summary>
+    public string? Description { get; set; }
 }
