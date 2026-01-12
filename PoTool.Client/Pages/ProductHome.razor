@@ -15,6 +15,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IWorkItemSyncHubService SyncHubService
+@inject IPreferencesService PreferencesService
 @implements IDisposable
 
 <PageTitle>Product Overview - PO Companion</PageTitle>
@@ -654,7 +655,33 @@
             
             if (_activeProfile == null)
             {
-                // No active profile - redirect to profiles home
+                // Try to restore from localStorage (in case of page refresh)
+                var cachedProfileId = await PreferencesService.GetIntAsync("ActiveProfileId");
+                if (cachedProfileId.HasValue)
+                {
+                    try
+                    {
+                        // Restore the profile on the backend
+                        await ProfileService.SetActiveProfileAsync(cachedProfileId.Value);
+                        _activeProfile = await ProfileService.GetActiveProfileAsync();
+                        
+                        if (_activeProfile != null)
+                        {
+                            Console.WriteLine($"[ProductHome] Restored active profile from localStorage: {_activeProfile.Name} (ID: {_activeProfile.Id})");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[ProductHome] Failed to restore profile from localStorage: {ex.Message}");
+                        // Clear invalid cached profile ID
+                        await PreferencesService.RemoveAsync("ActiveProfileId");
+                    }
+                }
+            }
+            
+            if (_activeProfile == null)
+            {
+                // No active profile and couldn't restore - redirect to profiles home
                 NavigationManager.NavigateTo("/profiles");
                 return;
             }

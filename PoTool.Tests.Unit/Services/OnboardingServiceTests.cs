@@ -124,14 +124,25 @@ public class OnboardingServiceTests
     /// </summary>
     private class MockPreferencesService : IPreferencesService
     {
-        private readonly Dictionary<string, bool> _storage = new();
+        private readonly Dictionary<string, object> _storage = new();
 
         public Task<bool> GetBoolAsync(string key, bool defaultValue)
         {
-            return Task.FromResult(_storage.TryGetValue(key, out var value) ? value : defaultValue);
+            return Task.FromResult(_storage.TryGetValue(key, out var value) && value is bool b ? b : defaultValue);
         }
 
         public Task SetBoolAsync(string key, bool value)
+        {
+            _storage[key] = value;
+            return Task.CompletedTask;
+        }
+
+        public Task<int?> GetIntAsync(string key)
+        {
+            return Task.FromResult(_storage.TryGetValue(key, out var value) && value is int i ? (int?)i : null);
+        }
+
+        public Task SetIntAsync(string key, int value)
         {
             _storage[key] = value;
             return Task.CompletedTask;

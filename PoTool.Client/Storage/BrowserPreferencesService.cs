@@ -34,6 +34,25 @@ public class BrowserPreferencesService : IPreferencesService
         await _jsRuntime.InvokeVoidAsync("localStorage.setItem", key, value.ToString());
     }
 
+    public async Task<int?> GetIntAsync(string key)
+    {
+        try
+        {
+            var value = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", key);
+            if (value == null) return null;
+            return int.TryParse(value, out var result) ? result : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task SetIntAsync(string key, int value)
+    {
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", key, value.ToString());
+    }
+
     public async Task RemoveAsync(string key)
     {
         await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", key);
