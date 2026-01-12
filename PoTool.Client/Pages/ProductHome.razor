@@ -15,6 +15,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IWorkItemSyncHubService SyncHubService
+@inject IPreferencesService PreferencesService
 @implements IDisposable
 
 <PageTitle>Product Overview - PO Companion</PageTitle>
@@ -628,10 +629,16 @@
             if (status == "Completed")
             {
                 Snackbar.Add(message, Severity.Success);
+                _isSyncing = false;
+                _syncType = "";
+                StateHasChanged();
             }
             else if (status == "Failed")
             {
                 Snackbar.Add(message, Severity.Error);
+                _isSyncing = false;
+                _syncType = "";
+                StateHasChanged();
             }
         });
     }
@@ -648,7 +655,33 @@
             
             if (_activeProfile == null)
             {
-                // No active profile - redirect to profiles home
+                // Try to restore from localStorage (in case of page refresh)
+                var cachedProfileId = await PreferencesService.GetIntAsync("ActiveProfileId");
+                if (cachedProfileId.HasValue)
+                {
+                    try
+                    {
+                        // Restore the profile on the backend
+                        await ProfileService.SetActiveProfileAsync(cachedProfileId.Value);
+                        _activeProfile = await ProfileService.GetActiveProfileAsync();
+                        
+                        if (_activeProfile != null)
+                        {
+                            Console.WriteLine($"[ProductHome] Restored active profile from localStorage: {_activeProfile.Name} (ID: {_activeProfile.Id})");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[ProductHome] Failed to restore profile from localStorage: {ex.Message}");
+                        // Clear invalid cached profile ID
+                        await PreferencesService.RemoveAsync("ActiveProfileId");
+                    }
+                }
+            }
+            
+            if (_activeProfile == null)
+            {
+                // No active profile and couldn't restore - redirect to profiles home
                 NavigationManager.NavigateTo("/profiles");
                 return;
             }
@@ -801,6 +834,7 @@
         
         _isSyncing = true;
         _syncType = "full";
+        StateHasChanged();
         
         try
         {
@@ -823,6 +857,7 @@
                 Snackbar.Add("Full sync failed", Severity.Error);
                 _isSyncing = false;
                 _syncType = "";
+                StateHasChanged();
             }
             // Success/failure handled by SignalR progress events
         }
@@ -831,9 +866,8 @@
             Snackbar.Add($"Sync error: {ex.Message}", Severity.Error);
             _isSyncing = false;
             _syncType = "";
+            StateHasChanged();
         }
-        
-        StateHasChanged();
     }
     
     private async Task RequestIncrementalSync()
@@ -842,6 +876,7 @@
         
         _isSyncing = true;
         _syncType = "incremental";
+        StateHasChanged();
         
         try
         {
@@ -864,6 +899,7 @@
                 Snackbar.Add("Incremental sync failed", Severity.Error);
                 _isSyncing = false;
                 _syncType = "";
+                StateHasChanged();
             }
             // Success/failure handled by SignalR progress events
         }
@@ -872,9 +908,8 @@
             Snackbar.Add($"Sync error: {ex.Message}", Severity.Error);
             _isSyncing = false;
             _syncType = "";
+            StateHasChanged();
         }
-        
-        StateHasChanged();
     }
 
     private string GetHealthPercentage()

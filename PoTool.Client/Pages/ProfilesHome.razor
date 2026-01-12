@@ -10,6 +10,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject ErrorMessageService ErrorMessageService
+@inject IPreferencesService PreferencesService
 
 <PageTitle>Profiles Home</PageTitle>
 
@@ -127,10 +128,14 @@
         {
             await ProfileService.SetActiveProfileAsync(profile.Id);
             _activeProfileId = profile.Id;
+            
+            // Persist profile ID to localStorage for recovery on page refresh
+            await PreferencesService.SetIntAsync("ActiveProfileId", profile.Id);
+            
             Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
             
-            // Navigate to dashboard after selecting profile
-            NavigationManager.NavigateTo("/");
+            // Navigate to sync gate to ensure data is synced before entering Product Home
+            NavigationManager.NavigateTo("/sync-gate");
         }
         catch (Exception ex)
         {

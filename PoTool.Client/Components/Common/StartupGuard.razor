@@ -1,6 +1,8 @@
 @using PoTool.Client.Services
 @inject IStartupOrchestratorService StartupOrchestrator
 @inject NavigationManager NavigationManager
+@inject IPreferencesService PreferencesService
+@inject ProfileService ProfileService
 
 @* 
     StartupGuard component that checks startup readiness and routes appropriately.
@@ -130,6 +132,29 @@ else
                 return;
             }
             
+            // If no active profile, try to restore from localStorage
+            if (_readiness.ActiveProfileId == null)
+            {
+                var cachedProfileId = await PreferencesService.GetIntAsync("ActiveProfileId");
+                if (cachedProfileId.HasValue)
+                {
+                    try
+                    {
+                        // Attempt to restore the profile
+                        await ProfileService.SetActiveProfileAsync(cachedProfileId.Value);
+                        // Re-check readiness after restoration
+                        _readiness = await StartupOrchestrator.GetStartupReadinessAsync();
+                        Console.WriteLine($"[StartupGuard] Restored active profile from localStorage: ID {cachedProfileId.Value}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[StartupGuard] Failed to restore profile from localStorage: {ex.Message}");
+                        // Clear invalid cached profile ID
+                        await PreferencesService.RemoveAsync("ActiveProfileId");
+                    }
+                }
+            }
+            
             // Check if current page is exempt
             var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
             // Normalize: remove query string and ensure leading slash
@@ -143,7 +168,7 @@ else
             }
             
             // Check if feature pages are accessible
-            _isReady = StartupOrchestrator.IsFeaturePageAccessible(_readiness);
+            _isReady = _readiness != null && StartupOrchestrator.IsFeaturePageAccessible(_readiness);
         }
         catch (Exception)
         {

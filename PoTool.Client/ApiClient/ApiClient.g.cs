@@ -13091,6 +13091,9 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("lastModified")]
         public System.DateTimeOffset LastModified { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("lastSyncedAt")]
+        public System.DateTimeOffset? LastSyncedAt { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("teamIds")]
         public System.Collections.Generic.ICollection<int> TeamIds { get; set; } = default!;
 

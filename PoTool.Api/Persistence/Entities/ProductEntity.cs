@@ -68,6 +68,13 @@ public class ProductEntity
     public DateTimeOffset LastModified { get; set; } = DateTimeOffset.UtcNow;
 
     /// <summary>
+    /// Timestamp of the last successful sync for this product.
+    /// Null if the product has never been synced.
+    /// Used to determine whether to perform Full Sync (null) or Incremental Sync (has value).
+    /// </summary>
+    public DateTimeOffset? LastSyncedAt { get; set; }
+
+    /// <summary>
     /// Navigation property to the Product Owner.
     /// Null if product is orphaned.
     /// </summary>

@@ -18,6 +18,16 @@ public interface IPreferencesService
     Task SetBoolAsync(string key, bool value);
 
     /// <summary>
+    /// Gets an integer value from preferences.
+    /// </summary>
+    Task<int?> GetIntAsync(string key);
+
+    /// <summary>
+    /// Sets an integer value in preferences.
+    /// </summary>
+    Task SetIntAsync(string key, int value);
+
+    /// <summary>
     /// Removes a key from preferences.
     /// </summary>
     Task RemoveAsync(string key);

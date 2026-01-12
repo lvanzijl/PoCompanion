@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Hubs;
+using PoTool.Api.Persistence;
 using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
 using PoTool.Api.Repositories;
@@ -279,6 +281,9 @@ public class WorkItemSyncService : BackgroundService
                 RootWorkItemIds = rootWorkItemIds
             }, cancellationToken);
 
+            // Update LastSyncedAt for all products that were synced
+            await UpdateProductLastSyncedAtAsync(rootWorkItemIds, cancellationToken);
+
             _logger.LogInformation("Sync completed successfully for {Count} root work items", rootWorkItemIds.Length);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -313,6 +318,41 @@ public class WorkItemSyncService : BackgroundService
                 Message = $"Sync failed: {ex.Message}",
                 RootWorkItemIds = rootWorkItemIds
             }, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Updates LastSyncedAt timestamp for products with the given root work item IDs.
+    /// </summary>
+    private async Task UpdateProductLastSyncedAtAsync(int[] rootWorkItemIds, CancellationToken cancellationToken)
+    {
+        if (rootWorkItemIds == null || rootWorkItemIds.Length == 0)
+        {
+            return;
+        }
+
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            var products = await dbContext.Products
+                .Where(p => rootWorkItemIds.Contains(p.BacklogRootWorkItemId))
+                .ToListAsync(cancellationToken);
+
+            foreach (var product in products)
+            {
+                product.LastSyncedAt = now;
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Updated LastSyncedAt for {Count} products", products.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to update LastSyncedAt for products");
+            // Don't throw - sync was successful, this is just metadata
         }
     }
 
