@@ -17,6 +17,8 @@ public class BacklogHealthTests : BunitTestContext
 {
     private Mock<IMetricsClient> _mockMetricsClient = null!;
     private Mock<ISnackbar> _mockSnackbar = null!;
+    private Mock<IProfilesClient> _mockProfilesClient = null!;
+    private Mock<IProductsClient> _mockProductsClient = null!;
 
     [TestInitialize]
     public void Setup()
@@ -30,6 +32,8 @@ public class BacklogHealthTests : BunitTestContext
         // Setup mocks
         _mockMetricsClient = new Mock<IMetricsClient>();
         _mockSnackbar = new Mock<ISnackbar>();
+        _mockProfilesClient = new Mock<IProfilesClient>();
+        _mockProductsClient = new Mock<IProductsClient>();
 
         // Mock IHealthCalculationClient for BacklogHealthCalculationService
         var mockHealthCalculationClient = new Mock<IHealthCalculationClient>();
@@ -45,6 +49,13 @@ public class BacklogHealthTests : BunitTestContext
         var mockWorkItemsClient = new Mock<IWorkItemsClient>();
         var mockHttpClient = new HttpClient { BaseAddress = new Uri("http://localhost/") };
 
+        // Setup profile and product mocks to return empty/default by default
+        // GetActiveProfileAsync throws ApiException when no profile is active
+        _mockProfilesClient.Setup(x => x.GetActiveProfileAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ApiException("No active profile", 404, string.Empty, new Dictionary<string, IEnumerable<string>>(), null));
+        _mockProductsClient.Setup(x => x.GetProductsByOwnerAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ProductDto>());
+
         // Register mock services
         Services.AddSingleton(_mockMetricsClient.Object);
         Services.AddSingleton(mockHealthCalculationClient.Object);
@@ -54,6 +65,10 @@ public class BacklogHealthTests : BunitTestContext
         Services.AddSingleton<WorkItemService>();
         Services.AddSingleton<ErrorMessageService>();
         Services.AddSingleton(_mockSnackbar.Object);
+        Services.AddSingleton(_mockProfilesClient.Object);
+        Services.AddSingleton(_mockProductsClient.Object);
+        Services.AddSingleton<ProfileService>();
+        Services.AddSingleton<ProductService>();
     }
 
     private IRenderedFragment RenderBacklogHealthWithMudProvider()
