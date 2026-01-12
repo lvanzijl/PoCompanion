@@ -16,44 +16,6 @@
     <div class="header">
         <h1>Work Item Explorer</h1>
         <div class="header-actions">
-            <MudTooltip Text="Downloads all work items from Azure DevOps. Use when syncing for the first time or after major changes." 
-                        Placement="Placement.Bottom">
-                <MudButton Variant="Variant.Filled" 
-                           Color="Color.Primary" 
-                           OnClick="OnSyncClicked" 
-                           Disabled="@IsSyncing"
-                           StartIcon="@Icons.Material.Filled.Sync"
-                           Size="Size.Small">
-                    @if (IsSyncing)
-                    {
-                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                        <span>Syncing...</span>
-                    }
-                    else
-                    {
-                        <span>Full Sync</span>
-                    }
-                </MudButton>
-            </MudTooltip>
-            <MudTooltip Text="Downloads only changes since last sync (faster). Use for regular updates." 
-                        Placement="Placement.Bottom">
-                <MudButton Variant="Variant.Filled" 
-                           Color="Color.Secondary" 
-                           OnClick="OnIncrementalSyncClicked" 
-                           Disabled="@IsSyncing"
-                           StartIcon="@Icons.Material.Filled.SyncAlt"
-                           Size="Size.Small">
-                    @if (IsSyncing)
-                    {
-                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                        <span>Syncing...</span>
-                    }
-                    else
-                    {
-                        <span>Incremental Sync</span>
-                    }
-                </MudButton>
-            </MudTooltip>
             <MudTooltip Text="Clears the expanded/collapsed state of all tree nodes"
                         Placement="Placement.Bottom">
                 <MudButton Variant="Variant.Outlined" 
@@ -67,24 +29,7 @@
         </div>
     </div>
 
-    @if (!string.IsNullOrEmpty(SyncMessage))
-    {
-        <div class="sync-status @SyncStatusClass">
-            @SyncMessage
-        </div>
-    }
 
-    @if (LastSyncTime.HasValue)
-    {
-        <div class="last-sync-time">
-            <small>Last sync: @LastSyncTime.Value.ToLocalTime().ToString("g")</small>
-        </div>
-    }
-
-    <div class="endpoint-info">
-        <small>API base: @ApiBase</small><br />
-        <small>Hub URL: @HubUrl</small>
-    </div>
 
     <div class="search-filter">
         <input type="text" 
@@ -184,34 +129,10 @@
 
 @code {
     [Parameter]
-    public string ApiBase { get; set; } = string.Empty;
-
-    [Parameter]
-    public string HubUrl { get; set; } = string.Empty;
-
-    [Parameter]
-    public bool IsSyncing { get; set; }
-
-    [Parameter]
-    public string SyncMessage { get; set; } = string.Empty;
-
-    [Parameter]
-    public string SyncStatusClass { get; set; } = string.Empty;
-
-    [Parameter]
     public string FilterText { get; set; } = string.Empty;
 
     [Parameter]
     public List<ValidationFilter> ValidationFilters { get; set; } = new();
-
-    [Parameter]
-    public DateTimeOffset? LastSyncTime { get; set; }
-
-    [Parameter]
-    public EventCallback OnSyncRequested { get; set; }
-
-    [Parameter]
-    public EventCallback OnIncrementalSyncRequested { get; set; }
 
     [Parameter]
     public EventCallback OnClearState { get; set; }
@@ -248,16 +169,6 @@
             "missingEffort" => "Highlights work items in 'In Progress' state without effort or story points assigned",
             _ => ""
         };
-    }
-
-    private async Task OnSyncClicked()
-    {
-        await OnSyncRequested.InvokeAsync();
-    }
-
-    private async Task OnIncrementalSyncClicked()
-    {
-        await OnIncrementalSyncRequested.InvokeAsync();
     }
 
     private async Task OnClearStateClicked()

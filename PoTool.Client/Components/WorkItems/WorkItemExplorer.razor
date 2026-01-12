@@ -12,6 +12,7 @@
 @inject WorkItemFilteringService FilteringService
 @inject WorkItemSelectionService SelectionService
 @inject ProfileService ProfileService
+@inject ProductService ProductService
 @inject TfsConfigService TfsConfigService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
@@ -23,18 +24,10 @@
 <PageTitle>Work Item Explorer</PageTitle>
 
 <div class="workitem-explorer">
-    <WorkItemToolbar ApiBase="@_apiBase"
-                     HubUrl="@_hubUrl"
-                     IsSyncing="@_isSyncing"
-                     SyncMessage="@_syncMessage"
-                     SyncStatusClass="@_syncStatusClass"
-                     FilterText="@_filterText"
+    <WorkItemToolbar FilterText="@_filterText"
                      ValidationFilters="@_validationFilters"
-                     LastSyncTime="@_lastSyncTime"
                      SelectedCount="@_selectedIds.Count"
                      SelectedWorkItems="@_selectedWorkItems"
-                     OnSyncRequested="@RequestSync"
-                     OnIncrementalSyncRequested="@RequestIncrementalSync"
                      OnClearState="@ClearExpandedState"
                      OnFilterChanged="@HandleFilterChanged"
                      OnValidationFiltersChanged="@HandleValidationFiltersChanged"
@@ -113,10 +106,6 @@
     private List<string> _selectedValidationIssues = new();
     private string _filterText = string.Empty;
     private bool _isLoading = true;
-    private bool _isSyncing = false;
-    private string _syncMessage = string.Empty;
-    private string _syncStatusClass = string.Empty;
-    private DateTimeOffset? _lastSyncTime;
 
     // Error display
     private ErrorResponse? _errorResponse;
@@ -136,10 +125,6 @@
     // Focus root for product-aware navigation
     private int? _focusRootId;
 
-    // Resolved endpoints for debugging
-    private string _apiBase = string.Empty;
-    private string _hubUrl = string.Empty;
-
     // Tree structure
     private List<TreeNode> _treeRoots = new();
     private List<TreeNode> _flatNodeList = new(); // Flat list for keyboard navigation
@@ -157,7 +142,6 @@
         
         await InitializeSignalRAsync();
         await LoadExpandedStateAsync();
-        await LoadLastSyncTimeAsync();
         await LoadWorkItems();
     }
 
@@ -200,29 +184,15 @@
         }
     }
 
-    private async Task LoadLastSyncTimeAsync()
-    {
-        try
-        {
-            var config = await TfsConfigService.GetConfigAsync();
-            _lastSyncTime = config?.LastValidated;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[WorkItemExplorer] Error loading last sync time: {ex.Message}");
-        }
-    }
-
     private async Task InitializeSignalRAsync()
     {
-        _apiBase = NavigationManager.BaseUri.TrimEnd('/');
-        _hubUrl = _apiBase + "/hubs/workitems";
-
         SyncHubService.OnSyncStatusChanged += HandleSyncStatus;
 
         try
         {
-            await SyncHubService.StartAsync(_hubUrl);
+            var apiBase = NavigationManager.BaseUri.TrimEnd('/');
+            var hubUrl = apiBase + "/hubs/workitems";
+            await SyncHubService.StartAsync(hubUrl);
         }
         catch (Exception ex)
         {
@@ -232,17 +202,6 @@
 
     private void HandleSyncStatus(string status, string message)
     {
-        _syncMessage = message;
-        _syncStatusClass = status switch
-        {
-            "InProgress" => "status-progress",
-            "Completed" => "status-success",
-            "Failed" => "status-error",
-            _ => ""
-        };
-
-        _isSyncing = status == "InProgress";
-
         if (status == "Completed")
         {
             _ = LoadWorkItems();
@@ -261,14 +220,25 @@
         _isLoading = true;
         try
         {
-            // Get active profile to determine which goals to load
-            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            // Load all products
+            var allProducts = (await ProductService.GetAllProductsAsync()).ToList();
+            Console.WriteLine($"[WorkItemExplorer] Loaded {allProducts.Count} products");
 
-            // Load hierarchy with validation - get all first
+            // Load all work items with validation
             var allWorkItems = (await WorkItemService.GetAllWithValidationAsync()).ToList();
             Console.WriteLine($"[WorkItemExplorer] Loaded {allWorkItems.Count} total work items");
             
-            // Then filter by profile goals if configured
+            // Ensure all product root work items exist in the database
+            await EnsureProductRootWorkItemsExist(allProducts, allWorkItems);
+            
+            // Reload work items after ensuring roots exist (in case new ones were added)
+            allWorkItems = (await WorkItemService.GetAllWithValidationAsync()).ToList();
+            Console.WriteLine($"[WorkItemExplorer] After ensuring roots: {allWorkItems.Count} total work items");
+
+            // Get active profile to determine which goals to load (for goal filter UI, not for tree building)
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+
+            // Prepare goal filtering UI (this doesn't affect tree structure)
             if (activeProfile != null && activeProfile.GoalIds.Any())
             {
                 _profileGoalIds = activeProfile.GoalIds.ToList();
@@ -322,7 +292,7 @@
             }
 
             Console.WriteLine($"[WorkItemExplorer] Final work item count: {_workItemsWithValidation.Count}");
-            await ApplyFilterAsync();
+            await ApplyFilterAsync(allProducts);
             await UpdateValidationFilterCountsAsync();
             await SaveExpandedStateAsync();
         }
@@ -337,103 +307,38 @@
         }
     }
 
-    private async Task RequestSync()
+    private async Task EnsureProductRootWorkItemsExist(List<ProductDto> products, List<WorkItemWithValidationDto> existingWorkItems)
     {
-        _syncMessage = string.Empty;
+        var existingIds = new HashSet<int>(existingWorkItems.Select(wi => wi.TfsId));
+        var missingRootIds = new List<int>();
 
-        if (SyncHubService.IsConnected)
+        foreach (var product in products)
         {
-            _isSyncing = true;
-            _syncMessage = "Requesting full sync via SignalR...";
-            _syncStatusClass = "status-progress";
+            if (!existingIds.Contains(product.BacklogRootWorkItemId))
+            {
+                missingRootIds.Add(product.BacklogRootWorkItemId);
+                Console.WriteLine($"[WorkItemExplorer] Product '{product.Name}' root work item {product.BacklogRootWorkItemId} is missing from DB");
+            }
+        }
 
+        if (missingRootIds.Any())
+        {
+            Console.WriteLine($"[WorkItemExplorer] Fetching {missingRootIds.Count} missing product root work items...");
+            // Trigger a sync to fetch missing root work items
+            // The sync service will fetch the root items and their hierarchies
             try
             {
-                await SyncHubService.RequestSyncAsync("");  // Parameter is deprecated - hub uses configured DefaultAreaPath
-                await Task.Delay(AppSettings.SyncDelayMilliseconds);
-                await LoadWorkItems();
-                await LoadLastSyncTimeAsync();
+                if (SyncHubService.IsConnected)
+                {
+                    await SyncHubService.RequestSyncAsync("");
+                    await Task.Delay(2000); // Wait for sync to complete
+                }
             }
             catch (Exception ex)
             {
-                _syncMessage = FormatTfsError("Error requesting sync via SignalR", ex);
-                _syncStatusClass = "status-error";
-                ShowTfsErrorSnackbar(ex);
+                Console.WriteLine($"[WorkItemExplorer] Error syncing missing root work items: {ex.Message}");
+                Snackbar.Add($"Warning: Could not fetch missing product root work items. Some products may not display.", Severity.Warning);
             }
-            finally
-            {
-                _isSyncing = false;
-            }
-            return;
-        }
-
-        // Fallback: call API endpoint to trigger sync
-        try
-        {
-            _isSyncing = true;
-            _syncMessage = "Requesting full sync via HTTP...";
-            _syncStatusClass = "status-progress";
-
-            var success = await TfsConfigService.RequestSyncAsync();
-            if (success)
-            {
-                await LoadWorkItems();
-                await LoadLastSyncTimeAsync();
-                _syncMessage = "Full sync completed (HTTP)";
-                _syncStatusClass = "status-success";
-            }
-            else
-            {
-                _syncMessage = "Sync request failed (HTTP)";
-                _syncStatusClass = "status-error";
-            }
-        }
-        catch (Exception ex)
-        {
-            _syncMessage = FormatTfsError("Error requesting sync", ex);
-            _syncStatusClass = "status-error";
-            ShowTfsErrorSnackbar(ex);
-        }
-        finally
-        {
-            _isSyncing = false;
-        }
-    }
-
-    private async Task RequestIncrementalSync()
-    {
-        _syncMessage = string.Empty;
-
-        try
-        {
-            _isSyncing = true;
-            _syncMessage = "Requesting incremental sync...";
-            _syncStatusClass = "status-progress";
-
-            // For incremental sync, we pass the last sync time to the API
-            var success = await TfsConfigService.RequestIncrementalSyncAsync();
-            if (success)
-            {
-                await LoadWorkItems();
-                await LoadLastSyncTimeAsync();
-                _syncMessage = "Incremental sync completed";
-                _syncStatusClass = "status-success";
-            }
-            else
-            {
-                _syncMessage = "Incremental sync request failed";
-                _syncStatusClass = "status-error";
-            }
-        }
-        catch (Exception ex)
-        {
-            _syncMessage = FormatTfsError("Error requesting incremental sync", ex);
-            _syncStatusClass = "status-error";
-            ShowTfsErrorSnackbar(ex);
-        }
-        finally
-        {
-            _isSyncing = false;
         }
     }
 
@@ -454,8 +359,14 @@
         await LoadWorkItems();
     }
 
-    private async Task ApplyFilterAsync()
+    private async Task ApplyFilterAsync(List<ProductDto>? products = null)
     {
+        // Load products if not provided
+        if (products == null)
+        {
+            products = (await ProductService.GetAllProductsAsync()).ToList();
+        }
+
         // Get enabled filter IDs
         var enabledFilterIds = _validationFilters
             .Where(f => f.IsEnabled)
@@ -467,7 +378,8 @@
             _filterText,
             enabledFilterIds);
 
-        _treeRoots = TreeBuilderService.BuildTreeWithValidation(filteredItems, _expandedState);
+        // Use product-based tree building
+        _treeRoots = TreeBuilderService.BuildProductBasedTreeWithValidation(filteredItems, products, _expandedState);
         _flatNodeList = SelectionService.BuildFlatNodeList(_treeRoots);
         StateHasChanged();
     }
