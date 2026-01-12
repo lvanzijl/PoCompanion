@@ -189,6 +189,9 @@ namespace PoTool.Api.Migrations
                     b.Property<DateTimeOffset>("LastModified")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTimeOffset?>("LastSyncedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)

@@ -32,5 +32,6 @@ public sealed record ProductDto(
     string? CustomPicturePath,
     DateTimeOffset CreatedAt,
     DateTimeOffset LastModified,
+    DateTimeOffset? LastSyncedAt,
     List<int> TeamIds
 );

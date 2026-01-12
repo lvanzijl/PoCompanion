@@ -116,10 +116,6 @@
             _errorMessage = null;
             _syncCompleted = false;
 
-            // Determine sync type based on last sync time (global for now)
-            var config = await TfsConfigService.GetConfigAsync();
-            _syncType = config?.LastValidated == null ? "full" : "incremental";
-
             // Get active profile to determine root work item IDs
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
@@ -134,6 +130,11 @@
             var products = await ProductService.GetProductsByOwnerAsync(activeProfile.Id);
             var productsList = products.OrderBy(p => p.Order).ToList();
 
+            // Determine sync type based on per-product sync history
+            // Full sync if ANY product has never been synced, Incremental if ALL have been synced
+            bool anyProductNeverSynced = productsList.Any(p => p.LastSyncedAt == null);
+            _syncType = anyProductNeverSynced ? "full" : "incremental";
+
             // Determine root work item IDs
             int[] rootIds;
             if (productsList.Any())
@@ -142,7 +143,9 @@
             }
             else
             {
-                // No products configured - this is acceptable
+                // No products configured - fall back to global LastValidated check
+                var config = await TfsConfigService.GetConfigAsync();
+                _syncType = config?.LastValidated == null ? "full" : "incremental";
                 rootIds = Array.Empty<int>();
             }
 

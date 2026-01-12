@@ -285,6 +285,7 @@ public class ProductRepository : IProductRepository
             entity.CustomPicturePath,
             entity.CreatedAt,
             entity.LastModified,
+            entity.LastSyncedAt,
             teamIds
         );
     }

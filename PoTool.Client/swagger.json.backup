@@ -5399,11 +5399,6 @@
             "type": "string",
             "format": "date-time"
           },
-          "lastSyncedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
           "teamIds": {
             "type": "array",
             "items": {
@@ -5580,11 +5575,6 @@
           }
         }
       },
-          "lastSyncedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
       "ProfilePictureType": {
         "type": "integer",
         "description": "",
@@ -5676,11 +5666,6 @@
           }
         }
       },
-          "lastSyncedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
       "SetActiveProfileRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -6806,11 +6791,6 @@
           }
         }
       },
-          "lastSyncedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
       "TeamPictureType": {
         "type": "integer",
         "description": "",
