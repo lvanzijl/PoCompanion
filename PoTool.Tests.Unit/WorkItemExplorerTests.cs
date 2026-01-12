@@ -1,6 +1,6 @@
 using Microsoft.JSInterop;
 using Moq;
-using PoTool.Shared.WorkItems;
+using SharedWorkItemDto = PoTool.Shared.WorkItems.WorkItemDto;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services.MockData;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -11,6 +11,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using PoTool.Core.WorkItems;
+using PoTool.Client.Services;
+using PoTool.Client.ApiClient;
 
 namespace PoTool.Tests.Unit;
 
@@ -77,7 +79,7 @@ public class WorkItemExplorerTests
 
         // emulate client-side filtering logic
         var matches = items.Where(w => w.Title.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
-        var toInclude = new Dictionary<int, WorkItemDto>();
+        var toInclude = new Dictionary<int, SharedWorkItemDto>();
         foreach (var m in matches)
         {
             toInclude.TryAdd(m.TfsId, m);
@@ -145,4 +147,228 @@ public class WorkItemExplorerTests
             Assert.AreEqual("Goal", root.Type, $"Root node {root.TfsId} should be a Goal, but is {root.Type}");
         }
     }
+
+    [TestMethod]
+    public void ProductBasedTree_CreatesProductNodes()
+    {
+        // Arrange
+        var treeBuilder = new TreeBuilderService();
+        var expandedState = new Dictionary<int, bool>();
+
+        // Create sample work items with validation - use Client.ApiClient types
+        var workItems = new List<PoTool.Client.ApiClient.WorkItemWithValidationDto>
+        {
+            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            {
+                TfsId = 100,
+                Title = "Product 1 Root",
+                Type = "Epic",
+                State = "Active",
+                ParentTfsId = null,
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            },
+            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            {
+                TfsId = 101,
+                Title = "Feature under Product 1",
+                Type = "Feature",
+                State = "Active",
+                ParentTfsId = 100,
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            },
+            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            {
+                TfsId = 200,
+                Title = "Product 2 Root",
+                Type = "Epic",
+                State = "Active",
+                ParentTfsId = null,
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            }
+        };
+
+        // Create sample products
+        var products = new List<ProductDto>
+        {
+            new ProductDto
+            {
+                Id = 1,
+                Name = "Product Alpha",
+                BacklogRootWorkItemId = 100,
+                Order = 1
+            },
+            new ProductDto
+            {
+                Id = 2,
+                Name = "Product Beta",
+                BacklogRootWorkItemId = 200,
+                Order = 2
+            }
+        };
+
+        // Act
+        var tree = treeBuilder.BuildProductBasedTreeWithValidation(workItems, products, expandedState);
+
+        // Assert
+        Assert.AreEqual(2, tree.Count, "Should have 2 top-level nodes (one per product)");
+        Assert.AreEqual("Product Alpha", tree[0].Title);
+        Assert.AreEqual("Product", tree[0].Type);
+        Assert.AreEqual(1, tree[0].Children.Count, "Product Alpha should have 1 child (root work item)");
+        Assert.AreEqual(100, tree[0].Children[0].Id);
+        Assert.AreEqual("Product Beta", tree[1].Title);
+    }
+
+    [TestMethod]
+    public void ProductBasedTree_CreatesUnparentedNode_ForOrphanedItems()
+    {
+        // Arrange
+        var treeBuilder = new TreeBuilderService();
+        var expandedState = new Dictionary<int, bool>();
+
+        // Create sample work items - one with missing parent, one product root
+        var workItems = new List<PoTool.Client.ApiClient.WorkItemWithValidationDto>
+        {
+            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            {
+                TfsId = 100,
+                Title = "Product Root",
+                Type = "Epic",
+                State = "Active",
+                ParentTfsId = null,
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            },
+            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            {
+                TfsId = 999,
+                Title = "Orphaned Item",
+                Type = "Feature",
+                State = "Active",
+                ParentTfsId = 888, // Parent doesn't exist
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            }
+        };
+
+        var products = new List<ProductDto>
+        {
+            new ProductDto
+            {
+                Id = 1,
+                Name = "Product Alpha",
+                BacklogRootWorkItemId = 100,
+                Order = 1
+            }
+        };
+
+        // Act
+        var tree = treeBuilder.BuildProductBasedTreeWithValidation(workItems, products, expandedState);
+
+        // Assert
+        Assert.AreEqual(2, tree.Count, "Should have 2 top-level nodes (Product + Unparented)");
+        
+        var productNode = tree.FirstOrDefault(n => n.Type == "Product");
+        Assert.IsNotNull(productNode, "Should have a Product node");
+        Assert.AreEqual("Product Alpha", productNode.Title);
+        
+        var unparentedNode = tree.FirstOrDefault(n => n.Type == "Unparented");
+        Assert.IsNotNull(unparentedNode, "Should have an Unparented node");
+        Assert.AreEqual("Unparented", unparentedNode.Title);
+        Assert.AreEqual(1, unparentedNode.Children.Count, "Unparented should have 1 child");
+        Assert.AreEqual(999, unparentedNode.Children[0].Id);
+        Assert.AreEqual("Orphaned Item", unparentedNode.Children[0].Title);
+    }
+
+    [TestMethod]
+    public void ProductBasedTree_ProductRootsNotInUnparented()
+    {
+        // Arrange
+        var treeBuilder = new TreeBuilderService();
+        var expandedState = new Dictionary<int, bool>();
+
+        // Create product root without parent (should go under product, not Unparented)
+        var workItems = new List<PoTool.Client.ApiClient.WorkItemWithValidationDto>
+        {
+            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            {
+                TfsId = 100,
+                Title = "Product Root (No Parent)",
+                Type = "Epic",
+                State = "Active",
+                ParentTfsId = null,
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            }
+        };
+
+        var products = new List<ProductDto>
+        {
+            new ProductDto
+            {
+                Id = 1,
+                Name = "Product Alpha",
+                BacklogRootWorkItemId = 100,
+                Order = 1
+            }
+        };
+
+        // Act
+        var tree = treeBuilder.BuildProductBasedTreeWithValidation(workItems, products, expandedState);
+
+        // Assert
+        Assert.AreEqual(1, tree.Count, "Should have only 1 top-level node (Product), no Unparented");
+        Assert.AreEqual("Product", tree[0].Type);
+        Assert.AreEqual("Product Alpha", tree[0].Title);
+        Assert.AreEqual(1, tree[0].Children.Count);
+        Assert.AreEqual(100, tree[0].Children[0].Id);
+    }
+
+    [TestMethod]
+    public void ProductBasedTree_NoUnparentedNode_WhenAllItemsHaveParents()
+    {
+        // Arrange
+        var treeBuilder = new TreeBuilderService();
+        var expandedState = new Dictionary<int, bool>();
+
+        // Create complete hierarchy - no orphans
+        var workItems = new List<PoTool.Client.ApiClient.WorkItemWithValidationDto>
+        {
+            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            {
+                TfsId = 100,
+                Title = "Product Root",
+                Type = "Epic",
+                State = "Active",
+                ParentTfsId = null,
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            },
+            new PoTool.Client.ApiClient.WorkItemWithValidationDto
+            {
+                TfsId = 101,
+                Title = "Child of Root",
+                Type = "Feature",
+                State = "Active",
+                ParentTfsId = 100,
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            }
+        };
+
+        var products = new List<ProductDto>
+        {
+            new ProductDto
+            {
+                Id = 1,
+                Name = "Product Alpha",
+                BacklogRootWorkItemId = 100,
+                Order = 1
+            }
+        };
+
+        // Act
+        var tree = treeBuilder.BuildProductBasedTreeWithValidation(workItems, products, expandedState);
+
+        // Assert
+        Assert.AreEqual(1, tree.Count, "Should have only 1 top-level node (Product), no Unparented");
+        Assert.AreEqual("Product", tree[0].Type);
+        var unparentedNode = tree.FirstOrDefault(n => n.Type == "Unparented");
+        Assert.IsNull(unparentedNode, "Should not have Unparented node when all items have parents");
+    }
 }
+
