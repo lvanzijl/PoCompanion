@@ -133,10 +133,10 @@
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[BacklogHealth] Error loading product context: {ex.Message}");
             // Continue without product context - will show global data
+            // Error is not critical as the view can still function without product context
         }
     }
 
