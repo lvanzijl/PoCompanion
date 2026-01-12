@@ -66,9 +66,9 @@
                     }
                 </MudText>
                 
-                @* Progress Panel *@
+                @* Progress Panel with Sync Type *@
                 <div style="width: 100%;">
-                    <SyncProgressPanel @ref="_syncProgressPanel" />
+                    <SyncProgressPanel @ref="_syncProgressPanel" SyncType="@GetSyncTypeLabel()" />
                 </div>
                 
                 @if (_isStarting)
@@ -261,5 +261,10 @@
     private void BackToProfiles()
     {
         NavigationManager.NavigateTo("/profiles");
+    }
+
+    private string GetSyncTypeLabel()
+    {
+        return _syncType == "full" ? "Full Sync" : "Incremental Sync";
     }
 }
