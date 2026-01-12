@@ -1,0 +1,267 @@
+@page "/sync-gate"
+@using PoTool.Client.Services
+@using PoTool.Client.Components.Common
+@using PoTool.Shared.WorkItems
+@inject ProfileService ProfileService
+@inject TfsConfigService TfsConfigService
+@inject ProductService ProductService
+@inject IWorkItemSyncHubService SyncHubService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<PageTitle>Syncing Data - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudStack Spacing="4" AlignItems="AlignItems.Center">
+            @if (_errorMessage != null)
+            {
+                @* Error State *@
+                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" />
+                <MudText Typo="Typo.h5" Color="Color.Error">Sync Failed</MudText>
+                <MudText Typo="Typo.body1" Align="Align.Center">
+                    @_errorMessage
+                </MudText>
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="RetrySync">
+                        Retry Sync
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Default"
+                               StartIcon="@Icons.Material.Filled.ArrowBack"
+                               OnClick="BackToProfiles">
+                        Back to Profiles
+                    </MudButton>
+                </MudStack>
+            }
+            else if (_syncCompleted)
+            {
+                @* Success State - Navigating to Product Home *@
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                <MudText Typo="Typo.h5" Color="Color.Success">Sync Complete</MudText>
+                <MudText Typo="Typo.body1">
+                    Redirecting to Product Home...
+                </MudText>
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
+            }
+            else
+            {
+                @* Syncing State *@
+                <MudIcon Icon="@Icons.Material.Filled.Sync" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h5">
+                    @(_syncType == "full" ? "Full Sync" : "Incremental Sync") in Progress
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                    @if (_syncType == "full")
+                    {
+                        <span>Downloading all work items from Azure DevOps. This may take a few minutes...</span>
+                    }
+                    else
+                    {
+                        <span>Downloading changes since last sync...</span>
+                    }
+                </MudText>
+                
+                @* Progress Panel *@
+                <div style="width: 100%;">
+                    <SyncProgressPanel @ref="_syncProgressPanel" />
+                </div>
+                
+                @if (_isStarting)
+                {
+                    <MudProgressCircular Size="Size.Medium" Indeterminate="true" Color="Color.Primary" />
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Starting sync...
+                    </MudText>
+                }
+            }
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private SyncProgressPanel? _syncProgressPanel;
+    private string _syncType = "incremental";
+    private bool _isStarting = true;
+    private bool _syncCompleted = false;
+    private string? _errorMessage;
+    private bool _disposed = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Subscribe to sync progress events
+        SyncHubService.OnSyncProgressReceived += HandleSyncProgress;
+        SyncHubService.OnSyncStatusChanged += HandleSyncStatusChanged;
+
+        // Start sync automatically
+        await StartSyncAsync();
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        SyncHubService.OnSyncProgressReceived -= HandleSyncProgress;
+        SyncHubService.OnSyncStatusChanged -= HandleSyncStatusChanged;
+    }
+
+    private async Task StartSyncAsync()
+    {
+        try
+        {
+            _isStarting = true;
+            _errorMessage = null;
+            _syncCompleted = false;
+
+            // Determine sync type based on last sync time (global for now)
+            var config = await TfsConfigService.GetConfigAsync();
+            _syncType = config?.LastValidated == null ? "full" : "incremental";
+
+            // Get active profile to determine root work item IDs
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                _errorMessage = "No active profile found. Please select a profile.";
+                _isStarting = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Get products for this profile
+            var products = await ProductService.GetProductsByOwnerAsync(activeProfile.Id);
+            var productsList = products.OrderBy(p => p.Order).ToList();
+
+            // Determine root work item IDs
+            int[] rootIds;
+            if (productsList.Any())
+            {
+                rootIds = productsList.Select(p => p.BacklogRootWorkItemId).ToArray();
+            }
+            else
+            {
+                // No products configured - this is acceptable
+                rootIds = Array.Empty<int>();
+            }
+
+            // Request sync
+            bool success;
+            if (rootIds.Length > 0)
+            {
+                // Product-scoped sync
+                success = await TfsConfigService.RequestSyncByRootIdsAsync(
+                    rootIds, 
+                    incremental: _syncType == "incremental");
+            }
+            else
+            {
+                // Fallback to legacy area-path sync
+                if (_syncType == "full")
+                {
+                    success = await TfsConfigService.RequestSyncAsync();
+                }
+                else
+                {
+                    success = await TfsConfigService.RequestIncrementalSyncAsync();
+                }
+            }
+
+            if (!success)
+            {
+                _errorMessage = "Failed to start sync operation. Please try again.";
+                _isStarting = false;
+                StateHasChanged();
+                return;
+            }
+
+            _isStarting = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error starting sync: {ex.Message}";
+            _isStarting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleSyncProgress(SyncProgressDto progress)
+    {
+        if (_disposed) return;
+
+        InvokeAsync(() =>
+        {
+            _syncProgressPanel?.UpdateProgress(progress);
+
+            // Check for completion or failure
+            if (progress.Status == "Completed")
+            {
+                _syncCompleted = true;
+                StateHasChanged();
+                
+                // Navigate to Product Home after a brief delay
+                Task.Delay(1500).ContinueWith(_ =>
+                {
+                    if (!_disposed)
+                    {
+                        InvokeAsync(() => NavigationManager.NavigateTo("/", forceLoad: true));
+                    }
+                });
+            }
+            else if (progress.Status == "Failed")
+            {
+                _errorMessage = progress.Message ?? "Sync failed. Please try again.";
+                StateHasChanged();
+            }
+            else if (progress.Status == "Cancelled")
+            {
+                _errorMessage = "Sync was cancelled.";
+                StateHasChanged();
+            }
+            else
+            {
+                StateHasChanged();
+            }
+        });
+    }
+
+    private void HandleSyncStatusChanged(string status, string message)
+    {
+        if (_disposed) return;
+
+        InvokeAsync(() =>
+        {
+            if (status == "Completed")
+            {
+                _syncCompleted = true;
+                StateHasChanged();
+                
+                // Navigate to Product Home
+                Task.Delay(1500).ContinueWith(_ =>
+                {
+                    if (!_disposed)
+                    {
+                        InvokeAsync(() => NavigationManager.NavigateTo("/", forceLoad: true));
+                    }
+                });
+            }
+            else if (status == "Failed")
+            {
+                _errorMessage = message ?? "Sync failed. Please try again.";
+                StateHasChanged();
+            }
+        });
+    }
+
+    private async Task RetrySync()
+    {
+        await StartSyncAsync();
+    }
+
+    private void BackToProfiles()
+    {
+        NavigationManager.NavigateTo("/profiles");
+    }
+}

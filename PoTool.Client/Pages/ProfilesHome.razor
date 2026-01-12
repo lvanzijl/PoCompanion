@@ -129,8 +129,8 @@
             _activeProfileId = profile.Id;
             Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
             
-            // Navigate to dashboard after selecting profile
-            NavigationManager.NavigateTo("/");
+            // Navigate to sync gate to ensure data is synced before entering Product Home
+            NavigationManager.NavigateTo("/sync-gate");
         }
         catch (Exception ex)
         {
