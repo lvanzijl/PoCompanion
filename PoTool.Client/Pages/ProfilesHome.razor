@@ -126,6 +126,7 @@
     {
         try
         {
+            Console.WriteLine($"[ProfilesHome] Selecting profile: {profile.Name} (ID: {profile.Id})");
             await ProfileService.SetActiveProfileAsync(profile.Id);
             _activeProfileId = profile.Id;
             
@@ -134,11 +135,13 @@
             
             Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
             
+            Console.WriteLine($"[ProfilesHome] Navigating to SyncGate for profile: {profile.Name}");
             // Navigate to sync gate to ensure data is synced before entering Product Home
             NavigationManager.NavigateTo("/sync-gate");
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[ProfilesHome] Error selecting profile: {ex.Message}");
             Snackbar.Add($"Error selecting profile: {ex.Message}", Severity.Error);
         }
     }

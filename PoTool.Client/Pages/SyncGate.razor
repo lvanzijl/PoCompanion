@@ -218,17 +218,20 @@
             // Check for completion or failure
             if (progress.Status == "Completed")
             {
+                Console.WriteLine($"[SyncGate] Sync completed via progress event. SyncType: {_syncType}");
                 _syncCompleted = true;
                 StateHasChanged();
                 _ = NavigateToProductHomeAsync();
             }
             else if (progress.Status == "Failed")
             {
+                Console.WriteLine($"[SyncGate] Sync failed: {progress.Message}");
                 _errorMessage = progress.Message ?? "Sync failed. Please try again.";
                 StateHasChanged();
             }
             else if (progress.Status == "Cancelled")
             {
+                Console.WriteLine("[SyncGate] Sync was cancelled");
                 _errorMessage = "Sync was cancelled.";
                 StateHasChanged();
             }
@@ -247,12 +250,14 @@
         {
             if (status == "Completed")
             {
+                Console.WriteLine($"[SyncGate] Sync completed via status change event. SyncType: {_syncType}");
                 _syncCompleted = true;
                 StateHasChanged();
                 _ = NavigateToProductHomeAsync();
             }
             else if (status == "Failed")
             {
+                Console.WriteLine($"[SyncGate] Sync failed via status change: {message}");
                 _errorMessage = message ?? "Sync failed. Please try again.";
                 StateHasChanged();
             }
@@ -266,7 +271,8 @@
         
         if (!_disposed)
         {
-            NavigationManager.NavigateTo("/", forceLoad: true);
+            Console.WriteLine("[SyncGate] Sync completed successfully, navigating to Product Home (/)");
+            NavigationManager.NavigateTo("/", forceLoad: false);
         }
     }
 
