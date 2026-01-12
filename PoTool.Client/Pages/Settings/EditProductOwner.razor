@@ -219,8 +219,8 @@
                 
                 Snackbar.Add("Product Owner created successfully", Severity.Success);
                 
-                // Navigate to the management page for the new profile
-                NavigationManager.NavigateTo($"/settings/productowner/{newProfile.Id}");
+                // Navigate back to profiles home after creating a profile
+                NavigationManager.NavigateTo("/profiles");
             }
             else
             {
