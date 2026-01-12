@@ -1143,4 +1143,88 @@ public class BattleshipMockDataFacade : ITfsClient
 
         return Task.FromResult<IEnumerable<WorkItemDto>>(results);
     }
+
+    public Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsWithDetailedProgressAsync(
+        int[] rootWorkItemIds,
+        DateTimeOffset? since = null,
+        Action<SyncProgressDto>? detailedProgressCallback = null,
+        CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: GetWorkItemsByRootIdsWithDetailedProgressAsync called for rootIds=[{RootIds}], since={Since}",
+            string.Join(", ", rootWorkItemIds), since);
+
+        // Get all mock work items
+        var allWorkItems = GetMockHierarchy();
+
+        // Build hierarchy map to find descendants
+        var results = new List<WorkItemDto>();
+        var processedIds = new HashSet<int>();
+
+        void CollectHierarchy(int parentId)
+        {
+            if (processedIds.Contains(parentId)) return;
+
+            var item = allWorkItems.FirstOrDefault(wi => wi.TfsId == parentId);
+            if (item != null)
+            {
+                processedIds.Add(parentId);
+                results.Add(item);
+
+                // Find children
+                var children = allWorkItems.Where(wi => wi.ParentTfsId == parentId);
+                foreach (var child in children)
+                {
+                    CollectHierarchy(child.TfsId);
+                }
+            }
+        }
+
+        // Report detailed progress
+        detailedProgressCallback?.Invoke(new SyncProgressDto
+        {
+            Status = "InProgress",
+            Message = "Finding root work items...",
+            Phase = "Discovery",
+            BatchIndex = 1,
+            TotalBatches = 1
+        });
+
+        foreach (var rootId in rootWorkItemIds)
+        {
+            CollectHierarchy(rootId);
+        }
+
+        detailedProgressCallback?.Invoke(new SyncProgressDto
+        {
+            Status = "InProgress",
+            Message = $"Processing {results.Count} work items...",
+            Phase = "Processing",
+            BatchIndex = 1,
+            TotalBatches = 1,
+            IdCount = results.Count
+        });
+
+        // Filter by date if specified
+        if (since.HasValue)
+        {
+            results = results.Where(wi => wi.RetrievedAt >= since.Value).ToList();
+        }
+
+        detailedProgressCallback?.Invoke(new SyncProgressDto
+        {
+            Status = "InProgress",
+            Message = "Complete",
+            Phase = "Complete",
+            BatchIndex = 1,
+            TotalBatches = 1,
+            ProcessedCount = results.Count,
+            TotalCount = results.Count
+        });
+
+        _logger.LogInformation("Mock TFS client: Returning {Count} work items for root IDs [{RootIds}]",
+            results.Count, string.Join(", ", rootWorkItemIds));
+
+        return Task.FromResult<IEnumerable<WorkItemDto>>(results);
+    }
 }
