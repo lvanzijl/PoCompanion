@@ -7,6 +7,7 @@
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 @inherits LayoutComponentBase
+@implements IDisposable
 
 <MudThemeProvider Theme="_darkTheme" IsDarkMode="true" />
 <MudPopoverProvider />
@@ -73,6 +74,9 @@
             {
                 await OpenOnboardingWizard();
             }
+            
+            // Subscribe to navigation changes to refresh profile selector when needed
+            NavigationManager.LocationChanged += OnLocationChanged;
         }
         
         // Perform startup routing on first render (only for root path)
@@ -81,6 +85,33 @@
             _hasCheckedStartupRouting = true;
             await PerformStartupRoutingAsync();
         }
+    }
+    
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        try
+        {
+            // Refresh profile selector when navigating to profiles page or back from profile edit
+            var path = NavigationManager.ToBaseRelativePath(e.Location).TrimStart('/');
+            if (path.StartsWith("profiles", StringComparison.OrdinalIgnoreCase) || 
+                path.StartsWith("settings/productowner", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_profileSelector != null)
+                {
+                    await _profileSelector.RefreshAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't throw - navigation should continue
+            Console.WriteLine($"[MainLayout] Error refreshing profile selector: {ex.Message}");
+        }
+    }
+    
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
     }
     
     private async Task PerformStartupRoutingAsync()

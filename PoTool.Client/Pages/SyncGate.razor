@@ -97,6 +97,23 @@
         SyncHubService.OnSyncProgressReceived += HandleSyncProgress;
         SyncHubService.OnSyncStatusChanged += HandleSyncStatusChanged;
 
+        // Start SignalR connection before triggering sync
+        try
+        {
+            var hubUrl = $"{NavigationManager.BaseUri}hubs/workitems";
+            if (!SyncHubService.IsConnected)
+            {
+                await SyncHubService.StartAsync(hubUrl);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to connect to sync service: {ex.Message}";
+            _isStarting = false;
+            StateHasChanged();
+            return;
+        }
+
         // Start sync automatically
         await StartSyncAsync();
     }

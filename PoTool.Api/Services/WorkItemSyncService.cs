@@ -183,7 +183,7 @@ public class WorkItemSyncService : BackgroundService
             throw new InvalidOperationException(errorMessage);
         }
 
-        _logger.LogInformation("Sync triggered for {Count} root work items: [{Ids}], incremental={Incremental}",
+        _logger.LogInformation(">>> FULL SYNC STARTED for {Count} root work items: [{Ids}], incremental={Incremental}",
             rootWorkItemIds.Length, string.Join(", ", rootWorkItemIds), incremental);
 
         using var scope = _serviceProvider.CreateScope();
@@ -192,6 +192,7 @@ public class WorkItemSyncService : BackgroundService
 
         try
         {
+            _logger.LogInformation(">>> Sync Phase: Initializing - Sending initial progress update");
             await SendProgressAsync(new SyncProgressDto
             {
                 Status = "InProgress",
@@ -237,6 +238,7 @@ public class WorkItemSyncService : BackgroundService
 
             if (tfsClient != null)
             {
+                _logger.LogInformation(">>> Sync Phase 2: Fetching from TFS - Calling GetWorkItemsByRootIdsAsync");
                 // Use the new root-based sync method with progress callback
                 workItems = await tfsClient.GetWorkItemsByRootIdsAsync(
                     rootWorkItemIds,
@@ -244,6 +246,8 @@ public class WorkItemSyncService : BackgroundService
                     (step, total, label) => 
                     {
                         // This callback fires during TFS retrieval
+                        // Log at Debug level since this can be frequent during large syncs
+                        _logger.LogDebug(">>> TFS Fetch Progress: Step {Step}/{Total} - {Label}", step, total, label);
                         _ = SendProgressAsync(new SyncProgressDto
                         {
                             Status = "InProgress",
@@ -258,6 +262,7 @@ public class WorkItemSyncService : BackgroundService
                         }, cancellationToken);
                     },
                     cancellationToken);
+                _logger.LogInformation(">>> GetWorkItemsByRootIdsAsync completed - Retrieved {Count} work items", workItems.Count());
             }
             else
             {
@@ -268,6 +273,7 @@ public class WorkItemSyncService : BackgroundService
 
             var workItemList = workItems.ToList();
 
+            _logger.LogInformation(">>> Sync Phase 3: Saving to Cache - {Count} work items", workItemList.Count);
             await SendProgressAsync(new SyncProgressDto
             {
                 Status = "InProgress",
@@ -283,14 +289,17 @@ public class WorkItemSyncService : BackgroundService
             if (incremental && since.HasValue)
             {
                 // For incremental sync, merge with existing items
+                _logger.LogInformation(">>> Performing incremental upsert for {Count} work items", workItemList.Count);
                 await repository.UpsertManyAsync(workItemList, cancellationToken);
             }
             else
             {
                 // For full sync, replace all
+                _logger.LogInformation(">>> Performing full replace for {Count} work items", workItemList.Count);
                 await repository.ReplaceAllAsync(workItemList, cancellationToken);
             }
 
+            _logger.LogInformation(">>> Sync Phase 3: Complete - Sending completion progress");
             await SendProgressAsync(new SyncProgressDto
             {
                 Status = "Completed",
@@ -306,11 +315,11 @@ public class WorkItemSyncService : BackgroundService
             // Update LastSyncedAt for all products that were synced
             await UpdateProductLastSyncedAtAsync(rootWorkItemIds, cancellationToken);
 
-            _logger.LogInformation("Sync completed successfully for {Count} root work items", rootWorkItemIds.Length);
+            _logger.LogInformation(">>> FULL SYNC COMPLETED SUCCESSFULLY for {Count} root work items", rootWorkItemIds.Length);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning("Sync was cancelled for root work items: [{Ids}]", string.Join(", ", rootWorkItemIds));
+            _logger.LogWarning(">>> SYNC CANCELLED for root work items: [{Ids}]", string.Join(", ", rootWorkItemIds));
             await SendProgressAsync(new SyncProgressDto
             {
                 Status = "Cancelled",
@@ -322,7 +331,7 @@ public class WorkItemSyncService : BackgroundService
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
             // Timeout occurred (not user cancellation)
-            _logger.LogError(ex, "Sync timed out for root work items: [{Ids}]", string.Join(", ", rootWorkItemIds));
+            _logger.LogError(ex, ">>> SYNC TIMED OUT for root work items: [{Ids}]", string.Join(", ", rootWorkItemIds));
             await SendProgressAsync(new SyncProgressDto
             {
                 Status = "Failed",
@@ -332,7 +341,7 @@ public class WorkItemSyncService : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during sync for root work items: [{Ids}]", string.Join(", ", rootWorkItemIds));
+            _logger.LogError(ex, ">>> SYNC FAILED for root work items: [{Ids}]", string.Join(", ", rootWorkItemIds));
 
             await SendProgressAsync(new SyncProgressDto
             {

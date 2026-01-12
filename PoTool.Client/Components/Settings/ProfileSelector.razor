@@ -7,57 +7,59 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
 
-<MudMenu Icon="@Icons.Material.Filled.AccountCircle" 
-         Color="Color.Inherit" 
-         AnchorOrigin="Origin.BottomLeft"
-         Dense="true"
-         Label="@GetProfileLabel()">
-    @if (_isLoading)
-    {
-        <MudMenuItem Disabled="true">
-            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-            <span class="ml-2">Loading...</span>
-        </MudMenuItem>
-    }
-    else
-    {
-        @if (_profiles != null && _profiles.Any())
+<MudTooltip Text="Switch Profile">
+    <MudMenu Icon="@Icons.Material.Filled.AccountCircle" 
+             Color="Color.Inherit" 
+             AnchorOrigin="Origin.BottomLeft"
+             Dense="true"
+             Label="@GetProfileLabel()">
+        @if (_isLoading)
         {
             <MudMenuItem Disabled="true">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Select Profile</MudText>
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                <span class="ml-2">Loading...</span>
             </MudMenuItem>
-            @foreach (var profile in _profiles)
-            {
-                <MudMenuItem OnClick="@(() => SetActiveProfile(profile))">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        @if (_activeProfileId == profile.Id)
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" />
-                        }
-                        else
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Transparent" Size="Size.Small" />
-                        }
-                        <MudStack Spacing="0">
-                            <MudText Typo="Typo.body2">@profile.Name</MudText>
-                        </MudStack>
-                    </MudStack>
-                </MudMenuItem>
-            }
-            <MudDivider />
         }
         else
         {
-            <MudMenuItem Disabled="true">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">No profiles yet</MudText>
+            @if (_profiles != null && _profiles.Any())
+            {
+                <MudMenuItem Disabled="true">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Select Profile</MudText>
+                </MudMenuItem>
+                @foreach (var profile in _profiles)
+                {
+                    <MudMenuItem OnClick="@(() => SetActiveProfile(profile))">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            @if (_activeProfileId == profile.Id)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" />
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Transparent" Size="Size.Small" />
+                            }
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@profile.Name</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudMenuItem>
+                }
+                <MudDivider />
+            }
+            else
+            {
+                <MudMenuItem Disabled="true">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">No profiles yet</MudText>
+                </MudMenuItem>
+            }
+            <MudMenuItem OnClick="ManageProfiles">
+                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-2" />
+                Manage Profiles
             </MudMenuItem>
         }
-        <MudMenuItem OnClick="ManageProfiles">
-            <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-2" />
-            Manage Profiles
-        </MudMenuItem>
-    }
-</MudMenu>
+    </MudMenu>
+</MudTooltip>
 
 @code {
     [Parameter]
