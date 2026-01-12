@@ -628,10 +628,16 @@
             if (status == "Completed")
             {
                 Snackbar.Add(message, Severity.Success);
+                _isSyncing = false;
+                _syncType = "";
+                StateHasChanged();
             }
             else if (status == "Failed")
             {
                 Snackbar.Add(message, Severity.Error);
+                _isSyncing = false;
+                _syncType = "";
+                StateHasChanged();
             }
         });
     }
@@ -801,6 +807,7 @@
         
         _isSyncing = true;
         _syncType = "full";
+        StateHasChanged();
         
         try
         {
@@ -823,6 +830,7 @@
                 Snackbar.Add("Full sync failed", Severity.Error);
                 _isSyncing = false;
                 _syncType = "";
+                StateHasChanged();
             }
             // Success/failure handled by SignalR progress events
         }
@@ -831,9 +839,8 @@
             Snackbar.Add($"Sync error: {ex.Message}", Severity.Error);
             _isSyncing = false;
             _syncType = "";
+            StateHasChanged();
         }
-        
-        StateHasChanged();
     }
     
     private async Task RequestIncrementalSync()
@@ -842,6 +849,7 @@
         
         _isSyncing = true;
         _syncType = "incremental";
+        StateHasChanged();
         
         try
         {
@@ -864,6 +872,7 @@
                 Snackbar.Add("Incremental sync failed", Severity.Error);
                 _isSyncing = false;
                 _syncType = "";
+                StateHasChanged();
             }
             // Success/failure handled by SignalR progress events
         }
@@ -872,9 +881,8 @@
             Snackbar.Add($"Sync error: {ex.Message}", Severity.Error);
             _isSyncing = false;
             _syncType = "";
+            StateHasChanged();
         }
-        
-        StateHasChanged();
     }
 
     private string GetHealthPercentage()
