@@ -1015,6 +1015,35 @@ public class RealTfsClient : ITfsClient
     }
 
     /// <summary>
+    /// Retrieves work items starting from specified root work item IDs with detailed structured progress reporting.
+    /// This is a wrapper around GetWorkItemsByRootIdsAsync that provides enhanced progress callbacks.
+    /// </summary>
+    public async Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsWithDetailedProgressAsync(
+        int[] rootWorkItemIds,
+        DateTimeOffset? since = null,
+        Action<SyncProgressDto>? detailedProgressCallback = null,
+        CancellationToken cancellationToken = default)
+    {
+        // For now, wrap the existing method with basic progress translation
+        // In the future, this can be enhanced to emit detailed batch-level progress
+        return await GetWorkItemsByRootIdsAsync(
+            rootWorkItemIds,
+            since,
+            (step, total, label) =>
+            {
+                detailedProgressCallback?.Invoke(new SyncProgressDto
+                {
+                    Status = "InProgress",
+                    Message = label,
+                    MajorStep = step,
+                    MajorStepTotal = total,
+                    MajorStepLabel = label
+                });
+            },
+            cancellationToken);
+    }
+
+    /// <summary>
     /// Extracts the parent work item ID from the relations array.
     /// Parent relationship is stored with rel == "System.LinkTypes.Hierarchy-Reverse".
     /// </summary>

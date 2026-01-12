@@ -5,6 +5,7 @@ using PoTool.Api.Persistence;
 using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
 using PoTool.Api.Repositories;
+using System.Linq;
 
 namespace PoTool.Api.Services;
 
@@ -206,11 +207,32 @@ public class WorkItemSyncService : BackgroundService
 
             if (incremental)
             {
-                // For incremental sync, get last sync time from repository
-                var existingItems = await repository.GetAllAsync(cancellationToken);
-                since = existingItems.Any() 
-                    ? existingItems.Max(wi => wi.RetrievedAt).AddMinutes(-IncrementalSyncOverlapMinutes)
-                    : null;
+                // For incremental sync, determine "since" time from product-specific last sync
+                var dbContext = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+                var products = await dbContext.Products
+                    .Where(p => rootWorkItemIds.Contains(p.BacklogRootWorkItemId))
+                    .ToListAsync(cancellationToken);
+
+                // Get the OLDEST LastSyncedAt across all products being synced
+                // This ensures we capture changes for any product that may have been synced longer ago
+                var oldestSyncTime = products
+                    .Where(p => p.LastSyncedAt.HasValue)
+                    .OrderBy(p => p.LastSyncedAt)
+                    .FirstOrDefault()?.LastSyncedAt;
+
+                since = oldestSyncTime?.AddMinutes(-IncrementalSyncOverlapMinutes);
+
+                if (since.HasValue)
+                {
+                    _logger.LogInformation(
+                        "Incremental sync: using oldest product sync time {SinceTime} (with {OverlapMinutes}min overlap) across {ProductCount} products",
+                        since.Value, IncrementalSyncOverlapMinutes, products.Count);
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "Incremental sync requested but no products have been synced. Performing full sync.");
+                }
             }
 
             if (tfsClient != null)
