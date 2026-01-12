@@ -38,7 +38,8 @@ public class MockTfsClient : ITfsClient
                 State: "Active",
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
-                Effort: null
+                Effort: null,
+                    Description: null
             ),
             new WorkItemDto(
                 TfsId: 1001,
@@ -50,7 +51,8 @@ public class MockTfsClient : ITfsClient
                 State: "Active",
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
-                Effort: null
+                Effort: null,
+                    Description: null
             ),
             new WorkItemDto(
                 TfsId: 1002,
@@ -62,7 +64,8 @@ public class MockTfsClient : ITfsClient
                 State: "New",
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
-                Effort: null
+                Effort: null,
+                    Description: null
             )
         };
 

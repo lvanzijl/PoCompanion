@@ -156,6 +156,14 @@ else if (SelectedWorkItem != null)
                     </div>
                 }
 
+                @if (!string.IsNullOrWhiteSpace(SelectedWorkItem.Description))
+                {
+                    <div class="detail-field">
+                        <label>Description:</label>
+                        <div class="description-content">@((MarkupString)SelectedWorkItem.Description)</div>
+                    </div>
+                }
+
                 @* Display validation issues section *@
                 @if (ValidationIssues != null && ValidationIssues.Any())
                 {

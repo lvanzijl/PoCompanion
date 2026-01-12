@@ -53,7 +53,8 @@ public sealed class WorkItemRepositoryTests
                 State: "Active",
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
-                Effort: null
+                Effort: null,
+                    Description: null
             ),
             new WorkItemDto(
                 TfsId: 2,
@@ -65,7 +66,8 @@ public sealed class WorkItemRepositoryTests
                 State: "Active",
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
-                Effort: null
+                Effort: null,
+                    Description: null
             )
         };
 
@@ -96,7 +98,8 @@ public sealed class WorkItemRepositoryTests
                 State: "Active",
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
-                Effort: null
+                Effort: null,
+                    Description: null
             )
         };
 
@@ -112,7 +115,8 @@ public sealed class WorkItemRepositoryTests
                 State: "Active",
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
-                Effort: null
+                Effort: null,
+                    Description: null
             )
         };
 
@@ -146,7 +150,8 @@ public sealed class WorkItemRepositoryTests
                 State: "Active",
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
-                Effort: null
+                Effort: null,
+                    Description: null
             ),
             new WorkItemDto(
                 TfsId: 2,
@@ -158,7 +163,8 @@ public sealed class WorkItemRepositoryTests
                 State: "Active",
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
-                Effort: null
+                Effort: null,
+                    Description: null
             )
         };
 
@@ -189,7 +195,8 @@ public sealed class WorkItemRepositoryTests
             State: "Active",
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
-                Effort: null
+                Effort: null,
+                    Description: null
         );
 
         await repository.ReplaceAllAsync(new[] { workItem });

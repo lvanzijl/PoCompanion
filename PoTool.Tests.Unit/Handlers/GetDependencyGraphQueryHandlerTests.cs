@@ -330,7 +330,8 @@ public class GetDependencyGraphQueryHandlerTests
             State: state,
             JsonPayload: jsonPayload,
             RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: effort
+            Effort: effort,
+                    Description: null
         );
     }
 }

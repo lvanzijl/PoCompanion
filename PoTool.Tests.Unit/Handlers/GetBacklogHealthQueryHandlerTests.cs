@@ -302,7 +302,8 @@ public class GetBacklogHealthQueryHandlerTests
             State: state,
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: effort
+            Effort: effort,
+                    Description: null
         );
     }
 }
