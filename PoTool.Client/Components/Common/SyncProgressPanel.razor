@@ -90,12 +90,12 @@
 
     private double MajorProgressPercentage => 
         _progress?.MajorStepTotal > 0 
-            ? (double)_progress.MajorStep / _progress.MajorStepTotal * 100 
+            ? Math.Min(100, (double)_progress.MajorStep / _progress.MajorStepTotal * 100)
             : 0;
 
     private double MinorProgressPercentage => 
         _progress?.MinorStepTotal > 0 
-            ? (double)_progress.MinorStep / _progress.MinorStepTotal * 100 
+            ? Math.Min(100, (double)_progress.MinorStep / _progress.MinorStepTotal * 100)
             : 0;
 
     /// <summary>

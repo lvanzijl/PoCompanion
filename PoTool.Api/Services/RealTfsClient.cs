@@ -747,6 +747,7 @@ public class RealTfsClient : ITfsClient
             if (currentBatch.Count == 0) break;
 
             // Build WIQL query to find children of current batch
+            // Note: idList is safe from injection as currentBatch contains only validated integers
             var idList = string.Join(",", currentBatch);
             var dateFilter = since.HasValue
                 ? $" AND [System.ChangedDate] >= '{since.Value:yyyy-MM-ddTHH:mm:ssZ}'"
@@ -910,6 +911,9 @@ public class RealTfsClient : ITfsClient
 
         return results;
     }
+
+    /// <summary>
+    /// Extracts the parent work item ID from the relations array.
     /// Parent relationship is stored with rel == "System.LinkTypes.Hierarchy-Reverse".
     /// </summary>
     private static int? ExtractParentIdFromRelations(JsonElement item)

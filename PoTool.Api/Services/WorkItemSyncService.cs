@@ -11,6 +11,12 @@ namespace PoTool.Api.Services;
 /// </summary>
 public class WorkItemSyncService : BackgroundService
 {
+    /// <summary>
+    /// Safety overlap in minutes for incremental sync to account for clock drift
+    /// and ensure no items are missed between syncs.
+    /// </summary>
+    private const int IncrementalSyncOverlapMinutes = 5;
+
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<WorkItemSyncService> _logger;
     private readonly IHubContext<WorkItemHub> _hubContext;
@@ -201,7 +207,7 @@ public class WorkItemSyncService : BackgroundService
                 // For incremental sync, get last sync time from repository
                 var existingItems = await repository.GetAllAsync(cancellationToken);
                 since = existingItems.Any() 
-                    ? existingItems.Max(wi => wi.RetrievedAt).AddMinutes(-5) // 5-minute overlap for safety
+                    ? existingItems.Max(wi => wi.RetrievedAt).AddMinutes(-IncrementalSyncOverlapMinutes)
                     : null;
             }
 
