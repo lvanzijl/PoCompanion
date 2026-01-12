@@ -3,6 +3,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
+@using PoTool.Shared.WorkItems
 @inject ProfileService ProfileService
 @inject ProductService ProductService
 @inject WorkItemService WorkItemService
@@ -13,6 +14,8 @@
 @inject PullRequestMetricsService PrMetricsService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject IWorkItemSyncHubService SyncHubService
+@implements IDisposable
 
 <PageTitle>Product Overview - PO Companion</PageTitle>
 
@@ -189,6 +192,9 @@
                 </MudStack>
             </MudStack>
         </MudPaper>
+
+        @* Sync Progress Panel - Two-level progress bars *@
+        <SyncProgressPanel @ref="_syncProgressPanel" />
 
         @* Backlog Health Summary Section *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
@@ -568,6 +574,7 @@
     // Sync state
     private bool _isSyncing = false;
     private string _syncType = "";
+    private SyncProgressPanel? _syncProgressPanel;
     
     // Profile and products
     private ProfileDto? _activeProfile;
@@ -584,7 +591,49 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Subscribe to sync progress events
+        SyncHubService.OnSyncProgressReceived += HandleSyncProgress;
+        SyncHubService.OnSyncStatusChanged += HandleSyncStatusChanged;
+        
         await LoadDataAsync();
+    }
+
+    public void Dispose()
+    {
+        SyncHubService.OnSyncProgressReceived -= HandleSyncProgress;
+        SyncHubService.OnSyncStatusChanged -= HandleSyncStatusChanged;
+    }
+
+    private void HandleSyncProgress(SyncProgressDto progress)
+    {
+        InvokeAsync(() =>
+        {
+            _syncProgressPanel?.UpdateProgress(progress);
+            
+            // Update sync state based on progress
+            if (progress.Status == "Completed" || progress.Status == "Failed" || progress.Status == "Cancelled")
+            {
+                _isSyncing = false;
+                _syncType = "";
+            }
+            
+            StateHasChanged();
+        });
+    }
+
+    private void HandleSyncStatusChanged(string status, string message)
+    {
+        InvokeAsync(() =>
+        {
+            if (status == "Completed")
+            {
+                Snackbar.Add(message, Severity.Success);
+            }
+            else if (status == "Failed")
+            {
+                Snackbar.Add(message, Severity.Error);
+            }
+        });
     }
 
     private async Task LoadDataAsync()
@@ -726,6 +775,26 @@
         StateHasChanged();
     }
     
+    /// <summary>
+    /// Gets root work item IDs for the currently selected products.
+    /// If a single product is selected, returns that product's root ID.
+    /// Otherwise, returns all product root IDs for the active profile.
+    /// </summary>
+    private int[] GetRootWorkItemIds()
+    {
+        if (_selectedProduct != null)
+        {
+            return new[] { _selectedProduct.BacklogRootWorkItemId };
+        }
+        
+        if (_products.Count > 0)
+        {
+            return _products.Select(p => p.BacklogRootWorkItemId).ToArray();
+        }
+        
+        return Array.Empty<int>();
+    }
+    
     private async Task RequestFullSync()
     {
         if (_isSyncing) return;
@@ -735,29 +804,36 @@
         
         try
         {
-            var success = await TfsConfigService.RequestSyncAsync();
-            if (success)
+            var rootIds = GetRootWorkItemIds();
+            bool success;
+            
+            if (rootIds.Length > 0)
             {
-                Snackbar.Add("Full sync completed successfully", Severity.Success);
-                // Reload data after sync
-                var config = await TfsConfigService.GetConfigAsync();
-                _lastSyncTime = config?.LastValidated;
+                // Use product-scoped sync with root work item IDs
+                success = await TfsConfigService.RequestSyncByRootIdsAsync(rootIds, incremental: false);
             }
             else
             {
-                Snackbar.Add("Full sync failed", Severity.Error);
+                // Fall back to legacy area-path sync if no products configured
+                success = await TfsConfigService.RequestSyncAsync();
             }
+            
+            if (!success)
+            {
+                Snackbar.Add("Full sync failed", Severity.Error);
+                _isSyncing = false;
+                _syncType = "";
+            }
+            // Success/failure handled by SignalR progress events
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Sync error: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
             _isSyncing = false;
             _syncType = "";
-            StateHasChanged();
         }
+        
+        StateHasChanged();
     }
     
     private async Task RequestIncrementalSync()
@@ -769,29 +845,36 @@
         
         try
         {
-            var success = await TfsConfigService.RequestIncrementalSyncAsync();
-            if (success)
+            var rootIds = GetRootWorkItemIds();
+            bool success;
+            
+            if (rootIds.Length > 0)
             {
-                Snackbar.Add("Incremental sync completed successfully", Severity.Success);
-                // Reload data after sync
-                var config = await TfsConfigService.GetConfigAsync();
-                _lastSyncTime = config?.LastValidated;
+                // Use product-scoped sync with root work item IDs (incremental)
+                success = await TfsConfigService.RequestSyncByRootIdsAsync(rootIds, incremental: true);
             }
             else
             {
-                Snackbar.Add("Incremental sync failed", Severity.Error);
+                // Fall back to legacy area-path sync if no products configured
+                success = await TfsConfigService.RequestIncrementalSyncAsync();
             }
+            
+            if (!success)
+            {
+                Snackbar.Add("Incremental sync failed", Severity.Error);
+                _isSyncing = false;
+                _syncType = "";
+            }
+            // Success/failure handled by SignalR progress events
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Sync error: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
             _isSyncing = false;
             _syncType = "";
-            StateHasChanged();
         }
+        
+        StateHasChanged();
     }
 
     private string GetHealthPercentage()

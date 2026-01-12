@@ -66,4 +66,11 @@ public class DevWorkItemRepository : IWorkItemRepository
         // In a real scenario, this would persist to a database
         return Task.CompletedTask;
     }
+
+    public Task UpsertManyAsync(IEnumerable<WorkItemDto> workItems, CancellationToken cancellationToken = default)
+    {
+        // For dev repository with mock data, this operation is not meaningful
+        // The mock data is always regenerated from the facade
+        return Task.CompletedTask;
+    }
 }

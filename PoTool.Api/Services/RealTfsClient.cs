@@ -697,7 +697,219 @@ public class RealTfsClient : ITfsClient
     }
 
     /// <summary>
-    /// Extracts the parent work item ID from the relations array.
+    /// Retrieves work items starting from specified root work item IDs and their entire hierarchy.
+    /// Uses a recursive approach to find all children of the root items.
+    /// </summary>
+    public async Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsAsync(
+        int[] rootWorkItemIds,
+        DateTimeOffset? since = null,
+        Action<int, int, string>? progressCallback = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (rootWorkItemIds == null || rootWorkItemIds.Length == 0)
+        {
+            _logger.LogWarning("GetWorkItemsByRootIdsAsync called with no root work item IDs");
+            return Enumerable.Empty<WorkItemDto>();
+        }
+
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+        var config = entity!;
+
+        var httpClient = GetAuthenticatedHttpClient();
+        var startTime = DateTimeOffset.UtcNow;
+
+        _logger.LogInformation("Starting hierarchy sync for {Count} root work items: [{Ids}]", 
+            rootWorkItemIds.Length, string.Join(", ", rootWorkItemIds));
+
+        // Step 1: Get all work items under the root hierarchy using WIQL with tree query
+        // We use System.Links.Hierarchy/Forward to traverse the tree
+        progressCallback?.Invoke(1, 3, "Querying work item hierarchy...");
+
+        var allWorkItemIds = new HashSet<int>(rootWorkItemIds);
+        var idsToProcess = new Queue<int>(rootWorkItemIds);
+        var processedIds = new HashSet<int>();
+
+        // Traverse the hierarchy to find all child work items
+        while (idsToProcess.Count > 0)
+        {
+            var currentBatch = new List<int>();
+            while (idsToProcess.Count > 0 && currentBatch.Count < WorkItemBatchSize)
+            {
+                var id = idsToProcess.Dequeue();
+                if (!processedIds.Contains(id))
+                {
+                    currentBatch.Add(id);
+                    processedIds.Add(id);
+                }
+            }
+
+            if (currentBatch.Count == 0) break;
+
+            // Build WIQL query to find children of current batch
+            var idList = string.Join(",", currentBatch);
+            var dateFilter = since.HasValue
+                ? $" AND [System.ChangedDate] >= '{since.Value:yyyy-MM-ddTHH:mm:ssZ}'"
+                : "";
+
+            // Query for children using tree query mode
+            var wiql = new
+            {
+                query = $"SELECT [System.Id] FROM WorkItemLinks WHERE " +
+                        $"([Source].[System.Id] IN ({idList})) AND " +
+                        $"([System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward'){dateFilter} " +
+                        $"MODE (Recursive)"
+            };
+
+            try
+            {
+                var wiqlUrl = ProjectUrl(config, "_apis/wit/wiql");
+                using var content = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
+
+                var wiqlResponse = await httpClient.PostAsync(wiqlUrl, content, cancellationToken);
+                
+                if (wiqlResponse.IsSuccessStatusCode)
+                {
+                    using var stream = await wiqlResponse.Content.ReadAsStreamAsync(cancellationToken);
+                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                    if (doc.RootElement.TryGetProperty("workItemRelations", out var relations))
+                    {
+                        foreach (var relation in relations.EnumerateArray())
+                        {
+                            if (relation.TryGetProperty("target", out var target) && 
+                                target.TryGetProperty("id", out var idElement))
+                            {
+                                var childId = idElement.GetInt32();
+                                if (allWorkItemIds.Add(childId) && !processedIds.Contains(childId))
+                                {
+                                    idsToProcess.Enqueue(childId);
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("WIQL tree query failed, falling back to simple query. Status: {Status}", 
+                        wiqlResponse.StatusCode);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error querying work item hierarchy, continuing with direct query");
+            }
+        }
+
+        _logger.LogInformation("Found {Count} work items in hierarchy", allWorkItemIds.Count);
+
+        if (allWorkItemIds.Count == 0)
+        {
+            return Enumerable.Empty<WorkItemDto>();
+        }
+
+        // Step 2: Fetch all work items in the hierarchy using batch API
+        progressCallback?.Invoke(2, 3, $"Fetching {allWorkItemIds.Count} work items...");
+
+        var ids = allWorkItemIds.ToArray();
+        var totalBatches = (int)Math.Ceiling((double)ids.Length / WorkItemBatchSize);
+        var results = new List<WorkItemDto>();
+
+        // Phase 1: Fetch relations (same as GetWorkItemsAsync)
+        var relationsMap = new Dictionary<int, int?>();
+
+        for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++)
+        {
+            var batchIds = ids.Skip(batchIndex * WorkItemBatchSize).Take(WorkItemBatchSize).ToArray();
+
+            progressCallback?.Invoke(2, 3, $"Fetching relations batch {batchIndex + 1}/{totalBatches}...");
+
+            var relationsRequest = new WorkItemBatchRequest
+            {
+                Ids = batchIds,
+                Expand = "relations"
+            };
+
+            var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
+            using var relationsContent = new StringContent(
+                JsonSerializer.Serialize(relationsRequest),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
+            await HandleHttpErrorsAsync(relationsResponse, cancellationToken);
+
+            using var relationsStream = await relationsResponse.Content.ReadAsStreamAsync(cancellationToken);
+            using var relationsDoc = await JsonDocument.ParseAsync(relationsStream, cancellationToken: cancellationToken);
+
+            foreach (var item in relationsDoc.RootElement.GetProperty("value").EnumerateArray())
+            {
+                var id = item.GetProperty("id").GetInt32();
+                var parentId = ExtractParentIdFromRelations(item);
+                relationsMap[id] = parentId;
+            }
+        }
+
+        // Phase 2: Fetch fields (same as GetWorkItemsAsync)
+        progressCallback?.Invoke(3, 3, "Fetching work item details...");
+
+        for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++)
+        {
+            var batchIds = ids.Skip(batchIndex * WorkItemBatchSize).Take(WorkItemBatchSize).ToArray();
+
+            var fieldsRequest = new WorkItemBatchRequest
+            {
+                Ids = batchIds,
+                Fields = RequiredWorkItemFields
+            };
+
+            var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
+            using var fieldsContent = new StringContent(
+                JsonSerializer.Serialize(fieldsRequest),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            var fieldsResponse = await httpClient.PostAsync(batchUrl, fieldsContent, cancellationToken);
+            await HandleHttpErrorsAsync(fieldsResponse, cancellationToken);
+
+            using var fieldsStream = await fieldsResponse.Content.ReadAsStreamAsync(cancellationToken);
+            using var fieldsDoc = await JsonDocument.ParseAsync(fieldsStream, cancellationToken: cancellationToken);
+
+            foreach (var item in fieldsDoc.RootElement.GetProperty("value").EnumerateArray())
+            {
+                var id = item.GetProperty("id").GetInt32();
+                var fields = item.GetProperty("fields");
+                var type = fields.TryGetProperty("System.WorkItemType", out var t) ? t.GetString() ?? "" : "";
+                var title = fields.TryGetProperty("System.Title", out var ti) ? ti.GetString() ?? "" : "";
+                var state = fields.TryGetProperty("System.State", out var s) ? s.GetString() ?? "" : "";
+                var area = fields.TryGetProperty("System.AreaPath", out var a) ? a.GetString() ?? "" : "";
+                var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
+
+                var parentId = relationsMap.TryGetValue(id, out var pid) ? pid : null;
+                int? effort = ParseEffortField(fields);
+
+                results.Add(new WorkItemDto(
+                    TfsId: id,
+                    Type: type,
+                    Title: title,
+                    ParentTfsId: parentId,
+                    AreaPath: area,
+                    IterationPath: iteration,
+                    State: state,
+                    JsonPayload: item.GetRawText(),
+                    RetrievedAt: DateTimeOffset.UtcNow,
+                    Effort: effort
+                ));
+            }
+        }
+
+        var elapsed = DateTimeOffset.UtcNow - startTime;
+        _logger.LogInformation(
+            "Retrieved {Count} work items for root IDs [{RootIds}] in {ElapsedMs}ms",
+            results.Count, string.Join(", ", rootWorkItemIds), elapsed.TotalMilliseconds);
+
+        return results;
+    }
     /// Parent relationship is stored with rel == "System.LinkTypes.Hierarchy-Reverse".
     /// </summary>
     private static int? ExtractParentIdFromRelations(JsonElement item)

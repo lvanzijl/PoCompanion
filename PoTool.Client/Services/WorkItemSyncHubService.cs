@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR.Client;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Client.Services;
 
@@ -13,6 +14,9 @@ public class WorkItemSyncHubService : IWorkItemSyncHubService, IAsyncDisposable
 
     /// <inheritdoc/>
     public event Action<string, string>? OnSyncStatusChanged;
+
+    /// <inheritdoc/>
+    public event Action<SyncProgressDto>? OnSyncProgressReceived;
 
     /// <inheritdoc/>
     public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
@@ -48,6 +52,7 @@ public class WorkItemSyncHubService : IWorkItemSyncHubService, IAsyncDisposable
                 .Build();
 
             _hubConnection.On<object>("SyncStatus", HandleSyncStatus);
+            _hubConnection.On<SyncProgressDto>("SyncProgress", HandleSyncProgress);
 
             await _hubConnection.StartAsync();
             Console.WriteLine("[WorkItemSyncHubService] SignalR connected successfully");
@@ -133,6 +138,19 @@ public class WorkItemSyncHubService : IWorkItemSyncHubService, IAsyncDisposable
         catch (Exception ex)
         {
             Console.WriteLine($"[WorkItemSyncHubService] Error handling sync status: {ex.Message}");
+        }
+    }
+
+    private void HandleSyncProgress(SyncProgressDto progress)
+    {
+        try
+        {
+            Console.WriteLine($"[WorkItemSyncHubService] Sync progress: {progress.Status} - {progress.Message} (Step {progress.MajorStep}/{progress.MajorStepTotal})");
+            OnSyncProgressReceived?.Invoke(progress);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WorkItemSyncHubService] Error handling sync progress: {ex.Message}");
         }
     }
 }
