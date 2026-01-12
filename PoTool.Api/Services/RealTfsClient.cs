@@ -699,6 +699,7 @@ public class RealTfsClient : ITfsClient
     /// <summary>
     /// Retrieves work items starting from specified root work item IDs and their entire hierarchy.
     /// Uses a recursive approach to find all children of the root items.
+    /// For incremental sync, applies date filter only to discovered children, always including roots.
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsAsync(
         int[] rootWorkItemIds,
@@ -718,21 +719,43 @@ public class RealTfsClient : ITfsClient
 
         var httpClient = GetAuthenticatedHttpClient();
         var startTime = DateTimeOffset.UtcNow;
+        var lastActivity = DateTimeOffset.UtcNow;
+        const int inactivityTimeoutSeconds = 300; // 5 minutes of no progress = timeout
 
-        _logger.LogInformation("Starting hierarchy sync for {Count} root work items: [{Ids}]", 
-            rootWorkItemIds.Length, string.Join(", ", rootWorkItemIds));
+        _logger.LogInformation("Starting hierarchy sync for {Count} root work items: [{Ids}], incremental={Incremental}", 
+            rootWorkItemIds.Length, string.Join(", ", rootWorkItemIds), since.HasValue);
+
+        // Helper to update heartbeat and check for inactivity timeout
+        void UpdateHeartbeat()
+        {
+            lastActivity = DateTimeOffset.UtcNow;
+        }
+
+        void CheckInactivity()
+        {
+            var elapsed = DateTimeOffset.UtcNow - lastActivity;
+            if (elapsed.TotalSeconds > inactivityTimeoutSeconds)
+            {
+                _logger.LogError("Sync stalled: No progress for {Seconds} seconds", elapsed.TotalSeconds);
+                throw new TimeoutException($"Sync cancelled due to inactivity (no progress for {elapsed.TotalSeconds:F0} seconds)");
+            }
+        }
 
         // Step 1: Get all work items under the root hierarchy using WIQL with tree query
         // We use System.Links.Hierarchy/Forward to traverse the tree
         progressCallback?.Invoke(1, 3, "Querying work item hierarchy...");
+        UpdateHeartbeat();
 
         var allWorkItemIds = new HashSet<int>(rootWorkItemIds);
         var idsToProcess = new Queue<int>(rootWorkItemIds);
         var processedIds = new HashSet<int>();
 
         // Traverse the hierarchy to find all child work items
+        // IMPORTANT: For incremental sync, date filter only applies to CHILDREN, not roots
         while (idsToProcess.Count > 0)
         {
+            CheckInactivity();
+            
             var currentBatch = new List<int>();
             while (idsToProcess.Count > 0 && currentBatch.Count < WorkItemBatchSize)
             {
@@ -749,8 +772,11 @@ public class RealTfsClient : ITfsClient
             // Build WIQL query to find children of current batch
             // Note: idList is safe from injection as currentBatch contains only validated integers
             var idList = string.Join(",", currentBatch);
+            
+            // For incremental sync: filter CHILDREN by date, but always query from root
+            // This ensures we discover new/modified children while keeping the full hierarchy context
             var dateFilter = since.HasValue
-                ? $" AND [System.ChangedDate] >= '{since.Value:yyyy-MM-ddTHH:mm:ssZ}'"
+                ? $" AND [Target].[System.ChangedDate] >= '{since.Value:yyyy-MM-ddTHH:mm:ssZ}'"
                 : "";
 
             // Query for children using tree query mode
@@ -768,6 +794,7 @@ public class RealTfsClient : ITfsClient
                 using var content = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
 
                 var wiqlResponse = await httpClient.PostAsync(wiqlUrl, content, cancellationToken);
+                UpdateHeartbeat();
                 
                 if (wiqlResponse.IsSuccessStatusCode)
                 {
@@ -796,13 +823,22 @@ public class RealTfsClient : ITfsClient
                         wiqlResponse.StatusCode);
                 }
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (TimeoutException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Error querying work item hierarchy, continuing with direct query");
             }
         }
 
-        _logger.LogInformation("Found {Count} work items in hierarchy", allWorkItemIds.Count);
+        _logger.LogInformation("Found {Count} work items in hierarchy (roots={RootCount}, descendants={DescCount})", 
+            allWorkItemIds.Count, rootWorkItemIds.Length, allWorkItemIds.Count - rootWorkItemIds.Length);
 
         if (allWorkItemIds.Count == 0)
         {
@@ -811,19 +847,31 @@ public class RealTfsClient : ITfsClient
 
         // Step 2: Fetch all work items in the hierarchy using batch API
         progressCallback?.Invoke(2, 3, $"Fetching {allWorkItemIds.Count} work items...");
+        UpdateHeartbeat();
 
         var ids = allWorkItemIds.ToArray();
         var totalBatches = (int)Math.Ceiling((double)ids.Length / WorkItemBatchSize);
         var results = new List<WorkItemDto>();
 
-        // Phase 1: Fetch relations (same as GetWorkItemsAsync)
+        // Phase 1: Fetch relations
         var relationsMap = new Dictionary<int, int?>();
+        var relationsPresent = 0;
+        var reverseLinksPresent = 0;
+        var parentIdsExtracted = 0;
+
+        _logger.LogInformation("Phase 1: Fetching relations for {Count} work items in {BatchCount} batches", 
+            ids.Length, totalBatches);
 
         for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++)
         {
+            CheckInactivity();
+            var batchStartTime = DateTimeOffset.UtcNow;
             var batchIds = ids.Skip(batchIndex * WorkItemBatchSize).Take(WorkItemBatchSize).ToArray();
 
-            progressCallback?.Invoke(2, 3, $"Fetching relations batch {batchIndex + 1}/{totalBatches}...");
+            _logger.LogDebug("Phase 1 (relations): Processing batch {BatchIndex}/{TotalBatches} with {IdCount} IDs",
+                batchIndex + 1, totalBatches, batchIds.Length);
+
+            progressCallback?.Invoke(2, 3, $"Phase 1: Relations batch {batchIndex + 1}/{totalBatches}...");
 
             var relationsRequest = new WorkItemBatchRequest
             {
@@ -838,6 +886,7 @@ public class RealTfsClient : ITfsClient
                 "application/json");
 
             var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
+            UpdateHeartbeat();
             await HandleHttpErrorsAsync(relationsResponse, cancellationToken);
 
             using var relationsStream = await relationsResponse.Content.ReadAsStreamAsync(cancellationToken);
@@ -846,17 +895,62 @@ public class RealTfsClient : ITfsClient
             foreach (var item in relationsDoc.RootElement.GetProperty("value").EnumerateArray())
             {
                 var id = item.GetProperty("id").GetInt32();
+                
+                // Check if relations are present
+                if (item.TryGetProperty("relations", out var relations) && relations.ValueKind == JsonValueKind.Array)
+                {
+                    relationsPresent++;
+                    
+                    // Count reverse hierarchy links
+                    foreach (var rel in relations.EnumerateArray())
+                    {
+                        if (rel.TryGetProperty("rel", out var relType))
+                        {
+                            var relTypeStr = relType.GetString();
+                            if (string.Equals(relTypeStr, "System.LinkTypes.Hierarchy-Reverse", StringComparison.OrdinalIgnoreCase))
+                            {
+                                reverseLinksPresent++;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
                 var parentId = ExtractParentIdFromRelations(item);
                 relationsMap[id] = parentId;
+                
+                if (parentId.HasValue)
+                {
+                    parentIdsExtracted++;
+                }
             }
+
+            var batchElapsed = DateTimeOffset.UtcNow - batchStartTime;
+            _logger.LogDebug("Phase 1 batch {BatchIndex}/{TotalBatches} completed: {IdCount} IDs, HTTP {StatusCode}, {ElapsedMs}ms",
+                batchIndex + 1, totalBatches, batchIds.Length, (int)relationsResponse.StatusCode, batchElapsed.TotalMilliseconds);
         }
 
-        // Phase 2: Fetch fields (same as GetWorkItemsAsync)
-        progressCallback?.Invoke(3, 3, "Fetching work item details...");
+        _logger.LogInformation(
+            "Phase 1 complete: Relations present: {RelationsCount}, Reverse links: {ReverseLinksCount}, Parent IDs extracted: {ParentIdsCount}",
+            relationsPresent, reverseLinksPresent, parentIdsExtracted);
+
+        // Phase 2: Fetch fields
+        _logger.LogInformation("Phase 2: Fetching fields for {Count} work items in {BatchCount} batches", 
+            ids.Length, totalBatches);
+
+        progressCallback?.Invoke(3, 3, "Phase 2: Fetching work item fields...");
+        UpdateHeartbeat();
 
         for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++)
         {
+            CheckInactivity();
+            var batchStartTime = DateTimeOffset.UtcNow;
             var batchIds = ids.Skip(batchIndex * WorkItemBatchSize).Take(WorkItemBatchSize).ToArray();
+
+            _logger.LogDebug("Phase 2 (fields): Processing batch {BatchIndex}/{TotalBatches} with {IdCount} IDs",
+                batchIndex + 1, totalBatches, batchIds.Length);
+
+            progressCallback?.Invoke(3, 3, $"Phase 2: Fields batch {batchIndex + 1}/{totalBatches}...");
 
             var fieldsRequest = new WorkItemBatchRequest
             {
@@ -871,6 +965,7 @@ public class RealTfsClient : ITfsClient
                 "application/json");
 
             var fieldsResponse = await httpClient.PostAsync(batchUrl, fieldsContent, cancellationToken);
+            UpdateHeartbeat();
             await HandleHttpErrorsAsync(fieldsResponse, cancellationToken);
 
             using var fieldsStream = await fieldsResponse.Content.ReadAsStreamAsync(cancellationToken);
@@ -902,12 +997,19 @@ public class RealTfsClient : ITfsClient
                     Effort: effort
                 ));
             }
+
+            var batchElapsed = DateTimeOffset.UtcNow - batchStartTime;
+            _logger.LogInformation(
+                "Phase 2 batch {BatchIndex}/{TotalBatches} completed: {IdCount} IDs fetched, HTTP {StatusCode}, {ElapsedMs}ms",
+                batchIndex + 1, totalBatches, batchIds.Length, (int)fieldsResponse.StatusCode, batchElapsed.TotalMilliseconds);
         }
 
         var elapsed = DateTimeOffset.UtcNow - startTime;
         _logger.LogInformation(
-            "Retrieved {Count} work items for root IDs [{RootIds}] in {ElapsedMs}ms",
-            results.Count, string.Join(", ", rootWorkItemIds), elapsed.TotalMilliseconds);
+            "Retrieved {Count} work items for root IDs [{RootIds}] in {ElapsedMs}ms. " +
+            "Hierarchy stats: Relations={RelationsCount}, ReverseLinks={ReverseLinksCount}, ParentIDs={ParentIdsCount}",
+            results.Count, string.Join(", ", rootWorkItemIds), elapsed.TotalMilliseconds,
+            relationsPresent, reverseLinksPresent, parentIdsExtracted);
 
         return results;
     }
