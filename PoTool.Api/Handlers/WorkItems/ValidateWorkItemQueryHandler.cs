@@ -9,6 +9,16 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// <summary>
 /// Handler for ValidateWorkItemQuery.
 /// Validates a work item by ID directly from TFS (bypasses cache).
+/// 
+/// IMPORTANT: This handler ALWAYS queries TFS directly via ITfsClient.GetWorkItemByIdAsync().
+/// - In REAL mode: Calls RealTfsClient which makes HTTP POST to TFS API (_apis/wit/workitemsbatch)
+/// - In MOCK mode: Calls MockTfsClient which returns mock data (not SQLite cache)
+/// - SQLite cache (WorkItemRepository) is NEVER used for validation
+/// 
+/// This ensures that:
+/// 1. Product backlog root work item ID validation is always up-to-date
+/// 2. Empty or stale cache does not prevent validation
+/// 3. Invalid IDs are detected even if cache contains unrelated work items
 /// </summary>
 public sealed class ValidateWorkItemQueryHandler : IQueryHandler<ValidateWorkItemQuery, ValidateWorkItemResponse>
 {
