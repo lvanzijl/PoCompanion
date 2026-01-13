@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using PoTool.Core.WorkItems;
 using PoTool.Client.Services;
 using PoTool.Client.ApiClient;
+using PoTool.Client.Models;
 
 namespace PoTool.Tests.Unit;
 
@@ -151,7 +152,7 @@ public class WorkItemExplorerTests
     }
 
     [TestMethod]
-    public void ProductBasedTree_CreatesProductNodes()
+    public void ProductBasedTree_UsesActualWorkItemsAsRoots()
     {
         // Arrange
         var treeBuilder = new TreeBuilderService();
@@ -211,13 +212,19 @@ public class WorkItemExplorerTests
         // Act
         var tree = treeBuilder.BuildProductBasedTreeWithValidation(workItems, products, expandedState);
 
-        // Assert
-        Assert.AreEqual(2, tree.Count, "Should have 2 top-level nodes (one per product)");
-        Assert.AreEqual("Product Alpha", tree[0].Title);
-        Assert.AreEqual("Product", tree[0].Type);
-        Assert.AreEqual(1, tree[0].Children.Count, "Product Alpha should have 1 child (root work item)");
-        Assert.AreEqual(100, tree[0].Children[0].Id);
-        Assert.AreEqual("Product Beta", tree[1].Title);
+        // Assert - No synthetic "Product" nodes, actual work items are roots
+        Assert.AreEqual(2, tree.Count, "Should have 2 top-level nodes (actual work items, not product wrappers)");
+        
+        // Verify both root nodes are actual work items (Epics), not synthetic Product nodes
+        Assert.AreEqual("Product 1 Root", tree[0].Title);
+        Assert.AreEqual("Epic", tree[0].Type, "Root should be actual work item type, not 'Product'");
+        Assert.AreEqual(100, tree[0].Id);
+        Assert.AreEqual(1, tree[0].Children.Count, "Epic should have 1 child (Feature)");
+        Assert.AreEqual(101, tree[0].Children[0].Id);
+        
+        Assert.AreEqual("Product 2 Root", tree[1].Title);
+        Assert.AreEqual("Epic", tree[1].Type, "Root should be actual work item type, not 'Product'");
+        Assert.AreEqual(200, tree[1].Id);
     }
 
     [TestMethod]
@@ -265,11 +272,13 @@ public class WorkItemExplorerTests
         var tree = treeBuilder.BuildProductBasedTreeWithValidation(workItems, products, expandedState);
 
         // Assert
-        Assert.AreEqual(2, tree.Count, "Should have 2 top-level nodes (Product + Unparented)");
+        Assert.AreEqual(2, tree.Count, "Should have 2 top-level nodes (Epic root + Unparented)");
         
-        var productNode = tree.FirstOrDefault(n => n.Type == "Product");
-        Assert.IsNotNull(productNode, "Should have a Product node");
-        Assert.AreEqual("Product Alpha", productNode.Title);
+        // First node should be the actual Epic work item (not a synthetic Product node)
+        var epicNode = tree.FirstOrDefault(n => n.Type == "Epic");
+        Assert.IsNotNull(epicNode, "Should have an Epic node as root");
+        Assert.AreEqual("Product Root", epicNode.Title);
+        Assert.AreEqual(100, epicNode.Id);
         
         var unparentedNode = tree.FirstOrDefault(n => n.Type == "Unparented");
         Assert.IsNotNull(unparentedNode, "Should have an Unparented node");
@@ -280,13 +289,13 @@ public class WorkItemExplorerTests
     }
 
     [TestMethod]
-    public void ProductBasedTree_ProductRootsNotInUnparented()
+    public void ProductBasedTree_ParentlessWorkItemsAreRoots()
     {
         // Arrange
         var treeBuilder = new TreeBuilderService();
         var expandedState = new Dictionary<int, bool>();
 
-        // Create product root without parent (should go under product, not Unparented)
+        // Create product root without parent (should be a direct root)
         var workItems = new List<ClientWorkItemWithValidationDto>
         {
             new ClientWorkItemWithValidationDto
@@ -315,11 +324,11 @@ public class WorkItemExplorerTests
         var tree = treeBuilder.BuildProductBasedTreeWithValidation(workItems, products, expandedState);
 
         // Assert
-        Assert.AreEqual(1, tree.Count, "Should have only 1 top-level node (Product), no Unparented");
-        Assert.AreEqual("Product", tree[0].Type);
-        Assert.AreEqual("Product Alpha", tree[0].Title);
-        Assert.AreEqual(1, tree[0].Children.Count);
-        Assert.AreEqual(100, tree[0].Children[0].Id);
+        Assert.AreEqual(1, tree.Count, "Should have only 1 top-level node (the Epic), no synthetic Product wrapper, no Unparented");
+        Assert.AreEqual("Epic", tree[0].Type, "Root should be actual work item type");
+        Assert.AreEqual("Product Root (No Parent)", tree[0].Title);
+        Assert.AreEqual(100, tree[0].Id);
+        Assert.AreEqual(0, tree[0].Children.Count, "Epic has no children");
     }
 
     [TestMethod]
@@ -367,10 +376,191 @@ public class WorkItemExplorerTests
         var tree = treeBuilder.BuildProductBasedTreeWithValidation(workItems, products, expandedState);
 
         // Assert
-        Assert.AreEqual(1, tree.Count, "Should have only 1 top-level node (Product), no Unparented");
-        Assert.AreEqual("Product", tree[0].Type);
+        Assert.AreEqual(1, tree.Count, "Should have only 1 top-level node (Epic), no Unparented");
+        Assert.AreEqual("Epic", tree[0].Type);
         var unparentedNode = tree.FirstOrDefault(n => n.Type == "Unparented");
         Assert.IsNull(unparentedNode, "Should not have Unparented node when all items have parents");
+    }
+    
+    [TestMethod]
+    public void TreeBuilder_GoalEpicFeatureHierarchy_NoSyntheticRoots()
+    {
+        // Arrange
+        var treeBuilder = new TreeBuilderService();
+        var expandedState = new Dictionary<int, bool>();
+
+        // Create Goal -> Epic -> Feature hierarchy as specified in problem statement
+        var workItems = new List<ClientWorkItemWithValidationDto>
+        {
+            new ClientWorkItemWithValidationDto
+            {
+                TfsId = 1,
+                Title = "Strategic Goal",
+                Type = "Goal",
+                State = "Active",
+                ParentTfsId = null, // Goals are always parentless
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            },
+            new ClientWorkItemWithValidationDto
+            {
+                TfsId = 2,
+                Title = "Epic under Goal",
+                Type = "Epic",
+                State = "Active",
+                ParentTfsId = 1,
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            },
+            new ClientWorkItemWithValidationDto
+            {
+                TfsId = 3,
+                Title = "Feature under Epic",
+                Type = "Feature",
+                State = "Active",
+                ParentTfsId = 2,
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            },
+            new ClientWorkItemWithValidationDto
+            {
+                TfsId = 99,
+                Title = "Standalone Parentless Item",
+                Type = "Epic",
+                State = "Active",
+                ParentTfsId = null, // Another root
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            }
+        };
+
+        var products = new List<ProductDto>
+        {
+            new ProductDto
+            {
+                Id = 1,
+                Name = "Product One",
+                BacklogRootWorkItemId = 1,
+                Order = 1
+            }
+        };
+
+        // Act
+        var tree = treeBuilder.BuildProductBasedTreeWithValidation(workItems, products, expandedState);
+
+        // Assert
+        // Should have 2 root nodes: Goal (ID 1) and Standalone Epic (ID 99)
+        Assert.AreEqual(2, tree.Count, "Should have 2 root nodes (Goal and standalone Epic)");
+        
+        // Verify no synthetic "product name" root exists
+        Assert.IsFalse(tree.Any(n => n.Type == "Product"), "Should NOT have any synthetic 'Product' nodes");
+        
+        // Verify roots are actual work items
+        var goalNode = tree.FirstOrDefault(n => n.Id == 1);
+        Assert.IsNotNull(goalNode, "Goal should be a root");
+        Assert.AreEqual("Goal", goalNode.Type);
+        Assert.AreEqual("Strategic Goal", goalNode.Title);
+        Assert.AreEqual(1, goalNode.Children.Count, "Goal should have 1 child (Epic)");
+        Assert.AreEqual(2, goalNode.Children[0].Id);
+        Assert.AreEqual(1, goalNode.Children[0].Children.Count, "Epic should have 1 child (Feature)");
+        Assert.AreEqual(3, goalNode.Children[0].Children[0].Id);
+        
+        var standaloneNode = tree.FirstOrDefault(n => n.Id == 99);
+        Assert.IsNotNull(standaloneNode, "Standalone Epic should be a root");
+        Assert.AreEqual("Epic", standaloneNode.Type);
+        Assert.AreEqual("Standalone Parentless Item", standaloneNode.Title);
+        
+        // Verify no Unparented node exists (all items have valid parents or are roots)
+        Assert.IsFalse(tree.Any(n => n.Type == "Unparented"), "Should NOT have 'Unparented' node when all items are properly parented");
+    }
+    
+    [TestMethod]
+    public void TreeBuilder_NoDuplicateNodesInTree()
+    {
+        // Arrange
+        var treeBuilder = new TreeBuilderService();
+        var expandedState = new Dictionary<int, bool>();
+
+        // Create a hierarchy that could potentially cause duplication
+        var workItems = new List<ClientWorkItemWithValidationDto>
+        {
+            new ClientWorkItemWithValidationDto
+            {
+                TfsId = 1,
+                Title = "Root Goal",
+                Type = "Goal",
+                State = "Active",
+                ParentTfsId = null,
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            },
+            new ClientWorkItemWithValidationDto
+            {
+                TfsId = 2,
+                Title = "Child Epic",
+                Type = "Epic",
+                State = "Active",
+                ParentTfsId = 1,
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            },
+            new ClientWorkItemWithValidationDto
+            {
+                TfsId = 3,
+                Title = "Grandchild Feature",
+                Type = "Feature",
+                State = "Active",
+                ParentTfsId = 2,
+                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+            }
+        };
+
+        var products = new List<ProductDto>
+        {
+            new ProductDto
+            {
+                Id = 1,
+                Name = "Product",
+                BacklogRootWorkItemId = 1,
+                Order = 1
+            }
+        };
+
+        // Act
+        var tree = treeBuilder.BuildProductBasedTreeWithValidation(workItems, products, expandedState);
+
+        // Assert
+        // Collect all node IDs from the tree
+        var allNodeIds = CollectAllNodeIds(tree);
+        
+        // Verify no ID appears twice
+        var uniqueIds = new HashSet<int>(allNodeIds);
+        Assert.AreEqual(allNodeIds.Count, uniqueIds.Count, 
+            $"Work item IDs should not be duplicated in tree. Found {allNodeIds.Count} nodes but only {uniqueIds.Count} unique IDs");
+        
+        // Verify all work item IDs are present
+        Assert.AreEqual(3, allNodeIds.Count, "Should have exactly 3 nodes in tree");
+        Assert.IsTrue(allNodeIds.Contains(1), "Tree should contain Goal (ID 1)");
+        Assert.IsTrue(allNodeIds.Contains(2), "Tree should contain Epic (ID 2)");
+        Assert.IsTrue(allNodeIds.Contains(3), "Tree should contain Feature (ID 3)");
+    }
+    
+    /// <summary>
+    /// Recursively collects all node IDs from a tree.
+    /// </summary>
+    private static List<int> CollectAllNodeIds(List<TreeNode> roots)
+    {
+        var ids = new List<int>();
+        
+        void CollectIdsRecursive(TreeNode node)
+        {
+            ids.Add(node.Id);
+            foreach (var child in node.Children)
+            {
+                CollectIdsRecursive(child);
+            }
+        }
+        
+        foreach (var root in roots)
+        {
+            CollectIdsRecursive(root);
+        }
+        
+        return ids;
     }
 }
 

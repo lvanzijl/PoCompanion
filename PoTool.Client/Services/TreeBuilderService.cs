@@ -366,9 +366,6 @@ public class TreeBuilderService : ITreeBuilderService
         var itemsList = items.ToList();
         var productsList = products.ToList();
         
-        // Get all product root work item IDs
-        var productRootIds = new HashSet<int>(productsList.Select(p => p.BacklogRootWorkItemId));
-        
         // Create node instances keyed by TfsId
         var nodeMap = new Dictionary<int, TreeNode>();
         foreach (var dto in itemsList)
@@ -446,7 +443,9 @@ public class TreeBuilderService : ITreeBuilderService
         }
 
         // Build parent-child relationships
-        var unparentedWorkItems = new List<TreeNode>();
+        // Track which nodes have been attached to a parent to prevent duplication
+        var attachedNodeIds = new HashSet<int>();
+        var orphanedWorkItems = new List<TreeNode>(); // Items with a parent that doesn't exist in the dataset
         
         foreach (var dto in itemsList)
         {
@@ -457,25 +456,24 @@ public class TreeBuilderService : ITreeBuilderService
             {
                 if (nodeMap.TryGetValue(parentId.Value, out var parentNode))
                 {
-                    parentNode.Children.Add(node);
+                    // Parent exists - attach to parent
+                    if (!attachedNodeIds.Contains(node.Id))
+                    {
+                        parentNode.Children.Add(node);
+                        attachedNodeIds.Add(node.Id);
+                    }
                 }
                 else
                 {
-                    // Parent is missing - this is unparented unless it's a product root
-                    if (!productRootIds.Contains(dto.TfsId))
+                    // Parent is missing - this is an orphan
+                    if (!attachedNodeIds.Contains(node.Id))
                     {
-                        unparentedWorkItems.Add(node);
+                        orphanedWorkItems.Add(node);
+                        attachedNodeIds.Add(node.Id);
                     }
                 }
             }
-            else
-            {
-                // No parent at all - this is unparented unless it's a product root
-                if (!productRootIds.Contains(dto.TfsId))
-                {
-                    unparentedWorkItems.Add(node);
-                }
-            }
+            // else: No parent (parentless) - will become a root node
         }
 
         // Sort children for all nodes
@@ -484,30 +482,18 @@ public class TreeBuilderService : ITreeBuilderService
             node.Children = node.Children.OrderBy(c => c.Title).ToList();
         }
 
-        // Create Product nodes
-        foreach (var product in productsList.OrderBy(p => p.Order))
-        {
-            var productNode = new TreeNode
-            {
-                Id = ProductNodeIdOffset - product.Id, // Use negative IDs to avoid conflicts with real work item IDs
-                Title = product.Name,
-                Type = "Product",
-                State = "",
-                ParentId = null,
-                IsExpanded = expandedState.TryGetValue(ProductNodeIdOffset - product.Id, out var isExpanded) && isExpanded
-            };
+        // Collect root nodes: items without a parent AND not already attached
+        // Parentless items that haven't been attached become roots
+        var rootNodes = nodeMap.Values
+            .Where(n => !n.ParentId.HasValue)
+            .OrderBy(n => n.Title)
+            .ToList();
 
-            // Find the root work item for this product
-            if (nodeMap.TryGetValue(product.BacklogRootWorkItemId, out var rootNode))
-            {
-                productNode.Children.Add(rootNode);
-            }
-
-            topLevelNodes.Add(productNode);
-        }
-
-        // Create Unparented node if there are any unparented items
-        if (unparentedWorkItems.Any())
+        // Add root nodes directly to top level (no synthetic wrapper)
+        topLevelNodes.AddRange(rootNodes);
+        
+        // Create Unparented node only if there are orphaned items (items with missing parent)
+        if (orphanedWorkItems.Any())
         {
             var unparentedNode = new TreeNode
             {
@@ -516,7 +502,7 @@ public class TreeBuilderService : ITreeBuilderService
                 Type = "Unparented",
                 State = "",
                 ParentId = null,
-                Children = unparentedWorkItems.OrderBy(n => n.Title).ToList(),
+                Children = orphanedWorkItems.OrderBy(n => n.Title).ToList(),
                 IsExpanded = expandedState.TryGetValue(UnparentedNodeId, out var isExpanded) && isExpanded
             };
 
