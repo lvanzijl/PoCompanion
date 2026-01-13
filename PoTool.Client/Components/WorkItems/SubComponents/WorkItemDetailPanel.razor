@@ -61,6 +61,28 @@
             </div>
         }
 
+        @if (GetCommonDescription() != null)
+        {
+            <div class="detail-field">
+                <label>Description:</label>
+                @if (string.IsNullOrWhiteSpace(GetCommonDescription()))
+                {
+                    <span class="no-value">(No description)</span>
+                }
+                else
+                {
+                    <div class="description-content">@((MarkupString)(GetCommonDescription() ?? string.Empty))</div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="detail-field disabled">
+                <label>Description:</label>
+                <span class="multi-select-info">(Multiple descriptions selected)</span>
+            </div>
+        }
+
         <div class="detail-section">
             <h3>Selected Items:</h3>
             <ul class="selected-items-list">
@@ -156,13 +178,17 @@ else if (SelectedWorkItem != null)
                     </div>
                 }
 
-                @if (!string.IsNullOrWhiteSpace(SelectedWorkItem.Description))
-                {
-                    <div class="detail-field">
-                        <label>Description:</label>
+                <div class="detail-field">
+                    <label>Description:</label>
+                    @if (!string.IsNullOrWhiteSpace(SelectedWorkItem.Description))
+                    {
                         <div class="description-content">@((MarkupString)SelectedWorkItem.Description)</div>
-                    </div>
-                }
+                    }
+                    else
+                    {
+                        <span class="no-value">(No description)</span>
+                    }
+                </div>
 
                 @* Display validation issues section *@
                 @if (ValidationIssues != null && ValidationIssues.Any())
@@ -275,6 +301,22 @@ else if (SelectedWorkItem != null)
         var firstAreaPath = SelectedWorkItems[0].AreaPath;
         if (firstAreaPath == null) return null;
         return SelectedWorkItems.All(w => w.AreaPath != null && w.AreaPath == firstAreaPath) ? firstAreaPath : null;
+    }
+
+    private string? GetCommonDescription()
+    {
+        if (SelectedWorkItems == null || !SelectedWorkItems.Any()) return null;
+        var firstDescription = SelectedWorkItems[0].Description;
+        // For description, we consider null and empty string as equivalent
+        var normalizedFirst = string.IsNullOrWhiteSpace(firstDescription) ? string.Empty : firstDescription;
+        var allMatch = SelectedWorkItems.All(w =>
+        {
+            var normalizedDesc = string.IsNullOrWhiteSpace(w.Description) ? string.Empty : w.Description;
+            return normalizedDesc == normalizedFirst;
+        });
+        
+        // Return empty string if all are null/empty (so we show placeholder), or the first value if all match
+        return allMatch ? (string.IsNullOrWhiteSpace(firstDescription) ? string.Empty : firstDescription) : null;
     }
 
     private async Task LoadHistoryAsync()
