@@ -86,6 +86,17 @@ public class RealTfsClient : ITfsClient
     // Larger batches (up to 500) may work but could impact response time
     internal const int WorkItemBatchSize = 200;
 
+    // Ancestor completion safety limits
+    // MaxAncestorDepth: Prevents infinite loops in case of circular references or very deep hierarchies
+    // Typical org hierarchies: Goal (1) → Objective (2) → Epic (3) → Feature (4) → PBI (5) → Task (6) = 6 levels
+    // Setting to 20 provides comfortable headroom while preventing runaway scenarios
+    private const int MaxAncestorDepth = 20;
+    
+    // MaxAncestorCount: Caps total ancestors to add, preventing excessive API calls
+    // In practice, most hierarchies have < 100 ancestors
+    // Setting to 1000 handles large org structures while maintaining reasonable performance
+    private const int MaxAncestorCount = 1000;
+
     public RealTfsClient(
         IHttpClientFactory httpClientFactory,
         TfsConfigurationService configService,
@@ -4062,9 +4073,6 @@ public class RealTfsClient : ITfsClient
         Action checkInactivity,
         CancellationToken cancellationToken)
     {
-        const int maxAncestorDepth = 20; // Safety: prevent infinite loops
-        const int maxTotalAncestors = 1000; // Safety: cap total ancestors to add
-        
         var ancestorsAdded = 0;
         var visitedAncestors = new HashSet<int>();
         var missingParentIds = new HashSet<int>();
@@ -4091,9 +4099,10 @@ public class RealTfsClient : ITfsClient
 
         var currentDepth = 0;
         var parentsToFetch = new Queue<int>(missingParentIds);
+        var hasMoreParents = parentsToFetch.Count > 0;
 
         // Step 2: Walk up the hierarchy iteratively
-        while (parentsToFetch.Count > 0 && currentDepth < maxAncestorDepth && ancestorsAdded < maxTotalAncestors)
+        while (hasMoreParents && currentDepth < MaxAncestorDepth && ancestorsAdded < MaxAncestorCount)
         {
             checkInactivity();
             currentDepth++;
@@ -4167,25 +4176,29 @@ public class RealTfsClient : ITfsClient
 
                 _logger.LogDebug("Ancestor completion depth {Depth}: Added {Count} ancestors, {Remaining} parents queued", 
                     currentDepth, batchToFetch.Count, parentsToFetch.Count);
+                
+                // Update loop condition tracker
+                hasMoreParents = parentsToFetch.Count > 0;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Error fetching ancestors at depth {Depth}, continuing with partial hierarchy", currentDepth);
                 // Continue with partial results rather than failing completely
+                hasMoreParents = false;
                 break;
             }
         }
 
-        if (currentDepth >= maxAncestorDepth)
+        if (currentDepth >= MaxAncestorDepth)
         {
             _logger.LogWarning("Ancestor completion reached max depth {MaxDepth}, stopping (possible cycle or very deep hierarchy)", 
-                maxAncestorDepth);
+                MaxAncestorDepth);
         }
 
-        if (ancestorsAdded >= maxTotalAncestors)
+        if (ancestorsAdded >= MaxAncestorCount)
         {
             _logger.LogWarning("Ancestor completion reached max total ancestors {MaxTotal}, stopping", 
-                maxTotalAncestors);
+                MaxAncestorCount);
         }
 
         return ancestorsAdded;
