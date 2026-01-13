@@ -84,7 +84,8 @@ public class WorkItemDetailPanelTests : BunitTestContext
             State = "Active",
             JsonPayload = "{}",
             RetrievedAt = DateTimeOffset.Now,
-            Effort = null
+            Effort = null,
+            Description = null
         };
 
         // Act
@@ -119,7 +120,8 @@ public class WorkItemDetailPanelTests : BunitTestContext
             State = "New",
             JsonPayload = "{}",
             RetrievedAt = DateTimeOffset.Now,
-            Effort = null
+            Effort = null,
+            Description = null
         };
 
         // Act
@@ -152,7 +154,8 @@ public class WorkItemDetailPanelTests : BunitTestContext
             State = "Active",
             JsonPayload = "{}",
             RetrievedAt = DateTimeOffset.Now,
-            Effort = null
+            Effort = null,
+            Description = null
         };
 
         // Act
@@ -170,5 +173,264 @@ public class WorkItemDetailPanelTests : BunitTestContext
         Assert.Contains("Top level epic", cut.Markup);
         Assert.DoesNotContain("Parent ID", cut.Markup,
             "Should not show parent section for top-level items");
+    }
+
+    [TestMethod]
+    public void WorkItemDetailPanel_ShowsDescription_WhenPresent()
+    {
+        // Arrange
+        var workItem = new WorkItemDto
+        {
+            TfsId = 123,
+            Type = "User Story",
+            Title = "Test story",
+            ParentTfsId = null,
+            AreaPath = "Project\\Team",
+            IterationPath = "Sprint 1",
+            State = "Active",
+            JsonPayload = "{}",
+            RetrievedAt = DateTimeOffset.Now,
+            Effort = null,
+            Description = "This is a test description"
+        };
+
+        // Act
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<WorkItemDetailPanel>(1);
+            builder.AddAttribute(2, nameof(WorkItemDetailPanel.SelectedWorkItem), workItem);
+            builder.CloseComponent();
+        });
+
+        // Assert
+        Assert.Contains("Description:", cut.Markup, "Should show description label");
+        Assert.Contains("This is a test description", cut.Markup, "Should display description content");
+    }
+
+    [TestMethod]
+    public void WorkItemDetailPanel_ShowsNoDescriptionPlaceholder_WhenDescriptionNull()
+    {
+        // Arrange
+        var workItem = new WorkItemDto
+        {
+            TfsId = 123,
+            Type = "User Story",
+            Title = "Test story",
+            ParentTfsId = null,
+            AreaPath = "Project\\Team",
+            IterationPath = "Sprint 1",
+            State = "Active",
+            JsonPayload = "{}",
+            RetrievedAt = DateTimeOffset.Now,
+            Effort = null,
+            Description = null
+        };
+
+        // Act
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<WorkItemDetailPanel>(1);
+            builder.AddAttribute(2, nameof(WorkItemDetailPanel.SelectedWorkItem), workItem);
+            builder.CloseComponent();
+        });
+
+        // Assert
+        Assert.Contains("Description:", cut.Markup, "Should show description label");
+        Assert.Contains("(No description)", cut.Markup, "Should show placeholder for empty description");
+    }
+
+    [TestMethod]
+    public void WorkItemDetailPanel_ShowsNoDescriptionPlaceholder_WhenDescriptionEmpty()
+    {
+        // Arrange
+        var workItem = new WorkItemDto
+        {
+            TfsId = 123,
+            Type = "User Story",
+            Title = "Test story",
+            ParentTfsId = null,
+            AreaPath = "Project\\Team",
+            IterationPath = "Sprint 1",
+            State = "Active",
+            JsonPayload = "{}",
+            RetrievedAt = DateTimeOffset.Now,
+            Effort = null,
+            Description = ""
+        };
+
+        // Act
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<WorkItemDetailPanel>(1);
+            builder.AddAttribute(2, nameof(WorkItemDetailPanel.SelectedWorkItem), workItem);
+            builder.CloseComponent();
+        });
+
+        // Assert
+        Assert.Contains("Description:", cut.Markup, "Should show description label");
+        Assert.Contains("(No description)", cut.Markup, "Should show placeholder for empty description");
+    }
+
+    [TestMethod]
+    public void WorkItemDetailPanel_ShowsCommonDescription_WhenMultipleItemsWithSameDescription()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            new WorkItemDto
+            {
+                TfsId = 1,
+                Type = "User Story",
+                Title = "Story 1",
+                ParentTfsId = null,
+                AreaPath = "Project\\Team",
+                IterationPath = "Sprint 1",
+                State = "Active",
+                JsonPayload = "{}",
+                RetrievedAt = DateTimeOffset.Now,
+                Effort = null,
+                Description = "Same description"
+            },
+            new WorkItemDto
+            {
+                TfsId = 2,
+                Type = "User Story",
+                Title = "Story 2",
+                ParentTfsId = null,
+                AreaPath = "Project\\Team",
+                IterationPath = "Sprint 1",
+                State = "Active",
+                JsonPayload = "{}",
+                RetrievedAt = DateTimeOffset.Now,
+                Effort = null,
+                Description = "Same description"
+            }
+        };
+
+        // Act
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<WorkItemDetailPanel>(1);
+            builder.AddAttribute(2, nameof(WorkItemDetailPanel.SelectedWorkItems), workItems);
+            builder.CloseComponent();
+        });
+
+        // Assert
+        Assert.Contains("Description:", cut.Markup, "Should show description label");
+        Assert.Contains("Same description", cut.Markup, "Should display common description");
+        Assert.DoesNotContain("(Multiple descriptions selected)", cut.Markup, "Should not show multi-select message when descriptions are the same");
+    }
+
+    [TestMethod]
+    public void WorkItemDetailPanel_ShowsMultiSelectMessage_WhenDifferentDescriptions()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            new WorkItemDto
+            {
+                TfsId = 1,
+                Type = "User Story",
+                Title = "Story 1",
+                ParentTfsId = null,
+                AreaPath = "Project\\Team",
+                IterationPath = "Sprint 1",
+                State = "Active",
+                JsonPayload = "{}",
+                RetrievedAt = DateTimeOffset.Now,
+                Effort = null,
+                Description = "Description 1"
+            },
+            new WorkItemDto
+            {
+                TfsId = 2,
+                Type = "User Story",
+                Title = "Story 2",
+                ParentTfsId = null,
+                AreaPath = "Project\\Team",
+                IterationPath = "Sprint 1",
+                State = "Active",
+                JsonPayload = "{}",
+                RetrievedAt = DateTimeOffset.Now,
+                Effort = null,
+                Description = "Description 2"
+            }
+        };
+
+        // Act
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<WorkItemDetailPanel>(1);
+            builder.AddAttribute(2, nameof(WorkItemDetailPanel.SelectedWorkItems), workItems);
+            builder.CloseComponent();
+        });
+
+        // Assert
+        Assert.Contains("Description:", cut.Markup, "Should show description label");
+        Assert.Contains("(Multiple descriptions selected)", cut.Markup, "Should show multi-select message when descriptions differ");
+        Assert.DoesNotContain("Description 1", cut.Markup, "Should not show first description");
+        Assert.DoesNotContain("Description 2", cut.Markup, "Should not show second description");
+    }
+
+    [TestMethod]
+    public void WorkItemDetailPanel_ShowsNoDescriptionPlaceholder_WhenMultipleItemsAllWithEmptyDescription()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            new WorkItemDto
+            {
+                TfsId = 1,
+                Type = "User Story",
+                Title = "Story 1",
+                ParentTfsId = null,
+                AreaPath = "Project\\Team",
+                IterationPath = "Sprint 1",
+                State = "Active",
+                JsonPayload = "{}",
+                RetrievedAt = DateTimeOffset.Now,
+                Effort = null,
+                Description = null
+            },
+            new WorkItemDto
+            {
+                TfsId = 2,
+                Type = "User Story",
+                Title = "Story 2",
+                ParentTfsId = null,
+                AreaPath = "Project\\Team",
+                IterationPath = "Sprint 1",
+                State = "Active",
+                JsonPayload = "{}",
+                RetrievedAt = DateTimeOffset.Now,
+                Effort = null,
+                Description = ""
+            }
+        };
+
+        // Act
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<WorkItemDetailPanel>(1);
+            builder.AddAttribute(2, nameof(WorkItemDetailPanel.SelectedWorkItems), workItems);
+            builder.CloseComponent();
+        });
+
+        // Assert
+        Assert.Contains("Description:", cut.Markup, "Should show description label");
+        Assert.Contains("(No description)", cut.Markup, "Should show placeholder when all descriptions are empty");
+        Assert.DoesNotContain("(Multiple descriptions selected)", cut.Markup, "Should not show multi-select message when all descriptions are empty");
     }
 }
