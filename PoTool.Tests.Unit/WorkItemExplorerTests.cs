@@ -525,20 +525,7 @@ public class WorkItemExplorerTests
 
         // Assert
         // Collect all node IDs from the tree
-        var allNodeIds = new List<int>();
-        void CollectIds(TreeNode node)
-        {
-            allNodeIds.Add(node.Id);
-            foreach (var child in node.Children)
-            {
-                CollectIds(child);
-            }
-        }
-        
-        foreach (var root in tree)
-        {
-            CollectIds(root);
-        }
+        var allNodeIds = CollectAllNodeIds(tree);
         
         // Verify no ID appears twice
         var uniqueIds = new HashSet<int>(allNodeIds);
@@ -550,6 +537,30 @@ public class WorkItemExplorerTests
         Assert.IsTrue(allNodeIds.Contains(1), "Tree should contain Goal (ID 1)");
         Assert.IsTrue(allNodeIds.Contains(2), "Tree should contain Epic (ID 2)");
         Assert.IsTrue(allNodeIds.Contains(3), "Tree should contain Feature (ID 3)");
+    }
+    
+    /// <summary>
+    /// Recursively collects all node IDs from a tree.
+    /// </summary>
+    private static List<int> CollectAllNodeIds(List<TreeNode> roots)
+    {
+        var ids = new List<int>();
+        
+        void CollectIdsRecursive(TreeNode node)
+        {
+            ids.Add(node.Id);
+            foreach (var child in node.Children)
+            {
+                CollectIdsRecursive(child);
+            }
+        }
+        
+        foreach (var root in roots)
+        {
+            CollectIdsRecursive(root);
+        }
+        
+        return ids;
     }
 }
 

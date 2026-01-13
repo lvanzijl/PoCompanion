@@ -482,10 +482,10 @@ public class TreeBuilderService : ITreeBuilderService
             node.Children = node.Children.OrderBy(c => c.Title).ToList();
         }
 
-        // Collect root nodes: items without a parent OR not yet attached to anything
-        // This includes Goals (which are always parentless) and any other parentless work items
+        // Collect root nodes: items without a parent AND not already attached
+        // Parentless items that haven't been attached become roots
         var rootNodes = nodeMap.Values
-            .Where(n => !n.ParentId.HasValue && !attachedNodeIds.Contains(n.Id))
+            .Where(n => !n.ParentId.HasValue)
             .OrderBy(n => n.Title)
             .ToList();
 
