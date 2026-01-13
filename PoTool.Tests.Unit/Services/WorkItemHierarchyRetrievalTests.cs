@@ -224,7 +224,7 @@ public class WorkItemHierarchyRetrievalTests
 
         // Assert - CRITICAL: Both queries should return the exact same set of IDs
         // This proves that 'since' parameter does NOT affect graph discovery
-        Assert.AreEqual(resultIdsWithoutSince.Count, resultIdsWithSince.Count,
+        Assert.HasCount(resultIdsWithoutSince.Count, resultIdsWithSince,
             "Incremental sync (with 'since') must discover the same number of work items as full sync");
 
         CollectionAssert.AreEquivalent(resultIdsWithoutSince.ToList(), resultIdsWithSince.ToList(),
@@ -232,7 +232,7 @@ public class WorkItemHierarchyRetrievalTests
             "The 'since' parameter should ONLY affect refresh logic, NOT discovery.");
 
         // Assert - Both should have the complete hierarchy
-        Assert.AreEqual(expectedTotal, resultIdsWithSince.Count,
+        Assert.HasCount(expectedTotal, resultIdsWithSince,
             $"Should discover all {expectedTotal} items (root + {expectedDescendantCount} descendants) even with future 'since' date");
     }
 }
