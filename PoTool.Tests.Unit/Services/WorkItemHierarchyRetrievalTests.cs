@@ -165,5 +165,75 @@ public class WorkItemHierarchyRetrievalTests
         }
         return false;
     }
+
+    /// <summary>
+    /// CRITICAL TEST: Verifies that incremental sync (with 'since' parameter) does NOT filter graph discovery.
+    /// This is the core requirement: "Incremental sync must NEVER affect graph discovery."
+    /// 
+    /// Test scenario:
+    /// 1. Query a hierarchy with since=future date (no items changed since that date)
+    /// 2. Verify that ALL descendants are still discovered
+    /// 3. This proves that discovery phase ignores the 'since' parameter
+    /// </summary>
+    [TestMethod]
+    public async Task MockTfsClient_GetWorkItemsByRootIdsAsync_IncrementalSync_StillDiscoversUnchangedDescendants()
+    {
+        // Arrange - Create mock TFS client with all dependencies
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<BattleshipWorkItemGenerator>();
+        services.AddSingleton<BattleshipDependencyGenerator>();
+        services.AddSingleton<BattleshipPullRequestGenerator>();
+        services.AddSingleton<BattleshipPipelineGenerator>();
+        services.AddSingleton<MockDataValidator>();
+        services.AddSingleton<BattleshipMockDataFacade>();
+        services.AddSingleton<MockTfsClient>();
+        
+        var provider = services.BuildServiceProvider();
+        var mockTfsClient = provider.GetRequiredService<MockTfsClient>();
+        var mockDataFacade = provider.GetRequiredService<BattleshipMockDataFacade>();
+        
+        // Get all mock data to find a Goal ID
+        var allItems = mockDataFacade.GetMockHierarchy();
+        var firstGoal = allItems.First(wi => wi.Type == "goal");
+        var rootId = firstGoal.TfsId;
+        
+        // Count expected descendants
+        var expectedDescendantCount = CountDescendants(allItems, rootId);
+        var expectedTotal = 1 + expectedDescendantCount; // root + descendants
+
+        // Act - Query with a 'since' date in the future
+        // This simulates incremental sync where no items have changed
+        var futureDate = System.DateTimeOffset.UtcNow.AddYears(10);
+        var resultWithSince = await mockTfsClient.GetWorkItemsByRootIdsAsync(
+            new[] { rootId },
+            since: futureDate,
+            progressCallback: null,
+            cancellationToken: default);
+
+        var resultIdsWithSince = resultWithSince.Select(wi => wi.TfsId).ToHashSet();
+
+        // Act - Query without 'since' for comparison
+        var resultWithoutSince = await mockTfsClient.GetWorkItemsByRootIdsAsync(
+            new[] { rootId },
+            since: null,
+            progressCallback: null,
+            cancellationToken: default);
+
+        var resultIdsWithoutSince = resultWithoutSince.Select(wi => wi.TfsId).ToHashSet();
+
+        // Assert - CRITICAL: Both queries should return the exact same set of IDs
+        // This proves that 'since' parameter does NOT affect graph discovery
+        Assert.AreEqual(resultIdsWithoutSince.Count, resultIdsWithSince.Count,
+            "Incremental sync (with 'since') must discover the same number of work items as full sync");
+
+        CollectionAssert.AreEquivalent(resultIdsWithoutSince.ToList(), resultIdsWithSince.ToList(),
+            "Incremental sync (with 'since') must discover the exact same work items as full sync. " +
+            "The 'since' parameter should ONLY affect refresh logic, NOT discovery.");
+
+        // Assert - Both should have the complete hierarchy
+        Assert.AreEqual(expectedTotal, resultIdsWithSince.Count,
+            $"Should discover all {expectedTotal} items (root + {expectedDescendantCount} descendants) even with future 'since' date");
+    }
 }
 

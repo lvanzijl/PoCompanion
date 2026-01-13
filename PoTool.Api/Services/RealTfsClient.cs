@@ -768,6 +768,10 @@ public class RealTfsClient : ITfsClient
         // Step 1: Traverse DOWN the hierarchy to collect ALL DESCENDANTS (children → grandchildren → ...)
         // Uses System.LinkTypes.Hierarchy-Forward to follow parent→child links
         // Does NOT traverse UP (no ancestor/parent expansion from roots)
+        // 
+        // CRITICAL: Discovery phase NEVER filters by date/since parameter.
+        // Incremental sync (if since != null) will affect refresh logic AFTER discovery is complete.
+        // This ensures the complete graph structure is always discovered.
         progressCallback?.Invoke(1, 3, "Querying work item hierarchy (descendants)...");
         UpdateHeartbeat();
 
@@ -776,7 +780,7 @@ public class RealTfsClient : ITfsClient
         var processedIds = new HashSet<int>();
 
         // BFS traversal to find all descendant work items
-        // IMPORTANT: For incremental sync, date filter only applies to CHILDREN, not roots
+        // NO date filters - discovery must always find the complete hierarchy
         while (idsToProcess.Count > 0)
         {
             CheckInactivity();
@@ -798,12 +802,6 @@ public class RealTfsClient : ITfsClient
             // Note: idList is safe from injection as currentBatch contains only validated integers
             var idList = string.Join(",", currentBatch);
             
-            // For incremental sync: filter CHILDREN by date, but always query from root
-            // This ensures we discover new/modified children while keeping the full hierarchy context
-            var dateFilter = since.HasValue
-                ? $" AND [Target].[System.ChangedDate] >= '{since.Value:yyyy-MM-ddTHH:mm:ssZ}'"
-                : "";
-
             // Query for DESCENDANTS (children) using WorkItemLinks with Hierarchy-Forward
             // 
             // Azure DevOps Link Semantics:
@@ -814,20 +812,23 @@ public class RealTfsClient : ITfsClient
             // This query finds all links WHERE:
             // - Source (parent) is in our current batch
             // - Link type is Hierarchy-Forward (parent→child)
-            // - Target (child) meets date filter (if incremental)
             //
             // Expected result: Target IDs = children of items in our batch
+            //
+            // CRITICAL: NO date filters, NO MODE(Recursive)
+            // - Date filters would break graph discovery during incremental sync
+            // - MODE(Recursive) conflicts with our explicit BFS traversal loop
+            // - Discovery must always return the complete hierarchy
             var wiql = new
             {
                 query = $"SELECT [System.Id] FROM WorkItemLinks WHERE " +
                         $"([Source].[System.Id] IN ({idList})) AND " +
-                        $"([System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward'){dateFilter} " +
-                        $"MODE (Recursive)"
+                        $"([System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward')"
             };
 
             _logger.LogDebug(
-                "Querying descendants: Batch={BatchIds}, LinkType=Hierarchy-Forward (parent→child), DateFilter={HasDateFilter}",
-                idList, since.HasValue);
+                "Querying descendants: Batch={BatchIds}, LinkType=Hierarchy-Forward (parent→child)",
+                idList);
 
             try
             {

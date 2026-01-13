@@ -96,6 +96,9 @@ public class MockTfsClient : ITfsClient
         var allWorkItems = _mockDataFacade.GetMockHierarchy().ToList();
 
         // Build hierarchy map to find descendants
+        // CRITICAL: Discovery phase NEVER filters by 'since' parameter
+        // The complete hierarchy must always be discovered
+        // 'since' parameter is reserved for future refresh optimization logic (not implemented yet)
         var results = new List<WorkItemDto>();
         var processedIds = new HashSet<int>();
 
@@ -128,11 +131,11 @@ public class MockTfsClient : ITfsClient
 
         progressCallback?.Invoke(2, 3, $"Processing {results.Count} work items...");
 
-        // Filter by date if specified
-        if (since.HasValue)
-        {
-            results = results.Where(wi => wi.RetrievedAt >= since.Value).ToList();
-        }
+        // NOTE: 'since' parameter is intentionally NOT used here for filtering.
+        // Discovery phase must ALWAYS return the complete hierarchy.
+        // Incremental sync logic (if needed) should be applied AFTER discovery
+        // to decide which items need field refresh, not which items exist in the graph.
+        // This ensures graph structure is never affected by incremental sync dates.
 
         progressCallback?.Invoke(3, 3, "Complete");
 
