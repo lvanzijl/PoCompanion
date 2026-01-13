@@ -1,20 +1,19 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
-using PoTool.Core.Contracts;
-using PoTool.Shared.WorkItems;
-using PoTool.Shared.PullRequests;
-using PoTool.Shared.Pipelines;
-using PoTool.Shared.Exceptions;
 using PoTool.Api.Persistence.Entities;
-using PoTool.Shared.Contracts.TfsVerification;
-
-using PoTool.Core.PullRequests;
-
-using PoTool.Core.WorkItems;
-
+using PoTool.Core.Contracts;
 using PoTool.Core.Pipelines;
+using PoTool.Core.PullRequests;
+using PoTool.Core.WorkItems;
+using PoTool.Shared.Contracts.TfsVerification;
+using PoTool.Shared.Exceptions;
+using PoTool.Shared.Pipelines;
+using PoTool.Shared.PullRequests;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Services;
 
@@ -36,13 +35,15 @@ internal sealed class WorkItemBatchRequest
     /// If not specified, all fields are returned.
     /// </summary>
     [System.Text.Json.Serialization.JsonPropertyName("fields")]
-    public string[]? Fields { get; init; }
+   [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+   public string[]? Fields { get; init; }
 
     /// <summary>
     /// Optional expansion for additional data (e.g., "relations").
     /// </summary>
-    [System.Text.Json.Serialization.JsonPropertyName("expand")]
-    public string? Expand { get; init; }
+    [System.Text.Json.Serialization.JsonPropertyName("$expand")]
+   [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+   public string? Expand { get; init; }
 }
 
 /// <summary>
@@ -864,23 +865,39 @@ public class RealTfsClient : ITfsClient
                     using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
                     var childrenFound = 0;
-                    if (doc.RootElement.TryGetProperty("workItemRelations", out var relations))
-                    {
-                        foreach (var relation in relations.EnumerateArray())
-                        {
-                            // Extract TARGET id which should be the child
-                            if (relation.TryGetProperty("target", out var target) && 
-                                target.TryGetProperty("id", out var idElement))
-                            {
-                                var childId = idElement.GetInt32();
-                                if (allWorkItemIds.Add(childId) && !processedIds.Contains(childId))
-                                {
-                                    idsToProcess.Enqueue(childId);
-                                    childrenFound++;
-                                }
-                            }
-                        }
-                    }
+               if (doc.RootElement.TryGetProperty("workItemRelations", out var relations))
+               {
+                  foreach (var relation in relations.EnumerateArray())
+                  {
+                     // Extract TARGET id which should be the child
+                     if (!relation.TryGetProperty("rel", out var relProp) ||
+                        relProp.ValueKind != JsonValueKind.String ||
+                        !string.Equals(relProp.GetString(),
+                            "System.LinkTypes.Hierarchy-Forward",
+                            StringComparison.OrdinalIgnoreCase))
+                     {
+                        continue;
+                     }
+
+                     if (!relation.TryGetProperty("source", out var sourceProp) ||
+                         sourceProp.ValueKind != JsonValueKind.Object ||
+                         !sourceProp.TryGetProperty("id", out var sourceIdProp))
+                        continue;
+
+                     if (!relation.TryGetProperty("target", out var targetProp) ||
+                         targetProp.ValueKind != JsonValueKind.Object ||
+                         !targetProp.TryGetProperty("id", out var targetIdProp))
+                        continue;
+
+                     var parentId = sourceIdProp.GetInt32();
+                     var childId = targetIdProp.GetInt32();
+
+                     if (parentId == childId) continue;
+
+                     if (allWorkItemIds.Add(childId) && !processedIds.Contains(childId))
+                        idsToProcess.Enqueue(childId);
+                  }
+               }
                     
                     _logger.LogDebug(
                         "Found {ChildCount} new children for batch {BatchIds}. Total accumulated: {TotalCount}",
@@ -954,14 +971,14 @@ public class RealTfsClient : ITfsClient
                 System.Text.Encoding.UTF8,
                 "application/json");
 
-            var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
+         var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
             UpdateHeartbeat();
             await HandleHttpErrorsAsync(relationsResponse, cancellationToken);
 
             using var relationsStream = await relationsResponse.Content.ReadAsStreamAsync(cancellationToken);
             using var relationsDoc = await JsonDocument.ParseAsync(relationsStream, cancellationToken: cancellationToken);
 
-            var relationsMissing = 0;
+         var relationsMissing = 0;
             var firstMissingId = (int?)null;
             var firstMissingKeys = (string?)null;
 
@@ -1095,7 +1112,7 @@ public class RealTfsClient : ITfsClient
             using var fieldsStream = await fieldsResponse.Content.ReadAsStreamAsync(cancellationToken);
             using var fieldsDoc = await JsonDocument.ParseAsync(fieldsStream, cancellationToken: cancellationToken);
 
-            foreach (var item in fieldsDoc.RootElement.GetProperty("value").EnumerateArray())
+         foreach (var item in fieldsDoc.RootElement.GetProperty("value").EnumerateArray())
             {
                 var id = item.GetProperty("id").GetInt32();
                 var fields = item.GetProperty("fields");
