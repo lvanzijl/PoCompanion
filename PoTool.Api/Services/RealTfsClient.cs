@@ -702,9 +702,28 @@ public class RealTfsClient : ITfsClient
     }
 
     /// <summary>
-    /// Retrieves work items starting from specified root work item IDs and their entire hierarchy.
-    /// Uses a recursive approach to find all children of the root items.
-    /// For incremental sync, applies date filter only to discovered children, always including roots.
+    /// Retrieves work items starting from specified root work item IDs and traverses DOWN the hierarchy
+    /// to collect ALL DESCENDANTS (children, grandchildren, etc.). Does NOT fetch ancestors (parents).
+    /// 
+    /// Traversal Strategy:
+    /// - Starts with root work item IDs as the initial frontier
+    /// - Uses breadth-first search (BFS) to explore descendants
+    /// - For each work item in frontier, queries for its children using Hierarchy-Forward links
+    /// - Children become the next frontier, process repeats until no more children found
+    /// 
+    /// Link Direction:
+    /// - Uses System.LinkTypes.Hierarchy-Forward which represents parent → child
+    /// - Source = Parent, Target = Child
+    /// - Query finds links where Source (parent) is in our frontier
+    /// - Extracts Target IDs which are the children
+    /// 
+    /// For incremental sync:
+    /// - Applies date filter only to discovered CHILDREN, always including roots
+    /// - Ensures complete hierarchy context is maintained
+    /// 
+    /// Expected Result:
+    /// - Root work items + ALL their descendants (full subtree)
+    /// - NO ancestors (parents) of roots
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsAsync(
         int[] rootWorkItemIds,
@@ -746,16 +765,17 @@ public class RealTfsClient : ITfsClient
             }
         }
 
-        // Step 1: Get all work items under the root hierarchy using WIQL with tree query
-        // We use System.Links.Hierarchy/Forward to traverse the tree
-        progressCallback?.Invoke(1, 3, "Querying work item hierarchy...");
+        // Step 1: Traverse DOWN the hierarchy to collect ALL DESCENDANTS (children → grandchildren → ...)
+        // Uses System.LinkTypes.Hierarchy-Forward to follow parent→child links
+        // Does NOT traverse UP (no ancestor/parent expansion from roots)
+        progressCallback?.Invoke(1, 3, "Querying work item hierarchy (descendants)...");
         UpdateHeartbeat();
 
         var allWorkItemIds = new HashSet<int>(rootWorkItemIds);
         var idsToProcess = new Queue<int>(rootWorkItemIds);
         var processedIds = new HashSet<int>();
 
-        // Traverse the hierarchy to find all child work items
+        // BFS traversal to find all descendant work items
         // IMPORTANT: For incremental sync, date filter only applies to CHILDREN, not roots
         while (idsToProcess.Count > 0)
         {
@@ -784,7 +804,19 @@ public class RealTfsClient : ITfsClient
                 ? $" AND [Target].[System.ChangedDate] >= '{since.Value:yyyy-MM-ddTHH:mm:ssZ}'"
                 : "";
 
-            // Query for children using tree query mode
+            // Query for DESCENDANTS (children) using WorkItemLinks with Hierarchy-Forward
+            // 
+            // Azure DevOps Link Semantics:
+            // - Hierarchy-Forward: Represents parent → child direction
+            // - Source: Parent work item
+            // - Target: Child work item
+            //
+            // This query finds all links WHERE:
+            // - Source (parent) is in our current batch
+            // - Link type is Hierarchy-Forward (parent→child)
+            // - Target (child) meets date filter (if incremental)
+            //
+            // Expected result: Target IDs = children of items in our batch
             var wiql = new
             {
                 query = $"SELECT [System.Id] FROM WorkItemLinks WHERE " +
@@ -792,6 +824,10 @@ public class RealTfsClient : ITfsClient
                         $"([System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward'){dateFilter} " +
                         $"MODE (Recursive)"
             };
+
+            _logger.LogDebug(
+                "Querying descendants: Batch={BatchIds}, LinkType=Hierarchy-Forward (parent→child), DateFilter={HasDateFilter}",
+                idList, since.HasValue);
 
             try
             {
@@ -806,10 +842,12 @@ public class RealTfsClient : ITfsClient
                     using var stream = await wiqlResponse.Content.ReadAsStreamAsync(cancellationToken);
                     using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
+                    var childrenFound = 0;
                     if (doc.RootElement.TryGetProperty("workItemRelations", out var relations))
                     {
                         foreach (var relation in relations.EnumerateArray())
                         {
+                            // Extract TARGET id which should be the child
                             if (relation.TryGetProperty("target", out var target) && 
                                 target.TryGetProperty("id", out var idElement))
                             {
@@ -817,10 +855,15 @@ public class RealTfsClient : ITfsClient
                                 if (allWorkItemIds.Add(childId) && !processedIds.Contains(childId))
                                 {
                                     idsToProcess.Enqueue(childId);
+                                    childrenFound++;
                                 }
                             }
                         }
                     }
+                    
+                    _logger.LogDebug(
+                        "Found {ChildCount} new children for batch {BatchIds}. Total accumulated: {TotalCount}",
+                        childrenFound, idList, allWorkItemIds.Count);
                 }
                 else
                 {
