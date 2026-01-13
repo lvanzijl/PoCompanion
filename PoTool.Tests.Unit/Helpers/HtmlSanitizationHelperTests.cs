@@ -1,5 +1,8 @@
 using PoTool.Shared.Helpers;
 
+// Suppress MSTEST0037: This analyzer prefers Assert.Contains/DoesNotContain over Assert.IsTrue/IsFalse with string.Contains().
+// While the suggested methods provide better error messages, the current pattern is clear and consistent with existing tests.
+// Consider migrating to the new pattern in a future refactoring for improved test output diagnostics.
 #pragma warning disable MSTEST0037 // Use Assert.Contains/DoesNotContain instead of Assert.IsTrue/IsFalse
 
 namespace PoTool.Tests.Unit.Helpers;

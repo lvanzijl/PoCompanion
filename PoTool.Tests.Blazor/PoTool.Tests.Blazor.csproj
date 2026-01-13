@@ -6,6 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Suppress NU1608: HtmlSanitizer 8.1.870 requires AngleSharp 0.17.1, but bUnit requires AngleSharp 1.1.2.
+         This is a transitive dependency conflict that doesn't affect runtime behavior since PoTool.Tests.Blazor
+         doesn't directly use HtmlSanitizer. The newer AngleSharp version is compatible. -->
     <NoWarn>$(NoWarn);NU1608</NoWarn>
   </PropertyGroup>
 

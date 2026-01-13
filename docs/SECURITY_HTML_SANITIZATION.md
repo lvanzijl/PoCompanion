@@ -142,7 +142,7 @@ When adding new UI components that display HTML, add tests for:
 
 ### Example Test
 
-```csharp
+```razor
 [TestMethod]
 public void WorkItemDescription_WithScript_DoesNotExecuteScript()
 {
