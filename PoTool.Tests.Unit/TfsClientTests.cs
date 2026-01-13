@@ -442,8 +442,24 @@ public class TfsClientTests
 
         // Simulate large batch of work items response
         // The implementation uses batch size of 200, so 500 items = 3 batches (200 + 200 + 100)
-        // Setup 3 batch responses using the helper method
+        // Two-phase retrieval: 3 batches for Phase 1 (relations) + 3 batches for Phase 2 (fields)
 
+        // Phase 1: Fetch relations (3 batches)
+        // For this test, we'll mock empty relations since we're testing count, not hierarchy
+        for (int i = 0; i < 3; i++)
+        {
+            var start = i * RealTfsClient.WorkItemBatchSize + 1;
+            var count = Math.Min(RealTfsClient.WorkItemBatchSize, 500 - i * RealTfsClient.WorkItemBatchSize);
+            var relationsBatch = Enumerable.Range(start, count)
+                .Select(id => new Dictionary<string, object>
+                {
+                    ["id"] = id,
+                    ["relations"] = Array.Empty<object>() // No relations for simplicity
+                }).ToArray();
+            SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(new { count, value = relationsBatch }));
+        }
+
+        // Phase 2: Fetch fields (3 batches)
         // Batch 1: items 1-200
         var batch1Items = CreateMockWorkItemBatch(1, RealTfsClient.WorkItemBatchSize);
         var batch1Response = new { count = batch1Items.Length, value = batch1Items };
