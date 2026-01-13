@@ -2,6 +2,7 @@
 @using PoTool.Shared.Contracts
 @using PoTool.Client.Services
 @using System.Text.Json
+@using PoTool.Shared.Helpers
 @inject IClipboardService ClipboardService
 @inject TfsConfigService TfsConfigService
 @inject BrowserNavigationService BrowserNavigationService
@@ -71,7 +72,7 @@
                 }
                 else
                 {
-                    <div class="description-content">@((MarkupString)(GetCommonDescription() ?? string.Empty))</div>
+                    <div class="description-content">@((MarkupString)HtmlSanitizationHelper.Sanitize(GetCommonDescription()))</div>
                 }
             </div>
         }
@@ -182,7 +183,7 @@ else if (SelectedWorkItem != null)
                     <label>Description:</label>
                     @if (!string.IsNullOrWhiteSpace(SelectedWorkItem.Description))
                     {
-                        <div class="description-content">@((MarkupString)SelectedWorkItem.Description)</div>
+                        <div class="description-content">@((MarkupString)HtmlSanitizationHelper.Sanitize(SelectedWorkItem.Description))</div>
                     }
                     else
                     {

@@ -6,9 +6,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);NU1608</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AngleSharp" Version="1.1.2" />
+    <PackageReference Include="AngleSharp.Css" Version="1.0.0-beta.139" />
     <PackageReference Include="bunit" Version="1.32.7" />
     <PackageReference Include="bunit.web" Version="1.32.7" />
     <PackageReference Include="MSTest" Version="4.0.1" />

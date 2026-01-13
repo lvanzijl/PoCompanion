@@ -7,4 +7,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="HtmlSanitizer" Version="8.1.870" />
+  </ItemGroup>
+
 </Project>
