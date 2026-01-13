@@ -86,6 +86,17 @@ public class RealTfsClient : ITfsClient
     // Larger batches (up to 500) may work but could impact response time
     internal const int WorkItemBatchSize = 200;
 
+    // Ancestor completion safety limits
+    // MaxAncestorDepth: Prevents infinite loops in case of circular references or very deep hierarchies
+    // Typical org hierarchies: Goal (1) → Objective (2) → Epic (3) → Feature (4) → PBI (5) → Task (6) = 6 levels
+    // Setting to 20 provides comfortable headroom while preventing runaway scenarios
+    private const int MaxAncestorDepth = 20;
+    
+    // MaxAncestorCount: Caps total ancestors to add, preventing excessive API calls
+    // In practice, most hierarchies have < 100 ancestors
+    // Setting to 1000 handles large org structures while maintaining reasonable performance
+    private const int MaxAncestorCount = 1000;
+
     public RealTfsClient(
         IHttpClientFactory httpClientFactory,
         TfsConfigurationService configService,
@@ -469,6 +480,14 @@ public class RealTfsClient : ITfsClient
 
     public async Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, DateTimeOffset? since, CancellationToken cancellationToken = default)
     {
+        // NOTE: This method fetches work items by area path, not by hierarchy.
+        // It uses the same two-phase retrieval (relations then fields) to extract parent IDs.
+        // Unlike GetWorkItemsByRootIdsAsync, this does NOT complete ancestors because:
+        // 1. Area path queries are flat - they return all items under the area
+        // 2. Parent items should naturally be in the same area path in most cases
+        // 3. If parents are in a different area, they're intentionally excluded from this query scope
+        // For hierarchy-based queries with ancestor completion, use GetWorkItemsByRootIdsAsync.
+        
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
         ValidateTfsConfiguration(entity);
 
@@ -702,14 +721,15 @@ public class RealTfsClient : ITfsClient
     }
 
     /// <summary>
-    /// Retrieves work items starting from specified root work item IDs and traverses DOWN the hierarchy
-    /// to collect ALL DESCENDANTS (children, grandchildren, etc.). Does NOT fetch ancestors (parents).
+    /// Retrieves work items starting from specified root work item IDs and traverses the hierarchy
+    /// to collect ALL DESCENDANTS (children, grandchildren, etc.) AND their ANCESTORS (parents).
     /// 
     /// Traversal Strategy:
-    /// - Starts with root work item IDs as the initial frontier
+    /// - Phase 1: Starts with root work item IDs as the initial frontier
     /// - Uses breadth-first search (BFS) to explore descendants
     /// - For each work item in frontier, queries for its children using Hierarchy-Forward links
     /// - Children become the next frontier, process repeats until no more children found
+    /// - Phase 1.5: Completes ancestors by walking UP to fetch missing parents
     /// 
     /// Link Direction:
     /// - Uses System.LinkTypes.Hierarchy-Forward which represents parent → child
@@ -718,12 +738,12 @@ public class RealTfsClient : ITfsClient
     /// - Extracts Target IDs which are the children
     /// 
     /// For incremental sync:
-    /// - Applies date filter only to discovered CHILDREN, always including roots
+    /// - Applies date filter only to field refresh, NEVER to graph discovery
     /// - Ensures complete hierarchy context is maintained
     /// 
     /// Expected Result:
     /// - Root work items + ALL their descendants (full subtree)
-    /// - NO ancestors (parents) of roots
+    /// - ALL ancestors (parents) needed to build a connected hierarchy
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsAsync(
         int[] rootWorkItemIds,
@@ -941,6 +961,10 @@ public class RealTfsClient : ITfsClient
             using var relationsStream = await relationsResponse.Content.ReadAsStreamAsync(cancellationToken);
             using var relationsDoc = await JsonDocument.ParseAsync(relationsStream, cancellationToken: cancellationToken);
 
+            var relationsMissing = 0;
+            var firstMissingId = (int?)null;
+            var firstMissingKeys = (string?)null;
+
             foreach (var item in relationsDoc.RootElement.GetProperty("value").EnumerateArray())
             {
                 var id = item.GetProperty("id").GetInt32();
@@ -964,6 +988,29 @@ public class RealTfsClient : ITfsClient
                         }
                     }
                 }
+                else
+                {
+                    // Relations missing - capture diagnostic info for first occurrence
+                    relationsMissing++;
+                    if (!firstMissingId.HasValue)
+                    {
+                        firstMissingId = id;
+                        try
+                        {
+                            // Safely capture the property names present in the item
+                            var propNames = new List<string>();
+                            foreach (var prop in item.EnumerateObject())
+                            {
+                                propNames.Add(prop.Name);
+                            }
+                            firstMissingKeys = string.Join(", ", propNames);
+                        }
+                        catch
+                        {
+                            firstMissingKeys = "(failed to enumerate properties)";
+                        }
+                    }
+                }
                 
                 var parentId = ExtractParentIdFromRelations(item);
                 relationsMap[id] = parentId;
@@ -974,6 +1021,15 @@ public class RealTfsClient : ITfsClient
                 }
             }
 
+            // Log diagnostics for missing relations if any
+            if (relationsMissing > 0 && firstMissingId.HasValue)
+            {
+                _logger.LogDebug(
+                    "Phase 1 batch {BatchIndex}/{TotalBatches}: {MissingCount} items missing 'relations' property. " +
+                    "Sample item ID={SampleId}, properties present: [{Properties}]",
+                    batchIndex + 1, totalBatches, relationsMissing, firstMissingId.Value, firstMissingKeys ?? "(none)");
+            }
+
             var batchElapsed = DateTimeOffset.UtcNow - batchStartTime;
             _logger.LogDebug("Phase 1 batch {BatchIndex}/{TotalBatches} completed: {IdCount} IDs, HTTP {StatusCode}, {ElapsedMs}ms",
                 batchIndex + 1, totalBatches, batchIds.Length, (int)relationsResponse.StatusCode, batchElapsed.TotalMilliseconds);
@@ -982,6 +1038,25 @@ public class RealTfsClient : ITfsClient
         _logger.LogInformation(
             "Phase 1 complete: Relations present: {RelationsCount}, Reverse links: {ReverseLinksCount}, Parent IDs extracted: {ParentIdsCount}",
             relationsPresent, reverseLinksPresent, parentIdsExtracted);
+
+        // Phase 1.5: Complete ancestors (fetch missing parents)
+        // After descendants discovery and relations fetching, we may have parent IDs that aren't in our set
+        // This phase walks UP the hierarchy to fetch all ancestors needed to build a connected tree
+        var ancestorsAdded = await CompleteAncestorsAsync(
+            config,
+            httpClient,
+            allWorkItemIds,
+            relationsMap,
+            progressCallback,
+            UpdateHeartbeat,
+            CheckInactivity,
+            cancellationToken);
+
+        _logger.LogInformation("Phase 1.5 complete: Added {AncestorCount} ancestors to complete hierarchy", ancestorsAdded);
+
+        // Recalculate batch count and IDs array after adding ancestors
+        ids = allWorkItemIds.ToArray();
+        totalBatches = (int)Math.Ceiling((double)ids.Length / WorkItemBatchSize);
 
         // Phase 2: Fetch fields
         _logger.LogInformation("Phase 2: Fetching fields for {Count} work items in {BatchCount} batches", 
@@ -3972,5 +4047,160 @@ public class RealTfsClient : ITfsClient
             "pullrequest" => PipelineRunTrigger.PullRequest,
             _ => PipelineRunTrigger.Unknown
         };
+    }
+
+    /// <summary>
+    /// Completes the work item hierarchy by fetching missing ancestors (parents).
+    /// After discovering descendants, some items may reference parents that aren't in the fetched set.
+    /// This method walks UP the hierarchy to fetch those missing parents and their relations.
+    /// </summary>
+    /// <param name="config">TFS configuration.</param>
+    /// <param name="httpClient">HTTP client for TFS requests.</param>
+    /// <param name="allWorkItemIds">The set of all work item IDs (will be modified to add ancestors).</param>
+    /// <param name="relationsMap">The map of work item ID to parent ID (will be modified with new relations).</param>
+    /// <param name="progressCallback">Optional progress callback.</param>
+    /// <param name="updateHeartbeat">Callback to update activity heartbeat.</param>
+    /// <param name="checkInactivity">Callback to check for inactivity timeout.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Number of ancestor work items added.</returns>
+    private async Task<int> CompleteAncestorsAsync(
+        TfsConfigEntity config,
+        HttpClient httpClient,
+        HashSet<int> allWorkItemIds,
+        Dictionary<int, int?> relationsMap,
+        Action<int, int, string>? progressCallback,
+        Action updateHeartbeat,
+        Action checkInactivity,
+        CancellationToken cancellationToken)
+    {
+        var ancestorsAdded = 0;
+        var visitedAncestors = new HashSet<int>();
+        var missingParentIds = new HashSet<int>();
+        
+        // Step 1: Find all parent IDs that are not in our current set
+        foreach (var (childId, parentId) in relationsMap)
+        {
+            if (parentId.HasValue && !allWorkItemIds.Contains(parentId.Value))
+            {
+                missingParentIds.Add(parentId.Value);
+            }
+        }
+
+        if (missingParentIds.Count == 0)
+        {
+            _logger.LogInformation("No missing parent IDs found - hierarchy is complete");
+            return 0;
+        }
+
+        _logger.LogInformation("Found {Count} missing parent IDs, walking up hierarchy to fetch ancestors", 
+            missingParentIds.Count);
+
+        progressCallback?.Invoke(2, 3, $"Completing ancestors ({missingParentIds.Count} missing parents)...");
+
+        var currentDepth = 0;
+        var parentsToFetch = new Queue<int>(missingParentIds);
+        var hasMoreParents = parentsToFetch.Count > 0;
+
+        // Step 2: Walk up the hierarchy iteratively
+        while (hasMoreParents && currentDepth < MaxAncestorDepth && ancestorsAdded < MaxAncestorCount)
+        {
+            checkInactivity();
+            currentDepth++;
+
+            var batchToFetch = new List<int>();
+            while (parentsToFetch.Count > 0 && batchToFetch.Count < WorkItemBatchSize)
+            {
+                var parentId = parentsToFetch.Dequeue();
+                if (!visitedAncestors.Contains(parentId) && !allWorkItemIds.Contains(parentId))
+                {
+                    batchToFetch.Add(parentId);
+                    visitedAncestors.Add(parentId);
+                }
+            }
+
+            if (batchToFetch.Count == 0)
+            {
+                break;
+            }
+
+            _logger.LogDebug("Ancestor completion depth {Depth}: Fetching {Count} parent IDs", 
+                currentDepth, batchToFetch.Count);
+
+            progressCallback?.Invoke(2, 3, $"Fetching ancestors (depth {currentDepth}, {batchToFetch.Count} items)...");
+
+            // Fetch relations for this batch of parents
+            var relationsRequest = new WorkItemBatchRequest
+            {
+                Ids = batchToFetch.ToArray(),
+                Expand = "relations"
+            };
+
+            var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
+            using var relationsContent = new StringContent(
+                JsonSerializer.Serialize(relationsRequest),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            try
+            {
+                var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
+                updateHeartbeat();
+                await HandleHttpErrorsAsync(relationsResponse, cancellationToken);
+
+                using var relationsStream = await relationsResponse.Content.ReadAsStreamAsync(cancellationToken);
+                using var relationsDoc = await JsonDocument.ParseAsync(relationsStream, cancellationToken: cancellationToken);
+
+                // Process the fetched ancestors
+                foreach (var item in relationsDoc.RootElement.GetProperty("value").EnumerateArray())
+                {
+                    var id = item.GetProperty("id").GetInt32();
+                    
+                    // Add to our set of IDs
+                    if (allWorkItemIds.Add(id))
+                    {
+                        ancestorsAdded++;
+                        
+                        // Extract parent ID from this ancestor
+                        var parentId = ExtractParentIdFromRelations(item);
+                        relationsMap[id] = parentId;
+                        
+                        // If this ancestor has a parent that we don't have yet, queue it
+                        if (parentId.HasValue && 
+                            !allWorkItemIds.Contains(parentId.Value) && 
+                            !visitedAncestors.Contains(parentId.Value))
+                        {
+                            parentsToFetch.Enqueue(parentId.Value);
+                        }
+                    }
+                }
+
+                _logger.LogDebug("Ancestor completion depth {Depth}: Added {Count} ancestors, {Remaining} parents queued", 
+                    currentDepth, batchToFetch.Count, parentsToFetch.Count);
+                
+                // Update loop condition tracker
+                hasMoreParents = parentsToFetch.Count > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error fetching ancestors at depth {Depth}, continuing with partial hierarchy", currentDepth);
+                // Continue with partial results rather than failing completely
+                hasMoreParents = false;
+                break;
+            }
+        }
+
+        if (currentDepth >= MaxAncestorDepth)
+        {
+            _logger.LogWarning("Ancestor completion reached max depth {MaxDepth}, stopping (possible cycle or very deep hierarchy)", 
+                MaxAncestorDepth);
+        }
+
+        if (ancestorsAdded >= MaxAncestorCount)
+        {
+            _logger.LogWarning("Ancestor completion reached max total ancestors {MaxTotal}, stopping", 
+                MaxAncestorCount);
+        }
+
+        return ancestorsAdded;
     }
 }
