@@ -140,7 +140,8 @@ public class WorkItemInProgressWithoutEffortValidatorTests
             State: state,
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: effort
+            Effort: effort,
+                    Description: null
         );
     }
 }

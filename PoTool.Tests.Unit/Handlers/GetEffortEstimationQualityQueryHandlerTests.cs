@@ -266,7 +266,8 @@ public class GetEffortEstimationQualityQueryHandlerTests
             State: state,
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: effort
+            Effort: effort,
+                    Description: null
         );
     }
 
@@ -282,7 +283,8 @@ public class GetEffortEstimationQualityQueryHandlerTests
             State: state,
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: effort
+            Effort: effort,
+                    Description: null
         );
     }
 }

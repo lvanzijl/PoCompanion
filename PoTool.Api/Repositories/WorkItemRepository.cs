@@ -207,7 +207,8 @@ public class WorkItemRepository : IWorkItemRepository
             State: entity.State,
             JsonPayload: entity.JsonPayload,
             RetrievedAt: entity.RetrievedAt,
-            Effort: entity.Effort
+            Effort: entity.Effort,
+            Description: entity.Description
         );
     }
 
@@ -223,7 +224,9 @@ public class WorkItemRepository : IWorkItemRepository
             IterationPath = dto.IterationPath,
             State = dto.State,
             JsonPayload = dto.JsonPayload,
-            RetrievedAt = dto.RetrievedAt
+            RetrievedAt = dto.RetrievedAt,
+            Effort = dto.Effort,
+            Description = dto.Description
         };
     }
 }

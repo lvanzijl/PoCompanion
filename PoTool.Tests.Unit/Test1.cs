@@ -31,7 +31,8 @@ public sealed class WorkItemDtoTests
             State: state,
             JsonPayload: jsonPayload,
             RetrievedAt: retrievedAt,
-                    Effort: null
+                    Effort: null,
+                    Description: null
         );
 
         // Assert
@@ -59,7 +60,8 @@ public sealed class WorkItemDtoTests
             State: "Active",
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
-                    Effort: null
+                    Effort: null,
+                    Description: null
         );
 
         var dto2 = dto1 with { Title = "Modified Epic" };
@@ -85,7 +87,8 @@ public sealed class WorkItemDtoTests
             State: "Active",
             JsonPayload: "{}",
             RetrievedAt: now,
-                    Effort: null
+                    Effort: null,
+                    Description: null
         );
 
         var dto2 = new WorkItemDto(
@@ -98,7 +101,8 @@ public sealed class WorkItemDtoTests
             State: "Active",
             JsonPayload: "{}",
             RetrievedAt: now,
-                    Effort: null
+                    Effort: null,
+                    Description: null
         );
 
         // Act & Assert

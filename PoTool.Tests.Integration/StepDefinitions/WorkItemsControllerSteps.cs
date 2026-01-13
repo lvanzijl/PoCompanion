@@ -50,7 +50,8 @@ public class WorkItemsControllerSteps
                 State: row["State"],
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
-                    Effort: null
+                    Effort: null,
+                    Description: null
             );
 
             dbContext.WorkItems.Add(new WorkItemEntity
@@ -100,7 +101,8 @@ public class WorkItemsControllerSteps
                 State: row["State"],
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
-                    Effort: effort
+                    Effort: effort,
+                    Description: null
             );
 
             dbContext.WorkItems.Add(new WorkItemEntity

@@ -231,7 +231,8 @@ public class GetValidationImpactAnalysisQueryHandlerTests
             State: state,
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: null
+            Effort: null,
+                    Description: null
         );
     }
 
@@ -247,7 +248,8 @@ public class GetValidationImpactAnalysisQueryHandlerTests
             State: state,
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: null
+            Effort: null,
+                    Description: null
         );
     }
 }

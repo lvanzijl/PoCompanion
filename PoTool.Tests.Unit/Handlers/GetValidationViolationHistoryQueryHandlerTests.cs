@@ -179,7 +179,8 @@ public class GetValidationViolationHistoryQueryHandlerTests
             State: state,
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: null
+            Effort: null,
+                    Description: null
         );
     }
 
@@ -195,7 +196,8 @@ public class GetValidationViolationHistoryQueryHandlerTests
             State: state,
             JsonPayload: "{}",
             RetrievedAt: retrievedAt,
-            Effort: null
+            Effort: null,
+                    Description: null
         );
     }
 }

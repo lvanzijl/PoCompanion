@@ -314,7 +314,8 @@ public class GetEffortConcentrationRiskQueryHandlerTests
             State: "New",
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: effort
+            Effort: effort,
+                    Description: null
         );
     }
 }

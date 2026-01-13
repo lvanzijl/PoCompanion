@@ -76,6 +76,7 @@ public class RealTfsClient : ITfsClient
         "System.State",
         "System.AreaPath",
         "System.IterationPath",
+        "System.Description",
         TfsFieldEffort,
         TfsFieldStoryPoints
     };
@@ -434,6 +435,7 @@ public class RealTfsClient : ITfsClient
             var state = fields.TryGetProperty("System.State", out var s) ? s.GetString() ?? "" : "";
             var area = fields.TryGetProperty("System.AreaPath", out var a) ? a.GetString() ?? "" : "";
             var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
+            var description = fields.TryGetProperty("System.Description", out var d) ? d.GetString() : null;
 
             // Extract parent ID from relations
             var parentId = ExtractParentIdFromRelations(item);
@@ -451,7 +453,8 @@ public class RealTfsClient : ITfsClient
                 State: state,
                 JsonPayload: item.GetRawText(),
                 RetrievedAt: DateTimeOffset.UtcNow,
-                Effort: effort
+                Effort: effort,
+                Description: description
             );
 
             _logger.LogInformation("Retrieved work item {WorkItemId} from TFS: {Title}", id, title);
@@ -656,6 +659,7 @@ public class RealTfsClient : ITfsClient
                     var state = fields.TryGetProperty("System.State", out var s) ? s.GetString() ?? "" : "";
                     var area = fields.TryGetProperty("System.AreaPath", out var a) ? a.GetString() ?? "" : "";
                     var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
+                    var description = fields.TryGetProperty("System.Description", out var d) ? d.GetString() : null;
 
                     // Get parent ID from relations map (populated in Phase 1)
                     var parentId = relationsMap.TryGetValue(id, out var pid) ? pid : null;
@@ -674,7 +678,8 @@ public class RealTfsClient : ITfsClient
                         State: state,
                         JsonPayload: item.GetRawText(),
                         RetrievedAt: DateTimeOffset.UtcNow,
-                        Effort: effort
+                        Effort: effort,
+                        Description: description
                     ));
                 }
 
@@ -980,6 +985,7 @@ public class RealTfsClient : ITfsClient
                 var state = fields.TryGetProperty("System.State", out var s) ? s.GetString() ?? "" : "";
                 var area = fields.TryGetProperty("System.AreaPath", out var a) ? a.GetString() ?? "" : "";
                 var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
+                var description = fields.TryGetProperty("System.Description", out var d) ? d.GetString() : null;
 
                 var parentId = relationsMap.TryGetValue(id, out var pid) ? pid : null;
                 int? effort = ParseEffortField(fields);
@@ -994,7 +1000,8 @@ public class RealTfsClient : ITfsClient
                     State: state,
                     JsonPayload: item.GetRawText(),
                     RetrievedAt: DateTimeOffset.UtcNow,
-                    Effort: effort
+                    Effort: effort,
+                    Description: description
                 ));
             }
 

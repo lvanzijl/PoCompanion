@@ -269,7 +269,8 @@ public class GetEffortDistributionTrendQueryHandlerTests
             State: "New",
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: effort
+            Effort: effort,
+                    Description: null
         );
     }
 }
