@@ -167,6 +167,16 @@ public static class BoardRenderModelFactory
             {
                 renderRows.Add(CreateRenderRow(rowGroup.Key + 1, rowGroup.ToList(), dragState, false));
             }
+            
+            // For lanes with no rows at/after insertion point, we still need to show empty rows
+            // to maintain alignment across lanes
+            var maxOriginalRowIndex = rowGroups.Any() ? rowGroups.Max(g => g.Key) : -1;
+            if (maxOriginalRowIndex < insertRowIndex)
+            {
+                // No rows were pushed down, but we still need to show an empty row after the insertion
+                // This ensures all lanes have the same number of rows
+                // Actually, this is handled by the board-level MaxRowIndex calculation
+            }
         }
         else if (isPreviewingDropInThisLane && !dragState.IsInsertingNewRow)
         {
