@@ -1,0 +1,156 @@
+@using PoTool.Shared.ReleasePlanning
+
+<div class="lane-row-container @GetRowClass()" 
+     style="@GetRowStyle()"
+     @ondragover:preventDefault
+     @ondragover="@OnDragOver"
+     @ondrop="@OnDrop">
+    
+    @if (Row.LayoutType == RowLayoutType.Center)
+    {
+        <!-- Single epic: centered -->
+        <div class="lane-row-center">
+            @foreach (var card in Row.Cards)
+            {
+                @RenderCard(card)
+            }
+        </div>
+    }
+    else
+    {
+        <!-- Multiple epics: justified -->
+        <div class="lane-row-justify">
+            @foreach (var card in Row.Cards)
+            {
+                @RenderCard(card)
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public required RenderRow Row { get; set; }
+    
+    [Parameter]
+    public required LaneDto Lane { get; set; }
+    
+    [Parameter]
+    public bool IsDropTarget { get; set; }
+    
+    [Parameter]
+    public EventCallback OnDragOver { get; set; }
+    
+    [Parameter]
+    public EventCallback OnDrop { get; set; }
+    
+    [Parameter]
+    public EventCallback<EpicPlacementDto> OnEpicDragStart { get; set; }
+    
+    [Parameter]
+    public EventCallback<int> OnEpicSelected { get; set; }
+    
+    [Parameter]
+    public EventCallback<EpicMoveEventArgs> OnEpicMove { get; set; }
+    
+    [Parameter]
+    public EventCallback<EpicContextMenuEventArgs> OnEpicContextMenu { get; set; }
+    
+    [Parameter]
+    public EventCallback<EpicSplitEventArgs> OnEpicSplitRequested { get; set; }
+    
+    [Parameter]
+    public EventCallback<EpicViewDetailsEventArgs> OnEpicViewDetailsRequested { get; set; }
+    
+    [Parameter]
+    public int? SelectedPlacementId { get; set; }
+    
+    [Parameter]
+    public int? DraggingPlacementId { get; set; }
+    
+    private string GetRowClass()
+    {
+        var classes = new List<string>();
+        
+        if (Row.IsInsertedPreview)
+        {
+            classes.Add("lane-row-inserted-preview");
+        }
+        
+        if (IsDropTarget)
+        {
+            classes.Add("lane-row-drop-target");
+        }
+        
+        return string.Join(" ", classes);
+    }
+    
+    private string GetRowStyle()
+    {
+        // Fixed min-height for consistent row sizing
+        return "min-height: 80px;";
+    }
+    
+    private RenderFragment RenderCard(RenderCard card) => builder =>
+    {
+        if (card.IsPlaceholder)
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "class", "epic-card-placeholder");
+            
+            builder.OpenComponent<MudPaper>(2);
+            builder.AddAttribute(3, "Class", "pa-2");
+            builder.AddAttribute(4, "Elevation", 2);
+            builder.AddAttribute(5, "Style", "min-width: 180px; min-height: 60px; border: 2px dashed var(--mud-palette-primary); background-color: var(--mud-palette-primary-lighten);");
+            
+            builder.AddAttribute(6, "ChildContent", (RenderFragment)((builder2) =>
+            {
+                builder2.OpenComponent<MudText>(0);
+                builder2.AddAttribute(1, "Typo", Typo.body2);
+                builder2.AddAttribute(2, "Align", Align.Center);
+                builder2.AddAttribute(3, "Style", "opacity: 0.7;");
+                builder2.AddAttribute(4, "ChildContent", (RenderFragment)((builder3) =>
+                {
+                    builder3.AddContent(0, card.PlaceholderText);
+                }));
+                builder2.CloseComponent();
+            }));
+            
+            builder.CloseComponent();
+            builder.CloseElement();
+        }
+        else if (card.Placement != null)
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "class", GetEpicCardClass(card.Placement));
+            
+            builder.OpenComponent<EpicCard>(2);
+            builder.AddAttribute(3, "Placement", card.Placement);
+            builder.AddAttribute(4, "ObjectiveId", Lane.ObjectiveId);
+            builder.AddAttribute(5, "IsSelected", SelectedPlacementId == card.Placement.Id);
+            builder.AddAttribute(6, "OnDragStart", EventCallback.Factory.Create<(int, int, int)>(this, 
+                args => OnEpicDragStart.InvokeAsync(card.Placement)));
+            builder.AddAttribute(7, "OnSelected", EventCallback.Factory.Create<int>(this, 
+                OnEpicSelected));
+            builder.AddAttribute(8, "OnMove", OnEpicMove);
+            builder.AddAttribute(9, "OnContextMenu", OnEpicContextMenu);
+            builder.AddAttribute(10, "OnSplitRequested", OnEpicSplitRequested);
+            builder.AddAttribute(11, "OnViewDetailsRequested", OnEpicViewDetailsRequested);
+            builder.CloseComponent();
+            
+            builder.CloseElement();
+        }
+    };
+    
+    private string GetEpicCardClass(EpicPlacementDto placement)
+    {
+        var classes = new List<string> { "epic-card-wrapper" };
+        
+        if (DraggingPlacementId.HasValue && placement.Id == DraggingPlacementId.Value)
+        {
+            classes.Add("epic-being-dragged");
+        }
+        
+        return string.Join(" ", classes);
+    }
+}
