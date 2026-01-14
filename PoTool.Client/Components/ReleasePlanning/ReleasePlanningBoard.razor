@@ -23,7 +23,8 @@
         <!-- Unplanned Epics Source List -->
         <UnplannedEpicsList 
             Epics="_unplannedEpics"
-            OnEpicDrop="@HandleEpicDrop" />
+            OnEpicDrop="@HandleEpicDrop"
+            OnEpicDragStart="@(args => HandleUnplannedEpicDragStart(args.Item1, args.Item2))" />
 
         <!-- Board Container -->
         <MudPaper Class="board-container mt-4" Elevation="1">
@@ -72,7 +73,10 @@
                                     .ToList();
 
                                 <div class="lane-row flex-grow-1 pa-1"
-                                     style="border-right: 1px solid var(--mud-palette-lines-default);">
+                                     style="border-right: 1px solid var(--mud-palette-lines-default);"
+                                     @ondragover:preventDefault
+                                     @ondragover="@(() => HandleRowDragOver(lane.ObjectiveId, currentRow))"
+                                     @ondrop="@(async () => await HandleRowDrop(lane.ObjectiveId, currentRow))">
                                     <div class="d-flex flex-wrap gap-2">
                                         @foreach (var placement in lanePlacements)
                                         {
@@ -177,6 +181,11 @@
     private IReadOnlyList<UnplannedEpicDto>? _unplannedEpics;
     private bool _isLoading = true;
 
+    // Epic dragging state
+    private int? _draggingEpicId;
+    private int? _draggingObjectiveId;
+    private bool _isDraggingFromUnplanned;
+
     // Line dragging state
     private int? _draggingLineId;
     private bool _draggingIsMilestone;
@@ -213,6 +222,81 @@
             StateHasChanged();
         }
     }
+
+    #region Epic Drag and Drop
+
+    /// <summary>
+    /// Called when an epic starts being dragged from the unplanned list.
+    /// </summary>
+    private void HandleUnplannedEpicDragStart(int epicId, int objectiveId)
+    {
+        _draggingEpicId = epicId;
+        _draggingObjectiveId = objectiveId;
+        _isDraggingFromUnplanned = true;
+        Logger.LogDebug("Started dragging unplanned Epic {EpicId} from Objective {ObjectiveId}", epicId, objectiveId);
+    }
+
+    /// <summary>
+    /// Called when dragging over a lane row.
+    /// </summary>
+    private void HandleRowDragOver(int objectiveId, int rowIndex)
+    {
+        // Validate that the epic can be dropped here
+        // Per spec: Epics can only be placed in their parent Objective's lane
+        if (_draggingEpicId.HasValue && _draggingObjectiveId.HasValue)
+        {
+            if (_draggingObjectiveId.Value != objectiveId)
+            {
+                Logger.LogDebug("Cannot drop Epic {EpicId} into lane for different Objective {ObjectiveId}", 
+                    _draggingEpicId.Value, objectiveId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Called when an epic is dropped onto a lane row.
+    /// </summary>
+    private async Task HandleRowDrop(int objectiveId, int rowIndex)
+    {
+        if (!_draggingEpicId.HasValue || !_draggingObjectiveId.HasValue)
+        {
+            ResetEpicDragState();
+            return;
+        }
+
+        // Validate that epic belongs to this objective
+        if (_draggingObjectiveId.Value != objectiveId)
+        {
+            Snackbar.Add("Epics can only be placed in their parent Objective's lane", Severity.Warning);
+            ResetEpicDragState();
+            return;
+        }
+
+        if (_isDraggingFromUnplanned)
+        {
+            // Create a new placement
+            await HandleEpicDrop(new EpicDropEventArgs
+            {
+                EpicId = _draggingEpicId.Value,
+                ObjectiveId = objectiveId,
+                RowIndex = rowIndex
+            });
+        }
+
+        ResetEpicDragState();
+    }
+
+    /// <summary>
+    /// Resets epic drag state.
+    /// </summary>
+    private void ResetEpicDragState()
+    {
+        _draggingEpicId = null;
+        _draggingObjectiveId = null;
+        _isDraggingFromUnplanned = false;
+    }
+
+    #endregion
 
     private async Task HandleEpicDrop(EpicDropEventArgs args)
     {
