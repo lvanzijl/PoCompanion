@@ -84,6 +84,12 @@
     [Parameter]
     public EventCallback<EpicViewDetailsEventArgs> OnViewDetailsRequested { get; set; }
 
+    [Parameter]
+    public int ObjectiveId { get; set; } // Passed from parent to track lane ownership
+
+    [Parameter]
+    public EventCallback<(int PlacementId, int EpicId, int ObjectiveId)> OnDragStart { get; set; }
+
     private string GetCardStyle()
     {
         var borderColor = Placement.ValidationIndicator switch
@@ -128,9 +134,10 @@
         };
     }
 
-    private void HandleDragStart()
+    private async Task HandleDragStart()
     {
-        // Drag state management handled by parent
+        // Notify parent about which epic is being dragged
+        await OnDragStart.InvokeAsync((Placement.Id, Placement.EpicId, ObjectiveId));
     }
 
     private async Task HandleSplitEpic()

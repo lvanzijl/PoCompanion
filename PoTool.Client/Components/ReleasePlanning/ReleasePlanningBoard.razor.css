@@ -17,7 +17,12 @@
 .lane-header {
     min-width: 200px;
     text-align: center;
-    border-right: 1px solid var(--mud-palette-lines-default);
+    border-right: 2px solid var(--mud-palette-divider);
+    background-color: var(--mud-palette-surface);
+}
+
+.lane-header:nth-child(odd) {
+    background-color: var(--mud-palette-background-grey);
 }
 
 .lane-header:last-child {
@@ -35,6 +40,12 @@
 .lane-row {
     min-width: 200px;
     min-height: 70px;
+    background-color: var(--mud-palette-background);
+    padding: 8px;
+}
+
+.lane-row:nth-child(odd) {
+    background-color: var(--mud-palette-background-grey);
 }
 
 .lane-row:last-child {
@@ -141,4 +152,17 @@
         transform: scale(1.02);
         outline-color: var(--mud-palette-warning-darken);
     }
+}
+
+/* Drop target visual feedback */
+.lane-row.drop-target {
+    background-color: var(--mud-palette-primary-lighten);
+    outline: 2px dashed var(--mud-palette-primary);
+    outline-offset: -2px;
+    transition: all 0.2s ease;
+}
+
+/* Epic being dragged should be semi-transparent */
+.epic-being-dragged {
+    opacity: 0.5;
 }
