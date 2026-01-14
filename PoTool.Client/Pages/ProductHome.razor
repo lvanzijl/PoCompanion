@@ -766,6 +766,7 @@
         }
         
         // Load velocity data (limit to 6 sprints for averages)
+        // Note: Velocity API doesn't yet support productId filtering - shows global data for now
         try
         {
             _velocityData = await MetricsClient.GetVelocityTrendAsync(null, 6, cancellationToken);
@@ -782,6 +783,7 @@
         }
         
         // Load PR metrics (Phase 3)
+        // Note: PR metrics API doesn't support product filtering - shows global data for now
         try
         {
             _prMetrics = await PullRequestsClient.GetMetricsAsync(cancellationToken);
