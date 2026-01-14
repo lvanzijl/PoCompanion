@@ -1,0 +1,337 @@
+@page "/spikes/diagram-planning"
+@using Blazor.Diagrams.Core
+@using Blazor.Diagrams.Core.Models
+@using Blazor.Diagrams.Components
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Blazor.Diagrams Spike - Release Planning Board</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    <MudText Typo="Typo.h4" Class="mb-4">Blazor.Diagrams Spike - Release Planning Board</MudText>
+    
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-3">Unplanned Epics</MudText>
+        <MudStack Row="true" Spacing="2">
+            @foreach (var epic in _unplannedEpics)
+            {
+                <div draggable="true"
+                     @ondragstart="@(() => OnDragStart(epic))"
+                     @ondragend="OnDragEnd"
+                     style="display: inline-block; padding: 8px 16px; background: #1976d2; color: white; border-radius: 16px; cursor: grab; font-size: 14px;">
+                    @epic.Title
+                </div>
+            }
+        </MudStack>
+    </MudPaper>
+
+    <MudPaper Class="pa-4" Elevation="2" Style="min-height: 600px; position: relative;">
+        <MudText Typo="Typo.h6" Class="mb-3">Planning Board</MudText>
+        
+        <div style="display: flex; gap: 20px; height: 500px;">
+            <!-- Left Lane -->
+            <div style="flex: 1; border: 2px solid #e0e0e0; border-radius: 8px; padding: 16px; position: relative;"
+                 @ondrop="@((e) => OnDrop(e, "left"))"
+                 @ondragover="@((e) => OnDragOver(e, "left"))"
+                 @ondragleave="OnDragLeave">
+                <MudText Typo="Typo.subtitle1" Class="mb-2" Style="text-align: center;">Left Lane (Disabled for Spike)</MudText>
+                <div style="height: 100%; position: relative;" id="left-lane">
+                    <!-- Rows will be rendered here -->
+                    @RenderLane("left")
+                </div>
+            </div>
+
+            <!-- Right Lane -->
+            <div style="flex: 1; border: 2px solid #1976d2; border-radius: 8px; padding: 16px; position: relative;"
+                 @ondrop="@((e) => OnDrop(e, "right"))"
+                 @ondragover="@((e) => OnDragOver(e, "right"))"
+                 @ondragleave="OnDragLeave">
+                <MudText Typo="Typo.subtitle1" Class="mb-2" Style="text-align: center; color: #1976d2;">Right Lane (Active)</MudText>
+                <div style="height: 100%; position: relative;" id="right-lane">
+                    <!-- Rows and epics will be rendered here -->
+                    @RenderLane("right")
+                </div>
+            </div>
+        </div>
+        
+        <!-- SVG overlay for connectors -->
+        <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;" xmlns="http://www.w3.org/2000/svg">
+            @foreach (var connector in GetConnectors())
+            {
+                <path d="@connector.Path" 
+                      stroke="#1976d2" 
+                      stroke-width="2" 
+                      fill="none" 
+                      marker-end="url(#arrowhead)" />
+            }
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#1976d2" />
+                </marker>
+            </defs>
+        </svg>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    // Models
+    private class EpicModel
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+    }
+
+    private class EpicPlacement
+    {
+        public string EpicId { get; set; } = string.Empty;
+        public string LaneId { get; set; } = string.Empty;
+        public int RowIndex { get; set; }
+        public int OrderInRow { get; set; }
+    }
+
+    private class PreviewState
+    {
+        public string? HoverLaneId { get; set; }
+        public int? HoverRowIndex { get; set; }
+        public int? HoverInsertPosition { get; set; }
+        public bool IsInsertingNewRow { get; set; }
+        public string? DraggedEpicId { get; set; }
+    }
+
+    private class Connector
+    {
+        public string Path { get; set; } = string.Empty;
+    }
+
+    // Geometry constants
+    private const int ROW_HEIGHT = 100;
+    private const int EPIC_WIDTH = 120;
+    private const int EPIC_HEIGHT = 60;
+    private const int LANE_PADDING = 20;
+
+    // State
+    private List<EpicModel> _unplannedEpics = new();
+    private List<EpicPlacement> _placements = new();
+    private PreviewState? _preview;
+    private EpicModel? _draggedEpic;
+
+    protected override void OnInitialized()
+    {
+        // Initialize with 3 unplanned epics
+        _unplannedEpics = new List<EpicModel>
+        {
+            new EpicModel { Id = "E1", Title = "Epic 1" },
+            new EpicModel { Id = "E2", Title = "Epic 2" },
+            new EpicModel { Id = "E3", Title = "Epic 3" }
+        };
+
+        // Initialize right lane with 2 rows (empty initially)
+        // Rows will be created dynamically as epics are placed
+    }
+
+    private void OnDragStart(EpicModel epic)
+    {
+        _draggedEpic = epic;
+    }
+
+    private void OnDragEnd()
+    {
+        _draggedEpic = null;
+        _preview = null;
+    }
+
+    private void OnDragOver(DragEventArgs e, string laneId)
+    {
+        // DragOver handling
+        
+        // Only allow drops in right lane for this spike
+        if (laneId != "right" || _draggedEpic == null)
+            return;
+
+        // Calculate hovered row based on Y position
+        // For spike, we'll use simple top-to-bottom row calculation
+        var rowIndex = CalculateRowFromY(e.OffsetY);
+        
+        _preview = new PreviewState
+        {
+            HoverLaneId = laneId,
+            HoverRowIndex = rowIndex,
+            DraggedEpicId = _draggedEpic.Id
+        };
+
+        StateHasChanged();
+    }
+
+    private void OnDragLeave()
+    {
+        _preview = null;
+        StateHasChanged();
+    }
+
+    private void OnDrop(DragEventArgs e, string laneId)
+    {
+        // Drop handling
+        
+        // Only allow drops in right lane for this spike
+        if (laneId != "right" || _draggedEpic == null || _preview == null)
+            return;
+
+        // Remove from unplanned list
+        _unplannedEpics.Remove(_draggedEpic);
+
+        // Add placement
+        var rowIndex = _preview.HoverRowIndex ?? 0;
+        var existingInRow = _placements.Count(p => p.LaneId == laneId && p.RowIndex == rowIndex);
+        
+        _placements.Add(new EpicPlacement
+        {
+            EpicId = _draggedEpic.Id,
+            LaneId = laneId,
+            RowIndex = rowIndex,
+            OrderInRow = existingInRow
+        });
+
+        _draggedEpic = null;
+        _preview = null;
+
+        StateHasChanged();
+    }
+
+    private int CalculateRowFromY(double y)
+    {
+        // Simple calculation: divide Y by row height
+        return Math.Max(0, (int)(y / ROW_HEIGHT));
+    }
+
+    private RenderFragment RenderLane(string laneId)
+    {
+        return builder =>
+        {
+            var lanePlacements = _placements.Where(p => p.LaneId == laneId).ToList();
+            if (!lanePlacements.Any())
+            {
+                // Show placeholder rows
+                for (int i = 0; i < 2; i++)
+                {
+                    var rowY = i * ROW_HEIGHT;
+                    builder.OpenElement(0, "div");
+                    builder.AddAttribute(1, "style", $"position: absolute; top: {rowY}px; left: 0; right: 0; height: {ROW_HEIGHT}px; border-bottom: 1px dashed #ccc; display: flex; align-items: center; justify-content: center;");
+                    builder.OpenComponent<MudText>(2);
+                    builder.AddAttribute(3, "Typo", Typo.caption);
+                    builder.AddAttribute(4, "Style", "color: #999;");
+                    builder.AddAttribute(5, "ChildContent", (RenderFragment)(tc => tc.AddContent(6, $"Row {i + 1}")));
+                    builder.CloseComponent();
+                    builder.CloseElement();
+                }
+                return;
+            }
+
+            // Group by row
+            var rowGroups = lanePlacements.GroupBy(p => p.RowIndex).OrderBy(g => g.Key);
+            
+            foreach (var rowGroup in rowGroups)
+            {
+                var rowIndex = rowGroup.Key;
+                var rowY = rowIndex * ROW_HEIGHT;
+                var epicsInRow = rowGroup.OrderBy(p => p.OrderInRow).ToList();
+
+                // Render row container
+                builder.OpenElement(0, "div");
+                builder.AddAttribute(1, "style", $"position: absolute; top: {rowY}px; left: 0; right: 0; height: {ROW_HEIGHT}px; border-bottom: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; gap: 10px;");
+
+                // Render epics in row
+                foreach (var placement in epicsInRow)
+                {
+                    var epic = GetEpicById(placement.EpicId);
+                    if (epic != null)
+                    {
+                        builder.OpenComponent<MudPaper>(2);
+                        builder.AddAttribute(3, "Class", "pa-2");
+                        builder.AddAttribute(4, "Elevation", 3);
+                        builder.AddAttribute(5, "Style", $"width: {EPIC_WIDTH}px; height: {EPIC_HEIGHT}px; display: flex; align-items: center; justify-content: center; cursor: move; background: #fff;");
+                        builder.AddAttribute(6, "ChildContent", (RenderFragment)(ec =>
+                        {
+                            ec.OpenComponent<MudText>(0);
+                            ec.AddAttribute(1, "Typo", Typo.body2);
+                            ec.AddAttribute(2, "Align", Align.Center);
+                            ec.AddAttribute(3, "ChildContent", (RenderFragment)(tc => tc.AddContent(0, epic.Title)));
+                            ec.CloseComponent();
+                        }));
+                        builder.CloseComponent();
+                    }
+                }
+
+                builder.CloseElement();
+            }
+
+            // Show preview placeholder if hovering
+            if (_preview?.HoverLaneId == laneId && _preview.HoverRowIndex.HasValue)
+            {
+                var previewY = _preview.HoverRowIndex.Value * ROW_HEIGHT;
+                builder.OpenElement(0, "div");
+                builder.AddAttribute(1, "style", $"position: absolute; top: {previewY}px; left: 0; right: 0; height: {ROW_HEIGHT}px; background: rgba(25, 118, 210, 0.1); border: 2px dashed #1976d2; display: flex; align-items: center; justify-content: center;");
+                builder.OpenComponent<MudText>(2);
+                builder.AddAttribute(3, "Typo", Typo.body2);
+                builder.AddAttribute(4, "Style", "color: #1976d2;");
+                builder.AddAttribute(5, "ChildContent", (RenderFragment)(tc => tc.AddContent(6, "Drop here")));
+                builder.CloseComponent();
+                builder.CloseElement();
+            }
+        };
+    }
+
+    private EpicModel? GetEpicById(string epicId)
+    {
+        // Check in all epics (unplanned + create from placements)
+        var epic = _unplannedEpics.FirstOrDefault(e => e.Id == epicId);
+        if (epic != null) return epic;
+
+        // For placed epics, recreate from ID
+        return new EpicModel { Id = epicId, Title = epicId.Replace("E", "Epic ") };
+    }
+
+    private List<Connector> GetConnectors()
+    {
+        var connectors = new List<Connector>();
+        
+        // Only render connectors in right lane
+        var rightPlacements = _placements.Where(p => p.LaneId == "right").ToList();
+        if (rightPlacements.Count < 2)
+            return connectors;
+
+        // Group by row
+        var rowGroups = rightPlacements.GroupBy(p => p.RowIndex).OrderBy(g => g.Key).ToList();
+        
+        // Check if we have the specific pattern: 1 epic in row 1, 2 epics in row 2
+        if (rowGroups.Count >= 2)
+        {
+            var row1 = rowGroups.ElementAt(0);
+            var row2 = rowGroups.ElementAt(1);
+
+            if (row1.Count() == 1 && row2.Count() == 2)
+            {
+                // Draw split connectors from row 1 to row 2
+                var sourceY = (row1.Key * ROW_HEIGHT) + (ROW_HEIGHT / 2);
+                var targetY = (row2.Key * ROW_HEIGHT) + (ROW_HEIGHT / 2);
+                
+                // Approximate X positions (center of lane is at 50%)
+                var centerX = 250; // Approximate center of right lane
+                
+                // Split: one line from center splits to two targets
+                var leftTargetX = centerX - 60;
+                var rightTargetX = centerX + 60;
+                
+                // Draw Y-shaped connector
+                var midY = (sourceY + targetY) / 2;
+                
+                // Path: start at source, go down to mid, then split left and right
+                var path1 = $"M {centerX} {sourceY} L {centerX} {midY} L {leftTargetX} {targetY}";
+                var path2 = $"M {centerX} {midY} L {rightTargetX} {targetY}";
+                
+                connectors.Add(new Connector { Path = path1 });
+                connectors.Add(new Connector { Path = path2 });
+            }
+        }
+
+        return connectors;
+    }
+}
