@@ -1,0 +1,105 @@
+@using PoTool.Shared.ReleasePlanning
+
+<MudDialog>
+    <DialogContent>
+        @if (Epics == null || Epics.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">
+                All Epics are placed on the board.
+            </MudAlert>
+        }
+        else
+        {
+            <MudText Typo="Typo.subtitle1" Class="mb-3">
+                <strong>All Unplanned Epics (@Epics.Count total)</strong>
+            </MudText>
+
+            <MudList T="UnplannedEpicDto" Dense="true">
+                @foreach (var epic in Epics.OrderBy(e => e.ObjectiveTitle).ThenBy(e => e.TfsOrder))
+                {
+                    <MudListItem T="UnplannedEpicDto">
+                        <div class="d-flex flex-column gap-1">
+                            <div class="d-flex justify-space-between align-center">
+                                <div class="d-flex align-center gap-2 flex-grow-1">
+                                    @if (epic.ValidationIndicator != ValidationIndicator.None)
+                                    {
+                                        <MudIcon Icon="@GetValidationIcon(epic.ValidationIndicator)" 
+                                                 Color="@GetValidationColor(epic.ValidationIndicator)"
+                                                 Size="Size.Small" />
+                                    }
+                                    <MudText Typo="Typo.body2" Class="flex-grow-1">
+                                        @epic.Title
+                                    </MudText>
+                                    @if (epic.Effort.HasValue)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">
+                                            @epic.Effort pts
+                                        </MudChip>
+                                    }
+                                </div>
+                                <MudChip T="string" 
+                                         Size="Size.Small" 
+                                         Color="@GetStateColor(epic.State)" 
+                                         Variant="Variant.Text">
+                                    @epic.State
+                                </MudChip>
+                            </div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Objective: @epic.ObjectiveTitle
+                            </MudText>
+                        </div>
+                    </MudListItem>
+                    <MudDivider />
+                }
+            </MudList>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Color="Color.Default">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<UnplannedEpicDto>? Epics { get; set; }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private static string GetValidationIcon(ValidationIndicator indicator)
+    {
+        return indicator switch
+        {
+            ValidationIndicator.Error => Icons.Material.Filled.Error,
+            ValidationIndicator.Warning => Icons.Material.Filled.Warning,
+            _ => Icons.Material.Filled.CheckCircle
+        };
+    }
+
+    private static Color GetValidationColor(ValidationIndicator indicator)
+    {
+        return indicator switch
+        {
+            ValidationIndicator.Error => Color.Error,
+            ValidationIndicator.Warning => Color.Warning,
+            _ => Color.Success
+        };
+    }
+
+    private static Color GetStateColor(string state)
+    {
+        return state.ToLowerInvariant() switch
+        {
+            "active" => Color.Primary,
+            "new" => Color.Default,
+            "resolved" or "closed" or "done" => Color.Success,
+            "removed" => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+}
