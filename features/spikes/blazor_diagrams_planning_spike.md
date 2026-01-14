@@ -65,8 +65,10 @@ After evaluating Blazor.Diagrams for the Release Planning Board feature, the lib
 ### ⚠️ Version Compatibility Issue
 - Library targets .NET 8 (`Microsoft.AspNetCore.Components 8.0.0`)
 - Our codebase is .NET 10
-- Required suppressing `NU1608` warning to proceed
+- Required suppressing `NU1608` warning to proceed (added `<NoWarn>NU1608</NoWarn>` to PoTool.Client.csproj)
+- Transitive dependency issue affects solution build
 - **Risk:** Potential runtime incompatibilities or future breaking changes
+- **Note:** For production adoption, this would require library upgrade or codebase downgrade
 
 ### ⚠️ Freeform Design Paradigm
 - Blazor.Diagrams is built for **freeform** node placement
