@@ -211,6 +211,19 @@ public class ReleasePlanningService
         try
         {
             var response = await _httpClient.DeleteAsync($"api/releaseplanning/placements/{placementId}", cancellationToken);
+            
+            // Check if the response was successful before deserializing
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to delete placement {PlacementId}. Status: {StatusCode}", 
+                    placementId, response.StatusCode);
+                return new EpicPlacementResultDto 
+                { 
+                    Success = false, 
+                    ErrorMessage = $"Server returned {response.StatusCode}" 
+                };
+            }
+            
             return await response.Content.ReadFromJsonAsync<EpicPlacementResultDto>(cancellationToken);
         }
         catch (Exception ex)
