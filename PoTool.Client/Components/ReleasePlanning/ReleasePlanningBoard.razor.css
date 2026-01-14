@@ -156,7 +156,7 @@
 
 /* Drop target visual feedback */
 .lane-row.drop-target {
-    background-color: var(--mud-palette-primary-lighten) !important;
+    background-color: var(--mud-palette-primary-lighten);
     outline: 2px dashed var(--mud-palette-primary);
     outline-offset: -2px;
     transition: all 0.2s ease;

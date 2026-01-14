@@ -127,6 +127,7 @@
     private void HandleRemoveStaged(UnplannedEpicDto epic)
     {
         StagedEpics?.Remove(epic);
+        StateHasChanged();
     }
 
     private static Color GetValidationColor(ValidationIndicator indicator)

@@ -408,11 +408,7 @@
             Snackbar.Add("Epic placed on board", Severity.Success);
             
             // Remove from staged epics if it was there
-            var stagedEpic = _stagedEpics.FirstOrDefault(e => e.EpicId == args.EpicId);
-            if (stagedEpic != null)
-            {
-                _stagedEpics.Remove(stagedEpic);
-            }
+            _stagedEpics.RemoveAll(e => e.EpicId == args.EpicId);
             
             await LoadBoardAsync();
         }
