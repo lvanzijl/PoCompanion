@@ -593,6 +593,9 @@
     private string _syncType = "";
     private SyncProgressPanel? _syncProgressPanel;
     
+    // Cancellation for dashboard data loading (prevents race conditions)
+    private CancellationTokenSource? _dashboardLoadCts;
+    
     // Profile and products
     private ProfileDto? _activeProfile;
     private List<ProductDto> _products = new();
@@ -619,6 +622,10 @@
     {
         SyncHubService.OnSyncProgressReceived -= HandleSyncProgress;
         SyncHubService.OnSyncStatusChanged -= HandleSyncStatusChanged;
+        
+        // Cancel any pending dashboard load operations
+        _dashboardLoadCts?.Cancel();
+        _dashboardLoadCts?.Dispose();
     }
 
     private void HandleSyncProgress(SyncProgressDto progress)
@@ -733,7 +740,7 @@
     /// For "All products" mode (productId = AllProductsId), aggregates data across all products.
     /// For single product mode, filters data to that product's hierarchy.
     /// </summary>
-    private async Task LoadDashboardDataAsync()
+    private async Task LoadDashboardDataAsync(CancellationToken cancellationToken = default)
     {
         // Determine product scope for API calls
         // AllProductsId (0) means aggregate view - pass null to backend
@@ -745,7 +752,11 @@
         // Load health data (limit to 3 iterations for summary)
         try
         {
-            _healthData = await MetricsClient.GetMultiIterationBacklogHealthAsync(productIdForQuery, null, 3);
+            _healthData = await MetricsClient.GetMultiIterationBacklogHealthAsync(productIdForQuery, null, 3, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // Propagate cancellation
         }
         catch (Exception ex)
         {
@@ -757,7 +768,11 @@
         // Load velocity data (limit to 6 sprints for averages)
         try
         {
-            _velocityData = await MetricsClient.GetVelocityTrendAsync(null, 6);
+            _velocityData = await MetricsClient.GetVelocityTrendAsync(null, 6, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // Propagate cancellation
         }
         catch (Exception ex)
         {
@@ -769,7 +784,11 @@
         // Load PR metrics (Phase 3)
         try
         {
-            _prMetrics = await PullRequestsClient.GetMetricsAsync();
+            _prMetrics = await PullRequestsClient.GetMetricsAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // Propagate cancellation
         }
         catch (Exception ex)
         {
@@ -865,6 +884,11 @@
         
         _selectedProductId = newProductId;
         
+        // Cancel any pending dashboard load
+        _dashboardLoadCts?.Cancel();
+        _dashboardLoadCts?.Dispose();
+        _dashboardLoadCts = new CancellationTokenSource();
+        
         // Show loading indicator while reloading data
         _isLoading = true;
         StateHasChanged();
@@ -875,7 +899,17 @@
             await LoadSelectedProductDetailsAsync();
             
             // Reload all dashboard data with new product scope
-            await LoadDashboardDataAsync();
+            await LoadDashboardDataAsync(_dashboardLoadCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation - user switched products again
+            Console.WriteLine("[ProductHome] Dashboard load cancelled due to product change");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductHome] Error loading dashboard data: {ex.Message}");
+            _errorMessage = $"Error loading dashboard data: {ex.Message}";
         }
         finally
         {
