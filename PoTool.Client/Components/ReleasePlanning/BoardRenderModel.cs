@@ -225,9 +225,10 @@ public static class BoardRenderModelFactory
         DragState dragState,
         bool isInsertedPreview)
     {
+        // DO NOT filter out the dragging placement - keep it in place with visual styling
+        // The .epic-being-dragged CSS class will make it semi-transparent
         var cards = placements
             .OrderBy(p => p.OrderInRow)
-            .Where(p => !dragState.DraggingPlacementId.HasValue || p.Id != dragState.DraggingPlacementId.Value)
             .Select(p => new RenderCard { Placement = p })
             .ToList();
         
@@ -244,9 +245,9 @@ public static class BoardRenderModelFactory
         List<EpicPlacementDto> placements,
         DragState dragState)
     {
+        // Keep all placements including the one being dragged (it will be styled as semi-transparent)
         var cards = placements
             .OrderBy(p => p.OrderInRow)
-            .Where(p => !dragState.DraggingPlacementId.HasValue || p.Id != dragState.DraggingPlacementId.Value)
             .Select(p => new RenderCard { Placement = p })
             .ToList();
         
