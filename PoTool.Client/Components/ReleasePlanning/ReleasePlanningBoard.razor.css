@@ -5,6 +5,16 @@
     --animation-duration-highlight: 0.6s;
 }
 
+.release-planning-board:focus {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 4px;
+}
+
+.release-planning-board:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 4px;
+}
+
 .board-container {
     overflow-x: auto;
 }
@@ -52,15 +62,17 @@
     border-right: none;
 }
 
-/* Milestone Lines - visually dominant */
+/* Milestone Lines - visually dominant, full width */
 .milestone-line {
     position: relative;
     padding: 4px 0;
+    width: 100%;
 }
 
 .milestone-line-divider {
     border-color: var(--mud-palette-primary) !important;
     border-width: 2px !important;
+    width: 100%;
 }
 
 .milestone-line .line-label {
@@ -68,18 +80,21 @@
     left: 8px;
     top: 50%;
     transform: translateY(-50%);
+    z-index: 10;
 }
 
-/* Iteration Lines - visually secondary */
+/* Iteration Lines - visually secondary, full width */
 .iteration-line {
     position: relative;
     padding: 4px 0;
+    width: 100%;
 }
 
 .iteration-line-divider {
     border-color: var(--mud-palette-secondary) !important;
     border-width: 1px !important;
     border-style: dashed !important;
+    width: 100%;
 }
 
 .iteration-line .line-label {
@@ -87,6 +102,7 @@
     left: 8px;
     top: 50%;
     transform: translateY(-50%);
+    z-index: 10;
 }
 
 /* Draggable lines styling */
@@ -165,4 +181,40 @@
 /* Epic being dragged should be semi-transparent */
 .epic-being-dragged {
     opacity: 0.5;
+}
+
+/* Epic card selection state */
+.epic-card-selected {
+    outline: 3px solid var(--mud-palette-primary) !important;
+    outline-offset: 2px;
+    box-shadow: var(--mud-elevation-8) !important;
+    background-color: var(--mud-palette-primary-lighten) !important;
+}
+
+/* Drop zones between rows */
+.drop-zone-between-rows {
+    min-height: 20px;
+    transition: all 0.2s ease;
+}
+
+.drop-zone-between-rows:hover {
+    background-color: var(--mud-palette-primary-lighten);
+}
+
+.drop-placeholder {
+    text-align: center;
+    color: var(--mud-palette-primary);
+    font-size: 0.875rem;
+    padding: 4px;
+    background-color: var(--mud-palette-primary-lighten);
+    border: 2px dashed var(--mud-palette-primary);
+    border-radius: 4px;
+    margin: 0 8px;
+}
+
+/* Lines container - full width, pointer events managed per element */
+.lines-container {
+    width: 100%;
+    position: relative;
+    pointer-events: none;
 }

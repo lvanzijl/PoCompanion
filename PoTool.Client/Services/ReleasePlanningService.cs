@@ -201,6 +201,38 @@ public class ReleasePlanningService
         }
     }
 
+    /// <summary>
+    /// Deletes an Epic placement from the board (returns it to unplanned list).
+    /// </summary>
+    public async Task<EpicPlacementResultDto?> DeletePlacementAsync(
+        int placementId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.DeleteAsync($"api/releaseplanning/placements/{placementId}", cancellationToken);
+            
+            // Check if the response was successful before deserializing
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to delete placement {PlacementId}. Status: {StatusCode}", 
+                    placementId, response.StatusCode);
+                return new EpicPlacementResultDto 
+                { 
+                    Success = false, 
+                    ErrorMessage = $"Server returned {response.StatusCode}" 
+                };
+            }
+            
+            return await response.Content.ReadFromJsonAsync<EpicPlacementResultDto>(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting Epic placement {PlacementId}", placementId);
+            return null;
+        }
+    }
+
     #endregion
 
     #region Line Operations
