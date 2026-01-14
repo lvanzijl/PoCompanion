@@ -510,7 +510,7 @@ public class RealTfsClient : ITfsClient
                 AreaPath: area,
                 IterationPath: iteration,
                 State: state,
-                JsonPayload: item.GetRawText(),
+                JsonPayload: item.GetRawText(), // Note: Contains fields only, not relations (TFS Server 2022 limitation)
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: effort,
                 Description: description
