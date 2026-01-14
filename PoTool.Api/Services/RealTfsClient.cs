@@ -444,9 +444,8 @@ public class RealTfsClient : ITfsClient
                 return null;
             }
 
-            // Extract parent ID from relations
+            // Save relations item for parent ID extraction (do extraction after Phase 2 validation)
             var relationsItem = relationsItems[0];
-            var parentId = ExtractParentIdFromRelations(relationsItem);
 
             // Phase 2: Fetch fields to get work item data
             _logger.LogDebug("Phase 2: Fetching fields for work item {WorkItemId}", workItemId);
@@ -462,6 +461,14 @@ public class RealTfsClient : ITfsClient
                 "application/json");
 
             var fieldsResponse = await httpClient.PostAsync(batchUrl, fieldsContent, cancellationToken);
+            
+            // If work item not found in Phase 2, return null
+            if (fieldsResponse.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogDebug("Work item {WorkItemId} not found in TFS fields response", workItemId);
+                return null;
+            }
+
             await HandleHttpErrorsAsync(fieldsResponse, cancellationToken);
 
             using var fieldsStream = await fieldsResponse.Content.ReadAsStreamAsync(cancellationToken);
@@ -493,6 +500,9 @@ public class RealTfsClient : ITfsClient
 
             // Extract effort field with robust parsing
             int? effort = ParseEffortField(fields);
+
+            // Extract parent ID from relations (after Phase 2 validation to avoid unnecessary work)
+            var parentId = ExtractParentIdFromRelations(relationsItem);
 
             var workItem = new WorkItemDto(
                 TfsId: id,
