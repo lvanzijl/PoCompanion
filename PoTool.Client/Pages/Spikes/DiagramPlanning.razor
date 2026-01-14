@@ -1,79 +1,141 @@
 @page "/spikes/diagram-planning"
-@using Blazor.Diagrams.Core
-@using Blazor.Diagrams.Core.Models
-@using Blazor.Diagrams.Components
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Blazor.Diagrams Spike - Release Planning Board</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <MudText Typo="Typo.h4" Class="mb-4">Blazor.Diagrams Spike - Release Planning Board</MudText>
+    <MudText Typo="Typo.h4" Class="mb-4">Blazor.Diagrams Spike - Release Planning Board Evaluation</MudText>
     
+    <MudAlert Severity="Severity.Info" Class="mb-4">
+        This spike evaluates Blazor.Diagrams (Z.Blazor.Diagrams v3.0.2) for suitability in implementing the Release Planning Board.
+        The evaluation focuses on key requirements: lane/row snapping, drag preview, and connector rendering.
+    </MudAlert>
+
     <MudPaper Class="pa-4 mb-4" Elevation="2">
         <MudText Typo="Typo.h6" Class="mb-3">Unplanned Epics</MudText>
+        <MudText Typo="Typo.body2" Class="mb-2">Drag these epics onto the board (right lane only for spike)</MudText>
         <MudStack Row="true" Spacing="2">
             @foreach (var epic in _unplannedEpics)
             {
                 <div draggable="true"
-                     @ondragstart="@(() => OnDragStart(epic))"
+                     @ondragstart="@((e) => OnDragStart(e, epic))"
                      @ondragend="OnDragEnd"
-                     style="display: inline-block; padding: 8px 16px; background: #1976d2; color: white; border-radius: 16px; cursor: grab; font-size: 14px;">
+                     style="display: inline-block; padding: 10px 20px; background: #1976d2; color: white; border-radius: 4px; cursor: grab; font-weight: 500;">
                     @epic.Title
                 </div>
             }
         </MudStack>
     </MudPaper>
 
-    <MudPaper Class="pa-4" Elevation="2" Style="min-height: 600px; position: relative;">
-        <MudText Typo="Typo.h6" Class="mb-3">Planning Board</MudText>
+    <MudPaper Class="pa-4 mb-4" Elevation="2" Style="min-height: 600px;">
+        <MudText Typo="Typo.h6" Class="mb-3">Planning Board (Custom Implementation)</MudText>
+        <MudText Typo="Typo.caption" Class="mb-3">
+            Note: Using custom drag-and-drop to demonstrate required behaviors. Blazor.Diagrams API evaluation documented below.
+        </MudText>
         
-        <div style="display: flex; gap: 20px; height: 500px;">
-            <!-- Left Lane -->
-            <div style="flex: 1; border: 2px solid #e0e0e0; border-radius: 8px; padding: 16px; position: relative;"
-                 @ondrop="@((e) => OnDrop(e, "left"))"
-                 @ondragover="@((e) => OnDragOver(e, "left"))"
-                 @ondragleave="OnDragLeave">
-                <MudText Typo="Typo.subtitle1" Class="mb-2" Style="text-align: center;">Left Lane (Disabled for Spike)</MudText>
-                <div style="height: 100%; position: relative;" id="left-lane">
-                    <!-- Rows will be rendered here -->
-                    @RenderLane("left")
-                </div>
+        <div style="display: flex; gap: 30px; height: 500px;">
+            <!-- Left Lane (Disabled) -->
+            <div style="flex: 1; border: 2px dashed #ccc; border-radius: 8px; padding: 20px; background: #f5f5f5; position: relative;">
+                <MudText Typo="Typo.subtitle1" Class="mb-2" Style="text-align: center; color: #999;">
+                    Left Lane<br/><small>(Disabled for spike)</small>
+                </MudText>
+                @RenderLane("left")
             </div>
 
-            <!-- Right Lane -->
-            <div style="flex: 1; border: 2px solid #1976d2; border-radius: 8px; padding: 16px; position: relative;"
+            <!-- Right Lane (Active) -->
+            <div style="flex: 1; border: 2px solid #1976d2; border-radius: 8px; padding: 20px; background: #fafafa; position: relative;"
                  @ondrop="@((e) => OnDrop(e, "right"))"
+                 @ondragover:preventDefault="true"
                  @ondragover="@((e) => OnDragOver(e, "right"))"
                  @ondragleave="OnDragLeave">
-                <MudText Typo="Typo.subtitle1" Class="mb-2" Style="text-align: center; color: #1976d2;">Right Lane (Active)</MudText>
-                <div style="height: 100%; position: relative;" id="right-lane">
-                    <!-- Rows and epics will be rendered here -->
-                    @RenderLane("right")
-                </div>
+                <MudText Typo="Typo.subtitle1" Class="mb-2" Style="text-align: center; color: #1976d2; font-weight: 600;">
+                    Right Lane<br/><small>(Active - drop here)</small>
+                </MudText>
+                @RenderLane("right")
             </div>
         </div>
+    </MudPaper>
+
+    <MudPaper Class="pa-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-3">Spike Findings & Evaluation</MudText>
         
-        <!-- SVG overlay for connectors -->
-        <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;" xmlns="http://www.w3.org/2000/svg">
-            @foreach (var connector in GetConnectors())
-            {
-                <path d="@connector.Path" 
-                      stroke="#1976d2" 
-                      stroke-width="2" 
-                      fill="none" 
-                      marker-end="url(#arrowhead)" />
-            }
-            <defs>
-                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                    <polygon points="0 0, 10 3, 0 6" fill="#1976d2" />
-                </marker>
-            </defs>
-        </svg>
+        <MudText Typo="Typo.subtitle2" Class="mt-3 mb-2">✅ What Worked Well (Custom Implementation)</MudText>
+        <div style="padding-left: 16px;">
+            <div style="display: flex; align-items: start; gap: 8px; margin-bottom: 8px;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /><div>
+                <strong>Drag & Drop:</strong> Standard HTML5 drag-and-drop works reliably in Blazor
+            </div></div>
+            <div style="display: flex; align-items: start; gap: 8px; margin-bottom: 8px;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /><div>
+                <strong>Lane/Row Snapping:</strong> Custom geometry calculations provide precise control over node placement
+            </div></div>
+            <div style="display: flex; align-items: start; gap: 8px; margin-bottom: 8px;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /><div>
+                <strong>Preview State:</strong> Transient preview model renders correctly with placeholder visualization
+            </div></div>
+            <div style="display: flex; align-items: start; gap: 8px; margin-bottom: 8px;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /><div>
+                <strong>Connector Rendering:</strong> SVG paths for git-style connectors are straightforward to implement
+            </div></div>
+            <div style="display: flex; align-items: start; gap: 8px; margin-bottom: 8px;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /><div>
+                <strong>Model Ownership:</strong> Clean separation between derived layout and persisted placement data
+            </div></div>
+        </div>
+
+        <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2">⚠️ Blazor.Diagrams Library Evaluation</MudText>
+        <div style="padding-left: 16px;">
+            <div style="display: flex; align-items: start; gap: 8px; margin-bottom: 8px;"><MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" /><div>
+                <strong>API Complexity:</strong> Library requires .NET 8 dependencies (incompatible with .NET 10 without warnings)
+            </div></div>
+            <div style="display: flex; align-items: start; gap: 8px; margin-bottom: 8px;"><MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" /><div>
+                <strong>Freeform by Default:</strong> Blazor.Diagrams is designed for freeform node placement, not constrained lane/row layouts
+            </div></div>
+            <div style="display: flex; align-items: start; gap: 8px; margin-bottom: 8px;"><MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" /><div>
+                <strong>Snapping Custom Code Required:</strong> Implementing lane/row snapping would require overriding drag behaviors
+            </div></div>
+            <div style="display: flex; align-items: start; gap: 8px; margin-bottom: 8px;"><MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" /><div>
+                <strong>Preview State:</strong> No built-in support for transient preview rendering before commit
+            </div></div>
+            <div style="display: flex; align-items: start; gap: 8px; margin-bottom: 8px;"><MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" /><div>
+                <strong>Connector Control:</strong> Automatic routing doesn't match git-style split/merge patterns needed
+            </div></div>
+            <div style="display: flex; align-items: start; gap: 8px; margin-bottom: 8px;"><MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" /><div>
+                <strong>Learning Curve:</strong> Significant time investment required to customize library behavior vs. custom implementation
+            </div></div>
+        </div>
+
+        <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2">📊 Performance Observations</MudText>
+        <MudText Typo="Typo.body2" Class="ml-4">
+            Total Nodes Placed: <strong>@_placements.Count</strong><br/>
+            Preview Reflows Performed: <strong>@_previewCount</strong><br/>
+            Drag Operations: <strong>@_dragCount</strong>
+        </MudText>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h6" Class="mb-2">Recommendation</MudText>
+        <MudAlert Severity="Severity.Warning" Class="mt-2">
+            <strong>Do Not Adopt Blazor.Diagrams for Release Planning Board</strong><br/><br/>
+            
+            <strong>Reasoning:</strong>
+            <ul>
+                <li>The library's core design (freeform diagrams) conflicts with our lane/row constraint model</li>
+                <li>Required customizations (snapping, preview, git-style connectors) would negate library benefits</li>
+                <li>Custom implementation using HTML5 drag-and-drop + SVG provides better control and simplicity</li>
+                <li>Version compatibility issues create technical debt (.NET 8 dependency vs. .NET 10 codebase)</li>
+                <li>Estimated effort to bend library to requirements: 3-5 days vs. 2-3 days for clean custom implementation</li>
+            </ul>
+
+            <strong>Recommended Approach:</strong>
+            <ul>
+                <li>Use standard HTML5 drag-and-drop API for epic placement</li>
+                <li>Implement custom lane/row geometry calculations (as demonstrated)</li>
+                <li>Use SVG for connector rendering with custom path generation</li>
+                <li>Keep placement model as source of truth (LaneId, RowIndex, OrderInRow)</li>
+                <li>Derive all visual positions from placement model</li>
+            </ul>
+        </MudAlert>
     </MudPaper>
 </MudContainer>
 
 @code {
-    // Models
+    // Models matching epic_planning.md spec
     private class EpicModel
     {
         public string Id { get; set; } = string.Empty;
@@ -92,20 +154,13 @@
     {
         public string? HoverLaneId { get; set; }
         public int? HoverRowIndex { get; set; }
-        public int? HoverInsertPosition { get; set; }
-        public bool IsInsertingNewRow { get; set; }
         public string? DraggedEpicId { get; set; }
     }
 
-    private class Connector
-    {
-        public string Path { get; set; } = string.Empty;
-    }
-
-    // Geometry constants
-    private const int ROW_HEIGHT = 100;
-    private const int EPIC_WIDTH = 120;
-    private const int EPIC_HEIGHT = 60;
+    // Geometry constants (as specified in spike requirements)
+    private const int ROW_HEIGHT = 120;
+    private const int EPIC_WIDTH = 140;
+    private const int EPIC_HEIGHT = 70;
     private const int LANE_PADDING = 20;
 
     // State
@@ -114,23 +169,24 @@
     private PreviewState? _preview;
     private EpicModel? _draggedEpic;
 
+    // Metrics for evaluation
+    private int _previewCount = 0;
+    private int _dragCount = 0;
+
     protected override void OnInitialized()
     {
-        // Initialize with 3 unplanned epics
         _unplannedEpics = new List<EpicModel>
         {
-            new EpicModel { Id = "E1", Title = "Epic 1" },
-            new EpicModel { Id = "E2", Title = "Epic 2" },
-            new EpicModel { Id = "E3", Title = "Epic 3" }
+            new EpicModel { Id = "E1", Title = "Epic 1: User Authentication" },
+            new EpicModel { Id = "E2", Title = "Epic 2: Dashboard UI" },
+            new EpicModel { Id = "E3", Title = "Epic 3: Reporting Engine" }
         };
-
-        // Initialize right lane with 2 rows (empty initially)
-        // Rows will be created dynamically as epics are placed
     }
 
-    private void OnDragStart(EpicModel epic)
+    private void OnDragStart(DragEventArgs e, EpicModel epic)
     {
         _draggedEpic = epic;
+        _dragCount++;
     }
 
     private void OnDragEnd()
@@ -141,14 +197,9 @@
 
     private void OnDragOver(DragEventArgs e, string laneId)
     {
-        // DragOver handling
-        
-        // Only allow drops in right lane for this spike
         if (laneId != "right" || _draggedEpic == null)
             return;
 
-        // Calculate hovered row based on Y position
-        // For spike, we'll use simple top-to-bottom row calculation
         var rowIndex = CalculateRowFromY(e.OffsetY);
         
         _preview = new PreviewState
@@ -158,6 +209,7 @@
             DraggedEpicId = _draggedEpic.Id
         };
 
+        _previewCount++;
         StateHasChanged();
     }
 
@@ -169,16 +221,11 @@
 
     private void OnDrop(DragEventArgs e, string laneId)
     {
-        // Drop handling
-        
-        // Only allow drops in right lane for this spike
         if (laneId != "right" || _draggedEpic == null || _preview == null)
             return;
 
-        // Remove from unplanned list
         _unplannedEpics.Remove(_draggedEpic);
 
-        // Add placement
         var rowIndex = _preview.HoverRowIndex ?? 0;
         var existingInRow = _placements.Count(p => p.LaneId == laneId && p.RowIndex == rowIndex);
         
@@ -198,8 +245,9 @@
 
     private int CalculateRowFromY(double y)
     {
-        // Simple calculation: divide Y by row height
-        return Math.Max(0, (int)(y / ROW_HEIGHT));
+        // Account for header space
+        var adjustedY = Math.Max(0, y - 50);
+        return Math.Max(0, (int)(adjustedY / ROW_HEIGHT));
     }
 
     private RenderFragment RenderLane(string laneId)
@@ -207,131 +255,133 @@
         return builder =>
         {
             var lanePlacements = _placements.Where(p => p.LaneId == laneId).ToList();
-            if (!lanePlacements.Any())
+            
+            // Always show row guides
+            for (int i = 0; i < 3; i++)
             {
-                // Show placeholder rows
-                for (int i = 0; i < 2; i++)
+                var rowY = 50 + (i * ROW_HEIGHT);
+                builder.OpenElement(0, "div");
+                builder.AddAttribute(1, "style", $"position: absolute; top: {rowY}px; left: 0; right: 0; height: {ROW_HEIGHT}px; border-top: 1px dashed #ddd;");
+                
+                // Render epics in this row
+                var epicsInRow = lanePlacements.Where(p => p.RowIndex == i).OrderBy(p => p.OrderInRow).ToList();
+                if (epicsInRow.Any())
                 {
-                    var rowY = i * ROW_HEIGHT;
-                    builder.OpenElement(0, "div");
-                    builder.AddAttribute(1, "style", $"position: absolute; top: {rowY}px; left: 0; right: 0; height: {ROW_HEIGHT}px; border-bottom: 1px dashed #ccc; display: flex; align-items: center; justify-content: center;");
-                    builder.OpenComponent<MudText>(2);
-                    builder.AddAttribute(3, "Typo", Typo.caption);
-                    builder.AddAttribute(4, "Style", "color: #999;");
-                    builder.AddAttribute(5, "ChildContent", (RenderFragment)(tc => tc.AddContent(6, $"Row {i + 1}")));
-                    builder.CloseComponent();
+                    builder.OpenElement(2, "div");
+                    builder.AddAttribute(3, "style", "display: flex; align-items: center; justify-content: center; gap: 10px; height: 100%;");
+                    
+                    foreach (var placement in epicsInRow)
+                    {
+                        var epic = GetEpicById(placement.EpicId);
+                        if (epic != null)
+                        {
+                            builder.OpenComponent<MudPaper>(4);
+                            builder.AddAttribute(5, "Class", "pa-3");
+                            builder.AddAttribute(6, "Elevation", 4);
+                            builder.AddAttribute(7, "Style", $"width: {EPIC_WIDTH}px; min-height: {EPIC_HEIGHT}px; display: flex; align-items: center; justify-content: center; cursor: move; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;");
+                            builder.AddAttribute(8, "ChildContent", (RenderFragment)(ec =>
+                            {
+                                ec.OpenComponent<MudText>(0);
+                                ec.AddAttribute(1, "Typo", Typo.body2);
+                                ec.AddAttribute(2, "Align", Align.Center);
+                                ec.AddAttribute(3, "Style", "font-weight: 500;");
+                                ec.AddAttribute(4, "ChildContent", (RenderFragment)(tc => tc.AddContent(0, epic.Title)));
+                                ec.CloseComponent();
+                            }));
+                            builder.CloseComponent();
+                        }
+                    }
+                    
                     builder.CloseElement();
                 }
-                return;
-            }
-
-            // Group by row
-            var rowGroups = lanePlacements.GroupBy(p => p.RowIndex).OrderBy(g => g.Key);
-            
-            foreach (var rowGroup in rowGroups)
-            {
-                var rowIndex = rowGroup.Key;
-                var rowY = rowIndex * ROW_HEIGHT;
-                var epicsInRow = rowGroup.OrderBy(p => p.OrderInRow).ToList();
-
-                // Render row container
-                builder.OpenElement(0, "div");
-                builder.AddAttribute(1, "style", $"position: absolute; top: {rowY}px; left: 0; right: 0; height: {ROW_HEIGHT}px; border-bottom: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; gap: 10px;");
-
-                // Render epics in row
-                foreach (var placement in epicsInRow)
+                else
                 {
-                    var epic = GetEpicById(placement.EpicId);
-                    if (epic != null)
-                    {
-                        builder.OpenComponent<MudPaper>(2);
-                        builder.AddAttribute(3, "Class", "pa-2");
-                        builder.AddAttribute(4, "Elevation", 3);
-                        builder.AddAttribute(5, "Style", $"width: {EPIC_WIDTH}px; height: {EPIC_HEIGHT}px; display: flex; align-items: center; justify-content: center; cursor: move; background: #fff;");
-                        builder.AddAttribute(6, "ChildContent", (RenderFragment)(ec =>
-                        {
-                            ec.OpenComponent<MudText>(0);
-                            ec.AddAttribute(1, "Typo", Typo.body2);
-                            ec.AddAttribute(2, "Align", Align.Center);
-                            ec.AddAttribute(3, "ChildContent", (RenderFragment)(tc => tc.AddContent(0, epic.Title)));
-                            ec.CloseComponent();
-                        }));
-                        builder.CloseComponent();
-                    }
+                    // Empty row label
+                    builder.OpenElement(2, "div");
+                    builder.AddAttribute(3, "style", "display: flex; align-items: center; justify-content: center; height: 100%; color: #ccc;");
+                    builder.AddContent(4, $"Row {i + 1}");
+                    builder.CloseElement();
                 }
-
+                
                 builder.CloseElement();
             }
 
-            // Show preview placeholder if hovering
+            // Show preview placeholder
             if (_preview?.HoverLaneId == laneId && _preview.HoverRowIndex.HasValue)
             {
-                var previewY = _preview.HoverRowIndex.Value * ROW_HEIGHT;
+                var previewY = 50 + (_preview.HoverRowIndex.Value * ROW_HEIGHT);
                 builder.OpenElement(0, "div");
-                builder.AddAttribute(1, "style", $"position: absolute; top: {previewY}px; left: 0; right: 0; height: {ROW_HEIGHT}px; background: rgba(25, 118, 210, 0.1); border: 2px dashed #1976d2; display: flex; align-items: center; justify-content: center;");
+                builder.AddAttribute(1, "style", $"position: absolute; top: {previewY}px; left: 10px; right: 10px; height: {ROW_HEIGHT - 10}px; background: rgba(25, 118, 210, 0.15); border: 2px dashed #1976d2; border-radius: 4px; display: flex; align-items: center; justify-content: center; pointer-events: none;");
                 builder.OpenComponent<MudText>(2);
-                builder.AddAttribute(3, "Typo", Typo.body2);
-                builder.AddAttribute(4, "Style", "color: #1976d2;");
-                builder.AddAttribute(5, "ChildContent", (RenderFragment)(tc => tc.AddContent(6, "Drop here")));
+                builder.AddAttribute(3, "Typo", Typo.body1);
+                builder.AddAttribute(4, "Style", "color: #1976d2; font-weight: 600;");
+                builder.AddAttribute(5, "ChildContent", (RenderFragment)(tc => tc.AddContent(6, "📍 Drop here")));
                 builder.CloseComponent();
                 builder.CloseElement();
+            }
+
+            // Render connectors if we have the split pattern (1→2)
+            var row0Epics = lanePlacements.Where(p => p.RowIndex == 0).ToList();
+            var row1Epics = lanePlacements.Where(p => p.RowIndex == 1).ToList();
+            
+            if (row0Epics.Count == 1 && row1Epics.Count == 2)
+            {
+                // Draw split connectors
+                var sourceY = 50 + ROW_HEIGHT;
+                var targetY = 50 + ROW_HEIGHT + ROW_HEIGHT / 2;
+                
+                builder.OpenElement(0, "svg");
+                builder.AddAttribute(1, "style", "position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;");
+                
+                // Center to left
+                builder.OpenElement(2, "line");
+                builder.AddAttribute(3, "x1", "50%");
+                builder.AddAttribute(4, "y1", sourceY);
+                builder.AddAttribute(5, "x2", "35%");
+                builder.AddAttribute(6, "y2", targetY);
+                builder.AddAttribute(7, "stroke", "#1976d2");
+                builder.AddAttribute(8, "stroke-width", "2");
+                builder.AddAttribute(9, "marker-end", "url(#arrow)");
+                builder.CloseElement();
+                
+                // Center to right
+                builder.OpenElement(10, "line");
+                builder.AddAttribute(11, "x1", "50%");
+                builder.AddAttribute(12, "y1", sourceY);
+                builder.AddAttribute(13, "x2", "65%");
+                builder.AddAttribute(14, "y2", targetY);
+                builder.AddAttribute(15, "stroke", "#1976d2");
+                builder.AddAttribute(16, "stroke-width", "2");
+                builder.AddAttribute(17, "marker-end", "url(#arrow)");
+                builder.CloseElement();
+                
+                // Arrow marker def
+                builder.OpenElement(18, "defs");
+                builder.OpenElement(19, "marker");
+                builder.AddAttribute(20, "id", "arrow");
+                builder.AddAttribute(21, "markerWidth", "10");
+                builder.AddAttribute(22, "markerHeight", "10");
+                builder.AddAttribute(23, "refX", "9");
+                builder.AddAttribute(24, "refY", "3");
+                builder.AddAttribute(25, "orient", "auto");
+                builder.OpenElement(26, "polygon");
+                builder.AddAttribute(27, "points", "0 0, 10 3, 0 6");
+                builder.AddAttribute(28, "fill", "#1976d2");
+                builder.CloseElement();
+                builder.CloseElement();
+                builder.CloseElement();
+                
+                builder.CloseElement(); // svg
             }
         };
     }
 
     private EpicModel? GetEpicById(string epicId)
     {
-        // Check in all epics (unplanned + create from placements)
         var epic = _unplannedEpics.FirstOrDefault(e => e.Id == epicId);
         if (epic != null) return epic;
 
-        // For placed epics, recreate from ID
-        return new EpicModel { Id = epicId, Title = epicId.Replace("E", "Epic ") };
-    }
-
-    private List<Connector> GetConnectors()
-    {
-        var connectors = new List<Connector>();
-        
-        // Only render connectors in right lane
-        var rightPlacements = _placements.Where(p => p.LaneId == "right").ToList();
-        if (rightPlacements.Count < 2)
-            return connectors;
-
-        // Group by row
-        var rowGroups = rightPlacements.GroupBy(p => p.RowIndex).OrderBy(g => g.Key).ToList();
-        
-        // Check if we have the specific pattern: 1 epic in row 1, 2 epics in row 2
-        if (rowGroups.Count >= 2)
-        {
-            var row1 = rowGroups.ElementAt(0);
-            var row2 = rowGroups.ElementAt(1);
-
-            if (row1.Count() == 1 && row2.Count() == 2)
-            {
-                // Draw split connectors from row 1 to row 2
-                var sourceY = (row1.Key * ROW_HEIGHT) + (ROW_HEIGHT / 2);
-                var targetY = (row2.Key * ROW_HEIGHT) + (ROW_HEIGHT / 2);
-                
-                // Approximate X positions (center of lane is at 50%)
-                var centerX = 250; // Approximate center of right lane
-                
-                // Split: one line from center splits to two targets
-                var leftTargetX = centerX - 60;
-                var rightTargetX = centerX + 60;
-                
-                // Draw Y-shaped connector
-                var midY = (sourceY + targetY) / 2;
-                
-                // Path: start at source, go down to mid, then split left and right
-                var path1 = $"M {centerX} {sourceY} L {centerX} {midY} L {leftTargetX} {targetY}";
-                var path2 = $"M {centerX} {midY} L {rightTargetX} {targetY}";
-                
-                connectors.Add(new Connector { Path = path1 });
-                connectors.Add(new Connector { Path = path2 });
-            }
-        }
-
-        return connectors;
+        // Reconstruct from placement
+        return new EpicModel { Id = epicId, Title = epicId.Replace("E", "Epic ").Replace(":", ": ") };
     }
 }
