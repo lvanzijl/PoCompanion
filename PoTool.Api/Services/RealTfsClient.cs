@@ -396,50 +396,92 @@ public class RealTfsClient : ITfsClient
         {
             _logger.LogDebug("Fetching work item {WorkItemId} directly from TFS", workItemId);
 
-            // Use the Work Items Batch API to fetch a single work item
-            // Format: POST {collection}/_apis/wit/workitemsbatch?api-version={version}
-            var batchRequest = new WorkItemBatchRequest
-            {
-                Ids = new[] { workItemId },
-                Fields = RequiredWorkItemFields,
-                Expand = "relations" // Include relations to get parent ID
-            };
+            // TFS Server 2022 limitation: Cannot combine $expand=relations with fields= parameter
+            // Apply two-phase retrieval strategy (same as GetWorkItemsAsync)
+            // Phase 1: Fetch relations only to get parent ID
+            // Phase 2: Fetch fields only to get work item data
 
             var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
-            using var content = new StringContent(
-                JsonSerializer.Serialize(batchRequest),
+
+            // Phase 1: Fetch relations to get parent ID
+            _logger.LogDebug("Phase 1: Fetching relations for work item {WorkItemId}", workItemId);
+            var relationsRequest = new WorkItemBatchRequest
+            {
+                Ids = new[] { workItemId },
+                Expand = "relations" // Only expand relations, no fields
+            };
+
+            using var relationsContent = new StringContent(
+                JsonSerializer.Serialize(relationsRequest),
                 System.Text.Encoding.UTF8,
                 "application/json");
 
-            var response = await httpClient.PostAsync(batchUrl, content, cancellationToken);
+            var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
             
             // If work item not found, return null instead of throwing
-            if (response.StatusCode == HttpStatusCode.NotFound)
+            if (relationsResponse.StatusCode == HttpStatusCode.NotFound)
             {
                 _logger.LogDebug("Work item {WorkItemId} not found in TFS", workItemId);
                 return null;
             }
 
-            await HandleHttpErrorsAsync(response, cancellationToken);
+            await HandleHttpErrorsAsync(relationsResponse, cancellationToken);
 
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            using var relationsStream = await relationsResponse.Content.ReadAsStreamAsync(cancellationToken);
+            using var relationsDoc = await JsonDocument.ParseAsync(relationsStream, cancellationToken: cancellationToken);
 
             // Check if any work items were returned
-            if (!doc.RootElement.TryGetProperty("value", out var valueArray) || valueArray.ValueKind != JsonValueKind.Array)
+            if (!relationsDoc.RootElement.TryGetProperty("value", out var relationsArray) || relationsArray.ValueKind != JsonValueKind.Array)
             {
                 _logger.LogDebug("Work item {WorkItemId} not found in TFS response", workItemId);
                 return null;
             }
 
-            var items = valueArray.EnumerateArray().ToList();
-            if (items.Count == 0)
+            var relationsItems = relationsArray.EnumerateArray().ToList();
+            if (relationsItems.Count == 0)
             {
                 _logger.LogDebug("Work item {WorkItemId} not found in TFS", workItemId);
                 return null;
             }
 
-            var item = items[0];
+            // Extract parent ID from relations
+            var relationsItem = relationsItems[0];
+            var parentId = ExtractParentIdFromRelations(relationsItem);
+
+            // Phase 2: Fetch fields to get work item data
+            _logger.LogDebug("Phase 2: Fetching fields for work item {WorkItemId}", workItemId);
+            var fieldsRequest = new WorkItemBatchRequest
+            {
+                Ids = new[] { workItemId },
+                Fields = RequiredWorkItemFields // Only fetch fields, no expand
+            };
+
+            using var fieldsContent = new StringContent(
+                JsonSerializer.Serialize(fieldsRequest),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            var fieldsResponse = await httpClient.PostAsync(batchUrl, fieldsContent, cancellationToken);
+            await HandleHttpErrorsAsync(fieldsResponse, cancellationToken);
+
+            using var fieldsStream = await fieldsResponse.Content.ReadAsStreamAsync(cancellationToken);
+            using var fieldsDoc = await JsonDocument.ParseAsync(fieldsStream, cancellationToken: cancellationToken);
+
+            // Check if any work items were returned
+            if (!fieldsDoc.RootElement.TryGetProperty("value", out var fieldsArray) || fieldsArray.ValueKind != JsonValueKind.Array)
+            {
+                _logger.LogDebug("Work item {WorkItemId} not found in TFS fields response", workItemId);
+                return null;
+            }
+
+            var fieldsItems = fieldsArray.EnumerateArray().ToList();
+            if (fieldsItems.Count == 0)
+            {
+                _logger.LogDebug("Work item {WorkItemId} not found in TFS fields response", workItemId);
+                return null;
+            }
+
+            var item = fieldsItems[0];
             var id = item.GetProperty("id").GetInt32();
             var fields = item.GetProperty("fields");
             var type = fields.TryGetProperty("System.WorkItemType", out var t) ? t.GetString() ?? "" : "";
@@ -449,9 +491,6 @@ public class RealTfsClient : ITfsClient
             var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
             var description = fields.TryGetProperty("System.Description", out var d) ? d.GetString() : null;
 
-            // Extract parent ID from relations
-            var parentId = ExtractParentIdFromRelations(item);
-
             // Extract effort field with robust parsing
             int? effort = ParseEffortField(fields);
 
@@ -459,7 +498,7 @@ public class RealTfsClient : ITfsClient
                 TfsId: id,
                 Type: type,
                 Title: title,
-                ParentTfsId: parentId,
+                ParentTfsId: parentId, // Use parent ID from Phase 1
                 AreaPath: area,
                 IterationPath: iteration,
                 State: state,
