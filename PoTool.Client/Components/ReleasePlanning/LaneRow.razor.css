@@ -66,4 +66,7 @@
 /* Epic being dragged styling */
 .epic-being-dragged {
     opacity: 0.5;
+    position: relative;
+    z-index: 10;
+    pointer-events: none; /* Allow drag events to pass through to drop targets */
 }

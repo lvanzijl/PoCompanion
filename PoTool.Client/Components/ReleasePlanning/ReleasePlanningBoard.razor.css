@@ -192,9 +192,24 @@
 }
 
 /* Drop zones between rows */
-.drop-zone-between-rows {
+.drop-zone-between-rows,
+.drop-zone-row {
     min-height: 20px;
     transition: all 0.2s ease;
+}
+
+.drop-zone-row {
+    display: flex;
+}
+
+.drop-zone-lane-cell {
+    flex: 1;
+    min-width: 200px;
+    transition: background-color 0.2s ease;
+}
+
+.drop-zone-lane-cell:hover {
+    background-color: var(--mud-palette-primary-lighten);
 }
 
 .drop-zone-between-rows:hover {
