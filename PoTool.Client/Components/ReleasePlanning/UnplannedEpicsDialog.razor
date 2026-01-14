@@ -17,7 +17,7 @@
             <MudList T="UnplannedEpicDto" Dense="true">
                 @foreach (var epic in Epics.OrderBy(e => e.ObjectiveTitle).ThenBy(e => e.TfsOrder))
                 {
-                    <MudListItem T="UnplannedEpicDto">
+                    <MudListItem T="UnplannedEpicDto" OnClick="@(() => HandleEpicClick(epic))" Style="cursor: pointer;">
                         <div class="d-flex flex-column gap-1">
                             <div class="d-flex justify-space-between align-center">
                                 <div class="d-flex align-center gap-2 flex-grow-1">
@@ -65,6 +65,15 @@
 
     [Parameter]
     public IReadOnlyList<UnplannedEpicDto>? Epics { get; set; }
+
+    [Parameter]
+    public EventCallback<UnplannedEpicDto> OnEpicSelected { get; set; }
+
+    private async Task HandleEpicClick(UnplannedEpicDto epic)
+    {
+        await OnEpicSelected.InvokeAsync(epic);
+        // Don't close the dialog, allow multiple selections
+    }
 
     private void Cancel()
     {

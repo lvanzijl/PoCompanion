@@ -7,7 +7,7 @@
         Unplanned Epics
     </MudText>
 
-    @if (Epics == null || Epics.Count == 0)
+    @if ((Epics == null || Epics.Count == 0) && (StagedEpics == null || StagedEpics.Count == 0))
     {
         <MudText Typo="Typo.body2" Color="Color.Secondary">
             All Epics are placed on the board.
@@ -15,42 +15,88 @@
     }
     else
     {
-        <div class="epic-chips-container d-flex flex-wrap gap-2">
-            @foreach (var epic in Epics.Take(5))
-            {
-                <MudChip T="string"
-                         Size="Size.Medium"
-                         Color="@GetValidationColor(epic.ValidationIndicator)"
-                         Variant="Variant.Outlined"
-                         Class="unplanned-epic-chip"
-                         draggable="true"
-                         @ondragstart="@(() => HandleDragStart(epic))">
-                    <div class="d-flex align-center gap-1">
-                        @if (epic.ValidationIndicator != ValidationIndicator.None)
-                        {
-                            <MudIcon Icon="@GetValidationIcon(epic.ValidationIndicator)" 
-                                     Size="Size.Small" />
-                        }
-                        <span class="text-truncate" style="max-width: 200px;">
-                            @epic.Title
-                        </span>
-                        @if (epic.Effort.HasValue)
-                        {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">
-                                @epic.Effort
-                            </MudChip>
-                        }
-                    </div>
-                </MudChip>
-            }
-            
-            @if (Epics.Count > 5)
-            {
-                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@ShowAllEpics">
-                    +@(Epics.Count - 5) more
-                </MudButton>
-            }
-        </div>
+        <!-- Primary row: Top 5 priority-ordered unplanned epics -->
+        @if (Epics != null && Epics.Count > 0)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
+                Priority Order (Top 5)
+            </MudText>
+            <div class="epic-chips-container d-flex flex-wrap gap-2 mb-3">
+                @foreach (var epic in Epics.Take(5))
+                {
+                    <MudChip T="string"
+                             Size="Size.Medium"
+                             Color="@GetValidationColor(epic.ValidationIndicator)"
+                             Variant="Variant.Outlined"
+                             Class="unplanned-epic-chip"
+                             draggable="true"
+                             @ondragstart="@(() => HandleDragStart(epic))">
+                        <div class="d-flex align-center gap-1">
+                            @if (epic.ValidationIndicator != ValidationIndicator.None)
+                            {
+                                <MudIcon Icon="@GetValidationIcon(epic.ValidationIndicator)" 
+                                         Size="Size.Small" />
+                            }
+                            <span class="text-truncate" style="max-width: 200px;">
+                                @epic.Title
+                            </span>
+                            @if (epic.Effort.HasValue)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">
+                                    @epic.Effort
+                                </MudChip>
+                            }
+                        </div>
+                    </MudChip>
+                }
+                
+                @if (Epics.Count > 5)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@ShowAllEpics">
+                        +@(Epics.Count - 5) more
+                    </MudButton>
+                }
+            </div>
+        }
+
+        <!-- Secondary row: Staged epics from "+X more" dialog -->
+        @if (StagedEpics != null && StagedEpics.Count > 0)
+        {
+            <MudDivider Class="mb-2" />
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
+                Selected for Planning
+            </MudText>
+            <div class="epic-chips-container d-flex flex-wrap gap-2">
+                @foreach (var epic in StagedEpics)
+                {
+                    <MudChip T="string"
+                             Size="Size.Medium"
+                             Color="Color.Primary"
+                             Variant="Variant.Filled"
+                             Class="unplanned-epic-chip"
+                             draggable="true"
+                             OnClose="@(() => HandleRemoveStaged(epic))"
+                             @ondragstart="@(() => HandleDragStart(epic))">
+                        <div class="d-flex align-center gap-1">
+                            @if (epic.ValidationIndicator != ValidationIndicator.None)
+                            {
+                                <MudIcon Icon="@GetValidationIcon(epic.ValidationIndicator)" 
+                                         Size="Size.Small" />
+                            }
+                            <span class="text-truncate" style="max-width: 200px;">
+                                @epic.Title
+                            </span>
+                            @if (epic.Effort.HasValue)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">
+                                    @epic.Effort
+                                </MudChip>
+                            }
+                        </div>
+                    </MudChip>
+                }
+            </div>
+        }
     }
 </MudPaper>
 
@@ -59,10 +105,16 @@
     public IReadOnlyList<UnplannedEpicDto>? Epics { get; set; }
 
     [Parameter]
+    public List<UnplannedEpicDto>? StagedEpics { get; set; }
+
+    [Parameter]
     public EventCallback<EpicDropEventArgs> OnEpicDrop { get; set; }
 
     [Parameter]
     public EventCallback<(int EpicId, int ObjectiveId)> OnEpicDragStart { get; set; }
+
+    [Parameter]
+    public EventCallback<UnplannedEpicDto> OnEpicStaged { get; set; }
 
     private UnplannedEpicDto? _draggingEpic;
 
@@ -70,6 +122,11 @@
     {
         _draggingEpic = epic;
         await OnEpicDragStart.InvokeAsync((epic.EpicId, epic.ObjectiveId));
+    }
+
+    private void HandleRemoveStaged(UnplannedEpicDto epic)
+    {
+        StagedEpics?.Remove(epic);
     }
 
     private static Color GetValidationColor(ValidationIndicator indicator)
@@ -101,7 +158,8 @@
 
         var parameters = new DialogParameters<UnplannedEpicsDialog>
         {
-            { x => x.Epics, Epics }
+            { x => x.Epics, Epics },
+            { x => x.OnEpicSelected, EventCallback.Factory.Create<UnplannedEpicDto>(this, HandleEpicSelectedFromDialog) }
         };
 
         var options = new DialogOptions
@@ -111,6 +169,11 @@
         };
 
         await DialogService.ShowAsync<UnplannedEpicsDialog>("All Unplanned Epics", parameters, options);
+    }
+
+    private async Task HandleEpicSelectedFromDialog(UnplannedEpicDto epic)
+    {
+        await OnEpicStaged.InvokeAsync(epic);
     }
 }
 

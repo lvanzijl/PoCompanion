@@ -23,8 +23,10 @@
         <!-- Unplanned Epics Source List -->
         <UnplannedEpicsList 
             Epics="_unplannedEpics"
+            StagedEpics="_stagedEpics"
             OnEpicDrop="@HandleEpicDrop"
-            OnEpicDragStart="@(args => HandleUnplannedEpicDragStart(args.Item1, args.Item2))" />
+            OnEpicDragStart="@(args => HandleUnplannedEpicDragStart(args.Item1, args.Item2))"
+            OnEpicStaged="@HandleEpicStaged" />
 
         <!-- Board Container -->
         <MudPaper Class="board-container mt-4" Elevation="1">
@@ -73,7 +75,7 @@
                                     .ToList();
 
                                 <div class="lane-row flex-grow-1 pa-1"
-                                     style="border-right: 1px solid var(--mud-palette-lines-default);"
+                                     style="border-right: 2px solid var(--mud-palette-divider);"
                                      @ondragover:preventDefault
                                      @ondragover="@(() => HandleRowDragOver(lane.ObjectiveId, currentRow))"
                                      @ondrop="@(async () => await HandleRowDrop(lane.ObjectiveId, currentRow))">
@@ -84,6 +86,8 @@
                                             <div class="@epicClass">
                                                 <EpicCard 
                                                     Placement="@placement"
+                                                    ObjectiveId="@lane.ObjectiveId"
+                                                    OnDragStart="@HandlePlannedEpicDragStart"
                                                     OnMove="@HandleEpicMove"
                                                     OnContextMenu="@HandleEpicContextMenu"
                                                     OnSplitRequested="@HandleEpicSplit"
@@ -161,29 +165,19 @@
                 </div>
             }
         </MudPaper>
-
-        <!-- Add Row Button -->
-        <div class="mt-2">
-            <MudTooltip Text="Rows are automatically created when you place Epics on the board">
-                <MudButton StartIcon="@Icons.Material.Filled.Add"
-                           Size="Size.Small"
-                           Variant="Variant.Text"
-                           Disabled="true">
-                    Add Row
-                </MudButton>
-            </MudTooltip>
-        </div>
     }
 </MudPaper>
 
 @code {
     private ReleasePlanningBoardDto? _board;
     private IReadOnlyList<UnplannedEpicDto>? _unplannedEpics;
+    private List<UnplannedEpicDto> _stagedEpics = new(); // Epics selected from "+X more" dialog
     private bool _isLoading = true;
 
     // Epic dragging state
     private int? _draggingEpicId;
     private int? _draggingObjectiveId;
+    private int? _draggingPlacementId; // For planned epics
     private bool _isDraggingFromUnplanned;
 
     // Line dragging state
@@ -232,8 +226,22 @@
     {
         _draggingEpicId = epicId;
         _draggingObjectiveId = objectiveId;
+        _draggingPlacementId = null;
         _isDraggingFromUnplanned = true;
         Logger.LogDebug("Started dragging unplanned Epic {EpicId} from Objective {ObjectiveId}", epicId, objectiveId);
+    }
+
+    /// <summary>
+    /// Called when a planned epic starts being dragged from the board.
+    /// </summary>
+    private void HandlePlannedEpicDragStart((int PlacementId, int EpicId, int ObjectiveId) args)
+    {
+        _draggingEpicId = args.EpicId;
+        _draggingObjectiveId = args.ObjectiveId;
+        _draggingPlacementId = args.PlacementId;
+        _isDraggingFromUnplanned = false;
+        Logger.LogDebug("Started dragging planned Epic {EpicId} (Placement {PlacementId}) from Objective {ObjectiveId}", 
+            args.EpicId, args.PlacementId, args.ObjectiveId);
     }
 
     /// <summary>
@@ -282,6 +290,17 @@
                 RowIndex = rowIndex
             });
         }
+        else if (_draggingPlacementId.HasValue)
+        {
+            // Move existing placement
+            // TODO: Calculate OrderInRow based on drop position
+            await HandleEpicMove(new EpicMoveEventArgs
+            {
+                PlacementId = _draggingPlacementId.Value,
+                NewRowIndex = rowIndex,
+                NewOrderInRow = 0 // For now, place at start of row
+            });
+        }
 
         ResetEpicDragState();
     }
@@ -293,6 +312,7 @@
     {
         _draggingEpicId = null;
         _draggingObjectiveId = null;
+        _draggingPlacementId = null;
         _isDraggingFromUnplanned = false;
     }
 
@@ -397,6 +417,20 @@
     {
         // Navigate to Work Item Explorer with the Epic selected
         Navigation.NavigateTo($"/workitems?selected={args.EpicId}");
+    }
+
+    /// <summary>
+    /// Called when an epic is staged from the "+X more" dialog.
+    /// </summary>
+    private void HandleEpicStaged(UnplannedEpicDto epic)
+    {
+        // Add to staged list if not already there
+        if (!_stagedEpics.Any(e => e.EpicId == epic.EpicId))
+        {
+            _stagedEpics.Add(epic);
+            StateHasChanged();
+            Logger.LogDebug("Staged Epic {EpicId} for planning", epic.EpicId);
+        }
     }
 
     private (IEnumerable<MilestoneLineDto> MilestoneLines, IEnumerable<IterationLineDto> IterationLines) GetLinesAtPosition(double position)
