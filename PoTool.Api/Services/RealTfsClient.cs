@@ -444,8 +444,9 @@ public class RealTfsClient : ITfsClient
                 return null;
             }
 
-            // Save relations item for parent ID extraction (do extraction after Phase 2 validation)
+            // Extract parent ID from relations immediately (before document disposal)
             var relationsItem = relationsItems[0];
+            var parentId = ExtractParentIdFromRelations(relationsItem);
 
             // Phase 2: Fetch fields to get work item data
             _logger.LogDebug("Phase 2: Fetching fields for work item {WorkItemId}", workItemId);
@@ -500,9 +501,6 @@ public class RealTfsClient : ITfsClient
 
             // Extract effort field with robust parsing
             int? effort = ParseEffortField(fields);
-
-            // Extract parent ID from relations (after Phase 2 validation to avoid unnecessary work)
-            var parentId = ExtractParentIdFromRelations(relationsItem);
 
             var workItem = new WorkItemDto(
                 TfsId: id,
