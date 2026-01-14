@@ -246,6 +246,32 @@ public class ReleasePlanningController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Deletes an Epic placement from the board (returns it to unplanned list).
+    /// </summary>
+    [HttpDelete("placements/{placementId:int}")]
+    public async Task<ActionResult<EpicPlacementResultDto>> DeletePlacement(
+        int placementId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new DeleteEpicPlacementCommand(placementId), cancellationToken);
+
+            if (!result.Success)
+            {
+                return NotFound(result);
+            }
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting Epic placement {PlacementId}", placementId);
+            return StatusCode(500, "Error deleting Epic placement");
+        }
+    }
+
     #endregion
 
     #region Milestone Line Operations

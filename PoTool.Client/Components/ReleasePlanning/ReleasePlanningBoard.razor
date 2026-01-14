@@ -6,7 +6,7 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
-<MudPaper Class="release-planning-board pa-4" Elevation="0">
+<MudPaper Class="release-planning-board pa-4" Elevation="0" @onkeydown="@HandleKeyDown" tabindex="0">
     @if (_isLoading)
     {
         <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
@@ -62,11 +62,23 @@
                         CardHeight="60"
                         LaneWidth="200" />
                     
+                    <!-- Drop zone before first row -->
+                    <div class="drop-zone-between-rows" 
+                         style="height: 20px; position: relative; z-index: 1;"
+                         @ondragover:preventDefault
+                         @ondragover="@(() => HandleRowDragOver(_board.Lanes.First().ObjectiveId, 0))"
+                         @ondrop="@(async () => await HandleInsertBeforeRow(0))">
+                        @if (_dropTargetRowIndex == 0 && _isDraggingEpic)
+                        {
+                            <div class="drop-placeholder">Drop here to place at top</div>
+                        }
+                    </div>
+
                     @for (int row = 0; row <= _board.MaxRowIndex; row++)
                     {
                         var currentRow = row;
                         var linesAtPosition = GetLinesAtPosition(currentRow + 0.5);
-                        <div class="row-container d-flex" style="min-height: 80px;">
+                        <div class="row-container d-flex" style="min-height: 80px; position: relative;">
                             @foreach (var lane in _board.Lanes)
                             {
                                 var lanePlacements = _board.Placements
@@ -75,10 +87,10 @@
                                     .ToList();
 
                                 var isDropTarget = _dropTargetLaneId == lane.Id && _dropTargetRowIndex == currentRow;
-                                var laneRowClass = isDropTarget ? "lane-row flex-grow-1 pa-1 drop-target" : "lane-row flex-grow-1 pa-1";
+                                var laneRowClass = isDropTarget ? "lane-row flex-grow-1 pa-2 drop-target" : "lane-row flex-grow-1 pa-2";
 
                                 <div class="@laneRowClass"
-                                     style="border-right: 2px solid var(--mud-palette-divider);"
+                                     style="border-right: 2px solid var(--mud-palette-divider); position: relative; z-index: 2;"
                                      @ondragover:preventDefault
                                      @ondragover="@(() => HandleRowDragOver(lane.ObjectiveId, currentRow))"
                                      @ondrop="@(async () => await HandleRowDrop(lane.ObjectiveId, currentRow))">
@@ -99,7 +111,9 @@
                                                 <EpicCard 
                                                     Placement="@placement"
                                                     ObjectiveId="@lane.ObjectiveId"
+                                                    IsSelected="@(_selectedPlacementId == placement.Id)"
                                                     OnDragStart="@HandlePlannedEpicDragStart"
+                                                    OnSelected="@HandleEpicSelected"
                                                     OnMove="@HandleEpicMove"
                                                     OnContextMenu="@HandleEpicContextMenu"
                                                     OnSplitRequested="@HandleEpicSplit"
@@ -111,68 +125,86 @@
                             }
                         </div>
 
-                        <!-- Horizontal Lines between rows -->
-                        @foreach (var line in linesAtPosition.MilestoneLines)
-                        {
-                            var isBeingDragged = _draggingLineId == line.Id;
-                            var lineClass = isBeingDragged ? "milestone-line draggable-line line-being-dragged" : "milestone-line draggable-line";
-                            <div class="@lineClass"
-                                 draggable="true"
-                                 @ondragstart="@(e => HandleLineStartDrag(line.Id, true, line.Label, line.Type, line.VerticalPosition))"
-                                 @ondragover:preventDefault
-                                 @ondragover="@(e => HandleLineDragOver(e, currentRow + 0.5))"
-                                 @ondrop="@(async e => await HandleLineDrop(line.Id, true))">
-                                <MudDivider DividerType="DividerType.FullWidth" 
-                                            Class="milestone-line-divider" />
-                                <MudChip T="string" 
-                                         Size="Size.Small" 
-                                         Color="Color.Primary"
-                                         Icon="@Icons.Material.Filled.DragHandle"
-                                         Class="line-label">
-                                    @line.Label
-                                </MudChip>
-                            </div>
-                        }
-                        @foreach (var line in linesAtPosition.IterationLines)
-                        {
-                            var isBeingDragged = _draggingLineId == line.Id;
-                            var lineClass = isBeingDragged ? "iteration-line draggable-line line-being-dragged" : "iteration-line draggable-line";
-                            <div class="@lineClass"
-                                 draggable="true"
-                                 @ondragstart="@(e => HandleLineStartDrag(line.Id, false, line.Label, default, line.VerticalPosition))"
-                                 @ondragover:preventDefault
-                                 @ondragover="@(e => HandleLineDragOver(e, currentRow + 0.5))"
-                                 @ondrop="@(async e => await HandleLineDrop(line.Id, false))">
-                                <MudDivider DividerType="DividerType.FullWidth" 
-                                            Class="iteration-line-divider" 
-                                            Style="border-style: dashed;" />
-                                <MudChip T="string" 
-                                         Size="Size.Small" 
-                                         Color="Color.Secondary"
-                                         Variant="Variant.Outlined"
-                                         Icon="@Icons.Material.Filled.DragHandle"
-                                         Class="line-label">
-                                    @line.Label
-                                </MudChip>
-                            </div>
-                        }
+                        <!-- Horizontal Lines between rows - full width across all lanes -->
+                        <div class="lines-container" style="position: relative; pointer-events: none;">
+                            @foreach (var line in linesAtPosition.MilestoneLines)
+                            {
+                                var isBeingDragged = _draggingLineId == line.Id;
+                                var lineClass = isBeingDragged ? "milestone-line draggable-line line-being-dragged" : "milestone-line draggable-line";
+                                <div class="@lineClass"
+                                     style="pointer-events: auto; width: 100%;"
+                                     draggable="true"
+                                     @ondragstart="@(e => HandleLineStartDrag(line.Id, true, line.Label, line.Type, line.VerticalPosition))"
+                                     @ondragover:preventDefault
+                                     @ondragover="@(e => HandleLineDragOver(e, currentRow + 0.5))"
+                                     @ondrop="@(async e => await HandleLineDrop(line.Id, true))">
+                                    <MudDivider DividerType="DividerType.FullWidth" 
+                                                Class="milestone-line-divider" 
+                                                Style="pointer-events: none;" />
+                                    <MudChip T="string" 
+                                             Size="Size.Small" 
+                                             Color="Color.Primary"
+                                             Icon="@Icons.Material.Filled.DragHandle"
+                                             Class="line-label"
+                                             Style="pointer-events: auto;">
+                                        @line.Label
+                                    </MudChip>
+                                </div>
+                            }
+                            @foreach (var line in linesAtPosition.IterationLines)
+                            {
+                                var isBeingDragged = _draggingLineId == line.Id;
+                                var lineClass = isBeingDragged ? "iteration-line draggable-line line-being-dragged" : "iteration-line draggable-line";
+                                <div class="@lineClass"
+                                     style="pointer-events: auto; width: 100%;"
+                                     draggable="true"
+                                     @ondragstart="@(e => HandleLineStartDrag(line.Id, false, line.Label, default, line.VerticalPosition))"
+                                     @ondragover:preventDefault
+                                     @ondragover="@(e => HandleLineDragOver(e, currentRow + 0.5))"
+                                     @ondrop="@(async e => await HandleLineDrop(line.Id, false))">
+                                    <MudDivider DividerType="DividerType.FullWidth" 
+                                                Class="iteration-line-divider" 
+                                                Style="border-style: dashed; pointer-events: none;" />
+                                    <MudChip T="string" 
+                                             Size="Size.Small" 
+                                             Color="Color.Secondary"
+                                             Variant="Variant.Outlined"
+                                             Icon="@Icons.Material.Filled.DragHandle"
+                                             Class="line-label"
+                                             Style="pointer-events: auto;">
+                                        @line.Label
+                                    </MudChip>
+                                </div>
+                            }
 
-                        <!-- Preview Line during drag -->
-                        @if (IsPreviewLineAtPosition(currentRow + 0.5))
-                        {
-                            <div class="@(_draggingIsMilestone ? "milestone-line-preview" : "iteration-line-preview")">
-                                <MudDivider DividerType="DividerType.FullWidth" 
-                                            Class="@(_draggingIsMilestone ? "milestone-line-divider" : "iteration-line-divider")"
-                                            Style="@(_draggingIsMilestone ? "" : "border-style: dashed;")" />
-                                <MudChip T="string" 
-                                         Size="Size.Small" 
-                                         Color="@(_draggingIsMilestone ? Color.Primary : Color.Secondary)"
-                                         Variant="@(_draggingIsMilestone ? Variant.Filled : Variant.Outlined)"
-                                         Class="line-label">
-                                    @_draggingLineLabel (Preview)
-                                </MudChip>
-                            </div>
-                        }
+                            <!-- Preview Line during drag -->
+                            @if (IsPreviewLineAtPosition(currentRow + 0.5))
+                            {
+                                <div class="@(_draggingIsMilestone ? "milestone-line-preview" : "iteration-line-preview")">
+                                    <MudDivider DividerType="DividerType.FullWidth" 
+                                                Class="@(_draggingIsMilestone ? "milestone-line-divider" : "iteration-line-divider")"
+                                                Style="@(_draggingIsMilestone ? "pointer-events: none;" : "border-style: dashed; pointer-events: none;")" />
+                                    <MudChip T="string" 
+                                             Size="Size.Small" 
+                                             Color="@(_draggingIsMilestone ? Color.Primary : Color.Secondary)"
+                                             Variant="@(_draggingIsMilestone ? Variant.Filled : Variant.Outlined)"
+                                             Class="line-label">
+                                        @_draggingLineLabel (Preview)
+                                    </MudChip>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Drop zone between rows -->
+                        <div class="drop-zone-between-rows" 
+                             style="height: 20px; position: relative; z-index: 1;"
+                             @ondragover:preventDefault
+                             @ondrop="@(async () => await HandleInsertBeforeRow(currentRow + 1))">
+                            @if (_dropTargetRowIndex == currentRow + 1 && _isDraggingEpic)
+                            {
+                                <div class="drop-placeholder">Drop here</div>
+                            }
+                        </div>
                     }
                 </div>
             }
@@ -186,11 +218,15 @@
     private List<UnplannedEpicDto> _stagedEpics = new(); // Epics selected from "+X more" dialog
     private bool _isLoading = true;
 
+    // Epic selection state (Issue #5)
+    private int? _selectedPlacementId;
+
     // Epic dragging state
     private int? _draggingEpicId;
     private int? _draggingObjectiveId;
     private int? _draggingPlacementId; // For planned epics
     private bool _isDraggingFromUnplanned;
+    private bool _isDraggingEpic => _draggingEpicId.HasValue;
 
     // Drop target preview state
     private int? _dropTargetLaneId;
@@ -374,6 +410,135 @@
     }
 
     #endregion
+
+    #region Epic Selection and Deletion (Issue #5)
+
+    /// <summary>
+    /// Handles keyboard input for the board (e.g., Delete key).
+    /// </summary>
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Delete" && _selectedPlacementId.HasValue)
+        {
+            await DeleteSelectedEpic();
+        }
+        else if (e.Key == "Escape")
+        {
+            // Clear selection on Escape
+            _selectedPlacementId = null;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Handles epic selection (clicking on a card).
+    /// </summary>
+    private void HandleEpicSelected(int placementId)
+    {
+        // Toggle selection: if already selected, deselect; otherwise select
+        if (_selectedPlacementId == placementId)
+        {
+            _selectedPlacementId = null;
+        }
+        else
+        {
+            _selectedPlacementId = placementId;
+        }
+        StateHasChanged();
+        Logger.LogDebug("Epic placement {PlacementId} selected: {IsSelected}", placementId, _selectedPlacementId.HasValue);
+    }
+
+    /// <summary>
+    /// Deletes the currently selected epic from the board.
+    /// Returns it to the unplanned list.
+    /// </summary>
+    private async Task DeleteSelectedEpic()
+    {
+        if (!_selectedPlacementId.HasValue)
+        {
+            return;
+        }
+
+        var placementId = _selectedPlacementId.Value;
+        var placement = _board?.Placements.FirstOrDefault(p => p.Id == placementId);
+        
+        if (placement == null)
+        {
+            Logger.LogWarning("Attempted to delete non-existent placement {PlacementId}", placementId);
+            _selectedPlacementId = null;
+            return;
+        }
+
+        try
+        {
+            var result = await ReleasePlanningService.DeletePlacementAsync(placementId);
+            
+            if (result?.Success == true)
+            {
+                Snackbar.Add($"Epic '{placement.EpicTitle}' removed from board", Severity.Success);
+                _selectedPlacementId = null; // Clear selection
+                await LoadBoardAsync(); // Reload to reflect changes
+            }
+            else
+            {
+                Snackbar.Add($"Failed to remove Epic: {result?.ErrorMessage}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting epic placement {PlacementId}", placementId);
+            Snackbar.Add("Error removing Epic from board", Severity.Error);
+        }
+    }
+
+    #endregion
+
+    /// <summary>
+    /// Handles dropping an epic into a space between rows (creates a new row).
+    /// </summary>
+    private async Task HandleInsertBeforeRow(int targetRow)
+    {
+        if (!_draggingEpicId.HasValue || !_draggingObjectiveId.HasValue)
+        {
+            ResetEpicDragState();
+            ResetDropTargetState();
+            return;
+        }
+
+        // Find the lane for this objective
+        var lane = _board?.Lanes.FirstOrDefault(l => l.ObjectiveId == _draggingObjectiveId.Value);
+        if (lane == null)
+        {
+            Snackbar.Add("Cannot place epic: lane not found", Severity.Warning);
+            ResetEpicDragState();
+            ResetDropTargetState();
+            return;
+        }
+
+        // For inserting before a row, we place at that row index
+        // The existing epics will be shifted down by the service
+        if (_isDraggingFromUnplanned)
+        {
+            await HandleEpicDrop(new EpicDropEventArgs
+            {
+                EpicId = _draggingEpicId.Value,
+                ObjectiveId = _draggingObjectiveId.Value,
+                RowIndex = targetRow
+            });
+        }
+        else if (_draggingPlacementId.HasValue)
+        {
+            await HandleEpicMove(new EpicMoveEventArgs
+            {
+                PlacementId = _draggingPlacementId.Value,
+                NewRowIndex = targetRow,
+                NewOrderInRow = 0
+            });
+        }
+
+        ResetEpicDragState();
+        ResetDropTargetState();
+    }
 
     private async Task HandleEpicDrop(EpicDropEventArgs args)
     {

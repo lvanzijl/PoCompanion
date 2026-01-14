@@ -1,11 +1,12 @@
 @using PoTool.Shared.ReleasePlanning
 
 <div class="epic-card-container" style="position: relative;">
-    <MudPaper Class="epic-card pa-2" 
+    <MudPaper Class="@GetCardClass()" 
               Elevation="2" 
               Style="@GetCardStyle()"
               draggable="true"
-              @ondragstart="@HandleDragStart">
+              @ondragstart="@HandleDragStart"
+              @onclick="@HandleClick">
         <div class="d-flex flex-column">
             <div class="d-flex justify-space-between align-center">
                 <MudText Typo="Typo.body2" Class="font-weight-bold text-truncate" Style="max-width: 120px;">
@@ -90,6 +91,17 @@
     [Parameter]
     public EventCallback<(int PlacementId, int EpicId, int ObjectiveId)> OnDragStart { get; set; }
 
+    [Parameter]
+    public EventCallback<int> OnSelected { get; set; }
+
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    private string GetCardClass()
+    {
+        return IsSelected ? "epic-card pa-2 epic-card-selected" : "epic-card pa-2";
+    }
+
     private string GetCardStyle()
     {
         var borderColor = Placement.ValidationIndicator switch
@@ -138,6 +150,12 @@
     {
         // Notify parent about which epic is being dragged
         await OnDragStart.InvokeAsync((Placement.Id, Placement.EpicId, ObjectiveId));
+    }
+
+    private async Task HandleClick()
+    {
+        // Notify parent about selection
+        await OnSelected.InvokeAsync(Placement.Id);
     }
 
     private async Task HandleSplitEpic()
