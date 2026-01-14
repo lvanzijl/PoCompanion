@@ -74,7 +74,10 @@
                                     .OrderBy(p => p.OrderInRow)
                                     .ToList();
 
-                                <div class="lane-row flex-grow-1 pa-1"
+                                var isDropTarget = _dropTargetLaneId == lane.Id && _dropTargetRowIndex == currentRow;
+                                var laneRowClass = isDropTarget ? "lane-row flex-grow-1 pa-1 drop-target" : "lane-row flex-grow-1 pa-1";
+
+                                <div class="@laneRowClass"
                                      style="border-right: 2px solid var(--mud-palette-divider);"
                                      @ondragover:preventDefault
                                      @ondragover="@(() => HandleRowDragOver(lane.ObjectiveId, currentRow))"
@@ -83,6 +86,15 @@
                                         @foreach (var placement in lanePlacements)
                                         {
                                             var epicClass = GetEpicPreviewClass(placement, currentRow);
+                                            
+                                            // Add "being dragged" class if this is the epic being dragged
+                                            if (_draggingPlacementId.HasValue && placement.Id == _draggingPlacementId.Value)
+                                            {
+                                                epicClass = string.IsNullOrEmpty(epicClass) 
+                                                    ? "epic-being-dragged" 
+                                                    : $"{epicClass} epic-being-dragged";
+                                            }
+                                            
                                             <div class="@epicClass">
                                                 <EpicCard 
                                                     Placement="@placement"
@@ -180,6 +192,10 @@
     private int? _draggingPlacementId; // For planned epics
     private bool _isDraggingFromUnplanned;
 
+    // Drop target preview state
+    private int? _dropTargetLaneId;
+    private int? _dropTargetRowIndex;
+
     // Line dragging state
     private int? _draggingLineId;
     private bool _draggingIsMilestone;
@@ -257,6 +273,17 @@
             {
                 Logger.LogDebug("Cannot drop Epic {EpicId} into lane for different Objective {ObjectiveId}", 
                     _draggingEpicId.Value, objectiveId);
+                return;
+            }
+
+            // Find the lane
+            var lane = _board?.Lanes.FirstOrDefault(l => l.ObjectiveId == objectiveId);
+            if (lane != null)
+            {
+                // Update drop target preview state
+                _dropTargetLaneId = lane.Id;
+                _dropTargetRowIndex = rowIndex;
+                StateHasChanged();
             }
         }
     }
@@ -269,6 +296,7 @@
         if (!_draggingEpicId.HasValue || !_draggingObjectiveId.HasValue)
         {
             ResetEpicDragState();
+            ResetDropTargetState();
             return;
         }
 
@@ -277,8 +305,28 @@
         {
             Snackbar.Add("Epics can only be placed in their parent Objective's lane", Severity.Warning);
             ResetEpicDragState();
+            ResetDropTargetState();
             return;
         }
+
+        // Find the lane
+        var lane = _board?.Lanes.FirstOrDefault(l => l.ObjectiveId == objectiveId);
+        if (lane == null)
+        {
+            ResetEpicDragState();
+            ResetDropTargetState();
+            return;
+        }
+
+        // Calculate OrderInRow: place at the end of the row
+        var existingPlacementsInRow = _board?.Placements
+            .Where(p => p.LaneId == lane.Id && p.RowIndex == rowIndex && p.Id != _draggingPlacementId)
+            .OrderBy(p => p.OrderInRow)
+            .ToList() ?? new List<EpicPlacementDto>();
+        
+        int orderInRow = existingPlacementsInRow.Count > 0 
+            ? existingPlacementsInRow.Max(p => p.OrderInRow) + 1 
+            : 0;
 
         if (_isDraggingFromUnplanned)
         {
@@ -293,16 +341,25 @@
         else if (_draggingPlacementId.HasValue)
         {
             // Move existing placement
-            // TODO: Calculate OrderInRow based on drop position
             await HandleEpicMove(new EpicMoveEventArgs
             {
                 PlacementId = _draggingPlacementId.Value,
                 NewRowIndex = rowIndex,
-                NewOrderInRow = 0 // For now, place at start of row
+                NewOrderInRow = orderInRow
             });
         }
 
         ResetEpicDragState();
+        ResetDropTargetState();
+    }
+
+    /// <summary>
+    /// Resets drop target preview state.
+    /// </summary>
+    private void ResetDropTargetState()
+    {
+        _dropTargetLaneId = null;
+        _dropTargetRowIndex = null;
     }
 
     /// <summary>
@@ -349,6 +406,14 @@
         if (placementResult?.Success == true)
         {
             Snackbar.Add("Epic placed on board", Severity.Success);
+            
+            // Remove from staged epics if it was there
+            var stagedEpic = _stagedEpics.FirstOrDefault(e => e.EpicId == args.EpicId);
+            if (stagedEpic != null)
+            {
+                _stagedEpics.Remove(stagedEpic);
+            }
+            
             await LoadBoardAsync();
         }
         else

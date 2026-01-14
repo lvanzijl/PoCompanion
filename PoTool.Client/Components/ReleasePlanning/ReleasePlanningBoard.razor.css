@@ -153,3 +153,16 @@
         outline-color: var(--mud-palette-warning-darken);
     }
 }
+
+/* Drop target visual feedback */
+.lane-row.drop-target {
+    background-color: var(--mud-palette-primary-lighten) !important;
+    outline: 2px dashed var(--mud-palette-primary);
+    outline-offset: -2px;
+    transition: all 0.2s ease;
+}
+
+/* Epic being dragged should be semi-transparent */
+.epic-being-dragged {
+    opacity: 0.5;
+}
