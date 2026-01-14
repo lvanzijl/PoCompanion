@@ -228,7 +228,7 @@
     /// <summary>
     /// Called when an epic starts being dragged from the unplanned list.
     /// </summary>
-    public void HandleUnplannedEpicDragStart(int epicId, int objectiveId)
+    private void HandleUnplannedEpicDragStart(int epicId, int objectiveId)
     {
         _draggingEpicId = epicId;
         _draggingObjectiveId = objectiveId;
