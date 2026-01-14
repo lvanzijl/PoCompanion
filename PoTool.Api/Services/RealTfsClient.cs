@@ -1940,35 +1940,33 @@ public class RealTfsClient : ITfsClient
         return baseDelay + jitter;
     }
 
-    private async Task HandleHttpErrorsAsync(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        if (response.IsSuccessStatusCode)
-            return;
+   private async Task HandleHttpErrorsAsync(HttpResponseMessage response, CancellationToken ct)
+   {
+      if (response.IsSuccessStatusCode) return;
 
-        var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+      var body = response.Content != null
+          ? await response.Content.ReadAsStringAsync(ct)
+          : "<no body>";
 
-        var exception = response.StatusCode switch
-        {
-            HttpStatusCode.Unauthorized => new TfsAuthenticationException(
-                "TFS authentication failed. Ensure Windows authentication (NTLM) is enabled and your Windows credentials have access to the TFS server.", errorContent),
-            HttpStatusCode.Forbidden => new TfsAuthorizationException(
-                "TFS authorization failed. Your Windows account does not have sufficient permissions for this operation.", errorContent),
-            HttpStatusCode.NotFound => new TfsResourceNotFoundException(
-                "TFS resource not found. Check project name and URL.", errorContent),
-            HttpStatusCode.TooManyRequests => new TfsRateLimitException(
-                "TFS rate limit exceeded. Please try again later.", errorContent,
-                GetRetryAfter(response)),
-            _ when (int)response.StatusCode >= 500 => new TfsException(
-                $"TFS server error: {response.StatusCode}", (int)response.StatusCode, errorContent),
-            _ => new TfsException(
-                $"TFS request failed: {response.StatusCode}", (int)response.StatusCode, errorContent)
-        };
+      var request = response.RequestMessage;
+      var url = request?.RequestUri?.ToString() ?? "<unknown url>";
+      var method = request?.Method.Method ?? "<unknown method>";
 
-        _logger.LogError("TFS HTTP error: {StatusCode} - {Message}", response.StatusCode, exception.Message);
-        throw exception;
-    }
+      // Azure DevOps/TFS often returns an ActivityId header
+      var activityId =
+          response.Headers.TryGetValues("ActivityId", out var vals) ? string.Join(",", vals) :
+          response.Headers.TryGetValues("X-TFS-Session", out var vals2) ? string.Join(",", vals2) :
+          "<none>";
 
-    private TimeSpan? GetRetryAfter(HttpResponseMessage response)
+      _logger.LogError(
+          "TFS request failed. {Method} {Url} => {(int)Status} {Reason}. ActivityId={ActivityId}. Body={Body}",
+          method, url, (int)response.StatusCode, response.ReasonPhrase, activityId, body);
+
+      throw new TfsException(
+          $"TFS request failed: {(int)response.StatusCode} {response.ReasonPhrase}. ActivityId={activityId}. Url={url}. Body={body}");
+   }
+
+   private TimeSpan? GetRetryAfter(HttpResponseMessage response)
     {
         if (response.Headers.RetryAfter?.Delta.HasValue == true)
         {
