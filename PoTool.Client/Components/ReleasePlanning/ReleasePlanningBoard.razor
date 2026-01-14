@@ -234,6 +234,7 @@
     // Drop target preview state
     private int? _dropTargetLaneId;
     private int? _dropTargetRowIndex;
+    private bool _isHoveringDropZone; // True when hovering between-row drop zone, false when hovering row cell
 
     // Line dragging state
     private int? _draggingLineId;
@@ -284,22 +285,8 @@
     {
         get
         {
-            if (!_draggingEpicId.HasValue || !_dropTargetLaneId.HasValue || !_dropTargetRowIndex.HasValue)
-            {
-                return false;
-            }
-
-            // Check if we're hovering over a drop zone (which means inserting)
-            // This is true when _dropTargetLaneId is null (from HandleDropZoneDragOver)
-            // But since we need the lane, let's check if row exists
-            var lane = _board?.Lanes.FirstOrDefault(l => l.Id == _dropTargetLaneId.Value);
-            if (lane == null) return false;
-
-            var existingRow = _board?.Placements
-                .Any(p => p.LaneId == lane.Id && p.RowIndex == _dropTargetRowIndex.Value) ?? false;
-
-            // If no existing row at this index, we're inserting
-            return !existingRow;
+            // Use the explicit flag set by HandleDropZoneDragOver vs HandleRowDragOver
+            return _isHoveringDropZone;
         }
     }
 
@@ -382,6 +369,7 @@
                 // Update drop target preview state
                 _dropTargetLaneId = lane.Id;
                 _dropTargetRowIndex = rowIndex;
+                _isHoveringDropZone = false; // Hovering over row cell, not drop zone
                 StateHasChanged();
             }
             else
@@ -409,6 +397,7 @@
                 // Set drop target to indicate row insertion
                 _dropTargetLaneId = lane.Id;
                 _dropTargetRowIndex = targetRowIndex;
+                _isHoveringDropZone = true; // Hovering over drop zone between rows
                 StateHasChanged();
             }
             else
@@ -502,6 +491,7 @@
     {
         _dropTargetLaneId = null;
         _dropTargetRowIndex = null;
+        _isHoveringDropZone = false;
     }
 
     /// <summary>
