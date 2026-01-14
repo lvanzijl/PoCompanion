@@ -87,7 +87,8 @@ public static class BoardRenderModelFactory
     {
         var lanes = new List<RenderLane>();
         
-        foreach (var lane in board.Lanes)
+        // Ensure lanes are sorted by DisplayOrder for consistent left-to-right rendering
+        foreach (var lane in board.Lanes.OrderBy(l => l.DisplayOrder))
         {
             lanes.Add(CreateRenderLane(lane, board.Placements, dragState));
         }
