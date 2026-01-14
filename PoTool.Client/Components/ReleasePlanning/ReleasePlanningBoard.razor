@@ -111,8 +111,13 @@
                                     }
                                     else
                                     {
-                                        @* Empty lane cell *@
-                                        <div class="lane-row-container" style="flex: 1; min-width: 200px; border-right: 2px solid var(--mud-palette-divider);"></div>
+                                        @* Empty lane cell - MUST have drag handlers to work correctly *@
+                                        <div class="lane-row-container" 
+                                             style="flex: 1; min-width: 200px; border-right: 2px solid var(--mud-palette-divider);"
+                                             @ondragover:preventDefault
+                                             @ondragover="@(() => HandleRowDragOver(renderLane.Lane.ObjectiveId, currentRow))"
+                                             @ondrop="@(async () => await HandleRowDrop(renderLane.Lane.ObjectiveId, currentRow))">
+                                        </div>
                                     }
                                 }
                             </div>
@@ -123,8 +128,10 @@
                                 {
                                     var isBeingDragged = _draggingLineId == line.Id;
                                     var lineClass = isBeingDragged ? "milestone-line draggable-line line-being-dragged" : "milestone-line draggable-line";
+                                    @* Only enable pointer events when NOT dragging an epic - this allows epic drops to pass through *@
+                                    var linePointerEvents = _isDraggingEpic ? "none" : "auto";
                                     <div class="@lineClass"
-                                         style="pointer-events: auto; width: 100%;"
+                                         style="pointer-events: @linePointerEvents; width: 100%;"
                                          draggable="true"
                                          @ondragstart="@(e => HandleLineStartDrag(line.Id, true, line.Label, line.Type, line.VerticalPosition))"
                                          @ondragover:preventDefault
@@ -138,7 +145,7 @@
                                                  Color="Color.Primary"
                                                  Icon="@Icons.Material.Filled.DragHandle"
                                                  Class="line-label"
-                                                 Style="pointer-events: auto;">
+                                                 Style="pointer-events: inherit;">
                                             @line.Label
                                         </MudChip>
                                     </div>
@@ -147,8 +154,10 @@
                                 {
                                     var isBeingDragged = _draggingLineId == line.Id;
                                     var lineClass = isBeingDragged ? "iteration-line draggable-line line-being-dragged" : "iteration-line draggable-line";
+                                    @* Only enable pointer events when NOT dragging an epic - this allows epic drops to pass through *@
+                                    var linePointerEvents = _isDraggingEpic ? "none" : "auto";
                                     <div class="@lineClass"
-                                         style="pointer-events: auto; width: 100%;"
+                                         style="pointer-events: @linePointerEvents; width: 100%;"
                                          draggable="true"
                                          @ondragstart="@(e => HandleLineStartDrag(line.Id, false, line.Label, default, line.VerticalPosition))"
                                          @ondragover:preventDefault
@@ -163,7 +172,7 @@
                                                  Variant="Variant.Outlined"
                                                  Icon="@Icons.Material.Filled.DragHandle"
                                                  Class="line-label"
-                                                 Style="pointer-events: auto;">
+                                                 Style="pointer-events: inherit;">
                                             @line.Label
                                         </MudChip>
                                     </div>
@@ -212,6 +221,9 @@
     private List<UnplannedEpicDto> _stagedEpics = new(); // Epics selected from "+X more" dialog
     private bool _isLoading = true;
 
+    // Temporary debug logging flag - set to false to disable verbose drag logging
+    private const bool EnableDragDebugLogging = true;
+
     // Epic selection state (Issue #5)
     private int? _selectedPlacementId;
 
@@ -225,6 +237,7 @@
     // Drop target preview state
     private int? _dropTargetLaneId;
     private int? _dropTargetRowIndex;
+    private bool _isHoveringDropZone; // True when hovering between-row drop zone, false when hovering row cell
 
     // Line dragging state
     private int? _draggingLineId;
@@ -259,6 +272,12 @@
             IsInsertingNewRow = _isInsertingNewRow
         };
 
+        if (dragState.IsDragging && EnableDragDebugLogging)
+        {
+            Logger.LogInformation("[PREVIEW] Drag state - Epic: {EpicId}, HoverLane: {LaneId}, HoverRow: {RowIndex}, Inserting: {IsInserting}", 
+                dragState.DraggingEpicId, dragState.HoverLaneId, dragState.HoverRowIndex, dragState.IsInsertingNewRow);
+        }
+
         return BoardRenderModelFactory.Create(_board, dragState);
     }
 
@@ -269,22 +288,8 @@
     {
         get
         {
-            if (!_draggingEpicId.HasValue || !_dropTargetLaneId.HasValue || !_dropTargetRowIndex.HasValue)
-            {
-                return false;
-            }
-
-            // Check if we're hovering over a drop zone (which means inserting)
-            // This is true when _dropTargetLaneId is null (from HandleDropZoneDragOver)
-            // But since we need the lane, let's check if row exists
-            var lane = _board?.Lanes.FirstOrDefault(l => l.Id == _dropTargetLaneId.Value);
-            if (lane == null) return false;
-
-            var existingRow = _board?.Placements
-                .Any(p => p.LaneId == lane.Id && p.RowIndex == _dropTargetRowIndex.Value) ?? false;
-
-            // If no existing row at this index, we're inserting
-            return !existingRow;
+            // Use the explicit flag set by HandleDropZoneDragOver vs HandleRowDragOver
+            return _isHoveringDropZone;
         }
     }
 
@@ -325,7 +330,11 @@
         _draggingObjectiveId = objectiveId;
         _draggingPlacementId = null;
         _isDraggingFromUnplanned = true;
-        Logger.LogDebug("Started dragging unplanned Epic {EpicId} from Objective {ObjectiveId}", epicId, objectiveId);
+        
+        if (EnableDragDebugLogging)
+        {
+            Logger.LogInformation("[DRAG-START] Unplanned Epic {EpicId} from Objective {ObjectiveId}", epicId, objectiveId);
+        }
     }
 
     /// <summary>
@@ -337,8 +346,12 @@
         _draggingObjectiveId = args.ObjectiveId;
         _draggingPlacementId = args.PlacementId;
         _isDraggingFromUnplanned = false;
-        Logger.LogDebug("Started dragging planned Epic {EpicId} (Placement {PlacementId}) from Objective {ObjectiveId}", 
-            args.EpicId, args.PlacementId, args.ObjectiveId);
+        
+        if (EnableDragDebugLogging)
+        {
+            Logger.LogInformation("[DRAG-START] Planned Epic {EpicId} (Placement {PlacementId}) from Objective {ObjectiveId}", 
+                args.EpicId, args.PlacementId, args.ObjectiveId);
+        }
     }
 
     /// <summary>
@@ -352,8 +365,11 @@
         {
             if (_draggingObjectiveId.Value != objectiveId)
             {
-                Logger.LogDebug("Cannot drop Epic {EpicId} into lane for different Objective {ObjectiveId}", 
-                    _draggingEpicId.Value, objectiveId);
+                if (EnableDragDebugLogging)
+                {
+                    Logger.LogInformation("[DRAG-OVER] REJECTED - Epic {EpicId} cannot drop in Objective {ObjectiveId} (belongs to {SourceObjectiveId})", 
+                        _draggingEpicId.Value, objectiveId, _draggingObjectiveId.Value);
+                }
                 return;
             }
 
@@ -361,10 +377,24 @@
             var lane = _board?.Lanes.FirstOrDefault(l => l.ObjectiveId == objectiveId);
             if (lane != null)
             {
+                if (EnableDragDebugLogging)
+                {
+                    Logger.LogInformation("[DRAG-OVER] Epic {EpicId} over Lane {LaneId} (Objective {ObjectiveId}), Row {RowIndex}, Drop allowed: YES", 
+                        _draggingEpicId.Value, lane.Id, objectiveId, rowIndex);
+                }
+                
                 // Update drop target preview state
                 _dropTargetLaneId = lane.Id;
                 _dropTargetRowIndex = rowIndex;
+                _isHoveringDropZone = false; // Hovering over row cell, not drop zone
                 StateHasChanged();
+            }
+            else
+            {
+                if (EnableDragDebugLogging)
+                {
+                    Logger.LogWarning("[DRAG-OVER] Lane not found for Objective {ObjectiveId}", objectiveId);
+                }
             }
         }
     }
@@ -381,10 +411,24 @@
             var lane = _board?.Lanes.FirstOrDefault(l => l.ObjectiveId == _draggingObjectiveId.Value);
             if (lane != null)
             {
+                if (EnableDragDebugLogging)
+                {
+                    Logger.LogInformation("[DROP-ZONE] Epic {EpicId} over drop zone for Lane {LaneId}, inserting at Row {RowIndex}", 
+                        _draggingEpicId.Value, lane.Id, targetRowIndex);
+                }
+                
                 // Set drop target to indicate row insertion
                 _dropTargetLaneId = lane.Id;
                 _dropTargetRowIndex = targetRowIndex;
+                _isHoveringDropZone = true; // Hovering over drop zone between rows
                 StateHasChanged();
+            }
+            else
+            {
+                if (EnableDragDebugLogging)
+                {
+                    Logger.LogWarning("[DROP-ZONE] Lane not found for Objective {ObjectiveId}", _draggingObjectiveId.Value);
+                }
             }
         }
     }
@@ -394,8 +438,18 @@
     /// </summary>
     private async Task HandleRowDrop(int objectiveId, int rowIndex)
     {
+        if (EnableDragDebugLogging)
+        {
+            Logger.LogInformation("[DROP] Epic {EpicId} dropped on Row {RowIndex} for Objective {ObjectiveId}", 
+                _draggingEpicId, rowIndex, objectiveId);
+        }
+        
         if (!_draggingEpicId.HasValue || !_draggingObjectiveId.HasValue)
         {
+            if (EnableDragDebugLogging)
+            {
+                Logger.LogWarning("[DROP] Missing dragging state");
+            }
             ResetEpicDragState();
             ResetDropTargetState();
             return;
@@ -404,6 +458,11 @@
         // Validate that epic belongs to this objective
         if (_draggingObjectiveId.Value != objectiveId)
         {
+            if (EnableDragDebugLogging)
+            {
+                Logger.LogWarning("[DROP] REJECTED - Epic {EpicId} belongs to Objective {SourceObjectiveId}, cannot drop in {TargetObjectiveId}", 
+                    _draggingEpicId.Value, _draggingObjectiveId.Value, objectiveId);
+            }
             Snackbar.Add("Epics can only be placed in their parent Objective's lane", Severity.Warning);
             ResetEpicDragState();
             ResetDropTargetState();
@@ -414,9 +473,18 @@
         var lane = _board?.Lanes.FirstOrDefault(l => l.ObjectiveId == objectiveId);
         if (lane == null)
         {
+            if (EnableDragDebugLogging)
+            {
+                Logger.LogWarning("[DROP] Lane not found for Objective {ObjectiveId}", objectiveId);
+            }
             ResetEpicDragState();
             ResetDropTargetState();
             return;
+        }
+
+        if (EnableDragDebugLogging)
+        {
+            Logger.LogInformation("[DROP] Target Lane {LaneId} found for Objective {ObjectiveId}", lane.Id, objectiveId);
         }
 
         // Calculate OrderInRow: place at the end of the row
@@ -428,6 +496,12 @@
         int orderInRow = existingPlacementsInRow.Count > 0 
             ? existingPlacementsInRow.Max(p => p.OrderInRow) + 1 
             : 0;
+
+        if (EnableDragDebugLogging)
+        {
+            Logger.LogInformation("[DROP] Persisting Epic {EpicId} to Lane {LaneId}, Row {RowIndex}, Order {OrderInRow}", 
+                _draggingEpicId.Value, lane.Id, rowIndex, orderInRow);
+        }
 
         if (_isDraggingFromUnplanned)
         {
@@ -461,6 +535,7 @@
     {
         _dropTargetLaneId = null;
         _dropTargetRowIndex = null;
+        _isHoveringDropZone = false;
     }
 
     /// <summary>
