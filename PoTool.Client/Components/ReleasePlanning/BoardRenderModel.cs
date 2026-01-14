@@ -130,10 +130,14 @@ public static class BoardRenderModelFactory
             && dragState.HoverLaneId == lane.Id 
             && dragState.HoverRowIndex.HasValue;
         
-        // If previewing, we need to handle row insertion/modification
-        if (isPreviewingDropInThisLane && dragState.IsInsertingNewRow)
+        // Track if we're inserting a new row (affects all lanes visually)
+        bool isInsertingNewRowGlobally = dragState.IsDragging 
+            && dragState.IsInsertingNewRow 
+            && dragState.HoverRowIndex.HasValue;
+        
+        // If inserting a new row globally, all lanes need to show push-down
+        if (isInsertingNewRowGlobally)
         {
-            // Inserting a new row at HoverRowIndex
             int insertRowIndex = dragState.HoverRowIndex!.Value;
             
             // Add rows before insertion point
@@ -142,19 +146,31 @@ public static class BoardRenderModelFactory
                 renderRows.Add(CreateRenderRow(rowGroup.Key, rowGroup.ToList(), dragState, false));
             }
             
-            // Add inserted preview row with placeholder
-            renderRows.Add(CreateInsertedPreviewRow(insertRowIndex, dragState));
+            // Add inserted preview row ONLY for the target lane
+            if (isPreviewingDropInThisLane)
+            {
+                renderRows.Add(CreateInsertedPreviewRow(insertRowIndex, dragState));
+            }
+            else
+            {
+                // Other lanes: add empty row at insertion point
+                renderRows.Add(new RenderRow
+                {
+                    RowIndex = insertRowIndex,
+                    Cards = [],
+                    IsInsertedPreview = false
+                });
+            }
             
             // Add rows after insertion point (pushed down by 1 in visual preview)
             foreach (var rowGroup in rowGroups.Where(g => g.Key >= insertRowIndex))
             {
-                // These rows are visually pushed down but keep their indices for now
                 renderRows.Add(CreateRenderRow(rowGroup.Key + 1, rowGroup.ToList(), dragState, false));
             }
         }
         else if (isPreviewingDropInThisLane && !dragState.IsInsertingNewRow)
         {
-            // Dropping into an existing row
+            // Dropping into an existing row (only affects this lane)
             int targetRowIndex = dragState.HoverRowIndex!.Value;
             
             foreach (var rowGroup in rowGroups)
