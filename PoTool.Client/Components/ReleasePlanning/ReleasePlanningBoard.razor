@@ -77,138 +77,128 @@
                         </div>
                     }
 
-                    @for (int row = 0; row <= _board.MaxRowIndex; row++)
-                    {
-                        var currentRow = row;
-                        var linesAtPosition = GetLinesAtPosition(currentRow + 0.5);
-                        <div class="row-container d-flex" style="min-height: 80px; position: relative;">
-                            @foreach (var lane in _board.Lanes)
-                            {
-                                var lanePlacements = _board.Placements
-                                    .Where(p => p.LaneId == lane.Id && p.RowIndex == currentRow)
-                                    .OrderBy(p => p.OrderInRow)
-                                    .ToList();
+                    @* Render using derived render model *@
+                    @{
+                        var renderModel = GetRenderModel();
+                        for (int rowIdx = 0; rowIdx <= renderModel.MaxRowIndex; rowIdx++)
+                        {
+                            var currentRow = rowIdx;
+                            var linesAtPosition = GetLinesAtPosition(currentRow + 0.5);
+                            
+                            <div class="row-container d-flex" style="min-height: 80px; position: relative;">
+                                @foreach (var renderLane in renderModel.Lanes)
+                                {
+                                    var renderRow = renderLane.Rows.FirstOrDefault(r => r.RowIndex == currentRow);
+                                    
+                                    @if (renderRow != null)
+                                    {
+                                        var isDropTarget = _dropTargetLaneId == renderLane.Lane.Id && _dropTargetRowIndex == currentRow;
+                                        
+                                        <LaneRow 
+                                            Row="@renderRow"
+                                            Lane="@renderLane.Lane"
+                                            IsDropTarget="@isDropTarget"
+                                            OnDragOver="@(() => HandleRowDragOver(renderLane.Lane.ObjectiveId, currentRow))"
+                                            OnDrop="@(async () => await HandleRowDrop(renderLane.Lane.ObjectiveId, currentRow))"
+                                            OnEpicDragStart="@((placement) => HandlePlannedEpicDragStart((placement.Id, placement.EpicId, renderLane.Lane.ObjectiveId)))"
+                                            OnEpicSelected="@HandleEpicSelected"
+                                            OnEpicMove="@HandleEpicMove"
+                                            OnEpicContextMenu="@HandleEpicContextMenu"
+                                            OnEpicSplitRequested="@HandleEpicSplit"
+                                            OnEpicViewDetailsRequested="@HandleViewDetails"
+                                            SelectedPlacementId="@_selectedPlacementId"
+                                            DraggingPlacementId="@_draggingPlacementId" />
+                                    }
+                                    else
+                                    {
+                                        @* Empty lane cell *@
+                                        <div class="lane-row-container" style="flex: 1; min-width: 200px; border-right: 2px solid var(--mud-palette-divider);"></div>
+                                    }
+                                }
+                            </div>
 
-                                var isDropTarget = _dropTargetLaneId == lane.Id && _dropTargetRowIndex == currentRow;
-                                var laneRowClass = isDropTarget ? "lane-row flex-grow-1 pa-2 drop-target" : "lane-row flex-grow-1 pa-2";
-
-                                <div class="@laneRowClass"
-                                     style="border-right: 2px solid var(--mud-palette-divider); position: relative; z-index: 2;"
-                                     @ondragover:preventDefault
-                                     @ondragover="@(() => HandleRowDragOver(lane.ObjectiveId, currentRow))"
-                                     @ondrop="@(async () => await HandleRowDrop(lane.ObjectiveId, currentRow))">
-                                    <div class="d-flex flex-wrap gap-2">
-                                        @foreach (var placement in lanePlacements)
-                                        {
-                                            var epicClass = GetEpicPreviewClass(placement, currentRow);
-                                            
-                                            // Add "being dragged" class if this is the epic being dragged
-                                            if (_draggingPlacementId.HasValue && placement.Id == _draggingPlacementId.Value)
-                                            {
-                                                epicClass = string.IsNullOrEmpty(epicClass) 
-                                                    ? "epic-being-dragged" 
-                                                    : $"{epicClass} epic-being-dragged";
-                                            }
-                                            
-                                            <div class="@epicClass">
-                                                <EpicCard 
-                                                    Placement="@placement"
-                                                    ObjectiveId="@lane.ObjectiveId"
-                                                    IsSelected="@(_selectedPlacementId == placement.Id)"
-                                                    OnDragStart="@HandlePlannedEpicDragStart"
-                                                    OnSelected="@HandleEpicSelected"
-                                                    OnMove="@HandleEpicMove"
-                                                    OnContextMenu="@HandleEpicContextMenu"
-                                                    OnSplitRequested="@HandleEpicSplit"
-                                                    OnViewDetailsRequested="@HandleViewDetails" />
-                                            </div>
-                                        }
+                            <!-- Horizontal Lines between rows - full width across all lanes -->
+                            <div class="lines-container" style="position: relative; pointer-events: none;">
+                                @foreach (var line in linesAtPosition.MilestoneLines)
+                                {
+                                    var isBeingDragged = _draggingLineId == line.Id;
+                                    var lineClass = isBeingDragged ? "milestone-line draggable-line line-being-dragged" : "milestone-line draggable-line";
+                                    <div class="@lineClass"
+                                         style="pointer-events: auto; width: 100%;"
+                                         draggable="true"
+                                         @ondragstart="@(e => HandleLineStartDrag(line.Id, true, line.Label, line.Type, line.VerticalPosition))"
+                                         @ondragover:preventDefault
+                                         @ondragover="@(e => HandleLineDragOver(e, currentRow + 0.5))"
+                                         @ondrop="@(async e => await HandleLineDrop(line.Id, true))">
+                                        <MudDivider DividerType="DividerType.FullWidth" 
+                                                    Class="milestone-line-divider" 
+                                                    Style="pointer-events: none;" />
+                                        <MudChip T="string" 
+                                                 Size="Size.Small" 
+                                                 Color="Color.Primary"
+                                                 Icon="@Icons.Material.Filled.DragHandle"
+                                                 Class="line-label"
+                                                 Style="pointer-events: auto;">
+                                            @line.Label
+                                        </MudChip>
                                     </div>
-                                </div>
-                            }
-                        </div>
+                                }
+                                @foreach (var line in linesAtPosition.IterationLines)
+                                {
+                                    var isBeingDragged = _draggingLineId == line.Id;
+                                    var lineClass = isBeingDragged ? "iteration-line draggable-line line-being-dragged" : "iteration-line draggable-line";
+                                    <div class="@lineClass"
+                                         style="pointer-events: auto; width: 100%;"
+                                         draggable="true"
+                                         @ondragstart="@(e => HandleLineStartDrag(line.Id, false, line.Label, default, line.VerticalPosition))"
+                                         @ondragover:preventDefault
+                                         @ondragover="@(e => HandleLineDragOver(e, currentRow + 0.5))"
+                                         @ondrop="@(async e => await HandleLineDrop(line.Id, false))">
+                                        <MudDivider DividerType="DividerType.FullWidth" 
+                                                    Class="iteration-line-divider" 
+                                                    Style="border-style: dashed; pointer-events: none;" />
+                                        <MudChip T="string" 
+                                                 Size="Size.Small" 
+                                                 Color="Color.Secondary"
+                                                 Variant="Variant.Outlined"
+                                                 Icon="@Icons.Material.Filled.DragHandle"
+                                                 Class="line-label"
+                                                 Style="pointer-events: auto;">
+                                            @line.Label
+                                        </MudChip>
+                                    </div>
+                                }
 
-                        <!-- Horizontal Lines between rows - full width across all lanes -->
-                        <div class="lines-container" style="position: relative; pointer-events: none;">
-                            @foreach (var line in linesAtPosition.MilestoneLines)
-                            {
-                                var isBeingDragged = _draggingLineId == line.Id;
-                                var lineClass = isBeingDragged ? "milestone-line draggable-line line-being-dragged" : "milestone-line draggable-line";
-                                <div class="@lineClass"
-                                     style="pointer-events: auto; width: 100%;"
-                                     draggable="true"
-                                     @ondragstart="@(e => HandleLineStartDrag(line.Id, true, line.Label, line.Type, line.VerticalPosition))"
-                                     @ondragover:preventDefault
-                                     @ondragover="@(e => HandleLineDragOver(e, currentRow + 0.5))"
-                                     @ondrop="@(async e => await HandleLineDrop(line.Id, true))">
-                                    <MudDivider DividerType="DividerType.FullWidth" 
-                                                Class="milestone-line-divider" 
-                                                Style="pointer-events: none;" />
-                                    <MudChip T="string" 
-                                             Size="Size.Small" 
-                                             Color="Color.Primary"
-                                             Icon="@Icons.Material.Filled.DragHandle"
-                                             Class="line-label"
-                                             Style="pointer-events: auto;">
-                                        @line.Label
-                                    </MudChip>
-                                </div>
-                            }
-                            @foreach (var line in linesAtPosition.IterationLines)
-                            {
-                                var isBeingDragged = _draggingLineId == line.Id;
-                                var lineClass = isBeingDragged ? "iteration-line draggable-line line-being-dragged" : "iteration-line draggable-line";
-                                <div class="@lineClass"
-                                     style="pointer-events: auto; width: 100%;"
-                                     draggable="true"
-                                     @ondragstart="@(e => HandleLineStartDrag(line.Id, false, line.Label, default, line.VerticalPosition))"
-                                     @ondragover:preventDefault
-                                     @ondragover="@(e => HandleLineDragOver(e, currentRow + 0.5))"
-                                     @ondrop="@(async e => await HandleLineDrop(line.Id, false))">
-                                    <MudDivider DividerType="DividerType.FullWidth" 
-                                                Class="iteration-line-divider" 
-                                                Style="border-style: dashed; pointer-events: none;" />
-                                    <MudChip T="string" 
-                                             Size="Size.Small" 
-                                             Color="Color.Secondary"
-                                             Variant="Variant.Outlined"
-                                             Icon="@Icons.Material.Filled.DragHandle"
-                                             Class="line-label"
-                                             Style="pointer-events: auto;">
-                                        @line.Label
-                                    </MudChip>
-                                </div>
-                            }
+                                <!-- Preview Line during drag -->
+                                @if (IsPreviewLineAtPosition(currentRow + 0.5))
+                                {
+                                    <div class="@(_draggingIsMilestone ? "milestone-line-preview" : "iteration-line-preview")">
+                                        <MudDivider DividerType="DividerType.FullWidth" 
+                                                    Class="@(_draggingIsMilestone ? "milestone-line-divider" : "iteration-line-divider")"
+                                                    Style="@(_draggingIsMilestone ? "pointer-events: none;" : "border-style: dashed; pointer-events: none;")" />
+                                        <MudChip T="string" 
+                                                 Size="Size.Small" 
+                                                 Color="@(_draggingIsMilestone ? Color.Primary : Color.Secondary)"
+                                                 Variant="@(_draggingIsMilestone ? Variant.Filled : Variant.Outlined)"
+                                                 Class="line-label">
+                                            @_draggingLineLabel (Preview)
+                                        </MudChip>
+                                    </div>
+                                }
+                            </div>
 
-                            <!-- Preview Line during drag -->
-                            @if (IsPreviewLineAtPosition(currentRow + 0.5))
-                            {
-                                <div class="@(_draggingIsMilestone ? "milestone-line-preview" : "iteration-line-preview")">
-                                    <MudDivider DividerType="DividerType.FullWidth" 
-                                                Class="@(_draggingIsMilestone ? "milestone-line-divider" : "iteration-line-divider")"
-                                                Style="@(_draggingIsMilestone ? "pointer-events: none;" : "border-style: dashed; pointer-events: none;")" />
-                                    <MudChip T="string" 
-                                             Size="Size.Small" 
-                                             Color="@(_draggingIsMilestone ? Color.Primary : Color.Secondary)"
-                                             Variant="@(_draggingIsMilestone ? Variant.Filled : Variant.Outlined)"
-                                             Class="line-label">
-                                        @_draggingLineLabel (Preview)
-                                    </MudChip>
-                                </div>
-                            }
-                        </div>
-
-                        <!-- Drop zone between rows -->
-                        <div class="drop-zone-between-rows" 
-                             style="height: 20px; position: relative; z-index: 1;"
-                             @ondragover:preventDefault
-                             @ondragover="@(() => HandleDropZoneDragOver(currentRow + 1))"
-                             @ondrop="@(async () => await HandleInsertBeforeRow(currentRow + 1))">
-                            @if (_dropTargetRowIndex == currentRow + 1 && _isDraggingEpic)
-                            {
-                                <div class="drop-placeholder">Drop here</div>
-                            }
-                        </div>
+                            <!-- Drop zone between rows -->
+                            <div class="drop-zone-between-rows" 
+                                 style="height: 20px; position: relative; z-index: 1;"
+                                 @ondragover:preventDefault
+                                 @ondragover="@(() => HandleDropZoneDragOver(currentRow + 1))"
+                                 @ondrop="@(async () => await HandleInsertBeforeRow(currentRow + 1))">
+                                @if (_dropTargetRowIndex == currentRow + 1 && _isDraggingEpic)
+                                {
+                                    <div class="drop-placeholder">Drop here</div>
+                                }
+                            </div>
+                        }
                     }
                 </div>
             }
@@ -246,6 +236,57 @@
 
     // Constants for drag behavior
     private const double POSITION_TOLERANCE = 0.1;
+
+    /// <summary>
+    /// Creates the derived render model from persisted state and current drag state.
+    /// This method is called on every render to show the preview.
+    /// </summary>
+    private BoardRenderModel GetRenderModel()
+    {
+        if (_board == null)
+        {
+            return new BoardRenderModel();
+        }
+
+        // Build drag state from current UI state
+        var dragState = new DragState
+        {
+            DraggingEpicId = _draggingEpicId,
+            DraggingPlacementId = _draggingPlacementId,
+            SourceObjectiveId = _draggingObjectiveId,
+            HoverLaneId = _dropTargetLaneId,
+            HoverRowIndex = _dropTargetRowIndex,
+            IsInsertingNewRow = _isInsertingNewRow
+        };
+
+        return BoardRenderModelFactory.Create(_board, dragState);
+    }
+
+    /// <summary>
+    /// Determines if we're inserting a new row (vs dropping into existing row).
+    /// </summary>
+    private bool _isInsertingNewRow
+    {
+        get
+        {
+            if (!_draggingEpicId.HasValue || !_dropTargetLaneId.HasValue || !_dropTargetRowIndex.HasValue)
+            {
+                return false;
+            }
+
+            // Check if we're hovering over a drop zone (which means inserting)
+            // This is true when _dropTargetLaneId is null (from HandleDropZoneDragOver)
+            // But since we need the lane, let's check if row exists
+            var lane = _board?.Lanes.FirstOrDefault(l => l.Id == _dropTargetLaneId.Value);
+            if (lane == null) return false;
+
+            var existingRow = _board?.Placements
+                .Any(p => p.LaneId == lane.Id && p.RowIndex == _dropTargetRowIndex.Value) ?? false;
+
+            // If no existing row at this index, we're inserting
+            return !existingRow;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -330,15 +371,21 @@
 
     /// <summary>
     /// Called when dragging over a drop zone between rows.
+    /// This indicates intent to insert a new row.
     /// </summary>
     private void HandleDropZoneDragOver(int targetRowIndex)
     {
         if (_draggingEpicId.HasValue && _draggingObjectiveId.HasValue)
         {
-            // For drop zones, we set the row index but clear the lane ID
-            _dropTargetLaneId = null;
-            _dropTargetRowIndex = targetRowIndex;
-            StateHasChanged();
+            // Find the lane for this objective
+            var lane = _board?.Lanes.FirstOrDefault(l => l.ObjectiveId == _draggingObjectiveId.Value);
+            if (lane != null)
+            {
+                // Set drop target to indicate row insertion
+                _dropTargetLaneId = lane.Id;
+                _dropTargetRowIndex = targetRowIndex;
+                StateHasChanged();
+            }
         }
     }
 

@@ -1,0 +1,69 @@
+.lane-row-container {
+    position: relative;
+    width: 100%;
+    border-right: 2px solid var(--mud-palette-divider);
+    background-color: var(--mud-palette-background);
+    padding: 8px;
+}
+
+.lane-row-container:nth-child(odd) {
+    background-color: var(--mud-palette-background-grey);
+}
+
+/* Center layout for single epic */
+.lane-row-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 64px;
+}
+
+/* Justify layout for multiple epics */
+.lane-row-justify {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    min-height: 64px;
+    gap: 8px;
+}
+
+/* Ensure epic cards don't shrink */
+.epic-card-wrapper {
+    flex-shrink: 0;
+}
+
+/* Inserted preview row styling */
+.lane-row-inserted-preview {
+    background-color: var(--mud-palette-primary-lighten) !important;
+    outline: 2px dashed var(--mud-palette-primary);
+    outline-offset: -2px;
+    animation: pulse-insert 1s ease-in-out infinite;
+}
+
+@keyframes pulse-insert {
+    0%, 100% {
+        opacity: 0.8;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Drop target styling */
+.lane-row-drop-target {
+    background-color: var(--mud-palette-primary-lighten) !important;
+    outline: 2px dashed var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
+/* Placeholder card styling */
+.epic-card-placeholder {
+    flex-shrink: 0;
+}
+
+/* Epic being dragged styling */
+.epic-being-dragged {
+    opacity: 0.5;
+}
