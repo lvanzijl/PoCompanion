@@ -194,7 +194,10 @@
 /* Drop zones between rows */
 .drop-zone-between-rows,
 .drop-zone-row {
+    height: 20px;
     min-height: 20px;
+    position: relative;
+    z-index: 1;
     transition: all 0.2s ease;
 }
 
@@ -209,10 +212,6 @@
 }
 
 .drop-zone-lane-cell:hover {
-    background-color: var(--mud-palette-primary-lighten);
-}
-
-.drop-zone-between-rows:hover {
     background-color: var(--mud-palette-primary-lighten);
 }
 

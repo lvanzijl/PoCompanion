@@ -65,11 +65,10 @@
                     @if (_board.Lanes.Count > 0)
                     {
                         <!-- Drop zone before first row - per lane -->
-                        <div class="drop-zone-row d-flex" style="height: 20px; position: relative; z-index: 1;">
+                        <div class="drop-zone-row">
                             @foreach (var lane in _board.Lanes.OrderBy(l => l.DisplayOrder))
                             {
-                                <div class="drop-zone-lane-cell" 
-                                     style="flex: 1; min-width: 200px;"
+                                <div class="drop-zone-lane-cell"
                                      @ondragover:preventDefault
                                      @ondragover="@(() => HandleDropZoneDragOver(lane.ObjectiveId, 0))"
                                      @ondrop="@(async () => await HandleInsertBeforeRow(lane.ObjectiveId, 0))">
@@ -202,11 +201,10 @@
                             </div>
 
                             <!-- Drop zone between rows - per lane -->
-                            <div class="drop-zone-row d-flex" style="height: 20px; position: relative; z-index: 1;">
+                            <div class="drop-zone-row">
                                 @foreach (var lane in _board.Lanes.OrderBy(l => l.DisplayOrder))
                                 {
-                                    <div class="drop-zone-lane-cell" 
-                                         style="flex: 1; min-width: 200px;"
+                                    <div class="drop-zone-lane-cell"
                                          @ondragover:preventDefault
                                          @ondragover="@(() => HandleDropZoneDragOver(lane.ObjectiveId, currentRow + 1))"
                                          @ondrop="@(async () => await HandleInsertBeforeRow(lane.ObjectiveId, currentRow + 1))">
