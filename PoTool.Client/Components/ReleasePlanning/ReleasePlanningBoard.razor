@@ -62,17 +62,20 @@
                         CardHeight="60"
                         LaneWidth="200" />
                     
-                    <!-- Drop zone before first row -->
-                    <div class="drop-zone-between-rows" 
-                         style="height: 20px; position: relative; z-index: 1;"
-                         @ondragover:preventDefault
-                         @ondragover="@(() => HandleRowDragOver(_board.Lanes.First().ObjectiveId, 0))"
-                         @ondrop="@(async () => await HandleInsertBeforeRow(0))">
-                        @if (_dropTargetRowIndex == 0 && _isDraggingEpic)
-                        {
-                            <div class="drop-placeholder">Drop here to place at top</div>
-                        }
-                    </div>
+                    @if (_board.Lanes.Count > 0)
+                    {
+                        <!-- Drop zone before first row -->
+                        <div class="drop-zone-between-rows" 
+                             style="height: 20px; position: relative; z-index: 1;"
+                             @ondragover:preventDefault
+                             @ondragover="@(() => HandleDropZoneDragOver(0))"
+                             @ondrop="@(async () => await HandleInsertBeforeRow(0))">
+                            @if (_dropTargetRowIndex == 0 && _isDraggingEpic)
+                            {
+                                <div class="drop-placeholder">Drop here to place at top</div>
+                            }
+                        </div>
+                    }
 
                     @for (int row = 0; row <= _board.MaxRowIndex; row++)
                     {
@@ -199,6 +202,7 @@
                         <div class="drop-zone-between-rows" 
                              style="height: 20px; position: relative; z-index: 1;"
                              @ondragover:preventDefault
+                             @ondragover="@(() => HandleDropZoneDragOver(currentRow + 1))"
                              @ondrop="@(async () => await HandleInsertBeforeRow(currentRow + 1))">
                             @if (_dropTargetRowIndex == currentRow + 1 && _isDraggingEpic)
                             {
@@ -321,6 +325,20 @@
                 _dropTargetRowIndex = rowIndex;
                 StateHasChanged();
             }
+        }
+    }
+
+    /// <summary>
+    /// Called when dragging over a drop zone between rows.
+    /// </summary>
+    private void HandleDropZoneDragOver(int targetRowIndex)
+    {
+        if (_draggingEpicId.HasValue && _draggingObjectiveId.HasValue)
+        {
+            // For drop zones, we set the row index but clear the lane ID
+            _dropTargetLaneId = null;
+            _dropTargetRowIndex = targetRowIndex;
+            StateHasChanged();
         }
     }
 
