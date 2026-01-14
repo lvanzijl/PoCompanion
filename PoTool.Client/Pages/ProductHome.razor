@@ -33,8 +33,8 @@
     }
     else
     {
-        @* Product Selector Section - Only visible when multiple products exist *@
-        @if (_products.Count > 1)
+        @* Product Selector Section - Always visible when products exist *@
+        @if (_products.Count > 0)
         {
             <MudPaper Elevation="1" Class="pa-3 mb-3">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
@@ -46,6 +46,7 @@
                                Variant="Variant.Outlined"
                                Dense="true"
                                Style="min-width: 300px;">
+                        <MudSelectItem T="int" Value="@AllProductsId">All products</MudSelectItem>
                         @foreach (var product in _products)
                         {
                             <MudSelectItem T="int" Value="@product.Id">@product.Name</MudSelectItem>
@@ -82,10 +83,28 @@
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.h4">
                         <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
-                        @(_selectedProduct?.Name ?? _activeProfile?.Name ?? "Product Overview")
+                        @if (_selectedProductId == AllProductsId && _products.Count > 0)
+                        {
+                            <text>All Products Overview</text>
+                        }
+                        else if (_selectedProduct != null)
+                        {
+                            @_selectedProduct.Name
+                        }
+                        else
+                        {
+                            @(_activeProfile?.Name ?? "Product Overview")
+                        }
                     </MudText>
                     
-                    @if (_selectedProduct != null)
+                    @if (_selectedProductId == AllProductsId && _products.Count > 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <MudIcon Icon="@Icons.Material.Filled.ViewModule" Size="Size.Small" Class="mr-1" />
+                            Aggregated data across @_products.Count product(s)
+                        </MudText>
+                    }
+                    else if (_selectedProduct != null)
                     {
                         <MudText Typo="Typo.body2" Color="Color.Secondary">
                             <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" Class="mr-1" />
@@ -557,6 +576,9 @@
 </MudContainer>
 
 @code {
+    // Product scope constants
+    private const int AllProductsId = 0; // Synthetic ID representing "All products" aggregate view
+    
     // Configuration constants for PR metrics thresholds
     private const int LargePrFileThreshold = 50;
     private const double PrTimeGoodDaysThreshold = 2.0;
@@ -570,6 +592,9 @@
     private bool _isSyncing = false;
     private string _syncType = "";
     private SyncProgressPanel? _syncProgressPanel;
+    
+    // Cancellation for dashboard data loading (prevents race conditions)
+    private CancellationTokenSource? _dashboardLoadCts;
     
     // Profile and products
     private ProfileDto? _activeProfile;
@@ -597,6 +622,10 @@
     {
         SyncHubService.OnSyncProgressReceived -= HandleSyncProgress;
         SyncHubService.OnSyncStatusChanged -= HandleSyncStatusChanged;
+        
+        // Cancel any pending dashboard load operations
+        _dashboardLoadCts?.Cancel();
+        _dashboardLoadCts?.Dispose();
     }
 
     private void HandleSyncProgress(SyncProgressDto progress)
@@ -693,39 +722,8 @@
             var config = await TfsConfigService.GetConfigAsync();
             _lastSyncTime = config?.LastValidated;
             
-            // Load health data (limit to 3 iterations for summary)
-            // Use selected product if available, otherwise show global data
-            try
-            {
-                _healthData = await MetricsClient.GetMultiIterationBacklogHealthAsync(_selectedProductId > 0 ? _selectedProductId : null, null, 3);
-            }
-            catch (Exception)
-            {
-                // Health data not available - not critical
-                _healthData = null;
-            }
-            
-            // Load velocity data (limit to 6 sprints for averages)
-            try
-            {
-                _velocityData = await MetricsClient.GetVelocityTrendAsync(null, 6);
-            }
-            catch (Exception)
-            {
-                // Velocity data not available - not critical
-                _velocityData = null;
-            }
-            
-            // Load PR metrics (Phase 3)
-            try
-            {
-                _prMetrics = await PullRequestsClient.GetMetricsAsync();
-            }
-            catch (Exception)
-            {
-                // PR metrics not available - not critical
-                _prMetrics = null;
-            }
+            // Load dashboard data with current product scope
+            await LoadDashboardDataAsync();
         }
         catch (Exception ex)
         {
@@ -734,6 +732,71 @@
         finally
         {
             _isLoading = false;
+        }
+    }
+    
+    /// <summary>
+    /// Loads all dashboard data (health, velocity, PR metrics) for the currently selected product scope.
+    /// For "All products" mode (productId = AllProductsId), aggregates data across all products.
+    /// For single product mode, filters data to that product's hierarchy.
+    /// </summary>
+    private async Task LoadDashboardDataAsync(CancellationToken cancellationToken = default)
+    {
+        // Determine product scope for API calls
+        // AllProductsId (0) means aggregate view - pass null to backend
+        // Specific product ID means filter to that product's hierarchy
+        int? productIdForQuery = (_selectedProductId == AllProductsId) ? null : _selectedProductId;
+        
+        Console.WriteLine($"[ProductHome] Loading dashboard data for product scope: {(productIdForQuery.HasValue ? productIdForQuery.Value.ToString() : "All products")}");
+        
+        // Load health data (limit to 3 iterations for summary)
+        try
+        {
+            _healthData = await MetricsClient.GetMultiIterationBacklogHealthAsync(productIdForQuery, null, 3, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // Propagate cancellation
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductHome] Error loading health data: {ex.Message}");
+            // Health data not available - not critical
+            _healthData = null;
+        }
+        
+        // Load velocity data (limit to 6 sprints for averages)
+        // Note: Velocity API doesn't yet support productId filtering - shows global data for now
+        try
+        {
+            _velocityData = await MetricsClient.GetVelocityTrendAsync(null, 6, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // Propagate cancellation
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductHome] Error loading velocity data: {ex.Message}");
+            // Velocity data not available - not critical
+            _velocityData = null;
+        }
+        
+        // Load PR metrics (Phase 3)
+        // Note: PR metrics API doesn't support product filtering - shows global data for now
+        try
+        {
+            _prMetrics = await PullRequestsClient.GetMetricsAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // Propagate cancellation
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductHome] Error loading PR metrics: {ex.Message}");
+            // PR metrics not available - not critical
+            _prMetrics = null;
         }
     }
     
@@ -746,18 +809,24 @@
             var products = await ProductService.GetProductsByOwnerAsync(_activeProfile.Id);
             _products = products.OrderBy(p => p.Order).ToList();
             
-            // Auto-select first product if available
+            // Default to "All products" view
             if (_products.Any())
             {
-                if (_selectedProductId == 0 || !_products.Any(p => p.Id == _selectedProductId))
+                // Only keep existing selection if it's still valid, otherwise default to AllProductsId
+                if (_selectedProductId != AllProductsId && !_products.Any(p => p.Id == _selectedProductId))
                 {
-                    _selectedProductId = _products.First().Id;
+                    _selectedProductId = AllProductsId;
                 }
-                await LoadSelectedProductDetailsAsync();
+                
+                // Load details if a specific product is selected
+                if (_selectedProductId != AllProductsId)
+                {
+                    await LoadSelectedProductDetailsAsync();
+                }
             }
             else
             {
-                _selectedProductId = 0;
+                _selectedProductId = AllProductsId;
                 _selectedProduct = null;
                 _rootWorkItemTitle = null;
                 _rootWorkItemAreaPath = null;
@@ -772,6 +841,15 @@
     
     private async Task LoadSelectedProductDetailsAsync()
     {
+        // Clear product-specific details when "All products" is selected
+        if (_selectedProductId == AllProductsId)
+        {
+            _selectedProduct = null;
+            _rootWorkItemTitle = null;
+            _rootWorkItemAreaPath = null;
+            return;
+        }
+        
         _selectedProduct = _products.FirstOrDefault(p => p.Id == _selectedProductId);
         
         if (_selectedProduct != null)
@@ -801,11 +879,45 @@
     
     private async Task OnProductChanged(int newProductId)
     {
+        if (_selectedProductId == newProductId)
+        {
+            return; // No change
+        }
+        
         _selectedProductId = newProductId;
-        await LoadSelectedProductDetailsAsync();
-        // Switching product does NOT trigger a sync automatically to preserve user control
-        // over cache operations and avoid unexpected network calls when browsing products
+        
+        // Cancel any pending dashboard load
+        _dashboardLoadCts?.Cancel();
+        _dashboardLoadCts?.Dispose();
+        _dashboardLoadCts = new CancellationTokenSource();
+        
+        // Show loading indicator while reloading data
+        _isLoading = true;
         StateHasChanged();
+        
+        try
+        {
+            // Load product-specific details (or clear for "All products")
+            await LoadSelectedProductDetailsAsync();
+            
+            // Reload all dashboard data with new product scope
+            await LoadDashboardDataAsync(_dashboardLoadCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation - user switched products again
+            Console.WriteLine("[ProductHome] Dashboard load cancelled due to product change");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductHome] Error loading dashboard data: {ex.Message}");
+            _errorMessage = $"Error loading dashboard data: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
     }
     
     /// <summary>
