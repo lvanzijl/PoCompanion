@@ -111,20 +111,15 @@ public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullReq
         {
             // If no product IDs specified, get all products
             var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
-            foreach (var product in allProducts)
-            {
-                var repos = await _repoRepository.GetRepositoriesByProductAsync(product.Id, cancellationToken);
-                result.AddRange(repos.Select(r => (product.Id, r.Name)));
-            }
+            productIds = allProducts.Select(p => p.Id).ToList();
         }
-        else
+
+        // Fetch repositories for all products in a single query (avoids N+1 pattern)
+        var repositoriesByProduct = await _repoRepository.GetRepositoriesByProductIdsAsync(productIds, cancellationToken);
+
+        foreach (var (productId, repos) in repositoriesByProduct)
         {
-            // Get repositories for specified products
-            foreach (var productId in productIds)
-            {
-                var repos = await _repoRepository.GetRepositoriesByProductAsync(productId, cancellationToken);
-                result.AddRange(repos.Select(r => (productId, r.Name)));
-            }
+            result.AddRange(repos.Select(r => (productId, r.Name)));
         }
 
         return result;

@@ -81,12 +81,10 @@ public class PullRequestsController : ControllerBase
     {
         try
         {
-            List<int>? productIdsList = null;
-            if (!string.IsNullOrWhiteSpace(productIds))
+            var productIdsList = ParseProductIds(productIds, out var errorMessage);
+            if (errorMessage != null)
             {
-                productIdsList = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(id => int.Parse(id.Trim()))
-                    .ToList();
+                return BadRequest(errorMessage);
             }
 
             var metrics = await _mediator.Send(new GetPullRequestMetricsQuery(productIdsList), cancellationToken);
@@ -121,12 +119,10 @@ public class PullRequestsController : ControllerBase
     {
         try
         {
-            List<int>? productIdsList = null;
-            if (!string.IsNullOrWhiteSpace(productIds))
+            var productIdsList = ParseProductIds(productIds, out var errorMessage);
+            if (errorMessage != null)
             {
-                productIdsList = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(id => int.Parse(id.Trim()))
-                    .ToList();
+                return BadRequest(errorMessage);
             }
 
             var query = new GetFilteredPullRequestsQuery(productIdsList, iterationPath, createdBy, fromDate, toDate, status);
@@ -212,12 +208,10 @@ public class PullRequestsController : ControllerBase
     {
         try
         {
-            List<int>? productIdsList = null;
-            if (!string.IsNullOrWhiteSpace(productIds))
+            var productIdsList = ParseProductIds(productIds, out var errorMessage);
+            if (errorMessage != null)
             {
-                productIdsList = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(id => int.Parse(id.Trim()))
-                    .ToList();
+                return BadRequest(errorMessage);
             }
 
             var count = await _mediator.Send(new SyncPullRequestsCommand(productIdsList), cancellationToken);
@@ -266,5 +260,33 @@ public class PullRequestsController : ControllerBase
             _logger.LogError(ex, "Error retrieving PR review bottleneck analysis");
             return StatusCode(500, "Error retrieving PR review bottleneck analysis");
         }
+    }
+
+    /// <summary>
+    /// Helper method to parse comma-separated product IDs from query string.
+    /// </summary>
+    private static List<int>? ParseProductIds(string? productIds, out string? errorMessage)
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(productIds))
+        {
+            return null;
+        }
+
+        var result = new List<int>();
+        var parts = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var part in parts)
+        {
+            if (!int.TryParse(part.Trim(), out var id))
+            {
+                errorMessage = $"Invalid product ID format: '{part}'. Expected comma-separated integers.";
+                return null;
+            }
+            result.Add(id);
+        }
+
+        return result;
     }
 }

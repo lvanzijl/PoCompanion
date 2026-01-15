@@ -44,6 +44,25 @@ public class RepositoryRepository
     }
 
     /// <summary>
+    /// Gets repositories for multiple products in a single query.
+    /// </summary>
+    public async Task<Dictionary<int, List<RepositoryDto>>> GetRepositoriesByProductIdsAsync(List<int> productIds, CancellationToken cancellationToken = default)
+    {
+        var entities = await _context.Repositories
+            .Where(r => productIds.Contains(r.ProductId))
+            .OrderBy(r => r.ProductId)
+            .ThenBy(r => r.Name)
+            .ToListAsync(cancellationToken);
+
+        return entities
+            .GroupBy(r => r.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(MapToDto).ToList()
+            );
+    }
+
+    /// <summary>
     /// Creates a new repository configuration.
     /// </summary>
     public async Task<RepositoryDto> CreateRepositoryAsync(int productId, string name, CancellationToken cancellationToken = default)
