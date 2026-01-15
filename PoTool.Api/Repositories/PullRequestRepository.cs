@@ -222,7 +222,8 @@ public class PullRequestRepository : IPullRequestRepository
             IterationPath: entity.IterationPath,
             SourceBranch: entity.SourceBranch,
             TargetBranch: entity.TargetBranch,
-            RetrievedAt: entity.RetrievedAt
+            RetrievedAt: entity.RetrievedAt,
+            ProductId: entity.ProductId
         );
     }
 
@@ -240,7 +241,8 @@ public class PullRequestRepository : IPullRequestRepository
             IterationPath = dto.IterationPath,
             SourceBranch = dto.SourceBranch,
             TargetBranch = dto.TargetBranch,
-            RetrievedAt = dto.RetrievedAt
+            RetrievedAt = dto.RetrievedAt,
+            ProductId = dto.ProductId
         };
     }
 
@@ -256,6 +258,7 @@ public class PullRequestRepository : IPullRequestRepository
         entity.SourceBranch = dto.SourceBranch;
         entity.TargetBranch = dto.TargetBranch;
         entity.RetrievedAt = dto.RetrievedAt;
+        entity.ProductId = dto.ProductId;
     }
 
     private static PullRequestIterationDto MapToIterationDto(PullRequestIterationEntity entity)

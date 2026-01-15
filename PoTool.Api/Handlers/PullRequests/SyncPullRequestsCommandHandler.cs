@@ -1,8 +1,10 @@
 using Mediator;
 using Microsoft.Extensions.Configuration;
+using PoTool.Api.Repositories;
 using PoTool.Api.Services.MockData;
 using PoTool.Core.Contracts;
 using PoTool.Core.PullRequests.Commands;
+using PoTool.Shared.PullRequests;
 
 namespace PoTool.Api.Handlers.PullRequests;
 
@@ -14,16 +16,22 @@ namespace PoTool.Api.Handlers.PullRequests;
 public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullRequestsCommand, int>
 {
     private readonly IPullRequestRepository _repository;
+    private readonly RepositoryRepository _repoRepository;
+    private readonly IProductRepository _productRepository;
     private readonly ITfsClient _tfsClient;
     private readonly ILogger<SyncPullRequestsCommandHandler> _logger;
 
     public SyncPullRequestsCommandHandler(
         IPullRequestRepository repository,
+        RepositoryRepository repoRepository,
+        IProductRepository productRepository,
         ITfsClient tfsClient,
         ILogger<SyncPullRequestsCommandHandler> logger,
         IConfiguration configuration)
     {
         _repository = repository;
+        _repoRepository = repoRepository;
+        _productRepository = productRepository;
         _tfsClient = tfsClient;
         _logger = logger;
     }
@@ -32,33 +40,93 @@ public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullReq
         SyncPullRequestsCommand command,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting pull request sync");
+        _logger.LogInformation("Starting pull request sync for products");
 
-        // Use the bulk method to fetch all PR data in a single call.
-        // This prevents the N+1 pattern where we would call:
-        // - GetPullRequestsAsync (1 call)
-        // - GetPullRequestIterationsAsync (N calls, one per PR)
-        // - GetPullRequestCommentsAsync (N calls, one per PR)
-        // - GetPullRequestFileChangesAsync (M calls, one per iteration)
-        // Instead, GetPullRequestsWithDetailsAsync fetches all data efficiently.
-        var syncResult = await _tfsClient.GetPullRequestsWithDetailsAsync(cancellationToken: cancellationToken);
+        // Get repositories for the specified products
+        var repositories = await GetRepositoriesForProductsAsync(command.ProductIds, cancellationToken);
 
-        // Log performance instrumentation showing call reduction
+        if (!repositories.Any())
+        {
+            _logger.LogWarning("No repositories configured for the specified products");
+            return 0;
+        }
+
+        int totalPrsSynced = 0;
+        var allPrs = new List<PullRequestDto>();
+        var allIterations = new List<PullRequestIterationDto>();
+        var allComments = new List<PullRequestCommentDto>();
+        var allFileChanges = new List<PullRequestFileChangeDto>();
+
+        // Sync PRs for each repository
+        foreach (var (productId, repoName) in repositories)
+        {
+            _logger.LogInformation("Syncing PRs for repository '{Repository}' (Product ID: {ProductId})", repoName, productId);
+
+            // Fetch PRs for this repository
+            var syncResult = await _tfsClient.GetPullRequestsWithDetailsAsync(
+                repositoryName: repoName,
+                cancellationToken: cancellationToken);
+
+            _logger.LogInformation(
+                "Bulk PR fetch for '{Repository}' completed with {TfsCallCount} TFS call(s) - retrieved {PrCount} PRs",
+                repoName,
+                syncResult.TfsCallCount,
+                syncResult.PullRequests.Count);
+
+            // Set ProductId on all PRs from this repository
+            var prsWithProductId = syncResult.PullRequests.Select(pr => pr with { ProductId = productId }).ToList();
+            
+            allPrs.AddRange(prsWithProductId);
+            allIterations.AddRange(syncResult.Iterations);
+            allComments.AddRange(syncResult.Comments);
+            allFileChanges.AddRange(syncResult.FileChanges);
+
+            totalPrsSynced += syncResult.PullRequests.Count;
+        }
+
+        // Save all PRs, iterations, comments, and file changes to repository
+        if (allPrs.Any())
+        {
+            await _repository.SaveAsync(allPrs, cancellationToken);
+            await _repository.SaveIterationsAsync(allIterations, cancellationToken);
+            await _repository.SaveCommentsAsync(allComments, cancellationToken);
+            await _repository.SaveFileChangesAsync(allFileChanges, cancellationToken);
+        }
+
         _logger.LogInformation(
-            "Bulk PR fetch completed with {TfsCallCount} TFS call(s) - retrieved {PrCount} PRs, {IterCount} iterations, {CommentCount} comments, {FileCount} file changes",
-            syncResult.TfsCallCount,
-            syncResult.PullRequests.Count,
-            syncResult.Iterations.Count,
-            syncResult.Comments.Count,
-            syncResult.FileChanges.Count);
+            "Pull request sync completed. Synced {Count} PRs across {RepoCount} repositories",
+            totalPrsSynced,
+            repositories.Count);
 
-        // Save to repository
-        await _repository.SaveAsync(syncResult.PullRequests.ToList(), cancellationToken);
-        await _repository.SaveIterationsAsync(syncResult.Iterations.ToList(), cancellationToken);
-        await _repository.SaveCommentsAsync(syncResult.Comments.ToList(), cancellationToken);
-        await _repository.SaveFileChangesAsync(syncResult.FileChanges.ToList(), cancellationToken);
+        return totalPrsSynced;
+    }
 
-        _logger.LogInformation("Pull request sync completed. Synced {Count} PRs", syncResult.PullRequests.Count);
-        return syncResult.PullRequests.Count;
+    private async Task<List<(int ProductId, string RepoName)>> GetRepositoriesForProductsAsync(
+        List<int>? productIds,
+        CancellationToken cancellationToken)
+    {
+        var result = new List<(int ProductId, string RepoName)>();
+
+        if (productIds == null || !productIds.Any())
+        {
+            // If no product IDs specified, get all products
+            var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+            foreach (var product in allProducts)
+            {
+                var repos = await _repoRepository.GetRepositoriesByProductAsync(product.Id, cancellationToken);
+                result.AddRange(repos.Select(r => (product.Id, r.Name)));
+            }
+        }
+        else
+        {
+            // Get repositories for specified products
+            foreach (var productId in productIds)
+            {
+                var repos = await _repoRepository.GetRepositoriesByProductAsync(productId, cancellationToken);
+                result.AddRange(repos.Select(r => (productId, r.Name)));
+            }
+        }
+
+        return result;
     }
 }
