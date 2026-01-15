@@ -38,28 +38,41 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
         CancellationToken cancellationToken)
     {
         _logger.LogDebug(
-            "Handling GetMultiIterationBacklogHealthQuery with ProductId: {ProductId}, AreaPath: {AreaPath}, MaxIterations: {MaxIterations}",
-            query.ProductId?.ToString() ?? "None",
+            "Handling GetMultiIterationBacklogHealthQuery with ProductIds: {ProductIds}, AreaPath: {AreaPath}, MaxIterations: {MaxIterations}",
+            query.ProductIds != null ? string.Join(", ", query.ProductIds) : "None",
             query.AreaPath ?? "All",
             query.MaxIterations);
 
         var allWorkItems = await _repository.GetAllAsync(cancellationToken);
 
-        // Filter by product hierarchy if ProductId is specified
-        if (query.ProductId.HasValue)
+        // Filter by product hierarchy if ProductIds are specified
+        if (query.ProductIds != null && query.ProductIds.Length > 0)
         {
-            var product = await _productRepository.GetProductByIdAsync(query.ProductId.Value, cancellationToken);
-            if (product == null)
+            var rootWorkItemIds = new List<int>();
+            
+            // Collect root work item IDs from all specified products
+            foreach (var productId in query.ProductIds)
             {
-                _logger.LogWarning("Product with ID {ProductId} not found", query.ProductId.Value);
-                // Return empty result if product not found
+                var product = await _productRepository.GetProductByIdAsync(productId, cancellationToken);
+                if (product == null)
+                {
+                    _logger.LogWarning("Product with ID {ProductId} not found, skipping", productId);
+                    continue;
+                }
+                rootWorkItemIds.Add(product.BacklogRootWorkItemId);
+            }
+
+            if (rootWorkItemIds.Count == 0)
+            {
+                _logger.LogWarning("No valid products found for IDs: {ProductIds}", string.Join(", ", query.ProductIds));
+                // Return empty result if no valid products found
                 return new MultiIterationBacklogHealthDto(
                     IterationHealth: new List<BacklogHealthDto>(),
                     Trend: new BacklogHealthTrend(
                         EffortTrend: TrendDirection.Unknown,
                         ValidationTrend: TrendDirection.Unknown,
                         BlockerTrend: TrendDirection.Unknown,
-                        Summary: "Product not found"
+                        Summary: "No valid products found"
                     ),
                     TotalWorkItems: 0,
                     TotalIssues: 0,
@@ -67,15 +80,14 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
                 );
             }
 
-            // Filter to only work items in the product's hierarchy
-            allWorkItems = WorkItemHierarchyHelper.FilterDescendants(
-                new List<int> { product.BacklogRootWorkItemId },
-                allWorkItems);
+            // Filter to only work items in the products' hierarchies
+            // FilterDescendants automatically deduplicates by TfsId using HashSet internally
+            allWorkItems = WorkItemHierarchyHelper.FilterDescendants(rootWorkItemIds, allWorkItems);
 
             _logger.LogDebug(
-                "Filtered to {Count} work items in product hierarchy (root: {RootId})",
+                "Filtered to {Count} work items in product hierarchies (roots: {RootIds}), deduplicated by TfsId",
                 allWorkItems.Count(),
-                product.BacklogRootWorkItemId);
+                string.Join(", ", rootWorkItemIds));
         }
         // Otherwise, filter by area path if specified (legacy behavior)
         else if (!string.IsNullOrWhiteSpace(query.AreaPath))

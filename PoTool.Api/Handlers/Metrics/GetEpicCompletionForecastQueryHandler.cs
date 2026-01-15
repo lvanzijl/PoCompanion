@@ -58,7 +58,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
 
         // Get velocity trend for the area path
         var velocityTrend = await _mediator.Send(
-            new GetVelocityTrendQuery(epic.AreaPath, query.MaxSprintsForVelocity ?? 5),
+            new GetVelocityTrendQuery(ProductIds: null, AreaPath: epic.AreaPath, MaxSprints: query.MaxSprintsForVelocity ?? 5),
             cancellationToken);
 
         var estimatedVelocity = velocityTrend.AverageVelocity;

@@ -2,25 +2,30 @@ using Mediator;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
+using PoTool.Core.WorkItems;
 
 namespace PoTool.Api.Handlers.Metrics;
 
 /// <summary>
 /// Handler for GetVelocityTrendQuery.
 /// Calculates velocity trends across multiple sprints.
+/// Supports filtering by product IDs (with deduplication) or area path.
 /// </summary>
 public sealed class GetVelocityTrendQueryHandler : IQueryHandler<GetVelocityTrendQuery, VelocityTrendDto>
 {
     private readonly IWorkItemRepository _repository;
+    private readonly IProductRepository _productRepository;
     private readonly IMediator _mediator;
     private readonly ILogger<GetVelocityTrendQueryHandler> _logger;
 
     public GetVelocityTrendQueryHandler(
         IWorkItemRepository repository,
+        IProductRepository productRepository,
         IMediator mediator,
         ILogger<GetVelocityTrendQueryHandler> logger)
     {
         _repository = repository;
+        _productRepository = productRepository;
         _mediator = mediator;
         _logger = logger;
     }
@@ -29,13 +34,48 @@ public sealed class GetVelocityTrendQueryHandler : IQueryHandler<GetVelocityTren
         GetVelocityTrendQuery query,
         CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Handling GetVelocityTrendQuery for AreaPath: {AreaPath}, MaxSprints: {MaxSprints}",
-            query.AreaPath ?? "All", query.MaxSprints);
+        _logger.LogDebug("Handling GetVelocityTrendQuery for ProductIds: {ProductIds}, AreaPath: {AreaPath}, MaxSprints: {MaxSprints}",
+            query.ProductIds != null ? string.Join(", ", query.ProductIds) : "None",
+            query.AreaPath ?? "All", 
+            query.MaxSprints);
 
         var allWorkItems = await _repository.GetAllAsync(cancellationToken);
 
-        // Filter by area path if specified
-        if (!string.IsNullOrWhiteSpace(query.AreaPath))
+        // Filter by product hierarchy if ProductIds are specified
+        if (query.ProductIds != null && query.ProductIds.Length > 0)
+        {
+            var rootWorkItemIds = new List<int>();
+            
+            // Collect root work item IDs from all specified products
+            foreach (var productId in query.ProductIds)
+            {
+                var product = await _productRepository.GetProductByIdAsync(productId, cancellationToken);
+                if (product == null)
+                {
+                    _logger.LogWarning("Product with ID {ProductId} not found, skipping", productId);
+                    continue;
+                }
+                rootWorkItemIds.Add(product.BacklogRootWorkItemId);
+            }
+
+            if (rootWorkItemIds.Count > 0)
+            {
+                // Filter to only work items in the products' hierarchies
+                // FilterDescendants automatically deduplicates by TfsId using HashSet internally
+                allWorkItems = WorkItemHierarchyHelper.FilterDescendants(rootWorkItemIds, allWorkItems);
+
+                _logger.LogDebug(
+                    "Filtered to {Count} work items in product hierarchies (roots: {RootIds}), deduplicated by TfsId",
+                    allWorkItems.Count(),
+                    string.Join(", ", rootWorkItemIds));
+            }
+            else
+            {
+                _logger.LogWarning("No valid products found for IDs: {ProductIds}", string.Join(", ", query.ProductIds));
+            }
+        }
+        // Otherwise, filter by area path if specified (legacy behavior)
+        else if (!string.IsNullOrWhiteSpace(query.AreaPath))
         {
             allWorkItems = allWorkItems
                 .Where(wi => wi.AreaPath.StartsWith(query.AreaPath, StringComparison.OrdinalIgnoreCase))

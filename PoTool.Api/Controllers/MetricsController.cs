@@ -64,12 +64,14 @@ public class MetricsController : ControllerBase
     /// <summary>
     /// Gets velocity trend data across multiple sprints.
     /// </summary>
+    /// <param name="productIds">Optional product IDs to filter work items (comma-separated for multiple)</param>
     /// <param name="areaPath">Optional area path to filter work items</param>
     /// <param name="maxSprints">Maximum number of sprints to include (default: 10)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Velocity trend data including sprint metrics and averages</returns>
     [HttpGet("velocity")]
     public async Task<ActionResult<VelocityTrendDto>> GetVelocityTrend(
+        [FromQuery] int[]? productIds = null,
         [FromQuery] string? areaPath = null,
         [FromQuery] int maxSprints = 10,
         CancellationToken cancellationToken = default)
@@ -82,14 +84,16 @@ public class MetricsController : ControllerBase
             }
 
             var velocityTrend = await _mediator.Send(
-                new GetVelocityTrendQuery(areaPath, maxSprints),
+                new GetVelocityTrendQuery(productIds, areaPath, maxSprints),
                 cancellationToken);
 
             return Ok(velocityTrend);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving velocity trend for area: {AreaPath}", areaPath ?? "All");
+            _logger.LogError(ex, "Error retrieving velocity trend for products: {ProductIds}, area: {AreaPath}", 
+                productIds != null ? string.Join(", ", productIds) : "None",
+                areaPath ?? "All");
             return StatusCode(500, "Error retrieving velocity trend");
         }
     }
@@ -133,14 +137,14 @@ public class MetricsController : ControllerBase
     /// <summary>
     /// Gets aggregated backlog health across multiple iterations with trend analysis.
     /// </summary>
-    /// <param name="productId">Optional product ID to filter work items by product hierarchy</param>
-    /// <param name="areaPath">Optional area path to filter work items (used if productId is not specified)</param>
+    /// <param name="productIds">Optional product IDs to filter work items by product hierarchy (comma-separated for multiple)</param>
+    /// <param name="areaPath">Optional area path to filter work items (used if productIds is not specified)</param>
     /// <param name="maxIterations">Maximum number of iterations to include (default: 5)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Multi-iteration backlog health with trend analysis</returns>
     [HttpGet("multi-iteration-health")]
     public async Task<ActionResult<MultiIterationBacklogHealthDto>> GetMultiIterationBacklogHealth(
-        [FromQuery] int? productId = null,
+        [FromQuery] int[]? productIds = null,
         [FromQuery] string? areaPath = null,
         [FromQuery] int maxIterations = 5,
         CancellationToken cancellationToken = default)
@@ -153,15 +157,15 @@ public class MetricsController : ControllerBase
             }
 
             var health = await _mediator.Send(
-                new GetMultiIterationBacklogHealthQuery(productId, areaPath, maxIterations),
+                new GetMultiIterationBacklogHealthQuery(productIds, areaPath, maxIterations),
                 cancellationToken);
 
             return Ok(health);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving multi-iteration backlog health for product: {ProductId}, area: {AreaPath}", 
-                productId?.ToString() ?? "None", 
+            _logger.LogError(ex, "Error retrieving multi-iteration backlog health for products: {ProductIds}, area: {AreaPath}", 
+                productIds != null ? string.Join(", ", productIds) : "None", 
                 areaPath ?? "All");
             return StatusCode(500, "Error retrieving multi-iteration backlog health");
         }
