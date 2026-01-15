@@ -130,6 +130,7 @@
     // Product scope constants
     private const int AllProductsId = 0; // Synthetic ID representing "All products" aggregate view
     private const string PreferenceKey_SelectedProductId = "BacklogHealth_SelectedProductId";
+    private const string ApiEndpoint_MultiIterationHealth = "api/Metrics/multi-iteration-health";
     
     private MultiIterationBacklogHealthDto? _healthData;
     private bool _isLoading = true;
@@ -260,9 +261,15 @@
             // Determine product scope for API call
             // AllProductsId (0) means aggregate view - pass all product IDs
             // Specific product ID means filter to that product's hierarchy
-            int[] productIdsForQuery = _selectedProductId == AllProductsId 
-                ? _products.Select(p => p.Id).ToArray()
-                : new[] { _selectedProductId };
+            // If no products exist, pass null to get global/unfiltered data
+            int[]? productIdsForQuery = null;
+            
+            if (_products.Any())
+            {
+                productIdsForQuery = _selectedProductId == AllProductsId 
+                    ? _products.Select(p => p.Id).ToArray()
+                    : new[] { _selectedProductId };
+            }
             
             // Call API with multiple product IDs using manual HttpClient
             // (NSwag doesn't handle array parameters well)
@@ -307,8 +314,17 @@
         
         queryParams.Add($"maxIterations={maxIterations}");
         
-        var url = $"api/Metrics/multi-iteration-health?{string.Join("&", queryParams)}";
-        return await Http.GetFromJsonAsync<MultiIterationBacklogHealthDto>(url);
+        var url = $"{ApiEndpoint_MultiIterationHealth}?{string.Join("&", queryParams)}";
+        
+        try
+        {
+            return await Http.GetFromJsonAsync<MultiIterationBacklogHealthDto>(url);
+        }
+        catch (HttpRequestException ex)
+        {
+            // Provide context about which API call failed
+            throw new Exception($"Failed to retrieve multi-iteration backlog health data from {url}: {ex.Message}", ex);
+        }
     }
 
     private void ShowError(Exception ex, string context)
