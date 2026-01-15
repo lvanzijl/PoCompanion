@@ -70,14 +70,26 @@ public class PullRequestsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets aggregated metrics for all pull requests.
+    /// Gets aggregated metrics for pull requests.
     /// </summary>
+    /// <param name="productIds">Optional comma-separated list of product IDs to filter by</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     [HttpGet("metrics")]
-    public async Task<ActionResult<IEnumerable<PullRequestMetricsDto>>> GetMetrics(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<PullRequestMetricsDto>>> GetMetrics(
+        [FromQuery] string? productIds = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var metrics = await _mediator.Send(new GetPullRequestMetricsQuery(), cancellationToken);
+            List<int>? productIdsList = null;
+            if (!string.IsNullOrWhiteSpace(productIds))
+            {
+                productIdsList = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(id => int.Parse(id.Trim()))
+                    .ToList();
+            }
+
+            var metrics = await _mediator.Send(new GetPullRequestMetricsQuery(productIdsList), cancellationToken);
             return Ok(metrics);
         }
         catch (Exception ex)
@@ -88,10 +100,18 @@ public class PullRequestsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets filtered pull requests based on query parameters.
+    /// Gets filtered pull requests based on query parameters including product scope.
     /// </summary>
+    /// <param name="productIds">Optional comma-separated list of product IDs to filter by</param>
+    /// <param name="iterationPath">Optional iteration path filter</param>
+    /// <param name="createdBy">Optional creator filter</param>
+    /// <param name="fromDate">Optional start date filter</param>
+    /// <param name="toDate">Optional end date filter</param>
+    /// <param name="status">Optional status filter</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     [HttpGet("filter")]
     public async Task<ActionResult<IEnumerable<PullRequestDto>>> GetFiltered(
+        [FromQuery] string? productIds = null,
         [FromQuery] string? iterationPath = null,
         [FromQuery] string? createdBy = null,
         [FromQuery] DateTimeOffset? fromDate = null,
@@ -101,7 +121,15 @@ public class PullRequestsController : ControllerBase
     {
         try
         {
-            var query = new GetFilteredPullRequestsQuery(null, iterationPath, createdBy, fromDate, toDate, status);
+            List<int>? productIdsList = null;
+            if (!string.IsNullOrWhiteSpace(productIds))
+            {
+                productIdsList = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(id => int.Parse(id.Trim()))
+                    .ToList();
+            }
+
+            var query = new GetFilteredPullRequestsQuery(productIdsList, iterationPath, createdBy, fromDate, toDate, status);
             var pullRequests = await _mediator.Send(query, cancellationToken);
             return Ok(pullRequests);
         }
@@ -175,12 +203,24 @@ public class PullRequestsController : ControllerBase
     /// <summary>
     /// Synchronizes pull requests from TFS/Azure DevOps to local cache.
     /// </summary>
+    /// <param name="productIds">Optional comma-separated list of product IDs to sync. If null, syncs all products.</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     [HttpPost("sync")]
-    public async Task<ActionResult<int>> Sync(CancellationToken cancellationToken)
+    public async Task<ActionResult<int>> Sync(
+        [FromQuery] string? productIds = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var count = await _mediator.Send(new SyncPullRequestsCommand(), cancellationToken);
+            List<int>? productIdsList = null;
+            if (!string.IsNullOrWhiteSpace(productIds))
+            {
+                productIdsList = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(id => int.Parse(id.Trim()))
+                    .ToList();
+            }
+
+            var count = await _mediator.Send(new SyncPullRequestsCommand(productIdsList), cancellationToken);
             return Ok(count);
         }
         catch (Exception ex)
