@@ -213,7 +213,7 @@ public class BoardRenderModelTests
     }
 
     [TestMethod]
-    public void Create_WithDraggingPlacement_ExcludesItFromSourceRow()
+    public void Create_WithDraggingPlacement_KeepsItVisibleInSourceRow()
     {
         // Arrange
         var board = new ReleasePlanningBoardDto
@@ -248,10 +248,50 @@ public class BoardRenderModelTests
 
         // Assert
         var row = result.Lanes[0].Rows[0];
-        // Should have: Epic 2 (not Epic 1) + placeholder
-        Assert.HasCount(2, row.Cards);
+        // Should have: Both epics (Epic 1 being dragged will be styled with .epic-being-dragged) + placeholder
+        Assert.HasCount(3, row.Cards);
+        Assert.IsTrue(row.Cards.Any(c => c.Placement?.EpicId == 100)); // Epic 1 (being dragged, but kept visible)
         Assert.IsTrue(row.Cards.Any(c => c.Placement?.EpicId == 101)); // Epic 2 remains
-        Assert.IsFalse(row.Cards.Any(c => c.Placement?.EpicId == 100)); // Epic 1 being dragged
         Assert.IsTrue(row.Cards.Any(c => c.IsPlaceholder));
+    }
+
+    [TestMethod]
+    public void Create_RowWithSingleEpicAndPlaceholder_HasCenterLayout()
+    {
+        // Arrange - Tests that placeholders are excluded from layout calculation
+        var board = new ReleasePlanningBoardDto
+        {
+            Lanes = new[]
+            {
+                new LaneDto { Id = 1, ObjectiveId = 10, ObjectiveTitle = "Objective 1", DisplayOrder = 0 }
+            },
+            Placements = new[]
+            {
+                new EpicPlacementDto { Id = 1, EpicId = 100, LaneId = 1, RowIndex = 0, OrderInRow = 0, EpicTitle = "Epic 1" }
+            },
+            MilestoneLines = [],
+            IterationLines = [],
+            Connectors = [],
+            MaxRowIndex = 0,
+            TotalRows = 1
+        };
+        var dragState = new DragState
+        {
+            DraggingEpicId = 101,
+            SourceObjectiveId = 10,
+            HoverLaneId = 1,
+            HoverRowIndex = 0,
+            IsInsertingNewRow = false
+        };
+
+        // Act
+        var result = BoardRenderModelFactory.Create(board, dragState);
+
+        // Assert
+        var row = result.Lanes[0].Rows[0];
+        Assert.HasCount(2, row.Cards); // 1 epic + 1 placeholder
+        Assert.IsTrue(row.Cards.Any(c => c.IsPlaceholder));
+        // Layout should be Center because only 1 non-placeholder epic exists
+        Assert.AreEqual(RowLayoutType.Center, row.LayoutType);
     }
 }

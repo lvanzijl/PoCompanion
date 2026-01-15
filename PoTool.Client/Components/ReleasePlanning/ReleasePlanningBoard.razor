@@ -64,15 +64,19 @@
                     
                     @if (_board.Lanes.Count > 0)
                     {
-                        <!-- Drop zone before first row -->
-                        <div class="drop-zone-between-rows" 
-                             style="height: 20px; position: relative; z-index: 1;"
-                             @ondragover:preventDefault
-                             @ondragover="@(() => HandleDropZoneDragOver(0))"
-                             @ondrop="@(async () => await HandleInsertBeforeRow(0))">
-                            @if (_dropTargetRowIndex == 0 && _isDraggingEpic)
+                        <!-- Drop zone before first row - per lane -->
+                        <div class="drop-zone-row">
+                            @foreach (var lane in _board.Lanes.OrderBy(l => l.DisplayOrder))
                             {
-                                <div class="drop-placeholder">Drop here to place at top</div>
+                                <div class="drop-zone-lane-cell"
+                                     @ondragover:preventDefault
+                                     @ondragover="@(() => HandleDropZoneDragOver(lane.ObjectiveId, 0))"
+                                     @ondrop="@(async () => await HandleInsertBeforeRow(lane.ObjectiveId, 0))">
+                                    @if (_dropTargetLaneId == lane.Id && _dropTargetRowIndex == 0 && _isDraggingEpic)
+                                    {
+                                        <div class="drop-placeholder">Drop here to place at top</div>
+                                    }
+                                </div>
                             }
                         </div>
                     }
@@ -196,15 +200,19 @@
                                 }
                             </div>
 
-                            <!-- Drop zone between rows -->
-                            <div class="drop-zone-between-rows" 
-                                 style="height: 20px; position: relative; z-index: 1;"
-                                 @ondragover:preventDefault
-                                 @ondragover="@(() => HandleDropZoneDragOver(currentRow + 1))"
-                                 @ondrop="@(async () => await HandleInsertBeforeRow(currentRow + 1))">
-                                @if (_dropTargetRowIndex == currentRow + 1 && _isDraggingEpic)
+                            <!-- Drop zone between rows - per lane -->
+                            <div class="drop-zone-row">
+                                @foreach (var lane in _board.Lanes.OrderBy(l => l.DisplayOrder))
                                 {
-                                    <div class="drop-placeholder">Drop here</div>
+                                    <div class="drop-zone-lane-cell"
+                                         @ondragover:preventDefault
+                                         @ondragover="@(() => HandleDropZoneDragOver(lane.ObjectiveId, currentRow + 1))"
+                                         @ondrop="@(async () => await HandleInsertBeforeRow(lane.ObjectiveId, currentRow + 1))">
+                                        @if (_dropTargetLaneId == lane.Id && _dropTargetRowIndex == currentRow + 1 && _isDraggingEpic)
+                                        {
+                                            <div class="drop-placeholder">Drop here</div>
+                                        }
+                                    </div>
                                 }
                             </div>
                         }
@@ -403,12 +411,24 @@
     /// Called when dragging over a drop zone between rows.
     /// This indicates intent to insert a new row.
     /// </summary>
-    private void HandleDropZoneDragOver(int targetRowIndex)
+    private void HandleDropZoneDragOver(int objectiveId, int targetRowIndex)
     {
+        // Validate that the epic can be dropped here
+        // Per spec: Epics can only be placed in their parent Objective's lane
         if (_draggingEpicId.HasValue && _draggingObjectiveId.HasValue)
         {
+            if (_draggingObjectiveId.Value != objectiveId)
+            {
+                if (EnableDragDebugLogging)
+                {
+                    Logger.LogInformation("[DROP-ZONE] REJECTED - Epic {EpicId} cannot drop in Objective {ObjectiveId} (belongs to {SourceObjectiveId})", 
+                        _draggingEpicId.Value, objectiveId, _draggingObjectiveId.Value);
+                }
+                return;
+            }
+
             // Find the lane for this objective
-            var lane = _board?.Lanes.FirstOrDefault(l => l.ObjectiveId == _draggingObjectiveId.Value);
+            var lane = _board?.Lanes.FirstOrDefault(l => l.ObjectiveId == objectiveId);
             if (lane != null)
             {
                 if (EnableDragDebugLogging)
@@ -427,7 +447,7 @@
             {
                 if (EnableDragDebugLogging)
                 {
-                    Logger.LogWarning("[DROP-ZONE] Lane not found for Objective {ObjectiveId}", _draggingObjectiveId.Value);
+                    Logger.LogWarning("[DROP-ZONE] Lane not found for Objective {ObjectiveId}", objectiveId);
                 }
             }
         }
@@ -636,7 +656,7 @@
     /// <summary>
     /// Handles dropping an epic into a space between rows (creates a new row).
     /// </summary>
-    private async Task HandleInsertBeforeRow(int targetRow)
+    private async Task HandleInsertBeforeRow(int objectiveId, int targetRow)
     {
         if (!_draggingEpicId.HasValue || !_draggingObjectiveId.HasValue)
         {
@@ -645,8 +665,22 @@
             return;
         }
 
+        // Validate that epic belongs to this objective
+        if (_draggingObjectiveId.Value != objectiveId)
+        {
+            if (EnableDragDebugLogging)
+            {
+                Logger.LogWarning("[INSERT-ROW] REJECTED - Epic {EpicId} belongs to Objective {SourceObjectiveId}, cannot drop in {TargetObjectiveId}", 
+                    _draggingEpicId.Value, _draggingObjectiveId.Value, objectiveId);
+            }
+            Snackbar.Add("Epics can only be placed in their parent Objective's lane", Severity.Warning);
+            ResetEpicDragState();
+            ResetDropTargetState();
+            return;
+        }
+
         // Find the lane for this objective
-        var lane = _board?.Lanes.FirstOrDefault(l => l.ObjectiveId == _draggingObjectiveId.Value);
+        var lane = _board?.Lanes.FirstOrDefault(l => l.ObjectiveId == objectiveId);
         if (lane == null)
         {
             Snackbar.Add("Cannot place epic: lane not found", Severity.Warning);

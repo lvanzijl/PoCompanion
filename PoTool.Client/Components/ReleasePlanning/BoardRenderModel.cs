@@ -41,8 +41,16 @@ public sealed class RenderRow
     
     /// <summary>
     /// Gets the layout type for this row based on card count.
+    /// Only counts actual epics (non-placeholders) for layout determination.
     /// </summary>
-    public RowLayoutType LayoutType => Cards.Count == 1 ? RowLayoutType.Center : RowLayoutType.Justify;
+    public RowLayoutType LayoutType 
+    { 
+        get
+        {
+            var epicCount = Cards.Count(c => !c.IsPlaceholder);
+            return epicCount == 1 ? RowLayoutType.Center : RowLayoutType.Justify;
+        }
+    }
 }
 
 /// <summary>
