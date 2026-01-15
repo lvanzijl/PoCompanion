@@ -4,6 +4,8 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
 @using PoTool.Shared.WorkItems
+@using PoTool.Shared.Metrics
+@using System.Net.Http.Json
 @inject ProfileService ProfileService
 @inject ProductService ProductService
 @inject WorkItemService WorkItemService
@@ -16,6 +18,7 @@
 @inject ISnackbar Snackbar
 @inject IWorkItemSyncHubService SyncHubService
 @inject IPreferencesService PreferencesService
+@inject HttpClient Http
 @implements IDisposable
 
 <PageTitle>Product Overview - PO Companion</PageTitle>
@@ -277,9 +280,9 @@
                                         </MudText>
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">@_healthData.Trend.Summary</MudText>
                                     </div>
-                                    <MudIcon Icon="@HealthCalculationService.GetTrendIcon(_healthData.Trend.ValidationTrend)" 
+                                    <MudIcon Icon="@HealthCalculationService.GetTrendIcon((PoTool.Client.ApiClient.TrendDirection)_healthData.Trend.ValidationTrend)" 
                                              Size="Size.Large" 
-                                             Color="@HealthCalculationService.GetTrendColor(_healthData.Trend.ValidationTrend)" />
+                                             Color="@HealthCalculationService.GetTrendColor((PoTool.Client.ApiClient.TrendDirection)_healthData.Trend.ValidationTrend)" />
                                 </MudStack>
                             </MudCardContent>
                         </MudCard>
@@ -605,8 +608,8 @@
     private string? _rootWorkItemAreaPath;
     
     private DateTimeOffset? _lastSyncTime;
-    private MultiIterationBacklogHealthDto? _healthData;
-    private VelocityTrendDto? _velocityData;
+    private PoTool.Shared.Metrics.MultiIterationBacklogHealthDto? _healthData;
+    private PoTool.Shared.Metrics.VelocityTrendDto? _velocityData;
     private IEnumerable<PullRequestMetricsDto>? _prMetrics;
 
     protected override async Task OnInitializedAsync()
@@ -743,16 +746,18 @@
     private async Task LoadDashboardDataAsync(CancellationToken cancellationToken = default)
     {
         // Determine product scope for API calls
-        // AllProductsId (0) means aggregate view - pass null to backend
+        // AllProductsId (0) means aggregate view - pass all product IDs
         // Specific product ID means filter to that product's hierarchy
-        int? productIdForQuery = (_selectedProductId == AllProductsId) ? null : _selectedProductId;
+        int[] productIdsForQuery = _selectedProductId == AllProductsId 
+            ? _products.Select(p => p.Id).ToArray()
+            : new[] { _selectedProductId };
         
-        Console.WriteLine($"[ProductHome] Loading dashboard data for product scope: {(productIdForQuery.HasValue ? productIdForQuery.Value.ToString() : "All products")}");
+        Console.WriteLine($"[ProductHome] Loading dashboard data for product scope: {(_selectedProductId == AllProductsId ? $"All products ({productIdsForQuery.Length} products)" : productIdsForQuery[0].ToString())}");
         
         // Load health data (limit to 3 iterations for summary)
         try
         {
-            _healthData = await MetricsClient.GetMultiIterationBacklogHealthAsync(productIdForQuery, null, 3, cancellationToken);
+            _healthData = await GetMultiIterationBacklogHealthAsync(productIdsForQuery, null, 3, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -766,10 +771,9 @@
         }
         
         // Load velocity data (limit to 6 sprints for averages)
-        // Note: Velocity API doesn't yet support productId filtering - shows global data for now
         try
         {
-            _velocityData = await MetricsClient.GetVelocityTrendAsync(null, 6, cancellationToken);
+            _velocityData = await GetVelocityTrendAsync(productIdsForQuery, null, 6, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -798,6 +802,68 @@
             // PR metrics not available - not critical
             _prMetrics = null;
         }
+    }
+    
+    /// <summary>
+    /// Calls the multi-iteration backlog health API with support for multiple product IDs.
+    /// Constructs the URL manually to support array query parameters which NSwag doesn't handle well.
+    /// </summary>
+    private async Task<PoTool.Shared.Metrics.MultiIterationBacklogHealthDto?> GetMultiIterationBacklogHealthAsync(
+        int[]? productIds,
+        string? areaPath,
+        int maxIterations,
+        CancellationToken cancellationToken)
+    {
+        var queryParams = new List<string>();
+        
+        if (productIds != null && productIds.Length > 0)
+        {
+            foreach (var id in productIds)
+            {
+                queryParams.Add($"productIds={id}");
+            }
+        }
+        
+        if (!string.IsNullOrWhiteSpace(areaPath))
+        {
+            queryParams.Add($"areaPath={Uri.EscapeDataString(areaPath)}");
+        }
+        
+        queryParams.Add($"maxIterations={maxIterations}");
+        
+        var url = $"api/Metrics/multi-iteration-health?{string.Join("&", queryParams)}";
+        return await Http.GetFromJsonAsync<PoTool.Shared.Metrics.MultiIterationBacklogHealthDto>(url, cancellationToken);
+    }
+    
+    /// <summary>
+    /// Calls the velocity trend API with support for multiple product IDs.
+    /// Constructs the URL manually to support array query parameters which NSwag doesn't handle well.
+    /// </summary>
+    private async Task<PoTool.Shared.Metrics.VelocityTrendDto?> GetVelocityTrendAsync(
+        int[]? productIds,
+        string? areaPath,
+        int maxSprints,
+        CancellationToken cancellationToken)
+    {
+        var queryParams = new List<string>();
+        
+        if (productIds != null && productIds.Length > 0)
+        {
+            foreach (var id in productIds)
+            {
+                queryParams.Add($"productIds={id}");
+            }
+        }
+        
+        if (!string.IsNullOrWhiteSpace(areaPath))
+        {
+            queryParams.Add($"areaPath={Uri.EscapeDataString(areaPath)}");
+        }
+        
+        queryParams.Add($"maxSprints={maxSprints}");
+        
+        var url = $"api/Metrics/velocity?{string.Join("&", queryParams)}";
+        return await Http.GetFromJsonAsync<PoTool.Shared.Metrics.VelocityTrendDto>(url, cancellationToken);
     }
     
     private async Task LoadProductsAsync()
@@ -1054,13 +1120,13 @@
         };
     }
 
-    private string GetTrendText(TrendDirection trend)
+    private string GetTrendText(PoTool.Shared.Metrics.TrendDirection trend)
     {
         return trend switch
         {
-            TrendDirection.Improving => "Improving",
-            TrendDirection.Stable => "Stable",
-            TrendDirection.Degrading => "Degrading",
+            PoTool.Shared.Metrics.TrendDirection.Improving => "Improving",
+            PoTool.Shared.Metrics.TrendDirection.Stable => "Stable",
+            PoTool.Shared.Metrics.TrendDirection.Degrading => "Degrading",
             _ => "Unknown"
         };
     }
