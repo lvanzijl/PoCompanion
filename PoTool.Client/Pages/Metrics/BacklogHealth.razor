@@ -4,12 +4,15 @@
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Metrics.SubComponents
 @using static PoTool.Client.Components.Common.PageHelp
+@using System.Net.Http.Json
 @inject IMetricsClient MetricsClient
 @inject BacklogHealthCalculationService HealthCalculationService
 @inject ErrorMessageService ErrorMessageService
 @inject ProfileService ProfileService
 @inject ProductService ProductService
 @inject ISnackbar Snackbar
+@inject IPreferencesService PreferencesService
+@inject HttpClient Http
 
 <PageTitle>Backlog Health Dashboard</PageTitle>
 
@@ -23,11 +26,41 @@
               BestPractices="@_healthBestPractices"
               CommonIssues="@_healthCommonIssues" />
     
+    @* Product Selector Section - Always visible when products exist *@
+    @if (_products.Count > 0)
+    {
+        <MudPaper Elevation="1" Class="pa-3 mb-3">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" />
+                <MudSelect T="int" 
+                           Value="@_selectedProductId"
+                           ValueChanged="OnProductChanged"
+                           Label="Select Product"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Style="min-width: 300px;">
+                    <MudSelectItem T="int" Value="@AllProductsId">All products</MudSelectItem>
+                    @foreach (var product in _products)
+                    {
+                        <MudSelectItem T="int" Value="@product.Id">@product.Name</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @_products.Count products available
+                </MudText>
+            </MudStack>
+        </MudPaper>
+    }
+    
     <MudText Typo="Typo.h4" GutterBottom="true">
         <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Class="mr-2" /> 
-        @if (_selectedProduct != null)
+        @if (_selectedProductId == AllProductsId && _products.Count > 0)
         {
-            <text>@_selectedProduct.Name - Backlog Health Dashboard</text>
+            <text>Backlog Health — All products</text>
+        }
+        else if (_selectedProduct != null)
+        {
+            <text>Backlog Health — @_selectedProduct.Name</text>
         }
         else
         {
@@ -35,7 +68,11 @@
         }
     </MudText>
     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
-        @if (_selectedProduct != null)
+        @if (_selectedProductId == AllProductsId && _products.Count > 0)
+        {
+            <text>Multi-iteration backlog health analysis across @_products.Count product(s) showing validation issues, effort tracking, and trends</text>
+        }
+        else if (_selectedProduct != null)
         {
             <text>Multi-iteration backlog health analysis for @_selectedProduct.Name showing validation issues, effort tracking, and trends</text>
         }
@@ -90,6 +127,11 @@
 </MudContainer>
 
 @code {
+    // Product scope constants
+    private const int AllProductsId = 0; // Synthetic ID representing "All products" aggregate view
+    private const string PreferenceKey_SelectedProductId = "BacklogHealth_SelectedProductId";
+    private const string ApiEndpoint_MultiIterationHealth = "api/Metrics/multi-iteration-health";
+    
     private MultiIterationBacklogHealthDto? _healthData;
     private bool _isLoading = true;
     private ErrorResponse? _errorResponse;
@@ -98,6 +140,8 @@
     
     // Product context
     private ProfileDto? _activeProfile;
+    private List<ProductDto> _products = new();
+    private int _selectedProductId = AllProductsId;
     private ProductDto? _selectedProduct;
 
     private ChartOptions _chartOptions = new()
@@ -109,8 +153,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Load active profile and selected product
+        // Load active profile and products
         await LoadProductContext();
+        
+        // Restore selected product from preferences
+        await RestoreProductSelection();
+        
+        // Load data with current product scope
         await LoadData();
     }
     
@@ -124,20 +173,82 @@
             {
                 // Get products for this profile
                 var products = await ProductService.GetProductsByOwnerAsync(_activeProfile.Id);
-                var productsList = products.OrderBy(p => p.Order).ToList();
-                
-                // Select the first product if available
-                if (productsList.Any())
-                {
-                    _selectedProduct = productsList.First();
-                }
+                _products = products.OrderBy(p => p.Order).ToList();
             }
         }
         catch (Exception)
         {
             // Continue without product context - will show global data
             // Error is not critical as the view can still function without product context
+            _products = new List<ProductDto>();
         }
+    }
+    
+    private async Task RestoreProductSelection()
+    {
+        try
+        {
+            // Try to restore selected product from preferences
+            var savedProductId = await PreferencesService.GetIntAsync(PreferenceKey_SelectedProductId);
+            
+            if (savedProductId.HasValue)
+            {
+                // Validate that the saved product still exists or is AllProductsId
+                if (savedProductId.Value == AllProductsId || _products.Any(p => p.Id == savedProductId.Value))
+                {
+                    _selectedProductId = savedProductId.Value;
+                }
+            }
+            
+            // If "All products" is selected, clear _selectedProduct
+            if (_selectedProductId == AllProductsId)
+            {
+                _selectedProduct = null;
+            }
+            else
+            {
+                _selectedProduct = _products.FirstOrDefault(p => p.Id == _selectedProductId);
+            }
+        }
+        catch (Exception)
+        {
+            // If restoration fails, default to AllProductsId
+            _selectedProductId = AllProductsId;
+            _selectedProduct = null;
+        }
+    }
+    
+    private async Task OnProductChanged(int newProductId)
+    {
+        if (_selectedProductId == newProductId)
+        {
+            return; // No change
+        }
+        
+        _selectedProductId = newProductId;
+        
+        // Save selection to preferences
+        try
+        {
+            await PreferencesService.SetIntAsync(PreferenceKey_SelectedProductId, _selectedProductId);
+        }
+        catch (Exception)
+        {
+            // Non-critical failure
+        }
+        
+        // Update selected product reference
+        if (_selectedProductId == AllProductsId)
+        {
+            _selectedProduct = null;
+        }
+        else
+        {
+            _selectedProduct = _products.FirstOrDefault(p => p.Id == _selectedProductId);
+        }
+        
+        // Reload data with new product scope
+        await LoadData();
     }
 
     private async Task LoadData()
@@ -146,8 +257,24 @@
         try
         {
             ClearError();
-            _healthData = await MetricsClient.GetMultiIterationBacklogHealthAsync(
-                _selectedProduct?.Id, 
+            
+            // Determine product scope for API call
+            // AllProductsId (0) means aggregate view - pass all product IDs
+            // Specific product ID means filter to that product's hierarchy
+            // If no products exist, pass null to get global/unfiltered data
+            int[]? productIdsForQuery = null;
+            
+            if (_products.Any())
+            {
+                productIdsForQuery = _selectedProductId == AllProductsId 
+                    ? _products.Select(p => p.Id).ToArray()
+                    : new[] { _selectedProductId };
+            }
+            
+            // Call API with multiple product IDs using manual HttpClient
+            // (NSwag doesn't handle array parameters well)
+            _healthData = await GetMultiIterationBacklogHealthAsync(
+                productIdsForQuery, 
                 _areaPathFilter, 
                 _maxIterations);
         }
@@ -158,6 +285,45 @@
         finally
         {
             _isLoading = false;
+        }
+    }
+    
+    /// <summary>
+    /// Calls the multi-iteration backlog health API with support for multiple product IDs.
+    /// Constructs the URL manually to support array query parameters which NSwag doesn't handle well.
+    /// </summary>
+    private async Task<MultiIterationBacklogHealthDto?> GetMultiIterationBacklogHealthAsync(
+        int[]? productIds,
+        string? areaPath,
+        int maxIterations)
+    {
+        var queryParams = new List<string>();
+        
+        if (productIds != null && productIds.Length > 0)
+        {
+            foreach (var id in productIds)
+            {
+                queryParams.Add($"productIds={id}");
+            }
+        }
+        
+        if (!string.IsNullOrWhiteSpace(areaPath))
+        {
+            queryParams.Add($"areaPath={Uri.EscapeDataString(areaPath)}");
+        }
+        
+        queryParams.Add($"maxIterations={maxIterations}");
+        
+        var url = $"{ApiEndpoint_MultiIterationHealth}?{string.Join("&", queryParams)}";
+        
+        try
+        {
+            return await Http.GetFromJsonAsync<MultiIterationBacklogHealthDto>(url);
+        }
+        catch (HttpRequestException ex)
+        {
+            // Provide context about which API call failed
+            throw new Exception($"Failed to retrieve multi-iteration backlog health data from {url}: {ex.Message}", ex);
         }
     }
 
