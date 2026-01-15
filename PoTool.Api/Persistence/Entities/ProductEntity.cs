@@ -84,4 +84,9 @@ public class ProductEntity
     /// Navigation property to linked teams (many-to-many).
     /// </summary>
     public virtual ICollection<ProductTeamLinkEntity> ProductTeamLinks { get; set; } = new List<ProductTeamLinkEntity>();
+
+    /// <summary>
+    /// Navigation property to configured repositories.
+    /// </summary>
+    public virtual ICollection<RepositoryEntity> Repositories { get; set; } = new List<RepositoryEntity>();
 }

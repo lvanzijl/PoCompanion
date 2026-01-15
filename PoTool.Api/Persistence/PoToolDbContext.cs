@@ -100,6 +100,11 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<ProductTeamLinkEntity> ProductTeamLinks => Set<ProductTeamLinkEntity>();
 
+    /// <summary>
+    /// Repositories configured per product.
+    /// </summary>
+    public DbSet<RepositoryEntity> Repositories => Set<RepositoryEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -146,6 +151,13 @@ public class PoToolDbContext : DbContext
             entity.HasIndex(e => e.IterationPath);
 
             entity.HasIndex(e => e.Status);
+
+            entity.HasIndex(e => e.ProductId);
+
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<PullRequestIterationEntity>(entity =>
@@ -242,6 +254,20 @@ public class PoToolDbContext : DbContext
             entity.HasOne(e => e.Team)
                 .WithMany(t => t.ProductTeamLinks)
                 .HasForeignKey(e => e.TeamId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Repository entity
+        modelBuilder.Entity<RepositoryEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.ProductId, e.Name })
+                .IsUnique();
+
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+
+            entity.HasOne(e => e.Product)
+                .WithMany(p => p.Repositories)
+                .HasForeignKey(e => e.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
