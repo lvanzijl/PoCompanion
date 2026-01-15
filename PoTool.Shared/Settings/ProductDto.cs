@@ -33,5 +33,6 @@ public sealed record ProductDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset LastModified,
     DateTimeOffset? LastSyncedAt,
-    List<int> TeamIds
+    List<int> TeamIds,
+    List<RepositoryDto> Repositories
 );

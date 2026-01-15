@@ -27,7 +27,7 @@ public sealed class GetFilteredPullRequestsQueryHandler : IQueryHandler<GetFilte
     {
         _logger.LogDebug("Handling GetFilteredPullRequestsQuery");
 
-        var allPrs = await _repository.GetAllAsync(cancellationToken);
+        var allPrs = await _repository.GetByProductIdsAsync(query.ProductIds, cancellationToken);
 
         // Apply filters
         var filtered = allPrs.AsEnumerable();

@@ -8,6 +8,7 @@ namespace PoTool.Core.PullRequests.Queries;
 /// Query to retrieve filtered pull requests based on various criteria.
 /// </summary>
 public sealed record GetFilteredPullRequestsQuery(
+    List<int>? ProductIds = null,
     string? IterationPath = null,
     string? CreatedBy = null,
     DateTimeOffset? FromDate = null,

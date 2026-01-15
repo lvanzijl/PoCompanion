@@ -14,6 +14,13 @@ public interface IPullRequestRepository
     Task<IEnumerable<PullRequestDto>> GetAllAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves pull requests filtered by product IDs.
+    /// </summary>
+    /// <param name="productIds">List of product IDs to filter by. If null or empty, returns all PRs.</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task<IEnumerable<PullRequestDto>> GetByProductIdsAsync(List<int>? productIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves a specific pull request by ID.
     /// </summary>
     Task<PullRequestDto?> GetByIdAsync(int pullRequestId, CancellationToken cancellationToken = default);

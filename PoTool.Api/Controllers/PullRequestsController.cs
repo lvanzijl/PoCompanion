@@ -101,7 +101,7 @@ public class PullRequestsController : ControllerBase
     {
         try
         {
-            var query = new GetFilteredPullRequestsQuery(iterationPath, createdBy, fromDate, toDate, status);
+            var query = new GetFilteredPullRequestsQuery(null, iterationPath, createdBy, fromDate, toDate, status);
             var pullRequests = await _mediator.Send(query, cancellationToken);
             return Ok(pullRequests);
         }

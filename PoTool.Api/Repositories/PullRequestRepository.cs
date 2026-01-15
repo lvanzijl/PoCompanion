@@ -27,6 +27,20 @@ public class PullRequestRepository : IPullRequestRepository
         return entities.Select(MapToDto);
     }
 
+    public async Task<IEnumerable<PullRequestDto>> GetByProductIdsAsync(List<int>? productIds, CancellationToken cancellationToken = default)
+    {
+        var query = _context.PullRequests.AsNoTracking();
+
+        if (productIds != null && productIds.Count > 0)
+        {
+            query = query.Where(pr => pr.ProductId != null && productIds.Contains(pr.ProductId.Value));
+        }
+
+        var entities = await query.ToListAsync(cancellationToken);
+
+        return entities.Select(MapToDto);
+    }
+
     public async Task<PullRequestDto?> GetByIdAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
         var entity = await _context.PullRequests
