@@ -882,4 +882,21 @@ public class MockTfsClient : ITfsClient
 
         return Task.FromResult<IEnumerable<WorkItemDto>>(results);
     }
+
+    public Task<string?> GetRepositoryIdByNameAsync(
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        // Return a deterministic mock GUID based on repository name
+        var mockGuid = $"mock-repo-{repositoryName.ToLowerInvariant()}-guid";
+        return Task.FromResult<string?>(mockGuid);
+    }
+
+    public Task<IEnumerable<PipelineDefinitionDto>> GetPipelineDefinitionsForRepositoryAsync(
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        // Return empty list for tests
+        return Task.FromResult<IEnumerable<PipelineDefinitionDto>>(Array.Empty<PipelineDefinitionDto>());
+    }
 }
