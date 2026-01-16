@@ -27,6 +27,11 @@ public class PullRequestEntity
     public string RepositoryName { get; set; } = string.Empty;
 
     /// <summary>
+    /// Foreign key to the Product (nullable for backward compatibility with existing PRs).
+    /// </summary>
+    public int? ProductId { get; set; }
+
+    /// <summary>
     /// Pull request title.
     /// </summary>
     [Required]
@@ -84,4 +89,9 @@ public class PullRequestEntity
     /// </summary>
     [Required]
     public DateTimeOffset RetrievedAt { get; set; }
+
+    /// <summary>
+    /// Navigation property to the Product.
+    /// </summary>
+    public virtual ProductEntity? Product { get; set; }
 }

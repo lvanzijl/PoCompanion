@@ -14,5 +14,6 @@ public sealed record PullRequestDto(
     string IterationPath,
     string SourceBranch,
     string TargetBranch,
-    DateTimeOffset RetrievedAt
+    DateTimeOffset RetrievedAt,
+    int? ProductId = null
 );

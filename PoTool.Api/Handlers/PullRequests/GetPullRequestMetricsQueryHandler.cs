@@ -28,7 +28,7 @@ public sealed class GetPullRequestMetricsQueryHandler : IQueryHandler<GetPullReq
     {
         _logger.LogDebug("Handling GetPullRequestMetricsQuery");
 
-        var allPrs = await _repository.GetAllAsync(cancellationToken);
+        var allPrs = await _repository.GetByProductIdsAsync(query.ProductIds, cancellationToken);
         var metrics = new List<PullRequestMetricsDto>();
 
         foreach (var pr in allPrs)

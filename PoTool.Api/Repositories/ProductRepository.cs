@@ -23,6 +23,7 @@ public class ProductRepository : IProductRepository
     {
         var entities = await _context.Products
             .Include(p => p.ProductTeamLinks)
+            .Include(p => p.Repositories)
             .Where(p => p.ProductOwnerId == productOwnerId)
             .OrderBy(p => p.Order)
             .ToListAsync(cancellationToken);
@@ -35,6 +36,7 @@ public class ProductRepository : IProductRepository
     {
         var entity = await _context.Products
             .Include(p => p.ProductTeamLinks)
+            .Include(p => p.Repositories)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         return entity == null ? null : MapToDto(entity);
@@ -90,6 +92,7 @@ public class ProductRepository : IProductRepository
     {
         var entity = await _context.Products
             .Include(p => p.ProductTeamLinks)
+            .Include(p => p.Repositories)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         if (entity == null)
@@ -142,6 +145,7 @@ public class ProductRepository : IProductRepository
     {
         var entities = await _context.Products
             .Include(p => p.ProductTeamLinks)
+            .Include(p => p.Repositories)
             .Where(p => p.ProductOwnerId == productOwnerId && productIds.Contains(p.Id))
             .ToListAsync(cancellationToken);
 
@@ -206,6 +210,7 @@ public class ProductRepository : IProductRepository
     {
         var entity = await _context.Products
             .Include(p => p.ProductTeamLinks)
+            .Include(p => p.Repositories)
             .FirstOrDefaultAsync(p => p.Id == productId, cancellationToken);
 
         if (entity == null)
@@ -239,6 +244,7 @@ public class ProductRepository : IProductRepository
     {
         var entities = await _context.Products
             .Include(p => p.ProductTeamLinks)
+            .Include(p => p.Repositories)
             .OrderBy(p => p.Name)
             .ToListAsync(cancellationToken);
 
@@ -250,6 +256,7 @@ public class ProductRepository : IProductRepository
     {
         var entities = await _context.Products
             .Include(p => p.ProductTeamLinks)
+            .Include(p => p.Repositories)
             .Where(p => p.ProductOwnerId == null)
             .OrderBy(p => p.Name)
             .ToListAsync(cancellationToken);
@@ -262,6 +269,7 @@ public class ProductRepository : IProductRepository
     {
         var entities = await _context.Products
             .Include(p => p.ProductTeamLinks)
+            .Include(p => p.Repositories)
             .Where(p => p.ProductOwnerId == productOwnerId || p.ProductOwnerId == null)
             .OrderBy(p => p.Order)
             .ThenBy(p => p.Name)
@@ -273,6 +281,12 @@ public class ProductRepository : IProductRepository
     private static ProductDto MapToDto(ProductEntity entity)
     {
         var teamIds = entity.ProductTeamLinks?.Select(l => l.TeamId).ToList() ?? new List<int>();
+        var repositories = entity.Repositories?.Select(r => new RepositoryDto(
+            r.Id,
+            r.ProductId,
+            r.Name,
+            r.CreatedAt
+        )).ToList() ?? new List<RepositoryDto>();
 
         return new ProductDto(
             entity.Id,
@@ -286,7 +300,8 @@ public class ProductRepository : IProductRepository
             entity.CreatedAt,
             entity.LastModified,
             entity.LastSyncedAt,
-            teamIds
+            teamIds,
+            repositories
         );
     }
 }

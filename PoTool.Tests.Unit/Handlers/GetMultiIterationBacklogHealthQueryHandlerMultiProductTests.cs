@@ -214,7 +214,8 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
             CreatedAt: DateTimeOffset.UtcNow,
             LastModified: DateTimeOffset.UtcNow,
             LastSyncedAt: null,
-            TeamIds: new List<int>()
+            TeamIds: new List<int>(),
+            Repositories: new List<RepositoryDto>()
         );
     }
 
