@@ -6,6 +6,9 @@
 @using static PoTool.Client.Components.Common.PageHelp
 @inject PipelineService PipelineService
 @inject ErrorMessageService ErrorMessageService
+@inject ProductService ProductService
+@inject ProfileService ProfileService
+@inject IPreferencesService PreferencesService
 @inject ISnackbar Snackbar
 
 <PageTitle>Pipeline Insights</PageTitle>
@@ -27,9 +30,35 @@
     <MudText Typo="Typo.h4" GutterBottom="true">
         <MudIcon Icon="@Icons.Material.Filled.Engineering" Class="mr-2" /> Pipeline Insights
     </MudText>
-    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
         Build and release pipeline metrics and analytics
     </MudText>
+
+    @* Product Selector *@
+    @if (_products.Count > 0)
+    {
+        <MudPaper Elevation="1" Class="pa-3 mb-3">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" />
+                <MudSelect T="int" 
+                           Value="@_selectedProductId"
+                           ValueChanged="OnProductChanged"
+                           Label="Filter by Product"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Style="min-width: 300px;">
+                    <MudSelectItem T="int" Value="@AllProductsId">All products</MudSelectItem>
+                    @foreach (var product in _products)
+                    {
+                        <MudSelectItem T="int" Value="@product.Id">@product.Name</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Showing pipelines for: @GetProductScopeDescription()
+                </MudText>
+            </MudStack>
+        </MudPaper>
+    }
 
     <LoadingIndicator IsLoading="@_isLoading" />
     
@@ -131,9 +160,81 @@
     private bool _isSyncing = false;
     private ErrorResponse? _errorResponse;
 
+    // Product filtering state
+    private const int AllProductsId = 0;
+    private List<ProductDto> _products = new();
+    private int _selectedProductId = AllProductsId;
+
     protected override async Task OnInitializedAsync()
     {
+        await LoadProductsAsync();
+        await LoadSelectedProductIdAsync();
         await LoadData();
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        try
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile != null)
+            {
+                var products = await ProductService.GetProductsByOwnerAsync(activeProfile.Id);
+                _products = products.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PipelineInsights] Error loading products: {ex.Message}");
+            _products = new List<ProductDto>();
+        }
+    }
+
+    private async Task LoadSelectedProductIdAsync()
+    {
+        try
+        {
+            var savedProductId = await PreferencesService.GetIntAsync("PipelineInsights_SelectedProductId");
+            if (savedProductId.HasValue)
+            {
+                // Validate that the product still exists
+                if (savedProductId.Value == AllProductsId || _products.Any(p => p.Id == savedProductId.Value))
+                {
+                    _selectedProductId = savedProductId.Value;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PipelineInsights] Error loading saved product selection: {ex.Message}");
+        }
+    }
+
+    private async Task OnProductChanged(int newProductId)
+    {
+        if (_selectedProductId == newProductId)
+        {
+            return; // No change
+        }
+
+        _selectedProductId = newProductId;
+
+        // Save preference
+        await PreferencesService.SetIntAsync("PipelineInsights_SelectedProductId", _selectedProductId);
+
+        // Reload data with new filter
+        await LoadData();
+    }
+
+    private string GetProductScopeDescription()
+    {
+        if (_selectedProductId == AllProductsId)
+        {
+            return "All products";
+        }
+
+        var product = _products.FirstOrDefault(p => p.Id == _selectedProductId);
+        return product?.Name ?? "Unknown product";
     }
 
     private async Task LoadData()
@@ -142,10 +243,22 @@
         try
         {
             ClearError();
-            var metrics = await PipelineService.GetMetricsAsync();
+            
+            // Build product IDs parameter for filtering
+            string? productIdsParam = null;
+            if (_selectedProductId == AllProductsId && _products.Any())
+            {
+                productIdsParam = string.Join(",", _products.Select(p => p.Id));
+            }
+            else if (_selectedProductId != AllProductsId)
+            {
+                productIdsParam = _selectedProductId.ToString();
+            }
+            
+            var metrics = await PipelineService.GetMetricsAsync(productIdsParam);
             _metrics = metrics.ToList();
             
-            Console.WriteLine($"[PipelineInsights] Loaded {_metrics.Count} pipeline metrics");
+            Console.WriteLine($"[PipelineInsights] Loaded {_metrics.Count} pipeline metrics for product scope: {GetProductScopeDescription()}");
         }
         catch (Exception ex)
         {

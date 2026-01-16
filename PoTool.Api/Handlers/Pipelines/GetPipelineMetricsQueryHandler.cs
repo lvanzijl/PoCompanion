@@ -7,7 +7,7 @@ namespace PoTool.Api.Handlers.Pipelines;
 
 /// <summary>
 /// Handler for GetPipelineMetricsQuery.
-/// Calculates and returns aggregated metrics for all pipelines.
+/// Calculates and returns aggregated metrics for pipelines, optionally filtered by products.
 /// </summary>
 public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMetricsQuery, IEnumerable<PipelineMetricsDto>>
 {
@@ -22,7 +22,27 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
         GetPipelineMetricsQuery query,
         CancellationToken cancellationToken)
     {
+        // Get all pipelines
         var pipelines = await _repository.GetAllAsync(cancellationToken);
+        
+        // Filter by product IDs if specified
+        if (query.ProductIds != null && query.ProductIds.Count > 0)
+        {
+            // Get pipeline definitions for the specified products
+            var allowedPipelineIds = new HashSet<int>();
+            foreach (var productId in query.ProductIds)
+            {
+                var definitions = await _repository.GetDefinitionsByProductIdAsync(productId, cancellationToken);
+                foreach (var def in definitions)
+                {
+                    allowedPipelineIds.Add(def.PipelineDefinitionId);
+                }
+            }
+            
+            // Filter pipelines to only those in the allowed set
+            pipelines = pipelines.Where(p => allowedPipelineIds.Contains(p.Id)).ToList();
+        }
+
         var allRuns = await _repository.GetAllRunsAsync(cancellationToken);
 
         var runsByPipeline = allRuns.GroupBy(r => r.PipelineId).ToDictionary(g => g.Key, g => g.ToList());

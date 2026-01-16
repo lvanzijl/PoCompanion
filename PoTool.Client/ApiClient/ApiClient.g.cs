@@ -3028,11 +3028,11 @@ namespace PoTool.Client.ApiClient
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> GetRunsAsync(int id, int? top, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync();
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(string? productIds);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(string? productIds, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline, System.Collections.Generic.IEnumerable<int>? productIds, bool? syncDefinitions);
@@ -3262,14 +3262,14 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync()
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(string? productIds)
         {
-            return GetMetricsAsync(System.Threading.CancellationToken.None);
+            return GetMetricsAsync(productIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(string? productIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -3284,6 +3284,12 @@ namespace PoTool.Client.ApiClient
                     if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
                     // Operation Path: "api/Pipelines/metrics"
                     urlBuilder_.Append("api/Pipelines/metrics");
+                    urlBuilder_.Append('?');
+                    if (productIds != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("productIds")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(productIds, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
 
                     PrepareRequest(client_, request_, urlBuilder_);
 

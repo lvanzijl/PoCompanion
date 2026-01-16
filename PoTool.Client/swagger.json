@@ -959,6 +959,17 @@
           "Pipelines"
         ],
         "operationId": "Pipelines_GetMetrics",
+        "parameters": [
+          {
+            "name": "productIds",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
