@@ -951,6 +951,30 @@
               "default": 50
             },
             "x-position": 1
+          },
+          {
+            "name": "productIds",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "x-position": 2
+          },
+          {
+            "name": "syncDefinitions",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "x-position": 3
           }
         ],
         "responses": {
@@ -3598,6 +3622,51 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ValidateWorkItemResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Pipelines/definitions": {
+      "get": {
+        "tags": [
+          "Pipelines"
+        ],
+        "operationId": "Pipelines_GetDefinitions",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "repositoryId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PipelineDefinitionDto"
+                  }
                 }
               }
             }
@@ -7609,6 +7678,51 @@
           "errorMessage": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "PipelineDefinitionDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pipelineDefinitionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "repositoryId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "repoId": {
+            "type": "string"
+          },
+          "repoName": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "yamlPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "folder": {
+            "type": "string",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastSyncedUtc": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }
