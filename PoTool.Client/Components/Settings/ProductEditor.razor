@@ -196,13 +196,10 @@
     public ProductDto? Product { get; set; }
 
     [Parameter]
-    public EventCallback OnSaved { get; set; }
+    public EventCallback<bool> OnSaved { get; set; }
 
     [Parameter]
     public EventCallback OnCancelled { get; set; }
-    
-    [Parameter]
-    public EventCallback<bool> OnSavedWithSyncRequest { get; set; }
 
     private MudForm _form = null!;
     
@@ -364,14 +361,7 @@
             }
 
             // Notify parent with sync request if repositories changed
-            if (OnSavedWithSyncRequest.HasDelegate)
-            {
-                await OnSavedWithSyncRequest.InvokeAsync(repositoriesChanged);
-            }
-            else
-            {
-                await OnSaved.InvokeAsync();
-            }
+            await OnSaved.InvokeAsync(repositoriesChanged);
         }
         catch (Exception ex)
         {

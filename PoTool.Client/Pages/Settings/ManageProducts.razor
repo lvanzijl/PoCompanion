@@ -133,7 +133,7 @@
             {
                 <ProductEditor ProductOwnerId="@_editingProductOwnerId" 
                                Product="@_editingProduct" 
-                               OnSavedWithSyncRequest="OnProductSavedWithSync" 
+                               OnSaved="OnProductSaved" 
                                OnCancelled="CloseEditor" />
             }
         }
@@ -228,7 +228,7 @@
         }
     }
 
-    private async Task OnProductSavedWithSync(bool shouldSync)
+    private async Task OnProductSaved(bool shouldSync)
     {
         _showEditor = false;
         _editingProduct = null;
