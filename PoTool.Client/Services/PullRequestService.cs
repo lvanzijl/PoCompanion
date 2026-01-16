@@ -38,32 +38,36 @@ public class PullRequestService
     }
 
     /// <summary>
-    /// Gets aggregated metrics for all pull requests.
+    /// Gets aggregated metrics for pull requests.
     /// </summary>
-    public async Task<IEnumerable<PullRequestMetricsDto>> GetMetricsAsync()
+    /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
+    public async Task<IEnumerable<PullRequestMetricsDto>> GetMetricsAsync(string? productIds = null)
     {
-        return await _pullRequestsClient.GetMetricsAsync() ?? Array.Empty<PullRequestMetricsDto>();
+        return await _pullRequestsClient.GetMetricsAsync(productIds) ?? Array.Empty<PullRequestMetricsDto>();
     }
 
     /// <summary>
     /// Gets filtered pull requests.
     /// </summary>
+    /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
     public async Task<IEnumerable<PullRequestDto>> GetFilteredAsync(
+        string? productIds = null,
         string? iterationPath = null,
         string? createdBy = null,
         DateTimeOffset? fromDate = null,
         DateTimeOffset? toDate = null,
         string? status = null)
     {
-        return await _pullRequestsClient.GetFilteredAsync(iterationPath, createdBy, fromDate, toDate, status)
+        return await _pullRequestsClient.GetFilteredAsync(productIds, iterationPath, createdBy, fromDate, toDate, status)
             ?? Array.Empty<PullRequestDto>();
     }
 
     /// <summary>
     /// Synchronizes pull requests from TFS.
     /// </summary>
-    public async Task<int> SyncAsync()
+    /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
+    public async Task<int> SyncAsync(string? productIds = null)
     {
-        return await _pullRequestsClient.SyncAsync();
+        return await _pullRequestsClient.SyncAsync(productIds);
     }
 }

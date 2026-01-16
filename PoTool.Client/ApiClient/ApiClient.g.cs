@@ -71,6 +71,13 @@ namespace PoTool.Client.ApiClient
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task PostApiWorkitemsSyncAsync(System.Threading.CancellationToken cancellationToken);
 
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task PostApiWorkitemsSyncByRootIdsAsync(SyncRequest? request);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task PostApiWorkitemsSyncByRootIdsAsync(SyncRequest? request, System.Threading.CancellationToken cancellationToken);
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -526,6 +533,80 @@ namespace PoTool.Client.ApiClient
                     if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
                     // Operation Path: "api/workitems/sync"
                     urlBuilder_.Append("api/workitems/sync");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            return;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task PostApiWorkitemsSyncByRootIdsAsync(SyncRequest? request)
+        {
+            return PostApiWorkitemsSyncByRootIdsAsync(request, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task PostApiWorkitemsSyncByRootIdsAsync(SyncRequest? request, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.ByteArrayContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/workitems/sync/by-root-ids"
+                    urlBuilder_.Append("api/workitems/sync/by-root-ids");
 
                     PrepareRequest(client_, request_, urlBuilder_);
 
@@ -1618,11 +1699,11 @@ namespace PoTool.Client.ApiClient
         System.Threading.Tasks.Task<SprintMetricsDto> GetSprintMetricsAsync(string? iterationPath, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<VelocityTrendDto> GetVelocityTrendAsync(string? areaPath, int? maxSprints);
+        System.Threading.Tasks.Task<VelocityTrendDto> GetVelocityTrendAsync(System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxSprints);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<VelocityTrendDto> GetVelocityTrendAsync(string? areaPath, int? maxSprints, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<VelocityTrendDto> GetVelocityTrendAsync(System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxSprints, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<BacklogHealthDto> GetBacklogHealthAsync(string? iterationPath);
@@ -1632,11 +1713,11 @@ namespace PoTool.Client.ApiClient
         System.Threading.Tasks.Task<BacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productId, string? areaPath, int? maxIterations);
+        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxIterations);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productId, string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity);
@@ -1827,14 +1908,14 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<VelocityTrendDto> GetVelocityTrendAsync(string? areaPath, int? maxSprints)
+        public virtual System.Threading.Tasks.Task<VelocityTrendDto> GetVelocityTrendAsync(System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxSprints)
         {
-            return GetVelocityTrendAsync(areaPath, maxSprints, System.Threading.CancellationToken.None);
+            return GetVelocityTrendAsync(productIds, areaPath, maxSprints, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<VelocityTrendDto> GetVelocityTrendAsync(string? areaPath, int? maxSprints, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<VelocityTrendDto> GetVelocityTrendAsync(System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxSprints, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1850,6 +1931,10 @@ namespace PoTool.Client.ApiClient
                     // Operation Path: "api/Metrics/velocity"
                     urlBuilder_.Append("api/Metrics/velocity");
                     urlBuilder_.Append('?');
+                    if (productIds != null)
+                    {
+                            foreach (var item_ in productIds) { urlBuilder_.Append(System.Uri.EscapeDataString("productIds")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(item_, System.Globalization.CultureInfo.InvariantCulture))).Append('&'); }
+                    }
                     if (areaPath != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("areaPath")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(areaPath, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
@@ -1995,14 +2080,14 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productId, string? areaPath, int? maxIterations)
+        public virtual System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxIterations)
         {
-            return GetMultiIterationBacklogHealthAsync(productId, areaPath, maxIterations, System.Threading.CancellationToken.None);
+            return GetMultiIterationBacklogHealthAsync(productIds, areaPath, maxIterations, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productId, string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<MultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -2018,9 +2103,9 @@ namespace PoTool.Client.ApiClient
                     // Operation Path: "api/Metrics/multi-iteration-health"
                     urlBuilder_.Append("api/Metrics/multi-iteration-health");
                     urlBuilder_.Append('?');
-                    if (productId != null)
+                    if (productIds != null)
                     {
-                        urlBuilder_.Append(System.Uri.EscapeDataString("productId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(productId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                            foreach (var item_ in productIds) { urlBuilder_.Append(System.Uri.EscapeDataString("productIds")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(item_, System.Globalization.CultureInfo.InvariantCulture))).Append('&'); }
                     }
                     if (areaPath != null)
                     {
@@ -2943,11 +3028,11 @@ namespace PoTool.Client.ApiClient
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> GetRunsAsync(int id, int? top, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync();
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(string? productIds);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(string? productIds, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline, System.Collections.Generic.IEnumerable<int>? productIds, bool? syncDefinitions);
@@ -3177,14 +3262,14 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync()
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(string? productIds)
         {
-            return GetMetricsAsync(System.Threading.CancellationToken.None);
+            return GetMetricsAsync(productIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(string? productIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -3199,6 +3284,12 @@ namespace PoTool.Client.ApiClient
                     if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
                     // Operation Path: "api/Pipelines/metrics"
                     urlBuilder_.Append("api/Pipelines/metrics");
+                    urlBuilder_.Append('?');
+                    if (productIds != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("productIds")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(productIds, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
 
                     PrepareRequest(client_, request_, urlBuilder_);
 
@@ -3644,6 +3735,20 @@ namespace PoTool.Client.ApiClient
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<ProductDto> ChangeProductOwnerAsync(int productId, ChangeProductOwnerRequest request, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<RepositoryDto> CreateRepositoryAsync(int productId, CreateRepositoryRequest request);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<RepositoryDto> CreateRepositoryAsync(int productId, CreateRepositoryRequest request, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task DeleteRepositoryAsync(int productId, int repositoryId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task DeleteRepositoryAsync(int productId, int repositoryId, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -4735,6 +4840,193 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<RepositoryDto> CreateRepositoryAsync(int productId, CreateRepositoryRequest request)
+        {
+            return CreateRepositoryAsync(productId, request, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<RepositoryDto> CreateRepositoryAsync(int productId, CreateRepositoryRequest request, System.Threading.CancellationToken cancellationToken)
+        {
+            if (productId == null)
+                throw new System.ArgumentNullException("productId");
+
+            if (request == null)
+                throw new System.ArgumentNullException("request");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.ByteArrayContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/Products/{productId}/repositories"
+                    urlBuilder_.Append("api/Products/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(productId, System.Globalization.CultureInfo.InvariantCulture)));
+                    urlBuilder_.Append("/repositories");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 201)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<RepositoryDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        if (status_ == 400)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ProblemDetails>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ProblemDetails>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task DeleteRepositoryAsync(int productId, int repositoryId)
+        {
+            return DeleteRepositoryAsync(productId, repositoryId, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task DeleteRepositoryAsync(int productId, int repositoryId, System.Threading.CancellationToken cancellationToken)
+        {
+            if (productId == null)
+                throw new System.ArgumentNullException("productId");
+
+            if (repositoryId == null)
+                throw new System.ArgumentNullException("repositoryId");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("DELETE");
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/Products/{productId}/repositories/{repositoryId}"
+                    urlBuilder_.Append("api/Products/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(productId, System.Globalization.CultureInfo.InvariantCulture)));
+                    urlBuilder_.Append("/repositories/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(repositoryId, System.Globalization.CultureInfo.InvariantCulture)));
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 204)
+                        {
+                            return;
+                        }
+                        else
+                        if (status_ == 404)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ProblemDetails>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ProblemDetails>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
         protected struct ObjectResponseResult<T>
         {
             public ObjectResponseResult(T responseObject, string responseText)
@@ -5722,18 +6014,18 @@ namespace PoTool.Client.ApiClient
         System.Threading.Tasks.Task<PullRequestDto> GetByIdAsync(int id, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> GetMetricsAsync();
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> GetMetricsAsync(string? productIds);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> GetMetricsAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> GetMetricsAsync(string? productIds, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetFilteredAsync(string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status);
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetFilteredAsync(string? productIds, string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetFilteredAsync(string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetFilteredAsync(string? productIds, string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestIterationDto>> GetIterationsAsync(int id);
@@ -5757,11 +6049,11 @@ namespace PoTool.Client.ApiClient
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestFileChangeDto>> GetFileChangesAsync(int id, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<int> SyncAsync();
+        System.Threading.Tasks.Task<int> SyncAsync(string? productIds);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<int> SyncAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<int> SyncAsync(string? productIds, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<PRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack);
@@ -5977,14 +6269,14 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> GetMetricsAsync()
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> GetMetricsAsync(string? productIds)
         {
-            return GetMetricsAsync(System.Threading.CancellationToken.None);
+            return GetMetricsAsync(productIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> GetMetricsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestMetricsDto>> GetMetricsAsync(string? productIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5999,6 +6291,12 @@ namespace PoTool.Client.ApiClient
                     if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
                     // Operation Path: "api/PullRequests/metrics"
                     urlBuilder_.Append("api/PullRequests/metrics");
+                    urlBuilder_.Append('?');
+                    if (productIds != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("productIds")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(productIds, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
 
                     PrepareRequest(client_, request_, urlBuilder_);
 
@@ -6053,14 +6351,14 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetFilteredAsync(string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status)
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetFilteredAsync(string? productIds, string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status)
         {
-            return GetFilteredAsync(iterationPath, createdBy, fromDate, toDate, status, System.Threading.CancellationToken.None);
+            return GetFilteredAsync(productIds, iterationPath, createdBy, fromDate, toDate, status, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetFilteredAsync(string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetFilteredAsync(string? productIds, string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6076,6 +6374,10 @@ namespace PoTool.Client.ApiClient
                     // Operation Path: "api/PullRequests/filter"
                     urlBuilder_.Append("api/PullRequests/filter");
                     urlBuilder_.Append('?');
+                    if (productIds != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("productIds")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(productIds, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
                     if (iterationPath != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("iterationPath")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(iterationPath, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
@@ -6394,14 +6696,14 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<int> SyncAsync()
+        public virtual System.Threading.Tasks.Task<int> SyncAsync(string? productIds)
         {
-            return SyncAsync(System.Threading.CancellationToken.None);
+            return SyncAsync(productIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<int> SyncAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<int> SyncAsync(string? productIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6417,6 +6719,12 @@ namespace PoTool.Client.ApiClient
                     if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
                     // Operation Path: "api/PullRequests/sync"
                     urlBuilder_.Append("api/PullRequests/sync");
+                    urlBuilder_.Append('?');
+                    if (productIds != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("productIds")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(productIds, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
 
                     PrepareRequest(client_, request_, urlBuilder_);
 
@@ -6736,6 +7044,13 @@ namespace PoTool.Client.ApiClient
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<EpicPlacementResultDto> UpdatePlacementAsync(int placementId, UpdatePlacementRequest request, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicPlacementResultDto> DeletePlacementAsync(int placementId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<EpicPlacementResultDto> DeletePlacementAsync(int placementId, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<EpicPlacementResultDto> MoveEpicAsync(int placementId, MoveEpicRequest request);
@@ -7377,6 +7692,86 @@ namespace PoTool.Client.ApiClient
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
                     request_.Method = new System.Net.Http.HttpMethod("PUT");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/ReleasePlanning/placements/{placementId}"
+                    urlBuilder_.Append("api/ReleasePlanning/placements/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(placementId, System.Globalization.CultureInfo.InvariantCulture)));
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<EpicPlacementResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> DeletePlacementAsync(int placementId)
+        {
+            return DeletePlacementAsync(placementId, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> DeletePlacementAsync(int placementId, System.Threading.CancellationToken cancellationToken)
+        {
+            if (placementId == null)
+                throw new System.ArgumentNullException("placementId");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("DELETE");
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
@@ -9305,6 +9700,13 @@ namespace PoTool.Client.ApiClient
         System.Threading.Tasks.Task<TeamDto> UpdateTeamAsync(int id, UpdateTeamRequest request, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task DeleteTeamAsync(int id);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task DeleteTeamAsync(int id, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<TeamDto> ArchiveTeamAsync(int id, ArchiveTeamRequest request);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -9724,6 +10126,90 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task DeleteTeamAsync(int id)
+        {
+            return DeleteTeamAsync(id, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task DeleteTeamAsync(int id, System.Threading.CancellationToken cancellationToken)
+        {
+            if (id == null)
+                throw new System.ArgumentNullException("id");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("DELETE");
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/Teams/{id}"
+                    urlBuilder_.Append("api/Teams/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(id, System.Globalization.CultureInfo.InvariantCulture)));
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 204)
+                        {
+                            return;
+                        }
+                        else
+                        if (status_ == 404)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ProblemDetails>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ProblemDetails>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
         public virtual System.Threading.Tasks.Task<TeamDto> ArchiveTeamAsync(int id, ArchiveTeamRequest request)
         {
             return ArchiveTeamAsync(id, request, System.Threading.CancellationToken.None);
@@ -9989,6 +10475,13 @@ namespace PoTool.Client.ApiClient
         System.Threading.Tasks.Task<WorkItemDto> GetByTfsIdAsync(int tfsId, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(int workItemId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -10071,13 +10564,6 @@ namespace PoTool.Client.ApiClient
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<BulkEffortAssignmentResultDto> BulkAssignEffortAsync(BulkAssignEffortCommand command, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -10491,6 +10977,89 @@ namespace PoTool.Client.ApiClient
                         if (status_ == 200)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<WorkItemDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request)
+        {
+            return ValidateWorkItemAsync(request, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request, System.Threading.CancellationToken cancellationToken)
+        {
+            if (request == null)
+                throw new System.ArgumentNullException("request");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.ByteArrayContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/WorkItems/validate"
+                    urlBuilder_.Append("api/WorkItems/validate");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ValidateWorkItemResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -11539,89 +12108,6 @@ namespace PoTool.Client.ApiClient
             }
         }
 
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request)
-        {
-            return ValidateWorkItemAsync(request, System.Threading.CancellationToken.None);
-        }
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request, System.Threading.CancellationToken cancellationToken)
-        {
-            if (request == null)
-                throw new System.ArgumentNullException("request");
-
-            var client_ = _httpClient;
-            var disposeClient_ = false;
-            try
-            {
-                using (var request_ = new System.Net.Http.HttpRequestMessage())
-                {
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(request, JsonSerializerSettings);
-                    var content_ = new System.Net.Http.ByteArrayContent(json_);
-                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
-                    request_.Content = content_;
-                    request_.Method = new System.Net.Http.HttpMethod("POST");
-                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
-
-                    var urlBuilder_ = new System.Text.StringBuilder();
-                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
-                    // Operation Path: "api/WorkItems/validate"
-                    urlBuilder_.Append("api/WorkItems/validate");
-
-                    PrepareRequest(client_, request_, urlBuilder_);
-
-                    var url_ = urlBuilder_.ToString();
-                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
-
-                    PrepareRequest(client_, request_, url_);
-
-                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-                    var disposeResponse_ = true;
-                    try
-                    {
-                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
-                        foreach (var item_ in response_.Headers)
-                            headers_[item_.Key] = item_.Value;
-                        if (response_.Content != null && response_.Content.Headers != null)
-                        {
-                            foreach (var item_ in response_.Content.Headers)
-                                headers_[item_.Key] = item_.Value;
-                        }
-
-                        ProcessResponse(client_, response_);
-
-                        var status_ = (int)response_.StatusCode;
-                        if (status_ == 200)
-                        {
-                            var objectResponse_ = await ReadObjectResponseAsync<ValidateWorkItemResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
-                            if (objectResponse_.Object == null)
-                            {
-                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
-                            }
-                            return objectResponse_.Object;
-                        }
-                        else
-                        {
-                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
-                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
-                        }
-                    }
-                    finally
-                    {
-                        if (disposeResponse_)
-                            response_.Dispose();
-                    }
-                }
-            }
-            finally
-            {
-                if (disposeClient_)
-                    client_.Dispose();
-            }
-        }
-
         protected struct ObjectResponseResult<T>
         {
             public ObjectResponseResult(T responseObject, string responseText)
@@ -11942,6 +12428,18 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("workItemIdForWriteCheck")]
         public int? WorkItemIdForWriteCheck { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SyncRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("rootWorkItemIds")]
+        public System.Collections.Generic.ICollection<int>? RootWorkItemIds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("incremental")]
+        public bool Incremental { get; set; } = default!;
 
     }
 
@@ -13163,6 +13661,42 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PipelineDefinitionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("pipelineDefinitionId")]
+        public int PipelineDefinitionId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("productId")]
+        public int? ProductId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("repositoryId")]
+        public int? RepositoryId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("repoId")]
+        public string RepoId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("repoName")]
+        public string RepoName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("yamlPath")]
+        public string? YamlPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("folder")]
+        public string? Folder { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        public string? Url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lastSyncedUtc")]
+        public System.DateTimeOffset LastSyncedUtc { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ProductDto
     {
 
@@ -13202,6 +13736,9 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("teamIds")]
         public System.Collections.Generic.ICollection<int> TeamIds { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("repositories")]
+        public System.Collections.Generic.ICollection<RepositoryDto> Repositories { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -13211,6 +13748,24 @@ namespace PoTool.Client.ApiClient
         Default = 0,
 
         Custom = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RepositoryDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("productId")]
+        public int ProductId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdAt")]
+        public System.DateTimeOffset CreatedAt { get; set; } = default!;
 
     }
 
@@ -13307,6 +13862,15 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("newProductOwnerId")]
         public int? NewProductOwnerId { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateRepositoryRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
 
     }
 
@@ -13452,6 +14016,9 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("retrievedAt")]
         public System.DateTimeOffset RetrievedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("productId")]
+        public int? ProductId { get; set; } = default!;
 
     }
 
@@ -14490,6 +15057,36 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ValidateWorkItemResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("exists")]
+        public bool Exists { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        public string? Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public string? Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
+        public string? ErrorMessage { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ValidateWorkItemRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
+        public int WorkItemId { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class WorkItemRevisionDto
     {
 
@@ -14953,72 +15550,6 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("effortValue")]
         public int EffortValue { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ValidateWorkItemRequest
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("workItemId")]
-        public int WorkItemId { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ValidateWorkItemResponse
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("exists")]
-        public bool Exists { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public int Id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("title")]
-        public string? Title { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("type")]
-        public string? Type { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
-        public string? ErrorMessage { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PipelineDefinitionDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("pipelineDefinitionId")]
-        public int PipelineDefinitionId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("productId")]
-        public int? ProductId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("repositoryId")]
-        public int? RepositoryId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("repoId")]
-        public string RepoId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("repoName")]
-        public string RepoName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("name")]
-        public string Name { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("yamlPath")]
-        public string? YamlPath { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("folder")]
-        public string? Folder { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("url")]
-        public string? Url { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("lastSyncedUtc")]
-        public System.DateTimeOffset LastSyncedUtc { get; set; } = default!;
 
     }
 

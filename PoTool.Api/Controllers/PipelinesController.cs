@@ -66,14 +66,27 @@ public class PipelinesController : ControllerBase
     }
 
     /// <summary>
-    /// Gets aggregated metrics for all pipelines.
+    /// Gets aggregated metrics for pipelines, optionally filtered by products.
     /// </summary>
     [HttpGet("metrics")]
-    public async Task<ActionResult<IEnumerable<PipelineMetricsDto>>> GetMetrics(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<PipelineMetricsDto>>> GetMetrics(
+        [FromQuery] string? productIds = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var metrics = await _mediator.Send(new GetPipelineMetricsQuery(), cancellationToken);
+            // Parse productIds string to list
+            List<int>? productIdsList = null;
+            if (!string.IsNullOrWhiteSpace(productIds))
+            {
+                productIdsList = productIds
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(id => int.TryParse(id.Trim(), out var parsedId) ? parsedId : 0)
+                    .Where(id => id > 0)
+                    .ToList();
+            }
+
+            var metrics = await _mediator.Send(new GetPipelineMetricsQuery(productIdsList), cancellationToken);
             return Ok(metrics);
         }
         catch (Exception ex)

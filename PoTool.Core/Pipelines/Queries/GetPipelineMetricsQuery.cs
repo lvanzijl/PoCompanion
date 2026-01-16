@@ -5,6 +5,7 @@ using PoTool.Shared.Pipelines;
 namespace PoTool.Core.Pipelines.Queries;
 
 /// <summary>
-/// Query to retrieve aggregated metrics for all pipelines.
+/// Query to retrieve aggregated metrics for pipelines, optionally filtered by products.
 /// </summary>
-public sealed record GetPipelineMetricsQuery : IQuery<IEnumerable<PipelineMetricsDto>>;
+/// <param name="ProductIds">Optional list of product IDs to filter by</param>
+public sealed record GetPipelineMetricsQuery(List<int>? ProductIds = null) : IQuery<IEnumerable<PipelineMetricsDto>>;
