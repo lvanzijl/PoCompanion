@@ -6,6 +6,7 @@ using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
 using PoTool.Api.Repositories;
 using System.Linq;
+using PoTool.Core.PullRequests;
 
 namespace PoTool.Api.Services;
 
@@ -198,7 +199,7 @@ public class WorkItemSyncService : BackgroundService
                 Status = "InProgress",
                 Message = "Starting sync...",
                 MajorStep = 1,
-                MajorStepTotal = 3,
+                MajorStepTotal = 4,
                 MajorStepLabel = "Initializing",
                 RootWorkItemIds = rootWorkItemIds
             }, cancellationToken);
@@ -253,7 +254,7 @@ public class WorkItemSyncService : BackgroundService
                             Status = "InProgress",
                             Message = label,
                             MajorStep = 2,
-                            MajorStepTotal = 3,
+                            MajorStepTotal = 4,
                             MajorStepLabel = "Fetching from TFS",
                             MinorStep = step,
                             MinorStepTotal = total,
@@ -279,7 +280,7 @@ public class WorkItemSyncService : BackgroundService
                 Status = "InProgress",
                 Message = $"Saving {workItemList.Count} work items to cache...",
                 MajorStep = 3,
-                MajorStepTotal = 3,
+                MajorStepTotal = 4,
                 MajorStepLabel = "Saving to Cache",
                 ProcessedCount = workItemList.Count,
                 TotalCount = workItemList.Count,
@@ -299,13 +300,29 @@ public class WorkItemSyncService : BackgroundService
                 await repository.ReplaceAllAsync(workItemList, cancellationToken);
             }
 
-            _logger.LogInformation(">>> Sync Phase 3: Complete - Sending completion progress");
+            _logger.LogInformation(">>> Sync Phase 3: Complete - Work items saved");
+            
+            // Phase 4: Sync Pull Requests for products
+            _logger.LogInformation(">>> Sync Phase 4: Syncing Pull Requests");
+            await SendProgressAsync(new SyncProgressDto
+            {
+                Status = "InProgress",
+                Message = "Syncing pull requests...",
+                MajorStep = 4,
+                MajorStepTotal = 4,
+                MajorStepLabel = "Syncing Pull Requests",
+                RootWorkItemIds = rootWorkItemIds
+            }, cancellationToken);
+
+            await SyncPullRequestsForProductsAsync(rootWorkItemIds, cancellationToken);
+
+            _logger.LogInformation(">>> Sync Phase 4: Pull requests synced");
             await SendProgressAsync(new SyncProgressDto
             {
                 Status = "Completed",
-                Message = $"Successfully synced {workItemList.Count} work items",
-                MajorStep = 3,
-                MajorStepTotal = 3,
+                Message = $"Successfully synced {workItemList.Count} work items and pull requests",
+                MajorStep = 4,
+                MajorStepTotal = 4,
                 MajorStepLabel = "Complete",
                 ProcessedCount = workItemList.Count,
                 TotalCount = workItemList.Count,
@@ -349,6 +366,107 @@ public class WorkItemSyncService : BackgroundService
                 Message = $"Sync failed: {ex.Message}",
                 RootWorkItemIds = rootWorkItemIds
             }, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Syncs pull requests for all repositories of the specified products.
+    /// </summary>
+    private async Task SyncPullRequestsForProductsAsync(int[] rootWorkItemIds, CancellationToken cancellationToken)
+    {
+        if (rootWorkItemIds == null || rootWorkItemIds.Length == 0)
+        {
+            _logger.LogInformation("No products specified for PR sync");
+            return;
+        }
+
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var tfsClient = scope.ServiceProvider.GetService<ITfsClient>();
+        var prRepository = scope.ServiceProvider.GetRequiredService<IPullRequestRepository>();
+        var repoRepository = scope.ServiceProvider.GetRequiredService<RepositoryRepository>();
+
+        // Get products by root work item IDs
+        var products = await dbContext.Products
+            .Where(p => rootWorkItemIds.Contains(p.BacklogRootWorkItemId))
+            .ToListAsync(cancellationToken);
+
+        if (!products.Any())
+        {
+            _logger.LogInformation("No products found for the specified root work item IDs");
+            return;
+        }
+
+        var productIds = products.Select(p => p.Id).ToList();
+
+        // Get all repositories for these products
+        var repositoriesByProduct = await repoRepository.GetRepositoriesByProductIdsAsync(productIds, cancellationToken);
+
+        if (!repositoriesByProduct.Any())
+        {
+            _logger.LogInformation("No repositories configured for products with root work items: [{Ids}]", string.Join(", ", rootWorkItemIds));
+            return;
+        }
+
+        // Build list of (ProductId, RepoName) tuples
+        var repositories = new List<(int ProductId, string RepoName)>();
+        foreach (var (productId, repos) in repositoriesByProduct)
+        {
+            repositories.AddRange(repos.Select(r => (productId, r.Name)));
+        }
+
+        _logger.LogInformation("Syncing PRs for {Count} repositories across {ProductCount} products", repositories.Count, products.Count);
+
+        if (tfsClient == null)
+        {
+            _logger.LogWarning("No ITfsClient available for PR sync");
+            return;
+        }
+
+        var allPrs = new List<Shared.PullRequests.PullRequestDto>();
+        var allIterations = new List<Shared.PullRequests.PullRequestIterationDto>();
+        var allComments = new List<Shared.PullRequests.PullRequestCommentDto>();
+        var allFileChanges = new List<Shared.PullRequests.PullRequestFileChangeDto>();
+
+        // Sync PRs for each repository
+        foreach (var (productId, repoName) in repositories)
+        {
+            _logger.LogInformation("Syncing PRs for repository '{Repository}' (Product ID: {ProductId})", repoName, productId);
+
+            // Fetch PRs for this repository (already fetches from all branches)
+            var syncResult = await tfsClient.GetPullRequestsWithDetailsAsync(
+                repositoryName: repoName,
+                cancellationToken: cancellationToken);
+
+            _logger.LogInformation(
+                "Bulk PR fetch for '{Repository}' completed with {TfsCallCount} TFS call(s) - retrieved {PrCount} PRs",
+                repoName,
+                syncResult.TfsCallCount,
+                syncResult.PullRequests.Count);
+
+            // Set ProductId on all PRs from this repository
+            var prsWithProductId = syncResult.PullRequests.Select(pr => pr with { ProductId = productId }).ToList();
+
+            allPrs.AddRange(prsWithProductId);
+            allIterations.AddRange(syncResult.Iterations);
+            allComments.AddRange(syncResult.Comments);
+            allFileChanges.AddRange(syncResult.FileChanges);
+        }
+
+        // Save all PRs, iterations, comments, and file changes to repository
+        if (allPrs.Any())
+        {
+            _logger.LogInformation("Saving {Count} PRs to cache", allPrs.Count);
+            await prRepository.SaveAsync(allPrs, cancellationToken);
+            await prRepository.SaveIterationsAsync(allIterations, cancellationToken);
+            await prRepository.SaveCommentsAsync(allComments, cancellationToken);
+            await prRepository.SaveFileChangesAsync(allFileChanges, cancellationToken);
+
+            _logger.LogInformation("Successfully synced {Count} PRs across {RepoCount} repositories", allPrs.Count, repositories.Count);
+        }
+        else
+        {
+            _logger.LogInformation("No PRs found to sync");
         }
     }
 
