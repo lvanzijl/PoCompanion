@@ -1227,4 +1227,58 @@ public class BattleshipMockDataFacade : ITfsClient
 
         return Task.FromResult<IEnumerable<WorkItemDto>>(results);
     }
+
+    public Task<IEnumerable<PipelineDefinitionDto>> GetPipelineDefinitionsForRepositoryAsync(
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: GetPipelineDefinitionsForRepositoryAsync called for repository={RepoName}", repositoryName);
+
+        // Generate mock pipeline definitions for the repository
+        var mockRepoId = $"mock-repo-{repositoryName.ToLowerInvariant()}-guid";
+        var syncTime = DateTimeOffset.UtcNow;
+
+        var definitions = new List<PipelineDefinitionDto>
+        {
+            new PipelineDefinitionDto
+            {
+                PipelineDefinitionId = 101,
+                RepoId = mockRepoId,
+                RepoName = repositoryName,
+                Name = $"{repositoryName} - CI Build",
+                YamlPath = "/pipelines/ci-build.yml",
+                Folder = "\\CI",
+                Url = $"https://mock-tfs/{repositoryName}/_build?definitionId=101",
+                LastSyncedUtc = syncTime
+            },
+            new PipelineDefinitionDto
+            {
+                PipelineDefinitionId = 102,
+                RepoId = mockRepoId,
+                RepoName = repositoryName,
+                Name = $"{repositoryName} - PR Validation",
+                YamlPath = "/pipelines/pr-validation.yml",
+                Folder = "\\PR",
+                Url = $"https://mock-tfs/{repositoryName}/_build?definitionId=102",
+                LastSyncedUtc = syncTime
+            },
+            new PipelineDefinitionDto
+            {
+                PipelineDefinitionId = 103,
+                RepoId = mockRepoId,
+                RepoName = repositoryName,
+                Name = $"{repositoryName} - Release",
+                YamlPath = "/pipelines/release.yml",
+                Folder = "\\Release",
+                Url = $"https://mock-tfs/{repositoryName}/_build?definitionId=103",
+                LastSyncedUtc = syncTime
+            }
+        };
+
+        _logger.LogInformation("Mock TFS client: Returning {Count} pipeline definitions for repository '{RepoName}'",
+            definitions.Count, repositoryName);
+
+        return Task.FromResult<IEnumerable<PipelineDefinitionDto>>(definitions);
+    }
 }

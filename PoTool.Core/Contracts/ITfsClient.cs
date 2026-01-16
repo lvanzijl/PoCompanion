@@ -297,6 +297,33 @@ public interface ITfsClient
     Task<PipelineSyncResult> GetPipelinesWithRunsAsync(
         int runsPerPipeline = 50,
         CancellationToken cancellationToken = default);
+
+    // ============================================
+    // PIPELINE DEFINITION METHODS (YAML)
+    // ============================================
+
+    /// <summary>
+    /// Retrieves the TFS repository ID for a given repository name.
+    /// Uses Azure DevOps Server 2022 REST API (api-version=7.0).
+    /// </summary>
+    /// <param name="repositoryName">The repository name.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Repository ID (GUID) if found, null otherwise.</returns>
+    Task<string?> GetRepositoryIdByNameAsync(
+        string repositoryName,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves YAML pipeline definitions for a specific repository.
+    /// Uses Azure DevOps Server 2022 REST API (api-version=7.0) with includeAllProperties=true.
+    /// Filters build definitions to only those associated with the specified repository.
+    /// </summary>
+    /// <param name="repositoryName">The repository name to filter by.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of pipeline definition DTOs for the repository.</returns>
+    Task<IEnumerable<PipelineDefinitionDto>> GetPipelineDefinitionsForRepositoryAsync(
+        string repositoryName,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>

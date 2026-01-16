@@ -4265,4 +4265,214 @@ public class RealTfsClient : ITfsClient
 
         return ancestorsAdded;
     }
+
+    // ============================================
+    // PIPELINE DEFINITION METHODS (YAML) - API 7.0
+    // ============================================
+
+    public async Task<string?> GetRepositoryIdByNameAsync(
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+        var config = entity!;
+
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            // GET {ServerUri}/{Project}/_apis/git/repositories?api-version=7.0
+            var url = ProjectUrl(config, "_apis/git/repositories");
+            _logger.LogDebug("Fetching Git repositories from: {Url}", url);
+
+            var response = await httpClient.GetAsync(url, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to get Git repositories: {StatusCode}", response.StatusCode);
+                return null;
+            }
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            if (!doc.RootElement.TryGetProperty("value", out var valueArray))
+            {
+                _logger.LogWarning("Git repositories response missing 'value' array");
+                return null;
+            }
+
+            // Find repository by name (case-insensitive)
+            foreach (var repo in valueArray.EnumerateArray())
+            {
+                if (repo.TryGetProperty("name", out var nameElement))
+                {
+                    var name = nameElement.GetString();
+                    if (string.Equals(name, repositoryName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (repo.TryGetProperty("id", out var idElement))
+                        {
+                            var repoId = idElement.GetString();
+                            _logger.LogInformation("Found repository '{RepoName}' with ID: {RepoId}", repositoryName, repoId);
+                            return repoId;
+                        }
+                    }
+                }
+            }
+
+            _logger.LogWarning("Repository '{RepoName}' not found in project '{Project}'", repositoryName, config.Project);
+            return null;
+        }, cancellationToken);
+    }
+
+    public async Task<IEnumerable<PipelineDefinitionDto>> GetPipelineDefinitionsForRepositoryAsync(
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+        var config = entity!;
+
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            var definitions = new List<PipelineDefinitionDto>();
+
+            // Step 1: Get repository ID
+            var repoId = await GetRepositoryIdByNameAsync(repositoryName, cancellationToken);
+            if (string.IsNullOrEmpty(repoId))
+            {
+                _logger.LogWarning("Cannot fetch pipeline definitions for repository '{RepoName}' - repository ID not found", repositoryName);
+                return definitions;
+            }
+
+            // Step 2: Get all build definitions with full properties
+            // GET {ServerUri}/{Project}/_apis/build/definitions?api-version=7.0&includeAllProperties=true
+            var url = ProjectUrl(config, "_apis/build/definitions?includeAllProperties=true");
+            _logger.LogDebug("Fetching build definitions from: {Url}", url);
+
+            var response = await httpClient.GetAsync(url, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to get build definitions: {StatusCode}", response.StatusCode);
+                return definitions;
+            }
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            if (!doc.RootElement.TryGetProperty("value", out var valueArray))
+            {
+                _logger.LogDebug("Build definitions response missing 'value' array");
+                return definitions;
+            }
+
+            var syncTime = DateTimeOffset.UtcNow;
+            int processedCount = 0;
+            int filteredCount = 0;
+
+            foreach (var def in valueArray.EnumerateArray())
+            {
+                processedCount++;
+
+                // Filter by repository: check definition.repository.id or definition.repository.name
+                if (!def.TryGetProperty("repository", out var repository))
+                {
+                    _logger.LogDebug("Build definition {DefId} has no 'repository' property, skipping", 
+                        def.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : -1);
+                    continue;
+                }
+
+                // Preferred: match by repository.id (GUID)
+                bool matchesRepo = false;
+                if (repository.TryGetProperty("id", out var repoIdElement))
+                {
+                    var defRepoId = repoIdElement.GetString();
+                    if (string.Equals(defRepoId, repoId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        matchesRepo = true;
+                    }
+                }
+
+                // Fallback: match by repository.name
+                if (!matchesRepo && repository.TryGetProperty("name", out var repoNameElement))
+                {
+                    var defRepoName = repoNameElement.GetString();
+                    if (string.Equals(defRepoName, repositoryName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        matchesRepo = true;
+                    }
+                }
+
+                if (!matchesRepo)
+                {
+                    continue;
+                }
+
+                filteredCount++;
+
+                // Extract definition properties
+                var pipelineId = def.GetProperty("id").GetInt32();
+                var name = def.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                
+                // Extract YAML path from process.yamlFilename
+                string? yamlPath = null;
+                if (def.TryGetProperty("process", out var process))
+                {
+                    if (process.TryGetProperty("yamlFilename", out var yamlFileElement))
+                    {
+                        var rawPath = yamlFileElement.GetString();
+                        if (!string.IsNullOrEmpty(rawPath))
+                        {
+                            // Normalize: ensure leading /
+                            yamlPath = rawPath.StartsWith("/") ? rawPath : $"/{rawPath}";
+                        }
+                    }
+                }
+
+                // Extract folder/path
+                var folder = def.TryGetProperty("path", out var p) ? p.GetString() : null;
+
+                // Extract web URL
+                string? url = null;
+                if (def.TryGetProperty("_links", out var links))
+                {
+                    if (links.TryGetProperty("web", out var web))
+                    {
+                        if (web.TryGetProperty("href", out var href))
+                        {
+                            url = href.GetString();
+                        }
+                    }
+                }
+
+                var dto = new PipelineDefinitionDto
+                {
+                    PipelineDefinitionId = pipelineId,
+                    RepoId = repoId,
+                    RepoName = repositoryName,
+                    Name = name,
+                    YamlPath = yamlPath,
+                    Folder = folder,
+                    Url = url,
+                    LastSyncedUtc = syncTime
+                };
+
+                definitions.Add(dto);
+
+                _logger.LogDebug(
+                    "Mapped pipeline definition: ID={Id}, Name={Name}, YamlPath={YamlPath}",
+                    pipelineId, name, yamlPath ?? "(none)");
+            }
+
+            _logger.LogInformation(
+                "Retrieved {Count} pipeline definitions for repository '{RepoName}' (processed {Processed}, filtered {Filtered})",
+                definitions.Count, repositoryName, processedCount, filteredCount);
+
+            return (IEnumerable<PipelineDefinitionDto>)definitions;
+        }, cancellationToken);
+    }
 }

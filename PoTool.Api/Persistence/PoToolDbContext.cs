@@ -105,6 +105,11 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<RepositoryEntity> Repositories => Set<RepositoryEntity>();
 
+    /// <summary>
+    /// YAML pipeline definitions configured per repository.
+    /// </summary>
+    public DbSet<PipelineDefinitionEntity> PipelineDefinitions => Set<PipelineDefinitionEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -268,6 +273,32 @@ public class PoToolDbContext : DbContext
             entity.HasOne(e => e.Product)
                 .WithMany(p => p.Repositories)
                 .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Pipeline definition entity
+        modelBuilder.Entity<PipelineDefinitionEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.ProductId, e.PipelineDefinitionId })
+                .IsUnique();
+
+            entity.HasIndex(e => e.RepositoryId);
+
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.RepoId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.RepoName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.YamlPath).HasMaxLength(500);
+            entity.Property(e => e.Folder).HasMaxLength(500);
+            entity.Property(e => e.Url).HasMaxLength(1000);
+
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Repository)
+                .WithMany()
+                .HasForeignKey(e => e.RepositoryId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
