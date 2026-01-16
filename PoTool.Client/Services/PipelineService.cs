@@ -41,8 +41,16 @@ public class PipelineService
     /// <summary>
     /// Synchronizes pipelines from TFS.
     /// </summary>
-    public async Task<PipelineSyncResult> SyncAsync(int runsPerPipeline = 50)
+    public async Task<PipelineSyncResult> SyncAsync(int runsPerPipeline = 50, IEnumerable<int>? productIds = null, bool syncDefinitions = true)
     {
-        return await _pipelinesClient.SyncAsync(runsPerPipeline);
+        return await _pipelinesClient.SyncAsync(runsPerPipeline, productIds, syncDefinitions);
+    }
+
+    /// <summary>
+    /// Gets YAML pipeline definitions.
+    /// </summary>
+    public async Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsAsync(int? productId = null, int? repositoryId = null)
+    {
+        return await _pipelinesClient.GetDefinitionsAsync(productId, repositoryId) ?? Array.Empty<PipelineDefinitionDto>();
     }
 }

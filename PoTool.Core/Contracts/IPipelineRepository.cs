@@ -44,4 +44,36 @@ public interface IPipelineRepository
     /// Clears all cached pipeline data.
     /// </summary>
     Task ClearAllAsync(CancellationToken cancellationToken = default);
+
+    // ============================================
+    // PIPELINE DEFINITION METHODS
+    // ============================================
+
+    /// <summary>
+    /// Retrieves all pipeline definitions.
+    /// </summary>
+    Task<IEnumerable<PipelineDefinitionDto>> GetAllDefinitionsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves pipeline definitions for a specific product.
+    /// </summary>
+    Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByProductIdAsync(int productId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves pipeline definitions for a specific repository.
+    /// </summary>
+    Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByRepositoryIdAsync(int repositoryId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Saves pipeline definitions for products and repositories.
+    /// Performs upsert operation - updates existing or inserts new definitions.
+    /// Removes definitions that no longer exist in TFS.
+    /// </summary>
+    /// <param name="definitions">Pipeline definitions to save.</param>
+    /// <param name="productIds">Product IDs that were synced (used to identify stale entries).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task SaveDefinitionsAsync(
+        IEnumerable<PipelineDefinitionDto> definitions,
+        IEnumerable<int> productIds,
+        CancellationToken cancellationToken = default);
 }

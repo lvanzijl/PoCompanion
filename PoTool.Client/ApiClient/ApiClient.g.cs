@@ -2950,11 +2950,18 @@ namespace PoTool.Client.ApiClient
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineMetricsDto>> GetMetricsAsync(System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline);
+        System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline, System.Collections.Generic.IEnumerable<int>? productIds, bool? syncDefinitions);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline, System.Collections.Generic.IEnumerable<int>? productIds, bool? syncDefinitions, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDefinitionDto>> GetDefinitionsAsync(int? productId, int? repositoryId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDefinitionDto>> GetDefinitionsAsync(int? productId, int? repositoryId, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -3246,14 +3253,14 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline)
+        public virtual System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline, System.Collections.Generic.IEnumerable<int>? productIds, bool? syncDefinitions)
         {
-            return SyncAsync(runsPerPipeline, System.Threading.CancellationToken.None);
+            return SyncAsync(runsPerPipeline, productIds, syncDefinitions, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<PipelineSyncResult> SyncAsync(int? runsPerPipeline, System.Collections.Generic.IEnumerable<int>? productIds, bool? syncDefinitions, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -3273,6 +3280,14 @@ namespace PoTool.Client.ApiClient
                     if (runsPerPipeline != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("runsPerPipeline")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(runsPerPipeline, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (productIds != null)
+                    {
+                            foreach (var item_ in productIds) { urlBuilder_.Append(System.Uri.EscapeDataString("productIds")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(item_, System.Globalization.CultureInfo.InvariantCulture))).Append('&'); }
+                    }
+                    if (syncDefinitions != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("syncDefinitions")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(syncDefinitions, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     }
                     urlBuilder_.Length--;
 
@@ -3302,6 +3317,92 @@ namespace PoTool.Client.ApiClient
                         if (status_ == 200)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<PipelineSyncResult>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDefinitionDto>> GetDefinitionsAsync(int? productId, int? repositoryId)
+        {
+            return GetDefinitionsAsync(productId, repositoryId, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDefinitionDto>> GetDefinitionsAsync(int? productId, int? repositoryId, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/Pipelines/definitions"
+                    urlBuilder_.Append("api/Pipelines/definitions");
+                    urlBuilder_.Append('?');
+                    if (productId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("productId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(productId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (repositoryId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("repositoryId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(repositoryId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<PipelineDefinitionDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -14882,6 +14983,42 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
         public string? ErrorMessage { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PipelineDefinitionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("pipelineDefinitionId")]
+        public int PipelineDefinitionId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("productId")]
+        public int? ProductId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("repositoryId")]
+        public int? RepositoryId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("repoId")]
+        public string RepoId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("repoName")]
+        public string RepoName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("yamlPath")]
+        public string? YamlPath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("folder")]
+        public string? Folder { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        public string? Url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lastSyncedUtc")]
+        public System.DateTimeOffset LastSyncedUtc { get; set; } = default!;
 
     }
 
