@@ -788,10 +788,13 @@
         }
         
         // Load PR metrics (Phase 3)
-        // Note: PR metrics API doesn't support product filtering - shows global data for now
+        // Note: PR metrics API now supports product filtering
         try
         {
-            _prMetrics = await PullRequestsClient.GetMetricsAsync(cancellationToken);
+            var productIdsParam = _selectedProductId == AllProductsId 
+                ? string.Join(",", _products.Select(p => p.Id))
+                : _selectedProductId.ToString();
+            _prMetrics = await PullRequestsClient.GetMetricsAsync(productIdsParam, cancellationToken);
         }
         catch (OperationCanceledException)
         {

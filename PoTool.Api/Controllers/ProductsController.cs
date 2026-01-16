@@ -237,6 +237,37 @@ public class ProductsController : ControllerBase
             return NotFound();
         }
     }
+
+    /// <summary>
+    /// Creates a new repository configuration for a product.
+    /// </summary>
+    [HttpPost("{productId}/repositories")]
+    [ProducesResponseType(typeof(RepositoryDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<RepositoryDto>> CreateRepository(
+        int productId,
+        [FromBody] CreateRepositoryRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new CreateRepositoryCommand(productId, request.Name);
+        var result = await _mediator.Send(command, cancellationToken);
+        return Created($"/api/products/{productId}/repositories/{result.Id}", result);
+    }
+
+    /// <summary>
+    /// Deletes a repository configuration from a product.
+    /// </summary>
+    [HttpDelete("{productId}/repositories/{repositoryId}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteRepository(
+        int productId,
+        int repositoryId,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeleteRepositoryCommand(repositoryId), cancellationToken);
+        return NoContent();
+    }
 }
 
 /// <summary>
@@ -275,4 +306,11 @@ public record ReorderProductsRequest(
 /// </summary>
 public record ChangeProductOwnerRequest(
     int? NewProductOwnerId
+);
+
+/// <summary>
+/// Request model for creating a repository.
+/// </summary>
+public record CreateRepositoryRequest(
+    string Name
 );
