@@ -285,7 +285,7 @@ public class PoToolDbContext : DbContext
             entity.HasIndex(e => e.RepositoryId);
 
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
-            entity.Property(e => e.RepoId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.RepoId).HasMaxLength(36).IsRequired();
             entity.Property(e => e.RepoName).HasMaxLength(200).IsRequired();
             entity.Property(e => e.YamlPath).HasMaxLength(500);
             entity.Property(e => e.Folder).HasMaxLength(500);

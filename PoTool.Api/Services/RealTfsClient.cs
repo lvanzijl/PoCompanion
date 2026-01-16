@@ -4270,6 +4270,67 @@ public class RealTfsClient : ITfsClient
     // PIPELINE DEFINITION METHODS (YAML) - API 7.0
     // ============================================
 
+    /// <summary>
+    /// Retrieves repository IDs for multiple repository names in a single API call.
+    /// Prevents N+1 pattern when syncing pipeline definitions for multiple repositories.
+    /// </summary>
+    private async Task<Dictionary<string, string>> GetRepositoryIdsByNamesAsync(
+        IEnumerable<string> repositoryNames,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+        var config = entity!;
+
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            // GET {ServerUri}/{Project}/_apis/git/repositories?api-version=7.0
+            var url = ProjectUrl(config, "_apis/git/repositories");
+            _logger.LogDebug("Fetching Git repositories from: {Url}", url);
+
+            var response = await httpClient.GetAsync(url, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to get Git repositories: {StatusCode}", response.StatusCode);
+                return new Dictionary<string, string>();
+            }
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            if (!doc.RootElement.TryGetProperty("value", out var valueArray))
+            {
+                _logger.LogWarning("Git repositories response missing 'value' array");
+                return new Dictionary<string, string>();
+            }
+
+            var repoNamesSet = new HashSet<string>(repositoryNames, StringComparer.OrdinalIgnoreCase);
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var repo in valueArray.EnumerateArray())
+            {
+                if (repo.TryGetProperty("name", out var nameElement) && repo.TryGetProperty("id", out var idElement))
+                {
+                    var name = nameElement.GetString();
+                    var id = idElement.GetString();
+
+                    if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(id) && repoNamesSet.Contains(name))
+                    {
+                        result[name] = id;
+                    }
+                }
+            }
+
+            _logger.LogInformation("Resolved {Count} repository IDs from {Total} requested names",
+                result.Count, repoNamesSet.Count);
+
+            return result;
+        }, cancellationToken);
+    }
+
     public async Task<string?> GetRepositoryIdByNameAsync(
         string repositoryName,
         CancellationToken cancellationToken = default)

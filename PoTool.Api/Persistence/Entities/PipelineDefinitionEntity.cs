@@ -34,9 +34,10 @@ public class PipelineDefinitionEntity
 
     /// <summary>
     /// TFS repository ID (GUID from TFS API).
+    /// Standard GUID format is 36 characters (e.g., "12345678-1234-1234-1234-123456789012").
     /// </summary>
     [Required]
-    [MaxLength(50)]
+    [MaxLength(36)]
     public string RepoId { get; set; } = string.Empty;
 
     /// <summary>

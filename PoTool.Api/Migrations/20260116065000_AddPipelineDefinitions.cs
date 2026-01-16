@@ -20,7 +20,7 @@ namespace PoTool.Api.Migrations
                     PipelineDefinitionId = table.Column<int>(type: "INTEGER", nullable: false),
                     ProductId = table.Column<int>(type: "INTEGER", nullable: false),
                     RepositoryId = table.Column<int>(type: "INTEGER", nullable: false),
-                    RepoId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    RepoId = table.Column<string>(type: "TEXT", maxLength: 36, nullable: false),
                     RepoName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
                     YamlPath = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
