@@ -193,4 +193,33 @@ public class ProductService
 
         return await _productsClient.ChangeProductOwnerAsync(productId, request, cancellationToken);
     }
+
+    /// <summary>
+    /// Creates a new repository configuration for a product.
+    /// </summary>
+    public async Task<RepositoryDto> CreateRepositoryAsync(int productId, string name, CancellationToken cancellationToken = default)
+    {
+        var request = new CreateRepositoryRequest
+        {
+            Name = name
+        };
+
+        return await _productsClient.CreateRepositoryAsync(productId, request, cancellationToken);
+    }
+
+    /// <summary>
+    /// Deletes a repository configuration from a product.
+    /// </summary>
+    public async Task<bool> DeleteRepositoryAsync(int productId, int repositoryId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _productsClient.DeleteRepositoryAsync(productId, repositoryId, cancellationToken);
+            return true;
+        }
+        catch (ApiException ex) when (ex.StatusCode == 404)
+        {
+            return false;
+        }
+    }
 }

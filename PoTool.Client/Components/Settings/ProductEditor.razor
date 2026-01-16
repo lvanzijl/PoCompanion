@@ -89,6 +89,65 @@
                 </MudAlert>
             }
 
+            @* Repository Configuration *@
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudText Typo="Typo.body2" Style="flex: 0 0 auto;">Repositories</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="flex: 1 1 auto;">Git repositories in Azure DevOps/TFS</MudText>
+                </MudStack>
+                
+                @* List of existing repositories *@
+                @if (_repositories.Any())
+                {
+                    <MudPaper Elevation="0" Class="pa-2" Style="border: 1px solid var(--mud-palette-divider);">
+                        <MudStack Spacing="1">
+                            @foreach (var repo in _repositories)
+                            {
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Small" />
+                                    <MudText Typo="Typo.body2" Style="flex: 1 1 auto;">@repo.Name</MudText>
+                                    <CompactButton OnClick="@(() => RemoveRepository(repo.Name))"
+                                                   Color="Color.Error"
+                                                   Variant="Variant.Text"
+                                                   Size="Size.Small"
+                                                   StartIcon="@Icons.Material.Filled.Delete">
+                                        Remove
+                                    </CompactButton>
+                                </MudStack>
+                            }
+                        </MudStack>
+                    </MudPaper>
+                }
+                else if (IsEditing)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        <MudText Typo="Typo.caption">
+                            No repositories configured. Add at least one repository below.
+                        </MudText>
+                    </MudAlert>
+                }
+                
+                @* Add new repository *@
+                <MudStack Row="true" Spacing="1">
+                    <CompactTextField @bind-Value="_newRepositoryName"
+                                      Label="Repository Name"
+                                      Placeholder="e.g., MyRepo"
+                                      HelperText="Enter the repository name from Azure DevOps"
+                                      Style="flex: 1 1 auto;"
+                                      Error="@_repositoryError"
+                                      ErrorText="@_repositoryErrorMessage" />
+                    <CompactButton OnClick="AddRepository"
+                                   Color="Color.Primary"
+                                   Variant="Variant.Filled"
+                                   Size="Size.Small"
+                                   Disabled="@(string.IsNullOrWhiteSpace(_newRepositoryName))"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   Style="margin-top: 16px;">
+                        Add
+                    </CompactButton>
+                </MudStack>
+            </MudStack>
+
             @* Picture Selector *@
             <div class="mt-2">
                 <PicturePicker Title="Product Picture" 
@@ -163,6 +222,12 @@
 
     private List<TeamDto> _availableTeams = new();
 
+    // Repository management state
+    private List<RepositoryDto> _repositories = new();
+    private string _newRepositoryName = string.Empty;
+    private bool _repositoryError = false;
+    private string _repositoryErrorMessage = string.Empty;
+
     private string DraftKey => $"product_edit_{ProductOwnerId}_{(Product?.Id ?? 0)}";
 
     protected override async Task OnInitializedAsync()
@@ -179,6 +244,7 @@
             _backlogRootWorkItemIdText = Product.BacklogRootWorkItemId.ToString();
             _selectedImageId = Product.DefaultPictureId;
             _selectedTeamIds = Product.TeamIds.ToList();
+            _repositories = Product.Repositories.ToList();
         }
         else
         {
@@ -250,6 +316,9 @@
                 // Update team links
                 await UpdateTeamLinksAsync(Product.Id, Product.TeamIds.ToList(), _selectedTeamIds.ToList());
 
+                // Update repositories
+                await UpdateRepositoriesAsync(Product.Id, Product.Repositories.Select(r => r.Name).ToList(), _repositories.Select(r => r.Name).ToList());
+
                 Snackbar.Add("Product updated successfully", Severity.Success);
             }
             else
@@ -267,6 +336,12 @@
                 foreach (var teamId in _selectedTeamIds)
                 {
                     await ProductService.LinkTeamAsync(created.Id, teamId);
+                }
+
+                // Add repositories for new product
+                foreach (var repo in _repositories)
+                {
+                    await ProductService.CreateRepositoryAsync(created.Id, repo.Name);
                 }
 
                 Snackbar.Add("Product created successfully", Severity.Success);
@@ -301,6 +376,78 @@
         foreach (var teamId in teamsToLink)
         {
             await ProductService.LinkTeamAsync(productId, teamId);
+        }
+    }
+
+    private async Task UpdateRepositoriesAsync(int productId, List<string> currentRepoNames, List<string> newRepoNames)
+    {
+        // Find repositories to delete (in current but not in new)
+        var reposToDelete = currentRepoNames.Except(newRepoNames, StringComparer.OrdinalIgnoreCase);
+        foreach (var repoName in reposToDelete)
+        {
+            // Find the repository ID by name
+            var repo = _repositories.FirstOrDefault(r => r.Name.Equals(repoName, StringComparison.OrdinalIgnoreCase));
+            if (repo != null)
+            {
+                await ProductService.DeleteRepositoryAsync(productId, repo.Id);
+            }
+        }
+
+        // Find repositories to add (in new but not in current)
+        var reposToAdd = newRepoNames.Except(currentRepoNames, StringComparer.OrdinalIgnoreCase);
+        foreach (var repoName in reposToAdd)
+        {
+            await ProductService.CreateRepositoryAsync(productId, repoName);
+        }
+    }
+
+    private void AddRepository()
+    {
+        _repositoryError = false;
+        _repositoryErrorMessage = string.Empty;
+
+        var trimmedName = _newRepositoryName.Trim();
+
+        // Validation
+        if (string.IsNullOrWhiteSpace(trimmedName))
+        {
+            _repositoryError = true;
+            _repositoryErrorMessage = "Repository name cannot be empty";
+            return;
+        }
+
+        // Check for duplicates (case-insensitive)
+        if (_repositories.Any(r => r.Name.Equals(trimmedName, StringComparison.OrdinalIgnoreCase)))
+        {
+            _repositoryError = true;
+            _repositoryErrorMessage = "This repository already exists";
+            return;
+        }
+
+        // Add to list (for new products, we'll create a temporary DTO with Id=0)
+        var newRepo = new RepositoryDto
+        {
+            Id = 0,  // Temporary ID for unsaved repositories
+            ProductId = Product?.Id ?? 0,
+            Name = trimmedName,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _repositories.Add(newRepo);
+        _newRepositoryName = string.Empty;
+
+        // Save draft
+        Task.Run(async () => await SaveDraftAsync());
+    }
+
+    private void RemoveRepository(string repoName)
+    {
+        var repo = _repositories.FirstOrDefault(r => r.Name.Equals(repoName, StringComparison.OrdinalIgnoreCase));
+        if (repo != null)
+        {
+            _repositories.Remove(repo);
+            // Save draft
+            Task.Run(async () => await SaveDraftAsync());
         }
     }
 
