@@ -178,7 +178,7 @@
                 {
                     <ProductEditor ProductOwnerId="@ProfileId" 
                                    Product="@_editingProduct" 
-                                   OnSaved="OnProductSaved" 
+                                   OnSavedWithSyncRequest="OnProductSavedWithSync" 
                                    OnCancelled="CloseEditor" />
                 }
             </MudStack>
@@ -364,11 +364,17 @@
         }
     }
 
-    private async Task OnProductSaved()
+    private async Task OnProductSavedWithSync(bool shouldSync)
     {
         _showEditor = false;
         _editingProduct = null;
         await LoadDataAsync();
+        
+        if (shouldSync)
+        {
+            // Navigate to sync gate
+            NavigationManager.NavigateTo("/sync-gate");
+        }
     }
 
     private void CloseEditor()

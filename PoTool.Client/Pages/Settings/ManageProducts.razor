@@ -133,7 +133,7 @@
             {
                 <ProductEditor ProductOwnerId="@_editingProductOwnerId" 
                                Product="@_editingProduct" 
-                               OnSaved="OnProductSaved" 
+                               OnSavedWithSyncRequest="OnProductSavedWithSync" 
                                OnCancelled="CloseEditor" />
             }
         }
@@ -228,11 +228,17 @@
         }
     }
 
-    private async Task OnProductSaved()
+    private async Task OnProductSavedWithSync(bool shouldSync)
     {
         _showEditor = false;
         _editingProduct = null;
         await LoadProductsAsync();
+        
+        if (shouldSync)
+        {
+            // Navigate to sync gate
+            NavigationManager.NavigateTo("/sync-gate");
+        }
     }
 
     private void CloseEditor()
