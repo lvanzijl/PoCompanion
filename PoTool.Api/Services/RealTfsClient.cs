@@ -4437,14 +4437,14 @@ public class RealTfsClient : ITfsClient
                 var folder = def.TryGetProperty("path", out var p) ? p.GetString() : null;
 
                 // Extract web URL
-                string? url = null;
+                string? webUrl = null;
                 if (def.TryGetProperty("_links", out var links))
                 {
                     if (links.TryGetProperty("web", out var web))
                     {
                         if (web.TryGetProperty("href", out var href))
                         {
-                            url = href.GetString();
+                            webUrl = href.GetString();
                         }
                     }
                 }
@@ -4457,7 +4457,7 @@ public class RealTfsClient : ITfsClient
                     Name = name,
                     YamlPath = yamlPath,
                     Folder = folder,
-                    Url = url,
+                    Url = webUrl,
                     LastSyncedUtc = syncTime
                 };
 
