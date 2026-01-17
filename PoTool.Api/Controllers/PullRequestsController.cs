@@ -197,34 +197,6 @@ public class PullRequestsController : ControllerBase
     }
 
     /// <summary>
-    /// Synchronizes pull requests from TFS/Azure DevOps to local cache.
-    /// </summary>
-    /// <param name="productIds">Optional comma-separated list of product IDs to sync. If null, syncs all products.</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    [HttpPost("sync")]
-    public async Task<ActionResult<int>> Sync(
-        [FromQuery] string? productIds = null,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var productIdsList = ParseProductIds(productIds, out var errorMessage);
-            if (errorMessage != null)
-            {
-                return BadRequest(errorMessage);
-            }
-
-            var count = await _mediator.Send(new SyncPullRequestsCommand(productIdsList), cancellationToken);
-            return Ok(count);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error syncing pull requests");
-            return StatusCode(500, "Error syncing pull requests");
-        }
-    }
-
-    /// <summary>
     /// Gets PR review bottleneck analysis showing reviewer performance and bottlenecks.
     /// </summary>
     /// <param name="maxPRs">Maximum number of PRs to analyze (default: 100)</param>
