@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.PullRequests;
 using PoTool.Core.PullRequests.Queries;
@@ -8,17 +9,18 @@ namespace PoTool.Api.Handlers.PullRequests;
 /// <summary>
 /// Handler for GetPullRequestMetricsQuery.
 /// Calculates aggregated metrics for all pull requests.
+/// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetPullRequestMetricsQueryHandler : IQueryHandler<GetPullRequestMetricsQuery, IEnumerable<PullRequestMetricsDto>>
 {
-    private readonly IPullRequestRepository _repository;
+    private readonly PullRequestReadProviderFactory _providerFactory;
     private readonly ILogger<GetPullRequestMetricsQueryHandler> _logger;
 
     public GetPullRequestMetricsQueryHandler(
-        IPullRequestRepository repository,
+        PullRequestReadProviderFactory providerFactory,
         ILogger<GetPullRequestMetricsQueryHandler> logger)
     {
-        _repository = repository;
+        _providerFactory = providerFactory;
         _logger = logger;
     }
 
@@ -28,14 +30,15 @@ public sealed class GetPullRequestMetricsQueryHandler : IQueryHandler<GetPullReq
     {
         _logger.LogDebug("Handling GetPullRequestMetricsQuery");
 
-        var allPrs = await _repository.GetByProductIdsAsync(query.ProductIds, cancellationToken);
+        var provider = _providerFactory.Create();
+        var allPrs = await provider.GetByProductIdsAsync(query.ProductIds, cancellationToken);
         var metrics = new List<PullRequestMetricsDto>();
 
         foreach (var pr in allPrs)
         {
-            var iterations = await _repository.GetIterationsAsync(pr.Id, cancellationToken);
-            var comments = await _repository.GetCommentsAsync(pr.Id, cancellationToken);
-            var fileChanges = await _repository.GetFileChangesAsync(pr.Id, cancellationToken);
+            var iterations = await provider.GetIterationsAsync(pr.Id, cancellationToken);
+            var comments = await provider.GetCommentsAsync(pr.Id, cancellationToken);
+            var fileChanges = await provider.GetFileChangesAsync(pr.Id, cancellationToken);
 
             var totalTimeOpen = CalculateTotalTimeOpen(pr);
             var effectiveWorkTime = CalculateEffectiveWorkTime(pr, iterations.ToList());

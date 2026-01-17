@@ -121,6 +121,12 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<LiveWorkItemReadProvider>();
         services.AddScoped<WorkItemReadProviderFactory>();
 
+        // Register Pull Request Read Providers
+        // These provide mode-aware read access to pull requests (Live vs Cached)
+        services.AddScoped<CachedPullRequestReadProvider>();
+        services.AddScoped<LivePullRequestReadProvider>();
+        services.AddScoped<PullRequestReadProviderFactory>();
+
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();
 
