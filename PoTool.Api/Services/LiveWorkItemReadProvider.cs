@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
 
