@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
@@ -387,8 +388,8 @@ public static class ApiApplicationBuilderExtensions
             details
         };
 
-        var json = System.Text.Json.JsonSerializer.Serialize(progress);
-        await writer.WriteLineAsync(json.AsMemory(), cancellationToken);
+        var json = JsonSerializer.Serialize(progress);
+        await writer.WriteLineAsync(json);
         await writer.FlushAsync(cancellationToken);
     }
 }

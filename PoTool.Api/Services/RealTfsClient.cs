@@ -4365,7 +4365,7 @@ public class RealTfsClient : ITfsClient
         // Get auth-mode-specific HttpClient to avoid credential conflicts
         var httpClient = GetAuthenticatedHttpClient();
 
-        return await ExecuteWithRetryAsync(async () =>
+        return await ExecuteWithRetryAsync<IEnumerable<TfsTeamDto>>(async () =>
         {
             // Build URL: {ServerUri}/_apis/projects/{Project}/teams?api-version=7.0
             var encodedProject = Uri.EscapeDataString(config.Project);
@@ -4441,7 +4441,7 @@ public class RealTfsClient : ITfsClient
                 "Retrieved {Count} TFS teams for Project='{Project}'",
                 teams.Count, config.Project);
 
-            return (IEnumerable<TfsTeamDto>)teams;
+            return teams;
         }, cancellationToken);
     }
 
