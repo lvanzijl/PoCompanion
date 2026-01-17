@@ -111,6 +111,13 @@ public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullReq
                     cancellationToken);
 
                 _logger.LogInformation("Step B (Persist): Completed successfully");
+
+                // ========================================
+                // STEP C: BACKFILL (assign timeframe iterations to old PRs)
+                // ========================================
+                _logger.LogInformation("Step C (Backfill): Starting timeframe iteration assignment for existing PRs");
+                await _repository.BackfillTimeframeIterationsAsync(cancellationToken);
+                _logger.LogInformation("Step C (Backfill): Completed successfully");
             }
             else
             {

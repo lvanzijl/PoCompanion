@@ -106,6 +106,9 @@ public class PullRequestsController : ControllerBase
     /// <param name="fromDate">Optional start date filter</param>
     /// <param name="toDate">Optional end date filter</param>
     /// <param name="status">Optional status filter</param>
+    /// <param name="lastNWeeks">Optional filter for last N weeks</param>
+    /// <param name="lastNMonths">Optional filter for last N months</param>
+    /// <param name="timeframeIterationKey">Optional specific iteration key filter (e.g., "2025-W03")</param>
     /// <param name="cancellationToken">Cancellation token</param>
     [HttpGet("filter")]
     public async Task<ActionResult<IEnumerable<PullRequestDto>>> GetFiltered(
@@ -115,6 +118,9 @@ public class PullRequestsController : ControllerBase
         [FromQuery] DateTimeOffset? fromDate = null,
         [FromQuery] DateTimeOffset? toDate = null,
         [FromQuery] string? status = null,
+        [FromQuery] int? lastNWeeks = null,
+        [FromQuery] int? lastNMonths = null,
+        [FromQuery] string? timeframeIterationKey = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -125,7 +131,16 @@ public class PullRequestsController : ControllerBase
                 return BadRequest(errorMessage);
             }
 
-            var query = new GetFilteredPullRequestsQuery(productIdsList, iterationPath, createdBy, fromDate, toDate, status);
+            var query = new GetFilteredPullRequestsQuery(
+                productIdsList, 
+                iterationPath, 
+                createdBy, 
+                fromDate, 
+                toDate, 
+                status, 
+                lastNWeeks, 
+                lastNMonths, 
+                timeframeIterationKey);
             var pullRequests = await _mediator.Send(query, cancellationToken);
             return Ok(pullRequests);
         }

@@ -380,6 +380,29 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
                 // Add new PRs
                 var newPrs = prList.Where(pr => !existingPrIds.Contains(pr.Id)).Select(MapToEntity);
                 await _context.PullRequests.AddRangeAsync(newPrs, cancellationToken);
+
+                // Assign timeframe iterations for all PRs (both new and existing)
+                // Group by iteration key to minimize database operations
+                var prsByIterationKey = prList
+                    .GroupBy(pr => Helpers.TimeframeIterationHelper.GetIterationKey(pr.CreatedDate))
+                    .ToList();
+
+                foreach (var group in prsByIterationKey)
+                {
+                    var firstPr = group.First();
+                    var iterationId = await GetOrCreateTimeframeIterationIdAsync(firstPr.CreatedDate, cancellationToken);
+
+                    // Update both existing and newly added PRs
+                    var prIdsInGroup = group.Select(pr => pr.Id).ToHashSet();
+                    var prsToUpdate = await _context.PullRequests
+                        .Where(pr => prIdsInGroup.Contains(pr.Id))
+                        .ToListAsync(cancellationToken);
+
+                    foreach (var pr in prsToUpdate)
+                    {
+                        pr.TimeframeIterationId = iterationId;
+                    }
+                }
             }
 
             // Step 2: Save iterations
@@ -484,6 +507,89 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
             }
 
             // Single atomic save for all changes
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        finally
+        {
+            _dbGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Gets or creates a TimeframeIteration for the specified date.
+    /// </summary>
+    public async Task<int> GetOrCreateTimeframeIterationIdAsync(DateTimeOffset date, CancellationToken cancellationToken = default)
+    {
+        await _dbGate.WaitAsync(cancellationToken);
+        try
+        {
+            var (year, weekNumber) = Helpers.TimeframeIterationHelper.GetIsoWeek(date);
+            var iterationKey = Helpers.TimeframeIterationHelper.GetIterationKey(date);
+
+            var existing = await _context.TimeframeIterations
+                .FirstOrDefaultAsync(ti => ti.Year == year && ti.WeekNumber == weekNumber, cancellationToken);
+
+            if (existing != null)
+            {
+                return existing.Id;
+            }
+
+            var weekStart = Helpers.TimeframeIterationHelper.GetWeekStart(date);
+            var weekEnd = Helpers.TimeframeIterationHelper.GetWeekEnd(date);
+
+            var newIteration = new TimeframeIterationEntity
+            {
+                Year = year,
+                WeekNumber = weekNumber,
+                StartUtc = weekStart,
+                EndUtc = weekEnd,
+                IterationKey = iterationKey
+            };
+
+            await _context.TimeframeIterations.AddAsync(newIteration, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return newIteration.Id;
+        }
+        finally
+        {
+            _dbGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Backfills TimeframeIterationId for all PRs that don't have one yet.
+    /// </summary>
+    public async Task BackfillTimeframeIterationsAsync(CancellationToken cancellationToken = default)
+    {
+        await _dbGate.WaitAsync(cancellationToken);
+        try
+        {
+            var prsWithoutIteration = await _context.PullRequests
+                .Where(pr => pr.TimeframeIterationId == null)
+                .ToListAsync(cancellationToken);
+
+            if (!prsWithoutIteration.Any())
+            {
+                return;
+            }
+
+            // Group PRs by iteration key to minimize database operations
+            var prsByIterationKey = prsWithoutIteration
+                .GroupBy(pr => Helpers.TimeframeIterationHelper.GetIterationKey(pr.CreatedDate))
+                .ToList();
+
+            foreach (var group in prsByIterationKey)
+            {
+                var firstPr = group.First();
+                var iterationId = await GetOrCreateTimeframeIterationIdAsync(firstPr.CreatedDate, cancellationToken);
+
+                foreach (var pr in group)
+                {
+                    pr.TimeframeIterationId = iterationId;
+                }
+            }
+
             await _context.SaveChangesAsync(cancellationToken);
         }
         finally

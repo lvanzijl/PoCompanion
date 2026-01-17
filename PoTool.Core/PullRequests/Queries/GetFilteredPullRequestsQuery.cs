@@ -13,5 +13,8 @@ public sealed record GetFilteredPullRequestsQuery(
     string? CreatedBy = null,
     DateTimeOffset? FromDate = null,
     DateTimeOffset? ToDate = null,
-    string? Status = null
+    string? Status = null,
+    int? LastNWeeks = null,
+    int? LastNMonths = null,
+    string? TimeframeIterationKey = null
 ) : IQuery<IEnumerable<PullRequestDto>>;

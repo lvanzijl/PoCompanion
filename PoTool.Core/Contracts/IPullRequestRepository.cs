@@ -81,4 +81,14 @@ public interface IPullRequestRepository : IDisposable
         IEnumerable<PullRequestCommentDto> comments,
         IEnumerable<PullRequestFileChangeDto> fileChanges,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets or creates a TimeframeIteration for the specified date.
+    /// </summary>
+    Task<int> GetOrCreateTimeframeIterationIdAsync(DateTimeOffset date, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Backfills TimeframeIterationId for all PRs that don't have one yet.
+    /// </summary>
+    Task BackfillTimeframeIterationsAsync(CancellationToken cancellationToken = default);
 }

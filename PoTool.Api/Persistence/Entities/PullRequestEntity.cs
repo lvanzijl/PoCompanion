@@ -71,6 +71,12 @@ public class PullRequestEntity
     public string IterationPath { get; set; } = string.Empty;
 
     /// <summary>
+    /// Foreign key to the TimeframeIteration (time bucket for filtering).
+    /// Nullable for backward compatibility with existing PRs.
+    /// </summary>
+    public int? TimeframeIterationId { get; set; }
+
+    /// <summary>
     /// Source branch.
     /// </summary>
     [Required]
@@ -94,4 +100,9 @@ public class PullRequestEntity
     /// Navigation property to the Product.
     /// </summary>
     public virtual ProductEntity? Product { get; set; }
+
+    /// <summary>
+    /// Navigation property to the TimeframeIteration.
+    /// </summary>
+    public virtual TimeframeIterationEntity? TimeframeIteration { get; set; }
 }

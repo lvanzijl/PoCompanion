@@ -56,6 +56,11 @@ public class PoToolDbContext : DbContext
     public DbSet<PullRequestFileChangeEntity> PullRequestFileChanges => Set<PullRequestFileChangeEntity>();
 
     /// <summary>
+    /// Timeframe iterations (weekly time buckets for filtering PRs).
+    /// </summary>
+    public DbSet<TimeframeIterationEntity> TimeframeIterations => Set<TimeframeIterationEntity>();
+
+    /// <summary>
     /// Effort estimation settings.
     /// </summary>
     public DbSet<EffortEstimationSettingsEntity> EffortEstimationSettings => Set<EffortEstimationSettingsEntity>();
@@ -181,6 +186,15 @@ public class PoToolDbContext : DbContext
         modelBuilder.Entity<PullRequestFileChangeEntity>(entity =>
         {
             entity.HasIndex(e => new { e.PullRequestId, e.IterationId });
+        });
+
+        modelBuilder.Entity<TimeframeIterationEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.Year, e.WeekNumber })
+                .IsUnique();
+            
+            entity.HasIndex(e => e.IterationKey)
+                .IsUnique();
         });
 
         modelBuilder.Entity<EffortEstimationSettingsEntity>(entity =>

@@ -42,14 +42,29 @@ public sealed class GetFilteredPullRequestsQueryHandler : IQueryHandler<GetFilte
             filtered = filtered.Where(pr => pr.CreatedBy.Equals(query.CreatedBy, StringComparison.OrdinalIgnoreCase));
         }
 
-        if (query.FromDate.HasValue)
+        // Timeframe filtering by weeks/months (converted to date range)
+        if (query.LastNWeeks.HasValue && query.LastNWeeks.Value > 0)
         {
-            filtered = filtered.Where(pr => pr.CreatedDate >= query.FromDate.Value);
+            var cutoffDate = DateTimeOffset.UtcNow.AddDays(-7 * query.LastNWeeks.Value);
+            filtered = filtered.Where(pr => pr.CreatedDate >= cutoffDate);
         }
-
-        if (query.ToDate.HasValue)
+        else if (query.LastNMonths.HasValue && query.LastNMonths.Value > 0)
         {
-            filtered = filtered.Where(pr => pr.CreatedDate <= query.ToDate.Value);
+            var cutoffDate = DateTimeOffset.UtcNow.AddMonths(-query.LastNMonths.Value);
+            filtered = filtered.Where(pr => pr.CreatedDate >= cutoffDate);
+        }
+        // Explicit date range filtering
+        else if (query.FromDate.HasValue || query.ToDate.HasValue)
+        {
+            if (query.FromDate.HasValue)
+            {
+                filtered = filtered.Where(pr => pr.CreatedDate >= query.FromDate.Value);
+            }
+
+            if (query.ToDate.HasValue)
+            {
+                filtered = filtered.Where(pr => pr.CreatedDate <= query.ToDate.Value);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(query.Status))
