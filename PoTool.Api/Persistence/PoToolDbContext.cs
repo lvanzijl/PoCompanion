@@ -164,10 +164,17 @@ public class PoToolDbContext : DbContext
 
             entity.HasIndex(e => e.ProductId);
 
+            entity.HasIndex(e => e.TimeframeIterationId);
+
             entity.HasOne(e => e.Product)
                 .WithMany()
                 .HasForeignKey(e => e.ProductId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.TimeframeIteration)
+                .WithMany()
+                .HasForeignKey(e => e.TimeframeIterationId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<PullRequestIterationEntity>(entity =>

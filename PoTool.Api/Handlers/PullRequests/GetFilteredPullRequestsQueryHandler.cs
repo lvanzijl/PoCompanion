@@ -53,6 +53,8 @@ public sealed class GetFilteredPullRequestsQueryHandler : IQueryHandler<GetFilte
             var cutoffDate = DateTimeOffset.UtcNow.AddMonths(-query.LastNMonths.Value);
             filtered = filtered.Where(pr => pr.CreatedDate >= cutoffDate);
         }
+        // Specific iteration key filtering (note: IterationPath contains TFS iteration, not timeframe iteration)
+        // TimeframeIterationKey would require a join, so it's omitted for now in favor of date filtering
         // Explicit date range filtering
         else if (query.FromDate.HasValue || query.ToDate.HasValue)
         {
