@@ -29,5 +29,9 @@ public sealed record TeamDto(
     int DefaultPictureId,
     string? CustomPicturePath,
     DateTimeOffset CreatedAt,
-    DateTimeOffset LastModified
+    DateTimeOffset LastModified,
+    string? ProjectName,
+    string? TfsTeamId,
+    string? TfsTeamName,
+    DateTimeOffset? LastSyncedIterationsUtc
 );

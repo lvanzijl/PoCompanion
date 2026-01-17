@@ -1,6 +1,7 @@
 using PoTool.Shared.WorkItems;
 using PoTool.Shared.PullRequests;
 using PoTool.Shared.Pipelines;
+using PoTool.Shared.Settings;
 using PoTool.Shared.Contracts.TfsVerification;
 using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
@@ -323,6 +324,23 @@ public interface ITfsClient
     /// <returns>Collection of pipeline definition DTOs for the repository.</returns>
     Task<IEnumerable<PipelineDefinitionDto>> GetPipelineDefinitionsForRepositoryAsync(
         string repositoryName,
+        CancellationToken cancellationToken = default);
+
+    // ============================================
+    // TEAM ITERATIONS (SPRINTS)
+    // ============================================
+
+    /// <summary>
+    /// Retrieves team iterations (sprints) from TFS/Azure DevOps.
+    /// Uses Azure DevOps Server 2022 REST API (api-version=7.0).
+    /// </summary>
+    /// <param name="projectName">The TFS project name.</param>
+    /// <param name="teamName">The TFS team name.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of team iteration DTOs with dates and timeframe.</returns>
+    Task<IEnumerable<TeamIterationDto>> GetTeamIterationsAsync(
+        string projectName,
+        string teamName,
         CancellationToken cancellationToken = default);
 }
 

@@ -104,6 +104,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IPipelineRepository, Repositories.PipelineRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ITeamRepository, TeamRepository>();
+        services.AddScoped<ISprintRepository, SprintRepository>();
         services.AddScoped<Repositories.RepositoryRepository>();
 
         // Register Classification service

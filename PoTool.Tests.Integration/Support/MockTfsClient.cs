@@ -2,6 +2,7 @@ using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
 using PoTool.Shared.PullRequests;
 using PoTool.Shared.Pipelines;
+using PoTool.Shared.Settings;
 using PoTool.Shared.Contracts.TfsVerification;
 using PoTool.Core.WorkItems;
 using PoTool.Core.PullRequests;
@@ -898,5 +899,43 @@ public class MockTfsClient : ITfsClient
     {
         // Return empty list for tests
         return Task.FromResult<IEnumerable<PipelineDefinitionDto>>(Array.Empty<PipelineDefinitionDto>());
+    }
+
+    public Task<IEnumerable<TeamIterationDto>> GetTeamIterationsAsync(
+        string projectName,
+        string teamName,
+        CancellationToken cancellationToken = default)
+    {
+        // Return mock team iterations for testing
+        var now = DateTimeOffset.UtcNow;
+        var iterations = new List<TeamIterationDto>
+        {
+            new TeamIterationDto(
+                "test-iteration-1",
+                "Sprint 1",
+                $"\\{projectName}\\Sprint 1",
+                now.AddDays(-14),
+                now.AddDays(-7),
+                "past"
+            ),
+            new TeamIterationDto(
+                "test-iteration-2",
+                "Sprint 2",
+                $"\\{projectName}\\Sprint 2",
+                now.AddDays(-7),
+                now.AddDays(7),
+                "current"
+            ),
+            new TeamIterationDto(
+                "test-iteration-3",
+                "Sprint 3",
+                $"\\{projectName}\\Sprint 3",
+                now.AddDays(7),
+                now.AddDays(21),
+                "future"
+            )
+        };
+
+        return Task.FromResult<IEnumerable<TeamIterationDto>>(iterations);
     }
 }

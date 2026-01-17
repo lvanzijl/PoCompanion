@@ -13,6 +13,7 @@ using PoTool.Shared.Contracts.TfsVerification;
 using PoTool.Shared.Exceptions;
 using PoTool.Shared.Pipelines;
 using PoTool.Shared.PullRequests;
+using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Services;
@@ -4534,6 +4535,133 @@ public class RealTfsClient : ITfsClient
                 definitions.Count, repositoryName, processedCount, filteredCount);
 
             return (IEnumerable<PipelineDefinitionDto>)definitions;
+        }, cancellationToken);
+    }
+
+    // ============================================
+    // TEAM ITERATIONS (SPRINTS)
+    // ============================================
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<TeamIterationDto>> GetTeamIterationsAsync(
+        string projectName,
+        string teamName,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+
+        // Null assertion after validation - entity is guaranteed non-null here
+        var config = entity!;
+
+        // Get auth-mode-specific HttpClient to avoid credential conflicts
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            // Build URL: {ServerUri}/{Project}/{TeamName}/_apis/work/teamsettings/iterations?api-version=7.0
+            var encodedProject = Uri.EscapeDataString(projectName);
+            var encodedTeam = Uri.EscapeDataString(teamName);
+            var url = $"{config.Url.TrimEnd('/')}/{encodedProject}/{encodedTeam}/_apis/work/teamsettings/iterations?api-version={config.ApiVersion}";
+
+            _logger.LogInformation(
+                "Retrieving team iterations for Project='{Project}', Team='{Team}'",
+                projectName, teamName);
+
+            var response = await httpClient.GetAsync(url, cancellationToken);
+            await HandleHttpErrorsAsync(response, cancellationToken);
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("value", out var valueArray))
+            {
+                _logger.LogWarning(
+                    "Team iterations response missing 'value' array for Project='{Project}', Team='{Team}'",
+                    projectName, teamName);
+                return Array.Empty<TeamIterationDto>();
+            }
+
+            var iterations = new List<TeamIterationDto>();
+
+            foreach (var iteration in valueArray.EnumerateArray())
+            {
+                // Extract id (may be null or missing)
+                string? iterationId = null;
+                if (iteration.TryGetProperty("id", out var idProp))
+                {
+                    iterationId = idProp.GetString();
+                }
+
+                // Extract name (required)
+                if (!iteration.TryGetProperty("name", out var nameProp))
+                {
+                    _logger.LogWarning("Team iteration missing 'name' field - skipping");
+                    continue;
+                }
+                var name = nameProp.GetString() ?? string.Empty;
+
+                // Extract path (required)
+                if (!iteration.TryGetProperty("path", out var pathProp))
+                {
+                    _logger.LogWarning(
+                        "Team iteration '{Name}' missing 'path' field - skipping",
+                        name);
+                    continue;
+                }
+                var path = pathProp.GetString() ?? string.Empty;
+
+                // Extract attributes (optional) - contains startDate and finishDate
+                DateTimeOffset? startDate = null;
+                DateTimeOffset? finishDate = null;
+                if (iteration.TryGetProperty("attributes", out var attributes))
+                {
+                    if (attributes.TryGetProperty("startDate", out var startProp))
+                    {
+                        if (DateTimeOffset.TryParse(startProp.GetString(), out var start))
+                        {
+                            startDate = start;
+                        }
+                    }
+
+                    if (attributes.TryGetProperty("finishDate", out var finishProp))
+                    {
+                        if (DateTimeOffset.TryParse(finishProp.GetString(), out var finish))
+                        {
+                            finishDate = finish;
+                        }
+                    }
+                }
+
+                // Extract timeFrame (optional) - "past", "current", or "future"
+                string? timeFrame = null;
+                if (iteration.TryGetProperty("timeFrame", out var timeFrameProp))
+                {
+                    timeFrame = timeFrameProp.GetString();
+                }
+
+                var dto = new TeamIterationDto(
+                    iterationId,
+                    name,
+                    path,
+                    startDate,
+                    finishDate,
+                    timeFrame
+                );
+
+                iterations.Add(dto);
+
+                _logger.LogDebug(
+                    "Mapped team iteration: Path={Path}, Name={Name}, TimeFrame={TimeFrame}, Start={Start}, End={End}",
+                    path, name, timeFrame ?? "(none)", startDate?.ToString("yyyy-MM-dd") ?? "(none)", finishDate?.ToString("yyyy-MM-dd") ?? "(none)");
+            }
+
+            _logger.LogInformation(
+                "Retrieved {Count} team iterations for Project='{Project}', Team='{Team}'",
+                iterations.Count, projectName, teamName);
+
+            return (IEnumerable<TeamIterationDto>)iterations;
         }, cancellationToken);
     }
 }

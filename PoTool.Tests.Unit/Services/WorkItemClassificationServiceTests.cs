@@ -180,6 +180,11 @@ public class WorkItemClassificationServiceTests
             0,
             null,
             DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow,
+            null, // ProjectName
+            null, // TfsTeamId
+            null, // TfsTeamName
+            null  // LastSyncedIterationsUtc
+        );
     }
 }
