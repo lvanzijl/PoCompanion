@@ -42,63 +42,93 @@ public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullReq
     {
         _logger.LogInformation("Starting pull request sync for products");
 
-        // Get repositories for the specified products
-        var repositories = await GetRepositoriesForProductsAsync(command.ProductIds, cancellationToken);
-
-        if (!repositories.Any())
+        try
         {
-            _logger.LogWarning("No repositories configured for the specified products");
-            return 0;
-        }
+            // ========================================
+            // STEP A: COLLECT (network calls, no database access)
+            // ========================================
+            _logger.LogInformation("Step A (Collect): Starting PR data collection from TFS");
 
-        int totalPrsSynced = 0;
-        var allPrs = new List<PullRequestDto>();
-        var allIterations = new List<PullRequestIterationDto>();
-        var allComments = new List<PullRequestCommentDto>();
-        var allFileChanges = new List<PullRequestFileChangeDto>();
+            // Get repositories for the specified products
+            var repositories = await GetRepositoriesForProductsAsync(command.ProductIds, cancellationToken);
 
-        // Sync PRs for each repository
-        foreach (var (productId, repoName) in repositories)
-        {
-            _logger.LogInformation("Syncing PRs for repository '{Repository}' (Product ID: {ProductId})", repoName, productId);
+            if (!repositories.Any())
+            {
+                _logger.LogWarning("No repositories configured for the specified products");
+                return 0;
+            }
 
-            // Fetch PRs for this repository
-            var syncResult = await _tfsClient.GetPullRequestsWithDetailsAsync(
-                repositoryName: repoName,
-                cancellationToken: cancellationToken);
+            int totalPrsSynced = 0;
+            var allPrs = new List<PullRequestDto>();
+            var allIterations = new List<PullRequestIterationDto>();
+            var allComments = new List<PullRequestCommentDto>();
+            var allFileChanges = new List<PullRequestFileChangeDto>();
+
+            // Collect PRs for each repository (network calls only, no DB writes)
+            foreach (var (productId, repoName) in repositories)
+            {
+                _logger.LogInformation("Collecting PRs for repository '{Repository}' (Product ID: {ProductId})", repoName, productId);
+
+                // Fetch PRs for this repository (network call - returns in-memory data)
+                var syncResult = await _tfsClient.GetPullRequestsWithDetailsAsync(
+                    repositoryName: repoName,
+                    cancellationToken: cancellationToken);
+
+                _logger.LogInformation(
+                    "Bulk PR fetch for '{Repository}' completed with {TfsCallCount} TFS call(s) - retrieved {PrCount} PRs",
+                    repoName,
+                    syncResult.TfsCallCount,
+                    syncResult.PullRequests.Count);
+
+                // Set ProductId on all PRs from this repository
+                var prsWithProductId = syncResult.PullRequests.Select(pr => pr with { ProductId = productId }).ToList();
+                
+                allPrs.AddRange(prsWithProductId);
+                allIterations.AddRange(syncResult.Iterations);
+                allComments.AddRange(syncResult.Comments);
+                allFileChanges.AddRange(syncResult.FileChanges);
+
+                totalPrsSynced += syncResult.PullRequests.Count;
+            }
 
             _logger.LogInformation(
-                "Bulk PR fetch for '{Repository}' completed with {TfsCallCount} TFS call(s) - retrieved {PrCount} PRs",
-                repoName,
-                syncResult.TfsCallCount,
-                syncResult.PullRequests.Count);
+                "Step A (Collect): Completed. Collected {PrCount} PRs, {IterCount} iterations, {CommentCount} comments, {FileCount} file changes",
+                totalPrsSynced, allIterations.Count, allComments.Count, allFileChanges.Count);
 
-            // Set ProductId on all PRs from this repository
-            var prsWithProductId = syncResult.PullRequests.Select(pr => pr with { ProductId = productId }).ToList();
-            
-            allPrs.AddRange(prsWithProductId);
-            allIterations.AddRange(syncResult.Iterations);
-            allComments.AddRange(syncResult.Comments);
-            allFileChanges.AddRange(syncResult.FileChanges);
+            // ========================================
+            // STEP B: PERSIST (single atomic database operation)
+            // ========================================
+            if (allPrs.Any())
+            {
+                _logger.LogInformation("Step B (Persist): Starting atomic persistence of all PR data");
 
-            totalPrsSynced += syncResult.PullRequests.Count;
+                // Save all data in a single atomic operation to avoid concurrent DB access
+                await _repository.SaveBulkAsync(
+                    allPrs,
+                    allIterations,
+                    allComments,
+                    allFileChanges,
+                    cancellationToken);
+
+                _logger.LogInformation("Step B (Persist): Completed successfully");
+            }
+            else
+            {
+                _logger.LogInformation("Step B (Persist): Skipped - no PRs to save");
+            }
+
+            _logger.LogInformation(
+                "Pull request sync completed. Synced {Count} PRs across {RepoCount} repositories",
+                totalPrsSynced,
+                repositories.Count);
+
+            return totalPrsSynced;
         }
-
-        // Save all PRs, iterations, comments, and file changes to repository
-        if (allPrs.Any())
+        catch (Exception ex)
         {
-            await _repository.SaveAsync(allPrs, cancellationToken);
-            await _repository.SaveIterationsAsync(allIterations, cancellationToken);
-            await _repository.SaveCommentsAsync(allComments, cancellationToken);
-            await _repository.SaveFileChangesAsync(allFileChanges, cancellationToken);
+            _logger.LogError(ex, "Pull request sync failed: {ErrorMessage}", ex.Message);
+            throw;
         }
-
-        _logger.LogInformation(
-            "Pull request sync completed. Synced {Count} PRs across {RepoCount} repositories",
-            totalPrsSynced,
-            repositories.Count);
-
-        return totalPrsSynced;
     }
 
     private async Task<List<(int ProductId, string RepoName)>> GetRepositoriesForProductsAsync(

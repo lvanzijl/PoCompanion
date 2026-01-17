@@ -208,6 +208,129 @@ public class PullRequestRepository : IPullRequestRepository
         }
     }
 
+    public async Task SaveBulkAsync(
+        IEnumerable<PullRequestDto> pullRequests,
+        IEnumerable<PullRequestIterationDto> iterations,
+        IEnumerable<PullRequestCommentDto> comments,
+        IEnumerable<PullRequestFileChangeDto> fileChanges,
+        CancellationToken cancellationToken = default)
+    {
+        // Convert to lists for efficient operations
+        var prList = pullRequests.ToList();
+        var iterationsList = iterations.ToList();
+        var commentsList = comments.ToList();
+        var fileChangesList = fileChanges.ToList();
+
+        // Step 1: Save pull requests
+        if (prList.Count > 0)
+        {
+            var prIds = prList.Select(pr => pr.Id).ToList();
+            var existingPrs = await _context.PullRequests
+                .Where(pr => prIds.Contains(pr.Id))
+                .ToListAsync(cancellationToken);
+
+            var existingPrIds = existingPrs.Select(pr => pr.Id).ToHashSet();
+
+            // Update existing PRs
+            foreach (var existingPr in existingPrs)
+            {
+                var updatedPr = prList.First(pr => pr.Id == existingPr.Id);
+                UpdateEntity(existingPr, updatedPr);
+            }
+
+            // Add new PRs
+            var newPrs = prList.Where(pr => !existingPrIds.Contains(pr.Id)).Select(MapToEntity);
+            await _context.PullRequests.AddRangeAsync(newPrs, cancellationToken);
+        }
+
+        // Step 2: Save iterations
+        if (iterationsList.Count > 0)
+        {
+            // Build composite keys for efficient lookup
+            var iterationKeys = iterationsList
+                .Select(i => new { i.PullRequestId, i.IterationNumber })
+                .ToList();
+
+            var prIds = iterationKeys.Select(k => k.PullRequestId).Distinct().ToList();
+
+            var existingIterations = await _context.PullRequestIterations
+                .Where(i => prIds.Contains(i.PullRequestId))
+                .ToListAsync(cancellationToken);
+
+            var existingIterationKeys = existingIterations
+                .Select(i => new { i.PullRequestId, i.IterationNumber })
+                .ToHashSet();
+
+            // Update existing iterations
+            foreach (var iteration in iterationsList)
+            {
+                var key = new { iteration.PullRequestId, iteration.IterationNumber };
+                var existing = existingIterations.FirstOrDefault(
+                    i => i.PullRequestId == iteration.PullRequestId &&
+                         i.IterationNumber == iteration.IterationNumber);
+
+                if (existing != null)
+                {
+                    UpdateIterationEntity(existing, iteration);
+                }
+                else if (!existingIterationKeys.Contains(key))
+                {
+                    await _context.PullRequestIterations.AddAsync(MapToIterationEntity(iteration), cancellationToken);
+                    existingIterationKeys.Add(key);
+                }
+            }
+        }
+
+        // Step 3: Save comments
+        if (commentsList.Count > 0)
+        {
+            var commentIds = commentsList.Select(c => c.Id).ToList();
+            var existingComments = await _context.PullRequestComments
+                .Where(c => commentIds.Contains(c.Id))
+                .ToListAsync(cancellationToken);
+
+            var existingCommentIds = existingComments.Select(c => c.Id).ToHashSet();
+
+            // Update existing comments
+            foreach (var existingComment in existingComments)
+            {
+                var updatedComment = commentsList.First(c => c.Id == existingComment.Id);
+                UpdateCommentEntity(existingComment, updatedComment);
+            }
+
+            // Add new comments
+            var newComments = commentsList.Where(c => !existingCommentIds.Contains(c.Id)).Select(MapToCommentEntity);
+            await _context.PullRequestComments.AddRangeAsync(newComments, cancellationToken);
+        }
+
+        // Step 4: Save file changes
+        // Group by PR+Iteration and replace all for each group
+        if (fileChangesList.Count > 0)
+        {
+            var fileChangeGroups = fileChangesList
+                .GroupBy(fc => new { fc.PullRequestId, fc.IterationId })
+                .ToList();
+
+            foreach (var group in fileChangeGroups)
+            {
+                var prId = group.Key.PullRequestId;
+                var iterationId = group.Key.IterationId;
+
+                var existing = await _context.PullRequestFileChanges
+                    .Where(fc => fc.PullRequestId == prId && fc.IterationId == iterationId)
+                    .ToListAsync(cancellationToken);
+
+                _context.PullRequestFileChanges.RemoveRange(existing);
+
+                var entities = group.Select(MapToFileChangeEntity);
+                await _context.PullRequestFileChanges.AddRangeAsync(entities, cancellationToken);
+            }
+        }
+
+        // Single atomic save for all changes
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
     // Mapping methods
     private static PullRequestDto MapToDto(PullRequestEntity entity)
     {
