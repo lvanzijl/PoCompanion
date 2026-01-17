@@ -32,6 +32,11 @@ Describe the single, clear goal of this PR.
 - [ ] Core remains infrastructure-free
 - [ ] Backend remains runnable in- and out-of-process
 
+## Concurrency Safety
+- [ ] Parallelism scope:
+- [ ] EF access location:
+- [ ] Why EF cannot overlap:
+
 ### Process
 - [ ] No implicit decisions or assumptions introduced
 - [ ] No unapproved dependencies added
@@ -50,6 +55,7 @@ Describe the single, clear goal of this PR.
 - [ ] Business logic covered by unit tests (MSTest)
 - [ ] No real TFS calls used in tests
 - [ ] Existing tests updated where behavior changed
+- [ ] All tests succeed
 
 ---
 
