@@ -196,7 +196,7 @@
     public ProductDto? Product { get; set; }
 
     [Parameter]
-    public EventCallback OnSaved { get; set; }
+    public EventCallback<bool> OnSaved { get; set; }
 
     [Parameter]
     public EventCallback OnCancelled { get; set; }
@@ -302,6 +302,8 @@
         {
             _isSaving = true;
             ClearError();
+            
+            bool repositoriesChanged = false;
 
             if (IsEditing && Product != null)
             {
@@ -315,6 +317,11 @@
 
                 // Update team links
                 await UpdateTeamLinksAsync(Product.Id, Product.TeamIds.ToList(), _selectedTeamIds.ToList());
+
+                // Check if repositories changed
+                var oldRepoNames = Product.Repositories.Select(r => r.Name).OrderBy(n => n).ToList();
+                var newRepoNames = _repositories.Select(r => r.Name).OrderBy(n => n).ToList();
+                repositoriesChanged = !oldRepoNames.SequenceEqual(newRepoNames, StringComparer.OrdinalIgnoreCase);
 
                 // Update repositories
                 await UpdateRepositoriesAsync(Product.Id, Product.Repositories.Select(r => r.Name).ToList(), _repositories.Select(r => r.Name).ToList());
@@ -344,13 +351,17 @@
                     await ProductService.CreateRepositoryAsync(created.Id, repo.Name);
                 }
 
+                // New product with repositories should trigger sync
+                repositoriesChanged = _repositories.Any();
+
                 Snackbar.Add("Product created successfully", Severity.Success);
                 
                 // Clear draft after successful creation
                 await ClearDraftAsync();
             }
 
-            await OnSaved.InvokeAsync();
+            // Notify parent with sync request if repositories changed
+            await OnSaved.InvokeAsync(repositoriesChanged);
         }
         catch (Exception ex)
         {

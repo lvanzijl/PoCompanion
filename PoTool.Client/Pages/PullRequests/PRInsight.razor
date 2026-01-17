@@ -11,7 +11,6 @@
 @inject ProductService ProductService
 @inject ProfileService ProfileService
 @inject IPreferencesService PreferencesService
-@inject ISnackbar Snackbar
 
 <PageTitle>PR Insight Dashboard</PageTitle>
 
@@ -66,15 +65,53 @@
     
     @if (!_isLoading && !_metrics.Any())
     {
-        <EmptyStateDisplay Title="No Pull Request Data Available"
-                          Message="There are no pull requests to display. Click the 'Sync PRs' button below to fetch pull request data from Azure DevOps.">
-            <MudFab Color="Color.Primary" 
-                    StartIcon="@Icons.Material.Filled.Sync" 
-                    Label="Sync PRs" 
-                    Class="mt-4"
-                    OnClick="@SyncPullRequests"
-                    Disabled="@_isSyncing" />
-        </EmptyStateDisplay>
+        @if (_selectedProductId != AllProductsId)
+        {
+            @* Show product-specific message *@
+            var product = _products.FirstOrDefault(p => p.Id == _selectedProductId);
+            var hasRepositories = product?.Repositories?.Any() ?? false;
+
+            if (!hasRepositories)
+            {
+                <EmptyStateDisplay Title="No Repositories Configured"
+                                   Message="@($"The product '{product?.Name}' has no repositories configured. To view PR insights, configure at least one repository in the product settings. PR data is automatically synced when the product is synced.")">
+                    <MudButton Color="Color.Primary" 
+                               Variant="Variant.Filled"
+                               Href="/settings/products"
+                               StartIcon="@Icons.Material.Filled.Settings">
+                        Configure Repositories
+                    </MudButton>
+                </EmptyStateDisplay>
+            }
+            else
+            {
+                <EmptyStateDisplay Title="No Pull Request Data Available"
+                                   Message="There are no pull requests to display. PR data is automatically synced when the product is synced. If you just configured repositories, please sync the product from the Product Home page." />
+            }
+        }
+        else
+        {
+            @* All products view *@
+            var anyProductsWithRepositories = _products.Any(p => p.Repositories?.Any() ?? false);
+
+            if (!anyProductsWithRepositories)
+            {
+                <EmptyStateDisplay Title="No Repositories Configured"
+                                   Message="None of the products have repositories configured. To view PR insights, configure at least one repository in the product settings. PR data is automatically synced when products are synced.">
+                    <MudButton Color="Color.Primary" 
+                               Variant="Variant.Filled"
+                               Href="/settings/products"
+                               StartIcon="@Icons.Material.Filled.Settings">
+                        Configure Repositories
+                    </MudButton>
+                </EmptyStateDisplay>
+            }
+            else
+            {
+                <EmptyStateDisplay Title="No Pull Request Data Available"
+                                   Message="There are no pull requests to display. PR data is automatically synced when products are synced." />
+            }
+        }
     }
     else
     {
@@ -139,14 +176,6 @@
                 </MudDataGrid>
             </MudTabPanel>
         </MudTabs>
-
-        <!-- Sync Button -->
-        <MudFab Color="Color.Primary" 
-                StartIcon="@Icons.Material.Filled.Sync" 
-                Label="Sync PRs" 
-                Class="mt-4"
-                OnClick="@SyncPullRequests"
-                Disabled="@_isSyncing" />
     }
 </MudContainer>
 
@@ -154,7 +183,6 @@
     private List<PullRequestMetricsDto> _metrics = new();
     private List<PullRequestMetricsDto> _allMetrics = new();
     private bool _isLoading = true;
-    private bool _isSyncing = false;
     private DateRange? _dateRange;
     private ErrorResponse? _errorResponse;
 
@@ -328,26 +356,6 @@
     {
         var currentHash = MetricsService.CalculateMetricsHashCode(_metrics);
         return currentHash == _cachedMetricsHashCode;
-    }
-
-    private async Task SyncPullRequests()
-    {
-        _isSyncing = true;
-        try
-        {
-            ClearError();
-            var count = await PullRequestService.SyncAsync();
-            Snackbar.Add($"Synced {count} pull requests successfully", Severity.Success);
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            ShowError(ex, "Error syncing pull requests");
-        }
-        finally
-        {
-            _isSyncing = false;
-        }
     }
 
     private void ShowError(Exception ex, string context)
