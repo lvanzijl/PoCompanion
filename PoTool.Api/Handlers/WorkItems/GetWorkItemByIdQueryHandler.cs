@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
@@ -7,17 +8,18 @@ namespace PoTool.Api.Handlers.WorkItems;
 
 /// <summary>
 /// Handler for GetWorkItemByIdQuery.
+/// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetWorkItemByIdQueryHandler : IQueryHandler<GetWorkItemByIdQuery, WorkItemDto?>
 {
-    private readonly IWorkItemRepository _repository;
+    private readonly WorkItemReadProviderFactory _providerFactory;
     private readonly ILogger<GetWorkItemByIdQueryHandler> _logger;
 
     public GetWorkItemByIdQueryHandler(
-        IWorkItemRepository repository,
+        WorkItemReadProviderFactory providerFactory,
         ILogger<GetWorkItemByIdQueryHandler> logger)
     {
-        _repository = repository;
+        _providerFactory = providerFactory;
         _logger = logger;
     }
 
@@ -26,6 +28,7 @@ public sealed class GetWorkItemByIdQueryHandler : IQueryHandler<GetWorkItemByIdQ
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetWorkItemByIdQuery for TfsId={TfsId}", query.TfsId);
-        return await _repository.GetByTfsIdAsync(query.TfsId, cancellationToken);
+        var provider = _providerFactory.Create();
+        return await provider.GetByTfsIdAsync(query.TfsId, cancellationToken);
     }
 }

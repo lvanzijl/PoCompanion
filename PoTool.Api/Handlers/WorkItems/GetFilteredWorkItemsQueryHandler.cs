@@ -9,19 +9,20 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// <summary>
 /// Handler for GetFilteredWorkItemsQuery.
 /// Automatically filters by active profile's area paths if a profile is set.
+/// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetFilteredWorkItemsQueryHandler : IQueryHandler<GetFilteredWorkItemsQuery, IEnumerable<WorkItemDto>>
 {
-    private readonly IWorkItemRepository _repository;
+    private readonly WorkItemReadProviderFactory _providerFactory;
     private readonly ProfileFilterService _profileFilterService;
     private readonly ILogger<GetFilteredWorkItemsQueryHandler> _logger;
 
     public GetFilteredWorkItemsQueryHandler(
-        IWorkItemRepository repository,
+        WorkItemReadProviderFactory providerFactory,
         ProfileFilterService profileFilterService,
         ILogger<GetFilteredWorkItemsQueryHandler> logger)
     {
-        _repository = repository;
+        _providerFactory = providerFactory;
         _profileFilterService = profileFilterService;
         _logger = logger;
     }
@@ -32,7 +33,8 @@ public sealed class GetFilteredWorkItemsQueryHandler : IQueryHandler<GetFiltered
     {
         _logger.LogDebug("Handling GetFilteredWorkItemsQuery with filter={Filter}", query.Filter);
 
-        var allFiltered = await _repository.GetFilteredAsync(query.Filter, cancellationToken);
+        var provider = _providerFactory.Create();
+        var allFiltered = await provider.GetFilteredAsync(query.Filter, cancellationToken);
 
         // Apply profile-based area path filtering
         var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);

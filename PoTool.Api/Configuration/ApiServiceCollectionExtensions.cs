@@ -5,6 +5,7 @@ using PoTool.Api.Repositories;
 using PoTool.Api.Services;
 using PoTool.Api.Services.MockData;
 using PoTool.Core.Contracts;
+using PoTool.Core.Configuration;
 using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Filtering;
 using PoTool.Core.Health;
@@ -47,6 +48,10 @@ public static class ApiServiceCollectionExtensions
         {
             options.ServiceLifetime = ServiceLifetime.Scoped;
         });
+
+        // Register DataSourceMode provider (reads from configuration)
+        // This is a singleton because the mode is determined at startup and doesn't change
+        services.AddSingleton<IDataSourceModeProvider, DataSourceModeProvider>();
 
         // Configure database - allow override for testing
         if (configureDatabase != null)
@@ -109,6 +114,24 @@ public static class ApiServiceCollectionExtensions
 
         // Register Classification service
         services.AddScoped<IWorkItemClassificationService, WorkItemClassificationService>();
+
+        // Register Work Item Read Providers
+        // These provide mode-aware read access to work items (Live vs Cached)
+        services.AddScoped<CachedWorkItemReadProvider>();
+        services.AddScoped<LiveWorkItemReadProvider>();
+        services.AddScoped<WorkItemReadProviderFactory>();
+
+        // Register Pull Request Read Providers
+        // These provide mode-aware read access to pull requests (Live vs Cached)
+        services.AddScoped<CachedPullRequestReadProvider>();
+        services.AddScoped<LivePullRequestReadProvider>();
+        services.AddScoped<PullRequestReadProviderFactory>();
+
+        // Register Pipeline Read Providers
+        // These provide mode-aware read access to pipelines (Live vs Cached)
+        services.AddScoped<CachedPipelineReadProvider>();
+        services.AddScoped<LivePipelineReadProvider>();
+        services.AddScoped<PipelineReadProviderFactory>();
 
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();

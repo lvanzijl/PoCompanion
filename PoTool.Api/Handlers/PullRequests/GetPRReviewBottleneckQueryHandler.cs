@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.PullRequests;
 using PoTool.Core.PullRequests.Queries;
@@ -8,18 +9,19 @@ namespace PoTool.Api.Handlers.PullRequests;
 /// <summary>
 /// Handler for GetPRReviewBottleneckQuery.
 /// Analyzes PR review performance and identifies bottlenecks.
+/// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetPRReviewBottleneckQueryHandler
     : IQueryHandler<GetPRReviewBottleneckQuery, PRReviewBottleneckDto>
 {
-    private readonly IPullRequestRepository _repository;
+    private readonly PullRequestReadProviderFactory _providerFactory;
     private readonly ILogger<GetPRReviewBottleneckQueryHandler> _logger;
 
     public GetPRReviewBottleneckQueryHandler(
-        IPullRequestRepository repository,
+        PullRequestReadProviderFactory providerFactory,
         ILogger<GetPRReviewBottleneckQueryHandler> logger)
     {
-        _repository = repository;
+        _providerFactory = providerFactory;
         _logger = logger;
     }
 
@@ -32,7 +34,8 @@ public sealed class GetPRReviewBottleneckQueryHandler
             query.MaxPRsToAnalyze,
             query.DaysBack);
 
-        var allPRs = await _repository.GetAllAsync(cancellationToken);
+        var provider = _providerFactory.Create();
+        var allPRs = await provider.GetAllAsync(cancellationToken);
 
         // Filter to recent PRs
         var cutoffDate = DateTimeOffset.UtcNow.AddDays(-query.DaysBack);

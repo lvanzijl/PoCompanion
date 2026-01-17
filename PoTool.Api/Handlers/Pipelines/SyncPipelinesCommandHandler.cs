@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Pipelines;
 using PoTool.Core.Pipelines;
@@ -11,6 +12,7 @@ namespace PoTool.Api.Handlers.Pipelines;
 /// Handler for SyncPipelinesCommand.
 /// Synchronizes pipelines from TFS to local cache.
 /// Now includes YAML pipeline definition sync per product/repository.
+/// NOTE: Sync operations only apply in Cached mode. In Live mode, data is fetched directly from TFS.
 /// </summary>
 public sealed class SyncPipelinesCommandHandler : ICommandHandler<SyncPipelinesCommand, PipelineSyncResult>
 {
@@ -18,6 +20,7 @@ public sealed class SyncPipelinesCommandHandler : ICommandHandler<SyncPipelinesC
     private readonly RepositoryRepository _repoRepository;
     private readonly IProductRepository _productRepository;
     private readonly ITfsClient _tfsClient;
+    private readonly IDataSourceModeProvider _modeProvider;
     private readonly ILogger<SyncPipelinesCommandHandler> _logger;
 
     public SyncPipelinesCommandHandler(
@@ -25,12 +28,14 @@ public sealed class SyncPipelinesCommandHandler : ICommandHandler<SyncPipelinesC
         RepositoryRepository repoRepository,
         IProductRepository productRepository,
         ITfsClient tfsClient,
+        IDataSourceModeProvider modeProvider,
         ILogger<SyncPipelinesCommandHandler> logger)
     {
         _repository = repository;
         _repoRepository = repoRepository;
         _productRepository = productRepository;
         _tfsClient = tfsClient;
+        _modeProvider = modeProvider;
         _logger = logger;
     }
 
@@ -38,7 +43,18 @@ public sealed class SyncPipelinesCommandHandler : ICommandHandler<SyncPipelinesC
         SyncPipelinesCommand command,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting pipeline sync with {RunsPerPipeline} runs per pipeline", command.RunsPerPipeline);
+        // In Live mode, sync operations are not needed as data is fetched directly from TFS
+        if (_modeProvider.Mode == DataSourceMode.Live)
+        {
+            _logger.LogWarning("SyncPipelinesCommand called in Live mode. Sync operations are only applicable in Cached mode. Returning empty result.");
+            return new PipelineSyncResult(
+                Pipelines: new List<PipelineDto>(),
+                Runs: new List<PipelineRunDto>(),
+                TfsCallCount: 0,
+                SyncedAt: DateTimeOffset.UtcNow);
+        }
+
+        _logger.LogInformation("Starting pipeline sync with {RunsPerPipeline} runs per pipeline (Cached mode)", command.RunsPerPipeline);
 
         // Sync pipeline runs (existing functionality - in-memory)
         var syncResult = await _tfsClient.GetPipelinesWithRunsAsync(command.RunsPerPipeline, cancellationToken);

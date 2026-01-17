@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
@@ -9,18 +10,19 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// <summary>
 /// Handler for GetDependencyGraphQuery.
 /// Builds a dependency graph from work item relationships.
+/// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetDependencyGraphQueryHandler
     : IQueryHandler<GetDependencyGraphQuery, DependencyGraphDto>
 {
-    private readonly IWorkItemRepository _repository;
+    private readonly WorkItemReadProviderFactory _providerFactory;
     private readonly ILogger<GetDependencyGraphQueryHandler> _logger;
 
     public GetDependencyGraphQueryHandler(
-        IWorkItemRepository repository,
+        WorkItemReadProviderFactory providerFactory,
         ILogger<GetDependencyGraphQueryHandler> logger)
     {
-        _repository = repository;
+        _providerFactory = providerFactory;
         _logger = logger;
     }
 
@@ -30,7 +32,8 @@ public sealed class GetDependencyGraphQueryHandler
     {
         _logger.LogDebug("Handling GetDependencyGraphQuery");
 
-        var allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        var provider = _providerFactory.Create();
+        var allWorkItems = await provider.GetAllAsync(cancellationToken);
         var workItemsList = allWorkItems.ToList();
 
         // Filter work items if specified

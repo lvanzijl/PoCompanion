@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
@@ -10,20 +11,21 @@ namespace PoTool.Api.Handlers.Metrics;
 /// <summary>
 /// Handler for GetBacklogHealthQuery.
 /// Calculates backlog health metrics for a specific iteration.
+/// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetBacklogHealthQueryHandler
     : IQueryHandler<GetBacklogHealthQuery, BacklogHealthDto?>
 {
-    private readonly IWorkItemRepository _repository;
+    private readonly WorkItemReadProviderFactory _providerFactory;
     private readonly IWorkItemValidator _validator;
     private readonly ILogger<GetBacklogHealthQueryHandler> _logger;
 
     public GetBacklogHealthQueryHandler(
-        IWorkItemRepository repository,
+        WorkItemReadProviderFactory providerFactory,
         IWorkItemValidator validator,
         ILogger<GetBacklogHealthQueryHandler> logger)
     {
-        _repository = repository;
+        _providerFactory = providerFactory;
         _validator = validator;
         _logger = logger;
     }
@@ -34,7 +36,8 @@ public sealed class GetBacklogHealthQueryHandler
     {
         _logger.LogDebug("Handling GetBacklogHealthQuery for iteration: {IterationPath}", query.IterationPath);
 
-        var allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        var provider = _providerFactory.Create();
+        var allWorkItems = await provider.GetAllAsync(cancellationToken);
         var iterationWorkItems = allWorkItems
             .Where(wi => wi.IterationPath.Equals(query.IterationPath, StringComparison.OrdinalIgnoreCase))
             .ToList();

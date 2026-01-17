@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems.Queries;
 
@@ -6,18 +7,19 @@ namespace PoTool.Api.Handlers.WorkItems;
 
 /// <summary>
 /// Handler for GetDistinctAreaPathsQuery.
-/// Returns all distinct area paths from cached work items.
+/// Returns all distinct area paths from work items.
+/// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetDistinctAreaPathsQueryHandler : IQueryHandler<GetDistinctAreaPathsQuery, IEnumerable<string>>
 {
-    private readonly IWorkItemRepository _repository;
+    private readonly WorkItemReadProviderFactory _providerFactory;
     private readonly ILogger<GetDistinctAreaPathsQueryHandler> _logger;
 
     public GetDistinctAreaPathsQueryHandler(
-        IWorkItemRepository repository,
+        WorkItemReadProviderFactory providerFactory,
         ILogger<GetDistinctAreaPathsQueryHandler> logger)
     {
-        _repository = repository;
+        _providerFactory = providerFactory;
         _logger = logger;
     }
 
@@ -27,7 +29,8 @@ public sealed class GetDistinctAreaPathsQueryHandler : IQueryHandler<GetDistinct
     {
         _logger.LogDebug("Handling GetDistinctAreaPathsQuery");
 
-        var workItems = await _repository.GetAllAsync(cancellationToken);
+        var provider = _providerFactory.Create();
+        var workItems = await provider.GetAllAsync(cancellationToken);
 
         var distinctAreaPaths = workItems
             .Select(wi => wi.AreaPath)

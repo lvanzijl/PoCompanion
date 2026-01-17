@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.PullRequests;
 using PoTool.Core.PullRequests.Queries;
@@ -7,17 +8,18 @@ namespace PoTool.Api.Handlers.PullRequests;
 
 /// <summary>
 /// Handler for GetPullRequestByIdQuery.
+/// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetPullRequestByIdQueryHandler : IQueryHandler<GetPullRequestByIdQuery, PullRequestDto?>
 {
-    private readonly IPullRequestRepository _repository;
+    private readonly PullRequestReadProviderFactory _providerFactory;
     private readonly ILogger<GetPullRequestByIdQueryHandler> _logger;
 
     public GetPullRequestByIdQueryHandler(
-        IPullRequestRepository repository,
+        PullRequestReadProviderFactory providerFactory,
         ILogger<GetPullRequestByIdQueryHandler> logger)
     {
-        _repository = repository;
+        _providerFactory = providerFactory;
         _logger = logger;
     }
 
@@ -26,6 +28,7 @@ public sealed class GetPullRequestByIdQueryHandler : IQueryHandler<GetPullReques
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetPullRequestByIdQuery for PR ID: {PullRequestId}", query.PullRequestId);
-        return await _repository.GetByIdAsync(query.PullRequestId, cancellationToken);
+        var provider = _providerFactory.Create();
+        return await provider.GetByIdAsync(query.PullRequestId, cancellationToken);
     }
 }

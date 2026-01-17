@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Pipelines;
 using PoTool.Core.Pipelines.Queries;
@@ -8,22 +9,25 @@ namespace PoTool.Api.Handlers.Pipelines;
 /// <summary>
 /// Handler for GetPipelineMetricsQuery.
 /// Calculates and returns aggregated metrics for pipelines, optionally filtered by products.
+/// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMetricsQuery, IEnumerable<PipelineMetricsDto>>
 {
-    private readonly IPipelineRepository _repository;
+    private readonly PipelineReadProviderFactory _providerFactory;
 
-    public GetPipelineMetricsQueryHandler(IPipelineRepository repository)
+    public GetPipelineMetricsQueryHandler(PipelineReadProviderFactory providerFactory)
     {
-        _repository = repository;
+        _providerFactory = providerFactory;
     }
 
     public async ValueTask<IEnumerable<PipelineMetricsDto>> Handle(
         GetPipelineMetricsQuery query,
         CancellationToken cancellationToken)
     {
+        var provider = _providerFactory.Create();
+        
         // Get all pipelines
-        var pipelines = await _repository.GetAllAsync(cancellationToken);
+        var pipelines = await provider.GetAllAsync(cancellationToken);
         
         // Filter by product IDs if specified
         if (query.ProductIds != null && query.ProductIds.Count > 0)
@@ -32,7 +36,7 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
             var allowedPipelineIds = new HashSet<int>();
             foreach (var productId in query.ProductIds)
             {
-                var definitions = await _repository.GetDefinitionsByProductIdAsync(productId, cancellationToken);
+                var definitions = await provider.GetDefinitionsByProductIdAsync(productId, cancellationToken);
                 foreach (var def in definitions)
                 {
                     allowedPipelineIds.Add(def.PipelineDefinitionId);
@@ -43,7 +47,7 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
             pipelines = pipelines.Where(p => allowedPipelineIds.Contains(p.Id)).ToList();
         }
 
-        var allRuns = await _repository.GetAllRunsAsync(cancellationToken);
+        var allRuns = await provider.GetAllRunsAsync(cancellationToken);
 
         var runsByPipeline = allRuns.GroupBy(r => r.PipelineId).ToDictionary(g => g.Key, g => g.ToList());
 

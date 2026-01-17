@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
@@ -12,22 +13,23 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetMultiIterationBacklogHealthQuery.
 /// Aggregates backlog health across multiple iterations and provides trend analysis.
 /// Supports filtering by product (via root work item hierarchy) or area path.
+/// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetMultiIterationBacklogHealthQueryHandler
     : IQueryHandler<GetMultiIterationBacklogHealthQuery, MultiIterationBacklogHealthDto>
 {
-    private readonly IWorkItemRepository _repository;
+    private readonly WorkItemReadProviderFactory _providerFactory;
     private readonly IProductRepository _productRepository;
     private readonly IWorkItemValidator _validator;
     private readonly ILogger<GetMultiIterationBacklogHealthQueryHandler> _logger;
 
     public GetMultiIterationBacklogHealthQueryHandler(
-        IWorkItemRepository repository,
+        WorkItemReadProviderFactory providerFactory,
         IProductRepository productRepository,
         IWorkItemValidator validator,
         ILogger<GetMultiIterationBacklogHealthQueryHandler> logger)
     {
-        _repository = repository;
+        _providerFactory = providerFactory;
         _productRepository = productRepository;
         _validator = validator;
         _logger = logger;
@@ -43,7 +45,8 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
             query.AreaPath ?? "All",
             query.MaxIterations);
 
-        var allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        var provider = _providerFactory.Create();
+        var allWorkItems = await provider.GetAllAsync(cancellationToken);
 
         // Filter by product hierarchy if ProductIds are specified
         if (query.ProductIds != null && query.ProductIds.Length > 0)

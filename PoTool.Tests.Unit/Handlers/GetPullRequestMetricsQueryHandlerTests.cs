@@ -2,6 +2,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Handlers.PullRequests;
+using PoTool.Api.Services;
+using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Shared.PullRequests;
 using PoTool.Core.PullRequests.Queries;
@@ -13,17 +15,24 @@ namespace PoTool.Tests.Unit.Handlers;
 [TestClass]
 public class GetPullRequestMetricsQueryHandlerTests
 {
-    private Mock<IPullRequestRepository> _mockRepository = null!;
+    private Mock<IPullRequestReadProvider> _mockProvider = null!;
+    private Mock<PullRequestReadProviderFactory> _mockFactory = null!;
     private Mock<ILogger<GetPullRequestMetricsQueryHandler>> _mockLogger = null!;
     private GetPullRequestMetricsQueryHandler _handler = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        _mockRepository = new Mock<IPullRequestRepository>();
+        _mockProvider = new Mock<IPullRequestReadProvider>();
+        var mockModeProvider = new Mock<IDataSourceModeProvider>();
+        var mockServiceProvider = new Mock<IServiceProvider>();
+        
+        _mockFactory = new Mock<PullRequestReadProviderFactory>(mockModeProvider.Object, mockServiceProvider.Object);
+        _mockFactory.Setup(f => f.Create()).Returns(_mockProvider.Object);
+        
         _mockLogger = new Mock<ILogger<GetPullRequestMetricsQueryHandler>>();
         _handler = new GetPullRequestMetricsQueryHandler(
-            _mockRepository.Object,
+            _mockFactory.Object,
             _mockLogger.Object);
     }
 
@@ -31,7 +40,7 @@ public class GetPullRequestMetricsQueryHandlerTests
     public async Task Handle_WithNoPullRequests_ReturnsEmptyList()
     {
         // Arrange
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(It.IsAny<List<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto>());
         var query = new GetPullRequestMetricsQuery();
 
@@ -69,13 +78,13 @@ public class GetPullRequestMetricsQueryHandlerTests
             CreateFileChange(1, 1, "File2.cs", 30, 20, 10)
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(iterations);
-        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(comments);
-        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(fileChanges);
 
         var query = new GetPullRequestMetricsQuery();
@@ -103,13 +112,13 @@ public class GetPullRequestMetricsQueryHandlerTests
         var createdDate = DateTimeOffset.UtcNow.AddDays(-3);
         var pr = CreatePullRequest(1, "Open PR", "TestUser", createdDate, null, "Active");
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestCommentDto>());
-        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestFileChangeDto>());
 
         var query = new GetPullRequestMetricsQuery();
@@ -132,13 +141,13 @@ public class GetPullRequestMetricsQueryHandlerTests
         var completedDate = DateTimeOffset.UtcNow;
         var pr = CreatePullRequest(1, "Simple PR", "TestUser", createdDate, completedDate, "Completed");
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestCommentDto>());
-        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestFileChangeDto>());
 
         var query = new GetPullRequestMetricsQuery();
@@ -160,13 +169,13 @@ public class GetPullRequestMetricsQueryHandlerTests
         var completedDate = DateTimeOffset.UtcNow;
         var pr = CreatePullRequest(1, "No Files PR", "TestUser", createdDate, completedDate, "Completed");
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestCommentDto>());
-        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestFileChangeDto>());
 
         var query = new GetPullRequestMetricsQuery();
@@ -198,13 +207,13 @@ public class GetPullRequestMetricsQueryHandlerTests
             CreateFileChange(1, 1, "File2.cs", 30, 0, 0)
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestCommentDto>());
-        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(fileChanges);
 
         var query = new GetPullRequestMetricsQuery();
@@ -235,13 +244,13 @@ public class GetPullRequestMetricsQueryHandlerTests
             CreateComment(3, 1, "Author3", createdDate.AddHours(3), true)
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(comments);
-        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestFileChangeDto>());
 
         var query = new GetPullRequestMetricsQuery();
@@ -265,13 +274,13 @@ public class GetPullRequestMetricsQueryHandlerTests
         var pr1 = CreatePullRequest(1, "PR 1", "User1", createdDate1, DateTimeOffset.UtcNow, "Completed");
         var pr2 = CreatePullRequest(2, "PR 2", "User2", createdDate2, null, "Active");
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr1, pr2 });
-        _mockRepository.Setup(r => r.GetIterationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetIterationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockRepository.Setup(r => r.GetCommentsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetCommentsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestCommentDto>());
-        _mockRepository.Setup(r => r.GetFileChangesAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetFileChangesAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestFileChangeDto>());
 
         var query = new GetPullRequestMetricsQuery();
@@ -301,13 +310,13 @@ public class GetPullRequestMetricsQueryHandlerTests
             CreateFileChange(1, 1, "File3.cs", 25, 0, 0)     // 25 added + 0 deleted = 25 lines changed
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockRepository.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockRepository.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestCommentDto>());
-        _mockRepository.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(fileChanges);
 
         var query = new GetPullRequestMetricsQuery();

@@ -11,22 +11,23 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// Handler for GetAllWorkItemsWithValidationQuery.
 /// Retrieves all work items and attaches validation results.
 /// Automatically filters by active profile's area paths if a profile is set.
+/// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetAllWorkItemsWithValidationQueryHandler
     : IQueryHandler<GetAllWorkItemsWithValidationQuery, IEnumerable<WorkItemWithValidationDto>>
 {
-    private readonly IWorkItemRepository _repository;
+    private readonly WorkItemReadProviderFactory _providerFactory;
     private readonly IWorkItemValidator _validator;
     private readonly ProfileFilterService _profileFilterService;
     private readonly ILogger<GetAllWorkItemsWithValidationQueryHandler> _logger;
 
     public GetAllWorkItemsWithValidationQueryHandler(
-        IWorkItemRepository repository,
+        WorkItemReadProviderFactory providerFactory,
         IWorkItemValidator validator,
         ProfileFilterService profileFilterService,
         ILogger<GetAllWorkItemsWithValidationQueryHandler> logger)
     {
-        _repository = repository;
+        _providerFactory = providerFactory;
         _validator = validator;
         _profileFilterService = profileFilterService;
         _logger = logger;
@@ -38,17 +39,18 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
     {
         _logger.LogDebug("Handling GetAllWorkItemsWithValidationQuery");
 
+        var provider = _providerFactory.Create();
         var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
 
         IEnumerable<WorkItemDto> workItems;
         if (profileAreaPaths != null && profileAreaPaths.Count > 0)
         {
             _logger.LogDebug("Filtering work items by active profile area paths for validation");
-            workItems = await _repository.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
+            workItems = await provider.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
         }
         else
         {
-            workItems = await _repository.GetAllAsync(cancellationToken);
+            workItems = await provider.GetAllAsync(cancellationToken);
         }
 
         var workItemsList = workItems.ToList();
