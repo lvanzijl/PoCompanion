@@ -164,6 +164,8 @@ A change is done only when:
 - all rules have been re-checked
 - feedback noise has been minimized
 - no architectural drift is introduced
+- Everything compiles
+- All unit tests succeed
 
 ## 12. Pull Request discipline (mandatory)
 
