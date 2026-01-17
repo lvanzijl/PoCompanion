@@ -246,8 +246,10 @@ public class PullRequestRepositoryConcurrencyTests
     {
         // Arrange - Create operations with artificial delays
         var tasks = new List<Task<long>>();
-        var operationStartTimes = new List<long>();
-        var operationEndTimes = new List<long>();
+        
+        // Use ConcurrentBag for thread-safe collection
+        var operationStartTimes = new System.Collections.Concurrent.ConcurrentBag<long>();
+        var operationEndTimes = new System.Collections.Concurrent.ConcurrentBag<long>();
 
         // Act - Start 3 concurrent operations
         for (int i = 0; i < 3; i++)
@@ -286,11 +288,8 @@ public class PullRequestRepositoryConcurrencyTests
 
                 var endTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                 
-                lock (operationStartTimes)
-                {
-                    operationStartTimes.Add(startTime);
-                    operationEndTimes.Add(endTime);
-                }
+                operationStartTimes.Add(startTime);
+                operationEndTimes.Add(endTime);
 
                 return endTime - startTime;
             }));

@@ -25,7 +25,12 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
     /// even if called from parallel tasks or overlapping async operations.
     /// </summary>
     private readonly SemaphoreSlim _dbGate = new SemaphoreSlim(1, 1);
-    private bool _disposed = false;
+    
+    /// <summary>
+    /// Flag to track if the repository has been disposed.
+    /// Volatile ensures visibility across threads without explicit locking.
+    /// </summary>
+    private volatile bool _disposed = false;
 
     public PullRequestRepository(PoToolDbContext context)
     {
