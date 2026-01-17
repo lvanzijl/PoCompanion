@@ -311,20 +311,27 @@ public class PullRequestRepository : IPullRequestRepository
                 .GroupBy(fc => new { fc.PullRequestId, fc.IterationId })
                 .ToList();
 
-            foreach (var group in fileChangeGroups)
-            {
-                var prId = group.Key.PullRequestId;
-                var iterationId = group.Key.IterationId;
+            // Collect all PR/Iteration IDs that have file changes
+            var prIds = fileChangeGroups.Select(g => g.Key.PullRequestId).Distinct().ToList();
+            var iterationIds = fileChangeGroups.Select(g => g.Key.IterationId).Distinct().ToList();
 
-                var existing = await _context.PullRequestFileChanges
-                    .Where(fc => fc.PullRequestId == prId && fc.IterationId == iterationId)
-                    .ToListAsync(cancellationToken);
+            // Fetch existing file changes for all affected PRs and iterations
+            var existingFileChanges = await _context.PullRequestFileChanges
+                .Where(fc => prIds.Contains(fc.PullRequestId) && iterationIds.Contains(fc.IterationId))
+                .ToListAsync(cancellationToken);
 
-                _context.PullRequestFileChanges.RemoveRange(existing);
+            // Filter to only the exact PR+Iteration combinations we're updating
+            var groupKeys = fileChangeGroups.Select(g => new { g.Key.PullRequestId, g.Key.IterationId }).ToHashSet();
+            var relevantExisting = existingFileChanges
+                .Where(fc => groupKeys.Contains(new { fc.PullRequestId, fc.IterationId }))
+                .ToList();
 
-                var entities = group.Select(MapToFileChangeEntity);
-                await _context.PullRequestFileChanges.AddRangeAsync(entities, cancellationToken);
-            }
+            // Remove existing file changes
+            _context.PullRequestFileChanges.RemoveRange(relevantExisting);
+
+            // Add all new file changes
+            var allNewFileChanges = fileChangeGroups.SelectMany(group => group.Select(MapToFileChangeEntity));
+            await _context.PullRequestFileChanges.AddRangeAsync(allNewFileChanges, cancellationToken);
         }
 
         // Single atomic save for all changes
