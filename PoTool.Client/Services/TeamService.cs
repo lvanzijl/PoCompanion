@@ -1,4 +1,5 @@
 using PoTool.Client.ApiClient;
+using System.Net.Http.Json;
 using TeamPictureType = PoTool.Shared.Settings.TeamPictureType;
 
 namespace PoTool.Client.Services;
@@ -9,10 +10,12 @@ namespace PoTool.Client.Services;
 public class TeamService
 {
     private readonly ITeamsClient _teamsClient;
+    private readonly HttpClient _httpClient;
 
-    public TeamService(ITeamsClient teamsClient)
+    public TeamService(ITeamsClient teamsClient, HttpClient httpClient)
     {
         _teamsClient = teamsClient;
+        _httpClient = httpClient;
     }
 
     /// <summary>
@@ -45,24 +48,35 @@ public class TeamService
     public async Task<TeamDto> CreateTeamAsync(
         string name,
         string teamAreaPath,
-        TeamPictureType pictureType = TeamPictureType.Default,
+        PoTool.Shared.Settings.TeamPictureType pictureType = PoTool.Shared.Settings.TeamPictureType.Default,
         int? defaultPictureId = null,
         string? customPicturePath = null,
+        string? projectName = null,
+        string? tfsTeamId = null,
+        string? tfsTeamName = null,
         CancellationToken cancellationToken = default)
     {
         // If no picture ID is specified and using default type, randomize it
         var pictureId = defaultPictureId ?? Random.Shared.Next(0, 64);
 
-        var request = new CreateTeamRequest
+        // Build request manually since NSwag client might not be regenerated yet
+        var requestBody = new
         {
-            Name = name,
-            TeamAreaPath = teamAreaPath,
-            PictureType = (ApiClient.TeamPictureType)pictureType,
-            DefaultPictureId = pictureId,
-            CustomPicturePath = customPicturePath
+            name,
+            teamAreaPath,
+            pictureType = (int)pictureType,
+            defaultPictureId = pictureId,
+            customPicturePath,
+            projectName,
+            tfsTeamId,
+            tfsTeamName
         };
 
-        return await _teamsClient.CreateTeamAsync(request, cancellationToken);
+        var response = await _httpClient.PostAsJsonAsync("/api/teams", requestBody, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<TeamDto>(cancellationToken);
+        return result!;
     }
 
     /// <summary>

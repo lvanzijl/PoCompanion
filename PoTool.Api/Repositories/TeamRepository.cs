@@ -51,6 +51,9 @@ public class TeamRepository : ITeamRepository
         TeamPictureType pictureType,
         int defaultPictureId,
         string? customPicturePath,
+        string? projectName = null,
+        string? tfsTeamId = null,
+        string? tfsTeamName = null,
         CancellationToken cancellationToken = default)
     {
         var entity = new TeamEntity
@@ -61,6 +64,9 @@ public class TeamRepository : ITeamRepository
             PictureType = (int)pictureType,
             DefaultPictureId = defaultPictureId,
             CustomPicturePath = customPicturePath,
+            ProjectName = projectName,
+            TfsTeamId = tfsTeamId,
+            TfsTeamName = tfsTeamName,
             CreatedAt = DateTimeOffset.UtcNow,
             LastModified = DateTimeOffset.UtcNow
         };

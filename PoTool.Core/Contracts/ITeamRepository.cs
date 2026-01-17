@@ -26,6 +26,9 @@ public interface ITeamRepository
         TeamPictureType pictureType,
         int defaultPictureId,
         string? customPicturePath,
+        string? projectName = null,
+        string? tfsTeamId = null,
+        string? tfsTeamName = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

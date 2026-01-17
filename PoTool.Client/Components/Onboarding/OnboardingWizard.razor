@@ -2,13 +2,17 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
+@using PoTool.Shared.Settings
+@using System.Text.Json
 @inject IOnboardingService OnboardingService
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
 @inject TfsConfigService TfsConfigService
 @inject ProfileService ProfileService
+@inject TeamService TeamService
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
+@inject HttpClient HttpClient
 
 @if (_isVisible)
 {
@@ -86,27 +90,65 @@
                             <MudStack Row="true" Spacing="2" Class="mt-2">
                                 <CompactButton Variant="Variant.Filled" 
                                           Color="Color.Primary" 
-                                          OnClick="SaveAndTestConfig"
-                                          Disabled="@(!_configFormValid || _isSaving || _isTesting)"
+                                          OnClick="SaveConfig"
+                                          Disabled="@(!_configFormValid || _isSaving)"
                                           StartIcon="@Icons.Material.Filled.Check">
-                                    @if (_isSaving || _isTesting)
+                                    @if (_isSaving)
                                     {
                                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                        <span>@(_isSaving ? "Saving..." : "Testing...")</span>
+                                        <span>Saving...</span>
                                     }
                                     else
                                     {
-                                        <span>Save & Test Connection</span>
+                                        <span>Save</span>
                                     }
                                 </CompactButton>
                             </MudStack>
                         </MudForm>
 
-                        @if (_connectionTestResult != null)
+                        @if (_progressUpdates.Any())
                         {
-                            <MudAlert Severity="@(_connectionTestResult.Success ? Severity.Success : Severity.Error)" Dense="true">
-                                @_connectionTestResult.Message
-                            </MudAlert>
+                            <MudPaper Elevation="2" Class="pa-3 mt-2">
+                                <MudStack Spacing="2">
+                                    @foreach (var update in _progressUpdates)
+                                    {
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            @if (update.State == "Running")
+                                            {
+                                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Info" />
+                                            }
+                                            else if (update.State == "Succeeded")
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                            }
+                                            else if (update.State == "Failed")
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Small" />
+                                            }
+                                            <MudStack Spacing="0">
+                                                <MudText Typo="Typo.body2">@update.Message</MudText>
+                                                @if (!string.IsNullOrEmpty(update.Details))
+                                                {
+                                                    <MudText Typo="Typo.caption" Color="Color.Error">@update.Details</MudText>
+                                                }
+                                            </MudStack>
+                                        </MudStack>
+                                    }
+                                    @if (_configCompleted.HasValue)
+                                    {
+                                        <MudProgressLinear Color="@(_configCompleted.Value ? Color.Success : Color.Error)" 
+                                                          Value="100" 
+                                                          Class="mt-2" />
+                                    }
+                                    else if (_progressUpdates.Any())
+                                    {
+                                        var lastUpdate = _progressUpdates.Last();
+                                        <MudProgressLinear Color="Color.Info" 
+                                                          Value="@(lastUpdate.PercentComplete ?? 0)" 
+                                                          Class="mt-2" />
+                                    }
+                                </MudStack>
+                            </MudPaper>
                         }
 
                         @if (_configErrorResponse != null)
@@ -122,71 +164,126 @@
                 }
                 else if (_currentStep == 2)
                 {
-                    <!-- Step 3: Setup Profile -->
+                    <!-- Step 3: Select Team -->
                     <MudStack Spacing="4">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" Size="Size.Large" />
-                            <MudText Typo="Typo.h6" Color="Color.Primary">Setup Your Profile</MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.Groups" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h6" Color="Color.Primary">Select Your Team</MudText>
                         </MudStack>
                         <MudText Typo="Typo.body1">
-                            Create a profile with your team name, area paths, and goals to personalize your experience.
+                            Select your team from Azure DevOps. The area path will be automatically derived from the team settings.
                         </MudText>
 
-                        <MudForm @ref="_profileForm" @bind-IsValid="_profileFormValid">
-                            <CompactTextField @bind-Value="_profileName" 
-                                          Label="Profile Name" 
+                        @if (_isLoadingTeams)
+                        {
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                <MudText>Loading teams from TFS...</MudText>
+                            </MudStack>
+                        }
+                        else if (_tfsTeams != null && _tfsTeams.Any())
+                        {
+                            <MudForm @ref="_teamForm" @bind-IsValid="_teamFormValid">
+                                <MudSelect T="TfsTeamDto" 
+                                          Label="Select Team" 
+                                          @bind-Value="_selectedTfsTeam"
                                           Required="true"
-                                          HelperText="e.g., 'Product A - Team Alpha'" />
-
-                            <CompactTextField @bind-Value="_profileTeamName" 
-                                          Label="Team Name" 
-                                          Required="true"
-                                          HelperText="The team you work with" />
-
-                            <CompactTextField @bind-Value="_profileAreaPaths" 
-                                          Label="Area Paths (comma-separated)" 
-                                          Required="true"
-                                          Lines="2"
-                                          HelperText="e.g., 'ProjectA\\ProductA, ProjectA\\ProductA\\FeatureX'" />
-
-                            <CompactTextField @bind-Value="_profileGoalIds" 
-                                          Label="Goal IDs (comma-separated, optional)" 
-                                          HelperText="Leave empty for all goals, or specify IDs like '1000,2000'" />
-
-                            <MudStack Row="true" Spacing="2" Class="mt-2">
-                                <CompactButton Variant="Variant.Filled" 
-                                          Color="Color.Primary" 
-                                          OnClick="SaveProfile"
-                                          Disabled="@(!_profileFormValid || _isSavingProfile)"
-                                          StartIcon="@Icons.Material.Filled.Save">
-                                    @if (_isSavingProfile)
+                                          HelperText="Choose your team from Azure DevOps">
+                                    @foreach (var team in _tfsTeams)
                                     {
-                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                        <span>Saving...</span>
+                                        <MudSelectItem Value="@team">
+                                            @team.Name
+                                            @if (!string.IsNullOrEmpty(team.Description))
+                                            {
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary"> - @team.Description</MudText>
+                                            }
+                                        </MudSelectItem>
+                                    }
+                                </MudSelect>
+
+                                @if (_selectedTfsTeam != null)
+                                {
+                                    <MudCheckBox @bind-Value="_overrideAreaPath" 
+                                                Label="Override area path" 
+                                                Color="Color.Primary"
+                                                Dense="true" />
+                                    
+                                    @if (_overrideAreaPath)
+                                    {
+                                        <CompactTextField @bind-Value="_teamAreaPath" 
+                                                         Label="Area Path" 
+                                                         Required="true"
+                                                         HelperText="Custom area path for this team" />
                                     }
                                     else
                                     {
-                                        <span>Save Profile</span>
+                                        <CompactTextField Value="@_selectedTfsTeam.DefaultAreaPath" 
+                                                         Label="Area Path (Derived from Team)" 
+                                                         ReadOnly="true"
+                                                         HelperText="This area path is automatically derived from the team settings" />
                                     }
-                                </CompactButton>
-                            </MudStack>
-                        </MudForm>
 
-                        @if (_profileSaveResult != null)
-                        {
-                            <MudAlert Severity="@(_profileSaveResult.Success ? Severity.Success : Severity.Error)" Dense="true">
-                                @_profileSaveResult.Message
-                            </MudAlert>
+                                    <MudText Typo="Typo.subtitle2" Class="mt-3 mb-2">Choose Team Picture</MudText>
+                                    <MudStack Row="true" Spacing="2" Class="mb-2">
+                                        @for (int i = 0; i < 10; i++)
+                                        {
+                                            var pictureId = i;
+                                            <MudTooltip Text="@($"Picture {i}")">
+                                                <MudPaper Elevation="@(_selectedPictureId == pictureId ? 3 : 1)" 
+                                                         Class="pa-2 cursor-pointer"
+                                                         Style="@($"border: 2px solid {(_selectedPictureId == pictureId ? "var(--mud-palette-primary)" : "transparent")}")"
+                                                         @onclick="() => _selectedPictureId = pictureId">
+                                                    <MudIcon Icon="@GetTeamIcon(pictureId)" Size="Size.Large" />
+                                                </MudPaper>
+                                            </MudTooltip>
+                                        }
+                                    </MudStack>
+                                }
+
+                                @if (_selectedTfsTeam != null)
+                                {
+                                    <MudStack Row="true" Spacing="2" Class="mt-2">
+                                        <CompactButton Variant="Variant.Filled" 
+                                                      Color="Color.Primary" 
+                                                      OnClick="SaveTeam"
+                                                      Disabled="@(!_teamFormValid || _isSavingTeam)"
+                                                      StartIcon="@Icons.Material.Filled.Save">
+                                            @if (_isSavingTeam)
+                                            {
+                                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                                <span>Saving...</span>
+                                            }
+                                            else
+                                            {
+                                                <span>Save Team</span>
+                                            }
+                                        </CompactButton>
+                                    </MudStack>
+                                }
+                            </MudForm>
+
+                            @if (_teamSaveResult != null)
+                            {
+                                <MudAlert Severity="@(_teamSaveResult.Success ? Severity.Success : Severity.Error)" Dense="true">
+                                    @_teamSaveResult.Message
+                                </MudAlert>
+                            }
+
+                            @if (_teamErrorResponse != null)
+                            {
+                                <ErrorDisplay ErrorResponse="@_teamErrorResponse" 
+                                             OnDismiss="ClearTeamError" />
+                            }
                         }
-
-                        @if (_profileErrorResponse != null)
+                        else
                         {
-                            <ErrorDisplay ErrorResponse="@_profileErrorResponse" 
-                                         OnDismiss="ClearProfileError" />
+                            <MudAlert Severity="Severity.Warning" Dense="true">
+                                No teams found. Please ensure TFS configuration is correct and you have access to the project.
+                            </MudAlert>
                         }
                         
                         <MudAlert Severity="Severity.Info" Dense="true">
-                            You can skip this step and create profiles later from the Settings page.
+                            You can skip this step and configure teams later from the Settings page.
                         </MudAlert>
                     </MudStack>
                 }
@@ -289,23 +386,25 @@
     private MudForm? _configForm;
     private bool _configFormValid;
     private bool _isSaving;
-    private bool _isTesting;
     private string _url = string.Empty;
     private string _project = string.Empty;
     private string _defaultAreaPath = string.Empty;
-    private ConnectionTestResult? _connectionTestResult;
     private ErrorResponse? _configErrorResponse;
+    private List<ProgressUpdate> _progressUpdates = new();
+    private bool? _configCompleted;
 
-    // Profile form fields
-    private MudForm? _profileForm;
-    private bool _profileFormValid;
-    private bool _isSavingProfile;
-    private string _profileName = string.Empty;
-    private string _profileTeamName = string.Empty;
-    private string _profileAreaPaths = string.Empty;
-    private string _profileGoalIds = string.Empty;
-    private ConnectionTestResult? _profileSaveResult;
-    private ErrorResponse? _profileErrorResponse;
+    // Team selection fields
+    private MudForm? _teamForm;
+    private bool _teamFormValid;
+    private bool _isLoadingTeams;
+    private bool _isSavingTeam;
+    private List<TfsTeamDto>? _tfsTeams;
+    private TfsTeamDto? _selectedTfsTeam;
+    private bool _overrideAreaPath;
+    private string _teamAreaPath = string.Empty;
+    private int _selectedPictureId = 0;
+    private ConnectionTestResult? _teamSaveResult;
+    private ErrorResponse? _teamErrorResponse;
 
     protected override async Task OnInitializedAsync()
     {
@@ -321,7 +420,7 @@
             {
                 _url = config.Url ?? string.Empty;
                 _project = config.Project ?? string.Empty;
-                // Don't pre-fill PAT for security reasons
+                _defaultAreaPath = config.DefaultAreaPath ?? string.Empty;
             }
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
@@ -342,7 +441,7 @@
         {
             0 => "Welcome to PO Companion",
             1 => "Configure Your Connection",
-            2 => "Setup Your Profile",
+            2 => "Select Your Team",
             3 => "Discover Key Features",
             _ => "Getting Started"
         };
@@ -353,14 +452,17 @@
         return (_currentStep + 1) * 25.0; // 4 steps now instead of 5
     }
 
-    private void Next()
+    private async Task Next()
     {
         if (_currentStep < 3) // Maximum step is now 3
         {
             _currentStep++;
-            // Reset connection test result when moving to next step
-            _connectionTestResult = null;
-            _profileSaveResult = null;
+            
+            // Load teams when entering team selection step
+            if (_currentStep == 2 && _configCompleted == true && _tfsTeams == null)
+            {
+                await LoadTfsTeams();
+            }
         }
     }
 
@@ -372,43 +474,75 @@
         }
     }
 
-    private async Task SaveAndTestConfig()
+    private async Task SaveConfig()
     {
         if (!_configFormValid) return;
 
         ClearConfigError();
         _isSaving = true;
+        _progressUpdates.Clear();
+        _configCompleted = null;
         
         try
         {
-            // Save configuration
-            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath);
-            
-            // Test connection
-            _isSaving = false;
-            _isTesting = true;
-            
-            var isValid = await TfsConfigService.ValidateConnectionAsync();
-            
-            if (isValid)
+            var requestBody = new
             {
-                _connectionTestResult = new ConnectionTestResult(true, "Connection successful! You're all set.");
-                Snackbar.Add("Configuration saved and tested successfully", Severity.Success);
+                url = _url,
+                project = _project,
+                defaultAreaPath = _defaultAreaPath,
+                useDefaultCredentials = true,
+                timeoutSeconds = 30,
+                apiVersion = "7.0"
+            };
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/tfsconfig/save-and-verify")
+            {
+                Content = JsonContent.Create(requestBody)
+            };
+
+            var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            var stream = await response.Content.ReadAsStreamAsync();
+            using var reader = new StreamReader(stream);
+
+            while (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync();
+                if (string.IsNullOrEmpty(line)) continue;
+
+                var update = JsonSerializer.Deserialize<ProgressUpdate>(line, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (update != null)
+                {
+                    _progressUpdates.Add(update);
+                    StateHasChanged();
+                }
+            }
+
+            var lastUpdate = _progressUpdates.LastOrDefault();
+            _configCompleted = lastUpdate?.State == "Succeeded";
+            
+            if (_configCompleted == true)
+            {
+                Snackbar.Add("Configuration saved and verified successfully", Severity.Success);
             }
             else
             {
-                _connectionTestResult = new ConnectionTestResult(false, "Connection failed. Please check your settings.");
+                Snackbar.Add("Configuration verification completed with errors", Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            _connectionTestResult = new ConnectionTestResult(false, "Connection test failed.");
-            ShowConfigError(ex, "Error testing connection");
+            _configCompleted = false;
+            ShowConfigError(ex, "Error during configuration");
         }
         finally
         {
             _isSaving = false;
-            _isTesting = false;
         }
     }
 
@@ -421,51 +555,99 @@
     private void ClearConfigError()
     {
         _configErrorResponse = null;
-        _connectionTestResult = null;
     }
 
-    private async Task SaveProfile()
+    private async Task LoadTfsTeams()
     {
-        if (!_profileFormValid) return;
+        _isLoadingTeams = true;
+        StateHasChanged();
 
-        ClearProfileError();
-        _isSavingProfile = true;
-        
         try
         {
-            var goalIds = InputParsingHelper.ParseCommaSeparatedInts(_profileGoalIds);
+            var response = await HttpClient.GetAsync("/api/startup/tfs-teams");
+            response.EnsureSuccessStatusCode();
 
-            // Create and activate the profile
-            await ProfileService.CreateAndActivateProfileAsync(
-                _profileName,
-                goalIds);
-            
-            _profileSaveResult = new ConnectionTestResult(true, "Profile created and activated successfully!");
-            Snackbar.Add("Profile saved successfully", Severity.Success);
+            _tfsTeams = await response.Content.ReadFromJsonAsync<List<TfsTeamDto>>(new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
         }
         catch (Exception ex)
         {
-            _profileSaveResult = new ConnectionTestResult(false, "Profile save failed.");
-            ShowProfileError(ex, "Error saving profile");
+            Snackbar.Add($"Failed to load teams: {ex.Message}", Severity.Error);
+            _tfsTeams = new List<TfsTeamDto>();
         }
         finally
         {
-            _isSavingProfile = false;
+            _isLoadingTeams = false;
+            StateHasChanged();
         }
     }
 
-
-
-    private void ShowProfileError(Exception ex, string context)
+    private async Task SaveTeam()
     {
-        _profileErrorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        if (!_teamFormValid || _selectedTfsTeam == null) return;
+
+        ClearTeamError();
+        _isSavingTeam = true;
+        
+        try
+        {
+            var areaPath = _overrideAreaPath ? _teamAreaPath : _selectedTfsTeam.DefaultAreaPath;
+            
+            // Create team entity with TFS team info
+            var team = await TeamService.CreateTeamAsync(
+                name: _selectedTfsTeam.Name,
+                teamAreaPath: areaPath,
+                pictureType: PoTool.Shared.Settings.TeamPictureType.Default,
+                defaultPictureId: _selectedPictureId,
+                customPicturePath: null,
+                projectName: _selectedTfsTeam.ProjectName,
+                tfsTeamId: _selectedTfsTeam.Id,
+                tfsTeamName: _selectedTfsTeam.Name);
+            
+            _teamSaveResult = new ConnectionTestResult(true, $"Team '{team.Name}' created successfully!");
+            Snackbar.Add("Team saved successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            _teamSaveResult = new ConnectionTestResult(false, "Team save failed.");
+            ShowTeamError(ex, "Error saving team");
+        }
+        finally
+        {
+            _isSavingTeam = false;
+        }
+    }
+
+    private void ShowTeamError(Exception ex, string context)
+    {
+        _teamErrorResponse = ErrorMessageService.GetErrorResponse(ex, context);
         StateHasChanged();
     }
 
-    private void ClearProfileError()
+    private void ClearTeamError()
     {
-        _profileErrorResponse = null;
-        _profileSaveResult = null;
+        _teamErrorResponse = null;
+        _teamSaveResult = null;
+    }
+
+    private string GetTeamIcon(int pictureId)
+    {
+        return pictureId switch
+        {
+            0 => Icons.Material.Filled.Groups,
+            1 => Icons.Material.Filled.People,
+            2 => Icons.Material.Filled.Group,
+            3 => Icons.Material.Filled.EmojiPeople,
+            4 => Icons.Material.Filled.Diversity3,
+            5 => Icons.Material.Filled.Engineering,
+            6 => Icons.Material.Filled.Science,
+            7 => Icons.Material.Filled.Code,
+            8 => Icons.Material.Filled.Build,
+            9 => Icons.Material.Filled.Security,
+            _ => Icons.Material.Filled.Groups
+        };
     }
 
     private async Task Skip()
@@ -483,4 +665,24 @@
     }
 
     private record ConnectionTestResult(bool Success, string Message);
+    
+    private class ProgressUpdate
+    {
+        public string Phase { get; set; } = string.Empty;
+        public string State { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public int? PercentComplete { get; set; }
+        public string? Details { get; set; }
+    }
+    
+    // DTO for TFS teams from API
+    private class TfsTeamDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string ProjectName { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string DefaultAreaPath { get; set; } = string.Empty;
+    }
+}
 }
