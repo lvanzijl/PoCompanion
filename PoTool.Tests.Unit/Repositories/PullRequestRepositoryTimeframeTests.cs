@@ -50,13 +50,13 @@ public class PullRequestRepositoryTimeframeTests
         var iterationId = await _repository.GetOrCreateTimeframeIterationIdAsync(date);
 
         // Assert
-        Assert.IsGreaterThan(iterationId, 0);
-
-        var iteration = await _context.TimeframeIterations.FindAsync(iterationId);
-        Assert.IsNotNull(iteration);
-        Assert.AreEqual(2025, iteration.Year);
-        Assert.AreEqual(3, iteration.WeekNumber);
-        Assert.AreEqual("2025-W03", iteration.IterationKey);
+        // Check that the iteration was created and has a valid ID
+        var iterations = await _context.TimeframeIterations.ToListAsync();
+        Assert.HasCount(1, iterations);
+        Assert.AreEqual(2025, iterations[0].Year);
+        Assert.AreEqual(3, iterations[0].WeekNumber);
+        Assert.AreEqual("2025-W03", iterations[0].IterationKey);
+        Assert.AreEqual(iterations[0].Id, iterationId);
     }
 
     [TestMethod]

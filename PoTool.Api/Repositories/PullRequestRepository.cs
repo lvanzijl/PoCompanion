@@ -390,7 +390,7 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
                 foreach (var group in prsByIterationKey)
                 {
                     var firstPr = group.First();
-                    var iterationId = await GetOrCreateTimeframeIterationIdAsync(firstPr.CreatedDate, cancellationToken);
+                    var iterationId = await GetOrCreateTimeframeIterationIdInternalAsync(firstPr.CreatedDate, cancellationToken);
 
                     // Update both existing and newly added PRs
                     var prIdsInGroup = group.Select(pr => pr.Id).ToHashSet();
@@ -523,38 +523,50 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
         await _dbGate.WaitAsync(cancellationToken);
         try
         {
-            var (year, weekNumber) = Helpers.TimeframeIterationHelper.GetIsoWeek(date);
-            var iterationKey = Helpers.TimeframeIterationHelper.GetIterationKey(date);
-
-            var existing = await _context.TimeframeIterations
-                .FirstOrDefaultAsync(ti => ti.Year == year && ti.WeekNumber == weekNumber, cancellationToken);
-
-            if (existing != null)
-            {
-                return existing.Id;
-            }
-
-            var weekStart = Helpers.TimeframeIterationHelper.GetWeekStart(date);
-            var weekEnd = Helpers.TimeframeIterationHelper.GetWeekEnd(date);
-
-            var newIteration = new TimeframeIterationEntity
-            {
-                Year = year,
-                WeekNumber = weekNumber,
-                StartUtc = weekStart,
-                EndUtc = weekEnd,
-                IterationKey = iterationKey
-            };
-
-            await _context.TimeframeIterations.AddAsync(newIteration, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return newIteration.Id;
+            return await GetOrCreateTimeframeIterationIdInternalAsync(date, cancellationToken);
         }
         finally
         {
             _dbGate.Release();
         }
+    }
+
+    /// <summary>
+    /// Internal version without locking - should only be called when the lock is already held.
+    /// </summary>
+    private async Task<int> GetOrCreateTimeframeIterationIdInternalAsync(DateTimeOffset date, CancellationToken cancellationToken)
+    {
+        var (year, weekNumber) = Helpers.TimeframeIterationHelper.GetIsoWeek(date);
+        var iterationKey = Helpers.TimeframeIterationHelper.GetIterationKey(date);
+
+        var existing = await _context.TimeframeIterations
+            .FirstOrDefaultAsync(ti => ti.Year == year && ti.WeekNumber == weekNumber, cancellationToken);
+
+        if (existing != null)
+        {
+            return existing.Id;
+        }
+
+        var weekStart = Helpers.TimeframeIterationHelper.GetWeekStart(date);
+        var weekEnd = Helpers.TimeframeIterationHelper.GetWeekEnd(date);
+
+        var newIteration = new TimeframeIterationEntity
+        {
+            Year = year,
+            WeekNumber = weekNumber,
+            StartUtc = weekStart,
+            EndUtc = weekEnd,
+            IterationKey = iterationKey
+        };
+
+        await _context.TimeframeIterations.AddAsync(newIteration, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Reload to get the generated ID (SQLite specific requirement)
+        var saved = await _context.TimeframeIterations
+            .FirstAsync(ti => ti.Year == year && ti.WeekNumber == weekNumber, cancellationToken);
+        
+        return saved.Id;
     }
 
     /// <summary>
@@ -582,7 +594,7 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
             foreach (var group in prsByIterationKey)
             {
                 var firstPr = group.First();
-                var iterationId = await GetOrCreateTimeframeIterationIdAsync(firstPr.CreatedDate, cancellationToken);
+                var iterationId = await GetOrCreateTimeframeIterationIdInternalAsync(firstPr.CreatedDate, cancellationToken);
 
                 foreach (var pr in group)
                 {
