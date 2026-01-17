@@ -17,6 +17,7 @@ public class PRInsightTests : BunitTestContext
 {
     private Mock<IPullRequestsClient> _mockPullRequestsClient = null!;
     private Mock<ISnackbar> _mockSnackbar = null!;
+    private Mock<IPreferencesService> _mockPreferencesService = null!;
 
     [TestInitialize]
     public void Setup()
@@ -30,6 +31,7 @@ public class PRInsightTests : BunitTestContext
         // Setup mocks
         _mockPullRequestsClient = new Mock<IPullRequestsClient>();
         _mockSnackbar = new Mock<ISnackbar>();
+        _mockPreferencesService = new Mock<IPreferencesService>();
 
         // Register mock services
         Services.AddSingleton(_mockPullRequestsClient.Object);
@@ -37,6 +39,7 @@ public class PRInsightTests : BunitTestContext
         Services.AddSingleton<PullRequestMetricsService>();
         Services.AddSingleton<ErrorMessageService>();
         Services.AddSingleton(_mockSnackbar.Object);
+        Services.AddSingleton(_mockPreferencesService.Object);
     }
 
     private IRenderedFragment RenderPRInsightWithMudProvider()

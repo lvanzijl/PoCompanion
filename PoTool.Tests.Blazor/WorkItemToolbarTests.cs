@@ -64,64 +64,51 @@ public class WorkItemToolbarTests : BunitTestContext
         var cut = RenderWithMudProvider(builder =>
         {
             builder.OpenComponent<WorkItemToolbar>(0);
-            builder.AddAttribute(1, "IsSyncing", false);
-            builder.AddAttribute(2, "FilterText", "");
-            builder.AddAttribute(3, "SelectedCount", 0);
-            builder.AddAttribute(4, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
+            builder.AddAttribute(1, "FilterText", "");
+            builder.AddAttribute(2, "SelectedCount", 0);
+            builder.AddAttribute(3, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
             builder.CloseComponent();
         });
 
         // Assert
         Assert.IsNotNull(cut);
         Assert.Contains("Work Item Explorer", cut.Markup);
-        Assert.Contains("Full Sync", cut.Markup);
+        Assert.Contains("Clear Tree State", cut.Markup);
     }
 
     [TestMethod]
-    public async Task WorkItemToolbar_SyncButton_InvokesCallback()
-    {
-        // Arrange
-        var syncClicked = false;
-        var cut = RenderWithMudProvider(builder =>
-        {
-            builder.OpenComponent<WorkItemToolbar>(0);
-            builder.AddAttribute(1, "IsSyncing", false);
-            builder.AddAttribute(2, "FilterText", "");
-            builder.AddAttribute(3, "SelectedCount", 0);
-            builder.AddAttribute(4, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
-            builder.AddAttribute(5, "OnSyncRequested", EventCallback.Factory.Create(this, () => { syncClicked = true; }));
-            builder.CloseComponent();
-        });
-
-        // Act - Find button by text content (MudButton containing "Full Sync")
-        var buttons = cut.FindAll("button");
-        var syncButton = buttons.FirstOrDefault(b => b.TextContent.Contains("Full Sync"));
-        Assert.IsNotNull(syncButton, "Should find Full Sync button");
-        await syncButton.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
-
-        // Assert
-        Assert.IsTrue(syncClicked, "Sync callback should have been invoked");
-    }
-
-    [TestMethod]
-    public void WorkItemToolbar_SyncButton_DisabledWhenSyncInProgress()
+    public void WorkItemToolbar_HasFilterInput()
     {
         // Arrange & Act
         var cut = RenderWithMudProvider(builder =>
         {
             builder.OpenComponent<WorkItemToolbar>(0);
-            builder.AddAttribute(1, "IsSyncing", true);
-            builder.AddAttribute(2, "FilterText", "");
-            builder.AddAttribute(3, "SelectedCount", 0);
-            builder.AddAttribute(4, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
+            builder.AddAttribute(1, "FilterText", "");
+            builder.AddAttribute(2, "SelectedCount", 0);
+            builder.AddAttribute(3, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
             builder.CloseComponent();
         });
 
-        // Assert - Find button by text content (will show "Syncing..." when IsSyncing is true)
-        var buttons = cut.FindAll("button");
-        var syncButton = buttons.FirstOrDefault(b => b.TextContent.Contains("Syncing"));
-        Assert.IsNotNull(syncButton, "Should find sync button");
-        Assert.IsTrue(syncButton.HasAttribute("disabled"), "Sync button should be disabled during sync");
+        // Assert - Verify filter input exists
+        var filterInput = cut.Find("input[type='text']");
+        Assert.IsNotNull(filterInput, "Should find filter input");
+    }
+
+    [TestMethod]
+    public void WorkItemToolbar_ShowsSelectionInfo_WhenItemsSelected()
+    {
+        // Arrange & Act
+        var cut = RenderWithMudProvider(builder =>
+        {
+            builder.OpenComponent<WorkItemToolbar>(0);
+            builder.AddAttribute(1, "FilterText", "");
+            builder.AddAttribute(2, "SelectedCount", 5);
+            builder.AddAttribute(3, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
+            builder.CloseComponent();
+        });
+
+        // Assert
+        Assert.Contains("5 items selected", cut.Markup);
     }
 
     [TestMethod]
@@ -133,11 +120,10 @@ public class WorkItemToolbarTests : BunitTestContext
         var cut = RenderWithMudProvider(builder =>
         {
             builder.OpenComponent<WorkItemToolbar>(0);
-            builder.AddAttribute(1, "IsSyncing", false);
-            builder.AddAttribute(2, "FilterText", "");
-            builder.AddAttribute(3, "SelectedCount", 0);
-            builder.AddAttribute(4, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
-            builder.AddAttribute(5, "OnFilterChanged", EventCallback.Factory.Create<string>(this, (value) =>
+            builder.AddAttribute(1, "FilterText", "");
+            builder.AddAttribute(2, "SelectedCount", 0);
+            builder.AddAttribute(3, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
+            builder.AddAttribute(4, "OnFilterChanged", EventCallback.Factory.Create<string>(this, (value) =>
             {
                 filterChanged = true;
                 newFilterValue = value;
@@ -166,10 +152,9 @@ public class WorkItemToolbarTests : BunitTestContext
         var cut = RenderWithMudProvider(builder =>
         {
             builder.OpenComponent<WorkItemToolbar>(0);
-            builder.AddAttribute(1, "IsSyncing", false);
-            builder.AddAttribute(2, "FilterText", "my filter");
-            builder.AddAttribute(3, "SelectedCount", 0);
-            builder.AddAttribute(4, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
+            builder.AddAttribute(1, "FilterText", "my filter");
+            builder.AddAttribute(2, "SelectedCount", 0);
+            builder.AddAttribute(3, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
             builder.CloseComponent();
         });
 
