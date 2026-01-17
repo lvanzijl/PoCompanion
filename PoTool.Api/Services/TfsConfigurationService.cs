@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Contracts;
 
 namespace PoTool.Api.Services;
 
@@ -19,38 +20,47 @@ public sealed class TfsConfig
 /// <summary>
 /// Service to persist TFS configuration.
 /// Authentication uses Windows credentials (NTLM) - no PAT needed.
+/// 
+/// All EF operations are protected by IEfConcurrencyGate to prevent concurrent DbContext access
+/// when this service is called from parallel code paths (e.g., Task.WhenAll in RealTfsClient).
 /// </summary>
 public class TfsConfigurationService
 {
     private readonly PoToolDbContext _db;
     private readonly ILogger<TfsConfigurationService> _logger;
+    private readonly IEfConcurrencyGate _efGate;
 
     public TfsConfigurationService(
         PoToolDbContext db,
-        ILogger<TfsConfigurationService> logger)
+        ILogger<TfsConfigurationService> logger,
+        IEfConcurrencyGate efGate)
     {
         _db = db;
         _logger = logger;
+        _efGate = efGate;
     }
 
     public async Task<TfsConfig?> GetConfigAsync(CancellationToken cancellationToken = default)
     {
-        // Use ToListAsync then LINQ to Objects for DateTimeOffset ordering (SQLite compatibility)
-        // Note: TfsConfig typically contains only one record (updated in place), so loading all is acceptable
-        var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
-        var entity = entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
-        if (entity == null) return null;
-
-        return new TfsConfig
+        return await _efGate.ExecuteAsync(async () =>
         {
-            Url = entity.Url,
-            Project = entity.Project,
-            DefaultAreaPath = entity.DefaultAreaPath,
-            UseDefaultCredentials = entity.UseDefaultCredentials,
-            TimeoutSeconds = entity.TimeoutSeconds,
-            ApiVersion = entity.ApiVersion,
-            LastValidated = entity.LastValidated
-        };
+            // Use ToListAsync then LINQ to Objects for DateTimeOffset ordering (SQLite compatibility)
+            // Note: TfsConfig typically contains only one record (updated in place), so loading all is acceptable
+            var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
+            var entity = entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
+            if (entity == null) return null;
+
+            return new TfsConfig
+            {
+                Url = entity.Url,
+                Project = entity.Project,
+                DefaultAreaPath = entity.DefaultAreaPath,
+                UseDefaultCredentials = entity.UseDefaultCredentials,
+                TimeoutSeconds = entity.TimeoutSeconds,
+                ApiVersion = entity.ApiVersion,
+                LastValidated = entity.LastValidated
+            };
+        }, cancellationToken);
     }
 
     /// <summary>
@@ -66,55 +76,64 @@ public class TfsConfigurationService
         string apiVersion = "7.0",
         CancellationToken cancellationToken = default)
     {
-        // Use ToListAsync then LINQ to Objects for DateTimeOffset ordering (SQLite compatibility)
-        var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
-        var existing = entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
-
-        if (existing == null)
+        await _efGate.ExecuteAsync(async () =>
         {
-            existing = new TfsConfigEntity
+            // Use ToListAsync then LINQ to Objects for DateTimeOffset ordering (SQLite compatibility)
+            var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
+            var existing = entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
+
+            if (existing == null)
             {
-                Url = url ?? string.Empty,
-                Project = project ?? string.Empty,
-                DefaultAreaPath = defaultAreaPath ?? string.Empty,
-                UseDefaultCredentials = useDefaultCredentials,
-                TimeoutSeconds = timeoutSeconds,
-                ApiVersion = apiVersion ?? "7.0",
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow
-            };
+                existing = new TfsConfigEntity
+                {
+                    Url = url ?? string.Empty,
+                    Project = project ?? string.Empty,
+                    DefaultAreaPath = defaultAreaPath ?? string.Empty,
+                    UseDefaultCredentials = useDefaultCredentials,
+                    TimeoutSeconds = timeoutSeconds,
+                    ApiVersion = apiVersion ?? "7.0",
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                };
 
-            await _db.TfsConfigs.AddAsync(existing, cancellationToken);
-        }
-        else
-        {
-            existing.Url = url ?? string.Empty;
-            existing.Project = project ?? string.Empty;
-            existing.DefaultAreaPath = defaultAreaPath ?? string.Empty;
-            existing.UseDefaultCredentials = useDefaultCredentials;
-            existing.TimeoutSeconds = timeoutSeconds;
-            existing.ApiVersion = apiVersion ?? "7.0";
-            existing.UpdatedAt = DateTimeOffset.UtcNow;
-            _db.TfsConfigs.Update(existing);
-        }
+                await _db.TfsConfigs.AddAsync(existing, cancellationToken);
+            }
+            else
+            {
+                existing.Url = url ?? string.Empty;
+                existing.Project = project ?? string.Empty;
+                existing.DefaultAreaPath = defaultAreaPath ?? string.Empty;
+                existing.UseDefaultCredentials = useDefaultCredentials;
+                existing.TimeoutSeconds = timeoutSeconds;
+                existing.ApiVersion = apiVersion ?? "7.0";
+                existing.UpdatedAt = DateTimeOffset.UtcNow;
+                _db.TfsConfigs.Update(existing);
+            }
 
-        await _db.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("TFS configuration saved/updated for Url={Url}, using NTLM authentication", url);
+            await _db.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("TFS configuration saved/updated for Url={Url}, using NTLM authentication", url);
+        }, cancellationToken);
     }
 
     public async Task<TfsConfigEntity?> GetConfigEntityAsync(CancellationToken cancellationToken = default)
     {
-        // Use ToListAsync then LINQ to Objects for DateTimeOffset ordering (SQLite compatibility)
-        // Note: TfsConfig typically contains only one record (updated in place), so loading all is acceptable
-        var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
-        return entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
+        return await _efGate.ExecuteAsync(async () =>
+        {
+            // Use ToListAsync then LINQ to Objects for DateTimeOffset ordering (SQLite compatibility)
+            // Note: TfsConfig typically contains only one record (updated in place), so loading all is acceptable
+            var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
+            return entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
+        }, cancellationToken);
     }
 
     public async Task SaveConfigEntityAsync(TfsConfigEntity entity, CancellationToken cancellationToken = default)
     {
-        entity.UpdatedAt = DateTimeOffset.UtcNow;
-        _db.TfsConfigs.Update(entity);
-        await _db.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("TFS configuration entity updated");
+        await _efGate.ExecuteAsync(async () =>
+        {
+            entity.UpdatedAt = DateTimeOffset.UtcNow;
+            _db.TfsConfigs.Update(entity);
+            await _db.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("TFS configuration entity updated");
+        }, cancellationToken);
     }
 }
