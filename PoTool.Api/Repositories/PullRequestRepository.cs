@@ -247,11 +247,7 @@ public class PullRequestRepository : IPullRequestRepository
         if (iterationsList.Count > 0)
         {
             // Build composite keys for efficient lookup
-            var iterationKeys = iterationsList
-                .Select(i => new { i.PullRequestId, i.IterationNumber })
-                .ToList();
-
-            var prIds = iterationKeys.Select(k => k.PullRequestId).Distinct().ToList();
+            var prIds = iterationsList.Select(i => i.PullRequestId).Distinct().ToList();
 
             var existingIterations = await _context.PullRequestIterations
                 .Where(i => prIds.Contains(i.PullRequestId))
@@ -261,7 +257,10 @@ public class PullRequestRepository : IPullRequestRepository
                 .Select(i => new { i.PullRequestId, i.IterationNumber })
                 .ToHashSet();
 
-            // Update existing iterations
+            // Separate iterations into updates and inserts
+            var iterationsToUpdate = new List<(PullRequestIterationEntity Entity, PullRequestIterationDto Dto)>();
+            var iterationsToInsert = new List<PullRequestIterationEntity>();
+
             foreach (var iteration in iterationsList)
             {
                 var key = new { iteration.PullRequestId, iteration.IterationNumber };
@@ -271,13 +270,24 @@ public class PullRequestRepository : IPullRequestRepository
 
                 if (existing != null)
                 {
-                    UpdateIterationEntity(existing, iteration);
+                    iterationsToUpdate.Add((existing, iteration));
                 }
                 else if (!existingIterationKeys.Contains(key))
                 {
-                    await _context.PullRequestIterations.AddAsync(MapToIterationEntity(iteration), cancellationToken);
-                    existingIterationKeys.Add(key);
+                    iterationsToInsert.Add(MapToIterationEntity(iteration));
                 }
+            }
+
+            // Apply updates
+            foreach (var (entity, dto) in iterationsToUpdate)
+            {
+                UpdateIterationEntity(entity, dto);
+            }
+
+            // Add new iterations in bulk
+            if (iterationsToInsert.Count > 0)
+            {
+                await _context.PullRequestIterations.AddRangeAsync(iterationsToInsert, cancellationToken);
             }
         }
 
