@@ -64,4 +64,21 @@ public interface IPullRequestRepository
     /// Clears all cached pull request data.
     /// </summary>
     Task ClearAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically saves pull requests with all their related data (iterations, comments, file changes)
+    /// in a single database transaction. This prevents concurrent database operations and ensures
+    /// consistency during PR sync operations.
+    /// </summary>
+    /// <param name="pullRequests">Pull requests to save or update.</param>
+    /// <param name="iterations">Pull request iterations to save or update.</param>
+    /// <param name="comments">Pull request comments to save or update.</param>
+    /// <param name="fileChanges">Pull request file changes to save or update.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task SaveBulkAsync(
+        IEnumerable<PullRequestDto> pullRequests,
+        IEnumerable<PullRequestIterationDto> iterations,
+        IEnumerable<PullRequestCommentDto> comments,
+        IEnumerable<PullRequestFileChangeDto> fileChanges,
+        CancellationToken cancellationToken = default);
 }
