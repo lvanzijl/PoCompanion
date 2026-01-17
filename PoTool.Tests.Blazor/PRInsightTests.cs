@@ -52,13 +52,13 @@ public class PRInsightTests : BunitTestContext
 
     private void SetupMockWithMetrics(List<PullRequestMetricsDto> metrics)
     {
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
             .ReturnsAsync(metrics);
     }
 
     private void SetupMockWithEmptyMetrics()
     {
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
             .ReturnsAsync(new List<PullRequestMetricsDto>());
     }
 
@@ -101,7 +101,7 @@ public class PRInsightTests : BunitTestContext
     public void PRInsight_ShowsEmptyState_WhenNoData()
     {
         // Arrange
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
             .ReturnsAsync(new List<PullRequestMetricsDto>());
 
         // Act
@@ -118,7 +118,7 @@ public class PRInsightTests : BunitTestContext
     {
         // Arrange - Setup to delay the async call
         var tcs = new TaskCompletionSource<ICollection<PullRequestMetricsDto>>();
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
             .Returns(tcs.Task);
 
         // Act
@@ -136,10 +136,10 @@ public class PRInsightTests : BunitTestContext
     public async Task PRInsight_SyncButton_InvokesService()
     {
         // Arrange
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
             .ReturnsAsync(new List<PullRequestMetricsDto>());
 
-        _mockPullRequestsClient.Setup(x => x.SyncAsync())
+        _mockPullRequestsClient.Setup(x => x.SyncAsync(It.IsAny<string?>()))
             .ReturnsAsync(5);
 
         var cut = RenderPRInsightWithMudProvider();
@@ -149,7 +149,7 @@ public class PRInsightTests : BunitTestContext
         await syncButton.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
 
         // Assert
-        _mockPullRequestsClient.Verify(x => x.SyncAsync(), Times.Once);
+        _mockPullRequestsClient.Verify(x => x.SyncAsync(It.IsAny<string?>()), Times.Once);
         _mockSnackbar.Verify(x => x.Add(It.IsAny<string>(), Severity.Success, It.IsAny<Action<SnackbarOptions>?>(), It.IsAny<string?>()), Times.Once);
     }
 
@@ -164,7 +164,7 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(3, "PR 3", "User3", "Active", 3, 15, 8)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
             .ReturnsAsync(metrics);
 
         // Act
@@ -194,7 +194,7 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(2, "PR 2", "User2", "Completed", 3, 15, 8)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
             .ReturnsAsync(metrics);
 
         // Act
@@ -220,7 +220,7 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(1, "PR 1", "User1", "Active", 2, 10, 5)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
             .ReturnsAsync(metrics);
 
         // Act
@@ -246,7 +246,7 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(1, "PR 1", "User1", "Active", 2, 10, 5)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
             .ReturnsAsync(metrics);
 
         // Act
@@ -273,7 +273,7 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(1, "Test PR Title", "TestUser", "Active", 2, 10, 5)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync())
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
             .ReturnsAsync(metrics);
 
         // Act
