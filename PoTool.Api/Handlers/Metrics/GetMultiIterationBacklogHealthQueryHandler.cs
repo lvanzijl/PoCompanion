@@ -18,18 +18,18 @@ namespace PoTool.Api.Handlers.Metrics;
 public sealed class GetMultiIterationBacklogHealthQueryHandler
     : IQueryHandler<GetMultiIterationBacklogHealthQuery, MultiIterationBacklogHealthDto>
 {
-    private readonly WorkItemReadProviderFactory _providerFactory;
+    private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly IProductRepository _productRepository;
     private readonly IWorkItemValidator _validator;
     private readonly ILogger<GetMultiIterationBacklogHealthQueryHandler> _logger;
 
     public GetMultiIterationBacklogHealthQueryHandler(
-        WorkItemReadProviderFactory providerFactory,
+        IWorkItemReadProvider workItemReadProvider,
         IProductRepository productRepository,
         IWorkItemValidator validator,
         ILogger<GetMultiIterationBacklogHealthQueryHandler> logger)
     {
-        _providerFactory = providerFactory;
+        _workItemReadProvider = workItemReadProvider;
         _productRepository = productRepository;
         _validator = validator;
         _logger = logger;
@@ -45,8 +45,8 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
             query.AreaPath ?? "All",
             query.MaxIterations);
 
-        var provider = _providerFactory.Create();
-        var allWorkItems = await provider.GetAllAsync(cancellationToken);
+        // Live-only mode: use injected provider directly
+        var allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
 
         // Filter by product hierarchy if ProductIds are specified
         if (query.ProductIds != null && query.ProductIds.Length > 0)

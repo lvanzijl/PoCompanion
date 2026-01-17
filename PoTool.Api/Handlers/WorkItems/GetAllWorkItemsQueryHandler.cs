@@ -13,16 +13,16 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// </summary>
 public sealed class GetAllWorkItemsQueryHandler : IQueryHandler<GetAllWorkItemsQuery, IEnumerable<WorkItemDto>>
 {
-    private readonly WorkItemReadProviderFactory _providerFactory;
+    private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly ProfileFilterService _profileFilterService;
     private readonly ILogger<GetAllWorkItemsQueryHandler> _logger;
 
     public GetAllWorkItemsQueryHandler(
-        WorkItemReadProviderFactory providerFactory,
+        IWorkItemReadProvider workItemReadProvider,
         ProfileFilterService profileFilterService,
         ILogger<GetAllWorkItemsQueryHandler> logger)
     {
-        _providerFactory = providerFactory;
+        _workItemReadProvider = workItemReadProvider;
         _profileFilterService = profileFilterService;
         _logger = logger;
     }
@@ -33,16 +33,16 @@ public sealed class GetAllWorkItemsQueryHandler : IQueryHandler<GetAllWorkItemsQ
     {
         _logger.LogDebug("Handling GetAllWorkItemsQuery");
 
-        var provider = _providerFactory.Create();
+        // Live-only mode: use injected provider directly
         var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
 
         if (profileAreaPaths != null && profileAreaPaths.Count > 0)
         {
             _logger.LogDebug("Filtering work items by active profile area paths: {AreaPaths}",
                 string.Join(", ", profileAreaPaths));
-            return await provider.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
+            return await _workItemReadProvider.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
         }
 
-        return await provider.GetAllAsync(cancellationToken);
+        return await _workItemReadProvider.GetAllAsync(cancellationToken);
     }
 }

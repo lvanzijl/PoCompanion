@@ -13,18 +13,18 @@ namespace PoTool.Api.Handlers.Pipelines;
 /// </summary>
 public sealed class GetAllPipelinesQueryHandler : IQueryHandler<GetAllPipelinesQuery, IEnumerable<PipelineDto>>
 {
-    private readonly PipelineReadProviderFactory _providerFactory;
+    private readonly IPipelineReadProvider _pipelineReadProvider;
 
-    public GetAllPipelinesQueryHandler(PipelineReadProviderFactory providerFactory)
+    public GetAllPipelinesQueryHandler(IPipelineReadProvider pipelineReadProvider)
     {
-        _providerFactory = providerFactory;
+        _pipelineReadProvider = pipelineReadProvider;
     }
 
     public async ValueTask<IEnumerable<PipelineDto>> Handle(
         GetAllPipelinesQuery query,
         CancellationToken cancellationToken)
     {
-        var provider = _providerFactory.Create();
-        return await provider.GetAllAsync(cancellationToken);
+        // Live-only mode: use injected provider directly
+        return await _pipelineReadProvider.GetAllAsync(cancellationToken);
     }
 }

@@ -12,14 +12,14 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// </summary>
 public sealed class GetDistinctAreaPathsQueryHandler : IQueryHandler<GetDistinctAreaPathsQuery, IEnumerable<string>>
 {
-    private readonly WorkItemReadProviderFactory _providerFactory;
+    private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly ILogger<GetDistinctAreaPathsQueryHandler> _logger;
 
     public GetDistinctAreaPathsQueryHandler(
-        WorkItemReadProviderFactory providerFactory,
+        IWorkItemReadProvider workItemReadProvider,
         ILogger<GetDistinctAreaPathsQueryHandler> logger)
     {
-        _providerFactory = providerFactory;
+        _workItemReadProvider = workItemReadProvider;
         _logger = logger;
     }
 
@@ -29,8 +29,8 @@ public sealed class GetDistinctAreaPathsQueryHandler : IQueryHandler<GetDistinct
     {
         _logger.LogDebug("Handling GetDistinctAreaPathsQuery");
 
-        var provider = _providerFactory.Create();
-        var workItems = await provider.GetAllAsync(cancellationToken);
+        // Live-only mode: use injected provider directly
+        var workItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
 
         var distinctAreaPaths = workItems
             .Select(wi => wi.AreaPath)

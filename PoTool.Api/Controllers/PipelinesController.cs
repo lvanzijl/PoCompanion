@@ -2,7 +2,6 @@ using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Shared.Pipelines;
 using PoTool.Core.Pipelines;
-using PoTool.Core.Pipelines.Commands;
 using PoTool.Core.Pipelines.Queries;
 
 namespace PoTool.Api.Controllers;

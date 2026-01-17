@@ -16,18 +16,18 @@ namespace PoTool.Api.Handlers.WorkItems;
 public sealed class GetAllWorkItemsWithValidationQueryHandler
     : IQueryHandler<GetAllWorkItemsWithValidationQuery, IEnumerable<WorkItemWithValidationDto>>
 {
-    private readonly WorkItemReadProviderFactory _providerFactory;
+    private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly IWorkItemValidator _validator;
     private readonly ProfileFilterService _profileFilterService;
     private readonly ILogger<GetAllWorkItemsWithValidationQueryHandler> _logger;
 
     public GetAllWorkItemsWithValidationQueryHandler(
-        WorkItemReadProviderFactory providerFactory,
+        IWorkItemReadProvider workItemReadProvider,
         IWorkItemValidator validator,
         ProfileFilterService profileFilterService,
         ILogger<GetAllWorkItemsWithValidationQueryHandler> logger)
     {
-        _providerFactory = providerFactory;
+        _workItemReadProvider = workItemReadProvider;
         _validator = validator;
         _profileFilterService = profileFilterService;
         _logger = logger;
@@ -39,18 +39,18 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
     {
         _logger.LogDebug("Handling GetAllWorkItemsWithValidationQuery");
 
-        var provider = _providerFactory.Create();
+        // Live-only mode: use injected provider directly
         var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
 
         IEnumerable<WorkItemDto> workItems;
         if (profileAreaPaths != null && profileAreaPaths.Count > 0)
         {
             _logger.LogDebug("Filtering work items by active profile area paths for validation");
-            workItems = await provider.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
+            workItems = await _workItemReadProvider.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
         }
         else
         {
-            workItems = await provider.GetAllAsync(cancellationToken);
+            workItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
         }
 
         var workItemsList = workItems.ToList();

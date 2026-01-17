@@ -13,21 +13,21 @@ namespace PoTool.Api.Handlers.Pipelines;
 /// </summary>
 public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMetricsQuery, IEnumerable<PipelineMetricsDto>>
 {
-    private readonly PipelineReadProviderFactory _providerFactory;
+    private readonly IPipelineReadProvider _pipelineReadProvider;
 
-    public GetPipelineMetricsQueryHandler(PipelineReadProviderFactory providerFactory)
+    public GetPipelineMetricsQueryHandler(IPipelineReadProvider pipelineReadProvider)
     {
-        _providerFactory = providerFactory;
+        _pipelineReadProvider = pipelineReadProvider;
     }
 
     public async ValueTask<IEnumerable<PipelineMetricsDto>> Handle(
         GetPipelineMetricsQuery query,
         CancellationToken cancellationToken)
     {
-        var provider = _providerFactory.Create();
+        // Live-only mode: use injected provider directly
         
         // Get all pipelines
-        var pipelines = await provider.GetAllAsync(cancellationToken);
+        var pipelines = await _pipelineReadProvider.GetAllAsync(cancellationToken);
         
         // Filter by product IDs if specified
         if (query.ProductIds != null && query.ProductIds.Count > 0)
@@ -36,7 +36,7 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
             var allowedPipelineIds = new HashSet<int>();
             foreach (var productId in query.ProductIds)
             {
-                var definitions = await provider.GetDefinitionsByProductIdAsync(productId, cancellationToken);
+                var definitions = await _pipelineReadProvider.GetDefinitionsByProductIdAsync(productId, cancellationToken);
                 foreach (var def in definitions)
                 {
                     allowedPipelineIds.Add(def.PipelineDefinitionId);
@@ -47,7 +47,7 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
             pipelines = pipelines.Where(p => allowedPipelineIds.Contains(p.Id)).ToList();
         }
 
-        var allRuns = await provider.GetAllRunsAsync(cancellationToken);
+        var allRuns = await _pipelineReadProvider.GetAllRunsAsync(cancellationToken);
 
         var runsByPipeline = allRuns.GroupBy(r => r.PipelineId).ToDictionary(g => g.Key, g => g.ToList());
 

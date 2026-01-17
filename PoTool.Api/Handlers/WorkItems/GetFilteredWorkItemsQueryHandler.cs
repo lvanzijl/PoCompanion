@@ -13,16 +13,16 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// </summary>
 public sealed class GetFilteredWorkItemsQueryHandler : IQueryHandler<GetFilteredWorkItemsQuery, IEnumerable<WorkItemDto>>
 {
-    private readonly WorkItemReadProviderFactory _providerFactory;
+    private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly ProfileFilterService _profileFilterService;
     private readonly ILogger<GetFilteredWorkItemsQueryHandler> _logger;
 
     public GetFilteredWorkItemsQueryHandler(
-        WorkItemReadProviderFactory providerFactory,
+        IWorkItemReadProvider workItemReadProvider,
         ProfileFilterService profileFilterService,
         ILogger<GetFilteredWorkItemsQueryHandler> logger)
     {
-        _providerFactory = providerFactory;
+        _workItemReadProvider = workItemReadProvider;
         _profileFilterService = profileFilterService;
         _logger = logger;
     }
@@ -33,8 +33,8 @@ public sealed class GetFilteredWorkItemsQueryHandler : IQueryHandler<GetFiltered
     {
         _logger.LogDebug("Handling GetFilteredWorkItemsQuery with filter={Filter}", query.Filter);
 
-        var provider = _providerFactory.Create();
-        var allFiltered = await provider.GetFilteredAsync(query.Filter, cancellationToken);
+        // Live-only mode: use injected provider directly
+        var allFiltered = await _workItemReadProvider.GetFilteredAsync(query.Filter, cancellationToken);
 
         // Apply profile-based area path filtering
         var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);

@@ -13,14 +13,14 @@ namespace PoTool.Api.Handlers.PullRequests;
 /// </summary>
 public sealed class GetPullRequestMetricsQueryHandler : IQueryHandler<GetPullRequestMetricsQuery, IEnumerable<PullRequestMetricsDto>>
 {
-    private readonly PullRequestReadProviderFactory _providerFactory;
+    private readonly IPullRequestReadProvider _pullRequestReadProvider;
     private readonly ILogger<GetPullRequestMetricsQueryHandler> _logger;
 
     public GetPullRequestMetricsQueryHandler(
-        PullRequestReadProviderFactory providerFactory,
+        IPullRequestReadProvider pullRequestReadProvider,
         ILogger<GetPullRequestMetricsQueryHandler> logger)
     {
-        _providerFactory = providerFactory;
+        _pullRequestReadProvider = pullRequestReadProvider;
         _logger = logger;
     }
 
@@ -30,15 +30,15 @@ public sealed class GetPullRequestMetricsQueryHandler : IQueryHandler<GetPullReq
     {
         _logger.LogDebug("Handling GetPullRequestMetricsQuery");
 
-        var provider = _providerFactory.Create();
-        var allPrs = await provider.GetByProductIdsAsync(query.ProductIds, cancellationToken);
+        // Live-only mode: use injected provider directly
+        var allPrs = await _pullRequestReadProvider.GetByProductIdsAsync(query.ProductIds, cancellationToken);
         var metrics = new List<PullRequestMetricsDto>();
 
         foreach (var pr in allPrs)
         {
-            var iterations = await provider.GetIterationsAsync(pr.Id, cancellationToken);
-            var comments = await provider.GetCommentsAsync(pr.Id, cancellationToken);
-            var fileChanges = await provider.GetFileChangesAsync(pr.Id, cancellationToken);
+            var iterations = await _pullRequestReadProvider.GetIterationsAsync(pr.Id, cancellationToken);
+            var comments = await _pullRequestReadProvider.GetCommentsAsync(pr.Id, cancellationToken);
+            var fileChanges = await _pullRequestReadProvider.GetFileChangesAsync(pr.Id, cancellationToken);
 
             var totalTimeOpen = CalculateTotalTimeOpen(pr);
             var effectiveWorkTime = CalculateEffectiveWorkTime(pr, iterations.ToList());

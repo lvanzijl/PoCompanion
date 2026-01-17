@@ -247,42 +247,6 @@ public static class ApiApplicationBuilderExtensions
         })
         .Produces<TfsVerificationReport>(StatusCodes.Status200OK);
 
-        // Legacy sync endpoint - uses area path
-        app.MapPost("/api/workitems/sync", async (IMediator mediator, TfsConfigurationService configService, CancellationToken ct) =>
-        {
-            var config = await configService.GetConfigAsync(ct);
-            if (config == null || string.IsNullOrWhiteSpace(config.DefaultAreaPath))
-            {
-                return Results.BadRequest(new { error = "Default Area Path is not configured. Configure this in TFS settings." });
-            }
-
-            await mediator.Send(new PoTool.Core.WorkItems.Commands.SyncWorkItemsCommand(config.DefaultAreaPath), ct);
-            return Results.Ok();
-        });
-
-        // New product-scoped sync endpoint - uses root work item IDs
-        app.MapPost("/api/workitems/sync/by-root-ids", async (
-            PoTool.Shared.WorkItems.SyncRequest? request,
-            WorkItemSyncService syncService,
-            TfsConfigurationService configService,
-            CancellationToken ct) =>
-        {
-            if (request?.RootWorkItemIds == null || request.RootWorkItemIds.Length == 0)
-            {
-                return Results.BadRequest(new { error = "No root work items configured for this product/profile." });
-            }
-
-            try
-            {
-                await syncService.TriggerSyncByRootIdsAsync(request.RootWorkItemIds, request.Incremental, ct);
-                return Results.Ok();
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        });
-
         // Fallback to index.html for client-side routing
         app.MapFallbackToFile("index.html");
 

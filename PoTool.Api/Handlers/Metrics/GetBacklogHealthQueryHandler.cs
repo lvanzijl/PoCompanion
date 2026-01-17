@@ -11,21 +11,21 @@ namespace PoTool.Api.Handlers.Metrics;
 /// <summary>
 /// Handler for GetBacklogHealthQuery.
 /// Calculates backlog health metrics for a specific iteration.
-/// Uses read provider to support both Live and Cached modes.
+/// Uses Live provider to fetch work items directly from TFS.
 /// </summary>
 public sealed class GetBacklogHealthQueryHandler
     : IQueryHandler<GetBacklogHealthQuery, BacklogHealthDto?>
 {
-    private readonly WorkItemReadProviderFactory _providerFactory;
+    private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly IWorkItemValidator _validator;
     private readonly ILogger<GetBacklogHealthQueryHandler> _logger;
 
     public GetBacklogHealthQueryHandler(
-        WorkItemReadProviderFactory providerFactory,
+        IWorkItemReadProvider workItemReadProvider,
         IWorkItemValidator validator,
         ILogger<GetBacklogHealthQueryHandler> logger)
     {
-        _providerFactory = providerFactory;
+        _workItemReadProvider = workItemReadProvider;
         _validator = validator;
         _logger = logger;
     }
@@ -36,8 +36,7 @@ public sealed class GetBacklogHealthQueryHandler
     {
         _logger.LogDebug("Handling GetBacklogHealthQuery for iteration: {IterationPath}", query.IterationPath);
 
-        var provider = _providerFactory.Create();
-        var allWorkItems = await provider.GetAllAsync(cancellationToken);
+        var allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
         var iterationWorkItems = allWorkItems
             .Where(wi => wi.IterationPath.Equals(query.IterationPath, StringComparison.OrdinalIgnoreCase))
             .ToList();

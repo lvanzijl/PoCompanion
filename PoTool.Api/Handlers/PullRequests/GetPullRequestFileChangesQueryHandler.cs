@@ -12,14 +12,14 @@ namespace PoTool.Api.Handlers.PullRequests;
 /// </summary>
 public sealed class GetPullRequestFileChangesQueryHandler : IQueryHandler<GetPullRequestFileChangesQuery, IEnumerable<PullRequestFileChangeDto>>
 {
-    private readonly PullRequestReadProviderFactory _providerFactory;
+    private readonly IPullRequestReadProvider _pullRequestReadProvider;
     private readonly ILogger<GetPullRequestFileChangesQueryHandler> _logger;
 
     public GetPullRequestFileChangesQueryHandler(
-        PullRequestReadProviderFactory providerFactory,
+        IPullRequestReadProvider pullRequestReadProvider,
         ILogger<GetPullRequestFileChangesQueryHandler> logger)
     {
-        _providerFactory = providerFactory;
+        _pullRequestReadProvider = pullRequestReadProvider;
         _logger = logger;
     }
 
@@ -28,7 +28,7 @@ public sealed class GetPullRequestFileChangesQueryHandler : IQueryHandler<GetPul
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetPullRequestFileChangesQuery for PR ID: {PullRequestId}", query.PullRequestId);
-        var provider = _providerFactory.Create();
-        return await provider.GetFileChangesAsync(query.PullRequestId, cancellationToken);
+        // Live-only mode: use injected provider directly
+        return await _pullRequestReadProvider.GetFileChangesAsync(query.PullRequestId, cancellationToken);
     }
 }

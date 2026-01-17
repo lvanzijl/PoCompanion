@@ -22,7 +22,6 @@ public class PipelineRepository : IPipelineRepository
     private readonly object _lock = new();
     private List<PipelineDto> _pipelines = new();
     private List<PipelineRunDto> _runs = new();
-    private DateTimeOffset? _lastSyncTime;
 
     public PipelineRepository(PoToolDbContext context, ILogger<PipelineRepository> logger)
     {
@@ -68,24 +67,6 @@ public class PipelineRepository : IPipelineRepository
         }
     }
 
-    public Task SaveAsync(PipelineSyncResult syncResult, CancellationToken cancellationToken = default)
-    {
-        lock (_lock)
-        {
-            _pipelines = syncResult.Pipelines.ToList();
-            _runs = syncResult.Runs.ToList();
-            _lastSyncTime = syncResult.SyncedAt;
-            return Task.CompletedTask;
-        }
-    }
-
-    public Task<DateTimeOffset?> GetLastSyncTimeAsync(CancellationToken cancellationToken = default)
-    {
-        lock (_lock)
-        {
-            return Task.FromResult(_lastSyncTime);
-        }
-    }
 
     public Task ClearAllAsync(CancellationToken cancellationToken = default)
     {
@@ -93,7 +74,6 @@ public class PipelineRepository : IPipelineRepository
         {
             _pipelines.Clear();
             _runs.Clear();
-            _lastSyncTime = null;
             return Task.CompletedTask;
         }
     }

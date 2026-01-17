@@ -15,16 +15,16 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// </summary>
 public class GetGoalHierarchyQueryHandler : IQueryHandler<GetGoalHierarchyQuery, IEnumerable<WorkItemDto>>
 {
-    private readonly WorkItemReadProviderFactory _providerFactory;
+    private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly BattleshipMockDataFacade? _mockDataFacade;
     private readonly bool _useMockClient;
 
     public GetGoalHierarchyQueryHandler(
-        WorkItemReadProviderFactory providerFactory,
+        IWorkItemReadProvider workItemReadProvider,
         IConfiguration configuration,
         BattleshipMockDataFacade? mockDataFacade = null)
     {
-        _providerFactory = providerFactory;
+        _workItemReadProvider = workItemReadProvider;
         _mockDataFacade = mockDataFacade;
         _useMockClient = configuration.GetValue<bool>("TfsIntegration:UseMockClient", false);
     }
@@ -39,8 +39,8 @@ public class GetGoalHierarchyQueryHandler : IQueryHandler<GetGoalHierarchyQuery,
 
         // For TFS mode, query from read provider
         // Get all work items that are descendants of the specified goals
-        var provider = _providerFactory.Create();
-        var allItems = await provider.GetAllAsync(cancellationToken);
+        // Live-only mode: use injected provider directly
+        var allItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
         return WorkItemHierarchyHelper.FilterDescendants(query.GoalIds, allItems);
     }
 }
