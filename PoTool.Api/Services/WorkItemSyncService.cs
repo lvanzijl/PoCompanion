@@ -456,11 +456,16 @@ public class WorkItemSyncService : BackgroundService
         // Save all PRs, iterations, comments, and file changes to repository
         if (allPrs.Any())
         {
-            _logger.LogInformation("Saving {Count} PRs to cache", allPrs.Count);
-            await prRepository.SaveAsync(allPrs, cancellationToken);
-            await prRepository.SaveIterationsAsync(allIterations, cancellationToken);
-            await prRepository.SaveCommentsAsync(allComments, cancellationToken);
-            await prRepository.SaveFileChangesAsync(allFileChanges, cancellationToken);
+            _logger.LogInformation("Saving {Count} PRs with all related data (iterations, comments, file changes) in a single atomic operation", allPrs.Count);
+            
+            // Use SaveBulkAsync to save all PR data in a single database transaction
+            // This prevents concurrent EF operations and ensures data consistency
+            await prRepository.SaveBulkAsync(
+                allPrs,
+                allIterations,
+                allComments,
+                allFileChanges,
+                cancellationToken);
 
             _logger.LogInformation("Successfully synced {Count} PRs across {RepoCount} repositories", allPrs.Count, repositories.Count);
         }

@@ -6,7 +6,7 @@ namespace PoTool.Core.Contracts;
 /// Interface for pull request repository operations.
 /// Handles local caching and persistence of pull request data.
 /// </summary>
-public interface IPullRequestRepository
+public interface IPullRequestRepository : IDisposable
 {
     /// <summary>
     /// Retrieves all cached pull requests.
