@@ -16,7 +16,6 @@ namespace PoTool.Tests.Unit.Handlers;
 public class GetDependencyGraphQueryHandlerTests
 {
     private Mock<IWorkItemReadProvider> _mockProvider = null!;
-    private Mock<WorkItemReadProviderFactory> _mockFactory = null!;
     private Mock<ILogger<GetDependencyGraphQueryHandler>> _mockLogger = null!;
     private GetDependencyGraphQueryHandler _handler = null!;
 
@@ -24,14 +23,8 @@ public class GetDependencyGraphQueryHandlerTests
     public void Setup()
     {
         _mockProvider = new Mock<IWorkItemReadProvider>();
-        var mockModeProvider = new Mock<IDataSourceModeProvider>();
-        var mockServiceProvider = new Mock<IServiceProvider>();
-        
-        _mockFactory = new Mock<WorkItemReadProviderFactory>(mockModeProvider.Object, mockServiceProvider.Object);
-        _mockFactory.Setup(f => f.Create()).Returns(_mockProvider.Object);
-        
         _mockLogger = new Mock<ILogger<GetDependencyGraphQueryHandler>>();
-        _handler = new GetDependencyGraphQueryHandler(_mockFactory.Object, _mockLogger.Object);
+        _handler = new GetDependencyGraphQueryHandler(_mockProvider.Object, _mockLogger.Object);
     }
 
     [TestMethod]

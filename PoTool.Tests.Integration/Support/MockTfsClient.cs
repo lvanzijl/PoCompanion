@@ -515,44 +515,6 @@ public class MockTfsClient : ITfsClient
     // BULK METHODS - Prevent N+1 query patterns
     // ============================================
 
-    public Task<PullRequestSyncResult> GetPullRequestsWithDetailsAsync(
-        string? repositoryName = null,
-        DateTimeOffset? fromDate = null,
-        DateTimeOffset? toDate = null,
-        CancellationToken cancellationToken = default)
-    {
-        var filtered = _mockPullRequests.AsEnumerable();
-
-        if (!string.IsNullOrEmpty(repositoryName))
-        {
-            filtered = filtered.Where(pr => pr.RepositoryName == repositoryName);
-        }
-
-        if (fromDate.HasValue)
-        {
-            filtered = filtered.Where(pr => pr.CreatedDate >= fromDate.Value);
-        }
-
-        if (toDate.HasValue)
-        {
-            filtered = filtered.Where(pr => pr.CreatedDate <= toDate.Value);
-        }
-
-        var prs = filtered.ToList();
-        var prIds = prs.Select(p => p.Id).ToHashSet();
-
-        var iterations = _mockIterations.Where(i => prIds.Contains(i.PullRequestId)).ToList();
-        var comments = _mockComments.Where(c => prIds.Contains(c.PullRequestId)).ToList();
-        var fileChanges = _mockFileChanges.Where(fc => prIds.Contains(fc.PullRequestId)).ToList();
-
-        return Task.FromResult(new PullRequestSyncResult(
-            PullRequests: prs,
-            Iterations: iterations,
-            Comments: comments,
-            FileChanges: fileChanges,
-            TfsCallCount: 1
-        ));
-    }
 
     public Task<BulkUpdateResult> UpdateWorkItemsEffortAsync(
         IEnumerable<WorkItemEffortUpdate> updates,
@@ -725,40 +687,6 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult<IEnumerable<PipelineRunDto>>(runs);
     }
 
-    public Task<PipelineSyncResult> GetPipelinesWithRunsAsync(
-        int runsPerPipeline = 50,
-        CancellationToken cancellationToken = default)
-    {
-        var pipelines = new List<PipelineDto>
-        {
-            new PipelineDto(1, "TestBuild.CI", PipelineType.Build, "\\Test", DateTimeOffset.UtcNow)
-        };
-
-        var runs = new List<PipelineRunDto>
-        {
-            new PipelineRunDto(
-                RunId: 1000,
-                PipelineId: 1,
-                PipelineName: "TestBuild.CI",
-                StartTime: DateTimeOffset.UtcNow.AddHours(-2),
-                FinishTime: DateTimeOffset.UtcNow.AddHours(-1),
-                Duration: TimeSpan.FromHours(1),
-                Result: PipelineRunResult.Succeeded,
-                Trigger: PipelineRunTrigger.ContinuousIntegration,
-                TriggerInfo: "Triggered by push",
-                Branch: "main",
-                RequestedFor: "test.user@test.com",
-                RetrievedAt: DateTimeOffset.UtcNow
-            )
-        };
-
-        return Task.FromResult(new PipelineSyncResult(
-            Pipelines: pipelines,
-            Runs: runs,
-            TfsCallCount: 1,
-            SyncedAt: DateTimeOffset.UtcNow
-        ));
-    }
 
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsAsync(
         int[] rootWorkItemIds,
@@ -813,7 +741,7 @@ public class MockTfsClient : ITfsClient
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsWithDetailedProgressAsync(
         int[] rootWorkItemIds,
         DateTimeOffset? since = null,
-        Action<SyncProgressDto>? detailedProgressCallback = null,
+        
         CancellationToken cancellationToken = default)
     {
         // Build hierarchy map to find descendants
@@ -840,29 +768,12 @@ public class MockTfsClient : ITfsClient
         }
 
         // Report detailed progress
-        detailedProgressCallback?.Invoke(new SyncProgressDto
-        {
-            Status = "InProgress",
-            Message = "Finding root work items...",
-            Phase = "Discovery",
-            BatchIndex = 1,
-            TotalBatches = 1
-        });
 
         foreach (var rootId in rootWorkItemIds)
         {
             CollectHierarchy(rootId);
         }
 
-        detailedProgressCallback?.Invoke(new SyncProgressDto
-        {
-            Status = "InProgress",
-            Message = $"Processing {results.Count} work items...",
-            Phase = "Processing",
-            BatchIndex = 1,
-            TotalBatches = 1,
-            IdCount = results.Count
-        });
 
         // Filter by date if specified
         if (since.HasValue)
@@ -870,16 +781,6 @@ public class MockTfsClient : ITfsClient
             results = results.Where(wi => wi.RetrievedAt >= since.Value).ToList();
         }
 
-        detailedProgressCallback?.Invoke(new SyncProgressDto
-        {
-            Status = "InProgress",
-            Message = "Complete",
-            Phase = "Complete",
-            BatchIndex = 1,
-            TotalBatches = 1,
-            ProcessedCount = results.Count,
-            TotalCount = results.Count
-        });
 
         return Task.FromResult<IEnumerable<WorkItemDto>>(results);
     }
