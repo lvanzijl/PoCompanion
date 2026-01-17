@@ -63,7 +63,7 @@ public class EfConcurrencyGateTests
         // Assert: All tasks should complete without exception
         var results = await Task.WhenAll(tasks);
         
-        Assert.AreEqual(10, results.Length, "Should have 10 results");
+        Assert.HasCount(10, results, "Should have 10 results");
         Assert.IsTrue(results.All(r => r != null), "All results should be non-null");
         Assert.IsTrue(results.All(r => r!.Project == "TestProject"), "All results should have correct project");
     }
