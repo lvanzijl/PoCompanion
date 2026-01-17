@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Configuration;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services.MockData;
+using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Core.PullRequests.Commands;
 using PoTool.Shared.PullRequests;
@@ -12,6 +13,7 @@ namespace PoTool.Api.Handlers.PullRequests;
 /// Handler for SyncPullRequestsCommand.
 /// Synchronizes pull requests from TFS to local cache.
 /// Uses bulk fetch method to prevent N+1 query pattern.
+/// NOTE: Sync operations only apply in Cached mode. In Live mode, data is fetched directly from TFS.
 /// </summary>
 public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullRequestsCommand, int>
 {
@@ -19,6 +21,7 @@ public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullReq
     private readonly RepositoryRepository _repoRepository;
     private readonly IProductRepository _productRepository;
     private readonly ITfsClient _tfsClient;
+    private readonly IDataSourceModeProvider _modeProvider;
     private readonly ILogger<SyncPullRequestsCommandHandler> _logger;
 
     public SyncPullRequestsCommandHandler(
@@ -26,6 +29,7 @@ public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullReq
         RepositoryRepository repoRepository,
         IProductRepository productRepository,
         ITfsClient tfsClient,
+        IDataSourceModeProvider modeProvider,
         ILogger<SyncPullRequestsCommandHandler> logger,
         IConfiguration configuration)
     {
@@ -33,6 +37,7 @@ public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullReq
         _repoRepository = repoRepository;
         _productRepository = productRepository;
         _tfsClient = tfsClient;
+        _modeProvider = modeProvider;
         _logger = logger;
     }
 
@@ -40,7 +45,14 @@ public sealed class SyncPullRequestsCommandHandler : ICommandHandler<SyncPullReq
         SyncPullRequestsCommand command,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting pull request sync for products");
+        // In Live mode, sync operations are not needed as data is fetched directly from TFS
+        if (_modeProvider.Mode == DataSourceMode.Live)
+        {
+            _logger.LogWarning("SyncPullRequestsCommand called in Live mode. Sync operations are only applicable in Cached mode. No action taken.");
+            return 0;
+        }
+
+        _logger.LogInformation("Starting pull request sync for products (Cached mode)");
 
         try
         {

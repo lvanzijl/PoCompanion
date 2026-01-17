@@ -126,7 +126,9 @@ public class DataSourceModeProviderTests
         var provider = new DataSourceModeProvider(configuration);
 
         // Assert
+#pragma warning disable CS0618 // Type or member is obsolete - Testing backward compatibility
         Assert.AreEqual(DataSourceMode.Cached, provider.Mode);
+#pragma warning restore CS0618
     }
 
     [TestMethod]
@@ -144,7 +146,9 @@ public class DataSourceModeProviderTests
         var provider = new DataSourceModeProvider(configuration);
 
         // Assert
+#pragma warning disable CS0618 // Type or member is obsolete - Testing backward compatibility
         Assert.AreEqual(DataSourceMode.Cached, provider.Mode);
+#pragma warning restore CS0618
     }
 
     [TestMethod]
@@ -162,6 +166,8 @@ public class DataSourceModeProviderTests
         var provider = new DataSourceModeProvider(configuration);
 
         // Assert
+#pragma warning disable CS0618 // Type or member is obsolete - Testing backward compatibility
         Assert.AreEqual(DataSourceMode.Cached, provider.Mode);
+#pragma warning restore CS0618
     }
 }

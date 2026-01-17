@@ -24,6 +24,7 @@ public class PipelineReadProviderFactory
     /// <summary>
     /// Creates the appropriate pipeline read provider based on the current data source mode.
     /// </summary>
+#pragma warning disable CS0618 // Type or member is obsolete - Cached mode is intentionally supported for backward compatibility
     public virtual IPipelineReadProvider Create()
     {
         return _modeProvider.Mode switch
@@ -33,4 +34,5 @@ public class PipelineReadProviderFactory
             _ => throw new InvalidOperationException($"Unsupported DataSourceMode: {_modeProvider.Mode}")
         };
     }
+#pragma warning restore CS0618
 }
