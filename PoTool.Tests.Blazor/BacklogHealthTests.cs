@@ -100,7 +100,7 @@ public class BacklogHealthTests : BunitTestContext
             }
         };
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(emptyData);
 
         // Act
@@ -124,7 +124,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -149,7 +149,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -173,7 +173,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -196,7 +196,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -218,7 +218,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -240,7 +240,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -262,7 +262,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -286,7 +286,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -308,7 +308,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act
@@ -318,7 +318,7 @@ public class BacklogHealthTests : BunitTestContext
         cut.WaitForAssertion(() =>
         {
             _mockMetricsClient.Verify(
-                x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<int?>()),
+                x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string>(), It.IsAny<int?>()),
                 Times.Once);
         }, timeout: TimeSpan.FromSeconds(5));
     }
@@ -329,7 +329,7 @@ public class BacklogHealthTests : BunitTestContext
         // Arrange
         var healthData = CreateMultiIterationHealthData();
 
-        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetMultiIterationBacklogHealthAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync(healthData);
 
         // Act

@@ -50,7 +50,7 @@ public class VelocityDashboardTests : BunitTestContext
     public void VelocityDashboard_RendersCorrectly_WithEmptyData()
     {
         // Arrange
-        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .Returns(Task.FromResult<VelocityTrendDto>(null!));
 
         // Act
@@ -71,7 +71,7 @@ public class VelocityDashboardTests : BunitTestContext
         // Arrange
         var velocityData = CreateVelocityTrendData();
 
-        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .ReturnsAsync(velocityData);
 
         // Act
@@ -91,7 +91,7 @@ public class VelocityDashboardTests : BunitTestContext
         // Arrange
         var velocityData = CreateVelocityTrendData();
 
-        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .ReturnsAsync(velocityData);
 
         // Act
@@ -113,7 +113,7 @@ public class VelocityDashboardTests : BunitTestContext
         // Arrange
         var velocityData = CreateVelocityTrendData();
 
-        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .ReturnsAsync(velocityData);
 
         // Act
@@ -134,7 +134,7 @@ public class VelocityDashboardTests : BunitTestContext
         // Arrange
         var velocityData = CreateVelocityTrendData();
 
-        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .ReturnsAsync(velocityData);
 
         // Act
@@ -157,7 +157,7 @@ public class VelocityDashboardTests : BunitTestContext
         // Arrange
         var velocityData = CreateVelocityTrendData();
 
-        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .ReturnsAsync(velocityData);
 
         // Act
@@ -176,7 +176,7 @@ public class VelocityDashboardTests : BunitTestContext
         // Arrange
         var velocityData = CreateVelocityTrendData();
 
-        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .ReturnsAsync(velocityData);
 
         // Act
@@ -186,7 +186,7 @@ public class VelocityDashboardTests : BunitTestContext
         cut.WaitForAssertion(() =>
         {
             _mockMetricsClient.Verify(
-                x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()),
+                x => x.GetVelocityTrendAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string?>(), It.IsAny<int?>()),
                 Times.Once);
         }, timeout: TimeSpan.FromSeconds(5));
     }
@@ -197,7 +197,7 @@ public class VelocityDashboardTests : BunitTestContext
         // Arrange
         var velocityData = CreateVelocityTrendData();
 
-        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .ReturnsAsync(velocityData);
 
         // Act
@@ -216,7 +216,7 @@ public class VelocityDashboardTests : BunitTestContext
         // Arrange
         var velocityData = CreateVelocityTrendData();
 
-        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .ReturnsAsync(velocityData);
 
         // Act
@@ -235,7 +235,7 @@ public class VelocityDashboardTests : BunitTestContext
         // Arrange
         var velocityData = CreateVelocityTrendData();
 
-        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .ReturnsAsync(velocityData);
 
         // Act
@@ -254,7 +254,7 @@ public class VelocityDashboardTests : BunitTestContext
         // Arrange
         var velocityData = CreateVelocityTrendData();
 
-        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<string>(), It.IsAny<int?>()))
+        _mockMetricsClient.Setup(x => x.GetVelocityTrendAsync(It.IsAny<IEnumerable<int>?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .ReturnsAsync(velocityData);
 
         // Act

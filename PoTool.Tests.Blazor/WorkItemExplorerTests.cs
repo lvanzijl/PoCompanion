@@ -24,6 +24,7 @@ public class WorkItemExplorerTests : BunitTestContext
     private Mock<IFilteringClient> _mockFilteringClient = null!;
     private Mock<ISettingsClient> _mockSettingsClient = null!;
     private Mock<IProfilesClient> _mockProfilesClient = null!;
+    private Mock<IProductsClient> _mockProductsClient = null!;
     private Mock<IClient> _mockApiClient = null!;
     private Mock<ISecureStorageService> _mockSecureStorage = null!;
     private Mock<Core.Contracts.IClipboardService> _mockClipboardService = null!;
@@ -47,6 +48,7 @@ public class WorkItemExplorerTests : BunitTestContext
         _mockFilteringClient = new Mock<IFilteringClient>();
         _mockSettingsClient = new Mock<ISettingsClient>();
         _mockProfilesClient = new Mock<IProfilesClient>();
+        _mockProductsClient = new Mock<IProductsClient>();
         _mockApiClient = new Mock<IClient>();
         _mockSecureStorage = new Mock<ISecureStorageService>();
         _mockClipboardService = new Mock<Core.Contracts.IClipboardService>();
@@ -85,6 +87,7 @@ public class WorkItemExplorerTests : BunitTestContext
         Services.AddSingleton(_mockWorkItemsClient.Object);
         Services.AddSingleton(_mockSettingsClient.Object);
         Services.AddSingleton(_mockProfilesClient.Object);
+        Services.AddSingleton(_mockProductsClient.Object);
         Services.AddSingleton(_mockSyncHubService.Object);
         Services.AddSingleton(_mockTreeBuilderService.Object);
         Services.AddSingleton(_mockFilteringClient.Object);
@@ -108,6 +111,7 @@ public class WorkItemExplorerTests : BunitTestContext
         Services.AddSingleton<WorkItemFilteringService>();
         Services.AddSingleton<SettingsService>();
         Services.AddSingleton<ProfileService>();
+        Services.AddSingleton<ProductService>();
         Services.AddSingleton<TfsConfigService>();
         Services.AddSingleton<ErrorMessageService>();
         Services.AddSingleton<ModeIsolatedStateService>();
