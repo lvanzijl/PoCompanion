@@ -63,7 +63,39 @@ public class TeamEntity
     public DateTimeOffset LastModified { get; set; } = DateTimeOffset.UtcNow;
 
     /// <summary>
+    /// TFS/Azure DevOps project name that contains this team.
+    /// Nullable - required only when linking to a real TFS team for sprint sync.
+    /// </summary>
+    [MaxLength(256)]
+    public string? ProjectName { get; set; }
+
+    /// <summary>
+    /// TFS Team ID (GUID string) for stable reference.
+    /// Nullable - required only when linking to a real TFS team for sprint sync.
+    /// </summary>
+    [MaxLength(100)]
+    public string? TfsTeamId { get; set; }
+
+    /// <summary>
+    /// TFS Team Name for human readability.
+    /// Nullable - required only when linking to a real TFS team for sprint sync.
+    /// </summary>
+    [MaxLength(200)]
+    public string? TfsTeamName { get; set; }
+
+    /// <summary>
+    /// Timestamp when sprints (iterations) were last synced for this team.
+    /// Nullable - null if never synced. Used for TTL-based incremental sprint refresh.
+    /// </summary>
+    public DateTimeOffset? LastSyncedIterationsUtc { get; set; }
+
+    /// <summary>
     /// Navigation property to linked products (many-to-many).
     /// </summary>
     public virtual ICollection<ProductTeamLinkEntity> ProductTeamLinks { get; set; } = new List<ProductTeamLinkEntity>();
+
+    /// <summary>
+    /// Navigation property to sprints (iterations) for this team.
+    /// </summary>
+    public virtual ICollection<SprintEntity> Sprints { get; set; } = new List<SprintEntity>();
 }

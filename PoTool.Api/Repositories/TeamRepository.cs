@@ -168,7 +168,11 @@ public class TeamRepository : ITeamRepository
             entity.DefaultPictureId,
             entity.CustomPicturePath,
             entity.CreatedAt,
-            entity.LastModified
+            entity.LastModified,
+            entity.ProjectName,
+            entity.TfsTeamId,
+            entity.TfsTeamName,
+            entity.LastSyncedIterationsUtc
         );
     }
 }

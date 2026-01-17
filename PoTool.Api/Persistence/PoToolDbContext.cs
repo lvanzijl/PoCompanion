@@ -96,6 +96,11 @@ public class PoToolDbContext : DbContext
     public DbSet<TeamEntity> Teams => Set<TeamEntity>();
 
     /// <summary>
+    /// Sprints (iterations) for teams.
+    /// </summary>
+    public DbSet<SprintEntity> Sprints => Set<SprintEntity>();
+
+    /// <summary>
     /// Product-Team many-to-many links.
     /// </summary>
     public DbSet<ProductTeamLinkEntity> ProductTeamLinks => Set<ProductTeamLinkEntity>();
@@ -244,6 +249,26 @@ public class PoToolDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
             entity.Property(e => e.TeamAreaPath).HasMaxLength(500).IsRequired();
             entity.Property(e => e.CustomPicturePath).HasMaxLength(512);
+            entity.Property(e => e.ProjectName).HasMaxLength(256);
+            entity.Property(e => e.TfsTeamId).HasMaxLength(100);
+            entity.Property(e => e.TfsTeamName).HasMaxLength(200);
+        });
+
+        // Sprint entity
+        modelBuilder.Entity<SprintEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.TeamId, e.Path })
+                .IsUnique();
+
+            entity.Property(e => e.TfsIterationId).HasMaxLength(100);
+            entity.Property(e => e.Path).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.TimeFrame).HasMaxLength(50);
+
+            entity.HasOne(e => e.Team)
+                .WithMany(t => t.Sprints)
+                .HasForeignKey(e => e.TeamId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Product-Team many-to-many link
