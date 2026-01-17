@@ -115,6 +115,12 @@ public static class ApiServiceCollectionExtensions
         // Register Classification service
         services.AddScoped<IWorkItemClassificationService, WorkItemClassificationService>();
 
+        // Register Work Item Read Providers
+        // These provide mode-aware read access to work items (Live vs Cached)
+        services.AddScoped<CachedWorkItemReadProvider>();
+        services.AddScoped<LiveWorkItemReadProvider>();
+        services.AddScoped<WorkItemReadProviderFactory>();
+
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();
 
