@@ -2,6 +2,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Handlers.Metrics;
+using PoTool.Api.Services;
+using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
@@ -17,7 +19,8 @@ namespace PoTool.Tests.Unit.Handlers;
 [TestClass]
 public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
 {
-    private Mock<IWorkItemRepository> _mockRepository = null!;
+    private Mock<IWorkItemReadProvider> _mockProvider = null!;
+    private Mock<WorkItemReadProviderFactory> _mockFactory = null!;
     private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<IWorkItemValidator> _mockValidator = null!;
     private Mock<ILogger<GetMultiIterationBacklogHealthQueryHandler>> _mockLogger = null!;
@@ -26,12 +29,18 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
     [TestInitialize]
     public void Setup()
     {
-        _mockRepository = new Mock<IWorkItemRepository>();
+        _mockProvider = new Mock<IWorkItemReadProvider>();
+        var mockModeProvider = new Mock<IDataSourceModeProvider>();
+        var mockServiceProvider = new Mock<IServiceProvider>();
+        
+        _mockFactory = new Mock<WorkItemReadProviderFactory>(mockModeProvider.Object, mockServiceProvider.Object);
+        _mockFactory.Setup(f => f.Create()).Returns(_mockProvider.Object);
+        
         _mockProductRepository = new Mock<IProductRepository>();
         _mockValidator = new Mock<IWorkItemValidator>();
         _mockLogger = new Mock<ILogger<GetMultiIterationBacklogHealthQueryHandler>>();
         _handler = new GetMultiIterationBacklogHealthQueryHandler(
-            _mockRepository.Object,
+            _mockFactory.Object,
             _mockProductRepository.Object,
             _mockValidator.Object,
             _mockLogger.Object);
@@ -61,7 +70,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
             .ReturnsAsync(product1);
         _mockProductRepository.Setup(r => r.GetProductByIdAsync(2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product2);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
@@ -107,7 +116,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
             .ReturnsAsync(product1);
         _mockProductRepository.Setup(r => r.GetProductByIdAsync(2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product2);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
@@ -144,7 +153,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
 
         _mockProductRepository.Setup(r => r.GetProductByIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
@@ -180,7 +189,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
             .ReturnsAsync(product1);
         _mockProductRepository.Setup(r => r.GetProductByIdAsync(999, It.IsAny<CancellationToken>()))
             .ReturnsAsync((ProductDto?)null); // Product 999 doesn't exist
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());

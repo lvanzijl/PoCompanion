@@ -2,6 +2,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Handlers.Metrics;
+using PoTool.Api.Services;
+using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
@@ -14,7 +16,8 @@ namespace PoTool.Tests.Unit.Handlers;
 [TestClass]
 public class GetBacklogHealthQueryHandlerTests
 {
-    private Mock<IWorkItemRepository> _mockRepository = null!;
+    private Mock<IWorkItemReadProvider> _mockProvider = null!;
+    private Mock<WorkItemReadProviderFactory> _mockFactory = null!;
     private Mock<IWorkItemValidator> _mockValidator = null!;
     private Mock<ILogger<GetBacklogHealthQueryHandler>> _mockLogger = null!;
     private GetBacklogHealthQueryHandler _handler = null!;
@@ -22,11 +25,17 @@ public class GetBacklogHealthQueryHandlerTests
     [TestInitialize]
     public void Setup()
     {
-        _mockRepository = new Mock<IWorkItemRepository>();
+        _mockProvider = new Mock<IWorkItemReadProvider>();
+        var mockModeProvider = new Mock<IDataSourceModeProvider>();
+        var mockServiceProvider = new Mock<IServiceProvider>();
+        
+        _mockFactory = new Mock<WorkItemReadProviderFactory>(mockModeProvider.Object, mockServiceProvider.Object);
+        _mockFactory.Setup(f => f.Create()).Returns(_mockProvider.Object);
+        
         _mockValidator = new Mock<IWorkItemValidator>();
         _mockLogger = new Mock<ILogger<GetBacklogHealthQueryHandler>>();
         _handler = new GetBacklogHealthQueryHandler(
-            _mockRepository.Object,
+            _mockFactory.Object,
             _mockValidator.Object,
             _mockLogger.Object);
     }
@@ -35,7 +44,7 @@ public class GetBacklogHealthQueryHandlerTests
     public async Task Handle_WithNoWorkItems_ReturnsNull()
     {
         // Arrange
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto>());
         var query = new GetBacklogHealthQuery("Sprint 1");
 
@@ -58,7 +67,7 @@ public class GetBacklogHealthQueryHandlerTests
             CreateWorkItem(4, "Task", "Done", "Sprint 1", 3)
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
@@ -88,7 +97,7 @@ public class GetBacklogHealthQueryHandlerTests
             CreateWorkItem(3, "Bug", "In Progress", "Sprint 1", 3)
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
@@ -128,7 +137,7 @@ public class GetBacklogHealthQueryHandlerTests
             }
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(validationResults);
@@ -167,7 +176,7 @@ public class GetBacklogHealthQueryHandlerTests
             }
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(validationResults);
@@ -193,7 +202,7 @@ public class GetBacklogHealthQueryHandlerTests
             CreateWorkItem(3, "Bug", "New", "Sprint 1", 3)
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
@@ -219,7 +228,7 @@ public class GetBacklogHealthQueryHandlerTests
             CreateWorkItem(2, "PBI", "Done", "Sprint 1", 8)
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
@@ -243,7 +252,7 @@ public class GetBacklogHealthQueryHandlerTests
             CreateWorkItem(1, "PBI", "Done", "Project\\Team A\\2024\\Sprint 5", 5)
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
@@ -270,7 +279,7 @@ public class GetBacklogHealthQueryHandlerTests
             CreateWorkItem(3, "Bug", "New", "Sprint 1", null)
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
