@@ -242,10 +242,15 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
             var entities = await _context.PullRequestComments
                 .AsNoTracking()
                 .Where(c => c.PullRequestId == pullRequestId)
-                .OrderBy(c => c.CreatedDate.Ticks)
                 .ToListAsync(cancellationToken);
+            
+            // Sort in memory (SQLite doesn't support DateTimeOffset in ORDER BY)
+            var orderedEntities = entities
+                .OrderBy(c => c.CreatedDate)
+                .ThenBy(c => c.InternalId)
+                .ToList();
 
-            return entities.Select(MapToCommentDto);
+            return orderedEntities.Select(MapToCommentDto);
         }
         finally
         {
