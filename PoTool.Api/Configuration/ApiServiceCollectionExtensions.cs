@@ -127,6 +127,12 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<LivePullRequestReadProvider>();
         services.AddScoped<PullRequestReadProviderFactory>();
 
+        // Register Pipeline Read Providers
+        // These provide mode-aware read access to pipelines (Live vs Cached)
+        services.AddScoped<CachedPipelineReadProvider>();
+        services.AddScoped<LivePipelineReadProvider>();
+        services.AddScoped<PipelineReadProviderFactory>();
+
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();
 

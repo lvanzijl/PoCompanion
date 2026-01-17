@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Pipelines.Queries;
 using PoTool.Shared.Pipelines;
@@ -7,18 +8,19 @@ namespace PoTool.Api.Handlers.Pipelines;
 
 /// <summary>
 /// Handler for GetPipelineDefinitionsQuery.
-/// Retrieves pipeline definitions from the database with optional filtering.
+/// Retrieves pipeline definitions from the configured data source with optional filtering.
+/// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetPipelineDefinitionsQueryHandler : IQueryHandler<GetPipelineDefinitionsQuery, IEnumerable<PipelineDefinitionDto>>
 {
-    private readonly IPipelineRepository _repository;
+    private readonly PipelineReadProviderFactory _providerFactory;
     private readonly ILogger<GetPipelineDefinitionsQueryHandler> _logger;
 
     public GetPipelineDefinitionsQueryHandler(
-        IPipelineRepository repository,
+        PipelineReadProviderFactory providerFactory,
         ILogger<GetPipelineDefinitionsQueryHandler> logger)
     {
-        _repository = repository;
+        _providerFactory = providerFactory;
         _logger = logger;
     }
 
@@ -30,19 +32,20 @@ public sealed class GetPipelineDefinitionsQueryHandler : IQueryHandler<GetPipeli
             "Retrieving pipeline definitions (ProductId={ProductId}, RepositoryId={RepositoryId})",
             query.ProductId, query.RepositoryId);
 
+        var provider = _providerFactory.Create();
         IEnumerable<PipelineDefinitionDto> definitions;
 
         if (query.ProductId.HasValue)
         {
-            definitions = await _repository.GetDefinitionsByProductIdAsync(query.ProductId.Value, cancellationToken);
+            definitions = await provider.GetDefinitionsByProductIdAsync(query.ProductId.Value, cancellationToken);
         }
         else if (query.RepositoryId.HasValue)
         {
-            definitions = await _repository.GetDefinitionsByRepositoryIdAsync(query.RepositoryId.Value, cancellationToken);
+            definitions = await provider.GetDefinitionsByRepositoryIdAsync(query.RepositoryId.Value, cancellationToken);
         }
         else
         {
-            definitions = await _repository.GetAllDefinitionsAsync(cancellationToken);
+            definitions = await provider.GetAllDefinitionsAsync(cancellationToken);
         }
 
         var definitionsList = definitions.ToList();
