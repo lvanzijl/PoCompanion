@@ -31,16 +31,6 @@ public interface IPipelineRepository
     Task<IEnumerable<PipelineRunDto>> GetAllRunsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Stores pipeline data from sync operation.
-    /// </summary>
-    Task SaveAsync(PipelineSyncResult syncResult, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets the timestamp of the last sync, or null if never synced.
-    /// </summary>
-    Task<DateTimeOffset?> GetLastSyncTimeAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Clears all cached pipeline data.
     /// </summary>
     Task ClearAllAsync(CancellationToken cancellationToken = default);

@@ -149,7 +149,6 @@ public class MockTfsClient : ITfsClient
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsWithDetailedProgressAsync(
         int[] rootWorkItemIds,
         DateTimeOffset? since = null,
-        Action<SyncProgressDto>? detailedProgressCallback = null,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Mock TFS client: GetWorkItemsByRootIdsWithDetailedProgressAsync called for rootIds=[{RootIds}], since={Since}",
@@ -182,29 +181,12 @@ public class MockTfsClient : ITfsClient
         }
 
         // Report progress with detailed structure
-        detailedProgressCallback?.Invoke(new SyncProgressDto
-        {
-            Status = "InProgress",
-            Message = "Finding root work items...",
-            Phase = "Discovery",
-            BatchIndex = 1,
-            TotalBatches = 1
-        });
 
         foreach (var rootId in rootWorkItemIds)
         {
             CollectHierarchy(rootId);
         }
 
-        detailedProgressCallback?.Invoke(new SyncProgressDto
-        {
-            Status = "InProgress",
-            Message = $"Processing {results.Count} work items...",
-            Phase = "Processing",
-            BatchIndex = 1,
-            TotalBatches = 1,
-            IdCount = results.Count
-        });
 
         // Filter by date if specified
         if (since.HasValue)
@@ -212,16 +194,6 @@ public class MockTfsClient : ITfsClient
             results = results.Where(wi => wi.RetrievedAt >= since.Value).ToList();
         }
 
-        detailedProgressCallback?.Invoke(new SyncProgressDto
-        {
-            Status = "InProgress",
-            Message = "Complete",
-            Phase = "Complete",
-            BatchIndex = 1,
-            TotalBatches = 1,
-            ProcessedCount = results.Count,
-            TotalCount = results.Count
-        });
 
         _logger.LogInformation("Mock TFS client: Returning {Count} work items for root IDs [{RootIds}]",
             results.Count, string.Join(", ", rootWorkItemIds));
@@ -514,14 +486,6 @@ public class MockTfsClient : ITfsClient
     /// <summary>
     /// Returns all PR data in a single call. Delegates to BattleshipMockDataFacade.
     /// </summary>
-    public Task<PullRequestSyncResult> GetPullRequestsWithDetailsAsync(
-        string? repositoryName = null,
-        DateTimeOffset? fromDate = null,
-        DateTimeOffset? toDate = null,
-        CancellationToken cancellationToken = default)
-    {
-        return _mockDataFacade.GetPullRequestsWithDetailsAsync(repositoryName, fromDate, toDate, cancellationToken);
-    }
 
     /// <summary>
     /// Updates effort for multiple work items in a single batch call.
@@ -599,12 +563,6 @@ public class MockTfsClient : ITfsClient
         return _mockDataFacade.GetPipelineRunsAsync(pipelineId, top, cancellationToken);
     }
 
-    public Task<PipelineSyncResult> GetPipelinesWithRunsAsync(
-        int runsPerPipeline = 50,
-        CancellationToken cancellationToken = default)
-    {
-        return _mockDataFacade.GetPipelinesWithRunsAsync(runsPerPipeline, cancellationToken);
-    }
 
     public Task<string?> GetRepositoryIdByNameAsync(
         string repositoryName,

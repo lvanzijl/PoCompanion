@@ -7,7 +7,6 @@
 @using PoTool.Client.Components.Common
 @using MudBlazor
 @inject WorkItemService WorkItemService
-@inject IWorkItemSyncHubService SyncHubService
 @inject ITreeBuilderService TreeBuilderService
 @inject WorkItemFilteringService FilteringService
 @inject WorkItemSelectionService SelectionService
@@ -140,7 +139,6 @@
         // Check for filter query parameter from Product Home navigation
         ApplyQueryParameterFilters();
         
-        await InitializeSignalRAsync();
         await LoadExpandedStateAsync();
         await LoadWorkItems();
     }
@@ -186,18 +184,8 @@
 
     private async Task InitializeSignalRAsync()
     {
-        SyncHubService.OnSyncStatusChanged += HandleSyncStatus;
-
-        try
-        {
-            var apiBase = NavigationManager.BaseUri.TrimEnd('/');
-            var hubUrl = apiBase + "/hubs/workitems";
-            await SyncHubService.StartAsync(hubUrl);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[WorkItemExplorer] Error connecting to SignalR hub: {ex.Message}");
-        }
+        // SignalR hub removed in Live-only mode
+        await Task.CompletedTask;
     }
 
     private void HandleSyncStatus(string status, string message)
@@ -324,21 +312,8 @@
         if (missingRootIds.Any())
         {
             Console.WriteLine($"[WorkItemExplorer] Fetching {missingRootIds.Count} missing product root work items...");
-            // Trigger a sync to fetch missing root work items
-            // The sync service will fetch the root items and their hierarchies
-            try
-            {
-                if (SyncHubService.IsConnected)
-                {
-                    await SyncHubService.RequestSyncAsync("");
-                    await Task.Delay(2000); // Wait for sync to complete
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[WorkItemExplorer] Error syncing missing root work items: {ex.Message}");
-                Snackbar.Add($"Warning: Could not fetch missing product root work items. Some products may not display.", Severity.Warning);
-            }
+            // Sync removed in Live-only mode - work items are fetched directly from TFS
+            // Missing root work items will be shown as orphaned in the UI
         }
     }
 
@@ -462,8 +437,8 @@
 
     public async ValueTask DisposeAsync()
     {
-        SyncHubService.OnSyncStatusChanged -= HandleSyncStatus;
-        await SyncHubService.DisposeAsync();
+        // No cleanup needed in Live-only mode
+        await Task.CompletedTask;
     }
 
 

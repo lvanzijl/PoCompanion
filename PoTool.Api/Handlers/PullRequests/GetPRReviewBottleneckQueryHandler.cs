@@ -14,14 +14,14 @@ namespace PoTool.Api.Handlers.PullRequests;
 public sealed class GetPRReviewBottleneckQueryHandler
     : IQueryHandler<GetPRReviewBottleneckQuery, PRReviewBottleneckDto>
 {
-    private readonly PullRequestReadProviderFactory _providerFactory;
+    private readonly IPullRequestReadProvider _pullRequestReadProvider;
     private readonly ILogger<GetPRReviewBottleneckQueryHandler> _logger;
 
     public GetPRReviewBottleneckQueryHandler(
-        PullRequestReadProviderFactory providerFactory,
+        IPullRequestReadProvider pullRequestReadProvider,
         ILogger<GetPRReviewBottleneckQueryHandler> logger)
     {
-        _providerFactory = providerFactory;
+        _pullRequestReadProvider = pullRequestReadProvider;
         _logger = logger;
     }
 
@@ -34,8 +34,8 @@ public sealed class GetPRReviewBottleneckQueryHandler
             query.MaxPRsToAnalyze,
             query.DaysBack);
 
-        var provider = _providerFactory.Create();
-        var allPRs = await provider.GetAllAsync(cancellationToken);
+        // Live-only mode: use injected provider directly
+        var allPRs = await _pullRequestReadProvider.GetAllAsync(cancellationToken);
 
         // Filter to recent PRs
         var cutoffDate = DateTimeOffset.UtcNow.AddDays(-query.DaysBack);

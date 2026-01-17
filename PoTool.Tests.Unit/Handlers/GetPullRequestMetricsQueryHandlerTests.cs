@@ -16,7 +16,6 @@ namespace PoTool.Tests.Unit.Handlers;
 public class GetPullRequestMetricsQueryHandlerTests
 {
     private Mock<IPullRequestReadProvider> _mockProvider = null!;
-    private Mock<PullRequestReadProviderFactory> _mockFactory = null!;
     private Mock<ILogger<GetPullRequestMetricsQueryHandler>> _mockLogger = null!;
     private GetPullRequestMetricsQueryHandler _handler = null!;
 
@@ -24,15 +23,9 @@ public class GetPullRequestMetricsQueryHandlerTests
     public void Setup()
     {
         _mockProvider = new Mock<IPullRequestReadProvider>();
-        var mockModeProvider = new Mock<IDataSourceModeProvider>();
-        var mockServiceProvider = new Mock<IServiceProvider>();
-        
-        _mockFactory = new Mock<PullRequestReadProviderFactory>(mockModeProvider.Object, mockServiceProvider.Object);
-        _mockFactory.Setup(f => f.Create()).Returns(_mockProvider.Object);
-        
         _mockLogger = new Mock<ILogger<GetPullRequestMetricsQueryHandler>>();
         _handler = new GetPullRequestMetricsQueryHandler(
-            _mockFactory.Object,
+            _mockProvider.Object,
             _mockLogger.Object);
     }
 

@@ -799,56 +799,6 @@ public class BattleshipMockDataFacade : ITfsClient
     /// GetPullRequestsAsync + GetPullRequestIterationsAsync + GetPullRequestCommentsAsync + GetPullRequestFileChangesAsync
     /// for each PR. Reduces N+1 to O(1) calls.
     /// </summary>
-    public Task<PullRequestSyncResult> GetPullRequestsWithDetailsAsync(
-        string? repositoryName = null,
-        DateTimeOffset? fromDate = null,
-        DateTimeOffset? toDate = null,
-        CancellationToken cancellationToken = default)
-    {
-        // Single API call for all PR data - no N+1 pattern
-        IncrementAndGetApiCallCount();
-        _logger.LogInformation("Mock TFS client: GetPullRequestsWithDetailsAsync called (efficient bulk method)");
-
-        var allPullRequests = GetMockPullRequests();
-        var filtered = allPullRequests.AsEnumerable();
-
-        if (!string.IsNullOrEmpty(repositoryName))
-        {
-            filtered = filtered.Where(pr => pr.RepositoryName.Equals(repositoryName, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (fromDate.HasValue)
-        {
-            filtered = filtered.Where(pr => pr.CreatedDate >= fromDate.Value);
-        }
-
-        if (toDate.HasValue)
-        {
-            filtered = filtered.Where(pr => pr.CreatedDate <= toDate.Value);
-        }
-
-        var prs = filtered.ToList();
-        var prIds = prs.Select(p => p.Id).ToHashSet();
-
-        // Get all related data for the filtered PRs
-        var iterations = GetMockIterations().Where(i => prIds.Contains(i.PullRequestId)).ToList();
-        var comments = GetMockComments().Where(c => prIds.Contains(c.PullRequestId)).ToList();
-        var fileChanges = GetMockFileChanges().Where(fc => prIds.Contains(fc.PullRequestId)).ToList();
-
-        var result = new PullRequestSyncResult(
-            PullRequests: prs,
-            Iterations: iterations,
-            Comments: comments,
-            FileChanges: fileChanges,
-            TfsCallCount: 1 // Only 1 conceptual API call instead of 1 + 3*N
-        );
-
-        _logger.LogInformation(
-            "Mock TFS client: Bulk fetched {PrCount} PRs, {IterCount} iterations, {CommentCount} comments, {FileCount} file changes in 1 call",
-            prs.Count, iterations.Count, comments.Count, fileChanges.Count);
-
-        return Task.FromResult(result);
-    }
 
     /// <summary>
     /// Updates effort for multiple work items in a single batch call.
@@ -1053,37 +1003,6 @@ public class BattleshipMockDataFacade : ITfsClient
         return Task.FromResult<IEnumerable<PipelineRunDto>>(result);
     }
 
-    public Task<PipelineSyncResult> GetPipelinesWithRunsAsync(
-        int runsPerPipeline = 50,
-        CancellationToken cancellationToken = default)
-    {
-        IncrementAndGetApiCallCount();
-        _logger.LogInformation("Mock TFS client: GetPipelinesWithRunsAsync called (efficient bulk method)");
-
-        var pipelines = GetMockPipelines();
-        var allRuns = GetMockPipelineRuns();
-
-        // Limit runs per pipeline
-        var pipelineIds = pipelines.Select(p => p.Id).ToHashSet();
-        var runs = allRuns
-            .Where(r => pipelineIds.Contains(r.PipelineId))
-            .GroupBy(r => r.PipelineId)
-            .SelectMany(g => g.Take(runsPerPipeline))
-            .ToList();
-
-        var result = new PipelineSyncResult(
-            Pipelines: pipelines,
-            Runs: runs,
-            TfsCallCount: 1,
-            SyncedAt: DateTimeOffset.UtcNow
-        );
-
-        _logger.LogInformation(
-            "Mock TFS client: Bulk fetched {PipelineCount} pipelines, {RunCount} runs in 1 call",
-            pipelines.Count, runs.Count);
-
-        return Task.FromResult(result);
-    }
 
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsAsync(
         int[] rootWorkItemIds,
@@ -1148,7 +1067,7 @@ public class BattleshipMockDataFacade : ITfsClient
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsWithDetailedProgressAsync(
         int[] rootWorkItemIds,
         DateTimeOffset? since = null,
-        Action<SyncProgressDto>? detailedProgressCallback = null,
+        
         CancellationToken cancellationToken = default)
     {
         IncrementAndGetApiCallCount();
@@ -1182,29 +1101,12 @@ public class BattleshipMockDataFacade : ITfsClient
         }
 
         // Report detailed progress
-        detailedProgressCallback?.Invoke(new SyncProgressDto
-        {
-            Status = "InProgress",
-            Message = "Finding root work items...",
-            Phase = "Discovery",
-            BatchIndex = 1,
-            TotalBatches = 1
-        });
 
         foreach (var rootId in rootWorkItemIds)
         {
             CollectHierarchy(rootId);
         }
 
-        detailedProgressCallback?.Invoke(new SyncProgressDto
-        {
-            Status = "InProgress",
-            Message = $"Processing {results.Count} work items...",
-            Phase = "Processing",
-            BatchIndex = 1,
-            TotalBatches = 1,
-            IdCount = results.Count
-        });
 
         // Filter by date if specified
         if (since.HasValue)
@@ -1212,16 +1114,6 @@ public class BattleshipMockDataFacade : ITfsClient
             results = results.Where(wi => wi.RetrievedAt >= since.Value).ToList();
         }
 
-        detailedProgressCallback?.Invoke(new SyncProgressDto
-        {
-            Status = "InProgress",
-            Message = "Complete",
-            Phase = "Complete",
-            BatchIndex = 1,
-            TotalBatches = 1,
-            ProcessedCount = results.Count,
-            TotalCount = results.Count
-        });
 
         _logger.LogInformation("Mock TFS client: Returning {Count} work items for root IDs [{RootIds}]",
             results.Count, string.Join(", ", rootWorkItemIds));

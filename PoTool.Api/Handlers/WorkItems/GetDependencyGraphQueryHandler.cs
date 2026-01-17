@@ -15,14 +15,14 @@ namespace PoTool.Api.Handlers.WorkItems;
 public sealed class GetDependencyGraphQueryHandler
     : IQueryHandler<GetDependencyGraphQuery, DependencyGraphDto>
 {
-    private readonly WorkItemReadProviderFactory _providerFactory;
+    private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly ILogger<GetDependencyGraphQueryHandler> _logger;
 
     public GetDependencyGraphQueryHandler(
-        WorkItemReadProviderFactory providerFactory,
+        IWorkItemReadProvider workItemReadProvider,
         ILogger<GetDependencyGraphQueryHandler> logger)
     {
-        _providerFactory = providerFactory;
+        _workItemReadProvider = workItemReadProvider;
         _logger = logger;
     }
 
@@ -32,8 +32,8 @@ public sealed class GetDependencyGraphQueryHandler
     {
         _logger.LogDebug("Handling GetDependencyGraphQuery");
 
-        var provider = _providerFactory.Create();
-        var allWorkItems = await provider.GetAllAsync(cancellationToken);
+        // Live-only mode: use injected provider directly
+        var allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
         var workItemsList = allWorkItems.ToList();
 
         // Filter work items if specified

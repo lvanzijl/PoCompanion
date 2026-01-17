@@ -17,7 +17,6 @@ namespace PoTool.Tests.Unit.Handlers;
 public class GetBacklogHealthQueryHandlerTests
 {
     private Mock<IWorkItemReadProvider> _mockProvider = null!;
-    private Mock<WorkItemReadProviderFactory> _mockFactory = null!;
     private Mock<IWorkItemValidator> _mockValidator = null!;
     private Mock<ILogger<GetBacklogHealthQueryHandler>> _mockLogger = null!;
     private GetBacklogHealthQueryHandler _handler = null!;
@@ -26,16 +25,10 @@ public class GetBacklogHealthQueryHandlerTests
     public void Setup()
     {
         _mockProvider = new Mock<IWorkItemReadProvider>();
-        var mockModeProvider = new Mock<IDataSourceModeProvider>();
-        var mockServiceProvider = new Mock<IServiceProvider>();
-        
-        _mockFactory = new Mock<WorkItemReadProviderFactory>(mockModeProvider.Object, mockServiceProvider.Object);
-        _mockFactory.Setup(f => f.Create()).Returns(_mockProvider.Object);
-        
         _mockValidator = new Mock<IWorkItemValidator>();
         _mockLogger = new Mock<ILogger<GetBacklogHealthQueryHandler>>();
         _handler = new GetBacklogHealthQueryHandler(
-            _mockFactory.Object,
+            _mockProvider.Object,
             _mockValidator.Object,
             _mockLogger.Object);
     }

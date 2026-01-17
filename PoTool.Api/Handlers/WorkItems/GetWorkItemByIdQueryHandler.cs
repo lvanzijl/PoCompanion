@@ -12,14 +12,14 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// </summary>
 public sealed class GetWorkItemByIdQueryHandler : IQueryHandler<GetWorkItemByIdQuery, WorkItemDto?>
 {
-    private readonly WorkItemReadProviderFactory _providerFactory;
+    private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly ILogger<GetWorkItemByIdQueryHandler> _logger;
 
     public GetWorkItemByIdQueryHandler(
-        WorkItemReadProviderFactory providerFactory,
+        IWorkItemReadProvider workItemReadProvider,
         ILogger<GetWorkItemByIdQueryHandler> logger)
     {
-        _providerFactory = providerFactory;
+        _workItemReadProvider = workItemReadProvider;
         _logger = logger;
     }
 
@@ -28,7 +28,7 @@ public sealed class GetWorkItemByIdQueryHandler : IQueryHandler<GetWorkItemByIdQ
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetWorkItemByIdQuery for TfsId={TfsId}", query.TfsId);
-        var provider = _providerFactory.Create();
-        return await provider.GetByTfsIdAsync(query.TfsId, cancellationToken);
+        // Live-only mode: use injected provider directly
+        return await _workItemReadProvider.GetByTfsIdAsync(query.TfsId, cancellationToken);
     }
 }

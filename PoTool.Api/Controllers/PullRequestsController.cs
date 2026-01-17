@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Shared.PullRequests;
-using PoTool.Core.PullRequests.Commands;
 using PoTool.Core.PullRequests.Queries;
 
 namespace PoTool.Api.Controllers;
@@ -193,34 +192,6 @@ public class PullRequestsController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving file changes for pull request ID: {PullRequestId}", id);
             return StatusCode(500, "Error retrieving pull request file changes");
-        }
-    }
-
-    /// <summary>
-    /// Synchronizes pull requests from TFS/Azure DevOps to local cache.
-    /// </summary>
-    /// <param name="productIds">Optional comma-separated list of product IDs to sync. If null, syncs all products.</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    [HttpPost("sync")]
-    public async Task<ActionResult<int>> Sync(
-        [FromQuery] string? productIds = null,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var productIdsList = ParseProductIds(productIds, out var errorMessage);
-            if (errorMessage != null)
-            {
-                return BadRequest(errorMessage);
-            }
-
-            var count = await _mediator.Send(new SyncPullRequestsCommand(productIdsList), cancellationToken);
-            return Ok(count);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error syncing pull requests");
-            return StatusCode(500, "Error syncing pull requests");
         }
     }
 

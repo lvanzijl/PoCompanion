@@ -13,14 +13,14 @@ namespace PoTool.Api.Handlers.Pipelines;
 /// </summary>
 public sealed class GetPipelineDefinitionsQueryHandler : IQueryHandler<GetPipelineDefinitionsQuery, IEnumerable<PipelineDefinitionDto>>
 {
-    private readonly PipelineReadProviderFactory _providerFactory;
+    private readonly IPipelineReadProvider _pipelineReadProvider;
     private readonly ILogger<GetPipelineDefinitionsQueryHandler> _logger;
 
     public GetPipelineDefinitionsQueryHandler(
-        PipelineReadProviderFactory providerFactory,
+        IPipelineReadProvider pipelineReadProvider,
         ILogger<GetPipelineDefinitionsQueryHandler> logger)
     {
-        _providerFactory = providerFactory;
+        _pipelineReadProvider = pipelineReadProvider;
         _logger = logger;
     }
 
@@ -32,20 +32,20 @@ public sealed class GetPipelineDefinitionsQueryHandler : IQueryHandler<GetPipeli
             "Retrieving pipeline definitions (ProductId={ProductId}, RepositoryId={RepositoryId})",
             query.ProductId, query.RepositoryId);
 
-        var provider = _providerFactory.Create();
+        // Live-only mode: use injected provider directly
         IEnumerable<PipelineDefinitionDto> definitions;
 
         if (query.ProductId.HasValue)
         {
-            definitions = await provider.GetDefinitionsByProductIdAsync(query.ProductId.Value, cancellationToken);
+            definitions = await _pipelineReadProvider.GetDefinitionsByProductIdAsync(query.ProductId.Value, cancellationToken);
         }
         else if (query.RepositoryId.HasValue)
         {
-            definitions = await provider.GetDefinitionsByRepositoryIdAsync(query.RepositoryId.Value, cancellationToken);
+            definitions = await _pipelineReadProvider.GetDefinitionsByRepositoryIdAsync(query.RepositoryId.Value, cancellationToken);
         }
         else
         {
-            definitions = await provider.GetAllDefinitionsAsync(cancellationToken);
+            definitions = await _pipelineReadProvider.GetAllDefinitionsAsync(cancellationToken);
         }
 
         var definitionsList = definitions.ToList();

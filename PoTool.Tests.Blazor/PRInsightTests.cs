@@ -136,27 +136,6 @@ public class PRInsightTests : BunitTestContext
     }
 
     [TestMethod]
-    public async Task PRInsight_SyncButton_InvokesService()
-    {
-        // Arrange
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
-            .ReturnsAsync(new List<PullRequestMetricsDto>());
-
-        _mockPullRequestsClient.Setup(x => x.SyncAsync(It.IsAny<string?>()))
-            .ReturnsAsync(5);
-
-        var cut = RenderPRInsightWithMudProvider();
-
-        // Act
-        var syncButton = cut.Find("button.mud-fab");
-        await syncButton.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
-
-        // Assert
-        _mockPullRequestsClient.Verify(x => x.SyncAsync(It.IsAny<string?>()), Times.Once);
-        _mockSnackbar.Verify(x => x.Add(It.IsAny<string>(), Severity.Success, It.IsAny<Action<SnackbarOptions>?>(), It.IsAny<string?>()), Times.Once);
-    }
-
-    [TestMethod]
     public void PRInsight_CalculatesAverageMetrics_Correctly()
     {
         // Arrange

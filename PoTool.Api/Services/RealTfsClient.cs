@@ -1212,25 +1212,13 @@ public class RealTfsClient : ITfsClient
     public async Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsWithDetailedProgressAsync(
         int[] rootWorkItemIds,
         DateTimeOffset? since = null,
-        Action<SyncProgressDto>? detailedProgressCallback = null,
         CancellationToken cancellationToken = default)
     {
-        // For now, wrap the existing method with basic progress translation
-        // In the future, this can be enhanced to emit detailed batch-level progress
+        // Detailed progress callback removed in Live-only mode
         return await GetWorkItemsByRootIdsAsync(
             rootWorkItemIds,
             since,
-            (step, total, label) =>
-            {
-                detailedProgressCallback?.Invoke(new SyncProgressDto
-                {
-                    Status = "InProgress",
-                    Message = label,
-                    MajorStep = step,
-                    MajorStepTotal = total,
-                    MajorStepLabel = label
-                });
-            },
+            null, // No progress callback
             cancellationToken);
     }
 
@@ -3204,128 +3192,6 @@ public class RealTfsClient : ITfsClient
     /// <summary>
     /// Returns all PR data in a single logical call. For real TFS, this still makes
     /// multiple API calls but batches them efficiently rather than per-item.
-    /// Reduces call count from 1 + 3*N + Sum(iterations) to approximately 4 calls.
-    /// </summary>
-    public async Task<PullRequestSyncResult> GetPullRequestsWithDetailsAsync(
-        string? repositoryName = null,
-        DateTimeOffset? fromDate = null,
-        DateTimeOffset? toDate = null,
-        CancellationToken cancellationToken = default)
-    {
-        var startTime = DateTimeOffset.UtcNow;
-        var tfsCallCount = 0;
-
-        _logger.LogInformation("Starting bulk PR fetch with details");
-
-        // Step 1: Get all PRs (1 call per repository, or 1 call if specific repo)
-        var pullRequests = (await GetPullRequestsAsync(repositoryName, fromDate, toDate, cancellationToken)).ToList();
-        tfsCallCount++; // Count as 1 logical call even though it may hit multiple repos
-
-        if (pullRequests.Count == 0)
-        {
-            return new PullRequestSyncResult(
-                PullRequests: pullRequests,
-                Iterations: new List<PullRequestIterationDto>(),
-                Comments: new List<PullRequestCommentDto>(),
-                FileChanges: new List<PullRequestFileChangeDto>(),
-                TfsCallCount: tfsCallCount
-            );
-        }
-
-        // Group PRs by repository for efficient batching
-        var prsByRepo = pullRequests.GroupBy(pr => pr.RepositoryName);
-
-        var allIterations = new List<PullRequestIterationDto>();
-        var allComments = new List<PullRequestCommentDto>();
-        var allFileChanges = new List<PullRequestFileChangeDto>();
-
-        // Step 2: For each PR, fetch iterations and comments with throttling
-        // Azure DevOps doesn't have a true bulk API, but we can parallelize with bounded concurrency
-        var prTasks = new List<Task<(List<PullRequestIterationDto> Iterations, List<PullRequestCommentDto> Comments, int PrId, string Repo)>>();
-
-        foreach (var repoGroup in prsByRepo)
-        {
-            var repo = repoGroup.Key;
-            foreach (var pr in repoGroup)
-            {
-                // Apply read throttling to PR details fetching
-                prTasks.Add(_throttler.ExecuteReadAsync(
-                    () => FetchPrDetailsAsync(pr.Id, repo, cancellationToken),
-                    cancellationToken));
-            }
-        }
-
-        var prResults = await Task.WhenAll(prTasks);
-
-        // Aggregate results and count calls
-        foreach (var prResult in prResults)
-        {
-            Interlocked.Add(ref tfsCallCount, 2); // 1 for iterations, 1 for comments
-            lock (allIterations)
-            {
-                allIterations.AddRange(prResult.Iterations);
-            }
-            lock (allComments)
-            {
-                allComments.AddRange(prResult.Comments);
-            }
-        }
-
-        // Step 3: Fetch file changes for all iterations with throttling
-        var fileChangeTasks = new List<Task<IEnumerable<PullRequestFileChangeDto>>>();
-        foreach (var prResult in prResults)
-        {
-            var repo = prResult.Repo;
-            var prId = prResult.PrId;
-            foreach (var iteration in prResult.Iterations)
-            {
-                // Apply read throttling to file changes fetching
-                fileChangeTasks.Add(_throttler.ExecuteReadAsync(
-                    () => GetPullRequestFileChangesAsync(prId, repo, iteration.IterationNumber, cancellationToken),
-                    cancellationToken));
-            }
-        }
-
-        var fileChangeResults = await Task.WhenAll(fileChangeTasks);
-        tfsCallCount += fileChangeResults.Length;
-
-        foreach (var fileChanges in fileChangeResults)
-        {
-            lock (allFileChanges)
-            {
-                allFileChanges.AddRange(fileChanges);
-            }
-        }
-
-        var elapsed = DateTimeOffset.UtcNow - startTime;
-        _logger.LogInformation(
-            "Bulk PR fetch completed: {PrCount} PRs, {IterCount} iterations, {CommentCount} comments, {FileCount} file changes in {ElapsedMs}ms ({CallCount} TFS calls)",
-            pullRequests.Count, allIterations.Count, allComments.Count, allFileChanges.Count,
-            elapsed.TotalMilliseconds, tfsCallCount);
-
-        return new PullRequestSyncResult(
-            PullRequests: pullRequests,
-            Iterations: allIterations,
-            Comments: allComments,
-            FileChanges: allFileChanges,
-            TfsCallCount: tfsCallCount
-        );
-    }
-
-    /// <summary>
-    /// Helper method to fetch PR details (iterations and comments) in parallel.
-    /// </summary>
-    private async Task<(List<PullRequestIterationDto> Iterations, List<PullRequestCommentDto> Comments, int PrId, string Repo)> FetchPrDetailsAsync(
-        int prId, string repo, CancellationToken cancellationToken)
-    {
-        // Fetch iterations and comments concurrently
-        var iterationsTask = GetPullRequestIterationsAsync(prId, repo, cancellationToken);
-        var commentsTask = GetPullRequestCommentsAsync(prId, repo, cancellationToken);
-
-        await Task.WhenAll(iterationsTask, commentsTask);
-
-        return (iterationsTask.Result.ToList(), commentsTask.Result.ToList(), prId, repo);
-    }
 
     /// <summary>
     /// Updates effort for multiple work items in a batch. 
@@ -3893,61 +3759,6 @@ public class RealTfsClient : ITfsClient
         }, cancellationToken);
     }
 
-    public async Task<PipelineSyncResult> GetPipelinesWithRunsAsync(
-        int runsPerPipeline = 50,
-        CancellationToken cancellationToken = default)
-    {
-        var startTime = DateTimeOffset.UtcNow;
-        var tfsCallCount = 0;
-
-        _logger.LogInformation("Starting bulk pipeline fetch with runs");
-
-        // Step 1: Get all pipelines
-        var pipelines = (await GetPipelinesAsync(cancellationToken)).ToList();
-        tfsCallCount++;
-
-        if (pipelines.Count == 0)
-        {
-            return new PipelineSyncResult(
-                Pipelines: pipelines,
-                Runs: new List<PipelineRunDto>(),
-                TfsCallCount: tfsCallCount,
-                SyncedAt: DateTimeOffset.UtcNow
-            );
-        }
-
-        // Step 2: Fetch runs for each pipeline with read throttling
-        var allRuns = new List<PipelineRunDto>();
-        var lockObj = new object();
-
-        var fetchTasks = pipelines.Select(async pipeline =>
-        {
-            // Apply read throttling to pipeline run fetching (GET operations)
-            var runs = await _throttler.ExecuteReadAsync(
-                () => GetPipelineRunsAsync(pipeline.Id, runsPerPipeline, cancellationToken),
-                cancellationToken);
-            Interlocked.Increment(ref tfsCallCount);
-
-            lock (lockObj)
-            {
-                allRuns.AddRange(runs);
-            }
-        });
-
-        await Task.WhenAll(fetchTasks);
-
-        var elapsed = DateTimeOffset.UtcNow - startTime;
-        _logger.LogInformation(
-            "Bulk pipeline fetch completed: {PipelineCount} pipelines, {RunCount} runs in {ElapsedMs}ms ({CallCount} TFS calls)",
-            pipelines.Count, allRuns.Count, elapsed.TotalMilliseconds, tfsCallCount);
-
-        return new PipelineSyncResult(
-            Pipelines: pipelines,
-            Runs: allRuns,
-            TfsCallCount: tfsCallCount,
-            SyncedAt: DateTimeOffset.UtcNow
-        );
-    }
 
     private PipelineRunDto ParseBuildRun(JsonElement run, int pipelineId)
     {

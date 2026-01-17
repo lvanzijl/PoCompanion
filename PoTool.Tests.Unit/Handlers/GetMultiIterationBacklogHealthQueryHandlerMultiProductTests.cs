@@ -20,7 +20,6 @@ namespace PoTool.Tests.Unit.Handlers;
 public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
 {
     private Mock<IWorkItemReadProvider> _mockProvider = null!;
-    private Mock<WorkItemReadProviderFactory> _mockFactory = null!;
     private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<IWorkItemValidator> _mockValidator = null!;
     private Mock<ILogger<GetMultiIterationBacklogHealthQueryHandler>> _mockLogger = null!;
@@ -30,17 +29,11 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
     public void Setup()
     {
         _mockProvider = new Mock<IWorkItemReadProvider>();
-        var mockModeProvider = new Mock<IDataSourceModeProvider>();
-        var mockServiceProvider = new Mock<IServiceProvider>();
-        
-        _mockFactory = new Mock<WorkItemReadProviderFactory>(mockModeProvider.Object, mockServiceProvider.Object);
-        _mockFactory.Setup(f => f.Create()).Returns(_mockProvider.Object);
-        
         _mockProductRepository = new Mock<IProductRepository>();
         _mockValidator = new Mock<IWorkItemValidator>();
         _mockLogger = new Mock<ILogger<GetMultiIterationBacklogHealthQueryHandler>>();
         _handler = new GetMultiIterationBacklogHealthQueryHandler(
-            _mockFactory.Object,
+            _mockProvider.Object,
             _mockProductRepository.Object,
             _mockValidator.Object,
             _mockLogger.Object);

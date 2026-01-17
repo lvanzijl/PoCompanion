@@ -2,7 +2,6 @@ using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Shared.Pipelines;
 using PoTool.Core.Pipelines;
-using PoTool.Core.Pipelines.Commands;
 using PoTool.Core.Pipelines.Queries;
 
 namespace PoTool.Api.Controllers;
@@ -93,30 +92,6 @@ public class PipelinesController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving pipeline metrics");
             return StatusCode(500, "Error retrieving pipeline metrics");
-        }
-    }
-
-    /// <summary>
-    /// Synchronizes pipelines from TFS/Azure DevOps to local cache.
-    /// </summary>
-    [HttpPost("sync")]
-    public async Task<ActionResult<PipelineSyncResult>> Sync(
-        [FromQuery] int runsPerPipeline = 50,
-        [FromQuery] List<int>? productIds = null,
-        [FromQuery] bool syncDefinitions = true,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var result = await _mediator.Send(
-                new SyncPipelinesCommand(runsPerPipeline, productIds, syncDefinitions),
-                cancellationToken);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error syncing pipelines");
-            return StatusCode(500, "Error syncing pipelines");
         }
     }
 

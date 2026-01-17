@@ -17,7 +17,6 @@
 @inject PullRequestMetricsService PrMetricsService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
-@inject IWorkItemSyncHubService SyncHubService
 @inject IPreferencesService PreferencesService
 @inject HttpClient Http
 @implements IDisposable
@@ -136,65 +135,6 @@
                 </MudStack>
                 
                 <MudStack AlignItems="AlignItems.End" Spacing="1">
-                    @* Cache Sync Controls *@
-                    <MudStack Row="true" Spacing="2">
-                        <MudTooltip Text="Downloads only changes since last sync (faster). Use for regular updates.">
-                            <MudButton Variant="Variant.Outlined" 
-                                       Color="Color.Primary" 
-                                       Size="Size.Small"
-                                       Disabled="@_isSyncing"
-                                       StartIcon="@Icons.Material.Filled.SyncAlt"
-                                       OnClick="RequestIncrementalSync">
-                                @if (_isSyncing && _syncType == "incremental")
-                                {
-                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
-                                    <span>Syncing...</span>
-                                }
-                                else
-                                {
-                                    <span>Incremental Sync</span>
-                                }
-                            </MudButton>
-                        </MudTooltip>
-                        <MudTooltip Text="Downloads all work items from Azure DevOps. Use when syncing for the first time or after major changes.">
-                            <MudButton Variant="Variant.Filled" 
-                                       Color="Color.Primary" 
-                                       Size="Size.Small"
-                                       Disabled="@_isSyncing"
-                                       StartIcon="@Icons.Material.Filled.Sync"
-                                       OnClick="RequestFullSync">
-                                @if (_isSyncing && _syncType == "full")
-                                {
-                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
-                                    <span>Syncing...</span>
-                                }
-                                else
-                                {
-                                    <span>Full Sync</span>
-                                }
-                            </MudButton>
-                        </MudTooltip>
-                    </MudStack>
-                    
-                    @if (_lastSyncTime.HasValue)
-                    {
-                        <MudChip T="string" 
-                                 Icon="@Icons.Material.Filled.Sync" 
-                                 Size="Size.Small"
-                                 Color="Color.Default">
-                            Last sync: @_lastSyncTime.Value.ToLocalTime().ToString("g")
-                        </MudChip>
-                    }
-                    else
-                    {
-                        <MudChip T="string" 
-                                 Icon="@Icons.Material.Filled.Warning" 
-                                 Size="Size.Small"
-                                 Color="Color.Warning">
-                            Never synced
-                        </MudChip>
-                    }
-                    
                     @if (_velocityData != null && _velocityData.TotalSprints >= 3)
                     {
                         <MudChip T="string" 
@@ -216,9 +156,6 @@
                 </MudStack>
             </MudStack>
         </MudPaper>
-
-        @* Sync Progress Panel - Two-level progress bars *@
-        <SyncProgressPanel @ref="_syncProgressPanel" />
 
         @* Backlog Health Summary Section *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
@@ -592,11 +529,6 @@
     private bool _isLoading = true;
     private string? _errorMessage;
     
-    // Sync state
-    private bool _isSyncing = false;
-    private string _syncType = "";
-    private SyncProgressPanel? _syncProgressPanel;
-    
     // Cancellation for dashboard data loading (prevents race conditions)
     private CancellationTokenSource? _dashboardLoadCts;
     
@@ -608,66 +540,20 @@
     private string? _rootWorkItemTitle;
     private string? _rootWorkItemAreaPath;
     
-    private DateTimeOffset? _lastSyncTime;
     private PoTool.Shared.Metrics.MultiIterationBacklogHealthDto? _healthData;
     private PoTool.Shared.Metrics.VelocityTrendDto? _velocityData;
     private IEnumerable<PullRequestMetricsDto>? _prMetrics;
 
     protected override async Task OnInitializedAsync()
     {
-        // Subscribe to sync progress events
-        SyncHubService.OnSyncProgressReceived += HandleSyncProgress;
-        SyncHubService.OnSyncStatusChanged += HandleSyncStatusChanged;
-        
         await LoadDataAsync();
     }
 
     public void Dispose()
     {
-        SyncHubService.OnSyncProgressReceived -= HandleSyncProgress;
-        SyncHubService.OnSyncStatusChanged -= HandleSyncStatusChanged;
-        
         // Cancel any pending dashboard load operations
         _dashboardLoadCts?.Cancel();
         _dashboardLoadCts?.Dispose();
-    }
-
-    private void HandleSyncProgress(SyncProgressDto progress)
-    {
-        InvokeAsync(() =>
-        {
-            _syncProgressPanel?.UpdateProgress(progress);
-            
-            // Update sync state based on progress
-            if (progress.Status == "Completed" || progress.Status == "Failed" || progress.Status == "Cancelled")
-            {
-                _isSyncing = false;
-                _syncType = "";
-            }
-            
-            StateHasChanged();
-        });
-    }
-
-    private void HandleSyncStatusChanged(string status, string message)
-    {
-        InvokeAsync(() =>
-        {
-            if (status == "Completed")
-            {
-                Snackbar.Add(message, Severity.Success);
-                _isSyncing = false;
-                _syncType = "";
-                StateHasChanged();
-            }
-            else if (status == "Failed")
-            {
-                Snackbar.Add(message, Severity.Error);
-                _isSyncing = false;
-                _syncType = "";
-                StateHasChanged();
-            }
-        });
     }
 
     private async Task LoadDataAsync()
@@ -721,10 +607,6 @@
             
             // Load products for this profile (Product Owner)
             await LoadProductsAsync();
-            
-            // Load last sync time
-            var config = await TfsConfigService.GetConfigAsync();
-            _lastSyncTime = config?.LastValidated;
             
             // Load dashboard data with current product scope
             await LoadDashboardDataAsync();
@@ -1008,90 +890,6 @@
         }
         
         return Array.Empty<int>();
-    }
-    
-    private async Task RequestFullSync()
-    {
-        if (_isSyncing) return;
-        
-        _isSyncing = true;
-        _syncType = "full";
-        StateHasChanged();
-        
-        try
-        {
-            var rootIds = GetRootWorkItemIds();
-            bool success;
-            
-            if (rootIds.Length > 0)
-            {
-                // Use product-scoped sync with root work item IDs
-                success = await TfsConfigService.RequestSyncByRootIdsAsync(rootIds, incremental: false);
-            }
-            else
-            {
-                // Fall back to legacy area-path sync if no products configured
-                success = await TfsConfigService.RequestSyncAsync();
-            }
-            
-            if (!success)
-            {
-                Snackbar.Add("Full sync failed", Severity.Error);
-                _isSyncing = false;
-                _syncType = "";
-                StateHasChanged();
-            }
-            // Success/failure handled by SignalR progress events
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Sync error: {ex.Message}", Severity.Error);
-            _isSyncing = false;
-            _syncType = "";
-            StateHasChanged();
-        }
-    }
-    
-    private async Task RequestIncrementalSync()
-    {
-        if (_isSyncing) return;
-        
-        _isSyncing = true;
-        _syncType = "incremental";
-        StateHasChanged();
-        
-        try
-        {
-            var rootIds = GetRootWorkItemIds();
-            bool success;
-            
-            if (rootIds.Length > 0)
-            {
-                // Use product-scoped sync with root work item IDs (incremental)
-                success = await TfsConfigService.RequestSyncByRootIdsAsync(rootIds, incremental: true);
-            }
-            else
-            {
-                // Fall back to legacy area-path sync if no products configured
-                success = await TfsConfigService.RequestIncrementalSyncAsync();
-            }
-            
-            if (!success)
-            {
-                Snackbar.Add("Incremental sync failed", Severity.Error);
-                _isSyncing = false;
-                _syncType = "";
-                StateHasChanged();
-            }
-            // Success/failure handled by SignalR progress events
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Sync error: {ex.Message}", Severity.Error);
-            _isSyncing = false;
-            _syncType = "";
-            StateHasChanged();
-        }
     }
 
     private string GetHealthPercentage()

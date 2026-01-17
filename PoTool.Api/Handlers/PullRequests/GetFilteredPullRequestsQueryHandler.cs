@@ -12,14 +12,14 @@ namespace PoTool.Api.Handlers.PullRequests;
 /// </summary>
 public sealed class GetFilteredPullRequestsQueryHandler : IQueryHandler<GetFilteredPullRequestsQuery, IEnumerable<PullRequestDto>>
 {
-    private readonly PullRequestReadProviderFactory _providerFactory;
+    private readonly IPullRequestReadProvider _pullRequestReadProvider;
     private readonly ILogger<GetFilteredPullRequestsQueryHandler> _logger;
 
     public GetFilteredPullRequestsQueryHandler(
-        PullRequestReadProviderFactory providerFactory,
+        IPullRequestReadProvider pullRequestReadProvider,
         ILogger<GetFilteredPullRequestsQueryHandler> logger)
     {
-        _providerFactory = providerFactory;
+        _pullRequestReadProvider = pullRequestReadProvider;
         _logger = logger;
     }
 
@@ -29,8 +29,8 @@ public sealed class GetFilteredPullRequestsQueryHandler : IQueryHandler<GetFilte
     {
         _logger.LogDebug("Handling GetFilteredPullRequestsQuery");
 
-        var provider = _providerFactory.Create();
-        var allPrs = await provider.GetByProductIdsAsync(query.ProductIds, cancellationToken);
+        // Live-only mode: use injected provider directly
+        var allPrs = await _pullRequestReadProvider.GetByProductIdsAsync(query.ProductIds, cancellationToken);
 
         // Apply filters
         var filtered = allPrs.AsEnumerable();
