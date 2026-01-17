@@ -25,15 +25,35 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
     /// even if called from parallel tasks or overlapping async operations.
     /// </summary>
     private readonly SemaphoreSlim _dbGate = new SemaphoreSlim(1, 1);
+    private bool _disposed = false;
 
     public PullRequestRepository(PoToolDbContext context)
     {
         _context = context;
     }
     
+    /// <summary>
+    /// Disposes the repository and releases the semaphore.
+    /// </summary>
     public void Dispose()
     {
-        _dbGate?.Dispose();
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+    
+    /// <summary>
+    /// Protected dispose pattern implementation.
+    /// </summary>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _dbGate?.Dispose();
+            }
+            _disposed = true;
+        }
     }
 
     public async Task<IEnumerable<PullRequestDto>> GetAllAsync(CancellationToken cancellationToken = default)
