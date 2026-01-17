@@ -53,13 +53,11 @@ public interface ITfsClient
     /// </summary>
     /// <param name="rootWorkItemIds">The root work item IDs to start from.</param>
     /// <param name="since">Optional date to retrieve only work items modified since this date (incremental sync).</param>
-    /// <param name="detailedProgressCallback">Optional callback for detailed structured progress reporting.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Collection of work item DTOs including root items and their descendants.</returns>
     Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsWithDetailedProgressAsync(
         int[] rootWorkItemIds,
         DateTimeOffset? since = null,
-        Action<SyncProgressDto>? detailedProgressCallback = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -192,21 +190,6 @@ public interface ITfsClient
     // ============================================
 
     /// <summary>
-    /// Retrieves pull requests with their related details (iterations, comments, file changes) in a single batch.
-    /// This prevents the N+1 pattern of fetching each PR's details in separate calls.
-    /// </summary>
-    /// <param name="repositoryName">Optional repository name to filter by.</param>
-    /// <param name="fromDate">Optional start date for filtering pull requests.</param>
-    /// <param name="toDate">Optional end date for filtering pull requests.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Complete pull request sync result with all related data.</returns>
-    Task<PullRequestSyncResult> GetPullRequestsWithDetailsAsync(
-        string? repositoryName = null,
-        DateTimeOffset? fromDate = null,
-        DateTimeOffset? toDate = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Updates effort (story points) for multiple work items in a single batch operation.
     /// This prevents the N+1 pattern of updating each work item's effort in separate calls.
     /// </summary>
@@ -287,16 +270,6 @@ public interface ITfsClient
     Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
         int pipelineId,
         int top = 100,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Retrieves all pipelines with their runs in a single batch operation.
-    /// </summary>
-    /// <param name="runsPerPipeline">Maximum number of runs to retrieve per pipeline.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Complete pipeline sync result with all related data.</returns>
-    Task<PipelineSyncResult> GetPipelinesWithRunsAsync(
-        int runsPerPipeline = 50,
         CancellationToken cancellationToken = default);
 
     // ============================================

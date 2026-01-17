@@ -7,7 +7,6 @@
 @using PoTool.Client.Components.Common
 @using MudBlazor
 @inject WorkItemService WorkItemService
-@inject IWorkItemSyncHubService SyncHubService
 @inject ITreeBuilderService TreeBuilderService
 @inject WorkItemFilteringService FilteringService
 @inject WorkItemSelectionService SelectionService
@@ -140,7 +139,6 @@
         // Check for filter query parameter from Product Home navigation
         ApplyQueryParameterFilters();
         
-        await InitializeSignalRAsync();
         await LoadExpandedStateAsync();
         await LoadWorkItems();
     }
