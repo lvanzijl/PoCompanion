@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using PoTool.Core.Contracts;
 
 namespace PoTool.Api.Services;
