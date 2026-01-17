@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
-
+using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit;
@@ -36,8 +36,15 @@ public class TfsConfigurationServiceSqliteTests
 
         _loggerMock = new Mock<ILogger<TfsConfigurationService>>();
 
+        // Create mock EF concurrency gate
+        var gateMock = new Mock<IEfConcurrencyGate>();
+        gateMock.Setup(g => g.ExecuteAsync(It.IsAny<Func<Task>>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<Task>, CancellationToken>((func, ct) => func());
+        gateMock.Setup(g => g.ExecuteAsync<It.IsAnyType>(It.IsAny<Func<Task<It.IsAnyType>>>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<Task<It.IsAnyType>>, CancellationToken>((func, ct) => func());
+
         // Note: TfsConfigurationService no longer requires IDataProtectionProvider
-        _service = new TfsConfigurationService(_context, _loggerMock.Object);
+        _service = new TfsConfigurationService(_context, _loggerMock.Object, gateMock.Object);
     }
 
     [TestCleanup]

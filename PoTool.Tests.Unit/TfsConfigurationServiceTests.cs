@@ -4,7 +4,7 @@ using Moq;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
-
+using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit;
@@ -32,9 +32,18 @@ public class TfsConfigurationServiceTests
 
         _loggerMock = new Mock<ILogger<TfsConfigurationService>>();
 
+        // Create mock EF concurrency gate that just executes operations immediately
+        var gateMock = new Mock<IEfConcurrencyGate>();
+        gateMock.Setup(g => g.ExecuteAsync(It.IsAny<Func<Task<TfsConfig?>>>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<Task<TfsConfig?>>, CancellationToken>((func, ct) => func());
+        gateMock.Setup(g => g.ExecuteAsync(It.IsAny<Func<Task<TfsConfigEntity?>>>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<Task<TfsConfigEntity?>>, CancellationToken>((func, ct) => func());
+        gateMock.Setup(g => g.ExecuteAsync(It.IsAny<Func<Task>>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<Task>, CancellationToken>((func, ct) => func());
+
         // Note: TfsConfigurationService no longer requires IDataProtectionProvider
         // PAT is stored client-side using MAUI SecureStorage
-        _service = new TfsConfigurationService(_context, _loggerMock.Object);
+        _service = new TfsConfigurationService(_context, _loggerMock.Object, gateMock.Object);
     }
 
     [TestCleanup]

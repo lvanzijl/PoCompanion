@@ -13,6 +13,7 @@ using Moq;
 using Moq.Protected;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
+using PoTool.Core.Contracts;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -43,7 +44,12 @@ public class WorkItemAncestorCompletionTests
         _dbContext = new PoToolDbContext(options);
 
         var configLogger = new Mock<ILogger<TfsConfigurationService>>();
-        _configService = new TfsConfigurationService(_dbContext, configLogger.Object);
+        var gateMock = new Mock<IEfConcurrencyGate>();
+        gateMock.Setup(g => g.ExecuteAsync(It.IsAny<Func<Task>>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<Task>, CancellationToken>((func, ct) => func());
+        gateMock.Setup(g => g.ExecuteAsync<It.IsAnyType>(It.IsAny<Func<Task<It.IsAnyType>>>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<Task<It.IsAnyType>>, CancellationToken>((func, ct) => func());
+        _configService = new TfsConfigurationService(_dbContext, configLogger.Object, gateMock.Object);
 
         _loggerMock = new Mock<ILogger<RealTfsClient>>();
 
