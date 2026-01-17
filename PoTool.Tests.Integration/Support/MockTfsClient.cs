@@ -802,6 +802,31 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult<IEnumerable<PipelineDefinitionDto>>(Array.Empty<PipelineDefinitionDto>());
     }
 
+    // ============================================
+    // TEAMS
+    // ============================================
+
+    public Task<IEnumerable<TfsTeamDto>> GetTfsTeamsAsync(CancellationToken cancellationToken = default)
+    {
+        // Return mock teams for testing
+        var teams = new List<TfsTeamDto>
+        {
+            new TfsTeamDto(
+                "test-team-1",
+                "Test Team Alpha",
+                "TestProject",
+                "Test description",
+                "TestProject\\Team Alpha"
+            )
+        };
+
+        return Task.FromResult<IEnumerable<TfsTeamDto>>(teams);
+    }
+
+    // ============================================
+    // TEAM ITERATIONS (SPRINTS)
+    // ============================================
+
     public Task<IEnumerable<TeamIterationDto>> GetTeamIterationsAsync(
         string projectName,
         string teamName,
