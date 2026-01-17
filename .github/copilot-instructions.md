@@ -34,6 +34,9 @@ You MUST load, understand, and apply all of them before generating any output:
 7. Mock data generation rules
    `docs/mock-data-rules.md`
 
+8. Entity Framework Instrucitons
+   `docs/EF_RULES.md`
+
 If any rule conflicts, is ambiguous, or cannot be satisfied, you MUST stop and ask for clarification.
 
 ---
