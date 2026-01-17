@@ -8,7 +8,7 @@ namespace PoTool.Api.Services;
 /// Factory that creates the appropriate work item read provider based on the configured DataSourceMode.
 /// This ensures handlers get the correct provider without needing to know about mode selection.
 /// </summary>
-public sealed class WorkItemReadProviderFactory
+public class WorkItemReadProviderFactory
 {
     private readonly IDataSourceModeProvider _modeProvider;
     private readonly IServiceProvider _serviceProvider;
@@ -24,7 +24,7 @@ public sealed class WorkItemReadProviderFactory
     /// <summary>
     /// Creates the appropriate work item read provider based on the current data source mode.
     /// </summary>
-    public IWorkItemReadProvider Create()
+    public virtual IWorkItemReadProvider Create()
     {
         return _modeProvider.Mode switch
         {
