@@ -43,7 +43,7 @@
                                 <MudText>Track pull request metrics and iteration patterns</MudText>
                             </MudListItem>
                             <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
-                                <MudText>Sync with Azure DevOps in real-time</MudText>
+                                <MudText>Sync with Azure DevOps in real-time (no caching required)</MudText>
                             </MudListItem>
                         </MudList>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">
@@ -192,42 +192,7 @@
                 }
                 else if (_currentStep == 3)
                 {
-                    <!-- Step 4: Initial Sync -->
-                    <MudStack Spacing="4">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.Sync" Color="Color.Primary" Size="Size.Large" />
-                            <MudText Typo="Typo.h6" Color="Color.Primary">Sync Your Work Items</MudText>
-                        </MudStack>
-                        <MudText Typo="Typo.body1">
-                            Once configured, you'll need to sync your work items from Azure DevOps.
-                        </MudText>
-                        
-                        <MudPaper Elevation="0" Class="pa-4 mud-background-gray">
-                            <MudStack Spacing="2">
-                                <MudText Typo="Typo.subtitle1"><strong>Full Sync</strong></MudText>
-                                <MudText Typo="Typo.body2">
-                                    Downloads all work items from Azure DevOps. Use this for the first sync or after major changes.
-                                </MudText>
-                            </MudStack>
-                        </MudPaper>
-
-                        <MudPaper Elevation="0" Class="pa-4 mud-background-gray">
-                            <MudStack Spacing="2">
-                                <MudText Typo="Typo.subtitle1"><strong>Incremental Sync</strong></MudText>
-                                <MudText Typo="Typo.body2">
-                                    Downloads only changes since the last sync. Faster for regular updates.
-                                </MudText>
-                            </MudStack>
-                        </MudPaper>
-
-                        <MudAlert Severity="Severity.Info" Dense="true">
-                            The first sync may take a few minutes depending on the number of work items in your project.
-                        </MudAlert>
-                    </MudStack>
-                }
-                else if (_currentStep == 4)
-                {
-                    <!-- Step 5: Feature Tour -->
+                    <!-- Step 4: Feature Tour -->
                     <MudStack Spacing="4">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudIcon Icon="@Icons.Material.Filled.Tour" Color="Color.Primary" Size="Size.Large" />
@@ -279,7 +244,7 @@
         </DialogContent>
         <DialogActions>
             <CompactButton OnClick="Skip" Color="Color.Default">
-                @if (_currentStep == 4)
+                @if (_currentStep == 3)
                 {
                     <text>Skip for Now</text>
                 }
@@ -294,7 +259,7 @@
                     Previous
                 </CompactButton>
             }
-            @if (_currentStep < 4)
+            @if (_currentStep < 3)
             {
                 <CompactButton OnClick="Next" Color="Color.Primary" Variant="Variant.Filled">
                     Next
@@ -378,20 +343,19 @@
             0 => "Welcome to PO Companion",
             1 => "Configure Your Connection",
             2 => "Setup Your Profile",
-            3 => "Sync Your Work Items",
-            4 => "Discover Key Features",
+            3 => "Discover Key Features",
             _ => "Getting Started"
         };
     }
 
     private double GetProgress()
     {
-        return (_currentStep + 1) * 20.0;
+        return (_currentStep + 1) * 25.0; // 4 steps now instead of 5
     }
 
     private void Next()
     {
-        if (_currentStep < 4)
+        if (_currentStep < 3) // Maximum step is now 3
         {
             _currentStep++;
             // Reset connection test result when moving to next step

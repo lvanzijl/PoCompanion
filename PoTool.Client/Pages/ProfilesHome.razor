@@ -135,9 +135,9 @@
             
             Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
             
-            Console.WriteLine($"[ProfilesHome] Navigating to SyncGate for profile: {profile.Name}");
-            // Navigate to sync gate to ensure data is synced before entering Product Home
-            NavigationManager.NavigateTo("/sync-gate");
+            Console.WriteLine($"[ProfilesHome] Navigating to Product Home for profile: {profile.Name}");
+            // Navigate directly to Product Home (Live mode - no sync required)
+            NavigationManager.NavigateTo("/");
         }
         catch (Exception ex)
         {
