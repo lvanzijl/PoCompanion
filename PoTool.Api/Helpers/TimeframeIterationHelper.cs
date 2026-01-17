@@ -21,15 +21,15 @@ public static class TimeframeIterationHelper
         var weekNumber = calendar.GetWeekOfYear(dateTime, rule, firstDayOfWeek);
         var year = dateTime.Year;
 
-        // Handle edge case: Week 52/53 in January belongs to previous year
-        if (weekNumber >= 52 && dateTime.Month == 1)
-        {
-            year--;
-        }
         // Handle edge case: Week 1 in December belongs to next year
-        else if (weekNumber == 1 && dateTime.Month == 12)
+        if (weekNumber == 1 && dateTime.Month == 12)
         {
             year++;
+        }
+        // Handle edge case: Week 52/53 in January belongs to previous year
+        else if (weekNumber >= 52 && dateTime.Month == 1)
+        {
+            year--;
         }
 
         return (year, weekNumber);
