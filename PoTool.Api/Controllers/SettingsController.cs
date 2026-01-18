@@ -75,4 +75,37 @@ public class SettingsController : ControllerBase
         var definitions = await _mediator.Send(new GetWorkItemTypeDefinitionsQuery(), cancellationToken);
         return Ok(definitions);
     }
+
+    /// <summary>
+    /// Gets work item state classifications for the configured TFS project.
+    /// </summary>
+    [HttpGet("state-classifications")]
+    [ProducesResponseType(typeof(GetStateClassificationsResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<GetStateClassificationsResponse>> GetStateClassifications(
+        CancellationToken cancellationToken)
+    {
+        var response = await _mediator.Send(new GetStateClassificationsQuery(), cancellationToken);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Saves work item state classifications for the configured TFS project.
+    /// </summary>
+    [HttpPost("state-classifications")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult> SaveStateClassifications(
+        [FromBody] SaveStateClassificationsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new SaveStateClassificationsCommand(request);
+        var success = await _mediator.Send(command, cancellationToken);
+
+        if (!success)
+        {
+            return BadRequest("Failed to save state classifications");
+        }
+
+        return Ok();
+    }
 }

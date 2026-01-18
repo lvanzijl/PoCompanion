@@ -112,6 +112,9 @@ public static class ApiServiceCollectionExtensions
         // Register Classification service
         services.AddScoped<IWorkItemClassificationService, WorkItemClassificationService>();
 
+        // Register Work Item State Classification service
+        services.AddScoped<IWorkItemStateClassificationService, WorkItemStateClassificationService>();
+
         // Register Live-only Read Providers (no cache mode)
         // All data is fetched directly from TFS/Azure DevOps
         services.AddScoped<IWorkItemReadProvider, LiveWorkItemReadProvider>();
