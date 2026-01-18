@@ -62,4 +62,17 @@ public class SettingsController : ControllerBase
         await _mediator.Send(command, cancellationToken);
         return Ok();
     }
+
+    /// <summary>
+    /// Gets work item type definitions from TFS.
+    /// Returns the available work item types and their valid states.
+    /// </summary>
+    [HttpGet("workitem-type-definitions")]
+    [ProducesResponseType(typeof(IEnumerable<WorkItemTypeDefinitionDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<WorkItemTypeDefinitionDto>>> GetWorkItemTypeDefinitions(
+        CancellationToken cancellationToken)
+    {
+        var definitions = await _mediator.Send(new GetWorkItemTypeDefinitionsQuery(), cancellationToken);
+        return Ok(definitions);
+    }
 }

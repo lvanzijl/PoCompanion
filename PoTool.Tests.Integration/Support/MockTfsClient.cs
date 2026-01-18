@@ -864,4 +864,49 @@ public class MockTfsClient : ITfsClient
 
         return Task.FromResult<IEnumerable<TeamIterationDto>>(iterations);
     }
+
+    public Task<IEnumerable<WorkItemTypeDefinitionDto>> GetWorkItemTypeDefinitionsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var definitions = new List<WorkItemTypeDefinitionDto>
+        {
+            new WorkItemTypeDefinitionDto
+            {
+                TypeName = "goal",
+                States = new List<string> { "Proposed", "Active", "Completed", "Removed" }.AsReadOnly()
+            },
+            new WorkItemTypeDefinitionDto
+            {
+                TypeName = "Objective",
+                States = new List<string> { "Proposed", "Active", "Completed", "Removed" }.AsReadOnly()
+            },
+            new WorkItemTypeDefinitionDto
+            {
+                TypeName = "Epic",
+                States = new List<string> { "New", "Active", "Resolved", "Closed", "Removed" }.AsReadOnly()
+            },
+            new WorkItemTypeDefinitionDto
+            {
+                TypeName = "Feature",
+                States = new List<string> { "New", "Active", "Resolved", "Closed", "Removed" }.AsReadOnly()
+            },
+            new WorkItemTypeDefinitionDto
+            {
+                TypeName = "Product Backlog Item",
+                States = new List<string> { "New", "Approved", "Committed", "Done", "Removed" }.AsReadOnly()
+            },
+            new WorkItemTypeDefinitionDto
+            {
+                TypeName = "Bug",
+                States = new List<string> { "New", "Approved", "Committed", "Done", "Removed" }.AsReadOnly()
+            },
+            new WorkItemTypeDefinitionDto
+            {
+                TypeName = "Task",
+                States = new List<string> { "To Do", "In Progress", "Done", "Removed" }.AsReadOnly()
+            }
+        };
+
+        return Task.FromResult<IEnumerable<WorkItemTypeDefinitionDto>>(definitions);
+    }
 }
