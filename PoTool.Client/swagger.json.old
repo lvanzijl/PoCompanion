@@ -101,19 +101,28 @@
         }
       }
     },
-    "/api/tfsconfig/save-and-verify": {
+    "/api/workitems/sync": {
       "post": {
-        "operationId": "PostApiTfsconfigSaveAndVerify",
+        "operationId": "PostApiWorkitemsSync",
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/workitems/sync/by-root-ids": {
+      "post": {
+        "operationId": "PostApiWorkitemsSyncByRootIds",
         "requestBody": {
-          "x-name": "req",
+          "x-name": "request",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TfsConfigRequest"
+                "$ref": "#/components/schemas/SyncRequest"
               }
             }
           },
-          "required": true,
           "x-position": 1
         },
         "responses": {
@@ -971,6 +980,62 @@
                   "items": {
                     "$ref": "#/components/schemas/PipelineMetricsDto"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Pipelines/sync": {
+      "post": {
+        "tags": [
+          "Pipelines"
+        ],
+        "operationId": "Pipelines_Sync",
+        "parameters": [
+          {
+            "name": "runsPerPipeline",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            },
+            "x-position": 1
+          },
+          {
+            "name": "productIds",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "x-position": 2
+          },
+          {
+            "name": "syncDefinitions",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineSyncResult"
                 }
               }
             }
@@ -2105,6 +2170,38 @@
         }
       }
     },
+    "/api/PullRequests/sync": {
+      "post": {
+        "tags": [
+          "PullRequests"
+        ],
+        "operationId": "PullRequests_Sync",
+        "parameters": [
+          {
+            "name": "productIds",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/PullRequests/review-bottleneck": {
       "get": {
         "tags": [
@@ -2887,82 +2984,6 @@
         }
       }
     },
-    "/api/Settings/workitem-type-definitions": {
-      "get": {
-        "tags": [
-          "Settings"
-        ],
-        "operationId": "Settings_GetWorkItemTypeDefinitions",
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/WorkItemTypeDefinitionDto"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/Settings/state-classifications": {
-      "get": {
-        "tags": [
-          "Settings"
-        ],
-        "operationId": "Settings_GetStateClassifications",
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetStateClassificationsResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Settings"
-        ],
-        "operationId": "Settings_SaveStateClassifications",
-        "requestBody": {
-          "x-name": "request",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SaveStateClassificationsRequest"
-              }
-            }
-          },
-          "required": true,
-          "x-position": 1
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/Startup/readiness": {
       "get": {
         "tags": [
@@ -2979,32 +3000,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/api/Startup/tfs-teams": {
-      "get": {
-        "tags": [
-          "Startup"
-        ],
-        "operationId": "Startup_GetTfsTeams",
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TfsTeamDto"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": ""
           }
         }
       }
@@ -4167,6 +4162,23 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          }
+        }
+      },
+      "SyncRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rootWorkItemIds": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "incremental": {
+            "type": "boolean"
           }
         }
       },
@@ -5659,6 +5671,32 @@
           }
         }
       },
+      "PipelineSyncResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pipelines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineDto"
+            }
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineRunDto"
+            }
+          },
+          "tfsCallCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "syncedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "PipelineDefinitionDto": {
         "type": "object",
         "additionalProperties": false,
@@ -7117,83 +7155,6 @@
           }
         }
       },
-      "WorkItemTypeDefinitionDto": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "typeName": {
-            "type": "string"
-          },
-          "states": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "GetStateClassificationsResponse": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "projectName": {
-            "type": "string"
-          },
-          "classifications": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WorkItemStateClassificationDto"
-            }
-          },
-          "isDefault": {
-            "type": "boolean"
-          }
-        }
-      },
-      "WorkItemStateClassificationDto": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "workItemType": {
-            "type": "string"
-          },
-          "stateName": {
-            "type": "string"
-          },
-          "classification": {
-            "$ref": "#/components/schemas/StateClassification"
-          }
-        }
-      },
-      "StateClassification": {
-        "type": "integer",
-        "description": "",
-        "x-enumNames": [
-          "New",
-          "InProgress",
-          "Done"
-        ],
-        "enum": [
-          0,
-          1,
-          2
-        ]
-      },
-      "SaveStateClassificationsRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "projectName": {
-            "type": "string"
-          },
-          "classifications": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WorkItemStateClassificationDto"
-            }
-          }
-        }
-      },
       "StartupReadinessDto": {
         "type": "object",
         "additionalProperties": false,
@@ -7221,28 +7182,6 @@
           "missingRequirementMessage": {
             "type": "string",
             "nullable": true
-          }
-        }
-      },
-      "TfsTeamDto": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "projectName": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string",
-            "nullable": true
-          },
-          "defaultAreaPath": {
-            "type": "string"
           }
         }
       },
@@ -7281,23 +7220,6 @@
           "lastModified": {
             "type": "string",
             "format": "date-time"
-          },
-          "projectName": {
-            "type": "string",
-            "nullable": true
-          },
-          "tfsTeamId": {
-            "type": "string",
-            "nullable": true
-          },
-          "tfsTeamName": {
-            "type": "string",
-            "nullable": true
-          },
-          "lastSyncedIterationsUtc": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
           }
         }
       },
@@ -7331,18 +7253,6 @@
             "format": "int32"
           },
           "customPicturePath": {
-            "type": "string",
-            "nullable": true
-          },
-          "projectName": {
-            "type": "string",
-            "nullable": true
-          },
-          "tfsTeamId": {
-            "type": "string",
-            "nullable": true
-          },
-          "tfsTeamName": {
             "type": "string",
             "nullable": true
           }

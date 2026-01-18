@@ -277,8 +277,8 @@
         try
         {
             ClearError();
-            var result = await PipelineService.SyncAsync();
-            Snackbar.Add($"Synced {result.Pipelines.Count} pipelines and {result.Runs.Count} runs successfully", Severity.Success);
+            // TODO: Sync endpoint removed from API - restore or implement alternative
+            Snackbar.Add("Sync functionality temporarily disabled", Severity.Warning);
             await LoadData();
         }
         catch (Exception ex)
