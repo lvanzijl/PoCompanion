@@ -1187,6 +1187,48 @@ public class BattleshipMockDataFacade : ITfsClient
         return Task.FromResult<IEnumerable<PipelineDefinitionDto>>(definitions);
     }
 
+    // ============================================
+    // TEAMS
+    // ============================================
+
+    public Task<IEnumerable<TfsTeamDto>> GetTfsTeamsAsync(CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client (BattleshipMockDataFacade): GetTfsTeamsAsync called");
+
+        // Return mock teams for the Battleship project
+        var teams = new List<TfsTeamDto>
+        {
+            new TfsTeamDto(
+                "team-alpha-guid",
+                "Battleship Alpha Squad",
+                "Battleship",
+                "Primary development team for Battleship game",
+                "Battleship\\Alpha Squad"
+            ),
+            new TfsTeamDto(
+                "team-beta-guid",
+                "Battleship Beta Team",
+                "Battleship",
+                "Feature development and enhancements",
+                "Battleship\\Beta Team"
+            ),
+            new TfsTeamDto(
+                "team-ops-guid",
+                "Battleship Operations",
+                "Battleship",
+                "DevOps and infrastructure support",
+                "Battleship\\Operations"
+            )
+        };
+
+        return Task.FromResult<IEnumerable<TfsTeamDto>>(teams);
+    }
+
+    // ============================================
+    // TEAM ITERATIONS (SPRINTS)
+    // ============================================
+
     public Task<IEnumerable<TeamIterationDto>> GetTeamIterationsAsync(
         string projectName,
         string teamName,

@@ -25,6 +25,9 @@ public class CreateTeamCommandHandler : ICommandHandler<CreateTeamCommand, TeamD
             command.PictureType,
             command.DefaultPictureId,
             command.CustomPicturePath,
+            command.ProjectName,
+            command.TfsTeamId,
+            command.TfsTeamName,
             cancellationToken);
     }
 }

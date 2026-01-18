@@ -300,6 +300,18 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     // ============================================
+    // TEAMS
+    // ============================================
+
+    /// <summary>
+    /// Retrieves all teams for the configured TFS project.
+    /// Each team includes its default area path derived from team settings.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of TFS team DTOs with ID, name, project, and derived area path.</returns>
+    Task<IEnumerable<TfsTeamDto>> GetTfsTeamsAsync(CancellationToken cancellationToken = default);
+
+    // ============================================
     // TEAM ITERATIONS (SPRINTS)
     // ============================================
 

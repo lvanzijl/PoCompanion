@@ -4350,6 +4350,175 @@ public class RealTfsClient : ITfsClient
     }
 
     // ============================================
+    // TEAMS
+    // ============================================
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<TfsTeamDto>> GetTfsTeamsAsync(CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+
+        // Null assertion after validation - entity is guaranteed non-null here
+        var config = entity!;
+
+        // Get auth-mode-specific HttpClient to avoid credential conflicts
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync<IEnumerable<TfsTeamDto>>(async () =>
+        {
+            // Build URL: {ServerUri}/_apis/projects/{Project}/teams?api-version=7.0
+            var encodedProject = Uri.EscapeDataString(config.Project);
+            var url = $"{config.Url.TrimEnd('/')}/_apis/projects/{encodedProject}/teams?api-version={config.ApiVersion}";
+
+            _logger.LogInformation("Retrieving TFS teams for Project='{Project}'", config.Project);
+
+            var response = await httpClient.GetAsync(url, cancellationToken);
+            await HandleHttpErrorsAsync(response, cancellationToken);
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("value", out var valueArray))
+            {
+                _logger.LogWarning("TFS teams response missing 'value' array for Project='{Project}'", config.Project);
+                return Array.Empty<TfsTeamDto>();
+            }
+
+            var teams = new List<TfsTeamDto>();
+
+            foreach (var team in valueArray.EnumerateArray())
+            {
+                // Extract id (required)
+                if (!team.TryGetProperty("id", out var idProp))
+                {
+                    _logger.LogWarning("TFS team missing 'id' field - skipping");
+                    continue;
+                }
+                var teamId = idProp.GetString() ?? string.Empty;
+
+                // Extract name (required)
+                if (!team.TryGetProperty("name", out var nameProp))
+                {
+                    _logger.LogWarning("TFS team '{Id}' missing 'name' field - skipping", teamId);
+                    continue;
+                }
+                var teamName = nameProp.GetString() ?? string.Empty;
+
+                // Extract description (optional)
+                string? description = null;
+                if (team.TryGetProperty("description", out var descProp))
+                {
+                    description = descProp.GetString();
+                }
+
+                // Get team's default area path from team field values
+                // This requires a separate API call per team
+                var defaultAreaPath = await GetTeamDefaultAreaPathAsync(
+                    httpClient,
+                    config,
+                    config.Project,
+                    teamName,
+                    cancellationToken);
+
+                var dto = new TfsTeamDto(
+                    teamId,
+                    teamName,
+                    config.Project,
+                    description,
+                    defaultAreaPath
+                );
+
+                teams.Add(dto);
+
+                _logger.LogDebug(
+                    "Mapped TFS team: Id={Id}, Name={Name}, DefaultAreaPath={AreaPath}",
+                    teamId, teamName, defaultAreaPath);
+            }
+
+            _logger.LogInformation(
+                "Retrieved {Count} TFS teams for Project='{Project}'",
+                teams.Count, config.Project);
+
+            return teams;
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Retrieves the default area path for a team by querying team field values.
+    /// </summary>
+    private async Task<string> GetTeamDefaultAreaPathAsync(
+        HttpClient httpClient,
+        TfsConfigEntity config,
+        string projectName,
+        string teamName,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Build URL: {ServerUri}/{Project}/{Team}/_apis/work/teamsettings/teamfieldvalues?api-version=7.0
+            var encodedProject = Uri.EscapeDataString(projectName);
+            var encodedTeam = Uri.EscapeDataString(teamName);
+            var url = $"{config.Url.TrimEnd('/')}/{encodedProject}/{encodedTeam}/_apis/work/teamsettings/teamfieldvalues?api-version={config.ApiVersion}";
+
+            var response = await httpClient.GetAsync(url, cancellationToken);
+            
+            // If team field values not available, fall back to project default
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Could not retrieve team field values for Team='{Team}', Status={Status}. Using project default.",
+                    teamName, response.StatusCode);
+                return config.DefaultAreaPath ?? projectName;
+            }
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var root = doc.RootElement;
+
+            // The response contains defaultValue which is the default area path
+            if (root.TryGetProperty("defaultValue", out var defaultValueProp))
+            {
+                var defaultValue = defaultValueProp.GetString();
+                if (!string.IsNullOrEmpty(defaultValue))
+                {
+                    return defaultValue;
+                }
+            }
+
+            // If no defaultValue, check for values array (team may have multiple area paths)
+            if (root.TryGetProperty("values", out var valuesArray) && valuesArray.GetArrayLength() > 0)
+            {
+                var firstValue = valuesArray[0];
+                if (firstValue.TryGetProperty("value", out var valueProp))
+                {
+                    var value = valueProp.GetString();
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        return value;
+                    }
+                }
+            }
+
+            // Fall back to config default or project name
+            var fallback = config.DefaultAreaPath ?? projectName;
+            _logger.LogDebug(
+                "No area path found in team field values for Team='{Team}', using fallback='{Fallback}'",
+                teamName, fallback);
+            return fallback;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Error retrieving team field values for Team='{Team}'. Using fallback.",
+                teamName);
+            return config.DefaultAreaPath ?? projectName;
+        }
+    }
+
+    // ============================================
     // TEAM ITERATIONS (SPRINTS)
     // ============================================
 

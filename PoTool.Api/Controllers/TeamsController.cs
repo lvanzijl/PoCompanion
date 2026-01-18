@@ -66,7 +66,10 @@ public class TeamsController : ControllerBase
             request.TeamAreaPath,
             request.PictureType,
             request.DefaultPictureId,
-            request.CustomPicturePath);
+            request.CustomPicturePath,
+            request.ProjectName,
+            request.TfsTeamId,
+            request.TfsTeamName);
 
         var result = await _mediator.Send(command, cancellationToken);
 
@@ -155,7 +158,10 @@ public record CreateTeamRequest(
     string TeamAreaPath,
     TeamPictureType PictureType = TeamPictureType.Default,
     int DefaultPictureId = 0,
-    string? CustomPicturePath = null
+    string? CustomPicturePath = null,
+    string? ProjectName = null,
+    string? TfsTeamId = null,
+    string? TfsTeamName = null
 );
 
 /// <summary>

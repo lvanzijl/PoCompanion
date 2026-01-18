@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Queries;
 
@@ -13,10 +14,12 @@ namespace PoTool.Api.Controllers;
 public class StartupController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ITfsClient _tfsClient;
 
-    public StartupController(IMediator mediator)
+    public StartupController(IMediator mediator, ITfsClient tfsClient)
     {
         _mediator = mediator;
+        _tfsClient = tfsClient;
     }
 
     /// <summary>
@@ -29,5 +32,17 @@ public class StartupController : ControllerBase
     {
         var readiness = await _mediator.Send(new GetStartupReadinessQuery(), cancellationToken);
         return Ok(readiness);
+    }
+
+    /// <summary>
+    /// Gets all TFS teams for the configured project (live from TFS).
+    /// </summary>
+    [HttpGet("tfs-teams")]
+    [ProducesResponseType(typeof(IEnumerable<TfsTeamDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<IEnumerable<TfsTeamDto>>> GetTfsTeams(CancellationToken cancellationToken)
+    {
+        var teams = await _tfsClient.GetTfsTeamsAsync(cancellationToken);
+        return Ok(teams);
     }
 }

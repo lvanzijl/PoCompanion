@@ -585,6 +585,47 @@ public class MockTfsClient : ITfsClient
         return _mockDataFacade.GetPipelineDefinitionsForRepositoryAsync(repositoryName, cancellationToken);
     }
 
+    // ============================================
+    // TEAMS
+    // ============================================
+
+    public Task<IEnumerable<TfsTeamDto>> GetTfsTeamsAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: GetTfsTeamsAsync called");
+
+        // Return mock teams for the configured project
+        var teams = new List<TfsTeamDto>
+        {
+            new TfsTeamDto(
+                "team-1-guid",
+                "Team Alpha",
+                "MockProject",
+                "Main development team",
+                "MockProject\\Team Alpha"
+            ),
+            new TfsTeamDto(
+                "team-2-guid",
+                "Team Beta",
+                "MockProject",
+                "Quality assurance team",
+                "MockProject\\Team Beta"
+            ),
+            new TfsTeamDto(
+                "team-3-guid",
+                "Team Gamma",
+                "MockProject",
+                "Infrastructure team",
+                "MockProject\\Infrastructure"
+            )
+        };
+
+        return Task.FromResult<IEnumerable<TfsTeamDto>>(teams);
+    }
+
+    // ============================================
+    // TEAM ITERATIONS (SPRINTS)
+    // ============================================
+
     public Task<IEnumerable<TeamIterationDto>> GetTeamIterationsAsync(
         string projectName,
         string teamName,

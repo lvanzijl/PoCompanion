@@ -1,9 +1,11 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Shared.Contracts;
 using PoTool.Shared.Contracts.TfsVerification;
 
 namespace PoTool.Api.Configuration;
@@ -247,10 +249,148 @@ public static class ApiApplicationBuilderExtensions
         })
         .Produces<TfsVerificationReport>(StatusCodes.Status200OK);
 
+        // Combined save, test, and verify with streaming progress
+        app.MapPost("/api/tfsconfig/save-and-verify", async (
+            TfsConfigurationService configService,
+            ITfsClient client,
+            TfsConfigRequest req,
+            HttpResponse response,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            response.ContentType = "application/json";
+            response.Headers.Append("Cache-Control", "no-cache");
+            response.Headers.Append("X-Accel-Buffering", "no"); // Disable nginx buffering
+
+            var writer = new StreamWriter(response.Body);
+
+            try
+            {
+                // Phase 1: Save configuration
+                await WriteProgressAsync(writer, "Saving Configuration", ProgressState.Running, "Saving TFS configuration...", 10, null, ct);
+                await configService.SaveConfigAsync(
+                    req.Url ?? string.Empty,
+                    req.Project ?? string.Empty,
+                    req.DefaultAreaPath ?? string.Empty,
+                    req.UseDefaultCredentials,
+                    req.TimeoutSeconds,
+                    req.ApiVersion ?? "7.0",
+                    ct);
+                await WriteProgressAsync(writer, "Saving Configuration", ProgressState.Succeeded, "Configuration saved successfully", 20, null, ct);
+
+                // Phase 2: Test connection
+                await WriteProgressAsync(writer, "Testing Connection", ProgressState.Running, "Validating TFS connection...", 30, null, ct);
+                var connectionOk = await client.ValidateConnectionAsync(ct);
+                if (connectionOk)
+                {
+                    // Update config entity to mark as tested
+                    var config = await configService.GetConfigEntityAsync(ct);
+                    if (config != null)
+                    {
+                        config.HasTestedConnectionSuccessfully = true;
+                        config.LastValidated = DateTimeOffset.UtcNow;
+                        await configService.SaveConfigEntityAsync(config, ct);
+                    }
+                    await WriteProgressAsync(writer, "Testing Connection", ProgressState.Succeeded, "Connection validated successfully", 40, null, ct);
+                }
+                else
+                {
+                    await WriteProgressAsync(writer, "Testing Connection", ProgressState.Failed, "Connection validation failed", 40, "The TFS server did not respond successfully", ct);
+                    return;
+                }
+
+                // Phase 3: Verify TFS API capabilities
+                await WriteProgressAsync(writer, "Verifying API", ProgressState.Running, "Running TFS API capability checks...", 50, null, ct);
+                var report = await client.VerifyCapabilitiesAsync(false, null, ct);
+                
+                // Report individual check results as sub-progress
+                int checkIndex = 0;
+                int totalChecks = report.Checks.Count;
+                foreach (var check in report.Checks)
+                {
+                    checkIndex++;
+                    int progressPercent = 50 + (int)((checkIndex / (double)totalChecks) * 40);
+                    var checkState = check.Success ? ProgressState.Succeeded : ProgressState.Failed;
+                    var errorDetails = check.Success ? null : check.RawEvidence ?? check.ObservedBehavior;
+                    await WriteProgressAsync(
+                        writer,
+                        $"Verifying API - {check.CapabilityId}",
+                        checkState,
+                        check.Success ? $"✓ {check.CapabilityId}" : $"✗ {check.CapabilityId}",
+                        progressPercent,
+                        errorDetails,
+                        ct);
+                }
+
+                if (report.Success)
+                {
+                    // Update config entity to mark as verified
+                    var config = await configService.GetConfigEntityAsync(ct);
+                    if (config != null)
+                    {
+                        config.HasVerifiedTfsApiSuccessfully = true;
+                        config.LastValidated = DateTimeOffset.UtcNow;
+                        await configService.SaveConfigEntityAsync(config, ct);
+                    }
+                    await WriteProgressAsync(writer, "Verifying API", ProgressState.Succeeded, $"All {report.Checks.Count} API checks passed", 90, null, ct);
+                }
+                else
+                {
+                    var failedCount = report.Checks.Count(c => !c.Success);
+                    await WriteProgressAsync(
+                        writer,
+                        "Verifying API",
+                        ProgressState.Failed,
+                        $"{failedCount} of {report.Checks.Count} API checks failed",
+                        90,
+                        report.Summary,
+                        ct);
+                }
+
+                // Phase 4: Complete
+                await WriteProgressAsync(writer, "Complete", ProgressState.Succeeded, "TFS configuration and verification complete", 100, null, ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error during save and verify operation");
+                await WriteProgressAsync(writer, "Error", ProgressState.Failed, "An error occurred", null, ex.Message, ct);
+            }
+            finally
+            {
+                await writer.FlushAsync(ct);
+            }
+        });
+
         // Fallback to index.html for client-side routing
         app.MapFallbackToFile("index.html");
 
         return app;
+    }
+
+    /// <summary>
+    /// Helper method to write progress updates to the HTTP response stream.
+    /// </summary>
+    private static async Task WriteProgressAsync(
+        StreamWriter writer,
+        string phase,
+        ProgressState state,
+        string message,
+        int? percentComplete = null,
+        string? details = null,
+        CancellationToken cancellationToken = default)
+    {
+        var progress = new
+        {
+            phase,
+            state = state.ToString(),
+            message,
+            percentComplete,
+            details
+        };
+
+        var json = JsonSerializer.Serialize(progress);
+        await writer.WriteLineAsync(json);
+        await writer.FlushAsync(cancellationToken);
     }
 }
 
