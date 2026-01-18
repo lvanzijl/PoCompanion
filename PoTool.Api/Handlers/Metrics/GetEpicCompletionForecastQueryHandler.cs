@@ -15,15 +15,18 @@ public sealed class GetEpicCompletionForecastQueryHandler
 {
     private readonly IWorkItemRepository _repository;
     private readonly IMediator _mediator;
+    private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetEpicCompletionForecastQueryHandler> _logger;
 
     public GetEpicCompletionForecastQueryHandler(
         IWorkItemRepository repository,
         IMediator mediator,
+        IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetEpicCompletionForecastQueryHandler> logger)
     {
         _repository = repository;
         _mediator = mediator;
+        _stateClassificationService = stateClassificationService;
         _logger = logger;
     }
 
@@ -50,9 +53,14 @@ public sealed class GetEpicCompletionForecastQueryHandler
             .Where(wi => wi.Effort.HasValue)
             .Sum(wi => wi.Effort!.Value);
 
-        var completedEffort = childItems
-            .Where(wi => wi.Effort.HasValue && IsCompleted(wi.State))
-            .Sum(wi => wi.Effort!.Value);
+        var completedEffort = 0;
+        foreach (var wi in childItems.Where(wi => wi.Effort.HasValue))
+        {
+            if (await IsCompletedAsync(wi.Type, wi.State, cancellationToken))
+            {
+                completedEffort += wi.Effort!.Value;
+            }
+        }
 
         var remainingEffort = totalEffort - completedEffort;
 
@@ -120,12 +128,9 @@ public sealed class GetEpicCompletionForecastQueryHandler
         return descendants;
     }
 
-    private static bool IsCompleted(string state)
+    private async Task<bool> IsCompletedAsync(string workItemType, string state, CancellationToken cancellationToken)
     {
-        return state.Equals("Done", StringComparison.OrdinalIgnoreCase) ||
-               state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
-               state.Equals("Removed", StringComparison.OrdinalIgnoreCase) ||
-               state.Equals("Completed", StringComparison.OrdinalIgnoreCase);
+        return await _stateClassificationService.IsDoneStateAsync(workItemType, state, cancellationToken);
     }
 
     private static ForecastConfidence DetermineConfidence(int sprintCount)

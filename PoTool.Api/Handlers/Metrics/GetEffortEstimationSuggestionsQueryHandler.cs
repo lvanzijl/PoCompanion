@@ -25,15 +25,18 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
 
     private readonly IWorkItemRepository _repository;
     private readonly IMediator _mediator;
+    private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetEffortEstimationSuggestionsQueryHandler> _logger;
 
     public GetEffortEstimationSuggestionsQueryHandler(
         IWorkItemRepository repository,
         IMediator mediator,
+        IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetEffortEstimationSuggestionsQueryHandler> logger)
     {
         _repository = repository;
         _mediator = mediator;
+        _stateClassificationService = stateClassificationService;
         _logger = logger;
     }
 
@@ -78,12 +81,14 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
         _logger.LogDebug("Found {Count} work items without effort matching criteria", itemsWithoutEffort.Count);
 
         // Get historical completed work items with effort for analysis
-        var completedWorkItemsWithEffort = workItemsList
-            .Where(wi => wi.Effort.HasValue && wi.Effort.Value > 0)
-            .Where(wi => wi.State.Equals("Done", StringComparison.OrdinalIgnoreCase) ||
-                         wi.State.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
-                         wi.State.Equals("Resolved", StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var completedWorkItemsWithEffort = new List<WorkItemDto>();
+        foreach (var wi in workItemsList.Where(wi => wi.Effort.HasValue && wi.Effort.Value > 0))
+        {
+            if (await _stateClassificationService.IsDoneStateAsync(wi.Type, wi.State, cancellationToken))
+            {
+                completedWorkItemsWithEffort.Add(wi);
+            }
+        }
 
         _logger.LogDebug("Found {Count} completed work items with effort for historical analysis", completedWorkItemsWithEffort.Count);
 

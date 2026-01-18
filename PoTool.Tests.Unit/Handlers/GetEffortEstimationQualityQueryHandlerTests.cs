@@ -14,6 +14,7 @@ namespace PoTool.Tests.Unit.Handlers;
 public class GetEffortEstimationQualityQueryHandlerTests
 {
     private Mock<IWorkItemRepository> _mockRepository = null!;
+    private Mock<IWorkItemStateClassificationService> _mockStateService = null!;
     private Mock<ILogger<GetEffortEstimationQualityQueryHandler>> _mockLogger = null!;
     private GetEffortEstimationQualityQueryHandler _handler = null!;
 
@@ -21,8 +22,17 @@ public class GetEffortEstimationQualityQueryHandlerTests
     public void Setup()
     {
         _mockRepository = new Mock<IWorkItemRepository>();
+        _mockStateService = new Mock<IWorkItemStateClassificationService>();
         _mockLogger = new Mock<ILogger<GetEffortEstimationQualityQueryHandler>>();
-        _handler = new GetEffortEstimationQualityQueryHandler(_mockRepository.Object, _mockLogger.Object);
+        
+        // Setup default state classification
+        _mockStateService.Setup(s => s.IsDoneStateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string type, string state, CancellationToken ct) => 
+                state.Equals("Done", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Resolved", StringComparison.OrdinalIgnoreCase));
+        
+        _handler = new GetEffortEstimationQualityQueryHandler(_mockRepository.Object, _mockStateService.Object, _mockLogger.Object);
     }
 
     [TestMethod]

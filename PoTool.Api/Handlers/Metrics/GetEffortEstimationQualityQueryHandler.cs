@@ -16,13 +16,16 @@ public sealed class GetEffortEstimationQualityQueryHandler
     : IQueryHandler<GetEffortEstimationQualityQuery, EffortEstimationQualityDto>
 {
     private readonly IWorkItemRepository _repository;
+    private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetEffortEstimationQualityQueryHandler> _logger;
 
     public GetEffortEstimationQualityQueryHandler(
         IWorkItemRepository repository,
+        IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetEffortEstimationQualityQueryHandler> logger)
     {
         _repository = repository;
+        _stateClassificationService = stateClassificationService;
         _logger = logger;
     }
 
@@ -45,13 +48,15 @@ public sealed class GetEffortEstimationQualityQueryHandler
         }
 
         // Get completed work items with effort estimates
-        var completedWorkItems = workItemsList
-            .Where(wi => wi.Effort.HasValue && wi.Effort.Value > 0)
-            .Where(wi => wi.State.Equals("Done", StringComparison.OrdinalIgnoreCase) ||
-                         wi.State.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
-                         wi.State.Equals("Resolved", StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(wi => wi.RetrievedAt)
-            .ToList();
+        var completedWorkItems = new List<WorkItemDto>();
+        foreach (var wi in workItemsList.Where(wi => wi.Effort.HasValue && wi.Effort.Value > 0))
+        {
+            if (await _stateClassificationService.IsDoneStateAsync(wi.Type, wi.State, cancellationToken))
+            {
+                completedWorkItems.Add(wi);
+            }
+        }
+        completedWorkItems = completedWorkItems.OrderByDescending(wi => wi.RetrievedAt).ToList();
 
         _logger.LogDebug("Found {Count} completed work items with effort estimates", completedWorkItems.Count);
 

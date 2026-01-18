@@ -17,6 +17,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
 {
     private Mock<IWorkItemRepository> _mockRepository = null!;
     private Mock<IMediator> _mockMediator = null!;
+    private Mock<IWorkItemStateClassificationService> _mockStateService = null!;
     private Mock<ILogger<GetEpicCompletionForecastQueryHandler>> _mockLogger = null!;
     private GetEpicCompletionForecastQueryHandler _handler = null!;
 
@@ -25,10 +26,21 @@ public class GetEpicCompletionForecastQueryHandlerTests
     {
         _mockRepository = new Mock<IWorkItemRepository>();
         _mockMediator = new Mock<IMediator>();
+        _mockStateService = new Mock<IWorkItemStateClassificationService>();
         _mockLogger = new Mock<ILogger<GetEpicCompletionForecastQueryHandler>>();
+        
+        // Setup default state classification
+        _mockStateService.Setup(s => s.IsDoneStateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string type, string state, CancellationToken ct) => 
+                state.Equals("Done", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Removed", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Completed", StringComparison.OrdinalIgnoreCase));
+        
         _handler = new GetEpicCompletionForecastQueryHandler(
             _mockRepository.Object,
             _mockMediator.Object,
+            _mockStateService.Object,
             _mockLogger.Object);
     }
 
