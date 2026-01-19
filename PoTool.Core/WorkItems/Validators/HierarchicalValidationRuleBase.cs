@@ -1,0 +1,89 @@
+using PoTool.Shared.WorkItems;
+
+namespace PoTool.Core.WorkItems.Validators;
+
+/// <summary>
+/// Base class for hierarchical validation rules, providing common functionality.
+/// </summary>
+public abstract class HierarchicalValidationRuleBase : IHierarchicalValidationRule
+{
+    /// <inheritdoc />
+    public abstract string RuleId { get; }
+
+    /// <inheritdoc />
+    public abstract ValidationCategory Category { get; }
+
+    /// <inheritdoc />
+    public abstract ValidationConsequence Consequence { get; }
+
+    /// <inheritdoc />
+    public abstract ResponsibleParty ResponsibleParty { get; }
+
+    /// <summary>
+    /// Gets the message template for violations of this rule.
+    /// </summary>
+    protected abstract string MessageTemplate { get; }
+
+    /// <inheritdoc />
+    public abstract IReadOnlyList<ValidationRuleResult> Evaluate(IEnumerable<WorkItemDto> workItems);
+
+    /// <summary>
+    /// Creates a validation rule definition for this rule.
+    /// </summary>
+    protected ValidationRule CreateRule(string message) =>
+        new(RuleId, Category, Consequence, ResponsibleParty, message);
+
+    /// <summary>
+    /// Creates a violation result for a specific work item.
+    /// </summary>
+    protected ValidationRuleResult CreateViolation(int workItemId, string? additionalContext = null)
+    {
+        var message = additionalContext != null
+            ? $"{MessageTemplate} {additionalContext}"
+            : MessageTemplate;
+
+        return new ValidationRuleResult(
+            CreateRule(message),
+            workItemId,
+            IsViolated: true,
+            additionalContext
+        );
+    }
+
+    /// <summary>
+    /// Determines if a work item state represents a finished state (Done or Removed).
+    /// </summary>
+    protected static bool IsFinishedState(string state) =>
+        string.Equals(state, "Done", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(state, "Removed", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Builds a lookup dictionary from TFS ID to work item.
+    /// </summary>
+    protected static Dictionary<int, WorkItemDto> BuildLookup(IEnumerable<WorkItemDto> workItems)
+    {
+        var list = workItems as List<WorkItemDto> ?? workItems.ToList();
+        return list.ToDictionary(w => w.TfsId);
+    }
+
+    /// <summary>
+    /// Gets all descendants of a work item recursively.
+    /// </summary>
+    protected static IEnumerable<WorkItemDto> GetAllDescendants(
+        int parentId,
+        IEnumerable<WorkItemDto> allItems)
+    {
+        var itemsList = allItems as List<WorkItemDto> ?? allItems.ToList();
+        var directChildren = itemsList.Where(w => w.ParentTfsId == parentId).ToList();
+
+        foreach (var child in directChildren)
+        {
+            yield return child;
+
+            foreach (var descendant in GetAllDescendants(child.TfsId, itemsList))
+            {
+                yield return descendant;
+            }
+        }
+    }
+}
