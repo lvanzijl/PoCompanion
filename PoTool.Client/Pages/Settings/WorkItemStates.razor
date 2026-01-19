@@ -10,8 +10,14 @@
     <MudText Typo="Typo.h4" GutterBottom="true">Work Item State Classification</MudText>
     <MudText Typo="Typo.body1" Class="mb-4">
         Configure how TFS work item states map to the system's canonical lifecycle states.
-        Each state must be classified as New, In Progress, Done, or Removed.
+        Each state must be classified as:
     </MudText>
+    <MudStack Spacing="1" Class="mb-4">
+        <MudText Typo="Typo.body2">• <strong>New:</strong> Work has not started yet</MudText>
+        <MudText Typo="Typo.body2">• <strong>In Progress:</strong> Work is actively being done</MudText>
+        <MudText Typo="Typo.body2">• <strong>Done:</strong> Work is complete and delivered</MudText>
+        <MudText Typo="Typo.body2">• <strong>Removed:</strong> Work was cancelled or intentionally discarded</MudText>
+    </MudStack>
 
     @if (_isLoading)
     {
