@@ -7,6 +7,7 @@ using PoTool.Api.Services.MockData;
 using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
 using PoTool.Core.WorkItems.Validators;
+using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Core.WorkItems.Filtering;
 using PoTool.Core.Health;
 
@@ -136,7 +137,7 @@ public static class ApiServiceCollectionExtensions
             services.AddSingleton<BattleshipMockDataFacade>();
         }
 
-        // Register validators
+        // Register legacy validators (existing validation)
         services.AddScoped<WorkItemParentProgressValidator>();
         services.AddScoped<WorkItemInProgressWithoutEffortValidator>();
         services.AddScoped<IWorkItemValidator>(provider =>
@@ -148,6 +149,18 @@ public static class ApiServiceCollectionExtensions
             };
             return new CompositeWorkItemValidator(validators);
         });
+
+        // Register hierarchical validation rules (new validation system)
+        services.AddScoped<IHierarchicalValidationRule, DoneParentWithUnfinishedDescendantsRule>();
+        services.AddScoped<IHierarchicalValidationRule, RemovedParentWithUnfinishedDescendantsRule>();
+        services.AddScoped<IHierarchicalValidationRule, NewParentWithInProgressDescendantsRule>();
+        services.AddScoped<IHierarchicalValidationRule, EpicDescriptionEmptyRule>();
+        services.AddScoped<IHierarchicalValidationRule, FeatureDescriptionEmptyRule>();
+        services.AddScoped<IHierarchicalValidationRule, PbiDescriptionEmptyRule>();
+        services.AddScoped<IHierarchicalValidationRule, PbiEffortEmptyRule>();
+
+        // Register hierarchical work item validator
+        services.AddScoped<IHierarchicalWorkItemValidator, HierarchicalWorkItemValidator>();
 
         // Register Core business logic services
         services.AddScoped<WorkItemFilterer>();
