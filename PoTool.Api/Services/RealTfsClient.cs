@@ -4704,7 +4704,6 @@ public class RealTfsClient : ITfsClient
                 }
 
                 var states = new List<string>();
-                var stateCategories = new Dictionary<string, string>();
 
                 // Extract states array
                 // Each state is an object with 'name' and 'category' properties
@@ -4721,12 +4720,12 @@ public class RealTfsClient : ITfsClient
                                 states.Add(stateName);
                                 
                                 // Extract category if present (e.g., "Completed" for "Done")
+                                // Category information is logged for future enhancement possibilities
                                 if (stateElement.TryGetProperty("category", out var categoryElement))
                                 {
                                     var category = categoryElement.GetString();
                                     if (!string.IsNullOrWhiteSpace(category))
                                     {
-                                        stateCategories[stateName] = category;
                                         _logger.LogDebug(
                                             "Work item type '{Type}': State '{State}' has category '{Category}'",
                                             typeName, stateName, category);
