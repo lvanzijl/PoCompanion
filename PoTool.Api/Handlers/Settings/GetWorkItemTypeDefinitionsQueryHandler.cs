@@ -14,6 +14,9 @@ namespace PoTool.Api.Handlers.Settings;
 public sealed class GetWorkItemTypeDefinitionsQueryHandler
     : IRequestHandler<GetWorkItemTypeDefinitionsQuery, IEnumerable<WorkItemTypeDefinitionDto>>
 {
+    private static readonly HashSet<string> SupportedWorkItemTypes = 
+        new(WorkItemType.AllTypes, StringComparer.OrdinalIgnoreCase);
+
     private readonly ITfsClient _tfsClient;
     private readonly ILogger<GetWorkItemTypeDefinitionsQueryHandler> _logger;
 
@@ -34,9 +37,8 @@ public sealed class GetWorkItemTypeDefinitionsQueryHandler
         var allDefinitions = await _tfsClient.GetWorkItemTypeDefinitionsAsync(cancellationToken);
 
         // Filter to only supported work item types from WorkItemType class
-        var supportedTypes = WorkItemType.AllTypes.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var filteredDefinitions = allDefinitions
-            .Where(def => supportedTypes.Contains(def.TypeName))
+            .Where(def => SupportedWorkItemTypes.Contains(def.TypeName))
             .ToList();
 
         _logger.LogInformation(

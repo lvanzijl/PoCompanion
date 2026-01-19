@@ -229,7 +229,6 @@
             if (missingStates.Any())
             {
                 _errorMessage = $"Please classify all states before saving. Missing: {string.Join(", ", missingStates)}";
-                Snackbar.Add("All states must be classified before saving", Severity.Warning);
                 return;
             }
 
