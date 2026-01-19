@@ -1397,8 +1397,8 @@ public class RealTfsClient : ITfsClient
                         ? (DateTimeOffset?)cld.GetDateTimeOffset()
                         : null;
 
-                    // Determine iteration path from work items or use default
-                    var iterationPath = config.Project; // Default to project name
+                    // Determine iteration path from work items or use project root
+                    var iterationPath = config.Project; // Default to project root path
 
                     allPRs.Add(new PullRequestDto(
                         Id: prId,
@@ -4464,13 +4464,13 @@ public class RealTfsClient : ITfsClient
 
             var response = await httpClient.GetAsync(url, cancellationToken);
             
-            // If team field values not available, fall back to project default
+            // If team field values not available, fall back to project root area path
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning(
-                    "Could not retrieve team field values for Team='{Team}', Status={Status}. Using project default.",
+                    "Could not retrieve team field values for Team='{Team}', Status={Status}. Using project root area path.",
                     teamName, response.StatusCode);
-                return config.DefaultAreaPath ?? projectName;
+                return projectName; // Default area path is the project name (root area path)
             }
 
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -4501,12 +4501,11 @@ public class RealTfsClient : ITfsClient
                 }
             }
 
-            // Fall back to config default or project name
-            var fallback = config.DefaultAreaPath ?? projectName;
+            // Fall back to project root area path
             _logger.LogDebug(
                 "No area path found in team field values for Team='{Team}', using fallback='{Fallback}'",
-                teamName, fallback);
-            return fallback;
+                teamName, projectName);
+            return projectName; // Default area path is the project name (root area path)
         }
         catch (Exception ex)
         {
@@ -4514,7 +4513,7 @@ public class RealTfsClient : ITfsClient
                 ex,
                 "Error retrieving team field values for Team='{Team}'. Using fallback.",
                 teamName);
-            return config.DefaultAreaPath ?? projectName;
+            return projectName; // Default area path is the project name (root area path)
         }
     }
 

@@ -20,8 +20,7 @@ public interface IOnboardingWizardState
     /// </summary>
     /// <param name="url">TFS URL</param>
     /// <param name="project">Project name</param>
-    /// <param name="defaultAreaPath">Default area path</param>
-    void MarkTfsVerified(string url, string project, string defaultAreaPath);
+    void MarkTfsVerified(string url, string project);
 
     /// <summary>
     /// Marks TFS configuration as not verified (failed verification or field changed).
@@ -34,9 +33,8 @@ public interface IOnboardingWizardState
     /// </summary>
     /// <param name="url">Current TFS URL</param>
     /// <param name="project">Current project name</param>
-    /// <param name="defaultAreaPath">Current default area path</param>
     /// <returns>True if values match verified state, false if dirty</returns>
-    bool CheckTfsFieldsUnchanged(string url, string project, string defaultAreaPath);
+    bool CheckTfsFieldsUnchanged(string url, string project);
 
     /// <summary>
     /// Resets all wizard state.

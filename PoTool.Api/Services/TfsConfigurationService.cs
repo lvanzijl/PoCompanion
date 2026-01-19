@@ -66,6 +66,7 @@ public class TfsConfigurationService
     /// <summary>
     /// Saves TFS configuration.
     /// Authentication uses Windows credentials (NTLM) - always enabled.
+    /// DefaultAreaPath is derived from Project name (canonical root area path).
     /// </summary>
     public async Task SaveConfigAsync(
         string url,
@@ -82,13 +83,16 @@ public class TfsConfigurationService
             var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
             var existing = entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
 
+            // Derive DefaultAreaPath from Project name (canonical root area path)
+            var derivedDefaultAreaPath = project ?? string.Empty;
+
             if (existing == null)
             {
                 existing = new TfsConfigEntity
                 {
                     Url = url ?? string.Empty,
                     Project = project ?? string.Empty,
-                    DefaultAreaPath = defaultAreaPath ?? string.Empty,
+                    DefaultAreaPath = derivedDefaultAreaPath,
                     UseDefaultCredentials = useDefaultCredentials,
                     TimeoutSeconds = timeoutSeconds,
                     ApiVersion = apiVersion ?? "7.0",
@@ -102,7 +106,7 @@ public class TfsConfigurationService
             {
                 existing.Url = url ?? string.Empty;
                 existing.Project = project ?? string.Empty;
-                existing.DefaultAreaPath = defaultAreaPath ?? string.Empty;
+                existing.DefaultAreaPath = derivedDefaultAreaPath;
                 existing.UseDefaultCredentials = useDefaultCredentials;
                 existing.TimeoutSeconds = timeoutSeconds;
                 existing.ApiVersion = apiVersion ?? "7.0";
@@ -111,7 +115,8 @@ public class TfsConfigurationService
             }
 
             await _db.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("TFS configuration saved/updated for Url={Url}, using NTLM authentication", url);
+            _logger.LogInformation("TFS configuration saved/updated for Url={Url}, Project={Project}, DefaultAreaPath={DefaultAreaPath} (derived from project), using NTLM authentication", 
+                url, project, derivedDefaultAreaPath);
         }, cancellationToken);
     }
 

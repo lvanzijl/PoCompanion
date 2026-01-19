@@ -169,10 +169,11 @@ public static class ApiApplicationBuilderExtensions
         app.MapPost("/api/tfsconfig", async (TfsConfigurationService svc, TfsConfigRequest req) =>
         {
             // Authentication uses Windows credentials (NTLM) - no PAT needed
+            // DefaultAreaPath is now derived from Project name, but accept parameter for backward compatibility
             await svc.SaveConfigAsync(
                 req.Url ?? string.Empty,
                 req.Project ?? string.Empty,
-                req.DefaultAreaPath ?? string.Empty,
+                req.DefaultAreaPath ?? string.Empty, // Ignored - derived from Project
                 req.UseDefaultCredentials,
                 req.TimeoutSeconds,
                 req.ApiVersion ?? "7.0");
@@ -268,10 +269,11 @@ public static class ApiApplicationBuilderExtensions
             {
                 // Phase 1: Save configuration
                 await WriteProgressAsync(writer, "Saving Configuration", ProgressState.Running, "Saving TFS configuration...", 10, null, ct);
+                // DefaultAreaPath is now derived from Project name, but accept parameter for backward compatibility
                 await configService.SaveConfigAsync(
                     req.Url ?? string.Empty,
                     req.Project ?? string.Empty,
-                    req.DefaultAreaPath ?? string.Empty,
+                    req.DefaultAreaPath ?? string.Empty, // Ignored - derived from Project
                     req.UseDefaultCredentials,
                     req.TimeoutSeconds,
                     req.ApiVersion ?? "7.0",
