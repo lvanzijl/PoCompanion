@@ -29,7 +29,7 @@
         
         var result = await DialogService.ShowAsync<PoTool.Client.Components.Onboarding.OnboardingWizard>("Getting Started", options);
         
-        // After wizard closes, navigate to home
+        // After wizard closes, navigate to home (force reload to reset state)
         NavigationManager.NavigateTo("/", forceLoad: true);
     }
 }

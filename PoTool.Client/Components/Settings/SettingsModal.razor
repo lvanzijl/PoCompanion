@@ -167,7 +167,7 @@
         // Close the settings modal
         await Close();
         
-        // Navigate to onboarding page
+        // Navigate to onboarding page (force reload to ensure clean state after reset)
         NavigationManager.NavigateTo("/onboarding", forceLoad: true);
     }
 

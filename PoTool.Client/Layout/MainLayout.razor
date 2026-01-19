@@ -132,9 +132,9 @@
         }
         
         // Skip startup routing if onboarding is not yet completed
+        // The onboarding redirect is handled earlier in this component's OnAfterRenderAsync
         if (!await OnboardingService.HasCompletedOnboardingAsync())
         {
-            // Onboarding redirect will be handled by OnAfterRenderAsync
             return;
         }
         
