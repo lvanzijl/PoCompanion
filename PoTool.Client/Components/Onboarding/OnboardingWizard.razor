@@ -216,6 +216,7 @@
                                          Label="Backlog Root Work Item ID" 
                                          Placeholder="e.g., 12345"
                                          Required="true"
+                                         InputType="InputType.Number"
                                          HelperText="The ID of the root work item for this product's backlog" />
 
                             <MudStack Row="true" Spacing="2" Class="mt-2">
@@ -693,7 +694,7 @@
         {
             if (!int.TryParse(_backlogRootWorkItemId, out int workItemId))
             {
-                throw new InvalidOperationException("Backlog Root Work Item ID must be a valid integer.");
+                throw new InvalidOperationException("Please enter a valid work item ID (numbers only).");
             }
 
             // productOwnerId can be null if user skipped profile creation step
