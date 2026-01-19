@@ -3,6 +3,12 @@ bin/
 obj/
 out/
 
+# EF Core BuildHost files (Windows paths with backslashes)
+**/bin\Debug/
+**/bin\Release/
+**/obj\Debug/
+**/obj\Release/
+
 # User-specific files
 *.suo
 *.user
