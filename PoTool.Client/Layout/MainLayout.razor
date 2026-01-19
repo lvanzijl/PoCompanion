@@ -72,7 +72,13 @@
             // Check if user needs onboarding
             if (!await OnboardingService.HasCompletedOnboardingAsync())
             {
-                await OpenOnboardingWizard();
+                // Redirect to onboarding page instead of showing dialog
+                var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).Trim('/');
+                if (!currentPath.StartsWith("onboarding", StringComparison.OrdinalIgnoreCase))
+                {
+                    NavigationManager.NavigateTo("/onboarding");
+                    return;
+                }
             }
             
             // Subscribe to navigation changes to refresh profile selector when needed
@@ -122,6 +128,13 @@
         var normalizedPath = currentPath.Trim('/');
         if (!string.IsNullOrEmpty(normalizedPath))
         {
+            return;
+        }
+        
+        // Skip startup routing if onboarding is not yet completed
+        if (!await OnboardingService.HasCompletedOnboardingAsync())
+        {
+            // Onboarding redirect will be handled by OnAfterRenderAsync
             return;
         }
         
