@@ -19,6 +19,13 @@ public class CreateTeamCommandHandler : ICommandHandler<CreateTeamCommand, TeamD
 
     public async ValueTask<TeamDto> Handle(CreateTeamCommand command, CancellationToken cancellationToken)
     {
+        // Enforce TFS team requirement for new teams
+        if (string.IsNullOrWhiteSpace(command.TfsTeamId))
+        {
+            throw new InvalidOperationException(
+                "New teams must be created from Azure DevOps/TFS. TfsTeamId is required.");
+        }
+
         return await _repository.CreateTeamAsync(
             command.Name,
             command.TeamAreaPath,

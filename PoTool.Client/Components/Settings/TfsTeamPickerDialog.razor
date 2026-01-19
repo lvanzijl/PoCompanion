@@ -1,0 +1,203 @@
+@using MudBlazor
+@using PoTool.Client.Services
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using PoTool.Shared.Settings
+@using TeamPictureType = PoTool.Shared.Settings.TeamPictureType
+@inject TeamService TeamService
+@inject ISnackbar Snackbar
+@inject ErrorMessageService ErrorMessageService
+@inject HttpClient HttpClient
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form">
+            <MudStack Spacing="3">
+                @if (_isLoadingTeams)
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        <MudText>Loading teams from TFS...</MudText>
+                    </MudStack>
+                }
+                else if (_tfsTeams != null && _tfsTeams.Any())
+                {
+                    <MudSelect T="TfsTeamDto" 
+                              Label="Select Team" 
+                              @bind-Value="_selectedTfsTeam"
+                              Required="true"
+                              HelperText="Choose your team from Azure DevOps">
+                        @foreach (var team in _tfsTeams)
+                        {
+                            <MudSelectItem Value="@team">
+                                @team.Name
+                                @if (!string.IsNullOrEmpty(team.Description))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary"> - @team.Description</MudText>
+                                }
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    @if (_selectedTfsTeam != null)
+                    {
+                        <MudCheckBox @bind-Value="_overrideAreaPath" 
+                                    Label="Override area path" 
+                                    Color="Color.Primary"
+                                    Dense="true" />
+                        
+                        @if (_overrideAreaPath)
+                        {
+                            <CompactTextField @bind-Value="_teamAreaPath" 
+                                             Label="Area Path" 
+                                             Required="true"
+                                             HelperText="Custom area path for this team" />
+                        }
+                        else
+                        {
+                            <CompactTextField Value="@_selectedTfsTeam.DefaultAreaPath" 
+                                             Label="Area Path (Derived from Team)" 
+                                             ReadOnly="true"
+                                             HelperText="This area path is automatically derived from the team settings" />
+                        }
+
+                        @* Picture Selector *@
+                        <div class="mt-2">
+                            <PicturePicker Title="Team Picture" 
+                                           Category="Team" 
+                                           @bind-SelectedImageId="_selectedImageId" />
+                        </div>
+                    }
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">
+                        No teams found. Please ensure TFS configuration is correct and you have access to the project.
+                    </MudAlert>
+                }
+
+                @if (_errorResponse != null)
+                {
+                    <ErrorDisplay ErrorResponse="@_errorResponse" 
+                                  OnDismiss="ClearError" />
+                }
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <CompactButton OnClick="Cancel" Color="Color.Default">Cancel</CompactButton>
+        <CompactButton OnClick="SaveTeam" 
+                   Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   Disabled="@(_isSaving || _selectedTfsTeam == null)"
+                   StartIcon="@Icons.Material.Filled.Save">
+            @if (_isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                <span>Creating...</span>
+            }
+            else
+            {
+                <span>Create Team</span>
+            }
+        </CompactButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private MudForm _form = null!;
+    
+    private bool _isSaving = false;
+    private bool _isLoadingTeams = true;
+    private ErrorResponse? _errorResponse;
+
+    private List<TfsTeamDto>? _tfsTeams;
+    private TfsTeamDto? _selectedTfsTeam;
+    private bool _overrideAreaPath;
+    private string _teamAreaPath = string.Empty;
+    private int _selectedImageId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedImageId = Random.Shared.Next(0, 64);
+        await LoadTfsTeamsAsync();
+    }
+
+    private async Task LoadTfsTeamsAsync()
+    {
+        _isLoadingTeams = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await HttpClient.GetAsync("/api/startup/tfs-teams");
+            response.EnsureSuccessStatusCode();
+
+            _tfsTeams = await response.Content.ReadFromJsonAsync<List<TfsTeamDto>>(new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error loading TFS teams");
+            _tfsTeams = new List<TfsTeamDto>();
+        }
+        finally
+        {
+            _isLoadingTeams = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveTeam()
+    {
+        await _form.Validate();
+        if (!_form.IsValid || _selectedTfsTeam == null)
+        {
+            return;
+        }
+
+        try
+        {
+            _isSaving = true;
+            ClearError();
+
+            var areaPath = _overrideAreaPath ? _teamAreaPath : _selectedTfsTeam.DefaultAreaPath;
+            
+            // Create team entity with TFS team info
+            var createdTeam = await TeamService.CreateTeamAsync(
+                name: _selectedTfsTeam.Name,
+                teamAreaPath: areaPath,
+                pictureType: TeamPictureType.Default,
+                defaultPictureId: _selectedImageId,
+                customPicturePath: null,
+                projectName: _selectedTfsTeam.ProjectName,
+                tfsTeamId: _selectedTfsTeam.Id,
+                tfsTeamName: _selectedTfsTeam.Name);
+
+            MudDialog.Close(DialogResult.Ok(createdTeam));
+        }
+        catch (Exception ex)
+        {
+            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error creating team");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+}

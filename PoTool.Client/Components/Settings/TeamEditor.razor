@@ -9,9 +9,17 @@
 @inject ErrorMessageService ErrorMessageService
 
 <MudPaper Elevation="1" Class="pa-4">
+    @if (!IsEditing)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true">
+            <MudText Typo="Typo.body2">
+                <strong>Note:</strong> New teams must be created from Azure DevOps. This editor is only for modifying existing teams.
+            </MudText>
+        </MudAlert>
+    }
     <MudForm @ref="_form">
         <MudStack Spacing="3">
-            <MudText Typo="Typo.h6">@(IsEditing ? "Edit Team" : "Add Team")</MudText>
+            <MudText Typo="Typo.h6">Edit Team</MudText>
 
             <CompactTextField @bind-Value="_name" 
                           Label="Team Name" 
@@ -68,7 +76,7 @@
                     }
                     else
                     {
-                        <span>@(IsEditing ? "Update" : "Create") Team</span>
+                        <span>Update Team</span>
                     }
                 </CompactButton>
                 <CompactButton OnClick="Cancel" 
@@ -171,14 +179,9 @@
             }
             else
             {
-                await TeamService.CreateTeamAsync(
-                    _name,
-                    _teamAreaPath,
-                    TeamPictureType.Default,
-                    _selectedImageId,
-                    null);
-
-                Snackbar.Add("Team created successfully", Severity.Success);
+                // Legacy team creation no longer supported - should use TFS team picker
+                Snackbar.Add("Please use 'Add Team from TFS' to create new teams", Severity.Warning);
+                return;
             }
 
             await OnSaved.InvokeAsync();

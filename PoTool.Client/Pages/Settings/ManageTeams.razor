@@ -58,6 +58,10 @@
                                                 {
                                                     <MudChip T="string" Size="Size.Small" Color="Color.Warning">Archived</MudChip>
                                                 }
+                                                @if (string.IsNullOrEmpty(team.TfsTeamId))
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Default">Legacy</MudChip>
+                                                }
                                             </MudStack>
                                             <MudText Typo="Typo.body2" Color="Color.Secondary">
                                                 Area Path: @team.TeamAreaPath
@@ -93,7 +97,7 @@
             else
             {
                 <MudAlert Severity="Severity.Info" Dense="true">
-                    No teams yet. Create your first team to get started.
+                    No teams yet. Add your first team from Azure DevOps to get started.
                 </MudAlert>
             }
 
@@ -152,7 +156,27 @@
     private void OpenAddTeam()
     {
         _editingTeam = null;
-        _showEditor = true;
+        _showEditor = false; // Don't show the old editor
+        OpenTfsTeamPickerDialog(); // Open TFS team picker instead
+    }
+
+    private async void OpenTfsTeamPickerDialog()
+    {
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<TfsTeamPickerDialog>("Select Team from TFS", options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is TeamDto newTeam)
+        {
+            Snackbar.Add($"Team '{newTeam.Name}' created successfully", Severity.Success);
+            await LoadTeamsAsync();
+        }
     }
 
     private void EditTeam(TeamDto team)
