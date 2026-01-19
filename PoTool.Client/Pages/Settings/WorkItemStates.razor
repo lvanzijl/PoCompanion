@@ -9,9 +9,15 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     <MudText Typo="Typo.h4" GutterBottom="true">Work Item State Classification</MudText>
     <MudText Typo="Typo.body1" Class="mb-4">
-        Configure how work item states are classified across your TFS project.
-        This configuration is used to determine which work items are new, in progress, or done.
+        Configure how TFS work item states map to the system's canonical lifecycle states.
+        Each state must be classified as:
     </MudText>
+    <MudStack Spacing="1" Class="mb-4">
+        <MudText Typo="Typo.body2">• <strong>New:</strong> Work has not started yet</MudText>
+        <MudText Typo="Typo.body2">• <strong>In Progress:</strong> Work is actively being done</MudText>
+        <MudText Typo="Typo.body2">• <strong>Done:</strong> Work is complete and delivered</MudText>
+        <MudText Typo="Typo.body2">• <strong>Removed:</strong> Work was cancelled or intentionally discarded</MudText>
+    </MudStack>
 
     @if (_isLoading)
     {
@@ -40,26 +46,40 @@
                     </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudGrid>
+                    <MudStack Spacing="2">
                         @foreach (var state in witDef.States)
                         {
                             var classification = GetClassification(witDef.TypeName, state);
                             var workItemType = witDef.TypeName; // Capture for lambda
                             var stateName = state; // Capture for lambda
-                            <MudItem xs="12" sm="6" md="4">
-                                <MudSelect T="StateClassification"
-                                           Label="@state"
-                                           Value="@classification"
-                                           ValueChanged="@((StateClassification newValue) => OnClassificationChanged(workItemType, stateName, newValue))"
-                                           Variant="Variant.Outlined"
-                                           Dense="true">
-                                    <MudSelectItem Value="StateClassification.New">New</MudSelectItem>
-                                    <MudSelectItem Value="StateClassification.InProgress">In Progress</MudSelectItem>
-                                    <MudSelectItem Value="StateClassification.Done">Done</MudSelectItem>
-                                </MudSelect>
-                            </MudItem>
+                            
+                            <MudPaper Elevation="0" Class="pa-3" Style="border: 1px solid var(--mud-palette-divider);">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                    <MudText Typo="Typo.body1" Style="min-width: 180px; font-weight: 500;">
+                                        @state
+                                    </MudText>
+                                    <MudRadioGroup T="StateClassification" 
+                                                   Value="@classification"
+                                                   ValueChanged="@((StateClassification newValue) => OnClassificationChanged(workItemType, stateName, newValue))">
+                                        <MudStack Row="true" Spacing="4">
+                                            <MudRadio T="StateClassification" Value="StateClassification.New" Dense="true">
+                                                New
+                                            </MudRadio>
+                                            <MudRadio T="StateClassification" Value="StateClassification.InProgress" Dense="true">
+                                                In Progress
+                                            </MudRadio>
+                                            <MudRadio T="StateClassification" Value="StateClassification.Done" Dense="true">
+                                                Done
+                                            </MudRadio>
+                                            <MudRadio T="StateClassification" Value="StateClassification.Removed" Dense="true">
+                                                Removed
+                                            </MudRadio>
+                                        </MudStack>
+                                    </MudRadioGroup>
+                                </MudStack>
+                            </MudPaper>
                         }
-                    </MudGrid>
+                    </MudStack>
                 </MudCardContent>
             </MudCard>
         }
@@ -91,7 +111,7 @@
     else
     {
         <MudAlert Severity="Severity.Warning">
-            No work item types found. Please check your TFS configuration.
+            No supported work item types found. Please check your TFS configuration.
         </MudAlert>
     }
 </MudContainer>
@@ -118,7 +138,7 @@
 
         try
         {
-            // Load work item type definitions
+            // Load work item type definitions (now filtered to supported types)
             var definitions = await SettingsClient.GetWorkItemTypeDefinitionsAsync();
             _workItemTypeDefinitions = definitions.ToList();
 
@@ -187,8 +207,6 @@
 
             foreach (var witDef in _workItemTypeDefinitions)
             {
-                var doneStateCount = 0;
-
                 foreach (var state in witDef.States)
                 {
                     if (_classifications.TryGetValue(witDef.TypeName, out var stateDict))
@@ -201,11 +219,6 @@
                                 StateName = state,
                                 Classification = classification
                             });
-
-                            if (classification == StateClassification.Done)
-                            {
-                                doneStateCount++;
-                            }
                         }
                         else
                         {
@@ -216,15 +229,6 @@
                     {
                         missingStates.Add($"{witDef.TypeName}.{state}");
                     }
-                }
-
-                // Validate: at least one Done state per type
-                if (doneStateCount == 0)
-                {
-                    Snackbar.Add(
-                        $"Work item type '{witDef.TypeName}' must have at least one state classified as 'Done'",
-                        Severity.Warning);
-                    return;
                 }
             }
 

@@ -7171,12 +7171,14 @@
         "x-enumNames": [
           "New",
           "InProgress",
-          "Done"
+          "Done",
+          "Removed"
         ],
         "enum": [
           0,
           1,
-          2
+          2,
+          3
         ]
       },
       "SaveStateClassificationsRequest": {

@@ -2,16 +2,21 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using PoTool.Core.Contracts;
 using PoTool.Core.Settings.Queries;
+using PoTool.Core.WorkItems;
 using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Handlers.Settings;
 
 /// <summary>
 /// Handler for retrieving work item type definitions from TFS.
+/// Filters to only return work item types defined in the WorkItemType class.
 /// </summary>
 public sealed class GetWorkItemTypeDefinitionsQueryHandler
     : IRequestHandler<GetWorkItemTypeDefinitionsQuery, IEnumerable<WorkItemTypeDefinitionDto>>
 {
+    private static readonly HashSet<string> SupportedWorkItemTypes = 
+        new(WorkItemType.AllTypes, StringComparer.OrdinalIgnoreCase);
+
     private readonly ITfsClient _tfsClient;
     private readonly ILogger<GetWorkItemTypeDefinitionsQueryHandler> _logger;
 
@@ -29,12 +34,17 @@ public sealed class GetWorkItemTypeDefinitionsQueryHandler
     {
         _logger.LogInformation("Retrieving work item type definitions from TFS");
 
-        var definitions = await _tfsClient.GetWorkItemTypeDefinitionsAsync(cancellationToken);
+        var allDefinitions = await _tfsClient.GetWorkItemTypeDefinitionsAsync(cancellationToken);
+
+        // Filter to only supported work item types from WorkItemType class
+        var filteredDefinitions = allDefinitions
+            .Where(def => SupportedWorkItemTypes.Contains(def.TypeName))
+            .ToList();
 
         _logger.LogInformation(
-            "Successfully retrieved {Count} work item type definitions",
-            definitions.Count());
+            "Successfully retrieved {TotalCount} work item type definitions, filtered to {FilteredCount} supported types",
+            allDefinitions.Count(), filteredDefinitions.Count);
 
-        return definitions;
+        return filteredDefinitions;
     }
 }
