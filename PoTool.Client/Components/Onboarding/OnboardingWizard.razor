@@ -51,13 +51,6 @@
                                          Required="true"
                                          HelperText="The name of your project" />
 
-                            <CompactTextField Value="@_defaultAreaPath"
-                                         ValueChanged="@((string value) => OnDefaultAreaPathChanged(value))"
-                                         Label="Default Area Path" 
-                                         Placeholder="e.g., MyProject\Team A"
-                                         Required="true"
-                                         HelperText="The area path used for work item queries" />
-
                             <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
                                 <strong>Authentication:</strong> Uses Windows credentials (NTLM) of the current user. No additional configuration required.
                             </MudAlert>
@@ -428,7 +421,6 @@
     private bool _isSaving;
     private string _url = string.Empty;
     private string _project = string.Empty;
-    private string _defaultAreaPath = string.Empty;
     private ErrorResponse? _configErrorResponse;
     private List<ProgressUpdate> _progressUpdates = new();
     private bool? _configCompleted;
@@ -478,7 +470,7 @@
             {
                 _url = config.Url ?? string.Empty;
                 _project = config.Project ?? string.Empty;
-                _defaultAreaPath = config.DefaultAreaPath ?? string.Empty;
+                // DefaultAreaPath is now derived from Project, no need to load it
             }
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
@@ -515,7 +507,7 @@
         // For step 0 (TFS Configuration), require verification and no changes
         if (_currentStep == 0)
         {
-            return !WizardState.TfsVerified || !WizardState.CheckTfsFieldsUnchanged(_url, _project, _defaultAreaPath);
+            return !WizardState.TfsVerified || !WizardState.CheckTfsFieldsUnchanged(_url, _project);
         }
         return false;
     }
@@ -529,12 +521,6 @@
     private void OnProjectChanged(string value)
     {
         _project = value;
-        WizardState.MarkTfsUnverified();
-    }
-
-    private void OnDefaultAreaPathChanged(string value)
-    {
-        _defaultAreaPath = value;
         WizardState.MarkTfsUnverified();
     }
 
@@ -575,7 +561,7 @@
             {
                 url = _url,
                 project = _project,
-                defaultAreaPath = _defaultAreaPath,
+                defaultAreaPath = _project, // Derived from project name (backward compatibility)
                 useDefaultCredentials = true,
                 timeoutSeconds = 30,
                 apiVersion = "7.0"

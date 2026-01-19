@@ -31,14 +31,17 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
 
         // Get the configured area path from TFS settings
         var config = await _configService.GetConfigAsync(cancellationToken);
-        if (config == null || string.IsNullOrWhiteSpace(config.DefaultAreaPath))
+        if (config == null || string.IsNullOrWhiteSpace(config.Project))
         {
-            _logger.LogWarning("LiveWorkItemReadProvider: No TFS configuration or area path found, returning empty collection");
+            _logger.LogWarning("LiveWorkItemReadProvider: No TFS configuration or project found, returning empty collection");
             return Enumerable.Empty<WorkItemDto>();
         }
 
+        // Use DefaultAreaPath from config, which is derived from Project name (root area path)
+        var areaPath = config.DefaultAreaPath ?? config.Project;
+        
         // Fetch work items directly from TFS
-        var workItems = await _tfsClient.GetWorkItemsAsync(config.DefaultAreaPath, cancellationToken);
+        var workItems = await _tfsClient.GetWorkItemsAsync(areaPath, cancellationToken);
         return workItems;
     }
 

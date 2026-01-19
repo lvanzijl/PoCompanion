@@ -61,12 +61,6 @@
                          Required="true"
                          HelperText="The name of your project" />
 
-            <CompactTextField @bind-Value="_defaultAreaPath" 
-                         Label="Default Area Path" 
-                         Placeholder="e.g., MyProject\Team A"
-                         Required="true"
-                         HelperText="The area path used for work item queries (e.g., ProjectName\Team A)" />
-
             <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
                 <strong>Authentication:</strong> Uses Windows credentials (NTLM) of the current user. No additional configuration required.
             </MudAlert>
@@ -166,7 +160,6 @@
             <MudText Typo="Typo.body2">
                 <strong>URL:</strong> @_currentUrl<br />
                 <strong>Project:</strong> @_currentProject<br />
-                <strong>Default Area Path:</strong> @_currentDefaultAreaPath<br />
                 <strong>Authentication:</strong> Windows (NTLM)<br />
                 <strong>Timeout:</strong> @_timeoutSeconds seconds<br />
                 <strong>API Version:</strong> @_apiVersion
@@ -190,7 +183,6 @@
 
     private string _url = string.Empty;
     private string _project = string.Empty;
-    private string _defaultAreaPath = string.Empty;
     private bool _useDefaultCredentials = true;
     private int _timeoutSeconds = 30;
     private string _apiVersion = "7.0";
@@ -201,7 +193,6 @@
 
     private string _currentUrl = string.Empty;
     private string _currentProject = string.Empty;
-    private string _currentDefaultAreaPath = string.Empty;
     private DateTimeOffset? _lastValidated;
 
     // Verification report
@@ -242,10 +233,8 @@
             {
                 _currentUrl = config.Url ?? string.Empty;
                 _currentProject = config.Project ?? string.Empty;
-                _currentDefaultAreaPath = config.DefaultAreaPath ?? string.Empty;
                 _url = _currentUrl;
                 _project = _currentProject;
-                _defaultAreaPath = _currentDefaultAreaPath;
                 _useDefaultCredentials = config.UseDefaultCredentials;
                 _timeoutSeconds = config.TimeoutSeconds;
                 _apiVersion = config.ApiVersion;
@@ -275,11 +264,11 @@
         ClearError();
         try
         {
-            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
+            // DefaultAreaPath is derived from Project name, pass project as parameter
+            await TfsConfigService.SaveConfigAsync(_url, _project, _project, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
             Snackbar.Add("Configuration saved successfully", Severity.Success);
             _currentUrl = _url;
             _currentProject = _project;
-            _currentDefaultAreaPath = _defaultAreaPath;
             await LoadCurrentConfig(); // Reload to get LastValidated
         }
         catch (Exception ex)
@@ -301,7 +290,8 @@
         try
         {
             // First save the config
-            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
+            // DefaultAreaPath is derived from Project name
+            await TfsConfigService.SaveConfigAsync(_url, _project, _project, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
 
             // Then test the connection (throws on failure with detailed error information)
             var isValid = await TfsConfigService.ValidateConnectionAsync();
@@ -311,7 +301,6 @@
                 Snackbar.Add("Connection test successful!", Severity.Success);
                 _currentUrl = _url;
                 _currentProject = _project;
-                _currentDefaultAreaPath = _defaultAreaPath;
                 await LoadCurrentConfig(); // Reload to get updated LastValidated
             }
         }
@@ -336,7 +325,8 @@
         try
         {
             // First save the config
-            await TfsConfigService.SaveConfigAsync(_url, _project, _defaultAreaPath, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
+            // DefaultAreaPath is derived from Project name
+            await TfsConfigService.SaveConfigAsync(_url, _project, _project, _useDefaultCredentials, _timeoutSeconds, _apiVersion);
 
             // Parse work item ID if provided
             int? workItemId = null;
@@ -432,7 +422,6 @@
                 
                 _currentUrl = _url;
                 _currentProject = _project;
-                _currentDefaultAreaPath = _defaultAreaPath;
             }
         }
         catch (Exception ex)
