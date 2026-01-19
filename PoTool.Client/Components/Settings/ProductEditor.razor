@@ -65,7 +65,7 @@
                                Variant="Variant.Text"
                                Size="Size.Small"
                                StartIcon="@Icons.Material.Filled.Add">
-                        Create New Team
+                        Add Team from TFS
                     </CompactButton>
                 </MudStack>
                 <CompactSelect T="int"
@@ -84,7 +84,7 @@
             {
                 <MudAlert Severity="Severity.Info" Dense="true">
                     <MudText Typo="Typo.caption">
-                        No teams available. Use the "Create New Team" button above to create one.
+                        No teams available. Use the "Add Team from TFS" button above to select a team from Azure DevOps.
                     </MudText>
                 </MudAlert>
             }
@@ -530,11 +530,6 @@
 
     private async Task OpenCreateTeamDialog()
     {
-        var parameters = new DialogParameters
-        {
-            { "Team", null }
-        };
-
         var options = new DialogOptions
         {
             CloseButton = true,
@@ -542,7 +537,7 @@
             FullWidth = true
         };
 
-        var dialog = await DialogService.ShowAsync<InlineTeamCreationDialog>("Create New Team", parameters, options);
+        var dialog = await DialogService.ShowAsync<TfsTeamPickerDialog>("Select Team from TFS", options);
         var result = await dialog.Result;
 
         if (result != null && !result.Canceled && result.Data is TeamDto newTeam)

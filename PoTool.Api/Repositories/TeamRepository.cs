@@ -56,6 +56,13 @@ public class TeamRepository : ITeamRepository
         string? tfsTeamName = null,
         CancellationToken cancellationToken = default)
     {
+        // Enforce TFS team requirement - new teams must have TfsTeamId
+        if (string.IsNullOrWhiteSpace(tfsTeamId))
+        {
+            throw new InvalidOperationException(
+                "Cannot create new team without TfsTeamId. Teams must be created from Azure DevOps/TFS.");
+        }
+
         var entity = new TeamEntity
         {
             Name = name,
