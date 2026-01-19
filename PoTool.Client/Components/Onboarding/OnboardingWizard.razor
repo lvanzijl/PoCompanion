@@ -697,7 +697,8 @@
                 throw new InvalidOperationException("Please enter a valid work item ID (numbers only).");
             }
 
-            // _createdProfileId (productOwnerId) can be null if user skipped profile creation step
+            // _createdProfileId (productOwnerId) can be null if user skipped profile creation step.
+            // ProductService.CreateProductAsync accepts null productOwnerId to create an orphaned product.
             var product = await ProductService.CreateProductAsync(
                 _createdProfileId,
                 _productName,

@@ -154,7 +154,11 @@ public class OnboardingWizardStateTests
     public void GatingScenario_InitiallyDisabled()
     {
         // Simulates wizard starting - Next should be disabled
-        var canProceed = _state.TfsVerified && _state.CheckTfsFieldsUnchanged("", "", "");
+        // Using realistic values to ensure fingerprinting works correctly
+        var canProceed = _state.TfsVerified && _state.CheckTfsFieldsUnchanged(
+            "https://dev.azure.com/org",
+            "TestProject", 
+            "TestArea\\Path");
         Assert.IsFalse(canProceed);
     }
 
