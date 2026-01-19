@@ -52,30 +52,39 @@
                             var classification = GetClassification(witDef.TypeName, state);
                             var workItemType = witDef.TypeName; // Capture for lambda
                             var stateName = state; // Capture for lambda
+                            var hasError = HasValidationError(workItemType, stateName);
                             
-                            <MudPaper Elevation="0" Class="pa-3" Style="border: 1px solid var(--mud-palette-divider);">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                                    <MudText Typo="Typo.body1" Style="min-width: 180px; font-weight: 500;">
-                                        @state
-                                    </MudText>
-                                    <MudRadioGroup T="StateClassification" 
-                                                   Value="@classification"
-                                                   ValueChanged="@((StateClassification newValue) => OnClassificationChanged(workItemType, stateName, newValue))">
-                                        <MudStack Row="true" Spacing="4">
-                                            <MudRadio T="StateClassification" Value="StateClassification.New" Dense="true">
-                                                New
-                                            </MudRadio>
-                                            <MudRadio T="StateClassification" Value="StateClassification.InProgress" Dense="true">
-                                                In Progress
-                                            </MudRadio>
-                                            <MudRadio T="StateClassification" Value="StateClassification.Done" Dense="true">
-                                                Done
-                                            </MudRadio>
-                                            <MudRadio T="StateClassification" Value="StateClassification.Removed" Dense="true">
-                                                Removed
-                                            </MudRadio>
-                                        </MudStack>
-                                    </MudRadioGroup>
+                            <MudPaper Elevation="0" Class="pa-3" Style="@($"border: 1px solid {(hasError ? "var(--mud-palette-error)" : "var(--mud-palette-divider)")};")">
+                                <MudStack Spacing="2">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                        <MudText Typo="Typo.body1" Style="min-width: 180px; font-weight: 500;">
+                                            @state
+                                        </MudText>
+                                        <MudRadioGroup T="StateClassification" 
+                                                       Value="@classification"
+                                                       ValueChanged="@((StateClassification newValue) => OnClassificationChanged(workItemType, stateName, newValue))">
+                                            <MudStack Row="true" Spacing="4">
+                                                <MudRadio T="StateClassification" Value="StateClassification.New" Dense="true">
+                                                    New
+                                                </MudRadio>
+                                                <MudRadio T="StateClassification" Value="StateClassification.InProgress" Dense="true">
+                                                    In Progress
+                                                </MudRadio>
+                                                <MudRadio T="StateClassification" Value="StateClassification.Done" Dense="true">
+                                                    Done
+                                                </MudRadio>
+                                                <MudRadio T="StateClassification" Value="StateClassification.Removed" Dense="true">
+                                                    Removed
+                                                </MudRadio>
+                                            </MudStack>
+                                        </MudRadioGroup>
+                                    </MudStack>
+                                    @if (hasError)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Error">
+                                            Please select a lifecycle state for this work item state.
+                                        </MudText>
+                                    }
                                 </MudStack>
                             </MudPaper>
                         }
@@ -125,6 +134,7 @@
 
     private List<WorkItemTypeDefinitionDto> _workItemTypeDefinitions = new();
     private Dictionary<string, Dictionary<string, StateClassification>> _classifications = new();
+    private HashSet<(string WorkItemType, string StateName)> _missingSelections = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -135,6 +145,7 @@
     {
         _isLoading = true;
         _errorMessage = null;
+        _missingSelections.Clear();
 
         try
         {
@@ -149,13 +160,24 @@
 
             // Build classification dictionary for easy lookup
             _classifications.Clear();
-            foreach (var c in response.Classifications)
+            
+            // First, initialize all states with their loaded classification or default
+            foreach (var witDef in _workItemTypeDefinitions)
             {
-                if (!_classifications.ContainsKey(c.WorkItemType))
+                if (!_classifications.ContainsKey(witDef.TypeName))
                 {
-                    _classifications[c.WorkItemType] = new Dictionary<string, StateClassification>();
+                    _classifications[witDef.TypeName] = new Dictionary<string, StateClassification>();
                 }
-                _classifications[c.WorkItemType][c.StateName] = c.Classification;
+                
+                foreach (var state in witDef.States)
+                {
+                    // Find classification from loaded data
+                    var loadedClassification = response.Classifications
+                        .FirstOrDefault(c => c.WorkItemType == witDef.TypeName && c.StateName == state);
+                    
+                    // Initialize with loaded value or default (New)
+                    _classifications[witDef.TypeName][state] = loadedClassification?.Classification ?? StateClassification.New;
+                }
             }
 
             Logger.LogInformation(
@@ -182,7 +204,13 @@
                 return classification;
             }
         }
-        return StateClassification.New; // Default
+        // Should not happen after LoadData initialization, but provide safe default
+        return StateClassification.New;
+    }
+    
+    private bool HasValidationError(string workItemType, string stateName)
+    {
+        return _missingSelections.Contains((workItemType, stateName));
     }
 
     private void OnClassificationChanged(string workItemType, string stateName, StateClassification newClassification)
@@ -192,49 +220,47 @@
             _classifications[workItemType] = new Dictionary<string, StateClassification>();
         }
         _classifications[workItemType][stateName] = newClassification;
+        
+        // Clear validation error for this row when user makes a selection
+        _missingSelections.Remove((workItemType, stateName));
     }
 
     private async Task SaveClassifications()
     {
         _isSaving = true;
         _errorMessage = null;
+        _missingSelections.Clear();
 
         try
         {
-            // Validate: ensure all states are classified
+            // Build all classifications from the dictionary (which now contains all states)
             var allClassifications = new List<WorkItemStateClassificationDto>();
-            var missingStates = new List<string>();
 
             foreach (var witDef in _workItemTypeDefinitions)
             {
                 foreach (var state in witDef.States)
                 {
-                    if (_classifications.TryGetValue(witDef.TypeName, out var stateDict))
+                    if (_classifications.TryGetValue(witDef.TypeName, out var stateDict) &&
+                        stateDict.TryGetValue(state, out var classification))
                     {
-                        if (stateDict.TryGetValue(state, out var classification))
+                        allClassifications.Add(new WorkItemStateClassificationDto
                         {
-                            allClassifications.Add(new WorkItemStateClassificationDto
-                            {
-                                WorkItemType = witDef.TypeName,
-                                StateName = state,
-                                Classification = classification
-                            });
-                        }
-                        else
-                        {
-                            missingStates.Add($"{witDef.TypeName}.{state}");
-                        }
+                            WorkItemType = witDef.TypeName,
+                            StateName = state,
+                            Classification = classification
+                        });
                     }
                     else
                     {
-                        missingStates.Add($"{witDef.TypeName}.{state}");
+                        // This should not happen after LoadData initialization, but handle defensively
+                        _missingSelections.Add((witDef.TypeName, state));
                     }
                 }
             }
 
-            if (missingStates.Any())
+            if (_missingSelections.Any())
             {
-                _errorMessage = $"Please classify all states before saving. Missing: {string.Join(", ", missingStates)}";
+                _errorMessage = $"Please classify all states before saving. Missing: {string.Join(", ", _missingSelections.Select(m => $"{m.WorkItemType}.{m.StateName}"))}";
                 return;
             }
 
