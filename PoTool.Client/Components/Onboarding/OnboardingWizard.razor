@@ -696,6 +696,7 @@
                 throw new InvalidOperationException("Backlog Root Work Item ID must be a valid integer.");
             }
 
+            // productOwnerId can be null if user skipped profile creation step
             var product = await ProductService.CreateProductAsync(
                 _createdProfileId,
                 _productName,
