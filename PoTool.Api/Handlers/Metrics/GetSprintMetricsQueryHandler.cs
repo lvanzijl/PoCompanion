@@ -1,6 +1,7 @@
 using Mediator;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Metrics;
+using PoTool.Shared.WorkItems;
 using PoTool.Core.Metrics.Queries;
 
 namespace PoTool.Api.Handlers.Metrics;
@@ -12,13 +13,16 @@ namespace PoTool.Api.Handlers.Metrics;
 public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetricsQuery, SprintMetricsDto?>
 {
     private readonly IWorkItemRepository _repository;
+    private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetSprintMetricsQueryHandler> _logger;
 
     public GetSprintMetricsQueryHandler(
         IWorkItemRepository repository,
+        IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetSprintMetricsQueryHandler> logger)
     {
         _repository = repository;
+        _stateClassificationService = stateClassificationService;
         _logger = logger;
     }
 
@@ -42,10 +46,14 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         }
 
         // Calculate metrics
-        var completedStates = new[] { "Done", "Closed", "Completed", "Resolved" };
-        var completedItems = sprintWorkItems
-            .Where(wi => completedStates.Contains(wi.State, StringComparer.OrdinalIgnoreCase))
-            .ToList();
+        var completedItems = new List<WorkItemDto>();
+        foreach (var wi in sprintWorkItems)
+        {
+            if (await _stateClassificationService.IsDoneStateAsync(wi.Type, wi.State, cancellationToken))
+            {
+                completedItems.Add(wi);
+            }
+        }
 
         var completedStoryPoints = completedItems
             .Where(wi => wi.Effort.HasValue)

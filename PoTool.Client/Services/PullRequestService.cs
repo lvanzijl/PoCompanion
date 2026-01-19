@@ -64,10 +64,14 @@ public class PullRequestService
 
     /// <summary>
     /// Synchronizes pull requests from TFS.
+    /// NOTE: Sync endpoint removed from API - this method is obsolete.
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
+    [Obsolete("Sync endpoint no longer exists in API")]
     public async Task<int> SyncAsync(string? productIds = null)
     {
-        return await _pullRequestsClient.SyncAsync(productIds);
+        // TODO: Restore sync functionality or remove this method
+        await Task.CompletedTask;
+        return 0;
     }
 }

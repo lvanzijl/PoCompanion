@@ -18,6 +18,7 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
 {
     private Mock<IWorkItemRepository> _mockRepository = null!;
     private Mock<IMediator> _mockMediator = null!;
+    private Mock<IWorkItemStateClassificationService> _mockStateService = null!;
     private Mock<ILogger<GetEffortEstimationSuggestionsQueryHandler>> _mockLogger = null!;
     private GetEffortEstimationSuggestionsQueryHandler _handler = null!;
 
@@ -26,13 +27,21 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
     {
         _mockRepository = new Mock<IWorkItemRepository>();
         _mockMediator = new Mock<IMediator>();
+        _mockStateService = new Mock<IWorkItemStateClassificationService>();
         _mockLogger = new Mock<ILogger<GetEffortEstimationSuggestionsQueryHandler>>();
 
         // Setup default effort estimation settings
         _mockMediator.Setup(m => m.Send(It.IsAny<GetEffortEstimationSettingsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EffortEstimationSettingsDto.Default);
 
-        _handler = new GetEffortEstimationSuggestionsQueryHandler(_mockRepository.Object, _mockMediator.Object, _mockLogger.Object);
+        // Setup default state classification
+        _mockStateService.Setup(s => s.IsDoneStateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string type, string state, CancellationToken ct) => 
+                state.Equals("Done", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Resolved", StringComparison.OrdinalIgnoreCase));
+
+        _handler = new GetEffortEstimationSuggestionsQueryHandler(_mockRepository.Object, _mockMediator.Object, _mockStateService.Object, _mockLogger.Object);
     }
 
     [TestMethod]

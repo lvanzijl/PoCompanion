@@ -115,6 +115,11 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<PipelineDefinitionEntity> PipelineDefinitions => Set<PipelineDefinitionEntity>();
 
+    /// <summary>
+    /// Work item state classifications (project-wide configuration).
+    /// </summary>
+    public DbSet<WorkItemStateClassificationEntity> WorkItemStateClassifications => Set<WorkItemStateClassificationEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -325,6 +330,17 @@ public class PoToolDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.RepositoryId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Work item state classifications
+        modelBuilder.Entity<WorkItemStateClassificationEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.TfsProjectName, e.WorkItemType, e.StateName })
+                .IsUnique();
+
+            entity.Property(e => e.TfsProjectName).HasMaxLength(256).IsRequired();
+            entity.Property(e => e.WorkItemType).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.StateName).HasMaxLength(100).IsRequired();
         });
     }
 }

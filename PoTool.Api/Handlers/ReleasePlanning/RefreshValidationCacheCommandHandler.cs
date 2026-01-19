@@ -15,15 +15,18 @@ public sealed class RefreshValidationCacheCommandHandler : ICommandHandler<Refre
 {
     private readonly IReleasePlanningRepository _repository;
     private readonly IWorkItemRepository _workItemRepository;
+    private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<RefreshValidationCacheCommandHandler> _logger;
 
     public RefreshValidationCacheCommandHandler(
         IReleasePlanningRepository repository,
         IWorkItemRepository workItemRepository,
+        IWorkItemStateClassificationService stateClassificationService,
         ILogger<RefreshValidationCacheCommandHandler> logger)
     {
         _repository = repository;
         _workItemRepository = workItemRepository;
+        _stateClassificationService = stateClassificationService;
         _logger = logger;
     }
 
@@ -120,15 +123,18 @@ public sealed class RefreshValidationCacheCommandHandler : ICommandHandler<Refre
             hasWarning = true;
         }
 
-        // 4. Epic is Closed but has Active descendants (error)
-        if (epic.State.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
-            epic.State.Equals("Done", StringComparison.OrdinalIgnoreCase))
+        // 4. Epic is Done but has Active descendants (error)
+        if (await _stateClassificationService.IsDoneStateAsync(epic.Type, epic.State, cancellationToken))
         {
-            var openDescendants = descendants.Where(d =>
-                !d.State.Equals("Closed", StringComparison.OrdinalIgnoreCase) &&
-                !d.State.Equals("Done", StringComparison.OrdinalIgnoreCase) &&
-                !d.State.Equals("Removed", StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            var openDescendants = new List<WorkItemDto>();
+            foreach (var d in descendants)
+            {
+                var isDone = await _stateClassificationService.IsDoneStateAsync(d.Type, d.State, cancellationToken);
+                if (!isDone)
+                {
+                    openDescendants.Add(d);
+                }
+            }
 
             if (openDescendants.Count > 0)
             {

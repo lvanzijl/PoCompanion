@@ -1,0 +1,264 @@
+@page "/settings/workitem-states"
+@using PoTool.Client.ApiClient
+@inject SettingsClient SettingsClient
+@inject ILogger<WorkItemStates> Logger
+@inject ISnackbar Snackbar
+
+<PageTitle>Work Item States</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">Work Item State Classification</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Configure how work item states are classified across your TFS project.
+        This configuration is used to determine which work items are new, in progress, or done.
+    </MudText>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" Class="mb-4" />
+        <MudText>Loading work item types and states...</MudText>
+    }
+    else if (_errorMessage != null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
+    }
+    else if (_workItemTypeDefinitions.Any())
+    {
+        @if (_isDefault)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                Currently using default state classifications. Save your changes to create custom classifications.
+            </MudAlert>
+        }
+
+        @foreach (var witDef in _workItemTypeDefinitions)
+        {
+            <MudCard Class="mb-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@witDef.TypeName</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid>
+                        @foreach (var state in witDef.States)
+                        {
+                            var classification = GetClassification(witDef.TypeName, state);
+                            var workItemType = witDef.TypeName; // Capture for lambda
+                            var stateName = state; // Capture for lambda
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudSelect T="StateClassification"
+                                           Label="@state"
+                                           Value="@classification"
+                                           ValueChanged="@((StateClassification newValue) => OnClassificationChanged(workItemType, stateName, newValue))"
+                                           Variant="Variant.Outlined"
+                                           Dense="true">
+                                    <MudSelectItem Value="StateClassification.New">New</MudSelectItem>
+                                    <MudSelectItem Value="StateClassification.InProgress">In Progress</MudSelectItem>
+                                    <MudSelectItem Value="StateClassification.Done">Done</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+        }
+
+        <MudPaper Class="pa-4 mt-4">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="SaveClassifications"
+                       Disabled="@_isSaving">
+                @if (_isSaving)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Saving...</span>
+                }
+                else
+                {
+                    <span>Save Configuration</span>
+                }
+            </MudButton>
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Default"
+                       OnClick="LoadData"
+                       Disabled="@_isSaving"
+                       Class="ml-2">
+                Reset
+            </MudButton>
+        </MudPaper>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Warning">
+            No work item types found. Please check your TFS configuration.
+        </MudAlert>
+    }
+</MudContainer>
+
+@code {
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private string? _errorMessage;
+    private bool _isDefault = false;
+    private string _projectName = string.Empty;
+
+    private List<WorkItemTypeDefinitionDto> _workItemTypeDefinitions = new();
+    private Dictionary<string, Dictionary<string, StateClassification>> _classifications = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            // Load work item type definitions
+            var definitions = await SettingsClient.GetWorkItemTypeDefinitionsAsync();
+            _workItemTypeDefinitions = definitions.ToList();
+
+            // Load current classifications
+            var response = await SettingsClient.GetStateClassificationsAsync();
+            _projectName = response.ProjectName;
+            _isDefault = response.IsDefault;
+
+            // Build classification dictionary for easy lookup
+            _classifications.Clear();
+            foreach (var c in response.Classifications)
+            {
+                if (!_classifications.ContainsKey(c.WorkItemType))
+                {
+                    _classifications[c.WorkItemType] = new Dictionary<string, StateClassification>();
+                }
+                _classifications[c.WorkItemType][c.StateName] = c.Classification;
+            }
+
+            Logger.LogInformation(
+                "Loaded {TypeCount} work item types with {ClassificationCount} state classifications (IsDefault: {IsDefault})",
+                _workItemTypeDefinitions.Count, response.Classifications.Count, _isDefault);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load work item state data: {ex.Message}";
+            Logger.LogError(ex, "Error loading work item state data");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private StateClassification GetClassification(string workItemType, string stateName)
+    {
+        if (_classifications.TryGetValue(workItemType, out var stateDict))
+        {
+            if (stateDict.TryGetValue(stateName, out var classification))
+            {
+                return classification;
+            }
+        }
+        return StateClassification.New; // Default
+    }
+
+    private void OnClassificationChanged(string workItemType, string stateName, StateClassification newClassification)
+    {
+        if (!_classifications.ContainsKey(workItemType))
+        {
+            _classifications[workItemType] = new Dictionary<string, StateClassification>();
+        }
+        _classifications[workItemType][stateName] = newClassification;
+    }
+
+    private async Task SaveClassifications()
+    {
+        _isSaving = true;
+        _errorMessage = null;
+
+        try
+        {
+            // Validate: ensure all states are classified
+            var allClassifications = new List<WorkItemStateClassificationDto>();
+            var missingStates = new List<string>();
+
+            foreach (var witDef in _workItemTypeDefinitions)
+            {
+                var doneStateCount = 0;
+
+                foreach (var state in witDef.States)
+                {
+                    if (_classifications.TryGetValue(witDef.TypeName, out var stateDict))
+                    {
+                        if (stateDict.TryGetValue(state, out var classification))
+                        {
+                            allClassifications.Add(new WorkItemStateClassificationDto
+                            {
+                                WorkItemType = witDef.TypeName,
+                                StateName = state,
+                                Classification = classification
+                            });
+
+                            if (classification == StateClassification.Done)
+                            {
+                                doneStateCount++;
+                            }
+                        }
+                        else
+                        {
+                            missingStates.Add($"{witDef.TypeName}.{state}");
+                        }
+                    }
+                    else
+                    {
+                        missingStates.Add($"{witDef.TypeName}.{state}");
+                    }
+                }
+
+                // Validate: at least one Done state per type
+                if (doneStateCount == 0)
+                {
+                    Snackbar.Add(
+                        $"Work item type '{witDef.TypeName}' must have at least one state classified as 'Done'",
+                        Severity.Warning);
+                    return;
+                }
+            }
+
+            if (missingStates.Any())
+            {
+                _errorMessage = $"Please classify all states before saving. Missing: {string.Join(", ", missingStates)}";
+                return;
+            }
+
+            // Save
+            var request = new SaveStateClassificationsRequest
+            {
+                ProjectName = _projectName,
+                Classifications = allClassifications
+            };
+
+            await SettingsClient.SaveStateClassificationsAsync(request);
+
+            Snackbar.Add("State classifications saved successfully", Severity.Success);
+            Logger.LogInformation("Saved {Count} state classifications for project '{Project}'",
+                allClassifications.Count, _projectName);
+
+            // Reload to show non-default state
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to save state classifications: {ex.Message}";
+            Logger.LogError(ex, "Error saving state classifications");
+            Snackbar.Add("Failed to save state classifications", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

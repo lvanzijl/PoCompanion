@@ -327,6 +327,19 @@ public interface ITfsClient
         string projectName,
         string teamName,
         CancellationToken cancellationToken = default);
+
+    // ============================================
+    // WORK ITEM TYPE DEFINITIONS
+    // ============================================
+
+    /// <summary>
+    /// Retrieves work item type definitions from TFS, including valid states for each type.
+    /// This is used for state classification configuration.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of work item type definitions with their valid states.</returns>
+    Task<IEnumerable<WorkItemTypeDefinitionDto>> GetWorkItemTypeDefinitionsAsync(
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>

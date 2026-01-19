@@ -4644,4 +4644,98 @@ public class RealTfsClient : ITfsClient
             return (IEnumerable<TeamIterationDto>)iterations;
         }, cancellationToken);
     }
+
+    // ============================================
+    // WORK ITEM TYPE DEFINITIONS
+    // ============================================
+
+    /// <summary>
+    /// Retrieves work item type definitions from TFS, including valid states for each type.
+    /// </summary>
+    public async Task<IEnumerable<WorkItemTypeDefinitionDto>> GetWorkItemTypeDefinitionsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+        var config = entity!;
+
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            // GET {ServerUri}/{Project}/_apis/wit/workitemtypes?api-version=7.0
+            var url = ProjectUrl(config, "_apis/wit/workitemtypes");
+            _logger.LogDebug("Fetching work item type definitions from: {Url}", url);
+
+            var response = await httpClient.GetAsync(url, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError(
+                    "Failed to get work item type definitions: {StatusCode}, Response: {Response}",
+                    response.StatusCode, errorContent);
+                throw new TfsException(
+                    $"Failed to retrieve work item type definitions: {response.StatusCode}");
+            }
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            if (!doc.RootElement.TryGetProperty("value", out var valueArray))
+            {
+                _logger.LogWarning("Work item type definitions response missing 'value' array");
+                return Array.Empty<WorkItemTypeDefinitionDto>();
+            }
+
+            var definitions = new List<WorkItemTypeDefinitionDto>();
+
+            foreach (var witElement in valueArray.EnumerateArray())
+            {
+                if (!witElement.TryGetProperty("name", out var nameProp))
+                {
+                    continue;
+                }
+
+                var typeName = nameProp.GetString();
+                if (string.IsNullOrWhiteSpace(typeName))
+                {
+                    continue;
+                }
+
+                var states = new List<string>();
+
+                // Extract states array
+                if (witElement.TryGetProperty("states", out var statesArray))
+                {
+                    foreach (var stateElement in statesArray.EnumerateArray())
+                    {
+                        var stateName = stateElement.GetString();
+                        if (!string.IsNullOrWhiteSpace(stateName))
+                        {
+                            states.Add(stateName);
+                        }
+                    }
+                }
+
+                var dto = new WorkItemTypeDefinitionDto
+                {
+                    TypeName = typeName,
+                    States = states.AsReadOnly()
+                };
+
+                definitions.Add(dto);
+
+                _logger.LogDebug(
+                    "Mapped work item type definition: Type={Type}, States={StateCount}",
+                    typeName, states.Count);
+            }
+
+            _logger.LogInformation(
+                "Retrieved {Count} work item type definitions from project '{Project}'",
+                definitions.Count, config.Project);
+
+            return (IEnumerable<WorkItemTypeDefinitionDto>)definitions;
+        }, cancellationToken);
+    }
 }
