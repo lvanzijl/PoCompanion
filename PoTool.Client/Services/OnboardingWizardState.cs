@@ -9,6 +9,7 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class OnboardingWizardState : IOnboardingWizardState
 {
+    private const string FingerprintSeparator = "|";
     private bool _tfsVerified;
     private string? _verifiedFingerprint;
 
@@ -63,7 +64,7 @@ public class OnboardingWizardState : IOnboardingWizardState
 
     private static string ComputeFingerprint(string url, string project, string defaultAreaPath)
     {
-        var combined = $"{url?.Trim() ?? ""}|{project?.Trim() ?? ""}|{defaultAreaPath?.Trim() ?? ""}";
+        var combined = $"{url?.Trim() ?? ""}{FingerprintSeparator}{project?.Trim() ?? ""}{FingerprintSeparator}{defaultAreaPath?.Trim() ?? ""}";
         var bytes = Encoding.UTF8.GetBytes(combined);
         var hash = SHA256.HashData(bytes);
         return Convert.ToBase64String(hash);
