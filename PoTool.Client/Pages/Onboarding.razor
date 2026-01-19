@@ -27,9 +27,12 @@
             FullWidth = true
         };
         
-        var result = await DialogService.ShowAsync<PoTool.Client.Components.Onboarding.OnboardingWizard>("Getting Started", options);
+        var dialogReference = await DialogService.ShowAsync<PoTool.Client.Components.Onboarding.OnboardingWizard>("Getting Started", options);
+        var result = await dialogReference.Result;
         
-        // After wizard closes, navigate to home (force reload to reset state)
+        // Navigate based on dialog result
+        // DialogResult.Ok means completed, Cancel means skipped
+        // In either case, redirect to home (force reload to reset state)
         NavigationManager.NavigateTo("/", forceLoad: true);
     }
 }
