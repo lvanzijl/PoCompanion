@@ -175,47 +175,47 @@ public class WorkItemStateClassificationService : IWorkItemStateClassificationSe
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "goal", StateName = "Proposed", Classification = StateClassification.New });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "goal", StateName = "Active", Classification = StateClassification.InProgress });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "goal", StateName = "Completed", Classification = StateClassification.Done });
-        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "goal", StateName = "Removed", Classification = StateClassification.Done });
+        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "goal", StateName = "Removed", Classification = StateClassification.Removed });
 
         // Objective
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Objective", StateName = "Proposed", Classification = StateClassification.New });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Objective", StateName = "Active", Classification = StateClassification.InProgress });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Objective", StateName = "Completed", Classification = StateClassification.Done });
-        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Objective", StateName = "Removed", Classification = StateClassification.Done });
+        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Objective", StateName = "Removed", Classification = StateClassification.Removed });
 
         // Epic
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "New", Classification = StateClassification.New });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "Active", Classification = StateClassification.InProgress });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "Resolved", Classification = StateClassification.Done });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "Closed", Classification = StateClassification.Done });
-        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "Removed", Classification = StateClassification.Done });
+        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "Removed", Classification = StateClassification.Removed });
 
         // Feature
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "New", Classification = StateClassification.New });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "Active", Classification = StateClassification.InProgress });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "Resolved", Classification = StateClassification.Done });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "Closed", Classification = StateClassification.Done });
-        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "Removed", Classification = StateClassification.Done });
+        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "Removed", Classification = StateClassification.Removed });
 
         // Product Backlog Item
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "New", Classification = StateClassification.New });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "Approved", Classification = StateClassification.New });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "Committed", Classification = StateClassification.InProgress });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "Done", Classification = StateClassification.Done });
-        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "Removed", Classification = StateClassification.Done });
+        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "Removed", Classification = StateClassification.Removed });
 
         // Bug
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Bug", StateName = "New", Classification = StateClassification.New });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Bug", StateName = "Approved", Classification = StateClassification.New });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Bug", StateName = "Committed", Classification = StateClassification.InProgress });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Bug", StateName = "Done", Classification = StateClassification.Done });
-        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Bug", StateName = "Removed", Classification = StateClassification.Done });
+        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Bug", StateName = "Removed", Classification = StateClassification.Removed });
 
         // Task
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "To Do", Classification = StateClassification.New });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "In Progress", Classification = StateClassification.InProgress });
         defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "Done", Classification = StateClassification.Done });
-        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "Removed", Classification = StateClassification.Done });
+        defaults.Add(new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "Removed", Classification = StateClassification.Removed });
 
         return defaults;
     }

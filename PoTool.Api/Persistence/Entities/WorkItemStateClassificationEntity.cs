@@ -27,7 +27,7 @@ public class WorkItemStateClassificationEntity
     public required string StateName { get; set; }
 
     /// <summary>
-    /// Classification for this state (0=New, 1=InProgress, 2=Done).
+    /// Classification for this state (0=New, 1=InProgress, 2=Done, 3=Removed).
     /// </summary>
     public required int Classification { get; set; }
 

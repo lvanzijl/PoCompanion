@@ -16,9 +16,15 @@ public enum StateClassification
     InProgress = 1,
 
     /// <summary>
-    /// Work is complete (e.g., "Done", "Closed", "Removed", "Resolved").
+    /// Work is complete (e.g., "Done", "Closed", "Resolved").
     /// </summary>
-    Done = 2
+    Done = 2,
+
+    /// <summary>
+    /// Work has been removed or cancelled (e.g., "Removed", "Cancelled").
+    /// This is a distinct state from Done, indicating the work was intentionally discarded.
+    /// </summary>
+    Removed = 3
 }
 
 /// <summary>
