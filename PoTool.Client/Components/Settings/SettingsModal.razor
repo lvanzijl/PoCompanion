@@ -164,8 +164,11 @@
         // Reset onboarding state so the wizard can be shown again
         await OnboardingService.ResetOnboardingAsync();
         
-        // Close the settings modal
+        // Close the settings modal first
         await Close();
+        
+        // Small delay to ensure modal is fully closed before navigation
+        await Task.Delay(100);
         
         // Navigate to onboarding page (force reload to ensure clean state after reset)
         NavigationManager.NavigateTo("/onboarding", forceLoad: true);

@@ -74,7 +74,9 @@
             {
                 // Redirect to onboarding page instead of showing dialog
                 var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).Trim('/');
-                if (!currentPath.StartsWith("onboarding", StringComparison.OrdinalIgnoreCase))
+                // Exact match to avoid matching paths like 'onboardingtest'
+                if (!currentPath.Equals("onboarding", StringComparison.OrdinalIgnoreCase) && 
+                    !currentPath.StartsWith("onboarding/", StringComparison.OrdinalIgnoreCase))
                 {
                     NavigationManager.NavigateTo("/onboarding");
                     return;
