@@ -5,10 +5,12 @@
 @using PoTool.Shared.Settings
 @using System.Text.Json
 @inject IOnboardingService OnboardingService
+@inject IOnboardingWizardState WizardState
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
 @inject TfsConfigService TfsConfigService
 @inject ProfileService ProfileService
+@inject ProductService ProductService
 @inject TeamService TeamService
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
@@ -27,37 +29,7 @@
             <MudStack Spacing="4" Class="pa-4">
                 @if (_currentStep == 0)
                 {
-                    <!-- Step 1: Welcome & Overview -->
-                    <MudStack Spacing="4">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.WavingHand" Color="Color.Primary" Size="Size.Large" />
-                            <MudText Typo="Typo.h6" Color="Color.Primary">Welcome to PO Companion!</MudText>
-                        </MudStack>
-                        <MudText Typo="Typo.body1">
-                            PO Companion is your Azure DevOps work item management companion, designed to help Product Owners:
-                        </MudText>
-                        <MudList T="string" Dense="true">
-                            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
-                                <MudText>View and manage work items in a hierarchical tree structure</MudText>
-                            </MudListItem>
-                            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
-                                <MudText>Validate work item relationships and identify issues</MudText>
-                            </MudListItem>
-                            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
-                                <MudText>Track pull request metrics and iteration patterns</MudText>
-                            </MudListItem>
-                            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
-                                <MudText>Sync with Azure DevOps in real-time (no caching required)</MudText>
-                            </MudListItem>
-                        </MudList>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            Let's get you started in just a few simple steps!
-                        </MudText>
-                    </MudStack>
-                }
-                else if (_currentStep == 1)
-                {
-                    <!-- Step 2: TFS Configuration -->
+                    <!-- Step 1: TFS Configuration -->
                     <MudStack Spacing="4">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Primary" Size="Size.Large" />
@@ -65,19 +37,22 @@
                         </MudStack>
                         
                         <MudForm @ref="_configForm" @bind-IsValid="_configFormValid">
-                            <CompactTextField @bind-Value="_url" 
+                            <CompactTextField Value="@_url"
+                                         ValueChanged="@((string value) => OnUrlChanged(value))"
                                          Label="Organization URL" 
                                          Placeholder="https://dev.azure.com/yourorg"
                                          Required="true"
                                          HelperText="The URL of your Azure DevOps organization" />
 
-                            <CompactTextField @bind-Value="_project" 
+                            <CompactTextField Value="@_project"
+                                         ValueChanged="@((string value) => OnProjectChanged(value))"
                                          Label="Project Name" 
                                          Placeholder="MyProject"
                                          Required="true"
                                          HelperText="The name of your project" />
 
-                            <CompactTextField @bind-Value="_defaultAreaPath" 
+                            <CompactTextField Value="@_defaultAreaPath"
+                                         ValueChanged="@((string value) => OnDefaultAreaPathChanged(value))"
                                          Label="Default Area Path" 
                                          Placeholder="e.g., MyProject\Team A"
                                          Required="true"
@@ -162,9 +137,127 @@
                         </MudAlert>
                     </MudStack>
                 }
+                else if (_currentStep == 1)
+                {
+                    <!-- Step 2: Product Owner (Profile) -->
+                    <MudStack Spacing="4">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h6" Color="Color.Primary">Create Product Owner Profile</MudText>
+                        </MudStack>
+                        <MudText Typo="Typo.body1">
+                            Create your Product Owner profile to get started.
+                        </MudText>
+
+                        <MudForm @ref="_profileForm" @bind-IsValid="_profileFormValid">
+                            <CompactTextField @bind-Value="_profileName" 
+                                         Label="Profile Name" 
+                                         Placeholder="e.g., John Doe"
+                                         Required="true"
+                                         HelperText="Your name as Product Owner" />
+
+                            <MudStack Row="true" Spacing="2" Class="mt-2">
+                                <CompactButton Variant="Variant.Filled" 
+                                          Color="Color.Primary" 
+                                          OnClick="SaveProfile"
+                                          Disabled="@(!_profileFormValid || _isSavingProfile)"
+                                          StartIcon="@Icons.Material.Filled.Save">
+                                    @if (_isSavingProfile)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                        <span>Saving...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Save Profile</span>
+                                    }
+                                </CompactButton>
+                            </MudStack>
+                        </MudForm>
+
+                        @if (_profileSaveResult != null)
+                        {
+                            <MudAlert Severity="@(_profileSaveResult.Success ? Severity.Success : Severity.Error)" Dense="true">
+                                @_profileSaveResult.Message
+                            </MudAlert>
+                        }
+
+                        @if (_profileErrorResponse != null)
+                        {
+                            <ErrorDisplay ErrorResponse="@_profileErrorResponse" 
+                                         OnDismiss="ClearProfileError" />
+                        }
+
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            You can skip this step and configure your profile later from the Settings page.
+                        </MudAlert>
+                    </MudStack>
+                }
                 else if (_currentStep == 2)
                 {
-                    <!-- Step 3: Select Team -->
+                    <!-- Step 3: Product -->
+                    <MudStack Spacing="4">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Inventory" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h6" Color="Color.Primary">Create Product</MudText>
+                        </MudStack>
+                        <MudText Typo="Typo.body1">
+                            Define a product to manage its backlog.
+                        </MudText>
+
+                        <MudForm @ref="_productForm" @bind-IsValid="_productFormValid">
+                            <CompactTextField @bind-Value="_productName" 
+                                         Label="Product Name" 
+                                         Placeholder="e.g., My Application"
+                                         Required="true"
+                                         HelperText="The name of your product" />
+
+                            <CompactTextField @bind-Value="_backlogRootWorkItemId" 
+                                         Label="Backlog Root Work Item ID" 
+                                         Placeholder="e.g., 12345"
+                                         Required="true"
+                                         HelperText="The ID of the root work item for this product's backlog" />
+
+                            <MudStack Row="true" Spacing="2" Class="mt-2">
+                                <CompactButton Variant="Variant.Filled" 
+                                          Color="Color.Primary" 
+                                          OnClick="SaveProduct"
+                                          Disabled="@(!_productFormValid || _isSavingProduct)"
+                                          StartIcon="@Icons.Material.Filled.Save">
+                                    @if (_isSavingProduct)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                        <span>Saving...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Save Product</span>
+                                    }
+                                </CompactButton>
+                            </MudStack>
+                        </MudForm>
+
+                        @if (_productSaveResult != null)
+                        {
+                            <MudAlert Severity="@(_productSaveResult.Success ? Severity.Success : Severity.Error)" Dense="true">
+                                @_productSaveResult.Message
+                            </MudAlert>
+                        }
+
+                        @if (_productErrorResponse != null)
+                        {
+                            <ErrorDisplay ErrorResponse="@_productErrorResponse" 
+                                         OnDismiss="ClearProductError" />
+                        }
+
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            You can skip this step and configure products later from the Settings page.
+                        </MudAlert>
+                    </MudStack>
+                }
+                else if (_currentStep == 3)
+                {
+                    <!-- Step 4: Team -->
                     <MudStack Spacing="4">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudIcon Icon="@Icons.Material.Filled.Groups" Color="Color.Primary" Size="Size.Large" />
@@ -287,68 +380,11 @@
                         </MudAlert>
                     </MudStack>
                 }
-                else if (_currentStep == 3)
-                {
-                    <!-- Step 4: Feature Tour -->
-                    <MudStack Spacing="4">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.Tour" Color="Color.Primary" Size="Size.Large" />
-                            <MudText Typo="Typo.h6" Color="Color.Primary">Key Features</MudText>
-                        </MudStack>
-                        
-                        <MudPaper Elevation="0" Class="pa-4 mud-background-gray">
-                            <MudStack Spacing="2">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Primary" />
-                                    <MudText Typo="Typo.subtitle1"><strong>Filters and Search</strong></MudText>
-                                </MudStack>
-                                <MudText Typo="Typo.body2">
-                                    Filter work items by type, state, or search by title. Use validation filters to identify issues with parent progress or missing effort.
-                                </MudText>
-                            </MudStack>
-                        </MudPaper>
-
-                        <MudPaper Elevation="0" Class="pa-4 mud-background-gray">
-                            <MudStack Spacing="2">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
-                                    <MudText Typo="Typo.subtitle1"><strong>Validation</strong></MudText>
-                                </MudStack>
-                                <MudText Typo="Typo.body2">
-                                    Automatically validate work item relationships and identify configuration issues.
-                                </MudText>
-                            </MudStack>
-                        </MudPaper>
-
-                        <MudPaper Elevation="0" Class="pa-4 mud-background-gray">
-                            <MudStack Spacing="2">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Keyboard" Color="Color.Info" />
-                                    <MudText Typo="Typo.subtitle1"><strong>Keyboard Shortcuts</strong></MudText>
-                                </MudStack>
-                                <MudText Typo="Typo.body2">
-                                    Navigate work items using arrow keys, expand/collapse with Enter, and use Ctrl+A to select all.
-                                </MudText>
-                            </MudStack>
-                        </MudPaper>
-
-                        <MudAlert Severity="Severity.Success" Dense="true">
-                            You're all set! Click "Get Started" to begin using PO Companion.
-                        </MudAlert>
-                    </MudStack>
-                }
             </MudStack>
         </DialogContent>
         <DialogActions>
             <CompactButton OnClick="Skip" Color="Color.Default">
-                @if (_currentStep == 3)
-                {
-                    <text>Skip for Now</text>
-                }
-                else
-                {
-                    <text>Skip Tour</text>
-                }
+                Skip Wizard
             </CompactButton>
             @if (_currentStep > 0)
             {
@@ -358,7 +394,10 @@
             }
             @if (_currentStep < 3)
             {
-                <CompactButton OnClick="Next" Color="Color.Primary" Variant="Variant.Filled">
+                <CompactButton OnClick="Next" 
+                              Color="Color.Primary" 
+                              Variant="Variant.Filled"
+                              Disabled="@IsNextDisabled()">
                     Next
                 </CompactButton>
             }
@@ -392,6 +431,24 @@
     private ErrorResponse? _configErrorResponse;
     private List<ProgressUpdate> _progressUpdates = new();
     private bool? _configCompleted;
+
+    // Profile form fields
+    private MudForm? _profileForm;
+    private bool _profileFormValid;
+    private bool _isSavingProfile;
+    private string _profileName = string.Empty;
+    private int? _createdProfileId;
+    private ConnectionTestResult? _profileSaveResult;
+    private ErrorResponse? _profileErrorResponse;
+
+    // Product form fields
+    private MudForm? _productForm;
+    private bool _productFormValid;
+    private bool _isSavingProduct;
+    private string _productName = string.Empty;
+    private string _backlogRootWorkItemId = string.Empty;
+    private ConnectionTestResult? _productSaveResult;
+    private ErrorResponse? _productErrorResponse;
 
     // Team selection fields
     private MudForm? _teamForm;
@@ -439,27 +496,55 @@
     {
         return _currentStep switch
         {
-            0 => "Welcome to PO Companion",
-            1 => "Configure Your Connection",
-            2 => "Select Your Team",
-            3 => "Discover Key Features",
+            0 => "Configure Azure DevOps Connection",
+            1 => "Create Product Owner Profile",
+            2 => "Create Product",
+            3 => "Select Your Team",
             _ => "Getting Started"
         };
     }
 
     private double GetProgress()
     {
-        return (_currentStep + 1) * 25.0; // 4 steps now instead of 5
+        return (_currentStep + 1) * 25.0; // 4 steps (0-3)
+    }
+
+    private bool IsNextDisabled()
+    {
+        // For step 0 (TFS Configuration), require verification and no changes
+        if (_currentStep == 0)
+        {
+            return !WizardState.TfsVerified || !WizardState.CheckTfsFieldsUnchanged(_url, _project, _defaultAreaPath);
+        }
+        return false;
+    }
+
+    private void OnUrlChanged(string value)
+    {
+        _url = value;
+        WizardState.MarkTfsUnverified();
+    }
+
+    private void OnProjectChanged(string value)
+    {
+        _project = value;
+        WizardState.MarkTfsUnverified();
+    }
+
+    private void OnDefaultAreaPathChanged(string value)
+    {
+        _defaultAreaPath = value;
+        WizardState.MarkTfsUnverified();
     }
 
     private async Task Next()
     {
-        if (_currentStep < 3) // Maximum step is now 3
+        if (_currentStep < 3) // Maximum step is 3
         {
             _currentStep++;
             
-            // Load teams when entering team selection step
-            if (_currentStep == 2 && _configCompleted == true && _tfsTeams == null)
+            // Load teams when entering team selection step (step 3)
+            if (_currentStep == 3 && _configCompleted == true && _tfsTeams == null)
             {
                 await LoadTfsTeams();
             }
@@ -528,16 +613,19 @@
             
             if (_configCompleted == true)
             {
+                WizardState.MarkTfsVerified(_url, _project, _defaultAreaPath);
                 Snackbar.Add("Configuration saved and verified successfully", Severity.Success);
             }
             else
             {
+                WizardState.MarkTfsUnverified();
                 Snackbar.Add("Configuration verification completed with errors", Severity.Error);
             }
         }
         catch (Exception ex)
         {
             _configCompleted = false;
+            WizardState.MarkTfsUnverified();
             ShowConfigError(ex, "Error during configuration");
         }
         finally
@@ -555,6 +643,88 @@
     private void ClearConfigError()
     {
         _configErrorResponse = null;
+    }
+
+    private async Task SaveProfile()
+    {
+        if (!_profileFormValid) return;
+
+        ClearProfileError();
+        _isSavingProfile = true;
+        
+        try
+        {
+            var profile = await ProfileService.CreateAndActivateProfileAsync(_profileName, new List<int>());
+            _createdProfileId = profile.Id;
+            _profileSaveResult = new ConnectionTestResult(true, $"Profile '{profile.Name}' created and activated successfully!");
+            Snackbar.Add("Profile saved successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            _profileSaveResult = new ConnectionTestResult(false, "Profile save failed.");
+            ShowProfileError(ex, "Error saving profile");
+        }
+        finally
+        {
+            _isSavingProfile = false;
+        }
+    }
+
+    private void ShowProfileError(Exception ex, string context)
+    {
+        _profileErrorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearProfileError()
+    {
+        _profileErrorResponse = null;
+        _profileSaveResult = null;
+    }
+
+    private async Task SaveProduct()
+    {
+        if (!_productFormValid) return;
+
+        ClearProductError();
+        _isSavingProduct = true;
+        
+        try
+        {
+            if (!int.TryParse(_backlogRootWorkItemId, out int workItemId))
+            {
+                throw new InvalidOperationException("Backlog Root Work Item ID must be a valid integer.");
+            }
+
+            var product = await ProductService.CreateProductAsync(
+                _createdProfileId,
+                _productName,
+                workItemId);
+            
+            _productSaveResult = new ConnectionTestResult(true, $"Product '{product.Name}' created successfully!");
+            Snackbar.Add("Product saved successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            _productSaveResult = new ConnectionTestResult(false, "Product save failed.");
+            ShowProductError(ex, "Error saving product");
+        }
+        finally
+        {
+            _isSavingProduct = false;
+        }
+    }
+
+    private void ShowProductError(Exception ex, string context)
+    {
+        _productErrorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearProductError()
+    {
+        _productErrorResponse = null;
+        _productSaveResult = null;
     }
 
     private async Task LoadTfsTeams()
