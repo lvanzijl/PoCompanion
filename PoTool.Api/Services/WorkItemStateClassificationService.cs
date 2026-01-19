@@ -31,7 +31,7 @@ public class WorkItemStateClassificationService : IWorkItemStateClassificationSe
         CancellationToken cancellationToken = default)
     {
         var config = await _configService.GetConfigEntityAsync(cancellationToken);
-        var projectName = config?.Project ?? "DefaultProject";
+        var projectName = config?.Project ?? throw new InvalidOperationException("TFS configuration not found");
 
         _logger.LogInformation("Getting state classifications for project '{Project}'", projectName);
 
@@ -78,7 +78,7 @@ public class WorkItemStateClassificationService : IWorkItemStateClassificationSe
         CancellationToken cancellationToken = default)
     {
         var config = await _configService.GetConfigEntityAsync(cancellationToken);
-        var projectName = config?.Project ?? "DefaultProject";
+        var projectName = config?.Project ?? throw new InvalidOperationException("TFS configuration not found");
 
         _logger.LogInformation(
             "Saving {Count} state classifications for project '{Project}'",

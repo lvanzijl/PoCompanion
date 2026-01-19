@@ -4704,16 +4704,35 @@ public class RealTfsClient : ITfsClient
                 }
 
                 var states = new List<string>();
+                var stateCategories = new Dictionary<string, string>();
 
                 // Extract states array
+                // Each state is an object with 'name' and 'category' properties
                 if (witElement.TryGetProperty("states", out var statesArray))
                 {
                     foreach (var stateElement in statesArray.EnumerateArray())
                     {
-                        var stateName = stateElement.GetString();
-                        if (!string.IsNullOrWhiteSpace(stateName))
+                        // Extract state name
+                        if (stateElement.TryGetProperty("name", out var nameElement))
                         {
-                            states.Add(stateName);
+                            var stateName = nameElement.GetString();
+                            if (!string.IsNullOrWhiteSpace(stateName))
+                            {
+                                states.Add(stateName);
+                                
+                                // Extract category if present (e.g., "Completed" for "Done")
+                                if (stateElement.TryGetProperty("category", out var categoryElement))
+                                {
+                                    var category = categoryElement.GetString();
+                                    if (!string.IsNullOrWhiteSpace(category))
+                                    {
+                                        stateCategories[stateName] = category;
+                                        _logger.LogDebug(
+                                            "Work item type '{Type}': State '{State}' has category '{Category}'",
+                                            typeName, stateName, category);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
