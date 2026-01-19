@@ -1,0 +1,38 @@
+@page "/onboarding"
+@using PoTool.Client.Services
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+@inject IOnboardingService OnboardingService
+
+<MudContainer MaxWidth="MaxWidth.False" Style="height: 100vh; display: flex; align-items: center; justify-content: center;">
+    <!-- Wizard will be shown as dialog automatically -->
+</MudContainer>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ShowOnboardingWizardAsync();
+        }
+    }
+
+    private async Task ShowOnboardingWizardAsync()
+    {
+        var options = new DialogOptions 
+        { 
+            CloseButton = false,
+            CloseOnEscapeKey = false,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+        
+        var dialogReference = await DialogService.ShowAsync<PoTool.Client.Components.Onboarding.OnboardingWizard>("Getting Started", options);
+        var result = await dialogReference.Result;
+        
+        // Navigate based on dialog result
+        // DialogResult.Ok means completed, Cancel means skipped
+        // In either case, redirect to home (force reload to reset state)
+        NavigationManager.NavigateTo("/", forceLoad: true);
+    }
+}

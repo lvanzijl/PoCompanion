@@ -59,6 +59,7 @@
     private bool _settingsVisible = false;
     private bool _hasCheckedOnboarding = false;
     private bool _hasCheckedStartupRouting = false;
+    private bool _onboardingCompleted = false;
     private ProfileSelector? _profileSelector;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -69,10 +70,20 @@
         {
             _hasCheckedOnboarding = true;
             
-            // Check if user needs onboarding
-            if (!await OnboardingService.HasCompletedOnboardingAsync())
+            // Check if user needs onboarding (cache result for reuse)
+            _onboardingCompleted = await OnboardingService.HasCompletedOnboardingAsync();
+            
+            if (!_onboardingCompleted)
             {
-                await OpenOnboardingWizard();
+                // Redirect to onboarding page instead of showing dialog
+                var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).Trim('/');
+                // Exact match to avoid matching paths like 'onboardingtest'
+                if (!currentPath.Equals("onboarding", StringComparison.OrdinalIgnoreCase) && 
+                    !currentPath.StartsWith("onboarding/", StringComparison.OrdinalIgnoreCase))
+                {
+                    NavigationManager.NavigateTo("/onboarding");
+                    return;
+                }
             }
             
             // Subscribe to navigation changes to refresh profile selector when needed
@@ -121,6 +132,14 @@
         // Normalize: trim leading/trailing slashes and check if empty (root path)
         var normalizedPath = currentPath.Trim('/');
         if (!string.IsNullOrEmpty(normalizedPath))
+        {
+            return;
+        }
+        
+        // Skip startup routing if onboarding is not yet completed
+        // The onboarding redirect is handled earlier in this component's OnAfterRenderAsync
+        // Use cached result to avoid duplicate async call
+        if (!_onboardingCompleted)
         {
             return;
         }

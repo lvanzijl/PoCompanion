@@ -1,6 +1,8 @@
 @using System.Net.Http.Json
 @using PoTool.Client.Services
 @inject TfsConfigService TfsConfigService
+@inject NavigationManager NavigationManager
+@inject IOnboardingService OnboardingService
 @implements IDisposable
 
 @if (Visible)
@@ -9,8 +11,32 @@
     <div class="settings-modal">
         <div class="settings-header">
             <h3>Settings</h3>
-            <button class="close-btn" @onclick="Close">?</button>
+            <button class="close-btn" @onclick="Close">×</button>
         </div>
+
+        <!-- Getting Started / Onboarding Section -->
+        <div class="form-group">
+            <label>Getting Started</label>
+            <div class="alert alert-info">
+                <p>Need help setting up? Run the getting started wizard to configure your connection and team.</p>
+                <button type="button" class="btn btn-link" @onclick="OpenOnboardingWizard">
+                    🚀 Run Getting Started Wizard
+                </button>
+            </div>
+        </div>
+
+        <!-- Current Configuration Summary -->
+        @if (!string.IsNullOrEmpty(_model.Url))
+        {
+            <div class="form-group">
+                <label>Current Configuration</label>
+                <div class="alert alert-secondary">
+                    <p><strong>Azure DevOps URL:</strong> @_model.Url</p>
+                    <p><strong>Project:</strong> @_model.Project</p>
+                    <p><strong>Default Area Path:</strong> @_model.DefaultAreaPath</p>
+                </div>
+            </div>
+        }
 
         <EditForm Model="_model" OnValidSubmit="SaveConfig">
             <div class="form-group">
@@ -131,6 +157,21 @@
     {
         Visible = false;
         await VisibleChanged.InvokeAsync(Visible);
+    }
+
+    private async Task OpenOnboardingWizard()
+    {
+        // Reset onboarding state so the wizard can be shown again
+        await OnboardingService.ResetOnboardingAsync();
+        
+        // Close the settings modal first
+        await Close();
+        
+        // Small delay to ensure modal is fully closed before navigation
+        await Task.Delay(100);
+        
+        // Navigate to onboarding page (force reload to ensure clean state after reset)
+        NavigationManager.NavigateTo("/onboarding", forceLoad: true);
     }
 
     public void Dispose()
