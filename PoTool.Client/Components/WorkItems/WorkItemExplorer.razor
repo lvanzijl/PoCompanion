@@ -213,15 +213,9 @@
             Console.WriteLine($"[WorkItemExplorer] Loaded {allProducts.Count} products");
 
             // Load all work items with validation
+            // Backend already loads hierarchically from product roots with validation
             var allWorkItems = (await WorkItemService.GetAllWithValidationAsync()).ToList();
             Console.WriteLine($"[WorkItemExplorer] Loaded {allWorkItems.Count} total work items");
-            
-            // Ensure all product root work items exist in the database
-            await EnsureProductRootWorkItemsExist(allProducts, allWorkItems);
-            
-            // Reload work items after ensuring roots exist (in case new ones were added)
-            allWorkItems = (await WorkItemService.GetAllWithValidationAsync()).ToList();
-            Console.WriteLine($"[WorkItemExplorer] After ensuring roots: {allWorkItems.Count} total work items");
 
             // Get active profile to determine which goals to load (for goal filter UI, not for tree building)
             var activeProfile = await ProfileService.GetActiveProfileAsync();
@@ -295,27 +289,7 @@
         }
     }
 
-    private async Task EnsureProductRootWorkItemsExist(List<ProductDto> products, List<WorkItemWithValidationDto> existingWorkItems)
-    {
-        var existingIds = new HashSet<int>(existingWorkItems.Select(wi => wi.TfsId));
-        var missingRootIds = new List<int>();
 
-        foreach (var product in products)
-        {
-            if (!existingIds.Contains(product.BacklogRootWorkItemId))
-            {
-                missingRootIds.Add(product.BacklogRootWorkItemId);
-                Console.WriteLine($"[WorkItemExplorer] Product '{product.Name}' root work item {product.BacklogRootWorkItemId} is missing from DB");
-            }
-        }
-
-        if (missingRootIds.Any())
-        {
-            Console.WriteLine($"[WorkItemExplorer] Fetching {missingRootIds.Count} missing product root work items...");
-            // Sync removed in Live-only mode - work items are fetched directly from TFS
-            // Missing root work items will be shown as orphaned in the UI
-        }
-    }
 
     private async Task HandleFilterChanged(string filterText)
     {
