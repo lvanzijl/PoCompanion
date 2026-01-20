@@ -173,27 +173,34 @@
         StateHasChanged();
     }
 
+    private async Task<List<ProductDto>> GetProfileProductsAsync()
+    {
+        // Get active profile to determine which products to load
+        var activeProfile = await ProfileService.GetActiveProfileAsync();
+
+        if (activeProfile != null)
+        {
+            // Load products for the active profile (Product Owner)
+            var profileProducts = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            Console.WriteLine($"[WorkItemExplorer] Loaded {profileProducts.Count} products for active profile '{activeProfile.Name}' (ID: {activeProfile.Id})");
+            return profileProducts;
+        }
+        else
+        {
+            // No active profile - load all products as fallback
+            var allProducts = (await ProductService.GetAllProductsAsync()).ToList();
+            Console.WriteLine($"[WorkItemExplorer] No active profile, loaded all {allProducts.Count} products");
+            return allProducts;
+        }
+    }
+
     private async Task LoadWorkItems()
     {
         _isLoading = true;
         try
         {
-            // Get active profile to determine which products to load
-            var activeProfile = await ProfileService.GetActiveProfileAsync();
-
-            List<ProductDto> profileProducts;
-            if (activeProfile != null)
-            {
-                // Load products for the active profile (Product Owner)
-                profileProducts = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
-                Console.WriteLine($"[WorkItemExplorer] Loaded {profileProducts.Count} products for active profile '{activeProfile.Name}' (ID: {activeProfile.Id})");
-            }
-            else
-            {
-                // No active profile - load all products as fallback
-                profileProducts = (await ProductService.GetAllProductsAsync()).ToList();
-                Console.WriteLine($"[WorkItemExplorer] No active profile, loaded all {profileProducts.Count} products");
-            }
+            // Get products for the active profile
+            var profileProducts = await GetProfileProductsAsync();
 
             // Load work items with validation
             // Backend automatically loads hierarchically from product root work item IDs
@@ -236,10 +243,10 @@
 
     private async Task ApplyFilterAsync(List<ProductDto>? products = null)
     {
-        // Load products if not provided
+        // Load profile-scoped products if not provided
         if (products == null)
         {
-            products = (await ProductService.GetAllProductsAsync()).ToList();
+            products = await GetProfileProductsAsync();
         }
 
         // Get enabled filter IDs
