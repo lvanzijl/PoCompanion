@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 
 namespace PoTool.Client.Services;
 
@@ -9,6 +10,12 @@ namespace PoTool.Client.Services;
 public class WorkItemLoadCoordinatorService
 {
     private readonly ConcurrentDictionary<string, Task> _inflightLoads = new();
+    private readonly ILogger<WorkItemLoadCoordinatorService> _logger;
+
+    public WorkItemLoadCoordinatorService(ILogger<WorkItemLoadCoordinatorService> logger)
+    {
+        _logger = logger;
+    }
 
     /// <summary>
     /// Ensures work items are loaded for the specified root IDs.
@@ -31,14 +38,14 @@ public class WorkItemLoadCoordinatorService
         // Try to get or add the load task
         var loadTask = _inflightLoads.GetOrAdd(key, _ =>
         {
-            Console.WriteLine($"[WorkItemLoadCoordinator] Starting new load for roots: {string.Join(", ", rootIds)}");
+            _logger.LogInformation("Starting new load for roots: {RootIds}", string.Join(", ", rootIds));
             return ExecuteLoadAsync(key, loadFunc);
         });
 
         // If we got an existing task, log that we're reusing it
-        if (loadTask.Status == TaskStatus.Running || !loadTask.IsCompleted)
+        if (!loadTask.IsCompleted)
         {
-            Console.WriteLine($"[WorkItemLoadCoordinator] Reusing in-flight load for roots: {string.Join(", ", rootIds)}");
+            _logger.LogInformation("Reusing in-flight load for roots: {RootIds}", string.Join(", ", rootIds));
         }
 
         await loadTask;
@@ -54,7 +61,7 @@ public class WorkItemLoadCoordinatorService
         {
             // Remove from tracking once complete (success or failure)
             _inflightLoads.TryRemove(key, out _);
-            Console.WriteLine($"[WorkItemLoadCoordinator] Load completed and removed from tracking: {key}");
+            _logger.LogDebug("Load completed and removed from tracking: {Key}", key);
         }
     }
 
@@ -72,6 +79,5 @@ public class WorkItemLoadCoordinatorService
     public void Clear()
     {
         _inflightLoads.Clear();
-        Console.WriteLine("[WorkItemLoadCoordinator] Cleared all in-flight load tracking");
     }
 }

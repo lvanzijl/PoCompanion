@@ -185,15 +185,15 @@ public class WorkItemService
     /// <summary>
     /// Ensures work items are loaded for the specified root IDs.
     /// Uses the coordinator to prevent duplicate in-flight requests for the same root set.
+    /// Returns the loaded work items.
     /// </summary>
     /// <param name="rootIds">The root work item IDs to load hierarchies from.</param>
-    /// <param name="onLoadComplete">Optional callback invoked after the load completes with the loaded work items.</param>
-    /// <returns>Task that completes when the load is finished.</returns>
-    public async Task EnsureLoadedForRootsAsync(int[] rootIds, Action<IEnumerable<WorkItemDto>>? onLoadComplete = null)
+    /// <returns>Collection of loaded work items.</returns>
+    public async Task<IEnumerable<WorkItemDto>> EnsureLoadedForRootsAsync(int[] rootIds)
     {
         if (rootIds == null || rootIds.Length == 0)
         {
-            return;
+            return Enumerable.Empty<WorkItemDto>();
         }
 
         IEnumerable<WorkItemDto>? loadedItems = null;
@@ -203,11 +203,14 @@ public class WorkItemService
             loadedItems = await GetByRootIdsAsync(rootIds);
         });
 
-        // Invoke callback if provided and items were loaded in this call
-        if (onLoadComplete != null && loadedItems != null)
+        // If loadedItems is still null, another call performed the loading
+        // So we need to fetch the data again (it should be fast since it's already in TFS's cache)
+        if (loadedItems == null)
         {
-            onLoadComplete(loadedItems);
+            loadedItems = await GetByRootIdsAsync(rootIds);
         }
+
+        return loadedItems;
     }
 }
 

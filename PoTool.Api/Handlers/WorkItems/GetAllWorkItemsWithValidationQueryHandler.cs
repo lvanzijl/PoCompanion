@@ -52,17 +52,32 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
         if (productsList.Count > 0)
         {
             // Product-scoped hierarchical loading
-            var rootIds = productsList.Select(p => p.BacklogRootWorkItemId).ToArray();
-            _logger.LogInformation("Loading work items hierarchically from {Count} product roots: {RootIds}",
-                rootIds.Length, string.Join(", ", rootIds));
-            
-            workItems = await _workItemReadProvider.GetByRootIdsAsync(rootIds, cancellationToken);
-            _logger.LogDebug("Loaded {Count} work items via hierarchical loading", workItems.Count());
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0) // Filter out invalid root IDs
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length == 0)
+            {
+                _logger.LogWarning("Products configured but all have invalid root work item IDs (≤ 0). Falling back to area path loading");
+                // Fall through to area path loading
+            }
+            else
+            {
+                _logger.LogInformation("Loading work items hierarchically from {Count} product roots: {RootIds}",
+                    rootIds.Length, string.Join(", ", rootIds));
+                
+                workItems = await _workItemReadProvider.GetByRootIdsAsync(rootIds, cancellationToken);
+                _logger.LogDebug("Loaded {Count} work items via hierarchical loading", workItems.Count());
+                
+                // Skip area path loading
+                goto ValidateWorkItems;
+            }
         }
-        else
+
+        // Fallback to area path-based loading when no products are configured or all have invalid root IDs
         {
-            // Fallback to area path-based loading when no products are configured
-            _logger.LogDebug("No products configured, falling back to area path loading");
+            _logger.LogDebug("Falling back to area path loading");
             
             var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
 
@@ -77,6 +92,7 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
             }
         }
 
+    ValidateWorkItems:
         var workItemsList = workItems.ToList();
         var validationResults = _validator.ValidateWorkItems(workItemsList);
 
