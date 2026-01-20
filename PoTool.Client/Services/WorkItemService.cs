@@ -15,10 +15,12 @@ public class WorkItemService
 {
     private readonly IWorkItemsClient _client;
     private readonly HttpClient _httpClient;
+    private readonly WorkItemLoadCoordinatorService _loadCoordinator;
 
     // API endpoint paths for direct TFS calls (bypassing cache)
     private const string AreaPathsFromTfsEndpoint = "/api/workitems/area-paths/from-tfs";
     private const string GoalsFromTfsEndpoint = "/api/workitems/goals/from-tfs";
+    private const string ByRootIdsEndpoint = "/api/workitems/by-root-ids";
 
     // JSON options for case-insensitive deserialization of API responses
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -31,10 +33,12 @@ public class WorkItemService
     /// </summary>
     /// <param name="client">The work items API client.</param>
     /// <param name="httpClient">HTTP client for direct API calls.</param>
-    public WorkItemService(IWorkItemsClient client, HttpClient httpClient)
+    /// <param name="loadCoordinator">Service to coordinate and deduplicate load operations.</param>
+    public WorkItemService(IWorkItemsClient client, HttpClient httpClient, WorkItemLoadCoordinatorService loadCoordinator)
     {
         _client = client;
         _httpClient = httpClient;
+        _loadCoordinator = loadCoordinator;
     }
 
     /// <summary>
@@ -153,6 +157,57 @@ public class WorkItemService
 
         var goals = await response.Content.ReadFromJsonAsync<IEnumerable<WorkItemDto>>(_jsonOptions);
         return goals ?? Enumerable.Empty<WorkItemDto>();
+    }
+
+    /// <summary>
+    /// Gets work items by root IDs (hierarchical tree loading).
+    /// Loads the complete hierarchy starting from specified root work item IDs.
+    /// </summary>
+    /// <param name="rootIds">The root work item IDs to load hierarchies from.</param>
+    /// <returns>Collection of work items including roots and their descendants.</returns>
+    public async Task<IEnumerable<WorkItemDto>> GetByRootIdsAsync(int[] rootIds)
+    {
+        if (rootIds == null || rootIds.Length == 0)
+        {
+            return Enumerable.Empty<WorkItemDto>();
+        }
+
+        var rootIdsParam = string.Join(",", rootIds);
+        var url = $"{ByRootIdsEndpoint}?rootIds={rootIdsParam}";
+        
+        var response = await _httpClient.GetAsync(url);
+        response.EnsureSuccessStatusCode();
+
+        var workItems = await response.Content.ReadFromJsonAsync<IEnumerable<WorkItemDto>>(_jsonOptions);
+        return workItems ?? Enumerable.Empty<WorkItemDto>();
+    }
+
+    /// <summary>
+    /// Ensures work items are loaded for the specified root IDs.
+    /// Uses the coordinator to prevent duplicate in-flight requests for the same root set.
+    /// </summary>
+    /// <param name="rootIds">The root work item IDs to load hierarchies from.</param>
+    /// <param name="onLoadComplete">Optional callback invoked after the load completes with the loaded work items.</param>
+    /// <returns>Task that completes when the load is finished.</returns>
+    public async Task EnsureLoadedForRootsAsync(int[] rootIds, Action<IEnumerable<WorkItemDto>>? onLoadComplete = null)
+    {
+        if (rootIds == null || rootIds.Length == 0)
+        {
+            return;
+        }
+
+        IEnumerable<WorkItemDto>? loadedItems = null;
+
+        await _loadCoordinator.EnsureLoadedAsync(rootIds, async () =>
+        {
+            loadedItems = await GetByRootIdsAsync(rootIds);
+        });
+
+        // Invoke callback if provided and items were loaded in this call
+        if (onLoadComplete != null && loadedItems != null)
+        {
+            onLoadComplete(loadedItems);
+        }
     }
 }
 

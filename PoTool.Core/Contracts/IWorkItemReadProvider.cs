@@ -38,4 +38,13 @@ public interface IWorkItemReadProvider
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The work item DTO or null if not found.</returns>
     Task<WorkItemDto?> GetByTfsIdAsync(int tfsId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves work items starting from specified root work item IDs and their entire hierarchy.
+    /// Used for product-scoped loading operations.
+    /// </summary>
+    /// <param name="rootWorkItemIds">The root work item IDs to start from.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of work item DTOs including root items and their descendants.</returns>
+    Task<IEnumerable<WorkItemDto>> GetByRootIdsAsync(int[] rootWorkItemIds, CancellationToken cancellationToken = default);
 }

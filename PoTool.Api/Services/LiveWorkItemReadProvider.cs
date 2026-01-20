@@ -90,4 +90,21 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
         // Use the direct TFS API to get a single work item
         return await _tfsClient.GetWorkItemByIdAsync(tfsId, cancellationToken);
     }
+
+    public async Task<IEnumerable<WorkItemDto>> GetByRootIdsAsync(int[] rootWorkItemIds, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("LiveWorkItemReadProvider: Fetching work items by root IDs from TFS: {RootIds}", 
+            string.Join(", ", rootWorkItemIds));
+
+        if (rootWorkItemIds == null || rootWorkItemIds.Length == 0)
+        {
+            _logger.LogWarning("LiveWorkItemReadProvider: No root work item IDs provided, returning empty collection");
+            return Enumerable.Empty<WorkItemDto>();
+        }
+
+        // Use the hierarchical loading method from TFS client
+        // This fetches the complete tree starting from the specified roots
+        var workItems = await _tfsClient.GetWorkItemsByRootIdsAsync(rootWorkItemIds, null, null, cancellationToken);
+        return workItems;
+    }
 }

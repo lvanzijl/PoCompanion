@@ -527,4 +527,57 @@ public class WorkItemsController : ControllerBase
             return StatusCode(500, "Error assigning effort in bulk");
         }
     }
+
+    /// <summary>
+    /// Gets work items by root IDs (hierarchical tree loading).
+    /// Loads the complete hierarchy starting from specified root work item IDs.
+    /// Used for product-scoped loading operations.
+    /// </summary>
+    /// <param name="rootIds">Comma-separated list of root work item IDs</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Collection of work items including roots and their descendants</returns>
+    [HttpGet("by-root-ids")]
+    public async Task<ActionResult<IEnumerable<WorkItemDto>>> GetByRootIds(
+        [FromQuery] string rootIds,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(rootIds))
+            {
+                return BadRequest("Root IDs parameter is required");
+            }
+
+            var ids = rootIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(int.Parse)
+                .ToArray();
+
+            if (ids.Length == 0)
+            {
+                return BadRequest("At least one root ID must be provided");
+            }
+
+            // Validate that all IDs are positive
+            if (ids.Any(id => id <= 0))
+            {
+                return BadRequest("All root IDs must be positive integers");
+            }
+
+            var workItems = await _mediator.Send(new GetWorkItemsByRootIdsQuery(ids), cancellationToken);
+            return Ok(workItems);
+        }
+        catch (FormatException)
+        {
+            return BadRequest("Invalid root ID format");
+        }
+        catch (OverflowException)
+        {
+            return BadRequest("Root ID value is too large");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving work items by root IDs: {RootIds}", rootIds);
+            return StatusCode(500, "Error retrieving work items by root IDs");
+        }
+    }
 }
