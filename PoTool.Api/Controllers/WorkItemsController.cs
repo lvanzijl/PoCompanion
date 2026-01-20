@@ -63,13 +63,33 @@ public class WorkItemsController : ControllerBase
 
     /// <summary>
     /// Gets all cached work items with validation results.
+    /// Optionally filtered by product IDs for efficient loading.
     /// </summary>
+    /// <param name="productIds">Optional comma-separated list of product IDs to filter by</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     [HttpGet("validated")]
-    public async Task<ActionResult<IEnumerable<WorkItemWithValidationDto>>> GetAllWithValidation(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<WorkItemWithValidationDto>>> GetAllWithValidation(
+        [FromQuery] string? productIds = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var workItems = await _mediator.Send(new GetAllWorkItemsWithValidationQuery(), cancellationToken);
+            int[]? productIdArray = null;
+            if (!string.IsNullOrWhiteSpace(productIds))
+            {
+                try
+                {
+                    productIdArray = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(int.Parse)
+                        .ToArray();
+                }
+                catch (FormatException)
+                {
+                    return BadRequest("Invalid product ID format. Must be comma-separated integers.");
+                }
+            }
+
+            var workItems = await _mediator.Send(new GetAllWorkItemsWithValidationQuery(productIdArray), cancellationToken);
             return Ok(workItems);
         }
         catch (Exception ex)

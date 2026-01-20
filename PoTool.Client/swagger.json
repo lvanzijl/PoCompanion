@@ -3316,6 +3316,17 @@
           "WorkItems"
         ],
         "operationId": "WorkItems_GetAllWithValidation",
+        "parameters": [
+          {
+            "name": "productIds",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -3917,6 +3928,39 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BulkEffortAssignmentResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/WorkItems/by-root-ids": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetByRootIds",
+        "parameters": [
+          {
+            "name": "rootIds",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkItemDto"
+                  }
                 }
               }
             }

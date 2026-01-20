@@ -107,7 +107,21 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<WorkItemWithValidationDto>> GetAllWithValidationAsync()
     {
-        return await _client.GetAllWithValidationAsync();
+        return await _client.GetAllWithValidationAsync(null);
+    }
+
+    /// <summary>
+    /// Gets cached work items with validation results filtered by product IDs.
+    /// </summary>
+    /// <param name="productIds">Optional list of product IDs to filter by. If null or empty, loads all products for the active profile.</param>
+    public async Task<IEnumerable<WorkItemWithValidationDto>> GetAllWithValidationAsync(int[]? productIds)
+    {
+        string? productIdsParam = null;
+        if (productIds != null && productIds.Length > 0)
+        {
+            productIdsParam = string.Join(",", productIds);
+        }
+        return await _client.GetAllWithValidationAsync(productIdsParam);
     }
 
     /// <summary>

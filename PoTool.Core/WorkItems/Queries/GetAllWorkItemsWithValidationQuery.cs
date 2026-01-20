@@ -5,6 +5,8 @@ using PoTool.Shared.WorkItems;
 namespace PoTool.Core.WorkItems.Queries;
 
 /// <summary>
-/// Query to retrieve all cached work items with validation results.
+/// Query to retrieve cached work items with validation results.
+/// Optionally filtered by product IDs.
 /// </summary>
-public sealed record GetAllWorkItemsWithValidationQuery : IQuery<IEnumerable<WorkItemWithValidationDto>>;
+/// <param name="ProductIds">Optional list of product IDs to filter by. If null or empty, uses all products for the active profile.</param>
+public sealed record GetAllWorkItemsWithValidationQuery(int[]? ProductIds = null) : IQuery<IEnumerable<WorkItemWithValidationDto>>;

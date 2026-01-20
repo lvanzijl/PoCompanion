@@ -4,6 +4,7 @@ using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 using PoTool.Core.WorkItems.Validators;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Handlers.WorkItems;
 
@@ -41,13 +42,30 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
         GetAllWorkItemsWithValidationQuery query,
         CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Handling GetAllWorkItemsWithValidationQuery");
+        _logger.LogDebug("Handling GetAllWorkItemsWithValidationQuery with ProductIds: {ProductIds}", 
+            query.ProductIds != null ? string.Join(", ", query.ProductIds) : "null (all products)");
 
         IEnumerable<WorkItemDto> workItems;
 
-        // Check if there are products configured - if so, use hierarchical loading
-        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
-        var productsList = allProducts.ToList();
+        // Determine which products to load from
+        IEnumerable<ProductDto> productsToLoad;
+        if (query.ProductIds != null && query.ProductIds.Length > 0)
+        {
+            // Load only the specified products
+            var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+            var productIdSet = new HashSet<int>(query.ProductIds);
+            productsToLoad = allProducts.Where(p => productIdSet.Contains(p.Id)).ToList();
+            _logger.LogDebug("Loading work items for {Count} specified products: {ProductIds}", 
+                productsToLoad.Count(), string.Join(", ", query.ProductIds));
+        }
+        else
+        {
+            // Load all products (existing behavior)
+            productsToLoad = await _productRepository.GetAllProductsAsync(cancellationToken);
+            _logger.LogDebug("Loading work items for all {Count} products", productsToLoad.Count());
+        }
+
+        var productsList = productsToLoad.ToList();
 
         if (productsList.Count > 0)
         {

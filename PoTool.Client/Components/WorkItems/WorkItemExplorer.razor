@@ -201,9 +201,13 @@
             // Get products for the active profile
             var profileProducts = await GetProfileProductsAsync();
 
-            // Load work items with validation
-            // Backend automatically loads hierarchically from product root work item IDs
-            var allWorkItems = (await WorkItemService.GetAllWithValidationAsync()).ToList();
+            // Extract product IDs to pass to the backend for efficient filtering
+            var productIds = profileProducts.Select(p => p.Id).ToArray();
+            Console.WriteLine($"[WorkItemExplorer] Loading work items for {productIds.Length} products: {string.Join(", ", productIds)}");
+
+            // Load work items with validation, filtered by product IDs
+            // Backend will only load hierarchies for the specified products
+            var allWorkItems = (await WorkItemService.GetAllWithValidationAsync(productIds)).ToList();
             Console.WriteLine($"[WorkItemExplorer] Loaded {allWorkItems.Count} total work items from product hierarchies");
 
             // All work items are already scoped by products, no goal filtering needed
