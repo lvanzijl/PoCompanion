@@ -202,10 +202,6 @@
 
             // All work items are already scoped by products, no goal filtering needed
             _workItemsWithValidation = allWorkItems;
-            
-            // Clear goal filtering UI (deprecated - products now define scope)
-            _profileGoals.Clear();
-            _selectedGoalIdsTyped = new HashSet<int>();
 
             Console.WriteLine($"[WorkItemExplorer] Final work item count: {_workItemsWithValidation.Count}");
             await ApplyFilterAsync(profileProducts);

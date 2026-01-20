@@ -114,8 +114,8 @@ public class WorkItemExplorerTests
         var repo = new DevWorkItemRepository(facade);
         var items = (await repo.GetAllAsync()).ToList();
 
-        // Get all goals
-        var goals = items.Where(i => i.Type == "Goal").ToList();
+        // Get all goals (note: Type is lowercase "goal" from mock data)
+        var goals = items.Where(i => i.Type.Equals("goal", StringComparison.OrdinalIgnoreCase)).ToList();
 
         // Verify we have exactly 10 goals
         Assert.AreEqual(10, goals.Count, "Should have exactly 10 goals");
@@ -128,26 +128,29 @@ public class WorkItemExplorerTests
     }
 
     [TestMethod]
-    public async Task TreeBuilder_ShowsAllGoals_WhenNoFiltering()
+    public async Task TreeBuilder_ShowsAllRootNodes_WhenNoFiltering()
     {
         var facade = CreateMockDataFacade();
         var repo = new DevWorkItemRepository(facade);
         var allItems = (await repo.GetAllAsync()).ToList();
 
-        // Simulate the behavior when ConfiguredGoalIds is empty (no filtering)
-        // In the actual WorkItemExplorer, this would skip the FilterByGoalsAsync call
+        // Simulate the behavior when no filtering is applied
+        // In the actual WorkItemExplorer, products define scope, not goals
         var filteredItems = allItems;
 
         // Build tree structure - count root nodes (items without parents)
         var roots = filteredItems.Where(item => !item.ParentTfsId.HasValue).ToList();
 
-        // Verify we have exactly 10 root nodes (the goals)
+        // Verify we have exactly 10 root nodes (the goals in this mock data)
         Assert.AreEqual(10, roots.Count, "Should have exactly 10 root nodes when no filtering is applied");
 
-        // Verify all roots are goals
+        // Note: In the mock data, all root nodes happen to be goals,
+        // but in real usage, products define what roots are shown (via BacklogRootWorkItemId)
+        // Type is lowercase "goal" from mock data
         foreach (var root in roots)
         {
-            Assert.AreEqual("Goal", root.Type, $"Root node {root.TfsId} should be a Goal, but is {root.Type}");
+            Assert.IsTrue(root.Type.Equals("goal", StringComparison.OrdinalIgnoreCase), 
+                $"Root node {root.TfsId} should be a Goal, but is {root.Type}");
         }
     }
 
