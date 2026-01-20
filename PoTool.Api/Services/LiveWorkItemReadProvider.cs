@@ -25,6 +25,15 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
         _logger = logger;
     }
 
+    /// <summary>
+    /// Retrieves all work items from the configured TFS area path.
+    /// WARNING: This loads all work items from the configured area path without product filtering.
+    /// Prefer using GetByRootIdsAsync() for product-scoped loading when products are configured.
+    /// Only use this method for:
+    /// - Discovery operations (area path selection, iteration selection)
+    /// - Fallback when no products are configured
+    /// - Legacy compatibility scenarios
+    /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("LiveWorkItemReadProvider: Fetching all work items from TFS");

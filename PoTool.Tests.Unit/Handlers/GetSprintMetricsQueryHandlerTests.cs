@@ -1,9 +1,13 @@
+using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Handlers.Metrics;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Queries;
+using PoTool.Core.WorkItems.Queries;
+using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 
 using PoTool.Core.WorkItems;
@@ -14,7 +18,9 @@ namespace PoTool.Tests.Unit.Handlers;
 public class GetSprintMetricsQueryHandlerTests
 {
     private Mock<IWorkItemRepository> _mockRepository = null!;
+    private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<IWorkItemStateClassificationService> _mockStateService = null!;
+    private Mock<IMediator> _mockMediator = null!;
     private Mock<ILogger<GetSprintMetricsQueryHandler>> _mockLogger = null!;
     private GetSprintMetricsQueryHandler _handler = null!;
 
@@ -22,7 +28,9 @@ public class GetSprintMetricsQueryHandlerTests
     public void Setup()
     {
         _mockRepository = new Mock<IWorkItemRepository>();
+        _mockProductRepository = new Mock<IProductRepository>();
         _mockStateService = new Mock<IWorkItemStateClassificationService>();
+        _mockMediator = new Mock<IMediator>();
         _mockLogger = new Mock<ILogger<GetSprintMetricsQueryHandler>>();
         
         // Setup default state classification behavior
@@ -32,8 +40,19 @@ public class GetSprintMetricsQueryHandlerTests
                 state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
                 state.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
                 state.Equals("Resolved", StringComparison.OrdinalIgnoreCase));
+
+        // Setup default mock behaviors
+        _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ProductDto>());
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkItemDto>());
         
-        _handler = new GetSprintMetricsQueryHandler(_mockRepository.Object, _mockStateService.Object, _mockLogger.Object);
+        _handler = new GetSprintMetricsQueryHandler(
+            _mockRepository.Object, 
+            _mockProductRepository.Object,
+            _mockStateService.Object, 
+            _mockMediator.Object,
+            _mockLogger.Object);
     }
 
     [TestMethod]
