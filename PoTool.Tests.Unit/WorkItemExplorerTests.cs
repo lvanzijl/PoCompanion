@@ -149,8 +149,7 @@ public class WorkItemExplorerTests
         // Type is lowercase "goal" from mock data
         foreach (var root in roots)
         {
-            Assert.IsTrue(root.Type.Equals("goal", StringComparison.OrdinalIgnoreCase), 
-                $"Root node {root.TfsId} should be a Goal, but is {root.Type}");
+            Assert.IsTrue(root.Type.Equals("goal", StringComparison.OrdinalIgnoreCase), $"Root node {root.TfsId} should be a Goal, but is {root.Type}");
         }
     }
 
