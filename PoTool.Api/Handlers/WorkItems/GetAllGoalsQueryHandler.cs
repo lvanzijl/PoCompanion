@@ -9,22 +9,26 @@ namespace PoTool.Api.Handlers.WorkItems;
 
 /// <summary>
 /// Handler for GetAllGoalsQuery.
-/// Retrieves all work items of type Goal, filtered by active profile if set.
+/// Retrieves all work items of type Goal from configured products.
+/// Uses product-scoped hierarchical loading when products are configured.
 /// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetAllGoalsQueryHandler : IQueryHandler<GetAllGoalsQuery, IEnumerable<WorkItemDto>>
 {
     private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly ProfileFilterService _profileFilterService;
+    private readonly IProductRepository _productRepository;
     private readonly ILogger<GetAllGoalsQueryHandler> _logger;
 
     public GetAllGoalsQueryHandler(
         IWorkItemReadProvider workItemReadProvider,
         ProfileFilterService profileFilterService,
+        IProductRepository productRepository,
         ILogger<GetAllGoalsQueryHandler> logger)
     {
         _workItemReadProvider = workItemReadProvider;
         _profileFilterService = profileFilterService;
+        _productRepository = productRepository;
         _logger = logger;
     }
 
@@ -34,18 +38,49 @@ public sealed class GetAllGoalsQueryHandler : IQueryHandler<GetAllGoalsQuery, IE
     {
         _logger.LogDebug("Handling GetAllGoalsQuery");
 
-        // Live-only mode: use injected provider directly
-        var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
-
+        // Load work items using product-scoped approach
         IEnumerable<WorkItemDto> allWorkItems;
-        if (profileAreaPaths != null && profileAreaPaths.Count > 0)
+        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+        var productsList = allProducts.ToList();
+
+        if (productsList.Count > 0)
         {
-            _logger.LogDebug("Filtering goals by active profile area paths");
-            allWorkItems = await _workItemReadProvider.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0)
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length > 0)
+            {
+                _logger.LogDebug("Loading goals from {Count} product roots", rootIds.Length);
+                allWorkItems = await _workItemReadProvider.GetByRootIdsAsync(rootIds, cancellationToken);
+            }
+            else
+            {
+                _logger.LogDebug("No valid product roots, falling back to area path loading");
+                var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
+                if (profileAreaPaths != null && profileAreaPaths.Count > 0)
+                {
+                    allWorkItems = await _workItemReadProvider.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
+                }
+                else
+                {
+                    allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+                }
+            }
         }
         else
         {
-            allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+            _logger.LogDebug("No products configured, falling back to area path loading");
+            var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
+            if (profileAreaPaths != null && profileAreaPaths.Count > 0)
+            {
+                allWorkItems = await _workItemReadProvider.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
+            }
+            else
+            {
+                allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+            }
         }
 
         return allWorkItems.Where(wi => wi.Type == WorkItemType.Goal).ToList();

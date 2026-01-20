@@ -8,18 +8,25 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// <summary>
 /// Handler for GetFilteredWorkItemsAdvancedQuery.
 /// Applies multiple filter dimensions to work items for advanced search.
+/// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class GetFilteredWorkItemsAdvancedQueryHandler
     : IQueryHandler<GetFilteredWorkItemsAdvancedQuery, IEnumerable<WorkItemDto>>
 {
     private readonly IWorkItemRepository _repository;
+    private readonly IWorkItemReadProvider _workItemReadProvider;
+    private readonly IProductRepository _productRepository;
     private readonly ILogger<GetFilteredWorkItemsAdvancedQueryHandler> _logger;
 
     public GetFilteredWorkItemsAdvancedQueryHandler(
         IWorkItemRepository repository,
+        IWorkItemReadProvider workItemReadProvider,
+        IProductRepository productRepository,
         ILogger<GetFilteredWorkItemsAdvancedQueryHandler> logger)
     {
         _repository = repository;
+        _workItemReadProvider = workItemReadProvider;
+        _productRepository = productRepository;
         _logger = logger;
     }
 
@@ -29,7 +36,32 @@ public sealed class GetFilteredWorkItemsAdvancedQueryHandler
     {
         _logger.LogDebug("Handling GetFilteredWorkItemsAdvancedQuery with filters");
 
-        var allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        // Load work items using product-scoped approach
+        IEnumerable<WorkItemDto> allWorkItems;
+        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+        var productsList = allProducts.ToList();
+
+        if (productsList.Count > 0)
+        {
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0)
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length > 0)
+            {
+                _logger.LogDebug("Loading work items from {Count} product roots for filtering", rootIds.Length);
+                allWorkItems = await _workItemReadProvider.GetByRootIdsAsync(rootIds, cancellationToken);
+            }
+            else
+            {
+                allWorkItems = await _repository.GetAllAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        }
 
         IEnumerable<WorkItemDto> filtered = allWorkItems;
 
