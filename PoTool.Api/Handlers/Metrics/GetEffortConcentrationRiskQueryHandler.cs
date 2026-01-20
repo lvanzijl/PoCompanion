@@ -3,24 +3,32 @@ using PoTool.Core.Contracts;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
+using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Api.Handlers.Metrics;
 
 /// <summary>
 /// Handler for GetEffortConcentrationRiskQuery.
 /// Identifies concentration risks where effort is focused in single features or areas.
+/// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class GetEffortConcentrationRiskQueryHandler
     : IQueryHandler<GetEffortConcentrationRiskQuery, EffortConcentrationRiskDto>
 {
     private readonly IWorkItemRepository _repository;
+    private readonly IProductRepository _productRepository;
+    private readonly IMediator _mediator;
     private readonly ILogger<GetEffortConcentrationRiskQueryHandler> _logger;
 
     public GetEffortConcentrationRiskQueryHandler(
         IWorkItemRepository repository,
+        IProductRepository productRepository,
+        IMediator mediator,
         ILogger<GetEffortConcentrationRiskQueryHandler> logger)
     {
         _repository = repository;
+        _productRepository = productRepository;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -33,7 +41,32 @@ public sealed class GetEffortConcentrationRiskQueryHandler
             query.AreaPathFilter ?? "All",
             query.ConcentrationThreshold);
 
-        var allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        // Load work items using product-scoped approach
+        IEnumerable<WorkItemDto> allWorkItems;
+        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+        var productsList = allProducts.ToList();
+
+        if (productsList.Count > 0)
+        {
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0)
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length > 0)
+            {
+                var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
+                allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
+            }
+            else
+            {
+                allWorkItems = await _repository.GetAllAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        }
 
         // Filter by area path if specified
         if (!string.IsNullOrWhiteSpace(query.AreaPathFilter))

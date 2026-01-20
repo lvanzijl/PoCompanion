@@ -2,23 +2,32 @@ using Mediator;
 using PoTool.Core.Contracts;
 using PoTool.Shared.ReleasePlanning;
 using PoTool.Core.ReleasePlanning.Queries;
+using PoTool.Core.WorkItems.Queries;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Handlers.ReleasePlanning;
 
 /// <summary>
 /// Handler for GetEpicFeaturesQuery.
 /// Returns all Features for a specific Epic (for the Epic Split dialog).
+/// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class GetEpicFeaturesQueryHandler : IQueryHandler<GetEpicFeaturesQuery, IReadOnlyList<EpicFeatureDto>>
 {
     private readonly IWorkItemRepository _workItemRepository;
+    private readonly IProductRepository _productRepository;
+    private readonly IMediator _mediator;
     private readonly ILogger<GetEpicFeaturesQueryHandler> _logger;
 
     public GetEpicFeaturesQueryHandler(
         IWorkItemRepository workItemRepository,
+        IProductRepository productRepository,
+        IMediator mediator,
         ILogger<GetEpicFeaturesQueryHandler> logger)
     {
         _workItemRepository = workItemRepository;
+        _productRepository = productRepository;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -28,8 +37,32 @@ public sealed class GetEpicFeaturesQueryHandler : IQueryHandler<GetEpicFeaturesQ
     {
         _logger.LogDebug("Handling GetEpicFeaturesQuery for Epic {EpicId}", query.EpicId);
 
-        // Get all work items to find Features with the specified Epic as parent
-        var allWorkItems = await _workItemRepository.GetAllAsync(cancellationToken);
+        // Load work items using product-scoped approach
+        IEnumerable<WorkItemDto> allWorkItems;
+        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+        var productsList = allProducts.ToList();
+
+        if (productsList.Count > 0)
+        {
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0)
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length > 0)
+            {
+                var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
+                allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
+            }
+            else
+            {
+                allWorkItems = await _workItemRepository.GetAllAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            allWorkItems = await _workItemRepository.GetAllAsync(cancellationToken);
+        }
         var features = allWorkItems
             .Where(w => w.Type.Equals("Feature", StringComparison.OrdinalIgnoreCase)
                         && w.ParentTfsId == query.EpicId)
