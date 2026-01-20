@@ -1,10 +1,12 @@
+using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Mediator;
 using PoTool.Api.Handlers.Metrics;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Queries;
+using PoTool.Core.WorkItems.Queries;
 using PoTool.Shared.WorkItems;
 using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Queries;
@@ -17,6 +19,7 @@ namespace PoTool.Tests.Unit.Handlers;
 public class GetEffortEstimationSuggestionsQueryHandlerTests
 {
     private Mock<IWorkItemRepository> _mockRepository = null!;
+    private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<IMediator> _mockMediator = null!;
     private Mock<IWorkItemStateClassificationService> _mockStateService = null!;
     private Mock<ILogger<GetEffortEstimationSuggestionsQueryHandler>> _mockLogger = null!;
@@ -26,6 +29,7 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
     public void Setup()
     {
         _mockRepository = new Mock<IWorkItemRepository>();
+        _mockProductRepository = new Mock<IProductRepository>();
         _mockMediator = new Mock<IMediator>();
         _mockStateService = new Mock<IWorkItemStateClassificationService>();
         _mockLogger = new Mock<ILogger<GetEffortEstimationSuggestionsQueryHandler>>();
@@ -41,7 +45,18 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
                 state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
                 state.Equals("Resolved", StringComparison.OrdinalIgnoreCase));
 
-        _handler = new GetEffortEstimationSuggestionsQueryHandler(_mockRepository.Object, _mockMediator.Object, _mockStateService.Object, _mockLogger.Object);
+        // Setup default mock behaviors
+        _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ProductDto>());
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkItemDto>());
+
+        _handler = new GetEffortEstimationSuggestionsQueryHandler(
+            _mockRepository.Object,
+            _mockProductRepository.Object,
+            _mockMediator.Object,
+            _mockStateService.Object,
+            _mockLogger.Object);
     }
 
     [TestMethod]

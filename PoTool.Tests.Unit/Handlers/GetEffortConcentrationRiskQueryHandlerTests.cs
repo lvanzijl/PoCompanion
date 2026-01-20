@@ -1,10 +1,14 @@
+using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Handlers.Metrics;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
+using PoTool.Core.WorkItems.Queries;
+using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 
 using PoTool.Core.WorkItems;
@@ -15,6 +19,8 @@ namespace PoTool.Tests.Unit.Handlers;
 public class GetEffortConcentrationRiskQueryHandlerTests
 {
     private Mock<IWorkItemRepository> _mockRepository = null!;
+    private Mock<IProductRepository> _mockProductRepository = null!;
+    private Mock<IMediator> _mockMediator = null!;
     private Mock<ILogger<GetEffortConcentrationRiskQueryHandler>> _mockLogger = null!;
     private GetEffortConcentrationRiskQueryHandler _handler = null!;
 
@@ -22,9 +28,20 @@ public class GetEffortConcentrationRiskQueryHandlerTests
     public void Setup()
     {
         _mockRepository = new Mock<IWorkItemRepository>();
+        _mockProductRepository = new Mock<IProductRepository>();
+        _mockMediator = new Mock<IMediator>();
         _mockLogger = new Mock<ILogger<GetEffortConcentrationRiskQueryHandler>>();
+
+        // Setup default mock behaviors
+        _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ProductDto>());
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkItemDto>());
+
         _handler = new GetEffortConcentrationRiskQueryHandler(
             _mockRepository.Object,
+            _mockProductRepository.Object,
+            _mockMediator.Object,
             _mockLogger.Object);
     }
 

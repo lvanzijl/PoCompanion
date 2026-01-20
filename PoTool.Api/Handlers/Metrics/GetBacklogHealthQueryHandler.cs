@@ -5,27 +5,34 @@ using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Validators;
+using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Api.Handlers.Metrics;
 
 /// <summary>
 /// Handler for GetBacklogHealthQuery.
 /// Calculates backlog health metrics for a specific iteration.
-/// Uses Live provider to fetch work items directly from TFS.
+/// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class GetBacklogHealthQueryHandler
     : IQueryHandler<GetBacklogHealthQuery, BacklogHealthDto?>
 {
     private readonly IWorkItemReadProvider _workItemReadProvider;
+    private readonly IProductRepository _productRepository;
+    private readonly IMediator _mediator;
     private readonly IWorkItemValidator _validator;
     private readonly ILogger<GetBacklogHealthQueryHandler> _logger;
 
     public GetBacklogHealthQueryHandler(
         IWorkItemReadProvider workItemReadProvider,
+        IProductRepository productRepository,
+        IMediator mediator,
         IWorkItemValidator validator,
         ILogger<GetBacklogHealthQueryHandler> logger)
     {
         _workItemReadProvider = workItemReadProvider;
+        _productRepository = productRepository;
+        _mediator = mediator;
         _validator = validator;
         _logger = logger;
     }
@@ -36,7 +43,33 @@ public sealed class GetBacklogHealthQueryHandler
     {
         _logger.LogDebug("Handling GetBacklogHealthQuery for iteration: {IterationPath}", query.IterationPath);
 
-        var allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+        // Load work items using product-scoped approach
+        IEnumerable<WorkItemDto> allWorkItems;
+        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+        var productsList = allProducts.ToList();
+
+        if (productsList.Count > 0)
+        {
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0)
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length > 0)
+            {
+                var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
+                allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
+            }
+            else
+            {
+                allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+        }
+
         var iterationWorkItems = allWorkItems
             .Where(wi => wi.IterationPath.Equals(query.IterationPath, StringComparison.OrdinalIgnoreCase))
             .ToList();

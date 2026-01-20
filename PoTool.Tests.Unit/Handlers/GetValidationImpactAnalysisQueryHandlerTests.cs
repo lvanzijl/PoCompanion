@@ -2,7 +2,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Handlers.WorkItems;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 using PoTool.Core.WorkItems.Validators;
@@ -15,6 +17,8 @@ namespace PoTool.Tests.Unit.Handlers;
 public class GetValidationImpactAnalysisQueryHandlerTests
 {
     private Mock<IWorkItemRepository> _mockRepository = null!;
+    private Mock<IWorkItemReadProvider> _mockReadProvider = null!;
+    private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<IWorkItemValidator> _mockValidator = null!;
     private Mock<ILogger<GetValidationImpactAnalysisQueryHandler>> _mockLogger = null!;
     private GetValidationImpactAnalysisQueryHandler _handler = null!;
@@ -23,11 +27,19 @@ public class GetValidationImpactAnalysisQueryHandlerTests
     public void Setup()
     {
         _mockRepository = new Mock<IWorkItemRepository>();
+        _mockReadProvider = new Mock<IWorkItemReadProvider>();
+        _mockProductRepository = new Mock<IProductRepository>();
         _mockValidator = new Mock<IWorkItemValidator>();
         _mockLogger = new Mock<ILogger<GetValidationImpactAnalysisQueryHandler>>();
 
+        // Setup default mock behaviors
+        _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ProductDto>());
+
         _handler = new GetValidationImpactAnalysisQueryHandler(
             _mockRepository.Object,
+            _mockReadProvider.Object,
+            _mockProductRepository.Object,
             _mockValidator.Object,
             _mockLogger.Object
         );

@@ -3,26 +3,35 @@ using PoTool.Core.Contracts;
 using PoTool.Core.ReleasePlanning;
 using PoTool.Shared.ReleasePlanning;
 using PoTool.Core.ReleasePlanning.Queries;
+using PoTool.Core.WorkItems.Queries;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Handlers.ReleasePlanning;
 
 /// <summary>
 /// Handler for GetObjectiveEpicsQuery.
 /// Returns all Epics for a specific Objective with their planned/unplanned status.
+/// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class GetObjectiveEpicsQueryHandler : IQueryHandler<GetObjectiveEpicsQuery, IReadOnlyList<ObjectiveEpicDto>>
 {
     private readonly IWorkItemRepository _workItemRepository;
     private readonly IReleasePlanningRepository _planningRepository;
+    private readonly IProductRepository _productRepository;
+    private readonly IMediator _mediator;
     private readonly ILogger<GetObjectiveEpicsQueryHandler> _logger;
 
     public GetObjectiveEpicsQueryHandler(
         IWorkItemRepository workItemRepository,
         IReleasePlanningRepository planningRepository,
+        IProductRepository productRepository,
+        IMediator mediator,
         ILogger<GetObjectiveEpicsQueryHandler> logger)
     {
         _workItemRepository = workItemRepository;
         _planningRepository = planningRepository;
+        _productRepository = productRepository;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -32,8 +41,32 @@ public sealed class GetObjectiveEpicsQueryHandler : IQueryHandler<GetObjectiveEp
     {
         _logger.LogDebug("Handling GetObjectiveEpicsQuery for Objective {ObjectiveId}", query.ObjectiveId);
 
-        // Get all work items to find Epics with the specified Objective as parent
-        var allWorkItems = await _workItemRepository.GetAllAsync(cancellationToken);
+        // Load work items using product-scoped approach
+        IEnumerable<WorkItemDto> allWorkItems;
+        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+        var productsList = allProducts.ToList();
+
+        if (productsList.Count > 0)
+        {
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0)
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length > 0)
+            {
+                var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
+                allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
+            }
+            else
+            {
+                allWorkItems = await _workItemRepository.GetAllAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            allWorkItems = await _workItemRepository.GetAllAsync(cancellationToken);
+        }
         var epics = allWorkItems
             .Where(w => w.Type.Equals("Epic", StringComparison.OrdinalIgnoreCase)
                         && w.ParentTfsId == query.ObjectiveId)

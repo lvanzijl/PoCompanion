@@ -5,6 +5,7 @@ using PoTool.Api.Handlers.WorkItems;
 using PoTool.Api.Services;
 using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
+using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 
@@ -16,6 +17,7 @@ namespace PoTool.Tests.Unit.Handlers;
 public class GetDependencyGraphQueryHandlerTests
 {
     private Mock<IWorkItemReadProvider> _mockProvider = null!;
+    private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<ILogger<GetDependencyGraphQueryHandler>> _mockLogger = null!;
     private GetDependencyGraphQueryHandler _handler = null!;
 
@@ -23,8 +25,17 @@ public class GetDependencyGraphQueryHandlerTests
     public void Setup()
     {
         _mockProvider = new Mock<IWorkItemReadProvider>();
+        _mockProductRepository = new Mock<IProductRepository>();
         _mockLogger = new Mock<ILogger<GetDependencyGraphQueryHandler>>();
-        _handler = new GetDependencyGraphQueryHandler(_mockProvider.Object, _mockLogger.Object);
+
+        // Setup default mock behaviors
+        _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ProductDto>());
+
+        _handler = new GetDependencyGraphQueryHandler(
+            _mockProvider.Object,
+            _mockProductRepository.Object,
+            _mockLogger.Object);
     }
 
     [TestMethod]

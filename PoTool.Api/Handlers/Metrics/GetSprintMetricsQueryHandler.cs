@@ -3,26 +3,34 @@ using PoTool.Core.Contracts;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.Metrics.Queries;
+using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Api.Handlers.Metrics;
 
 /// <summary>
 /// Handler for GetSprintMetricsQuery.
 /// Calculates metrics for a specific sprint based on work items.
+/// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetricsQuery, SprintMetricsDto?>
 {
     private readonly IWorkItemRepository _repository;
+    private readonly IProductRepository _productRepository;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
+    private readonly IMediator _mediator;
     private readonly ILogger<GetSprintMetricsQueryHandler> _logger;
 
     public GetSprintMetricsQueryHandler(
         IWorkItemRepository repository,
+        IProductRepository productRepository,
         IWorkItemStateClassificationService stateClassificationService,
+        IMediator mediator,
         ILogger<GetSprintMetricsQueryHandler> logger)
     {
         _repository = repository;
+        _productRepository = productRepository;
         _stateClassificationService = stateClassificationService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -32,7 +40,32 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
     {
         _logger.LogDebug("Handling GetSprintMetricsQuery for iteration: {IterationPath}", query.IterationPath);
 
-        var allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        // Load work items using product-scoped approach
+        IEnumerable<WorkItemDto> allWorkItems;
+        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+        var productsList = allProducts.ToList();
+
+        if (productsList.Count > 0)
+        {
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0)
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length > 0)
+            {
+                var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
+                allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
+            }
+            else
+            {
+                allWorkItems = await _repository.GetAllAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        }
 
         // Filter work items for this specific iteration
         var sprintWorkItems = allWorkItems

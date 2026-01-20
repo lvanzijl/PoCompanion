@@ -6,6 +6,7 @@ using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems;
+using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Api.Handlers.Metrics;
 
@@ -13,24 +14,27 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetMultiIterationBacklogHealthQuery.
 /// Aggregates backlog health across multiple iterations and provides trend analysis.
 /// Supports filtering by product (via root work item hierarchy) or area path.
-/// Uses read provider to support both Live and Cached modes.
+/// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class GetMultiIterationBacklogHealthQueryHandler
     : IQueryHandler<GetMultiIterationBacklogHealthQuery, MultiIterationBacklogHealthDto>
 {
     private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly IProductRepository _productRepository;
+    private readonly IMediator _mediator;
     private readonly IWorkItemValidator _validator;
     private readonly ILogger<GetMultiIterationBacklogHealthQueryHandler> _logger;
 
     public GetMultiIterationBacklogHealthQueryHandler(
         IWorkItemReadProvider workItemReadProvider,
         IProductRepository productRepository,
+        IMediator mediator,
         IWorkItemValidator validator,
         ILogger<GetMultiIterationBacklogHealthQueryHandler> logger)
     {
         _workItemReadProvider = workItemReadProvider;
         _productRepository = productRepository;
+        _mediator = mediator;
         _validator = validator;
         _logger = logger;
     }
@@ -45,8 +49,8 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
             query.AreaPath ?? "All",
             query.MaxIterations);
 
-        // Live-only mode: use injected provider directly
-        var allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+        // Load work items using product-scoped approach
+        IEnumerable<WorkItemDto> allWorkItems;
 
         // Filter by product hierarchy if ProductIds are specified
         if (query.ProductIds != null && query.ProductIds.Length > 0)
@@ -83,21 +87,50 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
                 );
             }
 
-            // Filter to only work items in the products' hierarchies
-            // FilterDescendants automatically deduplicates by TfsId using HashSet internally
-            allWorkItems = WorkItemHierarchyHelper.FilterDescendants(rootWorkItemIds, allWorkItems);
+            // Use product-scoped loading
+            var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootWorkItemIds.ToArray());
+            allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
 
             _logger.LogDebug(
                 "Filtered to {Count} work items in product hierarchies (roots: {RootIds}), deduplicated by TfsId",
                 allWorkItems.Count(),
                 string.Join(", ", rootWorkItemIds));
         }
-        // Otherwise, filter by area path if specified (legacy behavior)
-        else if (!string.IsNullOrWhiteSpace(query.AreaPath))
+        // Otherwise, use product-scoped approach or fallback
+        else
         {
-            allWorkItems = allWorkItems
-                .Where(wi => wi.AreaPath.StartsWith(query.AreaPath, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+            var productsList = allProducts.ToList();
+
+            if (productsList.Count > 0)
+            {
+                var rootIds = productsList
+                    .Where(p => p.BacklogRootWorkItemId > 0)
+                    .Select(p => p.BacklogRootWorkItemId)
+                    .ToArray();
+
+                if (rootIds.Length > 0)
+                {
+                    var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
+                    allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
+                }
+                else
+                {
+                    allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+                }
+            }
+            else
+            {
+                allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+            }
+
+            // Filter by area path if specified (legacy behavior)
+            if (!string.IsNullOrWhiteSpace(query.AreaPath))
+            {
+                allWorkItems = allWorkItems
+                    .Where(wi => wi.AreaPath.StartsWith(query.AreaPath, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
         }
 
         // Get distinct iteration paths, sorted

@@ -10,19 +10,23 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// <summary>
 /// Handler for GetDependencyGraphQuery.
 /// Builds a dependency graph from work item relationships.
+/// Uses product-scoped hierarchical loading when products are configured.
 /// Uses read provider to support both Live and Cached modes.
 /// </summary>
 public sealed class GetDependencyGraphQueryHandler
     : IQueryHandler<GetDependencyGraphQuery, DependencyGraphDto>
 {
     private readonly IWorkItemReadProvider _workItemReadProvider;
+    private readonly IProductRepository _productRepository;
     private readonly ILogger<GetDependencyGraphQueryHandler> _logger;
 
     public GetDependencyGraphQueryHandler(
         IWorkItemReadProvider workItemReadProvider,
+        IProductRepository productRepository,
         ILogger<GetDependencyGraphQueryHandler> logger)
     {
         _workItemReadProvider = workItemReadProvider;
+        _productRepository = productRepository;
         _logger = logger;
     }
 
@@ -32,8 +36,33 @@ public sealed class GetDependencyGraphQueryHandler
     {
         _logger.LogDebug("Handling GetDependencyGraphQuery");
 
-        // Live-only mode: use injected provider directly
-        var allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+        // Load work items using product-scoped approach
+        IEnumerable<WorkItemDto> allWorkItems;
+        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+        var productsList = allProducts.ToList();
+
+        if (productsList.Count > 0)
+        {
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0)
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length > 0)
+            {
+                _logger.LogDebug("Loading work items from {Count} product roots for dependency analysis", rootIds.Length);
+                allWorkItems = await _workItemReadProvider.GetByRootIdsAsync(rootIds, cancellationToken);
+            }
+            else
+            {
+                allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+        }
+
         var workItemsList = allWorkItems.ToList();
 
         // Filter work items if specified

@@ -4,29 +4,37 @@ using PoTool.Core.ReleasePlanning;
 using PoTool.Shared.ReleasePlanning;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.ReleasePlanning.Commands;
+using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Api.Handlers.ReleasePlanning;
 
 /// <summary>
 /// Handler for RefreshValidationCacheCommand.
 /// Refreshes cached validation results for all Epics on the board.
+/// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class RefreshValidationCacheCommandHandler : ICommandHandler<RefreshValidationCacheCommand, ValidationCacheResultDto>
 {
     private readonly IReleasePlanningRepository _repository;
     private readonly IWorkItemRepository _workItemRepository;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
+    private readonly IProductRepository _productRepository;
+    private readonly IMediator _mediator;
     private readonly ILogger<RefreshValidationCacheCommandHandler> _logger;
 
     public RefreshValidationCacheCommandHandler(
         IReleasePlanningRepository repository,
         IWorkItemRepository workItemRepository,
         IWorkItemStateClassificationService stateClassificationService,
+        IProductRepository productRepository,
+        IMediator mediator,
         ILogger<RefreshValidationCacheCommandHandler> logger)
     {
         _repository = repository;
         _workItemRepository = workItemRepository;
         _stateClassificationService = stateClassificationService;
+        _productRepository = productRepository;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -79,8 +87,32 @@ public sealed class RefreshValidationCacheCommandHandler : ICommandHandler<Refre
         int epicId,
         CancellationToken cancellationToken)
     {
-        // Get the Epic and its descendants
-        var allWorkItems = await _workItemRepository.GetAllAsync(cancellationToken);
+        // Load work items using product-scoped approach
+        IEnumerable<WorkItemDto> allWorkItems;
+        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+        var productsList = allProducts.ToList();
+
+        if (productsList.Count > 0)
+        {
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0)
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length > 0)
+            {
+                var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
+                allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
+            }
+            else
+            {
+                allWorkItems = await _workItemRepository.GetAllAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            allWorkItems = await _workItemRepository.GetAllAsync(cancellationToken);
+        }
         var epic = allWorkItems.FirstOrDefault(w => w.TfsId == epicId);
 
         if (epic == null)

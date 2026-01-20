@@ -3,6 +3,8 @@ using PoTool.Core.Contracts;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
+using PoTool.Core.WorkItems.Queries;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Handlers.Metrics;
 
@@ -39,7 +41,7 @@ public sealed class GetVelocityTrendQueryHandler : IQueryHandler<GetVelocityTren
             query.AreaPath ?? "All", 
             query.MaxSprints);
 
-        var allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        IEnumerable<WorkItemDto> allWorkItems;
 
         // Filter by product hierarchy if ProductIds are specified
         if (query.ProductIds != null && query.ProductIds.Length > 0)
@@ -60,26 +62,61 @@ public sealed class GetVelocityTrendQueryHandler : IQueryHandler<GetVelocityTren
 
             if (rootWorkItemIds.Count > 0)
             {
-                // Filter to only work items in the products' hierarchies
-                // FilterDescendants automatically deduplicates by TfsId using HashSet internally
-                allWorkItems = WorkItemHierarchyHelper.FilterDescendants(rootWorkItemIds, allWorkItems);
+                // Load work items hierarchically from product roots
+                _logger.LogDebug("Loading work items hierarchically from {Count} product roots: {RootIds}",
+                    rootWorkItemIds.Count, string.Join(", ", rootWorkItemIds));
+                
+                // Use GetWorkItemsByRootIdsAsync through mediator
+                var rootIds = rootWorkItemIds.ToArray();
+                var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
+                allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
 
-                _logger.LogDebug(
-                    "Filtered to {Count} work items in product hierarchies (roots: {RootIds}), deduplicated by TfsId",
+                _logger.LogDebug("Loaded {Count} work items in product hierarchies (roots: {RootIds})",
                     allWorkItems.Count(),
                     string.Join(", ", rootWorkItemIds));
             }
             else
             {
                 _logger.LogWarning("No valid products found for IDs: {ProductIds}", string.Join(", ", query.ProductIds));
+                allWorkItems = Enumerable.Empty<WorkItemDto>();
             }
         }
         // Otherwise, filter by area path if specified (legacy behavior)
         else if (!string.IsNullOrWhiteSpace(query.AreaPath))
         {
+            allWorkItems = await _repository.GetAllAsync(cancellationToken);
             allWorkItems = allWorkItems
                 .Where(wi => wi.AreaPath.StartsWith(query.AreaPath, StringComparison.OrdinalIgnoreCase))
                 .ToList();
+        }
+        else
+        {
+            // No filters specified - load from configured products
+            var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+            var productsList = allProducts.ToList();
+            
+            if (productsList.Count > 0)
+            {
+                var rootIds = productsList
+                    .Where(p => p.BacklogRootWorkItemId > 0)
+                    .Select(p => p.BacklogRootWorkItemId)
+                    .ToArray();
+                
+                if (rootIds.Length > 0)
+                {
+                    _logger.LogDebug("Loading work items from all {Count} configured products", rootIds.Length);
+                    var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
+                    allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
+                }
+                else
+                {
+                    allWorkItems = await _repository.GetAllAsync(cancellationToken);
+                }
+            }
+            else
+            {
+                allWorkItems = await _repository.GetAllAsync(cancellationToken);
+            }
         }
 
         // Get distinct iteration paths and sort them (most recent first based on path naming)

@@ -7,12 +7,14 @@ using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Queries;
 
 using PoTool.Core.WorkItems;
+using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Api.Handlers.Metrics;
 
 /// <summary>
 /// Handler for GetEffortEstimationSuggestionsQuery.
 /// Provides intelligent effort estimation suggestions based on historical data and ML/heuristic analysis.
+/// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class GetEffortEstimationSuggestionsQueryHandler
     : IQueryHandler<GetEffortEstimationSuggestionsQuery, IReadOnlyList<EffortEstimationSuggestionDto>>
@@ -24,17 +26,20 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
     private const double VarianceScalingFactor = 100.0;
 
     private readonly IWorkItemRepository _repository;
+    private readonly IProductRepository _productRepository;
     private readonly IMediator _mediator;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetEffortEstimationSuggestionsQueryHandler> _logger;
 
     public GetEffortEstimationSuggestionsQueryHandler(
         IWorkItemRepository repository,
+        IProductRepository productRepository,
         IMediator mediator,
         IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetEffortEstimationSuggestionsQueryHandler> logger)
     {
         _repository = repository;
+        _productRepository = productRepository;
         _mediator = mediator;
         _stateClassificationService = stateClassificationService;
         _logger = logger;
@@ -47,7 +52,32 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
         _logger.LogDebug("Handling GetEffortEstimationSuggestionsQuery for iteration={IterationPath}, area={AreaPath}, onlyInProgress={OnlyInProgress}",
             query.IterationPath, query.AreaPath, query.OnlyInProgressItems);
 
-        var allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        // Load work items using product-scoped approach
+        IEnumerable<WorkItemDto> allWorkItems;
+        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+        var productsList = allProducts.ToList();
+
+        if (productsList.Count > 0)
+        {
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0)
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length > 0)
+            {
+                var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
+                allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
+            }
+            else
+            {
+                allWorkItems = await _repository.GetAllAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        }
         var workItemsList = allWorkItems.ToList();
 
         // Filter work items without effort

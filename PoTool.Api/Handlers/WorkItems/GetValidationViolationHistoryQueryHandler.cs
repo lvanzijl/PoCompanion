@@ -9,6 +9,7 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// <summary>
 /// Handler for GetValidationViolationHistoryQuery.
 /// Retrieves historical validation violations for tracking patterns over time.
+/// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class GetValidationViolationHistoryQueryHandler
     : IQueryHandler<GetValidationViolationHistoryQuery, IEnumerable<ValidationViolationHistoryDto>>
@@ -16,15 +17,21 @@ public sealed class GetValidationViolationHistoryQueryHandler
     private const string ParentProgressValidationType = "ParentProgress";
 
     private readonly IWorkItemRepository _repository;
+    private readonly IWorkItemReadProvider _workItemReadProvider;
+    private readonly IProductRepository _productRepository;
     private readonly IWorkItemValidator _validator;
     private readonly ILogger<GetValidationViolationHistoryQueryHandler> _logger;
 
     public GetValidationViolationHistoryQueryHandler(
         IWorkItemRepository repository,
+        IWorkItemReadProvider workItemReadProvider,
+        IProductRepository productRepository,
         IWorkItemValidator validator,
         ILogger<GetValidationViolationHistoryQueryHandler> logger)
     {
         _repository = repository;
+        _workItemReadProvider = workItemReadProvider;
+        _productRepository = productRepository;
         _validator = validator;
         _logger = logger;
     }
@@ -36,8 +43,33 @@ public sealed class GetValidationViolationHistoryQueryHandler
         _logger.LogDebug("Handling GetValidationViolationHistoryQuery with AreaPathFilter={AreaPath}, StartDate={StartDate}, EndDate={EndDate}",
             query.AreaPathFilter, query.StartDate, query.EndDate);
 
-        // Get all work items
-        var workItems = await _repository.GetAllAsync(cancellationToken);
+        // Load work items using product-scoped approach
+        IEnumerable<WorkItemDto> workItems;
+        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+        var productsList = allProducts.ToList();
+
+        if (productsList.Count > 0)
+        {
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0)
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length > 0)
+            {
+                _logger.LogDebug("Loading work items from {Count} product roots for validation history", rootIds.Length);
+                workItems = await _workItemReadProvider.GetByRootIdsAsync(rootIds, cancellationToken);
+            }
+            else
+            {
+                workItems = await _repository.GetAllAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            workItems = await _repository.GetAllAsync(cancellationToken);
+        }
+
         var workItemsList = workItems.ToList();
 
         // Apply area path filter if provided

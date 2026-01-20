@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -6,6 +7,8 @@ using PoTool.Api.Services;
 using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Queries;
+using PoTool.Core.WorkItems.Queries;
+using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Validators;
 
@@ -17,6 +20,8 @@ namespace PoTool.Tests.Unit.Handlers;
 public class GetBacklogHealthQueryHandlerTests
 {
     private Mock<IWorkItemReadProvider> _mockProvider = null!;
+    private Mock<IProductRepository> _mockProductRepository = null!;
+    private Mock<IMediator> _mockMediator = null!;
     private Mock<IWorkItemValidator> _mockValidator = null!;
     private Mock<ILogger<GetBacklogHealthQueryHandler>> _mockLogger = null!;
     private GetBacklogHealthQueryHandler _handler = null!;
@@ -25,10 +30,21 @@ public class GetBacklogHealthQueryHandlerTests
     public void Setup()
     {
         _mockProvider = new Mock<IWorkItemReadProvider>();
+        _mockProductRepository = new Mock<IProductRepository>();
+        _mockMediator = new Mock<IMediator>();
         _mockValidator = new Mock<IWorkItemValidator>();
         _mockLogger = new Mock<ILogger<GetBacklogHealthQueryHandler>>();
+
+        // Setup default mock behaviors
+        _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ProductDto>());
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkItemDto>());
+
         _handler = new GetBacklogHealthQueryHandler(
             _mockProvider.Object,
+            _mockProductRepository.Object,
+            _mockMediator.Object,
             _mockValidator.Object,
             _mockLogger.Object);
     }

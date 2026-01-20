@@ -3,28 +3,33 @@ using PoTool.Core.Contracts;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
+using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Api.Handlers.Metrics;
 
 /// <summary>
 /// Handler for GetEpicCompletionForecastQuery.
 /// Calculates completion forecast for an Epic/Feature based on historical velocity.
+/// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class GetEpicCompletionForecastQueryHandler
     : IQueryHandler<GetEpicCompletionForecastQuery, EpicCompletionForecastDto?>
 {
     private readonly IWorkItemRepository _repository;
+    private readonly IProductRepository _productRepository;
     private readonly IMediator _mediator;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetEpicCompletionForecastQueryHandler> _logger;
 
     public GetEpicCompletionForecastQueryHandler(
         IWorkItemRepository repository,
+        IProductRepository productRepository,
         IMediator mediator,
         IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetEpicCompletionForecastQueryHandler> logger)
     {
         _repository = repository;
+        _productRepository = productRepository;
         _mediator = mediator;
         _stateClassificationService = stateClassificationService;
         _logger = logger;
@@ -44,8 +49,34 @@ public sealed class GetEpicCompletionForecastQueryHandler
             return null;
         }
 
+        // Load work items using product-scoped approach
+        IEnumerable<WorkItemDto> allWorkItems;
+        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+        var productsList = allProducts.ToList();
+
+        if (productsList.Count > 0)
+        {
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0)
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length > 0)
+            {
+                var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
+                allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
+            }
+            else
+            {
+                allWorkItems = await _repository.GetAllAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            allWorkItems = await _repository.GetAllAsync(cancellationToken);
+        }
+
         // Get all child work items (Features, PBIs, Tasks under this Epic)
-        var allWorkItems = await _repository.GetAllAsync(cancellationToken);
         var childItems = GetAllDescendants(epic, allWorkItems.ToList());
 
         // Calculate total and completed effort

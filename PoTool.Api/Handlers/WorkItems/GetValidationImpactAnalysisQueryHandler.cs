@@ -9,20 +9,27 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// <summary>
 /// Handler for GetValidationImpactAnalysisQuery.
 /// Analyzes the impact of validation violations on work item hierarchy and workflow.
+/// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class GetValidationImpactAnalysisQueryHandler
     : IQueryHandler<GetValidationImpactAnalysisQuery, ValidationImpactAnalysisDto>
 {
     private readonly IWorkItemRepository _repository;
+    private readonly IWorkItemReadProvider _workItemReadProvider;
+    private readonly IProductRepository _productRepository;
     private readonly IWorkItemValidator _validator;
     private readonly ILogger<GetValidationImpactAnalysisQueryHandler> _logger;
 
     public GetValidationImpactAnalysisQueryHandler(
         IWorkItemRepository repository,
+        IWorkItemReadProvider workItemReadProvider,
+        IProductRepository productRepository,
         IWorkItemValidator validator,
         ILogger<GetValidationImpactAnalysisQueryHandler> logger)
     {
         _repository = repository;
+        _workItemReadProvider = workItemReadProvider;
+        _productRepository = productRepository;
         _validator = validator;
         _logger = logger;
     }
@@ -34,8 +41,33 @@ public sealed class GetValidationImpactAnalysisQueryHandler
         _logger.LogDebug("Handling GetValidationImpactAnalysisQuery with AreaPathFilter={AreaPath}, IterationPathFilter={IterationPath}",
             query.AreaPathFilter, query.IterationPathFilter);
 
-        // Get all work items
-        var workItems = await _repository.GetAllAsync(cancellationToken);
+        // Load work items using product-scoped approach
+        IEnumerable<WorkItemDto> workItems;
+        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
+        var productsList = allProducts.ToList();
+
+        if (productsList.Count > 0)
+        {
+            var rootIds = productsList
+                .Where(p => p.BacklogRootWorkItemId > 0)
+                .Select(p => p.BacklogRootWorkItemId)
+                .ToArray();
+
+            if (rootIds.Length > 0)
+            {
+                _logger.LogDebug("Loading work items from {Count} product roots for impact analysis", rootIds.Length);
+                workItems = await _workItemReadProvider.GetByRootIdsAsync(rootIds, cancellationToken);
+            }
+            else
+            {
+                workItems = await _repository.GetAllAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            workItems = await _repository.GetAllAsync(cancellationToken);
+        }
+
         var workItemsList = workItems.ToList();
 
         // Apply filters
