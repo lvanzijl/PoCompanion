@@ -1,9 +1,13 @@
 @page "/velocity"
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Services
 @using static PoTool.Client.Components.Common.PageHelp
 @inject IMetricsClient MetricsClient
 @inject ISnackbar Snackbar
+@inject ProductService ProductService
+@inject TeamService TeamService
+@inject IPreferencesService PreferencesService
 
 <PageTitle>Velocity Dashboard</PageTitle>
 
@@ -23,6 +27,50 @@
     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
         Track team velocity and sprint metrics for data-driven planning
     </MudText>
+
+    @* Scope Selectors *@
+    @if (_products.Count > 0 || _teams.Count > 0)
+    {
+        <MudPaper Elevation="1" Class="pa-3 mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                @if (_products.Count > 0)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" />
+                    <MudSelect T="int" 
+                               Value="@_selectedProductId"
+                               ValueChanged="OnProductChanged"
+                               Label="Product Scope"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Style="min-width: 250px;">
+                        <MudSelectItem T="int" Value="@AllProductsId">All products</MudSelectItem>
+                        @foreach (var product in _products)
+                        {
+                            <MudSelectItem T="int" Value="@product.Id">@product.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+                
+                @if (_teams.Count > 0)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Groups" Color="Color.Secondary" />
+                    <MudSelect T="int" 
+                               Value="@_selectedTeamId"
+                               ValueChanged="OnTeamChanged"
+                               Label="Team Scope"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Style="min-width: 250px;">
+                        <MudSelectItem T="int" Value="@AllTeamsId">All teams</MudSelectItem>
+                        @foreach (var team in _teams)
+                        {
+                            <MudSelectItem T="int" Value="@team.Id">@team.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+            </MudStack>
+        </MudPaper>
+    }
 
     <LoadingIndicator IsLoading="@_isLoading" />
     
@@ -155,10 +203,24 @@
 </MudContainer>
 
 @code {
+    // Scope selector constants
+    private const int AllProductsId = 0;
+    private const int AllTeamsId = 0;
+    private const string ProductIdPreferenceKey = "VelocitySelectedProductId";
+    private const string TeamIdPreferenceKey = "VelocitySelectedTeamId";
+
+    // State
     private bool _isLoading = true;
     private VelocityTrendDto? _velocityTrend;
     private List<ChartSeries> _chartSeries = new();
     private List<string> _xAxisLabels = new();
+    
+    // Scope selection
+    private List<ProductDto> _products = new();
+    private List<TeamDto> _teams = new();
+    private int _selectedProductId = AllProductsId;
+    private int _selectedTeamId = AllTeamsId;
+    
     private ChartOptions _chartOptions = new() 
     { 
         YAxisTicks = 5,
@@ -169,6 +231,81 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadProductsAndTeamsAsync();
+        await LoadPersistedSelectionsAsync();
+        await LoadVelocityData();
+    }
+
+    private async Task LoadProductsAndTeamsAsync()
+    {
+        try
+        {
+            // Load all products
+            var productsEnumerable = await ProductService.GetAllProductsAsync();
+            _products = productsEnumerable.ToList();
+
+            // Load all non-archived teams
+            var teamsEnumerable = await TeamService.GetAllTeamsAsync(includeArchived: false);
+            _teams = teamsEnumerable.OrderBy(t => t.Name).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading products/teams: {ex.Message}", Severity.Warning);
+        }
+    }
+
+    private async Task LoadPersistedSelectionsAsync()
+    {
+        try
+        {
+            // Load persisted product selection
+            var persistedProductId = await PreferencesService.GetIntAsync(ProductIdPreferenceKey);
+            if (persistedProductId.HasValue)
+            {
+                // Validate that the product still exists
+                if (persistedProductId.Value == AllProductsId || 
+                    _products.Any(p => p.Id == persistedProductId.Value))
+                {
+                    _selectedProductId = persistedProductId.Value;
+                }
+            }
+
+            // Load persisted team selection
+            var persistedTeamId = await PreferencesService.GetIntAsync(TeamIdPreferenceKey);
+            if (persistedTeamId.HasValue)
+            {
+                // Validate that the team still exists
+                if (persistedTeamId.Value == AllTeamsId || 
+                    _teams.Any(t => t.Id == persistedTeamId.Value))
+                {
+                    _selectedTeamId = persistedTeamId.Value;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[VelocityDashboard] Error loading persisted selections: {ex.Message}");
+            // Continue with defaults
+        }
+    }
+
+    private async Task OnProductChanged(int newProductId)
+    {
+        if (_selectedProductId == newProductId)
+            return;
+
+        _selectedProductId = newProductId;
+        await PreferencesService.SetIntAsync(ProductIdPreferenceKey, newProductId);
+        await LoadVelocityData();
+    }
+
+    private async Task OnTeamChanged(int newTeamId)
+    {
+        if (_selectedTeamId == newTeamId)
+            return;
+
+        _selectedTeamId = newTeamId;
+        await PreferencesService.SetIntAsync(TeamIdPreferenceKey, newTeamId);
         await LoadVelocityData();
     }
 
@@ -179,8 +316,38 @@
 
         try
         {
-            // Get velocity trend for last 10 sprints
-            _velocityTrend = await MetricsClient.GetVelocityTrendAsync(productIds: null, areaPath: null, maxSprints: 10);
+            // Determine product IDs for query
+            IEnumerable<int>? productIds = null;
+            if (_products.Count > 0)
+            {
+                if (_selectedProductId == AllProductsId)
+                {
+                    // Pass all product IDs for aggregation
+                    productIds = _products.Select(p => p.Id);
+                }
+                else
+                {
+                    // Pass only selected product ID
+                    productIds = new[] { _selectedProductId };
+                }
+            }
+
+            // Determine area path for team filtering
+            string? areaPath = null;
+            if (_selectedTeamId != AllTeamsId)
+            {
+                var selectedTeam = _teams.FirstOrDefault(t => t.Id == _selectedTeamId);
+                if (selectedTeam != null)
+                {
+                    areaPath = selectedTeam.TeamAreaPath;
+                }
+            }
+
+            // Get velocity trend for last 10 sprints (6-month window is implicit based on sprint data)
+            _velocityTrend = await MetricsClient.GetVelocityTrendAsync(
+                productIds: productIds, 
+                areaPath: areaPath, 
+                maxSprints: 10);
             
             if (_velocityTrend?.Sprints.Any() == true)
             {

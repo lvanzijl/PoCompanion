@@ -130,7 +130,8 @@ public sealed class GetVelocityTrendQueryHandler : IQueryHandler<GetVelocityTren
 
         _logger.LogDebug("Found {Count} distinct iterations", iterationPaths.Count);
 
-        // Get metrics for each sprint
+        // Get metrics for each sprint, filtering to last 6 months
+        var sixMonthsAgo = DateTimeOffset.UtcNow.AddMonths(-6);
         var sprintMetricsList = new List<SprintMetricsDto>();
         foreach (var iterationPath in iterationPaths)
         {
@@ -140,7 +141,16 @@ public sealed class GetVelocityTrendQueryHandler : IQueryHandler<GetVelocityTren
 
             if (sprintMetrics != null)
             {
-                sprintMetricsList.Add(sprintMetrics);
+                // Only include sprints that ended within the last 6 months (or have no end date)
+                if (sprintMetrics.EndDate == null || sprintMetrics.EndDate >= sixMonthsAgo)
+                {
+                    sprintMetricsList.Add(sprintMetrics);
+                }
+                else
+                {
+                    _logger.LogDebug("Filtering out sprint {Sprint} - ended before 6-month window ({EndDate})", 
+                        sprintMetrics.SprintName, sprintMetrics.EndDate);
+                }
             }
         }
 

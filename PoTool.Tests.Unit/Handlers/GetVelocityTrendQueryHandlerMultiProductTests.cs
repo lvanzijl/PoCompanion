@@ -4,6 +4,7 @@ using Moq;
 using PoTool.Api.Handlers.Metrics;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Queries;
+using PoTool.Core.WorkItems.Queries;
 using PoTool.Shared.WorkItems;
 using PoTool.Shared.Settings;
 using Mediator;
@@ -64,7 +65,9 @@ public class GetVelocityTrendQueryHandlerMultiProductTests
             .ReturnsAsync(product1);
         _mockProductRepository.Setup(r => r.GetProductByIdAsync(2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product2);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        
+        // Mock GetWorkItemsByRootIdsQuery to return work items
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
 
         // Mock GetSprintMetricsQuery response
@@ -118,7 +121,9 @@ public class GetVelocityTrendQueryHandlerMultiProductTests
             .ReturnsAsync(product1);
         _mockProductRepository.Setup(r => r.GetProductByIdAsync(2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product2);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        
+        // Mock GetWorkItemsByRootIdsQuery to return work items
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
 
         // Mock GetSprintMetricsQuery response
@@ -165,7 +170,9 @@ public class GetVelocityTrendQueryHandlerMultiProductTests
 
         _mockProductRepository.Setup(r => r.GetProductByIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        
+        // Mock GetWorkItemsByRootIdsQuery to return work items
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
 
         var sprint1Metrics = new SprintMetricsDto(
@@ -212,7 +219,9 @@ public class GetVelocityTrendQueryHandlerMultiProductTests
             .ReturnsAsync(product1);
         _mockProductRepository.Setup(r => r.GetProductByIdAsync(999, It.IsAny<CancellationToken>()))
             .ReturnsAsync((ProductDto?)null); // Product 999 doesn't exist
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        
+        // Mock GetWorkItemsByRootIdsQuery to return work items
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
 
         var sprint1Metrics = new SprintMetricsDto(
