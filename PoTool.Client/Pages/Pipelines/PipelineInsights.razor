@@ -10,6 +10,7 @@
 @inject ProfileService ProfileService
 @inject IPreferencesService PreferencesService
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <PageTitle>Pipeline Insights</PageTitle>
 
@@ -23,7 +24,7 @@
               BestPractices="@_bestPractices"
               CommonIssues="@_commonIssues">
         <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
-            <strong>Pipeline Data:</strong> Sync pipelines from Azure DevOps to view build and release metrics. Data is cached locally for fast access.
+            <strong>Pipeline Data:</strong> View build and release metrics for your selected product scope. Data is automatically loaded from cached pipeline definitions and runs.
         </MudAlert>
     </PageHelp>
     
@@ -65,14 +66,7 @@
     @if (!_isLoading && !_metrics.Any())
     {
         <EmptyStateDisplay Title="No Pipeline Data Available"
-                          Message="There are no pipelines to display. Click the 'Sync Pipelines' button below to fetch pipeline data from Azure DevOps.">
-            <MudFab Color="Color.Primary" 
-                    StartIcon="@Icons.Material.Filled.Sync" 
-                    Label="Sync Pipelines" 
-                    Class="mt-4"
-                    OnClick="@SyncPipelines"
-                    Disabled="@_isSyncing" />
-        </EmptyStateDisplay>
+                          Message="There are no pipelines available for the selected product scope. Try selecting a different product or check that pipeline definitions exist in your Azure DevOps project." />
     }
     else if (!_isLoading)
     {
@@ -143,22 +137,14 @@
                 </MudDataGrid>
             </MudTabPanel>
         </MudTabs>
-
-        <!-- Sync Button -->
-        <MudFab Color="Color.Primary" 
-                StartIcon="@Icons.Material.Filled.Sync" 
-                Label="Sync Pipelines" 
-                Class="mt-4"
-                OnClick="@SyncPipelines"
-                Disabled="@_isSyncing" />
     }
 </MudContainer>
 
 @code {
     private List<PipelineMetricsDto> _metrics = new();
     private bool _isLoading = true;
-    private bool _isSyncing = false;
     private ErrorResponse? _errorResponse;
+    private CancellationTokenSource? _loadCancellationTokenSource;
 
     // Product filtering state
     private const int AllProductsId = 0;
@@ -222,6 +208,11 @@
         // Save preference
         await PreferencesService.SetIntAsync("PipelineInsights_SelectedProductId", _selectedProductId);
 
+        // Cancel any in-flight load operation
+        _loadCancellationTokenSource?.Cancel();
+        _loadCancellationTokenSource?.Dispose();
+        _loadCancellationTokenSource = null;
+
         // Reload data with new filter
         await LoadData();
     }
@@ -240,6 +231,13 @@
     private async Task LoadData()
     {
         _isLoading = true;
+        
+        // Create a new cancellation token for this load operation
+        _loadCancellationTokenSource?.Cancel();
+        _loadCancellationTokenSource?.Dispose();
+        _loadCancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = _loadCancellationTokenSource.Token;
+        
         try
         {
             ClearError();
@@ -256,9 +254,21 @@
             }
             
             var metrics = await PipelineService.GetMetricsAsync(productIdsParam);
+            
+            // Check if operation was cancelled
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            
             _metrics = metrics.ToList();
             
             Console.WriteLine($"[PipelineInsights] Loaded {_metrics.Count} pipeline metrics for product scope: {GetProductScopeDescription()}");
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when switching scopes rapidly - ignore
+            Console.WriteLine("[PipelineInsights] Load operation cancelled");
         }
         catch (Exception ex)
         {
@@ -268,26 +278,6 @@
         finally
         {
             _isLoading = false;
-        }
-    }
-
-    private async Task SyncPipelines()
-    {
-        _isSyncing = true;
-        try
-        {
-            ClearError();
-            // TODO: Sync endpoint removed from API - restore or implement alternative
-            Snackbar.Add("Sync functionality temporarily disabled", Severity.Warning);
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            ShowError(ex, "Error syncing pipelines");
-        }
-        finally
-        {
-            _isSyncing = false;
         }
     }
 
@@ -353,8 +343,8 @@
     {
         new CommonIssue 
         { 
-            Problem = "No pipeline data showing after sync",
-            Solution = "Ensure you have build/release pipelines in your Azure DevOps project and that your PAT has permissions to read them."
+            Problem = "No pipeline data available",
+            Solution = "Ensure you have build/release pipelines in your Azure DevOps project and that pipeline definitions have been cached. Check that your product's repositories are correctly configured."
         },
         new CommonIssue 
         { 
@@ -367,4 +357,10 @@
             Solution = "Optimize build steps, use caching, parallelize tasks, and consider incremental builds."
         }
     };
+
+    public void Dispose()
+    {
+        _loadCancellationTokenSource?.Cancel();
+        _loadCancellationTokenSource?.Dispose();
+    }
 }
