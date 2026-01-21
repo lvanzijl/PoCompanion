@@ -123,6 +123,8 @@ public class GetPullRequestMetricsQueryHandlerTests
         Assert.IsNotNull(result);
         var metrics = result.Single();
         // Use a more lenient check to avoid flaky timing issues (allow slight variations due to test execution time)
+        // MSTest signature: IsGreaterThanOrEqualTo(lowerBound, value) checks if "lowerBound >= value"
+        // We want to check if 2.99 <= metrics.TotalTimeOpen.TotalDays, so swap parameters
         Assert.IsGreaterThanOrEqualTo(2.99, metrics.TotalTimeOpen.TotalDays, 
             $"TotalTimeOpen should be approximately 3 days or more, but was {metrics.TotalTimeOpen.TotalDays}");
         Assert.IsNull(metrics.CompletedDate);
