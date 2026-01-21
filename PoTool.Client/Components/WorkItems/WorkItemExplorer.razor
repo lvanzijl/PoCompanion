@@ -6,6 +6,7 @@
 @using PoTool.Client.Components.WorkItems.SubComponents
 @using PoTool.Client.Components.Common
 @using MudBlazor
+@using ValidationCategory = PoTool.Shared.WorkItems.ValidationCategory
 @inject WorkItemService WorkItemService
 @inject ITreeBuilderService TreeBuilderService
 @inject WorkItemFilteringService FilteringService
@@ -86,8 +87,30 @@
     // Validation filters
     private readonly List<ValidationFilter> _validationFilters = new()
     {
-        new ValidationFilter { Id = "parentProgress", Label = "Parent Progress Issues", IsEnabled = false, Count = 0 },
-        new ValidationFilter { Id = "missingEffort", Label = "Missing Effort Issues", IsEnabled = false, Count = 0 }
+        new ValidationFilter 
+        { 
+            Id = "1", 
+            Label = "Structural Integrity", 
+            IsEnabled = false, 
+            Count = 0,
+            Category = ValidationCategory.StructuralIntegrity
+        },
+        new ValidationFilter 
+        { 
+            Id = "2", 
+            Label = "Refinement Readiness", 
+            IsEnabled = false, 
+            Count = 0,
+            Category = ValidationCategory.RefinementReadiness
+        },
+        new ValidationFilter 
+        { 
+            Id = "3", 
+            Label = "Refinement Completeness", 
+            IsEnabled = false, 
+            Count = 0,
+            Category = ValidationCategory.RefinementCompleteness
+        }
     };
     
     // Focus root for product-aware navigation

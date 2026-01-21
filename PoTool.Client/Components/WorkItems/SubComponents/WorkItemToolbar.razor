@@ -165,6 +165,13 @@
     {
         return filterId switch
         {
+            "1" => "Detects logically inconsistent work item trees (e.g., Done parent with unfinished descendants)",
+            "2" => "Ensures intent and context exist before refinement proceeds (e.g., empty descriptions)",
+            "3" => "Assesses whether PBIs are ready for implementation (e.g., missing effort)",
+            "StructuralIntegrity" => "Detects logically inconsistent work item trees (e.g., Done parent with unfinished descendants)",
+            "RefinementReadiness" => "Ensures intent and context exist before refinement proceeds (e.g., empty descriptions)",
+            "RefinementCompleteness" => "Assesses whether PBIs are ready for implementation (e.g., missing effort)",
+            // Legacy filters for backward compatibility
             "parentProgress" => "Highlights work items that are in progress but their parent or ancestor is not in progress",
             "missingEffort" => "Highlights work items in 'In Progress' state without effort or story points assigned",
             _ => ""

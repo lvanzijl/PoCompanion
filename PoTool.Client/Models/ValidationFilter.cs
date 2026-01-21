@@ -1,3 +1,5 @@
+using PoTool.Shared.WorkItems;
+
 namespace PoTool.Client.Models;
 
 /// <summary>
@@ -9,4 +11,9 @@ public class ValidationFilter
     public string Label { get; set; } = string.Empty;
     public bool IsEnabled { get; set; }
     public int Count { get; set; }
+    
+    /// <summary>
+    /// The validation category this filter represents, if applicable.
+    /// </summary>
+    public ValidationCategory? Category { get; set; }
 }

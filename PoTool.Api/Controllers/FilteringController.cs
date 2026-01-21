@@ -237,6 +237,7 @@ public class FilteringController : ControllerBase
             }
 
             public string Message => _issue.Message;
+            public string? RuleId => _issue.RuleId;
         }
     }
 }

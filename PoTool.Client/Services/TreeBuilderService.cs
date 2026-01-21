@@ -1,5 +1,6 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
+using SharedValidation = PoTool.Shared.WorkItems;
 
 namespace PoTool.Client.Services;
 
@@ -213,6 +214,9 @@ public class TreeBuilderService : ITreeBuilderService
             {
                 node.HighestSeverity = "Warning";
             }
+            
+            // Determine highest validation category
+            node.HighestCategory = DetermineHighestCategory(dto.ValidationIssues);
 
             // Populate self error and warning counts
             node.SelfErrorCount = dto.ValidationIssues.Count(vi => vi.Severity == "Error");
@@ -436,6 +440,9 @@ public class TreeBuilderService : ITreeBuilderService
             {
                 node.HighestSeverity = "Warning";
             }
+            
+            // Determine highest validation category
+            node.HighestCategory = DetermineHighestCategory(dto.ValidationIssues);
 
             // Populate self error and warning counts
             node.SelfErrorCount = dto.ValidationIssues.Count(vi => vi.Severity == "Error");
@@ -537,5 +544,86 @@ public class TreeBuilderService : ITreeBuilderService
         }
 
         return topLevelNodes;
+    }
+    
+    /// <summary>
+    /// Determines the highest validation category from a list of validation issues.
+    /// </summary>
+    private static SharedValidation.ValidationCategory? DetermineHighestCategory(IEnumerable<ValidationIssue> issues)
+    {
+        if (!issues.Any())
+        {
+            return null;
+        }
+        
+        SharedValidation.ValidationCategory? highest = null;
+        
+        foreach (var issue in issues)
+        {
+            SharedValidation.ValidationCategory? category = null;
+            
+            // Try to get RuleId using reflection (it may not exist in older API client versions)
+            var ruleIdProperty = issue.GetType().GetProperty("RuleId");
+            string? ruleId = ruleIdProperty?.GetValue(issue) as string;
+            
+            // Try to determine category from RuleId if present
+            if (!string.IsNullOrEmpty(ruleId))
+            {
+                if (ruleId.StartsWith("SI-"))
+                {
+                    category = SharedValidation.ValidationCategory.StructuralIntegrity;
+                }
+                else if (ruleId.StartsWith("RR-"))
+                {
+                    category = SharedValidation.ValidationCategory.RefinementReadiness;
+                }
+                else if (ruleId.StartsWith("RC-"))
+                {
+                    category = SharedValidation.ValidationCategory.RefinementCompleteness;
+                }
+            }
+            
+            // If RuleId not present or didn't match, infer from message
+            if (!category.HasValue)
+            {
+                var lowerMessage = issue.Message.ToLowerInvariant();
+                
+                // Structural Integrity patterns
+                if (lowerMessage.Contains("done") && lowerMessage.Contains("unfinished") ||
+                    lowerMessage.Contains("removed") && lowerMessage.Contains("unfinished") ||
+                    lowerMessage.Contains("new") && lowerMessage.Contains("in progress") ||
+                    lowerMessage.Contains("parent") && lowerMessage.Contains("progress"))
+                {
+                    category = SharedValidation.ValidationCategory.StructuralIntegrity;
+                }
+                // Refinement Readiness patterns
+                else if (lowerMessage.Contains("epic") && lowerMessage.Contains("description") ||
+                         lowerMessage.Contains("feature") && lowerMessage.Contains("description") ||
+                         lowerMessage.Contains("pbi") && lowerMessage.Contains("description"))
+                {
+                    category = SharedValidation.ValidationCategory.RefinementReadiness;
+                }
+                // Refinement Completeness patterns
+                else if (lowerMessage.Contains("pbi") && lowerMessage.Contains("effort") ||
+                         lowerMessage.Contains("effort") && (lowerMessage.Contains("empty") || lowerMessage.Contains("missing")))
+                {
+                    category = SharedValidation.ValidationCategory.RefinementCompleteness;
+                }
+                // Default to Structural Integrity
+                else
+                {
+                    category = SharedValidation.ValidationCategory.StructuralIntegrity;
+                }
+            }
+            
+            // Update highest if this category is higher priority
+            // Priority: RefinementCompleteness (3) > RefinementReadiness (2) > StructuralIntegrity (1)
+            if (!highest.HasValue || (int)category.Value > (int)highest.Value)
+            {
+                highest = category;
+            }
+        }
+        
+        return highest;
     }
 }
