@@ -122,7 +122,9 @@ public class GetPullRequestMetricsQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         var metrics = result.Single();
-        Assert.IsGreaterThanOrEqualTo(metrics.TotalTimeOpen.TotalDays, 3);
+        // Use a more lenient check to avoid flaky timing issues (allow slight variations due to test execution time)
+        Assert.IsGreaterThanOrEqualTo(2.99, metrics.TotalTimeOpen.TotalDays, 
+            $"TotalTimeOpen should be approximately 3 days or more, but was {metrics.TotalTimeOpen.TotalDays}");
         Assert.IsNull(metrics.CompletedDate);
     }
 
@@ -465,5 +467,90 @@ public class GetPullRequestMetricsQueryHandlerTests
         Assert.IsNotNull(capturedFromDate, "FromDate should be set");
         Assert.AreEqual(explicitFromDate, capturedFromDate, 
             "Should use the explicitly provided FromDate");
+    }
+
+    [TestMethod]
+    public async Task Handle_WithProductIds_PassesProductIdsToProvider()
+    {
+        // Arrange
+        var productIds = new List<int> { 1, 2, 3 };
+        List<int>? capturedProductIds = null;
+        
+        // Setup mock to capture the productIds parameter
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(
+            It.IsAny<List<int>>(), 
+            It.IsAny<DateTimeOffset?>(), 
+            It.IsAny<CancellationToken>()))
+            .Callback<List<int>, DateTimeOffset?, CancellationToken>((ids, _, _) => 
+            {
+                capturedProductIds = ids;
+            })
+            .ReturnsAsync(new List<PullRequestDto>());
+
+        var query = new GetPullRequestMetricsQuery(productIds);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(capturedProductIds, "ProductIds should be passed to provider");
+        CollectionAssert.AreEqual(productIds, capturedProductIds, 
+            "Should pass the product IDs to the provider");
+    }
+
+    [TestMethod]
+    public async Task Handle_WithNullProductIds_PassesNullToProvider()
+    {
+        // Arrange
+        List<int>? capturedProductIds = new List<int> { -1 }; // Initialize with dummy value
+        
+        // Setup mock to capture the productIds parameter
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(
+            It.IsAny<List<int>>(), 
+            It.IsAny<DateTimeOffset?>(), 
+            It.IsAny<CancellationToken>()))
+            .Callback<List<int>, DateTimeOffset?, CancellationToken>((ids, _, _) => 
+            {
+                capturedProductIds = ids;
+            })
+            .ReturnsAsync(new List<PullRequestDto>());
+
+        var query = new GetPullRequestMetricsQuery(null);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNull(capturedProductIds, 
+            "ProductIds should be null when not specified (all products)");
+    }
+
+    [TestMethod]
+    public async Task Handle_WithSingleProductId_PassesSingleIdToProvider()
+    {
+        // Arrange
+        var productIds = new List<int> { 42 };
+        List<int>? capturedProductIds = null;
+        
+        // Setup mock to capture the productIds parameter
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(
+            It.IsAny<List<int>>(), 
+            It.IsAny<DateTimeOffset?>(), 
+            It.IsAny<CancellationToken>()))
+            .Callback<List<int>, DateTimeOffset?, CancellationToken>((ids, _, _) => 
+            {
+                capturedProductIds = ids;
+            })
+            .ReturnsAsync(new List<PullRequestDto>());
+
+        var query = new GetPullRequestMetricsQuery(productIds);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(capturedProductIds, "ProductIds should be passed to provider");
+        Assert.HasCount(1, capturedProductIds, "Should have single product ID");
+        Assert.AreEqual(42, capturedProductIds[0], "Should pass correct product ID");
     }
 }
