@@ -30,8 +30,14 @@ public sealed class GetPullRequestMetricsQueryHandler : IQueryHandler<GetPullReq
     {
         _logger.LogDebug("Handling GetPullRequestMetricsQuery");
 
+        // Enforce 6-month time window: default to 6 months ago if not specified
+        var cutoffDate = DateTimeOffset.UtcNow.AddMonths(-6);
+        var fromDate = query.FromDate ?? cutoffDate;
+        
+        _logger.LogDebug("Fetching PRs from {FromDate} (6-month window enforced)", fromDate);
+
         // Live-only mode: use injected provider directly
-        var allPrs = await _pullRequestReadProvider.GetByProductIdsAsync(query.ProductIds, cancellationToken);
+        var allPrs = await _pullRequestReadProvider.GetByProductIdsAsync(query.ProductIds, fromDate, cancellationToken);
         var metrics = new List<PullRequestMetricsDto>();
 
         foreach (var pr in allPrs)

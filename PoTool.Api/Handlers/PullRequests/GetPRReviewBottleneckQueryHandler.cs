@@ -35,7 +35,7 @@ public sealed class GetPRReviewBottleneckQueryHandler
             query.DaysBack);
 
         // Live-only mode: use injected provider directly
-        var allPRs = await _pullRequestReadProvider.GetAllAsync(cancellationToken);
+        var allPRs = await _pullRequestReadProvider.GetAllAsync(null, cancellationToken);
 
         // Filter to recent PRs
         var cutoffDate = DateTimeOffset.UtcNow.AddDays(-query.DaysBack);
