@@ -42,8 +42,8 @@
 
     <ValidationHistoryPanel InitiallyExpanded="false" />
 
-    <div class="validation-filters-section" style="padding: 0.5rem 1rem; background-color: var(--mud-palette-background-grey); border-bottom: 1px solid var(--mud-palette-divider);">
-        <label style="font-weight: 500; margin-right: 1rem;">Validation Filters:</label>
+    <div class="validation-filters-section">
+        <label>Validation Filters:</label>
         
         @foreach (var filter in _validationFilters)
         {
@@ -51,11 +51,11 @@
                 <input type="checkbox" 
                        checked="@filter.IsEnabled"
                        @onchange="@(e => HandleValidationFilterChanged(filter, (bool)(e.Value ?? false)))" />
-                <span style="margin-left: 0.25rem;">@filter.Label (@filter.Count)</span>
+                <span>@filter.Label (@filter.Count)</span>
             </label>
         }
         
-        <button class="btn-toggle-filters" @onclick="ToggleAllFilters" style="margin-left: 1rem;">
+        <button class="btn-toggle-filters" @onclick="ToggleAllFilters">
             @(AreAllFiltersEnabled ? "Clear All" : "Select All")
         </button>
     </div>
