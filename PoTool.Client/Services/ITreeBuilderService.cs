@@ -43,4 +43,14 @@ public interface ITreeBuilderService
         IEnumerable<WorkItemWithValidationDto> items,
         IEnumerable<ProductDto> products,
         Dictionary<int, bool> expandedState);
+
+    /// <summary>
+    /// Applies visibility filtering to a tree, hiding completed items that meet all hiding criteria.
+    /// </summary>
+    /// <param name="roots">The root nodes of the tree.</param>
+    /// <param name="visibilityService">Service to determine node visibility.</param>
+    /// <returns>Filtered list of root nodes with hidden nodes removed.</returns>
+    Task<List<TreeNode>> ApplyVisibilityFilterAsync(
+        List<TreeNode> roots,
+        WorkItemVisibilityService visibilityService);
 }

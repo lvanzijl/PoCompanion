@@ -96,6 +96,18 @@ public class StateClassificationService
     }
 
     /// <summary>
+    /// Checks if a specific state is classified as "Done" for a work item type.
+    /// </summary>
+    public async Task<bool> IsDoneStateAsync(
+        string workItemType,
+        string state,
+        CancellationToken cancellationToken = default)
+    {
+        var classification = await GetClassificationAsync(workItemType, state, cancellationToken);
+        return classification == PoTool.Shared.Settings.StateClassification.Done;
+    }
+
+    /// <summary>
     /// Clears the cache, forcing a fresh fetch on the next request.
     /// </summary>
     public void ClearCache()
