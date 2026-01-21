@@ -126,222 +126,202 @@
 </div>
 
 @code {
-    [Parameter]
-    public bool IsLoading { get; set; }
+   [Parameter]
+   public bool IsLoading { get; set; }
 
-    [Parameter]
-    public List<TreeNode> TreeRoots { get; set; } = new();
+   [Parameter]
+   public List<TreeNode> TreeRoots { get; set; } = new();
 
-    [Parameter]
-    public int? SelectedId { get; set; }
+   [Parameter]
+   public int? SelectedId { get; set; }
 
-    [Parameter]
-    public HashSet<int>? SelectedIds { get; set; }
+   [Parameter]
+   public HashSet<int>? SelectedIds { get; set; }
 
-    [Parameter]
-    public EventCallback<TreeNode> OnNodeToggled { get; set; }
+   [Parameter]
+   public EventCallback<TreeNode> OnNodeToggled { get; set; }
 
-    [Parameter]
-    public EventCallback<(TreeNode Node, bool CtrlKey, bool ShiftKey)> OnNodeSelectedWithModifiers { get; set; }
+   [Parameter]
+   public EventCallback<(TreeNode Node, bool CtrlKey, bool ShiftKey)> OnNodeSelectedWithModifiers { get; set; }
 
-    [Parameter]
-    public EventCallback<TreeNode> OnNodeSelected { get; set; }
+   [Parameter]
+   public EventCallback<TreeNode> OnNodeSelected { get; set; }
 
-    [Parameter]
-    public EventCallback<TreeNode> OnRevealInvalidItem { get; set; }
-    
-    private async Task HandleNodeClick(TreeNode node, MouseEventArgs e)
-    {
-        if (OnNodeSelectedWithModifiers.HasDelegate)
-        {
-            await OnNodeSelectedWithModifiers.InvokeAsync((node, e.CtrlKey, e.ShiftKey));
-        }
-        else
-        {
-            await OnNodeSelected.InvokeAsync(node);
-        }
-    }
+   [Parameter]
+   public EventCallback<TreeNode> OnRevealInvalidItem { get; set; }
 
-    /// <summary>
-    /// Represents a flattened node for grid display.
-    /// </summary>
-    public record FlatNode(TreeNode Node, int Level);
+   private async Task HandleNodeClick(TreeNode node, MouseEventArgs e)
+   {
+      if (OnNodeSelectedWithModifiers.HasDelegate)
+      {
+         await OnNodeSelectedWithModifiers.InvokeAsync((node, e.CtrlKey, e.ShiftKey));
+      }
+      else
+      {
+         await OnNodeSelected.InvokeAsync(node);
+      }
+   }
 
-    // Memoization for flat list
-    private List<FlatNode>? _cachedFlatList;
-    private int _cachedTreeRootsHashCode;
+   /// <summary>
+   /// Represents a flattened node for grid display.
+   /// </summary>
+   public record FlatNode(TreeNode Node, int Level);
 
-    /// <summary>
-    /// Gets a flattened list of visible nodes based on expansion state.
-    /// </summary>
-    private List<FlatNode> GetFlatNodeList()
-    {
-        var currentHash = CalculateTreeHash();
+   // Memoization for flat list
+   private List<FlatNode>? _cachedFlatList;
+   private int _cachedTreeRootsHashCode;
 
-        if (_cachedFlatList != null && _cachedTreeRootsHashCode == currentHash)
-        {
-            return _cachedFlatList;
-        }
+   /// <summary>
+   /// Gets a flattened list of visible nodes based on expansion state.
+   /// </summary>
+   private List<FlatNode> GetFlatNodeList()
+   {
+      var currentHash = CalculateTreeHash();
 
-        var flatList = new List<FlatNode>();
-        foreach (var root in TreeRoots)
-        {
-            AddNodeToFlatList(root, 0, flatList);
-        }
+      if (_cachedFlatList != null && _cachedTreeRootsHashCode == currentHash)
+      {
+         return _cachedFlatList;
+      }
 
-        _cachedFlatList = flatList;
-        _cachedTreeRootsHashCode = currentHash;
+      var flatList = new List<FlatNode>();
+      foreach (var root in TreeRoots)
+      {
+         AddNodeToFlatList(root, 0, flatList);
+      }
 
-        return flatList;
-    }
+      _cachedFlatList = flatList;
+      _cachedTreeRootsHashCode = currentHash;
 
-    private int CalculateTreeHash()
-    {
-        var hash = new HashCode();
-        hash.Add(TreeRoots.Count);
-        foreach (var root in TreeRoots)
-        {
-            AddNodeToHash(root, ref hash);
-        }
-        return hash.ToHashCode();
-    }
+      return flatList;
+   }
 
-    private void AddNodeToHash(TreeNode node, ref HashCode hash)
-    {
-        hash.Add(node.Id);
-        hash.Add(node.IsExpanded);
-        hash.Add(node.Children.Count);
+   private int CalculateTreeHash()
+   {
+      var hash = new HashCode();
+      hash.Add(TreeRoots.Count);
+      foreach (var root in TreeRoots)
+      {
+         AddNodeToHash(root, ref hash);
+      }
+      return hash.ToHashCode();
+   }
 
-        if (node.IsExpanded)
-        {
-            foreach (var child in node.Children)
-            {
-                AddNodeToHash(child, ref hash);
-            }
-        }
-    }
+   private void AddNodeToHash(TreeNode node, ref HashCode hash)
+   {
+      hash.Add(node.Id);
+      hash.Add(node.IsExpanded);
+      hash.Add(node.Children.Count);
 
-    private void AddNodeToFlatList(TreeNode node, int level, List<FlatNode> flatList)
-    {
-        flatList.Add(new FlatNode(node, level));
+      if (node.IsExpanded)
+      {
+         foreach (var child in node.Children)
+         {
+            AddNodeToHash(child, ref hash);
+         }
+      }
+   }
 
-        if (node.IsExpanded && node.Children.Any())
-        {
-            foreach (var child in node.Children)
-            {
-                AddNodeToFlatList(child, level + 1, flatList);
-            }
-        }
-    }
+   private void AddNodeToFlatList(TreeNode node, int level, List<FlatNode> flatList)
+   {
+      flatList.Add(new FlatNode(node, level));
 
-    private string GetIconForType(string type)
-    {
-        return type switch
-        {
-            "Goal" => Icons.Material.Filled.Flag,
-            "Objective" => Icons.Material.Filled.TrackChanges,
-            "Epic" => Icons.Material.Filled.Layers,
-            "Feature" => Icons.Material.Filled.Dashboard,
-            "Product Backlog Item" => Icons.Material.Filled.Assignment,
-            "Bug" => Icons.Material.Filled.BugReport,
-            "Task" => Icons.Material.Filled.CheckCircle,
-            _ => Icons.Material.Filled.Circle
-        };
-    }
+      if (node.IsExpanded && node.Children.Any())
+      {
+         foreach (var child in node.Children)
+         {
+            AddNodeToFlatList(child, level + 1, flatList);
+         }
+      }
+   }
 
-    private string GetTitleClass(TreeNode node)
-    {
-        var className = "title-text";
-        if ((SelectedId.HasValue && SelectedId.Value == node.Id) ||
-            (SelectedIds != null && SelectedIds.Contains(node.Id)))
-        {
-            className += " selected";
-        }
-        return className;
-    }
+   private string GetIconForType(string type)
+   {
+      return type switch
+      {
+         "Goal" => Icons.Material.Filled.Flag,
+         "Objective" => Icons.Material.Filled.TrackChanges,
+         "Epic" => Icons.Material.Filled.Layers,
+         "Feature" => Icons.Material.Filled.Dashboard,
+         "Product Backlog Item" => Icons.Material.Filled.Assignment,
+         "Bug" => Icons.Material.Filled.BugReport,
+         "Task" => Icons.Material.Filled.CheckCircle,
+         _ => Icons.Material.Filled.Circle
+      };
+   }
 
-    private string GetSelfIssueTooltip(TreeNode node)
-    {
-        var parts = new List<string>();
-        if (node.SelfErrorCount > 0)
-        {
-            parts.Add($"{node.SelfErrorCount} error{(node.SelfErrorCount != 1 ? "s" : "")}");
-        }
-        if (node.SelfWarningCount > 0)
-        {
-            parts.Add($"{node.SelfWarningCount} warning{(node.SelfWarningCount != 1 ? "s" : "")}");
-        }
-        
-        var categoryText = node.HighestCategory switch
-        {
-            ValidationCategory.StructuralIntegrity => " - Structural Integrity",
-            ValidationCategory.RefinementReadiness => " - Refinement Readiness",
-            ValidationCategory.RefinementCompleteness => " - Refinement Completeness",
-            _ => ""
-        };
-        
-        return $"{string.Join(", ", parts)} (this item){categoryText}";
-    }
+   private string GetTitleClass(TreeNode node)
+   {
+      var className = "title-text";
+      if ((SelectedId.HasValue && SelectedId.Value == node.Id) ||
+          (SelectedIds != null && SelectedIds.Contains(node.Id)))
+      {
+         className += " selected";
+      }
+      return className;
+   }
 
-    private string GetSelfIssueIcon(TreeNode node)
-    {
-        // Use category-specific icons based on validation category
-        return node.HighestCategory switch
-        {
-            ValidationCategory.StructuralIntegrity => Icons.Material.Filled.Error,
-            ValidationCategory.RefinementReadiness => Icons.Material.Filled.Info,
-            ValidationCategory.RefinementCompleteness => Icons.Material.Filled.WarningAmber,
-            _ => Icons.Material.Filled.Error
-        };
-    }
+   private string GetSelfIssueTooltip(TreeNode node)
+   {
+      var parts = new List<string>();
+      if (node.SelfErrorCount > 0)
+      {
+         parts.Add($"{node.SelfErrorCount} error{(node.SelfErrorCount != 1 ? "s" : "")}");
+      }
+      if (node.SelfWarningCount > 0)
+      {
+         parts.Add($"{node.SelfWarningCount} warning{(node.SelfWarningCount != 1 ? "s" : "")}");
+      }
 
-    private Color GetSelfIssueColor(TreeNode node)
-    {
-        // Use category-specific colors
-        return node.HighestCategory switch
-        {
-            ValidationCategory.StructuralIntegrity => Color.Error,
-            ValidationCategory.RefinementReadiness => Color.Warning,
-            ValidationCategory.RefinementCompleteness => Color.Warning,
-            _ => Color.Error
-        };
-    }
+      var categoryText = node.HighestCategory switch
+      {
+         ValidationCategory.StructuralIntegrity => " - Structural Integrity",
+         ValidationCategory.RefinementReadiness => " - Refinement Readiness",
+         ValidationCategory.RefinementCompleteness => " - Refinement Completeness",
+         _ => ""
+      };
 
-    private string GetDescendantIssueIcon(TreeNode node)
-    {
-        // Use category-specific icons based on highest descendant validation category
-        return node.HighestDescendantCategory switch
-        {
-            ValidationCategory.StructuralIntegrity => Icons.Material.Filled.Error,
-            ValidationCategory.RefinementReadiness => Icons.Material.Filled.Info,
-            ValidationCategory.RefinementCompleteness => Icons.Material.Filled.WarningAmber,
-            _ => Icons.Material.Filled.Warning // Fallback for backwards compatibility
-        };
-    }
+      return $"{string.Join(", ", parts)} (this item){categoryText}";
+   }
 
-    private Color GetDescendantIssueColor(TreeNode node)
-    {
-        // Use category-specific colors for descendant issues
-        return node.HighestDescendantCategory switch
-        {
-            ValidationCategory.StructuralIntegrity => Color.Error,
-            ValidationCategory.RefinementReadiness => Color.Warning,
-            ValidationCategory.RefinementCompleteness => Color.Warning,
-            _ => Color.Warning // Fallback for backwards compatibility
-        };
-    }
+   private string GetSelfIssueIcon(TreeNode node)
+   {
+      // Use category-specific icons based on validation category
+      return node.HighestCategory switch
+      {
+         ValidationCategory.StructuralIntegrity => Icons.Material.Filled.Error,
+         ValidationCategory.RefinementReadiness => Icons.Material.Filled.Info,
+         ValidationCategory.RefinementCompleteness => Icons.Material.Filled.WarningAmber,
+         _ => Icons.Material.Filled.Error
+      };
+   }
+
+   private Color GetSelfIssueColor(TreeNode node)
+   {
+      // Use category-specific colors
+      return node.HighestCategory switch
+      {
+         ValidationCategory.StructuralIntegrity => Color.Error,
+         ValidationCategory.RefinementReadiness => Color.Warning,
+         ValidationCategory.RefinementCompleteness => Color.Warning,
+         _ => Color.Error
+      };
+   }
+
+   private string GetDescendantIssueIcon(TreeNode node)
+   {
+      return Icons.Material.Filled.SubdirectoryArrowRight;
+   }
+
+   private Color GetDescendantIssueColor(TreeNode node)
+   {
+      return Color.Warning;
+   }
 
     private string GetDescendantIssueTooltip(TreeNode node)
     {
         var count = node.InvalidDescendantIds.Count;
-        var categoryText = node.HighestDescendantCategory switch
-        {
-            ValidationCategory.StructuralIntegrity => " (Structural Integrity)",
-            ValidationCategory.RefinementReadiness => " (Refinement Readiness)",
-            ValidationCategory.RefinementCompleteness => " (Refinement Completeness)",
-            _ => ""
-        };
-        return $"{count} issue{(count != 1 ? "s" : "")} in descendants{categoryText}";
+        
+        return $"{count} issue{(count != 1 ? "s" : "")} in descendants";
     }
 
     private async Task RevealInvalidItem(TreeNode node)
