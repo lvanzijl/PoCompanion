@@ -349,6 +349,29 @@ public class TreeBuilderService : ITreeBuilderService
     }
 
     /// <summary>
+    /// Recursively filters out tasks that don't have validation issues from all nodes' children.
+    /// </summary>
+    private static void FilterTasksWithoutIssues(List<TreeNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            // Remove tasks without validation issues from children
+            node.Children = node.Children
+                .Where(child => child.Type != "Task" || child.HasValidationIssues)
+                .ToList();
+            
+            // Update ChildrenIds to match filtered children
+            node.ChildrenIds = node.Children.Select(c => c.Id).ToList();
+            
+            // Recursively filter children's children
+            if (node.Children.Any())
+            {
+                FilterTasksWithoutIssues(node.Children);
+            }
+        }
+    }
+
+    /// <summary>
     /// Collects all nodes in a subtree into a dictionary keyed by ID.
     /// </summary>
     private void CollectNodesIntoMap(TreeNode node, Dictionary<int, TreeNode> map)
@@ -488,6 +511,9 @@ public class TreeBuilderService : ITreeBuilderService
         {
             node.Children = node.Children.OrderBy(c => c.Title).ToList();
         }
+        
+        // Filter tasks: only show tasks that have validation issues
+        FilterTasksWithoutIssues(nodeMap.Values.ToList());
 
         // Collect root nodes: items without a parent AND not already attached
         // Parentless items that haven't been attached become roots

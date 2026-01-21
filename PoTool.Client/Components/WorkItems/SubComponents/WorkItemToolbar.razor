@@ -104,26 +104,6 @@
                 <button class="btn-select-all" @onclick="OnSelectAll">Select All</button>
             </MudTooltip>
         </div>
-        
-        <div class="validation-filters">
-            <label class="filter-label">Validation Filters:</label>
-            
-            @foreach (var filter in ValidationFilters)
-            {
-                <MudTooltip Text="@GetFilterTooltip(filter.Id)" Placement="Placement.Bottom">
-                    <label class="validation-filter-item">
-                        <input type="checkbox" 
-                               checked="@filter.IsEnabled"
-                               @onchange="@(e => OnValidationFilterChanged(filter, (bool)(e.Value ?? false)))" />
-                        <span>@filter.Label (@filter.Count)</span>
-                    </label>
-                </MudTooltip>
-            }
-            
-            <button class="btn-toggle-filters" @onclick="OnToggleAllFilters">
-                @(AreAllFiltersEnabled ? "Clear All" : "Select All")
-            </button>
-        </div>
     </div>
 </div>
 
@@ -132,16 +112,10 @@
     public string FilterText { get; set; } = string.Empty;
 
     [Parameter]
-    public List<ValidationFilter> ValidationFilters { get; set; } = new();
-
-    [Parameter]
     public EventCallback OnClearState { get; set; }
 
     [Parameter]
     public EventCallback<string> OnFilterChanged { get; set; }
-
-    [Parameter]
-    public EventCallback<List<ValidationFilter>> OnValidationFiltersChanged { get; set; }
 
     [Parameter]
     public int SelectedCount { get; set; }
@@ -154,29 +128,10 @@
 
     [Parameter]
     public List<WorkItemDto> SelectedWorkItems { get; set; } = new();
-
-    private bool AreAllFiltersEnabled => ValidationFilters.All(f => f.IsEnabled);
     
     // Debouncing fields
     private System.Threading.Timer? _debounceTimer;
     private const int DebounceDelayMilliseconds = 300;
-
-    private string GetFilterTooltip(string filterId)
-    {
-        return filterId switch
-        {
-            "1" => "Detects logically inconsistent work item trees (e.g., Done parent with unfinished descendants)",
-            "2" => "Ensures intent and context exist before refinement proceeds (e.g., empty descriptions)",
-            "3" => "Assesses whether PBIs are ready for implementation (e.g., missing effort)",
-            "StructuralIntegrity" => "Detects logically inconsistent work item trees (e.g., Done parent with unfinished descendants)",
-            "RefinementReadiness" => "Ensures intent and context exist before refinement proceeds (e.g., empty descriptions)",
-            "RefinementCompleteness" => "Assesses whether PBIs are ready for implementation (e.g., missing effort)",
-            // Legacy filters for backward compatibility
-            "parentProgress" => "Highlights work items that are in progress but their parent or ancestor is not in progress",
-            "missingEffort" => "Highlights work items in 'In Progress' state without effort or story points assigned",
-            _ => ""
-        };
-    }
 
     private async Task OnClearStateClicked()
     {
@@ -209,22 +164,6 @@
     public void Dispose()
     {
         _debounceTimer?.Dispose();
-    }
-
-    private async Task OnValidationFilterChanged(ValidationFilter filter, bool isEnabled)
-    {
-        filter.IsEnabled = isEnabled;
-        await OnValidationFiltersChanged.InvokeAsync(ValidationFilters);
-    }
-
-    private async Task OnToggleAllFilters()
-    {
-        var newState = !AreAllFiltersEnabled;
-        foreach (var filter in ValidationFilters)
-        {
-            filter.IsEnabled = newState;
-        }
-        await OnValidationFiltersChanged.InvokeAsync(ValidationFilters);
     }
 
     // Bulk operation handlers
