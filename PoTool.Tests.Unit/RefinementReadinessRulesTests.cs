@@ -3,6 +3,8 @@ using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Shared.WorkItems;
+using PoTool.Core.Contracts;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit;
 
@@ -15,7 +17,7 @@ public class RefinementReadinessRulesTests
     public void RR1_EpicWithDescription_NoViolation()
     {
         // Arrange
-        var rule = new EpicDescriptionEmptyRule();
+        var rule = new EpicDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "New", null, "This is the epic description")
@@ -32,7 +34,7 @@ public class RefinementReadinessRulesTests
     public void RR1_EpicWithEmptyDescription_HasViolation()
     {
         // Arrange
-        var rule = new EpicDescriptionEmptyRule();
+        var rule = new EpicDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "New", null, "")
@@ -54,7 +56,7 @@ public class RefinementReadinessRulesTests
     public void RR1_EpicWithNullDescription_HasViolation()
     {
         // Arrange
-        var rule = new EpicDescriptionEmptyRule();
+        var rule = new EpicDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "New", null, null)
@@ -72,7 +74,7 @@ public class RefinementReadinessRulesTests
     public void RR1_EpicWithWhitespaceDescription_HasViolation()
     {
         // Arrange
-        var rule = new EpicDescriptionEmptyRule();
+        var rule = new EpicDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "New", null, "   \t\n  ")
@@ -89,7 +91,7 @@ public class RefinementReadinessRulesTests
     public void RR1_DoneEpicWithEmptyDescription_NoViolation()
     {
         // Arrange: Done items should not be validated
-        var rule = new EpicDescriptionEmptyRule();
+        var rule = new EpicDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "Done", null, "")
@@ -106,7 +108,7 @@ public class RefinementReadinessRulesTests
     public void RR1_RemovedEpicWithEmptyDescription_NoViolation()
     {
         // Arrange: Removed items should not be validated
-        var rule = new EpicDescriptionEmptyRule();
+        var rule = new EpicDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "Removed", null, "")
@@ -123,7 +125,7 @@ public class RefinementReadinessRulesTests
     public void RR1_FeatureWithEmptyDescription_NoViolation()
     {
         // Arrange: This rule only applies to Epics
-        var rule = new EpicDescriptionEmptyRule();
+        var rule = new EpicDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Feature", "New", null, "")
@@ -144,7 +146,7 @@ public class RefinementReadinessRulesTests
     public void RR2_FeatureWithDescription_NoViolation()
     {
         // Arrange
-        var rule = new FeatureDescriptionEmptyRule();
+        var rule = new FeatureDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Feature", "New", null, "This is the feature description")
@@ -161,7 +163,7 @@ public class RefinementReadinessRulesTests
     public void RR2_FeatureWithEmptyDescription_HasViolation()
     {
         // Arrange
-        var rule = new FeatureDescriptionEmptyRule();
+        var rule = new FeatureDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Feature", "New", null, "")
@@ -181,7 +183,7 @@ public class RefinementReadinessRulesTests
     public void RR2_DoneFeatureWithEmptyDescription_NoViolation()
     {
         // Arrange: Done items should not be validated
-        var rule = new FeatureDescriptionEmptyRule();
+        var rule = new FeatureDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Feature", "Done", null, "")
@@ -198,7 +200,7 @@ public class RefinementReadinessRulesTests
     public void RR2_EpicWithEmptyDescription_NoViolation()
     {
         // Arrange: This rule only applies to Features
-        var rule = new FeatureDescriptionEmptyRule();
+        var rule = new FeatureDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "New", null, "")
@@ -215,7 +217,7 @@ public class RefinementReadinessRulesTests
     public void RR2_MultipleFeatures_ValidatesAll()
     {
         // Arrange
-        var rule = new FeatureDescriptionEmptyRule();
+        var rule = new FeatureDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Feature", "New", null, "Description"),
@@ -237,6 +239,66 @@ public class RefinementReadinessRulesTests
     }
 
     #endregion
+
+    private static IWorkItemStateClassificationService CreateMockStateClassificationService()
+    {
+        return new TestStateClassificationService();
+    }
+    
+    private class TestStateClassificationService : IWorkItemStateClassificationService
+    {
+        public Task<GetStateClassificationsResponse> GetClassificationsAsync(CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> SaveClassificationsAsync(SaveStateClassificationsRequest request, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> IsDoneStateAsync(string workItemType, string state, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(state.Equals("Done", StringComparison.OrdinalIgnoreCase) || 
+                                 state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Resolved", StringComparison.OrdinalIgnoreCase));
+        }
+
+        public Task<bool> IsInProgressStateAsync(string workItemType, string state, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(state.Equals("In Progress", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Active", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Committed", StringComparison.OrdinalIgnoreCase));
+        }
+
+        public Task<bool> IsNewStateAsync(string workItemType, string state, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(state.Equals("New", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Proposed", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Approved", StringComparison.OrdinalIgnoreCase));
+        }
+
+        public Task<StateClassification> GetClassificationAsync(string workItemType, string state, CancellationToken cancellationToken = default)
+        {
+            if (state.Equals("Done", StringComparison.OrdinalIgnoreCase) || 
+                state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Resolved", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(StateClassification.Done);
+            }
+            if (state.Equals("Removed", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(StateClassification.Removed);
+            }
+            if (state.Equals("In Progress", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Active", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Committed", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(StateClassification.InProgress);
+            }
+            return Task.FromResult(StateClassification.New);
+        }
+    }
 
     private static WorkItemDto CreateWorkItem(int id, string type, string state, int? parentId, string? description)
     {

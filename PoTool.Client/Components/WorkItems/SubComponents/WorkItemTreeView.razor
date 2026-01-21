@@ -64,13 +64,10 @@
                             @node.Node.State
                         </MudChip>
                         
-                        @if (node.Node.HasValidationIssues)
+                        @if (node.Node.HasValidationIssues || node.Node.HasDescendantIssues)
                         {
                             <MudTooltip Text="@GetValidationTooltip(node.Node)">
-                                <MudIcon Icon="@GetValidationIcon(node.Node)" 
-                                         Size="Size.Small" 
-                                         Color="@GetValidationColor(node.Node)" 
-                                         Class="validation-icon" />
+                                <span class="validation-icon" style="font-size: 1.2rem;">@node.Node.ValidationIcon</span>
                             </MudTooltip>
                         }
                     </MudPaper>
@@ -233,26 +230,6 @@
     private string GetValidationTooltip(TreeNode node)
     {
         return string.Join("\n", node.ValidationIssues);
-    }
-    
-    private string GetValidationIcon(TreeNode node)
-    {
-        return node.HighestSeverity switch
-        {
-            "Error" => Icons.Material.Filled.Error,
-            "Warning" => Icons.Material.Filled.Warning,
-            _ => Icons.Material.Filled.Info
-        };
-    }
-    
-    private Color GetValidationColor(TreeNode node)
-    {
-        return node.HighestSeverity switch
-        {
-            "Error" => Color.Error,
-            "Warning" => Color.Warning,
-            _ => Color.Info
-        };
     }
     
     private string GetValidationAriaLabel(TreeNode node)

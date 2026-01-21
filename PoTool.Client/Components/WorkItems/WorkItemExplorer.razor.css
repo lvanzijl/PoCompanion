@@ -466,6 +466,26 @@
     margin-left: 1rem;
 }
 
+.validation-filters-section {
+    padding: 0.5rem 1rem;
+    background-color: var(--mud-palette-background-grey);
+    border-bottom: 1px solid var(--mud-palette-divider);
+}
+
+.validation-filters-section label {
+    font-weight: 500;
+    margin-right: 1rem;
+}
+
+.validation-filters-section input[type="checkbox"] {
+    margin-right: 0.25rem;
+    cursor: pointer;
+}
+
+.btn-toggle-filters {
+    margin-left: 1rem;
+}
+
 /* small responsive tweaks */
 @media (max-width: 600px) {
     .workitem-type {

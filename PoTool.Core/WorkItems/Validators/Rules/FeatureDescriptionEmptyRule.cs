@@ -1,4 +1,5 @@
 using PoTool.Shared.WorkItems;
+using PoTool.Core.Contracts;
 
 namespace PoTool.Core.WorkItems.Validators.Rules;
 
@@ -8,6 +9,11 @@ namespace PoTool.Core.WorkItems.Validators.Rules;
 /// </summary>
 public sealed class FeatureDescriptionEmptyRule : HierarchicalValidationRuleBase
 {
+    public FeatureDescriptionEmptyRule(IWorkItemStateClassificationService stateClassificationService)
+    {
+        StateClassificationService = stateClassificationService ?? throw new ArgumentNullException(nameof(stateClassificationService));
+    }
+
     /// <inheritdoc />
     public override string RuleId => "RR-2";
 
@@ -36,7 +42,7 @@ public sealed class FeatureDescriptionEmptyRule : HierarchicalValidationRuleBase
         foreach (var feature in features)
         {
             // Skip items in terminal states
-            if (IsFinishedState(feature.State))
+            if (IsFinishedState(feature.Type, feature.State))
             {
                 continue;
             }

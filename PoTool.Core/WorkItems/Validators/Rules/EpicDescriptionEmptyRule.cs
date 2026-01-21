@@ -1,4 +1,5 @@
 using PoTool.Shared.WorkItems;
+using PoTool.Core.Contracts;
 
 namespace PoTool.Core.WorkItems.Validators.Rules;
 
@@ -8,6 +9,11 @@ namespace PoTool.Core.WorkItems.Validators.Rules;
 /// </summary>
 public sealed class EpicDescriptionEmptyRule : HierarchicalValidationRuleBase
 {
+    public EpicDescriptionEmptyRule(IWorkItemStateClassificationService stateClassificationService)
+    {
+        StateClassificationService = stateClassificationService ?? throw new ArgumentNullException(nameof(stateClassificationService));
+    }
+
     /// <inheritdoc />
     public override string RuleId => "RR-1";
 
@@ -36,7 +42,7 @@ public sealed class EpicDescriptionEmptyRule : HierarchicalValidationRuleBase
         foreach (var epic in epics)
         {
             // Skip items in terminal states
-            if (IsFinishedState(epic.State))
+            if (IsFinishedState(epic.Type, epic.State))
             {
                 continue;
             }

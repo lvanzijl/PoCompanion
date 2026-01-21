@@ -1,4 +1,5 @@
 using PoTool.Shared.WorkItems;
+using PoTool.Core.Contracts;
 
 namespace PoTool.Core.WorkItems.Validators.Rules;
 
@@ -9,6 +10,11 @@ namespace PoTool.Core.WorkItems.Validators.Rules;
 /// </summary>
 public sealed class PbiDescriptionEmptyRule : HierarchicalValidationRuleBase
 {
+    public PbiDescriptionEmptyRule(IWorkItemStateClassificationService stateClassificationService)
+    {
+        StateClassificationService = stateClassificationService ?? throw new ArgumentNullException(nameof(stateClassificationService));
+    }
+
     /// <inheritdoc />
     public override string RuleId => "RC-1";
 
@@ -37,7 +43,7 @@ public sealed class PbiDescriptionEmptyRule : HierarchicalValidationRuleBase
         foreach (var pbi in pbis)
         {
             // Skip items in terminal states
-            if (IsFinishedState(pbi.State))
+            if (IsFinishedState(pbi.Type, pbi.State))
             {
                 continue;
             }

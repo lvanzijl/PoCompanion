@@ -25,12 +25,10 @@
 
 <div class="workitem-explorer">
     <WorkItemToolbar FilterText="@_filterText"
-                     ValidationFilters="@_validationFilters"
                      SelectedCount="@_selectedIds.Count"
                      SelectedWorkItems="@_selectedWorkItems"
                      OnClearState="@ClearExpandedState"
                      OnFilterChanged="@HandleFilterChanged"
-                     OnValidationFiltersChanged="@HandleValidationFiltersChanged"
                      OnSelectAll="@SelectAllItems"
                      OnClearSelection="@ClearSelection" />
 
@@ -44,14 +42,22 @@
 
     <ValidationHistoryPanel InitiallyExpanded="false" />
 
-    <div class="type-legend">
-        @foreach (var type in WorkItemTypeHelper.AllTypes)
+    <div class="validation-filters-section">
+        <label>Validation Filters:</label>
+        
+        @foreach (var filter in _validationFilters)
         {
-            <span class="legend-item">
-                <span class="type-indicator" style="background-color: @WorkItemTypeHelper.GetColor(type)"></span>
-                @type
-            </span>
+            <label style="margin-right: 1rem; cursor: pointer;">
+                <input type="checkbox" 
+                       checked="@filter.IsEnabled"
+                       @onchange="@(e => HandleValidationFilterChanged(filter, (bool)(e.Value ?? false)))" />
+                <span>@filter.Label (@filter.Count)</span>
+            </label>
         }
+        
+        <button class="btn-toggle-filters" @onclick="ToggleAllFilters">
+            @(AreAllFiltersEnabled ? "Clear All" : "Select All")
+        </button>
     </div>
 
     <div class="content" @onkeydown="HandleKeyDown" @onkeydown:preventDefault="true" tabindex="0" role="tree" aria-label="Work item hierarchy tree">
@@ -264,6 +270,24 @@
     {
         await ApplyFilterAsync();
     }
+    
+    private async Task HandleValidationFilterChanged(ValidationFilter filter, bool isEnabled)
+    {
+        filter.IsEnabled = isEnabled;
+        await ApplyFilterAsync();
+    }
+
+    private async Task ToggleAllFilters()
+    {
+        var newState = !AreAllFiltersEnabled;
+        foreach (var filter in _validationFilters)
+        {
+            filter.IsEnabled = newState;
+        }
+        await ApplyFilterAsync();
+    }
+    
+    private bool AreAllFiltersEnabled => _validationFilters.All(f => f.IsEnabled);
 
     private async Task ApplyFilterAsync(List<ProductDto>? products = null)
     {

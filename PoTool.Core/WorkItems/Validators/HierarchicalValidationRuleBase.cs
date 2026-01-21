@@ -58,34 +58,19 @@ public abstract class HierarchicalValidationRuleBase : IHierarchicalValidationRu
 
     /// <summary>
     /// Determines if a work item state represents a finished state (Done or Removed).
-    /// Uses state classification service if available, otherwise falls back to hardcoded check.
+    /// Uses state classification service.
     /// </summary>
     protected bool IsFinishedState(string workItemType, string state)
     {
-        if (StateClassificationService != null)
+        if (StateClassificationService == null)
         {
-            var classification = StateClassificationService.GetClassificationAsync(workItemType, state).GetAwaiter().GetResult();
-            return classification == Shared.Settings.StateClassification.Done || 
-                   classification == Shared.Settings.StateClassification.Removed;
+            throw new InvalidOperationException("StateClassificationService is required for state validation.");
         }
         
-        // Fallback for rules that don't need state classification
-        return IsFinishedStateFallback(state);
+        var classification = StateClassificationService.GetClassificationAsync(workItemType, state).GetAwaiter().GetResult();
+        return classification == Shared.Settings.StateClassification.Done || 
+               classification == Shared.Settings.StateClassification.Removed;
     }
-    
-    /// <summary>
-    /// Determines if a work item state represents a finished state using hardcoded values (fallback).
-    /// </summary>
-    protected static bool IsFinishedState(string state) => IsFinishedStateFallback(state);
-    
-    /// <summary>
-    /// Fallback implementation for finished state check.
-    /// </summary>
-    private static bool IsFinishedStateFallback(string state) =>
-        string.Equals(state, "Done", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(state, "Removed", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(state, "Closed", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(state, "Resolved", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Builds a lookup dictionary from TFS ID to work item.

@@ -26,10 +26,10 @@ public class HierarchicalWorkItemValidatorTests
             new RemovedParentWithUnfinishedDescendantsRule(mockStateService),
             new NewParentWithInProgressDescendantsRule(mockStateService),
             // Refinement Readiness rules
-            new EpicDescriptionEmptyRule(),
-            new FeatureDescriptionEmptyRule(),
+            new EpicDescriptionEmptyRule(mockStateService),
+            new FeatureDescriptionEmptyRule(mockStateService),
             // Refinement Completeness rules
-            new PbiDescriptionEmptyRule(),
+            new PbiDescriptionEmptyRule(mockStateService),
             new PbiEffortEmptyRule(mockStateService)
         };
 
