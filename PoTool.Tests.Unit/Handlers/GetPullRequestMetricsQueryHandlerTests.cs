@@ -419,7 +419,7 @@ public class GetPullRequestMetricsQueryHandlerTests
             It.IsAny<List<int>>(), 
             It.IsAny<DateTimeOffset?>(), 
             It.IsAny<CancellationToken>()))
-            .Callback<List<int>?, DateTimeOffset?, CancellationToken>((ids, fromDate, ct) => 
+            .Callback<List<int>, DateTimeOffset?, CancellationToken>((_, fromDate, _) => 
             {
                 capturedFromDate = fromDate;
             })
@@ -450,7 +450,7 @@ public class GetPullRequestMetricsQueryHandlerTests
             It.IsAny<List<int>>(), 
             It.IsAny<DateTimeOffset?>(), 
             It.IsAny<CancellationToken>()))
-            .Callback<List<int>?, DateTimeOffset?, CancellationToken>((ids, fromDate, ct) => 
+            .Callback<List<int>, DateTimeOffset?, CancellationToken>((_, fromDate, _) => 
             {
                 capturedFromDate = fromDate;
             })

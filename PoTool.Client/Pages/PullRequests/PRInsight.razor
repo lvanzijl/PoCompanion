@@ -332,6 +332,7 @@
             }
             
             // Note: The backend now enforces a 6-month time window by default
+            // No need to pass fromDate explicitly - the handler applies the cutoff automatically
             var metrics = await PullRequestService.GetMetricsAsync(productIdsParam);
             
             // Check if cancelled before updating state
