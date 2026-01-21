@@ -3,6 +3,8 @@ using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Shared.WorkItems;
+using PoTool.Core.Contracts;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit;
 
@@ -14,19 +16,21 @@ public class HierarchicalWorkItemValidatorTests
     [TestInitialize]
     public void Setup()
     {
+        var mockStateService = CreateMockStateClassificationService();
+        
         // Create validator with all rules
         var rules = new List<IHierarchicalValidationRule>
         {
             // Structural Integrity rules
-            new DoneParentWithUnfinishedDescendantsRule(),
-            new RemovedParentWithUnfinishedDescendantsRule(),
-            new NewParentWithInProgressDescendantsRule(),
+            new DoneParentWithUnfinishedDescendantsRule(mockStateService),
+            new RemovedParentWithUnfinishedDescendantsRule(mockStateService),
+            new NewParentWithInProgressDescendantsRule(mockStateService),
             // Refinement Readiness rules
             new EpicDescriptionEmptyRule(),
             new FeatureDescriptionEmptyRule(),
             // Refinement Completeness rules
             new PbiDescriptionEmptyRule(),
-            new PbiEffortEmptyRule()
+            new PbiEffortEmptyRule(mockStateService)
         };
 
         _validator = new HierarchicalWorkItemValidator(rules);
@@ -339,6 +343,69 @@ public class HierarchicalWorkItemValidatorTests
     }
 
     #endregion
+    
+    /// <summary>
+    /// Creates a simple test mock for state classification that uses hardcoded mappings.
+    /// </summary>
+    private static IWorkItemStateClassificationService CreateMockStateClassificationService()
+    {
+        return new TestStateClassificationService();
+    }
+    
+    private class TestStateClassificationService : IWorkItemStateClassificationService
+    {
+        public Task<GetStateClassificationsResponse> GetClassificationsAsync(CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> SaveClassificationsAsync(SaveStateClassificationsRequest request, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> IsDoneStateAsync(string workItemType, string state, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(state.Equals("Done", StringComparison.OrdinalIgnoreCase) || 
+                                 state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Resolved", StringComparison.OrdinalIgnoreCase));
+        }
+
+        public Task<bool> IsInProgressStateAsync(string workItemType, string state, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(state.Equals("In Progress", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Active", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Committed", StringComparison.OrdinalIgnoreCase));
+        }
+
+        public Task<bool> IsNewStateAsync(string workItemType, string state, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(state.Equals("New", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Proposed", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Approved", StringComparison.OrdinalIgnoreCase));
+        }
+
+        public Task<StateClassification> GetClassificationAsync(string workItemType, string state, CancellationToken cancellationToken = default)
+        {
+            if (state.Equals("Done", StringComparison.OrdinalIgnoreCase) || 
+                state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Resolved", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(StateClassification.Done);
+            }
+            if (state.Equals("Removed", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(StateClassification.Removed);
+            }
+            if (state.Equals("In Progress", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Active", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Committed", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(StateClassification.InProgress);
+            }
+            return Task.FromResult(StateClassification.New);
+        }
+    }
 
     private static WorkItemDto CreateWorkItem(int id, string type, string state, int? parentId, string? description, int? effort)
     {

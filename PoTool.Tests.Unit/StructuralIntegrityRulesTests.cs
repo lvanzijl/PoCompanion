@@ -3,6 +3,8 @@ using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Shared.WorkItems;
+using PoTool.Core.Contracts;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit;
 
@@ -15,7 +17,7 @@ public class StructuralIntegrityRulesTests
     public void SI1_DoneParentWithDoneDescendants_NoViolation()
     {
         // Arrange
-        var rule = new DoneParentWithUnfinishedDescendantsRule();
+        var rule = new DoneParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "Done", null),
@@ -34,7 +36,7 @@ public class StructuralIntegrityRulesTests
     public void SI1_DoneParentWithRemovedDescendants_NoViolation()
     {
         // Arrange
-        var rule = new DoneParentWithUnfinishedDescendantsRule();
+        var rule = new DoneParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "Done", null),
@@ -53,7 +55,7 @@ public class StructuralIntegrityRulesTests
     public void SI1_DoneParentWithNewDescendant_HasViolation()
     {
         // Arrange
-        var rule = new DoneParentWithUnfinishedDescendantsRule();
+        var rule = new DoneParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "Done", null),
@@ -75,7 +77,7 @@ public class StructuralIntegrityRulesTests
     {
         // Arrange: Both Epic and Feature are Done, but PBI is In Progress
         // Both Done parents should be flagged as violations
-        var rule = new DoneParentWithUnfinishedDescendantsRule();
+        var rule = new DoneParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "Done", null),
@@ -101,7 +103,7 @@ public class StructuralIntegrityRulesTests
     {
         // Arrange: All parents are Done but Task is New
         // All Done parents should be flagged (Epic, Feature, PBI)
-        var rule = new DoneParentWithUnfinishedDescendantsRule();
+        var rule = new DoneParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "Done", null),
@@ -139,7 +141,7 @@ public class StructuralIntegrityRulesTests
     public void SI2_RemovedParentWithDoneDescendants_NoViolation()
     {
         // Arrange
-        var rule = new RemovedParentWithUnfinishedDescendantsRule();
+        var rule = new RemovedParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "Removed", null),
@@ -157,7 +159,7 @@ public class StructuralIntegrityRulesTests
     public void SI2_RemovedParentWithNewDescendant_HasViolation()
     {
         // Arrange
-        var rule = new RemovedParentWithUnfinishedDescendantsRule();
+        var rule = new RemovedParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "Removed", null),
@@ -181,7 +183,7 @@ public class StructuralIntegrityRulesTests
     public void SI3_NewParentWithNewDescendants_NoViolation()
     {
         // Arrange
-        var rule = new NewParentWithInProgressDescendantsRule();
+        var rule = new NewParentWithInProgressDescendantsRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "New", null),
@@ -199,7 +201,7 @@ public class StructuralIntegrityRulesTests
     public void SI3_NewParentWithInProgressDescendant_HasViolation()
     {
         // Arrange
-        var rule = new NewParentWithInProgressDescendantsRule();
+        var rule = new NewParentWithInProgressDescendantsRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "New", null),
@@ -220,7 +222,7 @@ public class StructuralIntegrityRulesTests
     {
         // Arrange: Both Epic and Feature are New, but PBI is In Progress
         // Both New parents should be flagged
-        var rule = new NewParentWithInProgressDescendantsRule();
+        var rule = new NewParentWithInProgressDescendantsRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "New", null),
@@ -245,7 +247,7 @@ public class StructuralIntegrityRulesTests
     public void SI3_InProgressParentWithInProgressDescendant_NoViolation()
     {
         // Arrange
-        var rule = new NewParentWithInProgressDescendantsRule();
+        var rule = new NewParentWithInProgressDescendantsRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "In Progress", null),
@@ -260,6 +262,69 @@ public class StructuralIntegrityRulesTests
     }
 
     #endregion
+    
+    /// <summary>
+    /// Creates a simple test mock for state classification that uses hardcoded mappings.
+    /// </summary>
+    private static IWorkItemStateClassificationService CreateMockStateClassificationService()
+    {
+        return new TestStateClassificationService();
+    }
+    
+    private class TestStateClassificationService : IWorkItemStateClassificationService
+    {
+        public Task<GetStateClassificationsResponse> GetClassificationsAsync(CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> SaveClassificationsAsync(SaveStateClassificationsRequest request, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> IsDoneStateAsync(string workItemType, string state, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(state.Equals("Done", StringComparison.OrdinalIgnoreCase) || 
+                                 state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Resolved", StringComparison.OrdinalIgnoreCase));
+        }
+
+        public Task<bool> IsInProgressStateAsync(string workItemType, string state, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(state.Equals("In Progress", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Active", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Committed", StringComparison.OrdinalIgnoreCase));
+        }
+
+        public Task<bool> IsNewStateAsync(string workItemType, string state, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(state.Equals("New", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Proposed", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Equals("Approved", StringComparison.OrdinalIgnoreCase));
+        }
+
+        public Task<StateClassification> GetClassificationAsync(string workItemType, string state, CancellationToken cancellationToken = default)
+        {
+            if (state.Equals("Done", StringComparison.OrdinalIgnoreCase) || 
+                state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Resolved", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(StateClassification.Done);
+            }
+            if (state.Equals("Removed", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(StateClassification.Removed);
+            }
+            if (state.Equals("In Progress", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Active", StringComparison.OrdinalIgnoreCase) ||
+                state.Equals("Committed", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(StateClassification.InProgress);
+            }
+            return Task.FromResult(StateClassification.New);
+        }
+    }
 
     private static WorkItemDto CreateWorkItem(int id, string type, string state, int? parentId)
     {
