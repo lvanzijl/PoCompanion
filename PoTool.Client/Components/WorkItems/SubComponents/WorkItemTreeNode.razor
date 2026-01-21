@@ -32,7 +32,7 @@
         
         <span class="status-column">@Node.State</span>
         
-        @if (Node.HasValidationIssues)
+        @if (Node.HasValidationIssues || Node.HasDescendantIssues)
         {
             <span class="validation-icon" title="@GetValidationTooltip()" role="img" aria-label="@GetValidationAriaLabel()">
                 @Node.ValidationIcon
@@ -141,7 +141,16 @@
 
     private string GetValidationAriaLabel()
     {
-        var issueCount = Node.ValidationIssues.Count;
-        return $"{Node.HighestSeverity}: {issueCount} validation issue{(issueCount != 1 ? "s" : "")}";
+        if (Node.HasValidationIssues)
+        {
+            var issueCount = Node.ValidationIssues.Count;
+            var categoryName = Node.HighestCategory?.ToString() ?? "Unknown";
+            return $"{categoryName}: {issueCount} validation issue{(issueCount != 1 ? "s" : "")}";
+        }
+        else if (Node.HasDescendantIssues)
+        {
+            return $"Descendant has validation issues";
+        }
+        return "No validation issues";
     }
 }

@@ -1,4 +1,5 @@
 using PoTool.Shared.WorkItems;
+using PoTool.Core.Contracts;
 
 namespace PoTool.Core.WorkItems.Validators;
 
@@ -7,6 +8,11 @@ namespace PoTool.Core.WorkItems.Validators;
 /// </summary>
 public abstract class HierarchicalValidationRuleBase : IHierarchicalValidationRule
 {
+    /// <summary>
+    /// State classification service for checking work item state mappings.
+    /// Optional - only set for rules that need it.
+    /// </summary>
+    protected IWorkItemStateClassificationService? StateClassificationService { get; set; }
     /// <inheritdoc />
     public abstract string RuleId { get; }
 
@@ -52,10 +58,34 @@ public abstract class HierarchicalValidationRuleBase : IHierarchicalValidationRu
 
     /// <summary>
     /// Determines if a work item state represents a finished state (Done or Removed).
+    /// Uses state classification service if available, otherwise falls back to hardcoded check.
     /// </summary>
-    protected static bool IsFinishedState(string state) =>
+    protected bool IsFinishedState(string workItemType, string state)
+    {
+        if (StateClassificationService != null)
+        {
+            var classification = StateClassificationService.GetClassificationAsync(workItemType, state).GetAwaiter().GetResult();
+            return classification == Shared.Settings.StateClassification.Done || 
+                   classification == Shared.Settings.StateClassification.Removed;
+        }
+        
+        // Fallback for rules that don't need state classification
+        return IsFinishedStateFallback(state);
+    }
+    
+    /// <summary>
+    /// Determines if a work item state represents a finished state using hardcoded values (fallback).
+    /// </summary>
+    protected static bool IsFinishedState(string state) => IsFinishedStateFallback(state);
+    
+    /// <summary>
+    /// Fallback implementation for finished state check.
+    /// </summary>
+    private static bool IsFinishedStateFallback(string state) =>
         string.Equals(state, "Done", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(state, "Removed", StringComparison.OrdinalIgnoreCase);
+        string.Equals(state, "Removed", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(state, "Closed", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(state, "Resolved", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Builds a lookup dictionary from TFS ID to work item.

@@ -1,4 +1,5 @@
 using PoTool.Shared.WorkItems;
+using PoTool.Core.Contracts;
 
 namespace PoTool.Core.WorkItems.Validators.Rules;
 
@@ -7,7 +8,10 @@ namespace PoTool.Core.WorkItems.Validators.Rules;
 /// </summary>
 public sealed class RemovedParentWithUnfinishedDescendantsRule : HierarchicalValidationRuleBase
 {
-    private const string RemovedState = "Removed";
+    public RemovedParentWithUnfinishedDescendantsRule(IWorkItemStateClassificationService stateClassificationService)
+    {
+        StateClassificationService = stateClassificationService ?? throw new ArgumentNullException(nameof(stateClassificationService));
+    }
 
     /// <inheritdoc />
     public override string RuleId => "SI-2";
@@ -30,15 +34,18 @@ public sealed class RemovedParentWithUnfinishedDescendantsRule : HierarchicalVal
         var results = new List<ValidationRuleResult>();
         var itemsList = workItems as List<WorkItemDto> ?? workItems.ToList();
 
-        // Find all items in Removed state
+        // Find all items in Removed state (using state classification)
         var removedItems = itemsList.Where(w =>
-            string.Equals(w.State, RemovedState, StringComparison.OrdinalIgnoreCase));
+        {
+            var classification = StateClassificationService!.GetClassificationAsync(w.Type, w.State).GetAwaiter().GetResult();
+            return classification == Shared.Settings.StateClassification.Removed;
+        });
 
         foreach (var removedItem in removedItems)
         {
             var descendants = GetAllDescendants(removedItem.TfsId, itemsList);
             var unfinishedDescendants = descendants
-                .Where(d => !IsFinishedState(d.State))
+                .Where(d => !IsFinishedState(d.Type, d.State))
                 .ToList();
 
             if (unfinishedDescendants.Count > 0)

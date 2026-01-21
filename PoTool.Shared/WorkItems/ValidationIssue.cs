@@ -5,5 +5,6 @@ namespace PoTool.Shared.WorkItems;
 /// </summary>
 public sealed record ValidationIssue(
     string Severity,
-    string Message
+    string Message,
+    string? RuleId = null
 );

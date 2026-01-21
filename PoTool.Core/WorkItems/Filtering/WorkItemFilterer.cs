@@ -9,6 +9,25 @@ namespace PoTool.Core.WorkItems.Filtering;
 public class WorkItemFilterer
 {
     /// <summary>
+    /// Maps rule IDs to validation categories.
+    /// </summary>
+    private static readonly Dictionary<string, ValidationCategory> RuleCategoryMap = new()
+    {
+        // Structural Integrity rules
+        { "SI-1", ValidationCategory.StructuralIntegrity },
+        { "SI-2", ValidationCategory.StructuralIntegrity },
+        { "SI-3", ValidationCategory.StructuralIntegrity },
+        
+        // Refinement Readiness rules
+        { "RR-1", ValidationCategory.RefinementReadiness },
+        { "RR-2", ValidationCategory.RefinementReadiness },
+        { "RR-3", ValidationCategory.RefinementReadiness },
+        
+        // Refinement Completeness rules
+        { "RC-1", ValidationCategory.RefinementCompleteness },
+        { "RC-2", ValidationCategory.RefinementCompleteness },
+    };
+    /// <summary>
     /// Interface for work items that can be filtered.
     /// </summary>
     public interface IFilterableWorkItem
@@ -24,6 +43,7 @@ public class WorkItemFilterer
     public interface IValidationIssue
     {
         string Message { get; }
+        string? RuleId { get; }
     }
 
     /// <summary>
@@ -80,12 +100,46 @@ public class WorkItemFilterer
     /// </summary>
     /// <typeparam name="T">Type of work item that implements IFilterableWorkItem.</typeparam>
     /// <param name="workItems">Work items to search.</param>
-    /// <param name="filterId">Filter identifier (e.g., "parentProgress", "missingEffort").</param>
+    /// <param name="filterId">Filter identifier (e.g., "StructuralIntegrity", "RefinementReadiness", "RefinementCompleteness" or category number "1", "2", "3").</param>
     /// <returns>IDs of work items matching the filter.</returns>
     public IEnumerable<int> GetWorkItemIdsByValidationFilter<T>(
         IEnumerable<T> workItems,
         string filterId) where T : IFilterableWorkItem
     {
+        // Support category-based filtering
+        ValidationCategory? targetCategory = null;
+        
+        if (filterId == "StructuralIntegrity" || filterId == "1")
+        {
+            targetCategory = ValidationCategory.StructuralIntegrity;
+        }
+        else if (filterId == "RefinementReadiness" || filterId == "2")
+        {
+            targetCategory = ValidationCategory.RefinementReadiness;
+        }
+        else if (filterId == "RefinementCompleteness" || filterId == "3")
+        {
+            targetCategory = ValidationCategory.RefinementCompleteness;
+        }
+        
+        if (targetCategory.HasValue)
+        {
+            return workItems
+                .Where(wi => wi.ValidationIssues.Any(issue =>
+                {
+                    // Check if the issue has a RuleId that maps to the target category
+                    if (!string.IsNullOrEmpty(issue.RuleId) && RuleCategoryMap.TryGetValue(issue.RuleId, out var category))
+                    {
+                        return category == targetCategory.Value;
+                    }
+                    
+                    // Fallback: For legacy issues without RuleId, try to infer from message
+                    return InferCategoryFromMessage(issue.Message) == targetCategory.Value;
+                }))
+                .Select(wi => wi.TfsId);
+        }
+        
+        // Legacy rule-based filtering for backward compatibility
         return filterId switch
         {
             "parentProgress" => workItems
@@ -98,6 +152,40 @@ public class WorkItemFilterer
                 .Select(wi => wi.TfsId),
             _ => Enumerable.Empty<int>()
         };
+    }
+    
+    /// <summary>
+    /// Infers the validation category from a validation message (for legacy issues without RuleId).
+    /// </summary>
+    private static ValidationCategory InferCategoryFromMessage(string message)
+    {
+        var lowerMessage = message.ToLowerInvariant();
+        
+        // Structural Integrity patterns
+        if (lowerMessage.Contains("done") && lowerMessage.Contains("unfinished") ||
+            lowerMessage.Contains("removed") && lowerMessage.Contains("unfinished") ||
+            lowerMessage.Contains("new") && lowerMessage.Contains("in progress"))
+        {
+            return ValidationCategory.StructuralIntegrity;
+        }
+        
+        // Refinement Readiness patterns
+        if (lowerMessage.Contains("epic") && lowerMessage.Contains("description") ||
+            lowerMessage.Contains("feature") && lowerMessage.Contains("description") ||
+            lowerMessage.Contains("pbi") && lowerMessage.Contains("description"))
+        {
+            return ValidationCategory.RefinementReadiness;
+        }
+        
+        // Refinement Completeness patterns
+        if (lowerMessage.Contains("pbi") && lowerMessage.Contains("effort") ||
+            lowerMessage.Contains("effort") && lowerMessage.Contains("empty"))
+        {
+            return ValidationCategory.RefinementCompleteness;
+        }
+        
+        // Default to Structural Integrity for unknown patterns
+        return ValidationCategory.StructuralIntegrity;
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using PoTool.Shared.WorkItems;
+using PoTool.Core.Contracts;
 
 namespace PoTool.Core.WorkItems.Validators.Rules;
 
@@ -7,8 +8,10 @@ namespace PoTool.Core.WorkItems.Validators.Rules;
 /// </summary>
 public sealed class NewParentWithInProgressDescendantsRule : HierarchicalValidationRuleBase
 {
-    private const string NewState = "New";
-    private const string InProgressState = "In Progress";
+    public NewParentWithInProgressDescendantsRule(IWorkItemStateClassificationService stateClassificationService)
+    {
+        StateClassificationService = stateClassificationService ?? throw new ArgumentNullException(nameof(stateClassificationService));
+    }
 
     /// <inheritdoc />
     public override string RuleId => "SI-3";
@@ -31,15 +34,22 @@ public sealed class NewParentWithInProgressDescendantsRule : HierarchicalValidat
         var results = new List<ValidationRuleResult>();
         var itemsList = workItems as List<WorkItemDto> ?? workItems.ToList();
 
-        // Find all items in New state
+        // Find all items in New state (using state classification)
         var newItems = itemsList.Where(w =>
-            string.Equals(w.State, NewState, StringComparison.OrdinalIgnoreCase));
+        {
+            var classification = StateClassificationService!.GetClassificationAsync(w.Type, w.State).GetAwaiter().GetResult();
+            return classification == Shared.Settings.StateClassification.New;
+        });
 
         foreach (var newItem in newItems)
         {
             var descendants = GetAllDescendants(newItem.TfsId, itemsList);
             var inProgressDescendants = descendants
-                .Where(d => string.Equals(d.State, InProgressState, StringComparison.OrdinalIgnoreCase))
+                .Where(d =>
+                {
+                    var classification = StateClassificationService!.GetClassificationAsync(d.Type, d.State).GetAwaiter().GetResult();
+                    return classification == Shared.Settings.StateClassification.InProgress;
+                })
                 .ToList();
 
             if (inProgressDescendants.Count > 0)

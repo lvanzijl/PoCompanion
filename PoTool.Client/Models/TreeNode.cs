@@ -1,3 +1,5 @@
+using PoTool.Shared.WorkItems;
+
 namespace PoTool.Client.Models;
 
 /// <summary>
@@ -79,16 +81,50 @@ public class TreeNode
     /// Highest severity level of validation issues (Error > Warning).
     /// </summary>
     public string? HighestSeverity { get; set; }
+    
+    /// <summary>
+    /// Highest validation category of issues on this item (for self issues).
+    /// Used to determine which icon to display.
+    /// </summary>
+    public ValidationCategory? HighestCategory { get; set; }
+
+    /// <summary>
+    /// Gets the validation icon to display for self issues (different icon per category).
+    /// </summary>
+    public string SelfValidationIcon => HighestCategory switch
+    {
+        ValidationCategory.StructuralIntegrity => "🔴", // Red circle for structural integrity
+        ValidationCategory.RefinementReadiness => "🟡", // Yellow circle for refinement readiness
+        ValidationCategory.RefinementCompleteness => "🟠", // Orange circle for refinement completeness
+        _ => "❌" // Fallback error icon
+    };
+    
+    /// <summary>
+    /// Gets the validation icon to display for descendant issues.
+    /// </summary>
+    public string DescendantValidationIcon => "→"; // Arrow icon for descendant issues
 
     /// <summary>
     /// Gets the validation icon to display (single icon showing highest severity).
+    /// Uses descendant icon if only descendants have issues, otherwise uses self icon.
     /// </summary>
-    public string ValidationIcon => HighestSeverity switch
+    public string ValidationIcon
     {
-        "Error" => "❌",
-        "Warning" => "⚠️",
-        _ => string.Empty
-    };
+        get
+        {
+            if (HasValidationIssues)
+            {
+                // Self has issues - use category-specific icon
+                return SelfValidationIcon;
+            }
+            else if (HasDescendantIssues)
+            {
+                // Only descendants have issues - use arrow icon
+                return DescendantValidationIcon;
+            }
+            return string.Empty;
+        }
+    }
 
     /// <summary>
     /// Gets whether this node has any validation issues.
