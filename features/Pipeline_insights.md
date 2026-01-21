@@ -36,23 +36,35 @@ Do NOT assume all fields exist; handle partial data gracefully.
 
 ---
 
-## 2. Caching rules
+## 2. Caching and Product Scoping
 
 - Use the same caching model as the Work Item Explorer and PR Insights views.
-- Pipeline data must be explicitly pulled via a "Pull & Cache Pipelines" action.
+- Pipeline data is loaded automatically when the view opens.
 - Cached data is read-only and timestamped.
+- **Product Scoping**: All pipeline data is filtered by the selected product scope:
+  - Default to persisted scope (from last session), otherwise "All products"
+  - When scope changes, data is automatically reloaded for the new scope
+  - Scope is implemented via repositories (only show pipelines matching the product's configured repositories)
 - The view must clearly show:
-  - last refresh time
-  - whether data is cached or live
-- No automatic background refresh.
+  - the currently selected product scope
+  - whether data is available for the selected scope
+- No manual "Pull & Cache" action required.
 
 ---
 
 ## 3. View layout (high level)
 
-The Pipeline Insights view consists of three vertical sections:
+The Pipeline Insights view consists of a product scope selector and three vertical sections:
 
-### 3.1 Pipeline Overview (top)
+### 3.0 Product Scope Selector (top)
+- Dropdown selector matching the behavior of product-home:
+  - "All products" option (shows aggregated data across all products)
+  - Individual product options (shows data for selected product only)
+  - Selection is persisted across sessions
+  - Changing scope triggers automatic data reload
+- Display text showing current scope: "Showing pipelines for: [Product Name]"
+
+### 3.1 Pipeline Overview (next)
 - Table or list of pipelines with:
   - pipeline name
   - total runs (cached scope)
@@ -91,7 +103,7 @@ No thresholds are enforced; numbers are shown, interpretation is left to the use
 - No “recommendations”.
 - No blocking warnings.
 - Visual emphasis must be subtle and consistent with other insight views.
-- Empty states must explain what data is missing and how to pull it.
+- Empty states must explain what data is missing (e.g., "No pipelines available for the selected product scope").
 
 ---
 
