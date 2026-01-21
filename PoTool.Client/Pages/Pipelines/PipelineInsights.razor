@@ -231,6 +231,7 @@
     private async Task LoadData()
     {
         _isLoading = true;
+        StateHasChanged(); // Notify UI of loading state
         
         // Create a new cancellation token for this load operation
         _loadCancellationTokenSource?.Cancel();
@@ -258,6 +259,7 @@
             // Check if operation was cancelled
             if (cancellationToken.IsCancellationRequested)
             {
+                Console.WriteLine("[PipelineInsights] Load operation cancelled");
                 return;
             }
             
@@ -278,6 +280,7 @@
         finally
         {
             _isLoading = false;
+            StateHasChanged(); // Ensure UI updates when loading completes
         }
     }
 
