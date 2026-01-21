@@ -22,27 +22,27 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         _logger = logger;
     }
 
-    public async Task<IEnumerable<PullRequestDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<PullRequestDto>> GetAllAsync(DateTimeOffset? fromDate = null, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("LivePullRequestReadProvider: Fetching all pull requests from TFS");
+        _logger.LogDebug("LivePullRequestReadProvider: Fetching all pull requests from TFS (fromDate: {FromDate})", fromDate);
         
-        // Fetch pull requests directly from TFS
+        // Fetch pull requests directly from TFS with date filtering
         var pullRequests = await _tfsClient.GetPullRequestsAsync(
             repositoryName: null,
-            fromDate: null,
+            fromDate: fromDate,
             toDate: null,
             cancellationToken);
         
         return pullRequests;
     }
 
-    public async Task<IEnumerable<PullRequestDto>> GetByProductIdsAsync(List<int>? productIds, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<PullRequestDto>> GetByProductIdsAsync(List<int>? productIds, DateTimeOffset? fromDate = null, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("LivePullRequestReadProvider: Fetching pull requests by product IDs from TFS");
+        _logger.LogDebug("LivePullRequestReadProvider: Fetching pull requests by product IDs from TFS (fromDate: {FromDate})", fromDate);
         
-        // Get all pull requests and filter by product ID in-memory
+        // Get all pull requests with date filter and filter by product ID in-memory
         // In Live mode, we don't have a direct way to filter by product in TFS
-        var allPullRequests = await GetAllAsync(cancellationToken);
+        var allPullRequests = await GetAllAsync(fromDate, cancellationToken);
         
         if (productIds == null || productIds.Count == 0)
         {
@@ -58,7 +58,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         
         // Get all pull requests and find by ID
         // Note: TFS API doesn't have a direct get-by-ID for PRs, so we fetch all and filter
-        var allPullRequests = await GetAllAsync(cancellationToken);
+        var allPullRequests = await GetAllAsync(null, cancellationToken);
         return allPullRequests.FirstOrDefault(pr => pr.Id == pullRequestId);
     }
 

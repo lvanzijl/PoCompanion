@@ -11,12 +11,15 @@ public interface IPullRequestReadProvider
     /// <summary>
     /// Retrieves all pull requests from the configured data source.
     /// </summary>
-    Task<IEnumerable<PullRequestDto>> GetAllAsync(CancellationToken cancellationToken = default);
+    /// <param name="fromDate">Optional start date filter to retrieve PRs created on or after this date.</param>
+    Task<IEnumerable<PullRequestDto>> GetAllAsync(DateTimeOffset? fromDate = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves pull requests filtered by product IDs from the configured data source.
     /// </summary>
-    Task<IEnumerable<PullRequestDto>> GetByProductIdsAsync(List<int>? productIds, CancellationToken cancellationToken = default);
+    /// <param name="productIds">Optional list of product IDs to filter by.</param>
+    /// <param name="fromDate">Optional start date filter to retrieve PRs created on or after this date.</param>
+    Task<IEnumerable<PullRequestDto>> GetByProductIdsAsync(List<int>? productIds, DateTimeOffset? fromDate = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves a specific pull request by ID from the configured data source.

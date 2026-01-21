@@ -29,6 +29,6 @@ public sealed class GetAllPullRequestsQueryHandler : IQueryHandler<GetAllPullReq
     {
         _logger.LogDebug("Handling GetAllPullRequestsQuery");
         // Live-only mode: use injected provider directly
-        return await _pullRequestReadProvider.GetAllAsync(cancellationToken);
+        return await _pullRequestReadProvider.GetAllAsync(null, cancellationToken);
     }
 }

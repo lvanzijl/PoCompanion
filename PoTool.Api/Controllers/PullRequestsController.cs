@@ -72,10 +72,12 @@ public class PullRequestsController : ControllerBase
     /// Gets aggregated metrics for pull requests.
     /// </summary>
     /// <param name="productIds">Optional comma-separated list of product IDs to filter by</param>
+    /// <param name="fromDate">Optional start date filter (ISO 8601 format). Defaults to 6 months ago if not specified.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     [HttpGet("metrics")]
     public async Task<ActionResult<IEnumerable<PullRequestMetricsDto>>> GetMetrics(
         [FromQuery] string? productIds = null,
+        [FromQuery] DateTimeOffset? fromDate = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -86,7 +88,7 @@ public class PullRequestsController : ControllerBase
                 return BadRequest(errorMessage);
             }
 
-            var metrics = await _mediator.Send(new GetPullRequestMetricsQuery(productIdsList), cancellationToken);
+            var metrics = await _mediator.Send(new GetPullRequestMetricsQuery(productIdsList, fromDate), cancellationToken);
             return Ok(metrics);
         }
         catch (Exception ex)

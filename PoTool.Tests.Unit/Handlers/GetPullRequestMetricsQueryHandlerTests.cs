@@ -33,7 +33,7 @@ public class GetPullRequestMetricsQueryHandlerTests
     public async Task Handle_WithNoPullRequests_ReturnsEmptyList()
     {
         // Arrange
-        _mockProvider.Setup(r => r.GetByProductIdsAsync(It.IsAny<List<int>>(), It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(It.IsAny<List<int>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto>());
         var query = new GetPullRequestMetricsQuery();
 
@@ -71,7 +71,7 @@ public class GetPullRequestMetricsQueryHandlerTests
             CreateFileChange(1, 1, "File2.cs", 30, 20, 10)
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(It.IsAny<List<int>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
         _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(iterations);
@@ -105,7 +105,7 @@ public class GetPullRequestMetricsQueryHandlerTests
         var createdDate = DateTimeOffset.UtcNow.AddDays(-3);
         var pr = CreatePullRequest(1, "Open PR", "TestUser", createdDate, null, "Active");
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(It.IsAny<List<int>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
         _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());
@@ -134,7 +134,7 @@ public class GetPullRequestMetricsQueryHandlerTests
         var completedDate = DateTimeOffset.UtcNow;
         var pr = CreatePullRequest(1, "Simple PR", "TestUser", createdDate, completedDate, "Completed");
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(It.IsAny<List<int>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
         _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());
@@ -162,7 +162,7 @@ public class GetPullRequestMetricsQueryHandlerTests
         var completedDate = DateTimeOffset.UtcNow;
         var pr = CreatePullRequest(1, "No Files PR", "TestUser", createdDate, completedDate, "Completed");
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(It.IsAny<List<int>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
         _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());
@@ -200,7 +200,7 @@ public class GetPullRequestMetricsQueryHandlerTests
             CreateFileChange(1, 1, "File2.cs", 30, 0, 0)
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(It.IsAny<List<int>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
         _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());
@@ -237,7 +237,7 @@ public class GetPullRequestMetricsQueryHandlerTests
             CreateComment(3, 1, "Author3", createdDate.AddHours(3), true)
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(It.IsAny<List<int>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
         _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());
@@ -267,7 +267,7 @@ public class GetPullRequestMetricsQueryHandlerTests
         var pr1 = CreatePullRequest(1, "PR 1", "User1", createdDate1, DateTimeOffset.UtcNow, "Completed");
         var pr2 = CreatePullRequest(2, "PR 2", "User2", createdDate2, null, "Active");
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(It.IsAny<List<int>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr1, pr2 });
         _mockProvider.Setup(r => r.GetIterationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());
@@ -303,7 +303,7 @@ public class GetPullRequestMetricsQueryHandlerTests
             CreateFileChange(1, 1, "File3.cs", 25, 0, 0)     // 25 added + 0 deleted = 25 lines changed
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(It.IsAny<List<int>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
         _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestIterationDto>());

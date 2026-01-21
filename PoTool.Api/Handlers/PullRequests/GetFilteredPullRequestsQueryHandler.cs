@@ -30,7 +30,7 @@ public sealed class GetFilteredPullRequestsQueryHandler : IQueryHandler<GetFilte
         _logger.LogDebug("Handling GetFilteredPullRequestsQuery");
 
         // Live-only mode: use injected provider directly
-        var allPrs = await _pullRequestReadProvider.GetByProductIdsAsync(query.ProductIds, cancellationToken);
+        var allPrs = await _pullRequestReadProvider.GetByProductIdsAsync(query.ProductIds, null, cancellationToken);
 
         // Apply filters
         var filtered = allPrs.AsEnumerable();
