@@ -1682,24 +1682,6 @@ public class RealTfsClient : ITfsClient
     }
 
     /// <summary>
-    /// DEPRECATED: This method is kept for backward compatibility but is no longer used.
-    /// All TFS calls now use GetAuthenticatedHttpClient() which creates properly configured
-    /// HttpClient instances from IHttpClientFactory.
-    /// 
-    /// The old approach of mutating _httpClient state was problematic because:
-    /// - NTLM authentication must be handled in HttpClientHandler, not headers
-    /// - Mixing PAT headers with NTLM handlers causes conflicts
-    /// - The same HttpClient instance shouldn't be reused across auth modes
-    /// </summary>
-    [Obsolete("Use GetAuthenticatedHttpClient() instead. This method is kept only for backward compatibility.")]
-    private Task ConfigureAuthenticationAsync(TfsConfigEntity entity, CancellationToken cancellationToken)
-    {
-        // This method is no longer called but kept for backward compatibility
-        _logger.LogWarning("ConfigureAuthenticationAsync is deprecated. Use GetAuthenticatedHttpClient() instead.");
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
     /// Gets repositories in the project using the provided authenticated HttpClient.
     /// Git repositories are project-scoped.
     /// </summary>
