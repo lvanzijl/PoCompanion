@@ -1,24 +1,45 @@
 using PoTool.Shared.WorkItems;
+using PoTool.Core.Contracts;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Core.WorkItems.Validators;
 
 /// <summary>
-/// Validates that work items in "In Progress" state have an effort estimate.
+/// Validates that work items in "In Progress" state (based on state classification) have an effort estimate.
 /// </summary>
 public class WorkItemInProgressWithoutEffortValidator : IWorkItemValidator
 {
-    private const string InProgressState = "In Progress";
     private const string ErrorSeverity = "Error";
+    private readonly IWorkItemStateClassificationService _stateClassificationService;
+
+    public WorkItemInProgressWithoutEffortValidator(IWorkItemStateClassificationService stateClassificationService)
+    {
+        _stateClassificationService = stateClassificationService ?? throw new ArgumentNullException(nameof(stateClassificationService));
+    }
 
     /// <inheritdoc/>
     public Dictionary<int, List<ValidationIssue>> ValidateWorkItems(IEnumerable<WorkItemDto> workItems)
     {
         var result = new Dictionary<int, List<ValidationIssue>>();
+        var itemsList = workItems as List<WorkItemDto> ?? workItems.ToList();
 
-        foreach (var item in workItems)
+        // Build a cache of state classifications to avoid repeated async calls
+        var stateClassificationCache = new Dictionary<(string Type, string State), StateClassification>();
+        foreach (var item in itemsList)
         {
-            // Only validate items that are "In Progress"
-            if (item.State != InProgressState)
+            var key = (item.Type, item.State);
+            if (!stateClassificationCache.ContainsKey(key))
+            {
+                var classification = _stateClassificationService.GetClassificationAsync(item.Type, item.State).GetAwaiter().GetResult();
+                stateClassificationCache[key] = classification;
+            }
+        }
+
+        foreach (var item in itemsList)
+        {
+            // Only validate items that are "In Progress" (based on state classification)
+            var itemClassification = stateClassificationCache[(item.Type, item.State)];
+            if (itemClassification != StateClassification.InProgress)
             {
                 continue;
             }

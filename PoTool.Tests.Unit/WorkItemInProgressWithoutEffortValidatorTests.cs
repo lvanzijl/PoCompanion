@@ -1,8 +1,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Validators;
-
 using PoTool.Core.WorkItems;
+using PoTool.Core.Contracts;
+using PoTool.Shared.Settings;
+using Moq;
 
 namespace PoTool.Tests.Unit;
 
@@ -10,11 +12,26 @@ namespace PoTool.Tests.Unit;
 public class WorkItemInProgressWithoutEffortValidatorTests
 {
     private WorkItemInProgressWithoutEffortValidator _validator = null!;
+    private Mock<IWorkItemStateClassificationService> _mockStateService = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        _validator = new WorkItemInProgressWithoutEffortValidator();
+        _mockStateService = new Mock<IWorkItemStateClassificationService>();
+        
+        // Setup default state classifications (matching typical TFS/Azure DevOps states)
+        SetupStateClassification("Feature", "New", StateClassification.New);
+        SetupStateClassification("Feature", "In Progress", StateClassification.InProgress);
+        SetupStateClassification("Feature", "Done", StateClassification.Done);
+        
+        _validator = new WorkItemInProgressWithoutEffortValidator(_mockStateService.Object);
+    }
+
+    private void SetupStateClassification(string type, string state, StateClassification classification)
+    {
+        _mockStateService
+            .Setup(s => s.GetClassificationAsync(type, state, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(classification);
     }
 
     [TestMethod]
