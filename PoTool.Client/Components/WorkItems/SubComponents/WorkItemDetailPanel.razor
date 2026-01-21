@@ -7,6 +7,7 @@
 @inject TfsConfigService TfsConfigService
 @inject BrowserNavigationService BrowserNavigationService
 @inject WorkItemService WorkItemService
+@inject StateClassificationService StateClassificationService
 @inject ISnackbar Snackbar
 
 @* Detail panel for displaying selected work item(s) *@
@@ -209,7 +210,7 @@ else if (SelectedWorkItem != null)
                                             {
                                                 <div class="fix-suggestion">
                                                     <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Size="Size.Small" Color="Color.Info" />
-                                                    <strong>Suggested Fix:</strong> Set parent work item to "In Progress" state
+                                                    @GetParentProgressSuggestion()
                                                 </div>
                                             }
                                         </li>
@@ -408,5 +409,57 @@ else if (SelectedWorkItem != null)
     {
         // Open URL in new browser tab
         await BrowserNavigationService.OpenInNewTabAsync(url);
+    }
+
+    private MarkupString GetParentProgressSuggestion()
+    {
+        if (SelectedWorkItem?.ParentTfsId == null)
+            return (MarkupString)"<strong>Suggested Fix:</strong> Set parent work item to an In Progress state";
+
+        // Try to get parent work item type from validation error message
+        var parentType = ExtractParentTypeFromError();
+        if (string.IsNullOrEmpty(parentType))
+            return (MarkupString)"<strong>Suggested Fix:</strong> Set parent work item to an In Progress state";
+
+        try
+        {
+            // Get available In Progress states for the parent type
+            var inProgressStates = StateClassificationService.GetInProgressStatesAsync(parentType).Result;
+
+            if (inProgressStates.Count == 0)
+            {
+                return (MarkupString)$"<strong>Suggested Fix:</strong> Set parent {parentType} to an In Progress state (configure state classifications in settings)";
+            }
+            else if (inProgressStates.Count == 1)
+            {
+                return (MarkupString)$"<strong>Suggested Fix:</strong> Set parent {parentType} to \"{inProgressStates[0]}\" state";
+            }
+            else
+            {
+                var statesList = string.Join(", ", inProgressStates.Select(s => $"\"{s}\""));
+                return (MarkupString)$"<strong>Suggested Fix:</strong> Set parent {parentType} to one of these In Progress states: {statesList}";
+            }
+        }
+        catch
+        {
+            return (MarkupString)"<strong>Suggested Fix:</strong> Set parent work item to an In Progress state";
+        }
+    }
+
+    private string ExtractParentTypeFromError()
+    {
+        // Look for "Parent 'TypeName' is not in progress" pattern in errors
+        foreach (var error in Errors)
+        {
+            if (error.Contains("Parent") && error.Contains("not in progress"))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(error, @"Parent '([^']+)'");
+                if (match.Success && match.Groups.Count > 1)
+                {
+                    return match.Groups[1].Value;
+                }
+            }
+        }
+        return string.Empty;
     }
 }

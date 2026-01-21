@@ -1,5 +1,6 @@
 @using PoTool.Client.Models
 @using MudBlazor
+@using PoTool.Shared.WorkItems
 @inject IDialogService DialogService
 
 @* TreeGrid component using MudDataGrid for TFS-like work item display *@
@@ -275,12 +276,26 @@
 
     private string GetSelfIssueIcon(TreeNode node)
     {
-        return node.SelfErrorCount > 0 ? Icons.Material.Filled.Error : Icons.Material.Filled.Warning;
+        // Use category-specific icons based on validation category
+        return node.HighestCategory switch
+        {
+            ValidationCategory.StructuralIntegrity => Icons.Material.Filled.Error,
+            ValidationCategory.RefinementReadiness => Icons.Material.Filled.Info,
+            ValidationCategory.RefinementCompleteness => Icons.Material.Filled.WarningAmber,
+            _ => Icons.Material.Filled.Error
+        };
     }
 
     private Color GetSelfIssueColor(TreeNode node)
     {
-        return node.SelfErrorCount > 0 ? Color.Error : Color.Warning;
+        // Use category-specific colors
+        return node.HighestCategory switch
+        {
+            ValidationCategory.StructuralIntegrity => Color.Error,
+            ValidationCategory.RefinementReadiness => Color.Warning,
+            ValidationCategory.RefinementCompleteness => Color.Warning,
+            _ => Color.Error
+        };
     }
 
     private string GetDescendantIssueTooltip(TreeNode node)

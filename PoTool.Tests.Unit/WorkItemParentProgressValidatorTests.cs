@@ -1,8 +1,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Validators;
-
 using PoTool.Core.WorkItems;
+using PoTool.Core.Contracts;
+using PoTool.Shared.Settings;
+using Moq;
 
 namespace PoTool.Tests.Unit;
 
@@ -10,11 +12,41 @@ namespace PoTool.Tests.Unit;
 public class WorkItemParentProgressValidatorTests
 {
     private WorkItemParentProgressValidator _validator = null!;
+    private Mock<IWorkItemStateClassificationService> _mockStateService = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        _validator = new WorkItemParentProgressValidator();
+        _mockStateService = new Mock<IWorkItemStateClassificationService>();
+        
+        // Setup default state classifications (matching typical TFS/Azure DevOps states)
+        SetupStateClassification("Goal", "New", StateClassification.New);
+        SetupStateClassification("Goal", "In Progress", StateClassification.InProgress);
+        SetupStateClassification("Goal", "in progress", StateClassification.New); // lowercase not mapped
+        SetupStateClassification("Goal", "Done", StateClassification.Done);
+        
+        SetupStateClassification("Epic", "New", StateClassification.New);
+        SetupStateClassification("Epic", "In Progress", StateClassification.InProgress);
+        SetupStateClassification("Epic", "Done", StateClassification.Done);
+        SetupStateClassification("Epic 1", "In Progress", StateClassification.InProgress);
+        SetupStateClassification("Epic 2", "In Progress", StateClassification.InProgress);
+        SetupStateClassification("Epic 3", "In Progress", StateClassification.InProgress);
+        
+        SetupStateClassification("Feature", "New", StateClassification.New);
+        SetupStateClassification("Feature", "In Progress", StateClassification.InProgress);
+        SetupStateClassification("Feature", "Done", StateClassification.Done);
+        
+        SetupStateClassification("Story", "In Progress", StateClassification.InProgress);
+        SetupStateClassification("Task", "In Progress", StateClassification.InProgress);
+        
+        _validator = new WorkItemParentProgressValidator(_mockStateService.Object);
+    }
+
+    private void SetupStateClassification(string type, string state, StateClassification classification)
+    {
+        _mockStateService
+            .Setup(s => s.GetClassificationAsync(type, state, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(classification);
     }
 
     [TestMethod]
