@@ -88,9 +88,9 @@
                             @if (context.Item.Node.HasDescendantIssues)
                             {
                                 <MudTooltip Text="@GetDescendantIssueTooltip(context.Item.Node)">
-                                    <MudIcon Icon="@Icons.Material.Filled.Warning" 
+                                    <MudIcon Icon="@GetDescendantIssueIcon(context.Item.Node)" 
                                              Size="Size.Small" 
-                                             Color="Color.Warning" 
+                                             Color="@GetDescendantIssueColor(context.Item.Node)" 
                                              Class="descendant-issue-icon" />
                                 </MudTooltip>
                             }
@@ -271,7 +271,16 @@
         {
             parts.Add($"{node.SelfWarningCount} warning{(node.SelfWarningCount != 1 ? "s" : "")}");
         }
-        return $"{string.Join(", ", parts)} (this item)";
+        
+        var categoryText = node.HighestCategory switch
+        {
+            ValidationCategory.StructuralIntegrity => " - Structural Integrity",
+            ValidationCategory.RefinementReadiness => " - Refinement Readiness",
+            ValidationCategory.RefinementCompleteness => " - Refinement Completeness",
+            _ => ""
+        };
+        
+        return $"{string.Join(", ", parts)} (this item){categoryText}";
     }
 
     private string GetSelfIssueIcon(TreeNode node)
@@ -298,10 +307,41 @@
         };
     }
 
+    private string GetDescendantIssueIcon(TreeNode node)
+    {
+        // Use category-specific icons based on highest descendant validation category
+        return node.HighestDescendantCategory switch
+        {
+            ValidationCategory.StructuralIntegrity => Icons.Material.Filled.Error,
+            ValidationCategory.RefinementReadiness => Icons.Material.Filled.Info,
+            ValidationCategory.RefinementCompleteness => Icons.Material.Filled.WarningAmber,
+            _ => Icons.Material.Filled.Warning // Fallback for backwards compatibility
+        };
+    }
+
+    private Color GetDescendantIssueColor(TreeNode node)
+    {
+        // Use category-specific colors for descendant issues
+        return node.HighestDescendantCategory switch
+        {
+            ValidationCategory.StructuralIntegrity => Color.Error,
+            ValidationCategory.RefinementReadiness => Color.Warning,
+            ValidationCategory.RefinementCompleteness => Color.Warning,
+            _ => Color.Warning // Fallback for backwards compatibility
+        };
+    }
+
     private string GetDescendantIssueTooltip(TreeNode node)
     {
         var count = node.InvalidDescendantIds.Count;
-        return $"{count} issue{(count != 1 ? "s" : "")} in descendants";
+        var categoryText = node.HighestDescendantCategory switch
+        {
+            ValidationCategory.StructuralIntegrity => " (Structural Integrity)",
+            ValidationCategory.RefinementReadiness => " (Refinement Readiness)",
+            ValidationCategory.RefinementCompleteness => " (Refinement Completeness)",
+            _ => ""
+        };
+        return $"{count} issue{(count != 1 ? "s" : "")} in descendants{categoryText}";
     }
 
     private async Task RevealInvalidItem(TreeNode node)

@@ -302,13 +302,14 @@ public class TreeBuilderService : ITreeBuilderService
     }
 
     /// <summary>
-    /// Recursively computes InvalidDescendantIds for each node.
+    /// Recursively computes InvalidDescendantIds and HighestDescendantCategory for each node.
     /// Returns a list of invalid descendant IDs with their original insertion order.
     /// </summary>
     private List<(int Id, int Order)> ComputeInvalidDescendantIds(TreeNode node, Dictionary<int, TreeNode> nodeMap)
     {
         var invalidDescendants = new List<(int Id, int Order)>();
         int order = 0;
+        SharedValidation.ValidationCategory? highestDescendantCategory = null;
 
         // Process children in order (stable pre-order traversal)
         foreach (var child in node.Children)
@@ -317,6 +318,16 @@ public class TreeBuilderService : ITreeBuilderService
             if (child.SelfErrorCount > 0 || child.SelfWarningCount > 0)
             {
                 invalidDescendants.Add((child.Id, order++));
+                
+                // Update highest descendant category from direct child
+                if (child.HighestCategory.HasValue)
+                {
+                    if (!highestDescendantCategory.HasValue || 
+                        (int)child.HighestCategory.Value > (int)highestDescendantCategory.Value)
+                    {
+                        highestDescendantCategory = child.HighestCategory;
+                    }
+                }
             }
 
             // Recursively collect invalid descendants from child's subtree
@@ -324,6 +335,16 @@ public class TreeBuilderService : ITreeBuilderService
             foreach (var (id, _) in childInvalidDescendants)
             {
                 invalidDescendants.Add((id, order++));
+            }
+            
+            // Also consider child's highest descendant category
+            if (child.HighestDescendantCategory.HasValue)
+            {
+                if (!highestDescendantCategory.HasValue || 
+                    (int)child.HighestDescendantCategory.Value > (int)highestDescendantCategory.Value)
+                {
+                    highestDescendantCategory = child.HighestDescendantCategory;
+                }
             }
         }
 
@@ -344,6 +365,7 @@ public class TreeBuilderService : ITreeBuilderService
             .ToList();
 
         node.InvalidDescendantIds = sortedInvalidDescendants;
+        node.HighestDescendantCategory = highestDescendantCategory;
 
         return invalidDescendants;
     }
@@ -588,28 +610,24 @@ public class TreeBuilderService : ITreeBuilderService
         {
             SharedValidation.ValidationCategory? category = null;
             
-            // Try to get RuleId using reflection (it may not exist in older API client versions)
-            var ruleIdProperty = issue.GetType().GetProperty("RuleId");
-            string? ruleId = ruleIdProperty?.GetValue(issue) as string;
-            
-            // Try to determine category from RuleId if present
-            if (!string.IsNullOrEmpty(ruleId))
+            // Use RuleId directly to determine category
+            if (!string.IsNullOrEmpty(issue.RuleId))
             {
-                if (ruleId.StartsWith("SI-"))
+                if (issue.RuleId.StartsWith("SI-"))
                 {
                     category = SharedValidation.ValidationCategory.StructuralIntegrity;
                 }
-                else if (ruleId.StartsWith("RR-"))
+                else if (issue.RuleId.StartsWith("RR-"))
                 {
                     category = SharedValidation.ValidationCategory.RefinementReadiness;
                 }
-                else if (ruleId.StartsWith("RC-"))
+                else if (issue.RuleId.StartsWith("RC-"))
                 {
                     category = SharedValidation.ValidationCategory.RefinementCompleteness;
                 }
             }
             
-            // If RuleId not present or didn't match, infer from message
+            // If RuleId not present or didn't match, infer from message as fallback
             if (!category.HasValue)
             {
                 var lowerMessage = issue.Message.ToLowerInvariant();

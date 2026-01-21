@@ -87,6 +87,12 @@ public class TreeNode
     /// Used to determine which icon to display.
     /// </summary>
     public ValidationCategory? HighestCategory { get; set; }
+    
+    /// <summary>
+    /// Highest validation category of issues in descendant items.
+    /// Used to determine which icon to display for descendant issues.
+    /// </summary>
+    public ValidationCategory? HighestDescendantCategory { get; set; }
 
     /// <summary>
     /// Gets the validation icon to display for self issues (different icon per category).
