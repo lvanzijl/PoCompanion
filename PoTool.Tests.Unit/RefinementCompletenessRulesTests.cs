@@ -17,7 +17,7 @@ public class RefinementCompletenessRulesTests
     public void RC1_PbiWithDescription_NoViolation()
     {
         // Arrange
-        var rule = new PbiDescriptionEmptyRule();
+        var rule = new PbiDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Product Backlog Item", "New", null, "User story description", 8)
@@ -34,7 +34,7 @@ public class RefinementCompletenessRulesTests
     public void RC1_PbiWithEmptyDescription_HasViolation()
     {
         // Arrange
-        var rule = new PbiDescriptionEmptyRule();
+        var rule = new PbiDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Product Backlog Item", "New", null, "", 8)
@@ -56,7 +56,7 @@ public class RefinementCompletenessRulesTests
     public void RC1_PbiWithNullDescription_HasViolation()
     {
         // Arrange
-        var rule = new PbiDescriptionEmptyRule();
+        var rule = new PbiDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Product Backlog Item", "New", null, null, 8)
@@ -73,7 +73,7 @@ public class RefinementCompletenessRulesTests
     public void RC1_DonePbiWithEmptyDescription_NoViolation()
     {
         // Arrange: Done items should not be validated
-        var rule = new PbiDescriptionEmptyRule();
+        var rule = new PbiDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Product Backlog Item", "Done", null, "", 8)
@@ -90,7 +90,7 @@ public class RefinementCompletenessRulesTests
     public void RC1_FeatureWithEmptyDescription_NoViolation()
     {
         // Arrange: This rule only applies to PBIs
-        var rule = new PbiDescriptionEmptyRule();
+        var rule = new PbiDescriptionEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Feature", "New", null, "", 8)
