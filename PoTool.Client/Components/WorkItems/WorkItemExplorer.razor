@@ -11,6 +11,7 @@
 @inject ITreeBuilderService TreeBuilderService
 @inject WorkItemFilteringService FilteringService
 @inject WorkItemSelectionService SelectionService
+@inject WorkItemVisibilityService VisibilityService
 @inject ProfileService ProfileService
 @inject ProductService ProductService
 @inject TfsConfigService TfsConfigService
@@ -310,6 +311,10 @@
 
         // Use product-based tree building
         _treeRoots = TreeBuilderService.BuildProductBasedTreeWithValidation(filteredItems, products, _expandedState);
+        
+        // Apply visibility filtering to hide completed items
+        _treeRoots = await TreeBuilderService.ApplyVisibilityFilterAsync(_treeRoots, VisibilityService);
+        
         _flatNodeList = SelectionService.BuildFlatNodeList(_treeRoots);
         StateHasChanged();
     }

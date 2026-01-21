@@ -594,6 +594,23 @@ public class TreeBuilderService : ITreeBuilderService
         return topLevelNodes;
     }
     
+    /// <inheritdoc/>
+    public async Task<List<TreeNode>> ApplyVisibilityFilterAsync(
+        List<TreeNode> roots,
+        WorkItemVisibilityService visibilityService,
+        CancellationToken cancellationToken = default)
+    {
+        // Build a map of all nodes for efficient lookups
+        var allNodes = new Dictionary<int, TreeNode>();
+        foreach (var root in roots)
+        {
+            CollectNodesIntoMap(root, allNodes);
+        }
+
+        // Recursively filter the tree
+        return await visibilityService.FilterHiddenNodesAsync(roots, allNodes, cancellationToken);
+    }
+    
     /// <summary>
     /// Determines the highest validation category from a list of validation issues.
     /// </summary>

@@ -146,6 +146,7 @@ builder.Services.AddScoped<TfsConfigService>();
 builder.Services.AddScoped<ModeIsolatedStateService>();
 builder.Services.AddScoped<ErrorMessageService>();
 builder.Services.AddScoped<StateClassificationService>();
+builder.Services.AddScoped<WorkItemVisibilityService>();
 builder.Services.AddScoped<IOnboardingService, OnboardingService>();
 builder.Services.AddScoped<IOnboardingWizardState, OnboardingWizardState>();
 builder.Services.AddScoped<IStartupOrchestratorService, StartupOrchestratorService>();
