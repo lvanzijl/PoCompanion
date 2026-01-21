@@ -48,8 +48,12 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
         }
 
         var allRuns = await _pipelineReadProvider.GetAllRunsAsync(cancellationToken);
+        
+        // Filter runs to last 6 months only
+        var sixMonthsAgo = DateTimeOffset.UtcNow.AddMonths(-6);
+        var filteredRuns = allRuns.Where(r => r.StartTime.HasValue && r.StartTime.Value >= sixMonthsAgo).ToList();
 
-        var runsByPipeline = allRuns.GroupBy(r => r.PipelineId).ToDictionary(g => g.Key, g => g.ToList());
+        var runsByPipeline = filteredRuns.GroupBy(r => r.PipelineId).ToDictionary(g => g.Key, g => g.ToList());
 
         var metrics = new List<PipelineMetricsDto>();
 
@@ -57,24 +61,7 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
         {
             if (!runsByPipeline.TryGetValue(pipeline.Id, out var runs) || runs.Count == 0)
             {
-                metrics.Add(new PipelineMetricsDto(
-                    PipelineId: pipeline.Id,
-                    PipelineName: pipeline.Name,
-                    Type: pipeline.Type,
-                    TotalRuns: 0,
-                    SuccessfulRuns: 0,
-                    FailedRuns: 0,
-                    PartiallySucceededRuns: 0,
-                    CanceledRuns: 0,
-                    FailureRate: 0,
-                    AverageDuration: null,
-                    MinDuration: null,
-                    MaxDuration: null,
-                    DurationVariance: null,
-                    LastRunResult: null,
-                    LastRunTime: null,
-                    ConsecutiveFailures: 0
-                ));
+                // Skip pipelines with no runs in the last 6 months
                 continue;
             }
 
