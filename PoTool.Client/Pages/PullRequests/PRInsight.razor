@@ -1,4 +1,5 @@
 @page "/pr-insights"
+@implements IDisposable
 @using PoTool.Client.Services
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Models
@@ -32,7 +33,7 @@
         <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" /> PR Insight Dashboard
     </MudText>
     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
-        Pull request metrics and analytics for better team insights
+        Pull request metrics and analytics for the last 6 months
     </MudText>
 
     @* Product Selector *@
@@ -55,7 +56,7 @@
                     }
                 </MudSelect>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                    Showing PRs for: @GetProductScopeDescription()
+                    Showing PRs for: @GetProductScopeDescription() (last 6 months)
                 </MudText>
             </MudStack>
         </MudPaper>
@@ -190,6 +191,7 @@
     private const int AllProductsId = 0;
     private List<ProductDto> _products = new();
     private int _selectedProductId = AllProductsId;
+    private CancellationTokenSource? _dataLoadCts;
 
     private ChartOptions _barChartOptions = new()
     {
@@ -210,7 +212,18 @@
     {
         await LoadProductsAsync();
         await LoadSelectedProductIdAsync();
-        await LoadData();
+        
+        // Create initial cancellation token source
+        _dataLoadCts = new CancellationTokenSource();
+        
+        try
+        {
+            await LoadData(_dataLoadCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            Console.WriteLine("[PRInsight] Initial data load cancelled");
+        }
     }
 
     private async Task LoadProductsAsync()
@@ -260,11 +273,33 @@
 
         _selectedProductId = newProductId;
 
+        // Cancel any pending data load to prevent race conditions
+        _dataLoadCts?.Cancel();
+        _dataLoadCts?.Dispose();
+        _dataLoadCts = new CancellationTokenSource();
+
         // Save preference
         await PreferencesService.SetIntAsync("PRInsight_SelectedProductId", _selectedProductId);
 
-        // Reload data with new filter
-        await LoadData();
+        // Show loading indicator while reloading data
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Reload data with new filter
+            await LoadData(_dataLoadCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation - user switched products again
+            Console.WriteLine("[PRInsight] Data load cancelled due to product change");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
     }
 
     private string GetProductScopeDescription()
@@ -278,7 +313,7 @@
         return product?.Name ?? "Unknown product";
     }
 
-    private async Task LoadData()
+    private async Task LoadData(CancellationToken cancellationToken = default)
     {
         _isLoading = true;
         try
@@ -296,13 +331,23 @@
                 productIdsParam = _selectedProductId.ToString();
             }
             
+            // Note: The backend now enforces a 6-month time window by default
             var metrics = await PullRequestService.GetMetricsAsync(productIdsParam);
+            
+            // Check if cancelled before updating state
+            cancellationToken.ThrowIfCancellationRequested();
+            
             _allMetrics = metrics.ToList();
             _metrics = _allMetrics;
             InvalidateCache();
             
             // Log for debugging
             Console.WriteLine($"[PRInsight] Loaded {_metrics.Count} PR metrics for product scope: {GetProductScopeDescription()}");
+        }
+        catch (OperationCanceledException)
+        {
+            // Re-throw to let caller handle
+            throw;
         }
         catch (Exception ex)
         {
@@ -520,5 +565,11 @@
             Solution = "Establish team guidelines for PR size. Break large features into smaller PRs. Target 10-20 files per PR for optimal review efficiency."
         }
     };
+
+    public void Dispose()
+    {
+        _dataLoadCts?.Cancel();
+        _dataLoadCts?.Dispose();
+    }
 }
 
