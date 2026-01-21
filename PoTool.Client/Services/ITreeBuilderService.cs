@@ -49,8 +49,10 @@ public interface ITreeBuilderService
     /// </summary>
     /// <param name="roots">The root nodes of the tree.</param>
     /// <param name="visibilityService">Service to determine node visibility.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Filtered list of root nodes with hidden nodes removed.</returns>
     Task<List<TreeNode>> ApplyVisibilityFilterAsync(
         List<TreeNode> roots,
-        WorkItemVisibilityService visibilityService);
+        WorkItemVisibilityService visibilityService,
+        CancellationToken cancellationToken = default);
 }

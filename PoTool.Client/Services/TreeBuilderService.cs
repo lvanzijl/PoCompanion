@@ -597,7 +597,8 @@ public class TreeBuilderService : ITreeBuilderService
     /// <inheritdoc/>
     public async Task<List<TreeNode>> ApplyVisibilityFilterAsync(
         List<TreeNode> roots,
-        WorkItemVisibilityService visibilityService)
+        WorkItemVisibilityService visibilityService,
+        CancellationToken cancellationToken = default)
     {
         // Build a map of all nodes for efficient lookups
         var allNodes = new Dictionary<int, TreeNode>();
@@ -607,7 +608,7 @@ public class TreeBuilderService : ITreeBuilderService
         }
 
         // Recursively filter the tree
-        return await visibilityService.FilterHiddenNodesAsync(roots, allNodes);
+        return await visibilityService.FilterHiddenNodesAsync(roots, allNodes, cancellationToken);
     }
     
     /// <summary>

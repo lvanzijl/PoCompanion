@@ -19,8 +19,9 @@ public class WorkItemVisibilityService
     /// </summary>
     /// <param name="node">The tree node to check.</param>
     /// <param name="allNodes">Map of all nodes in the tree for lookup.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if the node should be hidden, false otherwise.</returns>
-    public async Task<bool> ShouldHideNodeAsync(TreeNode node, Dictionary<int, TreeNode> allNodes)
+    public async Task<bool> ShouldHideNodeAsync(TreeNode node, Dictionary<int, TreeNode> allNodes, CancellationToken cancellationToken = default)
     {
         // Rule: Root items (without a parent) must never be hidden
         if (!node.ParentId.HasValue)
@@ -29,7 +30,7 @@ public class WorkItemVisibilityService
         }
 
         // Rule 1: The work item itself must be in a "Done" state
-        if (!await IsDoneStateAsync(node.Type, node.State))
+        if (!await IsDoneStateAsync(node.Type, node.State, cancellationToken))
         {
             return false;
         }
@@ -41,7 +42,7 @@ public class WorkItemVisibilityService
             return false;
         }
 
-        if (!await IsDoneStateAsync(parentNode.Type, parentNode.State))
+        if (!await IsDoneStateAsync(parentNode.Type, parentNode.State, cancellationToken))
         {
             return false;
         }
@@ -50,7 +51,7 @@ public class WorkItemVisibilityService
         var siblings = parentNode.Children;
         foreach (var sibling in siblings)
         {
-            if (!await IsDoneStateAsync(sibling.Type, sibling.State))
+            if (!await IsDoneStateAsync(sibling.Type, sibling.State, cancellationToken))
             {
                 return false;
             }
@@ -69,15 +70,17 @@ public class WorkItemVisibilityService
     /// <summary>
     /// Checks if a state is classified as "Done" for a given work item type.
     /// </summary>
-    private async Task<bool> IsDoneStateAsync(string workItemType, string state)
+    private async Task<bool> IsDoneStateAsync(string workItemType, string state, CancellationToken cancellationToken)
     {
         try
         {
-            return await _stateClassificationService.IsDoneStateAsync(workItemType, state);
+            return await _stateClassificationService.IsDoneStateAsync(workItemType, state, cancellationToken);
         }
-        catch
+        catch (Exception ex)
         {
             // If classification fails, assume not done (fail safe)
+            // Log for debugging but don't propagate the exception
+            Console.WriteLine($"[WorkItemVisibilityService] Error checking state classification for {workItemType}/{state}: {ex.Message}");
             return false;
         }
     }
@@ -107,15 +110,16 @@ public class WorkItemVisibilityService
     /// </summary>
     /// <param name="nodes">The list of nodes to filter.</param>
     /// <param name="allNodes">Map of all nodes in the tree for lookup.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Filtered list with hidden nodes removed.</returns>
-    public async Task<List<TreeNode>> FilterHiddenNodesAsync(List<TreeNode> nodes, Dictionary<int, TreeNode> allNodes)
+    public async Task<List<TreeNode>> FilterHiddenNodesAsync(List<TreeNode> nodes, Dictionary<int, TreeNode> allNodes, CancellationToken cancellationToken = default)
     {
         var visibleNodes = new List<TreeNode>();
 
         foreach (var node in nodes)
         {
             // Check if this node should be hidden
-            if (await ShouldHideNodeAsync(node, allNodes))
+            if (await ShouldHideNodeAsync(node, allNodes, cancellationToken))
             {
                 // Skip this node (hide it)
                 continue;
@@ -124,7 +128,7 @@ public class WorkItemVisibilityService
             // Recursively filter children
             if (node.Children.Any())
             {
-                node.Children = await FilterHiddenNodesAsync(node.Children, allNodes);
+                node.Children = await FilterHiddenNodesAsync(node.Children, allNodes, cancellationToken);
                 node.ChildrenIds = node.Children.Select(c => c.Id).ToList();
             }
 
