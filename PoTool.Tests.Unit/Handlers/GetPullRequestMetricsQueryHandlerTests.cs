@@ -405,4 +405,65 @@ public class GetPullRequestMetricsQueryHandlerTests
             LinesModified: linesModified
         );
     }
+
+    [TestMethod]
+    public async Task Handle_Enforces6MonthTimeWindow()
+    {
+        // Arrange
+        var now = DateTimeOffset.UtcNow;
+        var cutoffDate = now.AddMonths(-6);
+        DateTimeOffset? capturedFromDate = null;
+        
+        // Setup mock to capture the fromDate parameter
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(
+            It.IsAny<List<int>>(), 
+            It.IsAny<DateTimeOffset?>(), 
+            It.IsAny<CancellationToken>()))
+            .Callback<List<int>?, DateTimeOffset?, CancellationToken>((ids, fromDate, ct) => 
+            {
+                capturedFromDate = fromDate;
+            })
+            .ReturnsAsync(new List<PullRequestDto>());
+
+        var query = new GetPullRequestMetricsQuery();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(capturedFromDate, "FromDate should be set");
+        Assert.IsTrue(capturedFromDate.Value >= cutoffDate.AddMinutes(-1), 
+            "FromDate should be approximately 6 months ago");
+        Assert.IsTrue(capturedFromDate.Value <= now, 
+            "FromDate should not be in the future");
+    }
+
+    [TestMethod]
+    public async Task Handle_WithExplicitFromDate_UsesProvidedDate()
+    {
+        // Arrange
+        var explicitFromDate = DateTimeOffset.UtcNow.AddMonths(-3);
+        DateTimeOffset? capturedFromDate = null;
+        
+        // Setup mock to capture the fromDate parameter
+        _mockProvider.Setup(r => r.GetByProductIdsAsync(
+            It.IsAny<List<int>>(), 
+            It.IsAny<DateTimeOffset?>(), 
+            It.IsAny<CancellationToken>()))
+            .Callback<List<int>?, DateTimeOffset?, CancellationToken>((ids, fromDate, ct) => 
+            {
+                capturedFromDate = fromDate;
+            })
+            .ReturnsAsync(new List<PullRequestDto>());
+
+        var query = new GetPullRequestMetricsQuery(null, explicitFromDate);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(capturedFromDate, "FromDate should be set");
+        Assert.AreEqual(explicitFromDate, capturedFromDate, 
+            "Should use the explicitly provided FromDate");
+    }
 }
