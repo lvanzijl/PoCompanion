@@ -687,6 +687,38 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult<IEnumerable<PipelineRunDto>>(runs);
     }
 
+    public async Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
+        IEnumerable<int> pipelineIds,
+        string? branchName = null,
+        DateTimeOffset? minStartTime = null,
+        int top = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var allRuns = new List<PipelineRunDto>();
+        
+        foreach (var pipelineId in pipelineIds)
+        {
+            var runs = await GetPipelineRunsAsync(pipelineId, top, cancellationToken);
+            
+            // Apply filters in-memory for mock data
+            var filteredRuns = runs.AsEnumerable();
+            
+            if (!string.IsNullOrEmpty(branchName))
+            {
+                filteredRuns = filteredRuns.Where(r => r.Branch == branchName);
+            }
+            
+            if (minStartTime.HasValue)
+            {
+                filteredRuns = filteredRuns.Where(r => r.StartTime.HasValue && r.StartTime.Value >= minStartTime.Value);
+            }
+            
+            allRuns.AddRange(filteredRuns);
+        }
+        
+        return allRuns;
+    }
+
 
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsAsync(
         int[] rootWorkItemIds,

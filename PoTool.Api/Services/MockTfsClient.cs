@@ -563,6 +563,42 @@ public class MockTfsClient : ITfsClient
         return _mockDataFacade.GetPipelineRunsAsync(pipelineId, top, cancellationToken);
     }
 
+    public async Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
+        IEnumerable<int> pipelineIds,
+        string? branchName = null,
+        DateTimeOffset? minStartTime = null,
+        int top = 100,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "Mock TFS client: GetPipelineRunsAsync called for {Count} pipelines with filters (branch: {Branch}, minTime: {MinTime})",
+            pipelineIds.Count(), branchName ?? "none", minStartTime?.ToString("o") ?? "none");
+
+        var allRuns = new List<PipelineRunDto>();
+        
+        foreach (var pipelineId in pipelineIds)
+        {
+            var runs = await _mockDataFacade.GetPipelineRunsAsync(pipelineId, top, cancellationToken);
+            
+            // Apply filters in-memory for mock data
+            var filteredRuns = runs.AsEnumerable();
+            
+            if (!string.IsNullOrEmpty(branchName))
+            {
+                filteredRuns = filteredRuns.Where(r => r.Branch == branchName);
+            }
+            
+            if (minStartTime.HasValue)
+            {
+                filteredRuns = filteredRuns.Where(r => r.StartTime.HasValue && r.StartTime.Value >= minStartTime.Value);
+            }
+            
+            allRuns.AddRange(filteredRuns);
+        }
+        
+        return allRuns;
+    }
+
 
     public Task<string?> GetRepositoryIdByNameAsync(
         string repositoryName,

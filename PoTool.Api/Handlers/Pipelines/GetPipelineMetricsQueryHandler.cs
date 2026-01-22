@@ -24,44 +24,66 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
         GetPipelineMetricsQuery query,
         CancellationToken cancellationToken)
     {
-        // Live-only mode: use injected provider directly
+        // OPTIMIZATION: Filter by product IDs first to limit the dataset
+        IEnumerable<int> allowedPipelineIds;
         
-        // Get all pipelines
-        var pipelines = await _pipelineReadProvider.GetAllAsync(cancellationToken);
-        
-        // Filter by product IDs if specified
         if (query.ProductIds != null && query.ProductIds.Count > 0)
         {
-            // Get pipeline definitions for the specified products
-            var allowedPipelineIds = new HashSet<int>();
+            // Get pipeline definitions for the specified products from database
+            var allowedPipelineIdSet = new HashSet<int>();
             foreach (var productId in query.ProductIds)
             {
                 var definitions = await _pipelineReadProvider.GetDefinitionsByProductIdAsync(productId, cancellationToken);
                 foreach (var def in definitions)
                 {
-                    allowedPipelineIds.Add(def.PipelineDefinitionId);
+                    allowedPipelineIdSet.Add(def.PipelineDefinitionId);
                 }
             }
             
-            // Filter pipelines to only those in the allowed set
-            pipelines = pipelines.Where(p => allowedPipelineIds.Contains(p.Id)).ToList();
+            allowedPipelineIds = allowedPipelineIdSet;
+            
+            // If no pipelines found for these products, return empty
+            if (!allowedPipelineIds.Any())
+            {
+                return Enumerable.Empty<PipelineMetricsDto>();
+            }
+        }
+        else
+        {
+            // No product filter - get all pipelines
+            var allPipelines = await _pipelineReadProvider.GetAllAsync(cancellationToken);
+            allowedPipelineIds = allPipelines.Select(p => p.Id).ToList();
         }
 
-        var allRuns = await _pipelineReadProvider.GetAllRunsAsync(cancellationToken);
-        
-        // Filter runs to last 6 months only
+        // OPTIMIZATION: Fetch runs only for the filtered pipeline IDs, with branch and time filters at query level
         var sixMonthsAgo = DateTimeOffset.UtcNow.AddMonths(-6);
-        var filteredRuns = allRuns.Where(r => r.StartTime.HasValue && r.StartTime.Value >= sixMonthsAgo).ToList();
+        var allRuns = await _pipelineReadProvider.GetRunsForPipelinesAsync(
+            allowedPipelineIds,
+            branchName: "refs/heads/main",  // Filter for Main branch in the query
+            minStartTime: sixMonthsAgo,
+            top: 100,
+            cancellationToken);
+        
+        // Group runs by pipeline
+        var runsByPipeline = allRuns.GroupBy(r => r.PipelineId).ToDictionary(g => g.Key, g => g.ToList());
 
-        var runsByPipeline = filteredRuns.GroupBy(r => r.PipelineId).ToDictionary(g => g.Key, g => g.ToList());
+        // Get pipeline information for those that have runs
+        var pipelinesWithRuns = await _pipelineReadProvider.GetAllAsync(cancellationToken);
+        var pipelineDict = pipelinesWithRuns.ToDictionary(p => p.Id);
 
         var metrics = new List<PipelineMetricsDto>();
 
-        foreach (var pipeline in pipelines)
+        foreach (var (pipelineId, runs) in runsByPipeline)
         {
-            if (!runsByPipeline.TryGetValue(pipeline.Id, out var runs) || runs.Count == 0)
+            if (runs.Count == 0)
             {
-                // Skip pipelines with no runs in the last 6 months
+                continue;
+            }
+
+            // Get pipeline info
+            if (!pipelineDict.TryGetValue(pipelineId, out var pipeline))
+            {
+                // Pipeline not found, skip
                 continue;
             }
 
