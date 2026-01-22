@@ -46,11 +46,6 @@ public interface IPipelineReadProvider
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves all pipeline definitions from the configured data source.
-    /// </summary>
-    Task<IEnumerable<PipelineDefinitionDto>> GetAllDefinitionsAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Retrieves pipeline definitions for a specific product from the configured data source.
     /// </summary>
     Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByProductIdAsync(int productId, CancellationToken cancellationToken = default);

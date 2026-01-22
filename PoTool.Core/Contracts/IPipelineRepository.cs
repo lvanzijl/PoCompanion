@@ -56,11 +56,6 @@ public interface IPipelineRepository
     // ============================================
 
     /// <summary>
-    /// Retrieves all pipeline definitions.
-    /// </summary>
-    Task<IEnumerable<PipelineDefinitionDto>> GetAllDefinitionsAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Retrieves pipeline definitions for a specific product.
     /// </summary>
     Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByProductIdAsync(int productId, CancellationToken cancellationToken = default);

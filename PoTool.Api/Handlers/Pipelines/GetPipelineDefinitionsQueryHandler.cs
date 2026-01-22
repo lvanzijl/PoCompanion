@@ -32,6 +32,13 @@ public sealed class GetPipelineDefinitionsQueryHandler : IQueryHandler<GetPipeli
             "Retrieving pipeline definitions (ProductId={ProductId}, RepositoryId={RepositoryId})",
             query.ProductId, query.RepositoryId);
 
+        // ProductId or RepositoryId must be provided
+        if (!query.ProductId.HasValue && !query.RepositoryId.HasValue)
+        {
+            throw new InvalidOperationException(
+                "Either ProductId or RepositoryId must be provided when retrieving pipeline definitions.");
+        }
+
         // Live-only mode: use injected provider directly
         IEnumerable<PipelineDefinitionDto> definitions;
 
@@ -45,7 +52,9 @@ public sealed class GetPipelineDefinitionsQueryHandler : IQueryHandler<GetPipeli
         }
         else
         {
-            definitions = await _pipelineReadProvider.GetAllDefinitionsAsync(cancellationToken);
+            // This should never happen due to the check above, but satisfies the compiler
+            throw new InvalidOperationException(
+                "Either ProductId or RepositoryId must be provided when retrieving pipeline definitions.");
         }
 
         var definitionsList = definitions.ToList();
