@@ -3355,3 +3355,612 @@ Sarah checks pipeline health at start of week:
 
 ---
 
+
+**Purpose:** View and edit Product Owner profile information, including name, email, and product assignments.
+
+**How To Use:**
+
+1. **View Profile**
+   - Shows: Name, Email, Products managed
+   - Click "Edit" to modify
+
+2. **Edit Profile**
+   - Update name, email
+   - Add/remove product assignments
+   - Save changes
+
+### Work Item States
+
+**Page Location:** `/settings/workitem-states`
+
+**Purpose:** Configure work item state mappings and validation rules. Map Azure DevOps states to PO Companion's workflow states.
+
+**How To Use:**
+
+1. **View State Mappings**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ Work Item State Configuration                           │
+   ├─────────────────────────────────────────────────────────┤
+   │ Azure DevOps State  │ PO Companion State │ Validation │
+   ├─────────────────────┼────────────────────┼────────────┤
+   │ New                 │ New                │ Required   │
+   │ Approved            │ Approved           │ Optional   │
+   │ Committed           │ Committed          │ Required   │
+   │ In Progress         │ In Progress        │ Required   │
+   │ Done                │ Done               │ Required   │
+   │ Removed             │ Closed             │ Optional   │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+2. **Edit Mappings**
+   - Click state to edit
+   - Map to standard workflow state
+   - Set validation requirements
+   - Save
+
+3. **Validation Rules**
+   - "Required": State must exist for work items
+   - "Optional": State can be skipped in workflow
+   - Affects validation score calculations
+
+---
+
+## Day-to-Day Scenarios
+
+This section provides complete workflows showing how Sarah uses PO Companion throughout her week managing two products (Mobile App with Team Alpha, Web Portal with Team Beta).
+
+### Monday Morning: Week Planning
+
+**Time:** 9:00 AM  
+**Duration:** 30 minutes  
+**Goal:** Understand current state of both products and plan the week
+
+**Workflow:**
+
+1. **Check Dashboard (5 min)**
+   - Open PO Companion → Dashboard
+   - Profile: "Product A - Mobile App"
+   - Review key metrics:
+     - Velocity: 38 pts (down from 41)
+     - Backlog Health: 85% (needs attention)
+     - Capacity: 82% (good)
+   - Switch to "Product B - Web Portal"
+   - Review metrics:
+     - Velocity: 50 pts (stable)
+     - Backlog Health: 94% (excellent)
+     - Capacity: 88% (good)
+   - **Decision:** Focus on Product A backlog health today
+
+2. **Review Backlog Health (10 min)**
+   - Navigate to Backlog Health
+   - Product A: 85% health (was 92% last week)
+   - Issues:
+     - 12 PBIs missing effort estimates
+     - 6 PBIs no acceptance criteria
+     - 3 orphaned PBIs
+   - **Action:** Schedule grooming session Tuesday for estimates
+   - **Action:** Write acceptance criteria for 6 PBIs today
+
+3. **Check PR Insights (5 min)**
+   - Navigate to PR Insights
+   - 3 PRs open > 5 days
+   - **Action:** Ping reviewers in standup
+
+4. **Review Velocity Trends (5 min)**
+   - Navigate to Velocity Dashboard
+   - Product A velocity dropped 7% (38 from 41)
+   - Check: One team member was on vacation
+   - Normal variance, not concerning
+   - **Decision:** Plan Sprint 16 at 40 pts (slightly conservative)
+
+5. **Update Weekly Goals (5 min)**
+   - In personal notes:
+     - Product A: Improve backlog health to 90%
+     - Product A: Merge long-lived PRs
+     - Product B: Maintain current health
+     - Both: Prepare Sprint 16 planning
+
+### Tuesday: Sprint Planning Preparation
+
+**Time:** 2:00 PM  
+**Duration:** 1 hour  
+**Goal:** Prepare for Wednesday sprint planning sessions
+
+**Workflow:**
+
+1. **Product A - Review Work Items (20 min)**
+   - Navigate to Work Items Explorer
+   - Filter: Product A, Sprint 16, State: "New" or "Approved"
+   - Expand all epics
+   - Review:
+     - Epic "Two-Factor Auth": 36 pts remaining
+     - Epic "Payment Integration": 28 pts remaining
+     - Epic "Profile Management": 16 pts remaining
+   - Total available: 80 pts
+   - Team capacity: 40 pts (with vacation)
+   - **Decision:** Focus on Two-Factor Auth (36 pts) + 4 pts from Profile
+
+2. **Check Dependencies (10 min)**
+   - Navigate to Dependency Graph
+   - Select Epic "Two-Factor Auth"
+   - Dependencies:
+     - Blocked by: "User Profile API" (Product B)
+     - Status: User Profile API completes Sprint 15 (this week)
+     - No blocking issues
+   - **Action:** Confirm with Team Beta that API will be ready
+
+3. **Validate Epic Forecast (10 min)**
+   - Navigate to Epic Forecast
+   - Select Epic "Two-Factor Auth"
+   - Forecast:
+     - Best: End Sprint 16 (unlikely with 36 pts on 40 pt capacity)
+     - Likely: End Sprint 17 (realistic)
+     - Worst: Sprint 18
+   - **Decision:** Commit to Sprint 17, communicate to stakeholders
+
+4. **Review Effort Distribution (10 min)**
+   - Navigate to Effort Distribution
+   - Check Sprint 16-18 allocation
+   - Sprint 16: Product A = 89%, Product B = 82% (both good)
+   - Sprint 17: Product A = 105% (over!) Need to rebalance
+   - **Action:** Move 5 pts from Sprint 17 to 18
+   - Updated: Sprint 17 = 95% (acceptable)
+
+5. **Export Planning Materials (10 min)**
+   - Work Items Explorer → Export "Sprint 16 Candidate PBIs" to Excel
+   - Epic Forecast → Export "Two-Factor Auth Forecast" PDF
+   - Effort Distribution → Export heat map image
+   - Prepare presentation for tomorrow's planning
+
+### Wednesday: Sprint Planning & Stakeholder Update
+
+**Time:** 10:00 AM - 12:00 PM  
+**Duration:** 2 hours  
+**Goal:** Facilitate sprint planning and update stakeholders
+
+**Workflow:**
+
+1. **Sprint Planning - Team Alpha (1 hour)**
+   - Share exported materials
+   - Team reviews 40 pts of work
+   - Uses Work Items Explorer in meeting:
+     - Projects screen in planning room
+     - Team discusses each PBI
+     - Updates effort estimates in real-time
+     - Sarah marks items "Committed" after team agreement
+   - Final commitment: 38 pts (team conservative due to complexity)
+
+2. **Update Forecasts Post-Planning (15 min)**
+   - Epic Forecast: Refresh based on 38 pt commitment
+   - Forecast still shows Sprint 17 completion (good)
+   - Document commitment in forecast tool
+
+3. **Stakeholder Email Update (15 min)**
+   - Export Dashboard metrics
+   - Epic Forecast timeline image
+   - Write update email:
+     - Sprint 15 recap (velocity, completed work)
+     - Sprint 16 plan (commitment, key features)
+     - Epic "Two-Factor Auth" forecast: Sprint 17
+     - Risks: Dependency on Product B API (mitigated)
+
+4. **Sprint Planning - Team Beta (30 min)**
+   - Repeat process for Product B
+   - Team Beta commits to 48 pts
+   - Includes "Shared Components" for Product A dependency
+
+### Thursday: Mid-Sprint Check & Backlog Refinement
+
+**Time:** Throughout day  
+**Duration:** 2 hours total  
+**Goal:** Monitor sprint progress and improve backlog health
+
+**Workflow:**
+
+1. **Morning: Sprint Progress Check (15 min)**
+   - Work Items Explorer
+   - Filter: Sprint 16, State "In Progress"
+   - Product A: 8 PBIs in progress (expected)
+   - Product B: 12 PBIs in progress (expected)
+   - Check State Timeline for any PBIs "In Progress" > 3 days
+   - One PBI at 4 days, check with developer in standup
+
+2. **Afternoon: Backlog Grooming Session (1 hour)**
+   - Goal: Improve Product A backlog health
+   - Team estimates 12 PBIs missing effort
+   - Sarah adds acceptance criteria to 6 PBIs
+   - Team links 3 orphaned PBIs to correct features
+
+3. **Post-Grooming: Validate Improvement (15 min)**
+   - Navigate to Backlog Health
+   - Sync from Azure DevOps
+   - Health improved: 85% → 92% ✓
+   - Goal achieved!
+
+4. **Review Dependency Graph (30 min)**
+   - Weekly dependency review
+   - Check for new blocking relationships
+   - Validate Team Beta completing Product A dependency
+   - No issues found
+
+### Friday: Weekly Retrospective & Planning
+
+**Time:** 3:00 PM  
+**Duration:** 1 hour  
+**Goal:** Review week, prepare for next week
+
+**Workflow:**
+
+1. **Team Retrospective - Review Metrics (20 min)**
+   - PR Insights:
+     - Average time-to-merge: 5.2 days (up from 4.5)
+     - Action: Discuss PR size in retro
+     - Decision: Max 8 files per PR going forward
+   - Velocity:
+     - Sprint 15: 38 pts (down due to vacation)
+     - Sprint 14: 41 pts
+     - Trend: Stable, predictable
+   - Backlog Health:
+     - Improved this week (85% → 92%)
+     - Team agrees to maintain >90%
+
+2. **Pipeline Insights Review (10 min)**
+   - Success rate: 89% (good, was 87% Monday)
+   - Fixed "npm timeout" issue
+   - No flaky tests this week
+   - Build duration stable at 11 min
+
+3. **Plan Next Week (20 min)**
+   - Monday: Dashboard review
+   - Tuesday: Quarterly capacity planning (Effort Distribution)
+   - Wednesday: Backlog refinement
+   - Thursday: Dependency review with both teams
+   - Friday: Sprint 16 completion, prep Sprint 17 planning
+
+4. **Export Weekly Report (10 min)**
+   - Dashboard: Screenshots of both products
+   - Velocity: Trend charts
+   - Backlog Health: Improvement
+   - Epic Forecast: Updated timelines
+   - Send to manager and stakeholders
+
+### Monthly: Quarterly Planning
+
+**Time:** First Monday of Quarter  
+**Duration:** 4 hours  
+**Goal:** Plan next 3 months for both products
+
+**Workflow:**
+
+1. **Review Historical Data (30 min)**
+   - Velocity Dashboard: Last 12 weeks for both teams
+   - Calculate stable velocity: Team Alpha 41 pts, Team Beta 50 pts
+   - Backlog Health trends: Both improving
+   - PR Insights: Process improvements working
+
+2. **Capacity Planning (1 hour)**
+   - Effort Distribution: View next 12 sprints
+   - Input team capacities (account for holidays, training)
+   - Rough-assign epics to sprints
+   - Balance load to 75-85% utilization
+   - Export heat map for exec review
+
+3. **Epic Forecasting (1 hour)**
+   - List all epics for next quarter
+   - Run Epic Forecast for each
+   - Create roadmap timeline
+   - Identify risky forecasts
+   - Plan mitigation strategies
+
+4. **Dependency Planning (1 hour)**
+   - Dependency Graph: All products view
+   - Identify cross-team dependencies
+   - Coordinate with other POs
+   - Document in Azure DevOps
+   - Export dependency map
+
+5. **Stakeholder Presentation (30 min)**
+   - Prepare quarterly plan presentation
+   - Include:
+     - Velocity trends and forecasts
+     - Epic timeline (with best/likely/worst)
+     - Capacity allocation heat map
+     - Dependency graph
+     - Risks and mitigation plans
+
+---
+
+## Keyboard Shortcuts
+
+PO Companion supports keyboard shortcuts for efficient navigation:
+
+### Global Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+H` | Go to Dashboard (Home) |
+| `Ctrl+P` | Go to Profiles |
+| `Ctrl+W` | Go to Work Items Explorer |
+| `Ctrl+B` | Go to Backlog Health |
+| `Ctrl+V` | Go to Velocity Dashboard |
+| `Ctrl+E` | Go to Effort Distribution |
+| `Ctrl+/` | Show keyboard shortcuts help |
+| `Ctrl+S` | Save current changes (where applicable) |
+| `Ctrl+F` | Focus search box |
+| `Ctrl+R` | Refresh/Sync from Azure DevOps |
+| `Esc` | Close modal/dialog/panel |
+
+### Work Items Explorer Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `↑` / `↓` | Navigate up/down tree |
+| `→` | Expand selected node |
+| `←` | Collapse selected node |
+| `*` | Expand all children of selected node |
+| `Enter` | Open detail panel for selected item |
+| `Ctrl+A` | Select all visible items |
+| `Ctrl+C` | Copy selected items |
+| `Delete` | Delete selected items (confirmation required) |
+| `Ctrl+Click` | Multi-select items |
+| `Shift+Click` | Select range of items |
+| `Ctrl+E` | Export selected items |
+
+### Chart/Graph Navigation
+
+| Shortcut | Action |
+|----------|--------|
+| `Scroll Wheel` | Zoom in/out (graphs) |
+| `Click+Drag` | Pan graph |
+| `Double-Click` | Reset zoom |
+| `Hover` | Show data tooltip |
+
+### Dialog Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Enter` | Confirm/OK |
+| `Esc` | Cancel/Close |
+| `Tab` | Next field |
+| `Shift+Tab` | Previous field |
+
+**Tip:** Press `Ctrl+/` anytime to see available shortcuts for current page.
+
+---
+
+## Troubleshooting
+
+### Connection Issues
+
+#### Problem: "Cannot connect to Azure DevOps"
+
+**Solutions:**
+1. **Check URL format:**
+   - Must be: `https://dev.azure.com/yourorg` (Azure DevOps)
+   - Or: `https://tfs.company.com/tfs/collection` (TFS on-premise)
+   - No trailing slash
+
+2. **Verify PAT:**
+   - PAT must have "Work Items (Read)" scope
+   - Check expiration date in Azure DevOps
+   - Generate new PAT if expired
+
+3. **Test network:**
+   - Can you access Azure DevOps in browser?
+   - Check firewall/proxy settings
+   - Try from different network
+
+4. **Check project name:**
+   - Case-sensitive!
+   - Must match exactly as shown in Azure DevOps
+
+#### Problem: "PAT expired" or "Unauthorized"
+
+**Solutions:**
+1. Generate new PAT in Azure DevOps
+2. Update in TFS Config page
+3. Test connection
+4. If still fails, check PAT scopes
+
+### Data Sync Issues
+
+#### Problem: "Sync taking too long" or "Sync stuck"
+
+**Solutions:**
+1. **Large backlog:**
+   - First sync can take 10-15 minutes for 1000+ items
+   - Be patient, let it complete
+   - Subsequent syncs faster (incremental)
+
+2. **Cancel and retry:**
+   - Click "Cancel Sync"
+   - Wait 30 seconds
+   - Try again
+
+3. **Check Azure DevOps status:**
+   - Visit Azure DevOps
+   - Check if service is running normally
+   - Check service status page
+
+#### Problem: "Data not updating" or "Stale data"
+
+**Solutions:**
+1. Manual sync:
+   - Click "Sync" button in Work Items page
+   - Or press `Ctrl+R`
+
+2. Check last sync time:
+   - Shown in Dashboard header
+   - If >24 hours, sync recommended
+
+3. Clear cache:
+   - Settings → Advanced → "Clear Cache"
+   - Then sync again
+
+### Work Item Issues
+
+#### Problem: "Work items not showing" or "Empty tree"
+
+**Solutions:**
+1. **Check filters:**
+   - Profile selected?
+   - Area path correct?
+   - Iteration filter not too narrow?
+   - State filter not hiding items?
+
+2. **Clear filters:**
+   - Click "Reset Filters" button
+   - Should show all items
+
+3. **Sync data:**
+   - May need fresh sync from Azure DevOps
+   - Click "Sync" button
+
+#### Problem: "Validation warnings everywhere"
+
+**Explanation:** This is often normal for new backlogs!
+
+**Solutions:**
+1. **Prioritize fixes:**
+   - Fix errors (❌) before warnings (⚠)
+   - Start with missing effort estimates
+   - Then acceptance criteria
+   - Then orphaned items
+
+2. **Bulk fix:**
+   - Use bulk operations to fix multiple items
+   - Example: Select 10 PBIs → Bulk assign effort
+
+3. **Adjust validation rules:**
+   - Settings → Work Item States
+   - Make some rules "Optional" if too strict
+   - But maintaining >90% health is recommended
+
+### Performance Issues
+
+#### Problem: "Application slow" or "Laggy UI"
+
+**Solutions:**
+1. **Large dataset:**
+   - Filter work items (don't load all 5000 at once)
+   - Use specific iteration filters
+   - Collapse tree nodes
+
+2. **Clear cache:**
+   - Settings → Advanced → "Clear Cache"
+   - Restart application
+
+3. **Browser:**
+   - Clear browser cache
+   - Try different browser (Chrome recommended)
+   - Check browser extensions (disable if many)
+
+4. **Hardware:**
+   - Close other applications
+   - Check RAM usage
+   - Restart computer
+
+### Chart/Visualization Issues
+
+#### Problem: "Charts not loading" or "Blank charts"
+
+**Solutions:**
+1. **No data:**
+   - Check if data exists for selected filters
+   - Expand date range
+   - Change profile selection
+
+2. **Browser compatibility:**
+   - Use modern browser (Chrome, Edge, Firefox)
+   - Update browser to latest version
+   - Clear browser cache
+
+3. **Refresh page:**
+   - Press `F5` to reload
+   - Or `Ctrl+R`
+
+### Export Issues
+
+#### Problem: "Export failing" or "Empty export"
+
+**Solutions:**
+1. **Check selection:**
+   - Export only exports what's visible/selected
+   - Adjust filters to show desired data
+
+2. **File permissions:**
+   - Check download folder permissions
+   - Try different download location
+
+3. **Browser pop-up blocker:**
+   - Allow pop-ups for PO Companion
+   - Try export again
+
+### Getting More Help
+
+If problems persist:
+
+1. **Check Help page:**
+   - Navigate to Help
+   - Search for your issue
+
+2. **Contact support:**
+   - Email: support@yourorg.com
+   - Include:
+     - Screenshot of error
+     - Steps to reproduce
+     - Your browser and version
+     - Organization URL (not PAT!)
+
+3. **Known issues:**
+   - Check GitHub repository for known issues
+   - May be already reported/fixed
+
+---
+
+## Conclusion
+
+Congratulations! You now have a comprehensive understanding of PO Companion. 
+
+### Key Takeaways
+
+1. **Start with Dashboard** - Your daily starting point
+2. **Keep Backlog Healthy** - Maintain >90% health
+3. **Trust Velocity** - Use data for planning, not guesses
+4. **Manage Dependencies** - Make them visible and explicit
+5. **Monitor Metrics Weekly** - Consistency is key
+6. **Use Forecasts** - Set realistic stakeholder expectations
+
+### Recommended Weekly Routine
+
+- **Monday:** Dashboard review, prioritize week
+- **Wednesday:** Sprint planning with metrics
+- **Thursday:** Backlog grooming, health maintenance
+- **Friday:** Retrospective with data, weekly report
+
+### Next Steps
+
+1. Complete initial setup (TFS Config, Profiles)
+2. Run first full sync
+3. Explore Dashboard and Work Items
+4. Review one metric page per day this week
+5. Attend office hours or training sessions
+6. Join user community/forum
+
+### Feedback Welcome
+
+This manual evolves based on user feedback. If you have suggestions:
+- Email: manual-feedback@yourorg.com
+- Or submit PR to documentation repository
+
+---
+
+**Thank you for using PO Companion!**  
+*Empowering Product Owners with data-driven insights.*
+
+**Version:** 2.0  
+**Last Updated:** January 2026  
+**Manual Authors:** PO Companion Team  
+
+---
