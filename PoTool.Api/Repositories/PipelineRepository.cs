@@ -114,17 +114,6 @@ public class PipelineRepository : IPipelineRepository
     // PIPELINE DEFINITION METHODS (DATABASE)
     // ============================================
 
-    public async Task<IEnumerable<PipelineDefinitionDto>> GetAllDefinitionsAsync(CancellationToken cancellationToken = default)
-    {
-        var entities = await _context.PipelineDefinitions
-            .OrderBy(pd => pd.ProductId)
-            .ThenBy(pd => pd.RepoName)
-            .ThenBy(pd => pd.Name)
-            .ToListAsync(cancellationToken);
-
-        return entities.Select(MapToDto);
-    }
-
     public async Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByProductIdAsync(int productId, CancellationToken cancellationToken = default)
     {
         var entities = await _context.PipelineDefinitions

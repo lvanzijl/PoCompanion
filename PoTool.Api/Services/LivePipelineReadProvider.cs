@@ -13,13 +13,19 @@ namespace PoTool.Api.Services;
 public sealed class LivePipelineReadProvider : IPipelineReadProvider
 {
     private readonly ITfsClient _tfsClient;
+    private readonly IProductRepository _productRepository;
+    private readonly IRepositoryConfigRepository _repositoryConfigRepository;
     private readonly ILogger<LivePipelineReadProvider> _logger;
 
     public LivePipelineReadProvider(
         ITfsClient tfsClient,
+        IProductRepository productRepository,
+        IRepositoryConfigRepository repositoryConfigRepository,
         ILogger<LivePipelineReadProvider> logger)
     {
         _tfsClient = tfsClient;
+        _productRepository = productRepository;
+        _repositoryConfigRepository = repositoryConfigRepository;
         _logger = logger;
     }
 
@@ -91,35 +97,73 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
         return await _tfsClient.GetPipelineRunsAsync(pipelineIds, branchName, minStartTime, top, cancellationToken);
     }
 
-    public async Task<IEnumerable<PipelineDefinitionDto>> GetAllDefinitionsAsync(CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("LivePipelineReadProvider: Fetching all pipeline definitions from TFS");
-        
-        // In Live mode, we fetch pipeline definitions per repository
-        // Since TFS API doesn't have a method to get all definitions directly,
-        // we'll return empty for now as this would require knowing all repositories
-        // In practice, callers should use GetDefinitionsByProductIdAsync or GetDefinitionsByRepositoryIdAsync
-        _logger.LogWarning("GetAllDefinitionsAsync in Live mode is not fully supported - use product or repository filtering");
-        return Enumerable.Empty<PipelineDefinitionDto>();
-    }
-
     public async Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByProductIdAsync(int productId, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("LivePipelineReadProvider: Fetching pipeline definitions for product {ProductId} from TFS", productId);
         
-        // In Live mode, get all definitions and filter by product ID in-memory
-        // This is a limitation of the Live mode for now
-        _logger.LogWarning("GetDefinitionsByProductIdAsync in Live mode requires cached product-repository mapping");
-        return Enumerable.Empty<PipelineDefinitionDto>();
+        // Get repositories for the product
+        var repositories = await _repositoryConfigRepository.GetRepositoriesByProductAsync(productId, cancellationToken);
+        var repositoriesList = repositories.ToList();
+        
+        if (!repositoriesList.Any())
+        {
+            _logger.LogWarning("No repositories found for product {ProductId}", productId);
+            return Enumerable.Empty<PipelineDefinitionDto>();
+        }
+        
+        // Fetch pipeline definitions for each repository from TFS
+        var allDefinitions = new List<PipelineDefinitionDto>();
+        foreach (var repo in repositoriesList)
+        {
+            var definitions = await _tfsClient.GetPipelineDefinitionsForRepositoryAsync(repo.Name, cancellationToken);
+            
+            // Create new instances with ProductId and RepositoryId set
+            foreach (var definition in definitions)
+            {
+                var enrichedDefinition = definition with 
+                { 
+                    ProductId = productId, 
+                    RepositoryId = repo.Id 
+                };
+                allDefinitions.Add(enrichedDefinition);
+            }
+        }
+        
+        _logger.LogInformation(
+            "Fetched {Count} pipeline definitions for product {ProductId} from {RepoCount} repositories",
+            allDefinitions.Count, productId, repositoriesList.Count);
+        
+        return allDefinitions;
     }
 
     public async Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByRepositoryIdAsync(int repositoryId, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("LivePipelineReadProvider: Fetching pipeline definitions for repository {RepositoryId} from TFS", repositoryId);
         
-        // In Live mode, this would require mapping repository ID to repository name
-        // This is a limitation of the Live mode for now - requires repository lookup
-        _logger.LogWarning("GetDefinitionsByRepositoryIdAsync in Live mode requires repository ID to name mapping");
-        return Enumerable.Empty<PipelineDefinitionDto>();
+        // Get all repositories to find the repository by ID
+        var allRepositories = await _repositoryConfigRepository.GetAllRepositoriesAsync(cancellationToken);
+        var repository = allRepositories.FirstOrDefault(r => r.Id == repositoryId);
+        
+        if (repository == null)
+        {
+            _logger.LogWarning("Repository with ID {RepositoryId} not found", repositoryId);
+            return Enumerable.Empty<PipelineDefinitionDto>();
+        }
+        
+        // Fetch pipeline definitions for the repository from TFS
+        var definitions = await _tfsClient.GetPipelineDefinitionsForRepositoryAsync(repository.Name, cancellationToken);
+        
+        // Create new instances with ProductId and RepositoryId set
+        var definitionsList = definitions.Select(definition => definition with
+        {
+            ProductId = repository.ProductId,
+            RepositoryId = repositoryId
+        }).ToList();
+        
+        _logger.LogInformation(
+            "Fetched {Count} pipeline definitions for repository {RepositoryId} ({RepositoryName})",
+            definitionsList.Count, repositoryId, repository.Name);
+        
+        return definitionsList;
     }
 }
