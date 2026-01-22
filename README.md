@@ -99,6 +99,11 @@ This PR provides the **scaffolding baseline**:
 - Add configuration dialog for Area Path
 - Implement proper error handling and loading states
 
+## Documentation
+
+- **[User Manual](docs/USER_MANUAL.md)** - Complete guide for Product Owners with use cases and scenarios
+- **[Dutch Manual](docs/GEBRUIKERSHANDLEIDING.md)** - Nederlandse gebruikershandleiding
+
 ## Architecture Compliance
 
 This implementation follows:
