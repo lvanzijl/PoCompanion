@@ -12,13 +12,16 @@ namespace PoTool.Api.Services;
 public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 {
     private readonly ITfsClient _tfsClient;
+    private readonly IRepositoryConfigRepository _repositoryConfigRepository;
     private readonly ILogger<LivePullRequestReadProvider> _logger;
 
     public LivePullRequestReadProvider(
         ITfsClient tfsClient,
+        IRepositoryConfigRepository repositoryConfigRepository,
         ILogger<LivePullRequestReadProvider> logger)
     {
         _tfsClient = tfsClient;
+        _repositoryConfigRepository = repositoryConfigRepository;
         _logger = logger;
     }
 
@@ -40,16 +43,69 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
     {
         _logger.LogDebug("LivePullRequestReadProvider: Fetching pull requests by product IDs from TFS (fromDate: {FromDate})", fromDate);
         
-        // Get all pull requests with date filter and filter by product ID in-memory
-        // In Live mode, we don't have a direct way to filter by product in TFS
-        var allPullRequests = await GetAllAsync(fromDate, cancellationToken);
-        
+        // If no product IDs specified, return all PRs
         if (productIds == null || productIds.Count == 0)
         {
-            return allPullRequests;
+            _logger.LogDebug("No product IDs specified, returning all pull requests");
+            return await GetAllAsync(fromDate, cancellationToken);
         }
         
-        return allPullRequests.Where(pr => pr.ProductId.HasValue && productIds.Contains(pr.ProductId.Value));
+        // Load repository configurations for the specified products
+        var reposByProduct = await _repositoryConfigRepository.GetRepositoriesByProductIdsAsync(productIds, cancellationToken);
+        
+        if (reposByProduct.Count == 0)
+        {
+            _logger.LogWarning("No repositories configured for product IDs: {ProductIds}", string.Join(", ", productIds));
+            return Enumerable.Empty<PullRequestDto>();
+        }
+        
+        var totalRepoCount = reposByProduct.Values.Sum(repos => repos.Count);
+        _logger.LogDebug("Found {RepoCount} repositories across {ProductCount} products", totalRepoCount, reposByProduct.Count);
+        
+        // Fetch PRs for each repository and map to product
+        var allPullRequests = new List<PullRequestDto>();
+        
+        foreach (var (productId, repositories) in reposByProduct)
+        {
+            if (repositories.Count == 0)
+            {
+                _logger.LogDebug("Product {ProductId} has no configured repositories, skipping", productId);
+                continue;
+            }
+            
+            _logger.LogDebug("Fetching PRs for Product {ProductId} from {RepoCount} repositories: {RepoNames}", 
+                productId, repositories.Count, string.Join(", ", repositories.Select(r => r.Name)));
+            
+            foreach (var repo in repositories)
+            {
+                try
+                {
+                    // Fetch PRs for this specific repository
+                    var repoPullRequests = await _tfsClient.GetPullRequestsAsync(
+                        repositoryName: repo.Name,
+                        fromDate: fromDate,
+                        toDate: null,
+                        cancellationToken);
+                    
+                    // Map PRs to include ProductId based on repository-to-product mapping
+                    var mappedPRs = repoPullRequests.Select(pr => pr with { ProductId = productId });
+                    allPullRequests.AddRange(mappedPRs);
+                    
+                    _logger.LogDebug("Retrieved {Count} PRs from repository {RepoName} for Product {ProductId}", 
+                        repoPullRequests.Count(), repo.Name, productId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to fetch PRs from repository {RepoName} for Product {ProductId}", repo.Name, productId);
+                    // Continue with other repositories even if one fails
+                }
+            }
+        }
+        
+        _logger.LogInformation("Retrieved total of {Count} PRs for {ProductCount} products from {RepoCount} repositories", 
+            allPullRequests.Count, productIds.Count, totalRepoCount);
+        
+        return allPullRequests;
     }
 
     public async Task<PullRequestDto?> GetByIdAsync(int pullRequestId, CancellationToken cancellationToken = default)
