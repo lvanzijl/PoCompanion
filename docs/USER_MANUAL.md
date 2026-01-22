@@ -1428,3 +1428,1239 @@ Sarah plans Q2 work distribution for both products:
 
 ---
 
+## Velocity Dashboard
+
+### Use Case: Team Performance and Sprint Planning
+
+**What It Is:**  
+The Velocity Dashboard tracks your team's completed story points per sprint. It shows historical velocity trends, calculates averages, and provides forecasting data to help you plan future sprints realistically based on actual team performance.
+
+**Why It Matters:**  
+Velocity is the foundation of data-driven sprint planning. By tracking how much work your team actually completes sprint-over-sprint, you can make reliable commitments instead of guesses. It helps you predict when features will complete, identify capacity issues, and set realistic expectations with stakeholders.
+
+**Sub-Features:**
+- Sprint-by-sprint velocity chart
+- Rolling averages (3-sprint, 6-sprint)
+- Velocity trends (increasing, stable, decreasing)
+- Capacity vs. actual comparison
+- Team velocity comparison
+- Forecasting based on velocity
+- Anomaly detection (outlier sprints)
+- Export for reporting
+
+### Day-to-Day Usage Scenario
+
+**Scenario: Sprint Planning for Both Teams**
+
+Sarah prepares for sprint planning sessions:
+
+1. **Review Team Alpha Velocity (Product A)**
+   - Opens Velocity Dashboard
+   - Selects "Team Alpha" profile
+   - Last 6 sprints velocity:
+     - S10: 38 pts, S11: 42 pts, S12: 40 pts
+     - S13: 45 pts, S14: 38 pts, S15: 41 pts
+   - 3-sprint average: 41 points
+   - Trend: Stable (good predictability)
+
+2. **Plan Sprint 16 for Team Alpha**
+   - 3-sprint avg: 41 pts (most reliable)
+   - 6-sprint avg: 41 pts (confirms consistency)
+   - Planning decision: Commit to 40 pts (10% buffer)
+   - Rationale: One team member on vacation next sprint
+
+3. **Review Team Beta Velocity (Product B)**
+   - Switches to "Team Beta" profile
+   - Last 6 sprints:
+     - S10: 50 pts, S11: 52 pts, S12: 28 pts (outlier!)
+     - S13: 51 pts, S14: 49 pts, S15: 50 pts
+   - 3-sprint average: 50 points
+   - Anomaly detected: Sprint 12 (28 pts)
+
+4. **Investigate Anomaly**
+   - Clicks Sprint 12 bar
+   - Detail shows: Major production issue consumed 3 days
+   - Note: Team handled unplanned work, not a velocity problem
+   - Excludes S12 from planning calculations
+
+5. **Plan Sprint 16 for Team Beta**
+   - Adjusted 3-sprint avg (excluding S12): 50 pts
+   - No vacation or holidays
+   - Planning decision: Commit to 48 pts
+   - Pull 2 pts from backlog if team finishes early
+
+6. **Forecast Epic Completion**
+   - "Two-Factor Auth Epic" = 48 pts remaining
+   - Team Alpha velocity: 41 pts/sprint
+   - Forecast: 2 sprints to complete (S16-S17)
+   - Communicates to stakeholders: End of S17
+
+### How To Use Velocity Dashboard
+
+**Navigation:**
+- **Page Location:** `/velocity`
+- **Menu:** Click "Velocity Dashboard" under "Metrics"
+- **Keyboard Shortcut:** `Ctrl+V`
+
+**Step-by-Step:**
+
+1. **Open Velocity Dashboard**
+   ```
+   Navigation → Metrics → Velocity Dashboard
+   ```
+   - Chart loads showing sprint velocity history
+
+2. **Understand the Velocity Chart**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │         Team Velocity - Last 10 Sprints                 │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ 60├──────────────────────────────────────────────────   │
+   │   │                                                     │
+   │ 50│     ●═══●═══●       ●═══●═══●                      │
+   │   │                                                     │
+   │ 40│                 ●═══●                               │
+   │   │                                                     │
+   │ 30│                     ●                               │
+   │   │                                                     │
+   │ 20├──────────────────────────────────────────────────   │
+   │   S10  S11  S12  S13  S14  S15  S16  S17  S18  S19    │
+   │                                                         │
+   │   ● Actual Velocity    ─── 3-Sprint Avg (41 pts)      │
+   │   ═══ Target Capacity  ··· 6-Sprint Avg (43 pts)      │
+   └─────────────────────────────────────────────────────────┘
+   ```
+   
+   **Chart Elements:**
+   - **Blue bars:** Actual completed points per sprint
+   - **Solid line:** 3-sprint rolling average (most useful for planning)
+   - **Dotted line:** 6-sprint rolling average (trend indicator)
+   - **Orange line:** Team capacity (planned/target)
+   - **Red marker:** Anomaly/outlier sprint
+
+3. **Read Key Metrics**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ Key Metrics                                             │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │  Last Sprint:      41 points                           │
+   │  3-Sprint Avg:     41 points  →  (Stable)             │
+   │  6-Sprint Avg:     43 points  ↓  (-5% trend)          │
+   │  Std Deviation:    5.2 points                          │
+   │  Predictability:   🟢 High (±12%)                      │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+   
+   **Metric Meanings:**
+   - **Last Sprint:** Most recent completed sprint
+   - **3-Sprint Avg:** Rolling average of last 3 sprints (use for planning)
+   - **6-Sprint Avg:** Longer-term trend indicator
+   - **Std Deviation:** Consistency (lower = more predictable)
+   - **Predictability:** 
+     - 🟢 High (<15% deviation): Very reliable
+     - 🟡 Medium (15-25% deviation): Somewhat reliable
+     - 🔴 Low (>25% deviation): Unreliable, needs investigation
+
+4. **View Detailed Sprint Data**
+   ```
+   Click any sprint bar → Detail panel opens
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ Sprint 15 Details                           [×]         │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Completed:    41 points                                │
+   │ Committed:    45 points                                │
+   │ Achievement:  91%                                       │
+   │                                                         │
+   │ Work Items Completed: 12                               │
+   │  ├─ Epics:    0                                        │
+   │  ├─ Features: 2                                        │
+   │  ├─ PBIs:     8                                        │
+   │  └─ Tasks:    N/A (not counted)                        │
+   │                                                         │
+   │ Completed Items:                                        │
+   │  [PBI] Google OAuth (5 pts) ✓                         │
+   │  [PBI] Facebook Login (3 pts) ✓                       │
+   │  [PBI] Profile Edit (8 pts) ✓                         │
+   │  ... (9 more)                                          │
+   │                                                         │
+   │ [View All Items] [Export Sprint Report]                │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+5. **Filter by Team/Product**
+   ```
+   Filters:  Profile: [Team Alpha ▼]  Date Range: [Last 10 Sprints ▼]
+   ```
+   - **Profile:** Select team to view velocity
+   - **Date Range:** 
+     - Last 6 sprints (most useful)
+     - Last 10 sprints (trend analysis)
+     - Last quarter
+     - Custom range
+
+6. **Compare Multiple Teams**
+   ```
+   Click [📊 Compare Teams] button
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ Team Comparison                                         │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ 60├──────────────────────────────────────────────────   │
+   │   │          Team Beta                                  │
+   │ 50│     ●═══●═══●═══●═══●                              │
+   │   │                                                     │
+   │ 40│ ●═══●═══●═══●═══●        Team Alpha                │
+   │   │                                                     │
+   │ 30├──────────────────────────────────────────────────   │
+   │   S10  S11  S12  S13  S14  S15                         │
+   │                                                         │
+   │   ● Team Alpha (Avg: 41)   ● Team Beta (Avg: 50)      │
+   └─────────────────────────────────────────────────────────┘
+   
+   Comparison Table:
+   │ Team       │ Avg Velocity │ Trend │ Predictability │
+   ├────────────┼──────────────┼───────┼────────────────┤
+   │ Team Alpha │   41 pts     │   →   │   High 🟢      │
+   │ Team Beta  │   50 pts     │   ↑   │   High 🟢      │
+   ```
+   
+   **Important:** Don't compare teams to judge performance!
+   - Different team sizes
+   - Different story point scales
+   - Use for capacity planning only
+
+7. **Use Forecast Calculator**
+   ```
+   Click [🔮 Forecast] button
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ Velocity-Based Forecast                     [×]         │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Team: Team Alpha                                        │
+   │ Current Velocity (3-sprint avg): 41 points             │
+   │                                                         │
+   │ How much work do you want to forecast?                 │
+   │ Remaining Effort: [120] points                         │
+   │                                                         │
+   │ Forecast Results:                                       │
+   │                                                         │
+   │ ┌─────────────────────────────────────────────────┐   │
+   │ │                                                  │   │
+   │ │  Best Case:     2 sprints  (Sep 15, 2026)      │   │
+   │ │  Likely:        3 sprints  (Sep 29, 2026)      │   │
+   │ │  Worst Case:    4 sprints  (Oct 13, 2026)      │   │
+   │ │                                                  │   │
+   │ │  Based on:                                       │   │
+   │ │  ├─ High velocity: 45 pts/sprint                │   │
+   │ │  ├─ Average: 41 pts/sprint                      │   │
+   │ │  └─ Low velocity: 35 pts/sprint                 │   │
+   │ │                                                  │   │
+   │ └─────────────────────────────────────────────────┘   │
+   │                                                         │
+   │ [Export Forecast] [Close]                              │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+8. **Identify Anomalies**
+   ```
+   Sprints marked with 🔴 are anomalies
+   ```
+   - System detects outliers (>2 standard deviations from average)
+   - Hover over red marker to see why flagged
+   - Click to add notes explaining anomaly
+   - Option to exclude from calculations
+
+9. **Export Velocity Data**
+   ```
+   [📊 Export] button → Options:
+   
+   - Velocity Chart (image)
+   - Sprint Data (Excel)
+   - Planning Report (PDF)
+   - Forecast Report
+   ```
+
+**Tips:**
+- Use 3-sprint average for near-term planning
+- Use 6-sprint average for long-term trends
+- Don't plan at 100% of velocity - leave 10-15% buffer
+- Investigate anomalies - don't ignore them
+- Velocity should trend toward stable, not always increasing
+- If velocity drops consistently, investigate (not necessarily bad)
+- New team? Need 3+ sprints for reliable velocity
+- Team changes? Recalibrate velocity expectations
+- Story point scale changes? Reset velocity baseline
+
+**Velocity Anti-Patterns to Avoid:**
+- ❌ Comparing team velocities (different scales)
+- ❌ Using velocity as performance metric (encourages gaming)
+- ❌ Pushing team to increase velocity every sprint
+- ❌ Planning at exactly 100% of velocity (no buffer)
+- ❌ Ignoring anomalies instead of investigating
+- ❌ Using velocity from first 1-2 sprints (not stable yet)
+
+**Good Velocity Patterns:**
+- ✓ Stable velocity over time (predictability)
+- ✓ Low standard deviation (consistency)
+- ✓ Planning at 80-90% of velocity (sustainable)
+- ✓ Understanding and documenting anomalies
+- ✓ Using velocity for team's own planning only
+
+---
+
+## Epic Forecast
+
+### Use Case: Feature Completion Prediction
+
+**What It Is:**  
+Epic Forecast predicts when an Epic or Feature will complete based on team velocity and remaining work. It provides best-case, likely, and worst-case completion dates, helping you set realistic expectations with stakeholders and make informed trade-off decisions.
+
+**Why It Matters:**  
+Stakeholders constantly ask "When will feature X be done?" Epic Forecast gives you data-driven answers instead of guesses. It factors in team velocity variability, scope changes, and capacity to provide ranges that account for uncertainty. This helps you manage expectations and make go/no-go decisions on features.
+
+**Sub-Features:**
+- Epic/Feature selection
+- Remaining work calculation
+- Multi-scenario forecasting (best/likely/worst)
+- Confidence intervals
+- Velocity-based timeline
+- Scope change impact analysis
+- Dependency consideration
+- Forecast accuracy tracking
+
+### Day-to-Day Usage Scenario
+
+**Scenario: Stakeholder Meeting - Feature Commitment**
+
+Sarah needs to commit to feature delivery dates:
+
+1. **Executive Asks: "When will Two-Factor Auth be ready?"**
+   - Opens Epic Forecast page
+   - Selects Epic: "Two-Factor Authentication"
+   - System shows:
+     - Total effort: 48 points
+     - Completed: 12 points
+     - Remaining: 36 points
+
+2. **Review Team Velocity**
+   - Team Alpha velocity: 41 pts/sprint (3-sprint avg)
+   - Variability: ±5 points (low, good predictability)
+   - Current sprint: 15 (Feature starts Sprint 16)
+
+3. **View Forecast Results**
+   - Best case: End of Sprint 16 (2 weeks)
+     - If velocity = 46 pts (high)
+     - Assumes no scope changes
+   - Likely: End of Sprint 17 (4 weeks)
+     - If velocity = 41 pts (average)
+     - Most probable outcome: 75% confidence
+   - Worst case: End of Sprint 18 (6 weeks)
+     - If velocity = 36 pts (low)
+     - If minor scope additions
+     - Conservative estimate: 95% confidence
+
+4. **Consider Dependencies**
+   - Checks dependency graph
+   - 2 PBIs depend on "User Profile API" (different epic)
+   - User Profile API completes Sprint 16
+   - No blocking dependencies after S16
+
+5. **Make Commitment**
+   - Tells executive: "Most likely end of Sprint 17 (4 weeks)"
+   - Explains: "75% confident, assumes stable velocity"
+   - Conservative: "Could slip to Sprint 18 if scope grows"
+   - Documents commitment in forecast tool
+
+6. **Track Forecast Accuracy**
+   - After Sprint 16: 19 points completed (below avg)
+   - Remaining: 17 points (was 36, now 17)
+   - Forecast updates:
+     - Likely: Still Sprint 17 (17 pts < 41 pt capacity)
+     - High confidence: 90%
+   - On track for commitment!
+
+### How To Use Epic Forecast
+
+**Navigation:**
+- **Page Location:** `/epic-forecast` or `/epic-forecast/{epicId}`
+- **Menu:** Click "Epic Forecast" under "Metrics"
+- **Alternate:** From Work Items page → Right-click Epic → "Forecast Completion"
+
+**Step-by-Step:**
+
+1. **Open Epic Forecast Page**
+   ```
+   Navigation → Metrics → Epic Forecast
+   ```
+   - Landing page shows epic selector
+
+2. **Select Epic or Feature**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ Select Epic or Feature to Forecast                     │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Search: [🔍 Search epics...                          ] │
+   │                                                         │
+   │ Recent Forecasts:                                       │
+   │  ● Two-Factor Authentication (36 pts remaining)        │
+   │  ● Payment Integration (28 pts remaining)              │
+   │  ● Admin Dashboard (52 pts remaining)                  │
+   │                                                         │
+   │ All Epics:                                              │
+   │  [Epic] User Authentication (48 pts total)             │
+   │  [Epic] Payment System (68 pts total)                  │
+   │  [Epic] Reporting Suite (92 pts total)                 │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+   - Click epic from list OR search by name
+   - Can forecast any Epic or Feature level work item
+
+3. **View Epic Overview**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ Epic: Two-Factor Authentication                         │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Assigned Team:  Team Alpha                             │
+   │ State:          In Progress                            │
+   │ Priority:       High                                   │
+   │                                                         │
+   │ Effort Summary:                                         │
+   │  Total Effort:      48 points                          │
+   │  Completed:         12 points  (25%) ▓▓▓░░░░░░░░      │
+   │  In Progress:        8 points  (17%) ▓▓░░░░░░░░░░      │
+   │  Remaining:         28 points  (58%) ▓▓▓▓▓▓░░░░░░      │
+   │                                                         │
+   │ Work Items:                                             │
+   │  ├─ 3 Features                                         │
+   │  ├─ 12 PBIs (3 done, 2 in progress, 7 not started)   │
+   │  └─ 28 Tasks                                           │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+4. **Review Forecast Scenarios**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ Forecast Results                                        │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │  📅 LIKELY COMPLETION                                  │
+   │     September 29, 2026 (End of Sprint 17)              │
+   │     Confidence: 75%                                    │
+   │                                                         │
+   │  Scenario Breakdown:                                    │
+   │                                                         │
+   │  🟢 Best Case                                          │
+   │     September 15, 2026 (Sprint 16)                     │
+   │     • High team velocity (46 pts/sprint)               │
+   │     • No scope changes                                  │
+   │     • No blocking issues                                │
+   │     Confidence: 10%                                    │
+   │                                                         │
+   │  🟡 Likely Case                                        │
+   │     September 29, 2026 (Sprint 17)                     │
+   │     • Average velocity (41 pts/sprint)                 │
+   │     • Minor scope adjustments expected                  │
+   │     • Standard risk profile                             │
+   │     Confidence: 75%                                    │
+   │                                                         │
+   │  🔴 Worst Case                                         │
+   │     October 13, 2026 (Sprint 18)                       │
+   │     • Low velocity (36 pts/sprint)                     │
+   │     • Scope growth or technical issues                  │
+   │     • Capacity constraints                              │
+   │     Confidence: 95%                                    │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+   
+   **Understanding Confidence:**
+   - **Best Case (10%):** Only if everything goes perfectly
+   - **Likely (75%):** 3 out of 4 times, will finish by this date
+   - **Worst Case (95%):** Almost certainly done by this date
+
+5. **View Timeline Visualization**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ Completion Timeline                                     │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Today        Sprint 16      Sprint 17      Sprint 18   │
+   │   │              │              │              │        │
+   │   ●──────────────●──────────────●──────────────●       │
+   │   │              ▲              ▲              ▲        │
+   │   │           Best Case      Likely        Worst Case  │
+   │   │                                                     │
+   │   └─ 12 pts done                                        │
+   │        28 pts remaining                                 │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+6. **Analyze Velocity Assumptions**
+   ```
+   Click [📊 View Assumptions] button
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ Forecast Assumptions                        [×]         │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Team Velocity (Team Alpha):                            │
+   │  3-Sprint Average:    41 points/sprint                 │
+   │  Standard Deviation:  5 points                         │
+   │  Range:               36-46 points                     │
+   │                                                         │
+   │ Velocity History:                                       │
+   │  Sprint 13:  45 pts                                    │
+   │  Sprint 14:  38 pts                                    │
+   │  Sprint 15:  41 pts                                    │
+   │                                                         │
+   │ Assumptions:                                            │
+   │  ✓ Team composition remains stable                     │
+   │  ✓ No major holidays/vacations                         │
+   │  ✓ Current sprint load sustainable                     │
+   │  ⚠ Assumes scope freeze (no additions)                 │
+   │                                                         │
+   │ Accuracy Notes:                                         │
+   │  Most accurate when:                                    │
+   │  • Velocity is stable (✓ - 5pt std dev is good)       │
+   │  • Scope is frozen (⚠ - watch for changes)            │
+   │  • No major dependencies (check separately)             │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+7. **Test "What-If" Scenarios**
+   ```
+   Click [🧪 What-If Analysis] button
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ What-If Analysis                            [×]         │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Current Forecast: Sprint 17 (likely)                   │
+   │                                                         │
+   │ What if...                                              │
+   │                                                         │
+   │ ○ Scope increases by [10] points?                     │
+   │   Impact: Pushes to Sprint 17 (still, +0 sprints)     │
+   │                                                         │
+   │ ○ Team velocity drops to [35] pts/sprint?             │
+   │   Impact: Pushes to Sprint 18 (+1 sprint)             │
+   │                                                         │
+   │ ○ 2 team members unavailable next sprint?              │
+   │   Impact: Sprint velocity → 28 pts                     │
+   │           Pushes to Sprint 19 (+2 sprints)             │
+   │                                                         │
+   │ ○ We add 1 more developer to team?                     │
+   │   Impact: Minimal (velocity won't increase            │
+   │           immediately due to onboarding)                │
+   │                                                         │
+   │ [Calculate Impact]                                     │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+8. **Check Dependencies Impact**
+   ```
+   Dependencies Tab:
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ Dependencies Affecting Forecast                         │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Blocking Dependencies: 2                               │
+   │                                                         │
+   │ ❌ [PBI] User Profile API must complete first          │
+   │    Status: In Progress (Sprint 16)                     │
+   │    Impact: Blocks 2 PBIs (12 pts)                      │
+   │    Resolution: On track for Sprint 16                   │
+   │                                                         │
+   │ ⚠ [PBI] SMS Provider Integration                       │
+   │    Status: Vendor approval pending                      │
+   │    Impact: Blocks 1 PBI (5 pts)                        │
+   │    Risk: Could delay Sprint 17 → 18                    │
+   │                                                         │
+   │ ⚠ Forecast assumes dependencies resolve on time        │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+9. **Save and Track Forecast**
+   ```
+   [💾 Save Forecast] button
+   
+   - Saves current forecast
+   - Creates baseline for accuracy tracking
+   - Can compare actual vs. forecast later
+   - Useful for retrospectives and calibration
+   ```
+
+10. **Update Forecast**
+    ```
+    Click [🔄 Refresh Forecast] button
+    
+    - Recalculates based on latest data
+    - Updates velocity if new sprints completed
+    - Adjusts remaining work if items completed
+    - Shows what changed since last forecast
+    ```
+
+11. **Export Forecast**
+    ```
+    [📊 Export] → Options:
+    
+    - Executive Summary (PDF) - One page overview
+    - Detailed Report (PDF) - Includes assumptions, risks
+    - Timeline (Image) - Visual for presentations
+    - Data (Excel) - Raw numbers for analysis
+    ```
+
+**Tips:**
+- Update forecast weekly (after standups or sprint planning)
+- Always communicate likely case, mention worst case
+- Document assumptions when saving forecast
+- Don't hide worst-case scenarios from stakeholders
+- Track forecast accuracy to improve future predictions
+- If forecast slips repeatedly, investigate root causes
+- Frozen scope = higher accuracy
+- New team? Forecasts less reliable until velocity stabilizes
+
+**Using Forecasts in Conversations:**
+
+**Good Example:**
+> "Based on Team Alpha's velocity of 41 points per sprint, we'll most likely complete Two-Factor Auth by end of Sprint 17 (Sep 29). There's a 75% chance we hit this date. Worst case, if velocity drops or scope grows, we could slip to Sprint 18 (Oct 13), but that's only 5% likely."
+
+**Bad Example:**
+> "We'll be done in 2 weeks." (No confidence interval, unrealistic best-case)
+
+**When Forecast Changes:**
+> "Our forecast has shifted. Originally Sprint 17, now looking like Sprint 18. Reason: Scope increased by 12 points when we discovered additional security requirements. Updated likely date: Oct 13."
+
+---
+
+## State Timeline Analysis
+
+### Use Case: Work Item Lifecycle Optimization
+
+**What It Is:**  
+State Timeline Analysis visualizes how work items move through different states (New → Approved → Committed → In Progress → Done). It tracks time spent in each state, identifies bottlenecks, and compares individual work items against team averages to optimize your workflow.
+
+**Why It Matters:**  
+Understanding where work items get stuck helps you improve process efficiency. If PBIs sit "In Progress" for weeks, you might have too much WIP or hidden blockers. If items spend days in "Approved" before starting, your grooming-to-sprint handoff needs work. This analysis helps you spot and fix these issues.
+
+**Sub-Features:**
+- Visual state transition timeline
+- Time-in-state calculations
+- Cycle time vs. lead time metrics
+- Bottleneck identification
+- Team average comparisons
+- State transition analysis (which paths items take)
+- Aging work item alerts
+- Process efficiency metrics
+
+### Day-to-Day Usage Scenario
+
+**Scenario: Daily Standup - Stuck Work Item Investigation**
+
+During standup, team mentions PBI is "stuck":
+
+1. **Team Reports Issue**
+   - "PBI 12345: SMS Integration has been In Progress for 8 days"
+   - Sarah opens State Timeline page
+   - Enters work item ID: 12345
+
+2. **View Timeline**
+   - PBI lifecycle visualization shows:
+     - New: 2 days (Jan 5-7)
+     - Approved: 5 days (Jan 7-12) ⚠ Longer than average
+     - Committed: 1 day (Jan 12-13)
+     - In Progress: 8 days (Jan 13-21) ⚠ Much longer than average
+     - (Not yet Done)
+   - Total cycle time so far: 16 days
+
+3. **Compare to Team Average**
+   - Team average for PBIs:
+     - In Progress: 3 days typically
+     - Total cycle time: 7 days average
+   - This PBI: 2x longer than normal
+   - Red flag: Needs attention
+
+4. **Analyze State Transitions**
+   - Check transition history:
+     - Jan 13: New → In Progress (skipped Approved/Committed!)
+     - Jan 15: In Progress → Blocked (2 days)
+     - Jan 16: Blocked → In Progress (1 day)
+     - Jan 18: In Progress → Blocked (2 days)
+     - Jan 19: Blocked → In Progress (ongoing)
+   - Pattern: Multiple block/unblock cycles
+
+5. **Root Cause Discussion**
+   - Team discusses: External API vendor issues
+   - Blocking issues not visible in standard view
+   - Decision: Move to "Waiting" state for external dependencies
+   - Process improvement: Add "Waiting on External" state
+
+6. **Take Action**
+   - Update process to use "Waiting" state
+   - Document in State Timeline for future reference
+   - Create alert: PBIs in "In Progress" > 5 days
+
+### How To Use State Timeline
+
+**Navigation:**
+- **Page Location:** `/state-timeline` or `/state-timeline/{workItemId}`
+- **Menu:** Click "State Timeline" under "Metrics"
+- **Alternate:** From Work Items page → Right-click item → "View State Timeline"
+
+**Step-by-Step:**
+
+1. **Open State Timeline Page**
+   ```
+   Navigation → Metrics → State Timeline
+   ```
+   - Landing page shows work item selector
+
+2. **Select Work Item**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ Work Item Selection                                     │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Work Item ID: [12345          ] [Analyze]              │
+   │                                                         │
+   │ Or select from recent:                                  │
+   │  • #12345 - SMS Integration (In Progress, 8 days)      │
+   │  • #12340 - Payment UI (Done, 5 days)                  │
+   │  • #12338 - Profile Edit (Done, 12 days) ⚠            │
+   │                                                         │
+   │ Or browse aging items:                                  │
+   │  [Show items in "In Progress" > 5 days]                │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+   - Enter work item ID OR select from list
+   - Click "Analyze" to load timeline
+
+3. **View State Timeline Visualization**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ [PBI] SMS Integration (#12345)                          │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ State Timeline (16 days total):                         │
+   │                                                         │
+   │ Jan 5   Jan 7    Jan 12  J13  Jan 15 J16  Jan 18 J19  │
+   │  │        │        │      │      │    │      │    │    │
+   │  ●────────●────────●──────●──────●────●──────●────●─→  │
+   │  │   2d   │   5d   │  1d  │  2d  │ 1d │  2d  │  2d │  │
+   │ New   Approved Committed   IP  Blocked IP Blocked IP   │
+   │                                                         │
+   │ Legend:                                                 │
+   │  ● State Change   ─── Time in State   ─→ Ongoing      │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+   
+   **Timeline Elements:**
+   - **Dots (●):** State changes
+   - **Lines (───):** Time spent in state
+   - **Arrow (─→):** Currently in this state
+   - **Numbers:** Days in each state
+
+4. **View Detailed State Table**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ State History                                           │
+   ├─────────────────────────────────────────────────────────┤
+   │ State       │ Entered  │ Exited   │ Duration │ vs Avg  │
+   ├─────────────┼──────────┼──────────┼──────────┼─────────┤
+   │ New         │ Jan 5    │ Jan 7    │  2 days  │ ✓ (2d)  │
+   │ Approved    │ Jan 7    │ Jan 12   │  5 days  │ ⚠ (3d)  │
+   │ Committed   │ Jan 12   │ Jan 13   │  1 day   │ ✓ (1d)  │
+   │ In Progress │ Jan 13   │ Jan 15   │  2 days  │ ✓ (3d)  │
+   │ Blocked     │ Jan 15   │ Jan 16   │  1 day   │ - (n/a) │
+   │ In Progress │ Jan 16   │ Jan 18   │  2 days  │ ✓ (3d)  │
+   │ Blocked     │ Jan 18   │ Jan 19   │  1 day   │ - (n/a) │
+   │ In Progress │ Jan 19   │ Current  │  2 days  │ ✓ (3d)  │
+   └─────────────────────────────────────────────────────────┘
+   
+   Total time: 16 days
+   Team average for PBIs: 7 days
+   Status: ⚠ 2.3x longer than average
+   ```
+
+5. **View Cycle Time Metrics**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ Cycle Time Metrics                                      │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Lead Time:       16 days  (New → Done)                 │
+   │   This Item:     16 days (ongoing)                     │
+   │   Team Average:  10 days                               │
+   │                                                         │
+   │ Cycle Time:      12 days  (Committed → Done)           │
+   │   This Item:     12 days (ongoing)                     │
+   │   Team Average:  5 days                                │
+   │                                                         │
+   │ Active Time:     6 days   (In Progress states only)    │
+   │ Wait Time:       6 days   (Blocked, Approved, etc.)    │
+   │ Efficiency:      50%      (Active / Total)             │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+   
+   **Metric Definitions:**
+   - **Lead Time:** New → Done (total time in system)
+   - **Cycle Time:** Committed → Done (active development time)
+   - **Active Time:** Sum of "In Progress" states
+   - **Wait Time:** Sum of waiting/blocked states
+   - **Efficiency:** % of time actively worked vs. waiting
+
+6. **Compare to Team Averages**
+   ```
+   Click [📊 Team Comparison] button
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ Team Average Comparison                                 │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Time in "In Progress" State:                           │
+   │                                                         │
+   │ This Item:  ████████████████████ 8 days ⚠             │
+   │ Team Avg:   ████████ 3 days                            │
+   │ Team P90:   ████████████ 5 days                        │
+   │                                                         │
+   │ This item is in the 95th percentile (slower than       │
+   │ 95% of team's PBIs).                                   │
+   │                                                         │
+   │ Time in "Approved" State:                              │
+   │                                                         │
+   │ This Item:  ████████████ 5 days ⚠                     │
+   │ Team Avg:   ████ 3 days                                │
+   │ Team P90:   ████████ 4 days                            │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+7. **Identify Bottlenecks**
+   ```
+   [⚠ Bottleneck Analysis] section:
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ Identified Bottlenecks                                  │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ 🔴 Multiple Block/Unblock Cycles                       │
+   │    Item blocked 2 times, total 2 days blocked          │
+   │    Suggestion: Investigate root cause of blocking      │
+   │                                                         │
+   │ 🟡 Extended Time in "Approved"                         │
+   │    5 days waiting to start (67% above average)         │
+   │    Suggestion: Improve sprint planning handoff         │
+   │                                                         │
+   │ 🟢 Active development time is normal                    │
+   │    When actively worked, progresses at expected rate   │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+8. **View All State Transitions**
+   ```
+   Click [📋 Transition Log] tab
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ State Transition Log                                    │
+   ├─────────────────────────────────────────────────────────┤
+   │ Date/Time        │ From        │ To          │ By       │
+   ├──────────────────┼─────────────┼─────────────┼──────────┤
+   │ Jan 5, 10:00 AM  │ -           │ New         │ Sarah L. │
+   │ Jan 7, 2:30 PM   │ New         │ Approved    │ Sarah L. │
+   │ Jan 12, 9:00 AM  │ Approved    │ Committed   │ Sarah L. │
+   │ Jan 13, 10:15 AM │ Committed   │ In Progress │ John S.  │
+   │ Jan 15, 3:45 PM  │ In Progress │ Blocked     │ John S.  │
+   │ Jan 16, 11:00 AM │ Blocked     │ In Progress │ John S.  │
+   │ Jan 18, 4:30 PM  │ In Progress │ Blocked     │ John S.  │
+   │ Jan 19, 9:15 AM  │ Blocked     │ In Progress │ John S.  │
+   └─────────────────────────────────────────────────────────┘
+   
+   Notes/Comments:
+   • Jan 15: Blocked - Vendor API credentials not working
+   • Jan 18: Blocked - Vendor API rate limit exceeded
+   ```
+
+9. **View Aging Items Report**
+   ```
+   Click [📊 Aging Report] button (from main page)
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ Aging Work Items                                        │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Items "In Progress" > 5 days:                          │
+   │                                                         │
+   │ ID     │ Title             │ State       │ Days │ Owner│
+   │────────┼───────────────────┼─────────────┼──────┼──────│
+   │ 12345  │ SMS Integration   │ In Progress │  8🔴│ John │
+   │ 12342  │ OAuth Callback    │ In Progress │  7🟡│ Mary │
+   │ 12339  │ User Settings     │ In Progress │  6🟡│ Tom  │
+   │────────┴───────────────────┴─────────────┴──────┴──────│
+   │                                                         │
+   │ Total: 3 items need attention                          │
+   │ Average "In Progress" time: 7 days (vs 3 day target)   │
+   │                                                         │
+   │ [Export Report] [Email Team]                           │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+10. **Export Timeline**
+    ```
+    [📊 Export] → Options:
+    
+    - Timeline Image (PNG) - Visual for presentations
+    - State Report (PDF) - Detailed analysis
+    - Data (Excel) - Raw state history
+    - Comparison (Excel) - Item vs. team averages
+    ```
+
+**Tips:**
+- Review aging report weekly
+- Set alerts for items "In Progress" > 5 days
+- Use cycle time to improve sprint planning accuracy
+- Compare similar work items to identify patterns
+- High efficiency (>80%) = good process flow
+- Low efficiency (<50%) = too much waiting time
+- Blocked state should be explicit (don't hide in "In Progress")
+- Use state timeline in retrospectives to identify improvements
+
+**Process Improvement Workflow:**
+
+**Monthly Review:**
+1. Run aging items report
+2. Analyze bottleneck patterns
+3. Calculate average cycle time by work item type
+4. Identify states where items spend most time
+5. Discuss in retrospective
+6. Implement one improvement
+7. Measure impact next month
+
+**Common Bottlenecks and Fixes:**
+- **Long time in "Approved":** Improve grooming/sprint planning handoff
+- **Long time in "In Progress":** Reduce WIP limits, smaller stories
+- **Frequent "Blocked":** Better dependency management, unblock process
+- **Long cycle time:** Break down work items, reduce scope per item
+
+---
+
+## Dependency Graph
+
+### Use Case: Dependency Visualization
+
+**What It Is:**  
+The Dependency Graph visualizes relationships between work items, showing parent-child hierarchies, predecessor-successor links, and related items. It helps you understand the web of dependencies, identify critical paths, and spot blocking relationships that could delay delivery.
+
+**Why It Matters:**  
+Modern software projects have complex dependencies. Feature A can't start until Feature B completes. Epic X depends on infrastructure from Epic Y. Without visualization, these dependencies are invisible until they cause problems. The Dependency Graph makes dependencies explicit, helping you plan more effectively and avoid surprises.
+
+**Sub-Features:**
+- Interactive node-link graph
+- Multiple relationship types (parent-child, predecessor-successor, related)
+- Critical path highlighting
+- Blocking relationship identification
+- Zoom and pan navigation
+- Filter by relationship type
+- Dependency chain analysis
+- Export graph images
+
+### Day-to-Day Usage Scenario
+
+**Scenario: Release Planning - Dependency Management**
+
+Sarah plans Q2 release across both products:
+
+1. **Visualize Product A Dependencies**
+   - Opens Dependency Graph
+   - Filters to Product A epics
+   - Graph shows 5 epics, 12 features, 45 PBIs
+   - Complex web of dependencies visible
+
+2. **Identify Critical Path**
+   - Highlights critical path (longest dependency chain)
+   - Critical path: Epic "User Auth" → Epic "Payment" → Epic "Checkout"
+   - These must complete in sequence
+   - Any delay in Auth delays entire release
+
+3. **Spot Blocking Dependencies**
+   - Epic "Admin Dashboard" has red link to "User Auth"
+   - Meaning: Admin Dashboard can't start until User Auth completes
+   - User Auth currently Sprint 16-17
+   - Admin Dashboard can't start before Sprint 18
+
+4. **Analyze Cross-Product Dependencies**
+   - Switches to "All Products" view
+   - Discovers: Product B's "Shared Components" epic blocks Product A
+   - This dependency wasn't in sprint plans!
+   - Team Beta must prioritize Shared Components
+
+5. **Replan Based on Dependencies**
+   - Moves "Admin Dashboard" from Sprint 17 to Sprint 18
+   - Adds "Shared Components" to Team Beta's Sprint 15
+   - Updates stakeholder timeline: Delivery shifts 2 weeks
+
+6. **Document Dependencies**
+   - Exports graph as image for release plan documentation
+   - Shares with both teams
+   - Adds dependency notes in Azure DevOps
+
+### How To Use Dependency Graph
+
+**Navigation:**
+- **Page Location:** `/dependency-graph`
+- **Menu:** Click "Dependency Graph" under "Metrics"
+- **Alternate:** From Work Items → Right-click item → "Show Dependencies"
+
+**Step-by-Step:**
+
+1. **Open Dependency Graph**
+   ```
+   Navigation → Metrics → Dependency Graph
+   ```
+   - Graph loads showing work item relationships
+
+2. **Understand the Graph**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │                    Dependency Graph                     │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │              [Epic] User Auth                           │
+   │                      │                                  │
+   │              ┌───────┼───────┐                         │
+   │              ▼       ▼       ▼                         │
+   │         [Feature] [Feature] [Feature]                  │
+   │          Social   2FA      Password                    │
+   │          Login             Reset                        │
+   │              │                                          │
+   │              ├──────────► [Epic] Payment               │
+   │              │                 │                        │
+   │              │                 ▼                        │
+   │              │          [Epic] Checkout                 │
+   │              │                                          │
+   │              └────────────► [Epic] Admin                │
+   │                             Dashboard                   │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+   
+   **Graph Elements:**
+   - **Nodes (boxes):** Work items
+   - **Arrows (→):** Dependencies
+   - **Colors:** 
+     - Blue: Epic
+     - Green: Feature
+     - Yellow: PBI
+     - Gray: Task
+   - **Line styles:**
+     - Solid (─): Parent-child
+     - Dashed (┄): Predecessor-successor
+     - Dotted (···): Related
+
+3. **Navigate the Graph**
+   - **Zoom:** Scroll wheel or pinch gesture
+   - **Pan:** Click and drag background
+   - **Select:** Click node to highlight and show details
+   - **Focus:** Double-click node to center and show only related items
+
+4. **View Node Details**
+   ```
+   Click any node → Detail panel opens
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ [Epic] User Authentication                  [×]         │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ ID: 12300                                              │
+   │ State: In Progress                                     │
+   │ Effort: 48 points (12 complete, 36 remaining)         │
+   │                                                         │
+   │ Dependencies:                                           │
+   │                                                         │
+   │ ⬆ Parent:                                              │
+   │    [Objective] Improve User Experience                 │
+   │                                                         │
+   │ ⬇ Children (3):                                        │
+   │    [Feature] Social Login                              │
+   │    [Feature] Two-Factor Auth                           │
+   │    [Feature] Password Reset                            │
+   │                                                         │
+   │ ➡ Blocks (2):                                          │
+   │    [Epic] Payment Integration ⚠                        │
+   │    [Epic] Admin Dashboard ⚠                            │
+   │                                                         │
+   │ ⬅ Blocked By: None                                     │
+   │                                                         │
+   │ [View in Work Items] [Edit Dependencies]               │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+5. **Filter Graph**
+   ```
+   Filters (top toolbar):
+   
+   Product: [Product A ▼]
+   Type:    [All ▼]  or  [Epics] [Features] [PBIs]
+   Links:   ☑ Parent-Child  ☑ Predecessor  ☐ Related
+   State:   [Active ▼]
+   
+   [Apply Filters]
+   ```
+   
+   - **Product:** Focus on single product or view all
+   - **Type:** Show only specific work item types
+   - **Links:** Toggle relationship types
+   - **State:** Filter by work item state
+
+6. **Highlight Critical Path**
+   ```
+   Click [🔍 Show Critical Path] button
+   
+   - Longest dependency chain highlighted in red
+   - Shows minimum time to complete all dependencies
+   - Helps identify schedule risks
+   ```
+
+7. **Identify Blocking Items**
+   ```
+   Click [⚠ Show Blockers] button
+   
+   - Items blocking others highlighted in orange
+   - Shows count of items blocked by each
+   - Focus on these to unblock progress
+   ```
+
+8. **Analyze Dependency Chain**
+   ```
+   Right-click node → "Show Dependency Chain"
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ Dependency Chain for [Epic] Checkout                   │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Upstream Dependencies (must complete first):           │
+   │                                                         │
+   │ 1. [Epic] User Authentication (Sprint 16-17)           │
+   │    └─> [Feature] Social Login (Sprint 16)              │
+   │    └─> [Feature] Two-Factor Auth (Sprint 17)           │
+   │                                                         │
+   │ 2. [Epic] Payment Integration (Sprint 18)              │
+   │    └─> [Feature] Stripe API (Sprint 18)                │
+   │                                                         │
+   │ 3. [Epic] Checkout (Sprint 19) ◄── This item           │
+   │                                                         │
+   │ Downstream Dependencies (blocked by this):             │
+   │                                                         │
+   │ 4. [Epic] Order Tracking (Sprint 20)                   │
+   │ 5. [Epic] Shipping Integration (Sprint 21)             │
+   │                                                         │
+   │ Total chain length: 5 epics across 6 sprints           │
+   │ Critical path: Yes (longest chain in product)          │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+9. **Add/Edit Dependencies**
+   ```
+   Right-click node → "Edit Dependencies"
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ Edit Dependencies for [Epic] Admin Dashboard [×]       │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ This item is blocked by:                                │
+   │                                                         │
+   │ [Epic] User Authentication ✓                           │
+   │ [Remove]                                                │
+   │                                                         │
+   │ Add new predecessor:                                    │
+   │ Search: [🔍 Search work items...                     ] │
+   │ [Add Dependency]                                        │
+   │                                                         │
+   │ This item blocks:                                       │
+   │                                                         │
+   │ [Epic] Reporting Suite ✓                               │
+   │ [Remove]                                                │
+   │                                                         │
+   │ [Save] [Cancel]                                        │
+   └─────────────────────────────────────────────────────────┘
+   ```
+   - Add/remove dependencies
+   - Changes sync to Azure DevOps
+   - Graph updates immediately
+
+10. **Export Graph**
+    ```
+    [📊 Export] → Options:
+    
+    - Image (PNG/SVG) - For presentations
+    - Data (Excel) - Dependency matrix
+    - DOT Format - For external graph tools
+    - Report (PDF) - Analysis with graph image
+    ```
+
+**Tips:**
+- Review dependency graph during quarterly planning
+- Update dependencies when planning new features
+- Check critical path before making schedule commitments
+- Use graph in cross-team planning meetings
+- Color-code teams to see cross-team dependencies
+- Export graph for release documentation
+- Don't create circular dependencies (tool will warn)
+- Keep dependency links up to date (stale links mislead)
+
+**Dependency Management Best Practices:**
+
+**Do:**
+- ✓ Document dependencies early (during epic creation)
+- ✓ Review dependencies in refinement
+- ✓ Plan work to minimize dependencies
+- ✓ Work on critical path items first
+- ✓ Communicate dependencies across teams
+- ✓ Update graph when dependencies change
+
+**Don't:**
+- ✗ Ignore dependencies until sprint planning
+- ✗ Create circular dependencies (A blocks B blocks A)
+- ✗ Over-depend (every item depends on everything)
+- ✗ Hide dependencies (makes planning impossible)
+- ✗ Assume dependencies will "work out"
+
+**Common Dependency Patterns:**
+
+1. **Sequential (A → B → C):** 
+   - Clear order, easy to plan
+   - Risk: Any delay cascades
+
+2. **Fan-out (A → B, A → C, A → D):**
+   - One item blocks many
+   - Risk: A is critical bottleneck
+
+3. **Fan-in (A → C, B → C):**
+   - Many items must complete before C
+   - Risk: Coordination required
+
+4. **Diamond (A → B, A → C, B → D, C → D):**
+   - Complex coordination
+   - Risk: High probability of delays
+
+---
+
