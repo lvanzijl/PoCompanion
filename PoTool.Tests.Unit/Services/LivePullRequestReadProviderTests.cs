@@ -14,6 +14,8 @@ namespace PoTool.Tests.Unit.Services;
 [TestClass]
 public class LivePullRequestReadProviderTests
 {
+    private static readonly DateTimeOffset FixedTestTime = new DateTimeOffset(2026, 1, 15, 12, 0, 0, TimeSpan.Zero);
+    
     private Mock<ITfsClient> _mockTfsClient = null!;
     private Mock<IRepositoryConfigRepository> _mockRepositoryConfigRepository = null!;
     private Mock<ILogger<LivePullRequestReadProvider>> _mockLogger = null!;
@@ -166,8 +168,8 @@ public class LivePullRequestReadProviderTests
         {
             { productId, new List<RepositoryDto>
                 {
-                    new RepositoryDto(1, productId, "Repo1", DateTimeOffset.UtcNow),
-                    new RepositoryDto(2, productId, "Repo2", DateTimeOffset.UtcNow)
+                    new RepositoryDto(1, productId, "Repo1", FixedTestTime),
+                    new RepositoryDto(2, productId, "Repo2", FixedTestTime)
                 }
             }
         };
@@ -242,12 +244,12 @@ public class LivePullRequestReadProviderTests
         {
             { 1, new List<RepositoryDto>
                 {
-                    new RepositoryDto(1, 1, "Product1Repo1", DateTimeOffset.UtcNow)
+                    new RepositoryDto(1, 1, "Product1Repo1", FixedTestTime)
                 }
             },
             { 3, new List<RepositoryDto>
                 {
-                    new RepositoryDto(3, 3, "Product3Repo1", DateTimeOffset.UtcNow)
+                    new RepositoryDto(3, 3, "Product3Repo1", FixedTestTime)
                 }
             }
         };
@@ -339,7 +341,7 @@ public class LivePullRequestReadProviderTests
         {
             { productId, new List<RepositoryDto>
                 {
-                    new RepositoryDto(1, productId, "TestRepo", DateTimeOffset.UtcNow)
+                    new RepositoryDto(1, productId, "TestRepo", FixedTestTime)
                 }
             }
         };
@@ -383,7 +385,7 @@ public class LivePullRequestReadProviderTests
         {
             { productId, new List<RepositoryDto>
                 {
-                    new RepositoryDto(1, productId, "TestRepo", DateTimeOffset.UtcNow)
+                    new RepositoryDto(1, productId, "TestRepo", FixedTestTime)
                 }
             }
         };
