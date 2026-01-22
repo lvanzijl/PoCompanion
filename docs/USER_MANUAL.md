@@ -2664,3 +2664,694 @@ Sarah plans Q2 release across both products:
 
 ---
 
+## PR Insights
+
+### Use Case: Code Review Process Optimization
+
+**What It Is:**  
+PR Insights analyzes your pull request metrics from the last 6 months, tracking time open, iteration counts, file changes, and linking PRs to work items. It helps you optimize the code review process, identify bottlenecks, and ensure PRs are efficiently merged.
+
+**Why It Matters:**  
+Long-lived PRs create integration problems, slow feature delivery, and frustrate developers. By tracking PR metrics, you can identify patterns: Are PRs too large? Do certain developers' PRs languish? Is the review process efficient? This data helps you improve team collaboration and delivery speed.
+
+**Sub-Features:**
+- PR metrics dashboard (last 6 months)
+- Time-to-merge tracking
+- Iteration count analysis
+- File change size metrics
+- Work item linking (via AB#[ID] convention)
+- Reviewer response time
+- PR age alerts
+- Team comparison views
+
+### Day-to-Day Usage Scenario
+
+**Scenario: Retrospective - Improving Code Review Process**
+
+During sprint retrospective, team discusses slow PR merges:
+
+1. **Review PR Metrics**
+   - Opens PR Insights page
+   - Last sprint stats:
+     - Average time to merge: 4.5 days
+     - Average iterations: 3.2 (reviews + changes)
+     - 8 PRs merged, 3 still open
+
+2. **Identify Problem Pattern**
+   - Sorts PRs by "time open"
+   - Top 3 PRs open for 8+ days:
+     - PR #245: Authentication refactor (12 files, 8 days)
+     - PR #242: Payment integration (18 files, 9 days)
+     - PR #238: Database migration (25 files, 11 days)
+   - Pattern: Large PRs (>10 files) take 2x longer
+
+3. **Analyze Iteration Counts**
+   - PRs with 4+ review iterations take longest
+   - Root cause discussion:
+     - Large PRs hard to review thoroughly
+     - Reviewers overwhelmed by size
+     - Multiple rounds of feedback
+
+4. **Team Decision**
+   - New team agreement: Max 5 files per PR
+   - Break large features into smaller PRs
+   - Target: <3 days time-to-merge
+   - Target: <2 review iterations
+
+5. **Set Up Monitoring**
+   - Adds PR Insights to weekly standup agenda
+   - Track trend over next month
+   - Measure if agreement improves metrics
+
+6. **Link PRs to Work Items**
+   - Reviews which PRs lack work item links
+   - Reminds team: Use "AB#12345" in PR descriptions
+   - Ensures PRs traceable to features/bugs
+
+### How To Use PR Insights
+
+**Navigation:**
+- **Page Location:** `/pr-insights`
+- **Menu:** Click "PR Insights" under "DevOps Insights"
+- **Keyboard Shortcut:** None
+
+**Step-by-Step:**
+
+1. **Open PR Insights Page**
+   ```
+   Navigation → DevOps Insights → PR Insights
+   ```
+   - Dashboard loads showing PR metrics
+
+2. **View Key Metrics**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │               PR Insights - Last 6 Months               │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
+   │  │ Avg Time    │  │ Avg         │  │ PRs Merged  │   │
+   │  │ to Merge    │  │ Iterations  │  │ This Month  │   │
+   │  │  4.5 days   │  │    3.2      │  │     42      │   │
+   │  │    ↑ +0.8   │  │    ↑ +0.5   │  │    ↓ -8     │   │
+   │  └─────────────┘  └─────────────┘  └─────────────┘   │
+   │                                                         │
+   │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
+   │  │ Avg Files   │  │ Open PRs    │  │ Reviewers   │   │
+   │  │ Changed     │  │ > 5 days    │  │ Avg/PR      │   │
+   │  │    8.3      │  │      5      │  │    2.1      │   │
+   │  │    → stable │  │    ⚠ +2    │  │    ↑ +0.3   │   │
+   │  └─────────────┘  └─────────────┘  └─────────────┘   │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+3. **View PR Trends Chart**
+   ```
+   Time to Merge Trend (Last 3 Months)
+   
+   Days
+    10├────────────────────────────────────────────
+      │                              ●
+     8│                        ●  ●
+      │                  ●  ●          
+     6│            ●  ●                    ●
+      │      ●  ●                    ●  ●
+     4│●  ●                                    ●──●
+      │
+     2├────────────────────────────────────────────
+      Oct      Nov      Dec      Jan      Feb
+   
+   ⚠ Trend: Time to merge increasing
+   ```
+
+4. **View PR List**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ Pull Requests                                           │
+   ├─────────────────────────────────────────────────────────┤
+   │ PR#  │ Title              │ Days │ Iter │ Files │ WI   │
+   ├──────┼────────────────────┼──────┼──────┼───────┼──────┤
+   │ 245⚠│ Auth refactor      │  8   │  4   │  12   │12345│
+   │ 243 │ Fix login bug      │  2   │  1   │   3   │12340│
+   │ 242⚠│ Payment API        │  9   │  5   │  18   │12338│
+   │ 240 │ Update deps        │  1   │  1   │   1   │  -  │
+   │ 238🔴 DB migration        │ 11   │  6   │  25   │12335│
+   └─────────────────────────────────────────────────────────┘
+   
+   Legend: ⚠ > 5 days open   🔴 > 10 days open
+   ```
+   
+   - Click column headers to sort
+   - Click PR to view details
+
+5. **View PR Details**
+   ```
+   Click PR #245 →
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ PR #245: Authentication Refactoring         [×]         │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Author: John Smith                                      │
+   │ Created: Jan 14, 2026                                  │
+   │ Status: Open (8 days)                                  │
+   │                                                         │
+   │ Work Item: [PBI] Modernize Auth (#12345)               │
+   │                                                         │
+   │ Metrics:                                                │
+   │  Files Changed:     12                                  │
+   │  Lines Added:       +342                                │
+   │  Lines Deleted:     -156                                │
+   │  Review Iterations: 4                                   │
+   │                                                         │
+   │ Timeline:                                               │
+   │  Jan 14: Created                                        │
+   │  Jan 15: First review by Mary (requested changes)      │
+   │  Jan 16: Updated by John                                │
+   │  Jan 17: Second review by Tom (requested changes)      │
+   │  Jan 18: Updated by John                                │
+   │  Jan 19: Third review by Mary (approved)               │
+   │  Jan 20: Fourth review by Tom (requested changes)      │
+   │  Jan 21: Updated by John (pending review)              │
+   │                                                         │
+   │ [View in Azure DevOps] [View Work Item]                │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+6. **Filter PRs**
+   ```
+   Filters:  
+   
+   Status:     [All ▼]  (All, Open, Merged, Closed)
+   Author:     [All ▼]  (Team members)
+   Time Open:  [All ▼]  (< 3 days, 3-5 days, > 5 days)
+   Work Item:  ☐ Linked  ☐ Unlinked
+   
+   [Apply Filters]
+   ```
+
+7. **View Team Comparison**
+   ```
+   Click [📊 Team Comparison] tab
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ PR Metrics by Team Member                               │
+   ├─────────────────────────────────────────────────────────┤
+   │ Author   │ PRs  │ Avg Days │ Avg Iter │ Avg Files     │
+   ├──────────┼──────┼──────────┼──────────┼───────────────┤
+   │ John S.  │  18  │   5.2⚠  │   3.8    │   11.2⚠      │
+   │ Mary T.  │  24  │   3.1✓  │   2.4✓  │    6.5✓      │
+   │ Tom R.   │  16  │   4.8    │   3.2    │    8.1       │
+   │ Sarah L. │   8  │   2.9✓  │   2.1✓  │    4.2✓      │
+   └─────────────────────────────────────────────────────────┘
+   
+   Insights:
+   • John's PRs tend to be larger and take longer
+   • Mary consistently creates small, fast-merging PRs
+   • Consider sharing Mary's PR practices with team
+   ```
+   
+   **Important:** Use for process improvement, not performance evaluation
+
+8. **Identify Unlinked PRs**
+   ```
+   Click [⚠ Unlinked PRs] button
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ PRs Without Work Item Links                             │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ 8 PRs do not reference work items                       │
+   │                                                         │
+   │ PR#  │ Title                    │ Author  │ Status     │
+   │──────┼──────────────────────────┼─────────┼────────────│
+   │ 240  │ Update dependencies      │ John S. │ Merged    │
+   │ 236  │ Fix typo in README       │ Tom R.  │ Merged    │
+   │ 233  │ Refactor utils           │ Mary T. │ Open      │
+   │                                                         │
+   │ Reminder: Use "AB#12345" in PR description to link     │
+   │ PRs to work items for better traceability.              │
+   │                                                         │
+   │ [Close]                                                 │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+9. **Export PR Report**
+   ```
+   [📊 Export] → Options:
+   
+   - Summary Report (PDF) - Key metrics
+   - PR List (Excel) - All PRs with details
+   - Team Report (PDF) - By-author metrics
+   - Trends (Image) - Charts for presentations
+   ```
+
+**Tips:**
+- Review PR metrics weekly
+- Target <3 days average time-to-merge
+- Keep PRs small (<10 files ideal)
+- Link all PRs to work items using "AB#[WorkItemId]"
+- <2 review iterations indicates good quality
+- Discuss PR patterns in retrospectives
+- Don't use metrics to evaluate individuals
+- Focus on process improvement, not blame
+
+**PR Best Practices:**
+
+**Good PR Habits:**
+- ✓ Small, focused changes (one feature/fix)
+- ✓ Clear description with "AB#[ID]" link
+- ✓ Self-review before requesting review
+- ✓ Request 1-2 specific reviewers
+- ✓ Respond to feedback promptly
+
+**PR Anti-Patterns:**
+- ✗ Large PRs (>15 files) - hard to review
+- ✗ Multiple unrelated changes in one PR
+- ✗ No description or context
+- ✗ No work item link
+- ✗ Ignoring reviewer feedback
+
+---
+
+## Pipeline Insights
+
+### Use Case: CI/CD Health Monitoring
+
+**What It Is:**  
+Pipeline Insights monitors your build and release pipeline health metrics, including success rates, build durations, and failing pipelines. It helps you maintain reliable CI/CD, identify flaky tests or infrastructure issues, and improve build performance.
+
+**Why It Matters:**  
+Broken pipelines block feature delivery. Long build times slow iteration speed. Flaky tests erode confidence. Pipeline Insights gives you visibility into CI/CD health, helping you prioritize fixes and maintain fast, reliable deployments that support continuous delivery.
+
+**Sub-Features:**
+- Build success rate tracking
+- Build duration trends
+- Failing pipeline identification
+- Flaky test detection
+- Pipeline performance metrics
+- Historical trend analysis
+- Alert configuration
+- Team pipeline comparison
+
+### Day-to-Day Usage Scenario
+
+**Scenario: Monday Morning CI/CD Health Check**
+
+Sarah checks pipeline health at start of week:
+
+1. **Dashboard Review**
+   - Opens Pipeline Insights
+   - Overall success rate: 87% (down from 93% last week)
+   - Red flag: Something changed
+
+2. **Identify Failing Pipelines**
+   - 3 pipelines failing consistently:
+     - "Product A - Main Build": 12 failures in 20 runs (60%)
+     - "Product B - Integration Tests": 3 failures in 15 runs (80%)
+     - "Deployment - Staging": 5 failures in 10 runs (50%)
+
+3. **Investigate Main Build Failures**
+   - Clicks "Product A - Main Build"
+   - Failure pattern: Started Jan 17
+   - Error: "npm install timeout"
+   - 10 builds affected
+   - Root cause: New dependency added, large size
+
+4. **Investigate Integration Test Failures**
+   - Clicks "Product B - Integration Tests"
+   - Flaky test detected: "Login_Successful_Test"
+   - Passes some runs, fails others (intermittent)
+   - Root cause: Race condition in test
+
+5. **Take Action**
+   - Product A: Update dependency to smaller alternative
+   - Product B: Quarantine flaky test, assign developer to fix
+   - Staging deploy: Infrastructure issue, escalate to DevOps
+
+6. **Set Up Alerts**
+   - Configures alert: Success rate < 85%
+   - Email notification to team
+   - Prevents pipeline degradation
+
+### How To Use Pipeline Insights
+
+**Navigation:**
+- **Page Location:** `/pipeline-insights`
+- **Menu:** Click "Pipeline Insights" under "DevOps Insights"
+- **Keyboard Shortcut:** None
+
+**Step-by-Step:**
+
+1. **Open Pipeline Insights**
+   ```
+   Navigation → DevOps Insights → Pipeline Insights
+   ```
+   - Dashboard loads with pipeline health metrics
+
+2. **View Key Metrics**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │          Pipeline Health - Last 30 Days                 │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
+   │  │ Success     │  │ Avg Build   │  │ Total       │   │
+   │  │ Rate        │  │ Duration    │  │ Builds      │   │
+   │  │    87%      │  │   8.2 min   │  │    248      │   │
+   │  │  ↓ -6%⚠   │  │   ↑ +1.3m   │  │   ↑ +12     │   │
+   │  └─────────────┘  └─────────────┘  └─────────────┘   │
+   │                                                         │
+   │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
+   │  │ Failing     │  │ Flaky       │  │ Longest     │   │
+   │  │ Pipelines   │  │ Tests       │  │ Build       │   │
+   │  │      3      │  │      5      │  │   24 min    │   │
+   │  │   ⚠ +1     │  │   ⚠ +2     │  │   🔴 slow   │   │
+   │  └─────────────┘  └─────────────┘  └─────────────┘   │
+   │                                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+3. **View Success Rate Trend**
+   ```
+   Success Rate Trend - Last 90 Days
+   
+   100%├────────────────────────────────────────────
+       │  ●──●──●──●
+    95%│              ●
+       │                ●──●
+    90%│                      ●
+       │                        ●──●
+    85%│                              ●──●
+       │
+    80%├────────────────────────────────────────────
+       Nov      Dec      Jan      Feb
+   
+   ⚠ Declining trend since Jan 17
+   ```
+
+4. **View Pipeline List**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ Pipelines                                               │
+   ├─────────────────────────────────────────────────────────┤
+   │ Pipeline Name           │ Success│ Runs │ Avg Time    │
+   ├─────────────────────────┼────────┼──────┼─────────────┤
+   │ Product A - Main Build🔴 │  60%  │  20  │  12.5 min  │
+   │ Product A - Unit Tests   │  98%  │  20  │   4.2 min  │
+   │ Product B - Main Build   │  93%  │  15  │   9.8 min  │
+   │ Product B - Int Tests⚠  │  80%  │  15  │   8.5 min  │
+   │ Deployment - Staging🔴   │  50%  │  10  │  15.2 min  │
+   │ Deployment - Production  │ 100%  │   5  │  18.0 min  │
+   └─────────────────────────────────────────────────────────┘
+   
+   Legend: 🔴 < 70%   ⚠ 70-90%   ✓ > 90%
+   ```
+
+5. **View Pipeline Details**
+   ```
+   Click "Product A - Main Build" →
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ Pipeline: Product A - Main Build            [×]         │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Success Rate: 60% (12/20 runs) 🔴                      │
+   │ Avg Duration: 12.5 minutes                             │
+   │                                                         │
+   │ Recent Runs:                                            │
+   │ Jan 22  ●  Success    (11.2 min)                       │
+   │ Jan 22  ✗  Failed     (8.3 min) - npm timeout          │
+   │ Jan 21  ✗  Failed     (8.5 min) - npm timeout          │
+   │ Jan 21  ●  Success    (12.1 min)                       │
+   │ Jan 20  ✗  Failed     (8.2 min) - npm timeout          │
+   │ Jan 20  ●  Success    (11.8 min)                       │
+   │ ...                                                     │
+   │                                                         │
+   │ Common Failure Reasons:                                 │
+   │  ├─ npm install timeout (10 occurrences) ⚠            │
+   │  ├─ Test "Auth_Test" failed (1 occurrence)             │
+   │  └─ Out of disk space (1 occurrence)                   │
+   │                                                         │
+   │ Failure Pattern:                                        │
+   │  Failures started: Jan 17                              │
+   │  Trigger: Commit #abc123 (added new dependency)        │
+   │                                                         │
+   │ [View in Azure DevOps] [View Related Commits]          │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+6. **Identify Flaky Tests**
+   ```
+   Click [⚠ Flaky Tests] tab
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ Flaky Tests Detected                                    │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Test Name                │ Pass Rate │ Last Fail      │
+   ├──────────────────────────┼───────────┼────────────────┤
+   │ Login_Successful_Test    │   65%⚠   │ Jan 21        │
+   │ Payment_Process_Test     │   80%⚠   │ Jan 19        │
+   │ Profile_Update_Test      │   75%⚠   │ Jan 18        │
+   │ Search_Results_Test      │   85%    │ Jan 15        │
+   │ Notification_Send_Test   │   90%    │ Jan 12        │
+   └─────────────────────────────────────────────────────────┘
+   
+   Flaky Test Definition: Pass rate between 50-95%
+   
+   Recommendation: Quarantine or fix flaky tests
+   They erode confidence in CI/CD pipeline.
+   ```
+
+7. **View Build Duration Trends**
+   ```
+   Build Duration Trend
+   
+   Min
+    20├────────────────────────────────────────────
+      │                                    ●
+    16│                              ●  ●
+      │                        ●  ●
+    12│                  ●  ●              ●──●──●
+      │            ●  ●
+     8│      ●  ●
+      │●  ●
+     4├────────────────────────────────────────────
+      Dec      Jan      Feb
+   
+   ⚠ Duration increasing - investigate performance
+   ```
+
+8. **Filter Pipelines**
+   ```
+   Filters:
+   
+   Product:     [All ▼]
+   Status:      [All ▼]  (Passing, Failing, Flaky)
+   Duration:    [All ▼]  (< 5min, 5-15min, > 15min)
+   Date Range:  [Last 30 days ▼]
+   
+   [Apply Filters]
+   ```
+
+9. **Configure Alerts**
+   ```
+   Click [🔔 Configure Alerts] button
+   
+   ┌─────────────────────────────────────────────────────────┐
+   │ Pipeline Alerts Configuration           [×]             │
+   ├─────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ Alert Conditions:                                       │
+   │                                                         │
+   │ ☑ Success rate drops below [85]%                       │
+   │ ☑ Build duration exceeds [20] minutes                  │
+   │ ☑ Pipeline fails [3] consecutive times                 │
+   │ ☑ Flaky test detected (pass rate 50-95%)               │
+   │ ☐ New failing test detected                             │
+   │                                                         │
+   │ Notification Method:                                    │
+   │ ☑ Email team                                           │
+   │ ☑ Show in dashboard                                    │
+   │ ☐ Send Slack message                                   │
+   │                                                         │
+   │ Recipients:                                             │
+   │ [sarah@company.com; team@company.com              ]   │
+   │                                                         │
+   │ [Save] [Cancel]                                        │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+10. **Export Pipeline Report**
+    ```
+    [📊 Export] → Options:
+    
+    - Health Summary (PDF) - Overview metrics
+    - Pipeline Details (Excel) - All pipelines
+    - Failure Analysis (PDF) - Common failures
+    - Trends (Image) - Charts for presentations
+    ```
+
+**Tips:**
+- Check pipeline health Monday morning
+- Target >95% success rate
+- Fix failing pipelines immediately
+- Quarantine flaky tests until fixed
+- Optimize slow builds (target <10 min)
+- Set up alerts for degradation
+- Track duration trends - builds often slow over time
+- Investigate sudden success rate drops
+- Keep build agents healthy and updated
+
+**Pipeline Health Best Practices:**
+
+**Healthy CI/CD:**
+- ✓ >95% success rate
+- ✓ <10 minute build times
+- ✓ No flaky tests (100% or 0%)
+- ✓ Fast feedback (<5 min for unit tests)
+- ✓ Automated rollback on failure
+
+**Pipeline Anti-Patterns:**
+- ✗ Ignoring failing builds
+- ✗ Accepting flaky tests as "normal"
+- ✗ Slow builds (>20 min) that block developers
+- ✗ Manual intervention required
+- ✗ No monitoring or alerts
+
+---
+
+## Settings Pages
+
+### Manage Products
+
+**Page Location:** `/settings/products`
+
+**Purpose:** Configure all products across your organization. Add new products, edit existing ones, and identify orphaned products not assigned to any Product Owner.
+
+**How To Use:**
+
+1. **View Products**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ Manage Products                                         │
+   ├─────────────────────────────────────────────────────────┤
+   │ Product Name        │ Area Paths       │ PO     │ Edit │
+   ├─────────────────────┼──────────────────┼────────┼──────┤
+   │ Mobile App          │ Project\Mobile   │ Sarah  │ [✏] │
+   │ Web Portal          │ Project\Web      │ Sarah  │ [✏] │
+   │ Admin Dashboard     │ Project\Admin    │ (None) │ [✏] │
+   │                                                         │
+   │ [+ Add Product]                                         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+2. **Add Product**
+   - Click "+ Add Product"
+   - Fill in: Name, Description, Area Path(s)
+   - Optionally assign Product Owner
+   - Save
+
+3. **Edit Product**
+   - Click edit button
+   - Update fields
+   - Save changes
+
+4. **Orphaned Products**
+   - Products without PO shown in yellow
+   - Assign PO to activate metrics tracking
+
+### Manage Teams
+
+**Page Location:** `/settings/teams`
+
+**Purpose:** Manage team configurations, add new teams, show/hide archived teams. Teams are used for filtering in metrics and analytics.
+
+**How To Use:**
+
+1. **View Teams**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ Manage Teams                                            │
+   ├─────────────────────────────────────────────────────────┤
+   │ Team Name    │ Members │ Product      │ Active │ Edit  │
+   ├──────────────┼─────────┼──────────────┼────────┼───────┤
+   │ Team Alpha   │    5    │ Mobile App   │   ✓    │ [✏]  │
+   │ Team Beta    │    7    │ Web Portal   │   ✓    │ [✏]  │
+   │ Team Gamma   │    3    │ Mobile App   │   ✗    │ [✏]  │
+   │                                                         │
+   │ [+ Add Team]  [☐ Show Archived]                        │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+2. **Add Team**
+   - Click "+ Add Team"
+   - Enter: Name, Member count, Associated product
+   - Set active status
+   - Save
+
+3. **Archive Team**
+   - Edit team
+   - Uncheck "Active"
+   - Team hidden from most filters but data preserved
+
+4. **Show Archived**
+   - Check "Show Archived" to see inactive teams
+   - Useful for historical analysis
+
+### Manage Product Owner
+
+**Page Location:** `/settings/productowner/{ProfileId}` or `/settings/productowner/edit/{ProfileId}`
+
+**Purpose:** View and edit Product Owner profile information, including name, email, and product assignments.
+
+**How To Use:**
+
+1. **View Profile**
+   - Shows: Name, Email, Products managed
+   - Click "Edit" to modify
+
+2. **Edit Profile**
+   - Update name, email
+   - Add/remove product assignments
+   - Save changes
+
+### Work Item States
+
+**Page Location:** `/settings/workitem-states`
+
+**Purpose:** Configure work item state mappings and validation rules. Map Azure DevOps states to PO Companion's workflow states.
+
+**How To Use:**
+
+1. **View State Mappings**
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │ Work Item State Configuration                           │
+   ├─────────────────────────────────────────────────────────┤
+   │ Azure DevOps State  │ PO Companion State │ Validation │
+   ├─────────────────────┼────────────────────┼────────────┤
+   │ New                 │ New                │ Required   │
+   │ Approved            │ Approved           │ Optional   │
+   │ Committed           │ Committed          │ Required   │
+   │ In Progress         │ In Progress        │ Required   │
+   │ Done                │ Done               │ Required   │
+   │ Removed             │ Closed             │ Optional   │
+   └─────────────────────────────────────────────────────────┘
+   ```
+
+2. **Edit Mappings**
+   - Click state to edit
+   - Map to standard workflow state
+   - Set validation requirements
+   - Save
+
+3. **Validation Rules**
+   - "Required": State must exist for work items
+   - "Optional": State can be skipped in workflow
+   - Affects validation score calculations
+
+---
+
