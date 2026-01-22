@@ -67,6 +67,38 @@ public class PipelineRepository : IPipelineRepository
         }
     }
 
+    public Task<IEnumerable<PipelineRunDto>> GetRunsForPipelinesAsync(
+        IEnumerable<int> pipelineIds,
+        string? branchName = null,
+        DateTimeOffset? minStartTime = null,
+        int top = 100,
+        CancellationToken cancellationToken = default)
+    {
+        lock (_lock)
+        {
+            var pipelineIdSet = new HashSet<int>(pipelineIds);
+            var filteredRuns = _runs
+                .Where(r => pipelineIdSet.Contains(r.PipelineId));
+
+            if (!string.IsNullOrEmpty(branchName))
+            {
+                filteredRuns = filteredRuns.Where(r => r.Branch == branchName);
+            }
+
+            if (minStartTime.HasValue)
+            {
+                filteredRuns = filteredRuns.Where(r => r.StartTime.HasValue && r.StartTime.Value >= minStartTime.Value);
+            }
+
+            var result = filteredRuns
+                .GroupBy(r => r.PipelineId)
+                .SelectMany(g => g.OrderByDescending(r => r.StartTime).Take(top))
+                .ToList();
+
+            return Task.FromResult<IEnumerable<PipelineRunDto>>(result);
+        }
+    }
+
 
     public Task ClearAllAsync(CancellationToken cancellationToken = default)
     {

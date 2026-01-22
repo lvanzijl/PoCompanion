@@ -1003,6 +1003,44 @@ public class BattleshipMockDataFacade : ITfsClient
         return Task.FromResult<IEnumerable<PipelineRunDto>>(result);
     }
 
+    public Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
+        IEnumerable<int> pipelineIds,
+        string? branchName = null,
+        DateTimeOffset? minStartTime = null,
+        int top = 100,
+        CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation(
+            "Mock TFS client: GetPipelineRunsAsync called for {Count} pipelines with filters (branch: {Branch}, minTime: {MinTime})",
+            pipelineIds.Count(), branchName ?? "none", minStartTime?.ToString("o") ?? "none");
+
+        var allRuns = GetMockPipelineRuns();
+        var pipelineIdSet = new HashSet<int>(pipelineIds);
+        
+        var filtered = allRuns.Where(r => pipelineIdSet.Contains(r.PipelineId));
+        
+        // Apply filters
+        if (!string.IsNullOrEmpty(branchName))
+        {
+            filtered = filtered.Where(r => r.Branch == branchName);
+        }
+        
+        if (minStartTime.HasValue)
+        {
+            filtered = filtered.Where(r => r.StartTime.HasValue && r.StartTime.Value >= minStartTime.Value);
+        }
+        
+        // Take top N per pipeline
+        var result = filtered
+            .GroupBy(r => r.PipelineId)
+            .SelectMany(g => g.OrderByDescending(r => r.StartTime).Take(top))
+            .ToList();
+        
+        _logger.LogInformation("Mock TFS client: Returning {Count} pipeline runs", result.Count);
+        return Task.FromResult<IEnumerable<PipelineRunDto>>(result);
+    }
+
 
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsByRootIdsAsync(
         int[] rootWorkItemIds,

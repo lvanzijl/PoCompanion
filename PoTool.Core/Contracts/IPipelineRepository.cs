@@ -31,6 +31,22 @@ public interface IPipelineRepository
     Task<IEnumerable<PipelineRunDto>> GetAllRunsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves pipeline runs for multiple pipelines with optional filtering.
+    /// More efficient than GetAllRunsAsync when working with specific pipelines.
+    /// </summary>
+    /// <param name="pipelineIds">Collection of pipeline IDs to get runs for.</param>
+    /// <param name="branchName">Optional branch name to filter by.</param>
+    /// <param name="minStartTime">Optional minimum start time to filter by.</param>
+    /// <param name="top">Maximum number of runs to retrieve per pipeline.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IEnumerable<PipelineRunDto>> GetRunsForPipelinesAsync(
+        IEnumerable<int> pipelineIds,
+        string? branchName = null,
+        DateTimeOffset? minStartTime = null,
+        int top = 100,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Clears all cached pipeline data.
     /// </summary>
     Task ClearAllAsync(CancellationToken cancellationToken = default);

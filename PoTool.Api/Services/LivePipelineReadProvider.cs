@@ -76,6 +76,21 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
         return allRuns;
     }
 
+    public async Task<IEnumerable<PipelineRunDto>> GetRunsForPipelinesAsync(
+        IEnumerable<int> pipelineIds,
+        string? branchName = null,
+        DateTimeOffset? minStartTime = null,
+        int top = 100,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug(
+            "LivePipelineReadProvider: Fetching pipeline runs for {Count} pipelines with filters (branch: {Branch}, minTime: {MinTime})",
+            pipelineIds.Count(), branchName ?? "none", minStartTime?.ToString("o") ?? "none");
+        
+        // Use the new bulk method with filtering from TFS client
+        return await _tfsClient.GetPipelineRunsAsync(pipelineIds, branchName, minStartTime, top, cancellationToken);
+    }
+
     public async Task<IEnumerable<PipelineDefinitionDto>> GetAllDefinitionsAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("LivePipelineReadProvider: Fetching all pipeline definitions from TFS");

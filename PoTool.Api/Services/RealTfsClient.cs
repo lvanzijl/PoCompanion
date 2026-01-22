@@ -3607,6 +3607,115 @@ public class RealTfsClient : ITfsClient
         }, cancellationToken);
     }
 
+    public async Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
+        IEnumerable<int> pipelineIds,
+        string? branchName = null,
+        DateTimeOffset? minStartTime = null,
+        int top = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+        var config = entity!;
+
+        // Use auth-mode-specific HttpClient (requirement #2)
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            var allRuns = new List<PipelineRunDto>();
+            var pipelineIdsList = pipelineIds.ToList();
+
+            // Separate build and release pipeline IDs
+            var buildIds = pipelineIdsList.Where(id => id < ReleaseIdOffset).ToList();
+            var releaseIds = pipelineIdsList.Where(id => id >= ReleaseIdOffset).Select(id => id - ReleaseIdOffset).ToList();
+
+            // Fetch build runs with filters
+            if (buildIds.Any())
+            {
+                var queryParams = new List<string>
+                {
+                    $"definitions={string.Join(",", buildIds)}",
+                    $"$top={top}"
+                };
+
+                if (!string.IsNullOrEmpty(branchName))
+                {
+                    queryParams.Add($"branchName={Uri.EscapeDataString(branchName)}");
+                }
+
+                if (minStartTime.HasValue)
+                {
+                    queryParams.Add($"minTime={Uri.EscapeDataString(minStartTime.Value.ToString("o"))}");
+                }
+
+                var url = ProjectUrl(config, $"_apis/build/builds?{string.Join("&", queryParams)}");
+                var response = await httpClient.GetAsync(url, cancellationToken);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                    if (doc.RootElement.TryGetProperty("value", out var valueArray))
+                    {
+                        foreach (var run in valueArray.EnumerateArray())
+                        {
+                            // Get the actual pipeline ID from the run
+                            if (run.TryGetProperty("definition", out var def) && 
+                                def.TryGetProperty("id", out var defId))
+                            {
+                                var pipelineId = defId.GetInt32();
+                                allRuns.Add(ParseBuildRun(run, pipelineId));
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Fetch release runs (branch filtering not supported for releases)
+            if (releaseIds.Any())
+            {
+                foreach (var releaseId in releaseIds)
+                {
+                    var queryParams = new List<string>
+                    {
+                        $"definitionId={releaseId}",
+                        $"$top={top}"
+                    };
+
+                    if (minStartTime.HasValue)
+                    {
+                        queryParams.Add($"minCreatedTime={Uri.EscapeDataString(minStartTime.Value.ToString("o"))}");
+                    }
+
+                    var url = ProjectUrl(config, $"_apis/release/releases?{string.Join("&", queryParams)}");
+                    var response = await httpClient.GetAsync(url, cancellationToken);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                        if (doc.RootElement.TryGetProperty("value", out var valueArray))
+                        {
+                            foreach (var run in valueArray.EnumerateArray())
+                            {
+                                allRuns.Add(ParseReleaseRun(run, releaseId + ReleaseIdOffset));
+                            }
+                        }
+                    }
+                }
+            }
+
+            _logger.LogInformation(
+                "Retrieved {Count} runs for {PipelineCount} pipelines with filters (branch: {Branch}, minTime: {MinTime})",
+                allRuns.Count, pipelineIdsList.Count, branchName ?? "none", minStartTime?.ToString("o") ?? "none");
+            
+            return allRuns;
+        }, cancellationToken);
+    }
+
 
     private PipelineRunDto ParseBuildRun(JsonElement run, int pipelineId)
     {

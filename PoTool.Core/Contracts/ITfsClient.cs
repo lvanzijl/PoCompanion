@@ -272,6 +272,23 @@ public interface ITfsClient
         int top = 100,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Retrieves pipeline runs for multiple pipelines with optional filtering.
+    /// This method is more efficient than calling GetPipelineRunsAsync multiple times.
+    /// </summary>
+    /// <param name="pipelineIds">Collection of pipeline IDs to get runs for.</param>
+    /// <param name="branchName">Optional branch name to filter by (e.g., "refs/heads/main").</param>
+    /// <param name="minStartTime">Optional minimum start time to filter by.</param>
+    /// <param name="top">Maximum number of runs to retrieve per pipeline.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of pipeline run DTOs for all specified pipelines.</returns>
+    Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
+        IEnumerable<int> pipelineIds,
+        string? branchName = null,
+        DateTimeOffset? minStartTime = null,
+        int top = 100,
+        CancellationToken cancellationToken = default);
+
     // ============================================
     // PIPELINE DEFINITION METHODS (YAML)
     // ============================================
