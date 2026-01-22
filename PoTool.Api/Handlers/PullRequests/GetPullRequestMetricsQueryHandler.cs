@@ -42,9 +42,9 @@ public sealed class GetPullRequestMetricsQueryHandler : IQueryHandler<GetPullReq
 
         foreach (var pr in allPrs)
         {
-            var iterations = await _pullRequestReadProvider.GetIterationsAsync(pr.Id, cancellationToken);
-            var comments = await _pullRequestReadProvider.GetCommentsAsync(pr.Id, cancellationToken);
-            var fileChanges = await _pullRequestReadProvider.GetFileChangesAsync(pr.Id, cancellationToken);
+            var iterations = await _pullRequestReadProvider.GetIterationsAsync(pr.Id, pr.RepositoryName, cancellationToken);
+            var comments = await _pullRequestReadProvider.GetCommentsAsync(pr.Id, pr.RepositoryName, cancellationToken);
+            var fileChanges = await _pullRequestReadProvider.GetFileChangesAsync(pr.Id, pr.RepositoryName, cancellationToken);
 
             var totalTimeOpen = CalculateTotalTimeOpen(pr);
             var effectiveWorkTime = CalculateEffectiveWorkTime(pr, iterations.ToList());

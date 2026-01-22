@@ -112,10 +112,48 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
     {
         _logger.LogDebug("LivePullRequestReadProvider: Fetching pull request by ID from TFS: {PullRequestId}", pullRequestId);
         
-        // Get all pull requests and find by ID
-        // Note: TFS API doesn't have a direct get-by-ID for PRs, so we fetch all and filter
-        var allPullRequests = await GetAllAsync(null, cancellationToken);
-        return allPullRequests.FirstOrDefault(pr => pr.Id == pullRequestId);
+        // TFS API doesn't have a direct get-by-ID for PRs
+        // Optimization: Only fetch PRs from configured repositories instead of all PRs
+        var repositories = (await _repositoryConfigRepository.GetAllRepositoriesAsync(cancellationToken)).ToList();
+        
+        if (repositories.Count == 0)
+        {
+            _logger.LogWarning("No repositories configured in the system, cannot fetch PR {PullRequestId}", pullRequestId);
+            return null;
+        }
+        
+        _logger.LogDebug("Searching for PR {PullRequestId} across {RepoCount} configured repositories", 
+            pullRequestId, repositories.Count);
+        
+        // Search for the PR in each configured repository
+        foreach (var repo in repositories)
+        {
+            try
+            {
+                var repoPullRequests = await _tfsClient.GetPullRequestsAsync(
+                    repositoryName: repo.Name,
+                    fromDate: null,
+                    toDate: null,
+                    cancellationToken);
+                
+                var foundPr = repoPullRequests.FirstOrDefault(pr => pr.Id == pullRequestId);
+                if (foundPr != null)
+                {
+                    _logger.LogDebug("Found PR {PullRequestId} in repository {RepoName}", pullRequestId, repo.Name);
+                    return foundPr;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to fetch PRs from repository {RepoName} while searching for PR {PullRequestId}", 
+                    repo.Name, pullRequestId);
+                // Continue searching in other repositories
+            }
+        }
+        
+        _logger.LogWarning("Pull request {PullRequestId} not found in any of the {RepoCount} configured repositories", 
+            pullRequestId, repositories.Count);
+        return null;
     }
 
     public async Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId, CancellationToken cancellationToken = default)
@@ -134,6 +172,14 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         return await _tfsClient.GetPullRequestIterationsAsync(pullRequestId, pr.RepositoryName, cancellationToken);
     }
 
+    public async Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("LivePullRequestReadProvider: Fetching iterations for PR {PullRequestId} from TFS (repository: {RepositoryName})", pullRequestId, repositoryName);
+        
+        // Fetch iterations from TFS directly using provided repository name
+        return await _tfsClient.GetPullRequestIterationsAsync(pullRequestId, repositoryName, cancellationToken);
+    }
+
     public async Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("LivePullRequestReadProvider: Fetching comments for PR {PullRequestId} from TFS", pullRequestId);
@@ -148,6 +194,14 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         
         // Fetch comments from TFS
         return await _tfsClient.GetPullRequestCommentsAsync(pullRequestId, pr.RepositoryName, cancellationToken);
+    }
+
+    public async Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("LivePullRequestReadProvider: Fetching comments for PR {PullRequestId} from TFS (repository: {RepositoryName})", pullRequestId, repositoryName);
+        
+        // Fetch comments from TFS directly using provided repository name
+        return await _tfsClient.GetPullRequestCommentsAsync(pullRequestId, repositoryName, cancellationToken);
     }
 
     public async Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, CancellationToken cancellationToken = default)
@@ -174,5 +228,23 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         
         // Fetch file changes from TFS
         return await _tfsClient.GetPullRequestFileChangesAsync(pullRequestId, pr.RepositoryName, latestIteration.IterationNumber, cancellationToken);
+    }
+
+    public async Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("LivePullRequestReadProvider: Fetching file changes for PR {PullRequestId} from TFS (repository: {RepositoryName})", pullRequestId, repositoryName);
+        
+        // Get iterations to find the latest one - use optimized overload
+        var iterations = await GetIterationsAsync(pullRequestId, repositoryName, cancellationToken);
+        var latestIteration = iterations.OrderByDescending(i => i.IterationNumber).FirstOrDefault();
+        
+        if (latestIteration == null)
+        {
+            _logger.LogWarning("No iterations found for pull request {PullRequestId}", pullRequestId);
+            return Enumerable.Empty<PullRequestFileChangeDto>();
+        }
+        
+        // Fetch file changes from TFS directly using provided repository name
+        return await _tfsClient.GetPullRequestFileChangesAsync(pullRequestId, repositoryName, latestIteration.IterationNumber, cancellationToken);
     }
 }
