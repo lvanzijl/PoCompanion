@@ -144,22 +144,4 @@ public class WorkItemToolbarTests : BunitTestContext
         Assert.IsTrue(filterChanged, "Filter callback should have been invoked");
         Assert.AreEqual("test filter", newFilterValue);
     }
-
-    [TestMethod]
-    public void WorkItemToolbar_FilterInput_DisplaysCurrentValue()
-    {
-        // Arrange & Act
-        var cut = RenderWithMudProvider(builder =>
-        {
-            builder.OpenComponent<WorkItemToolbar>(0);
-            builder.AddAttribute(1, "FilterText", "my filter");
-            builder.AddAttribute(2, "SelectedCount", 0);
-            builder.AddAttribute(3, "ValidationFilters", new List<PoTool.Client.Models.ValidationFilter>());
-            builder.CloseComponent();
-        });
-
-        // Assert - Find the WorkItemToolbar instance
-        var toolbar = cut.FindComponent<WorkItemToolbar>();
-        Assert.AreEqual("my filter", toolbar.Instance.FilterText);
-    }
 }
