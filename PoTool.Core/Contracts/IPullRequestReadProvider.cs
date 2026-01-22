@@ -32,12 +32,30 @@ public interface IPullRequestReadProvider
     Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves iterations for a pull request from the configured data source.
+    /// Optimized version that accepts repository name to avoid redundant lookups.
+    /// </summary>
+    Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves comments for a pull request from the configured data source.
     /// </summary>
     Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves comments for a pull request from the configured data source.
+    /// Optimized version that accepts repository name to avoid redundant lookups.
+    /// </summary>
+    Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves file changes for a pull request from the configured data source.
     /// </summary>
     Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves file changes for a pull request from the configured data source.
+    /// Optimized version that accepts repository name to avoid redundant lookups.
+    /// </summary>
+    Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default);
 }

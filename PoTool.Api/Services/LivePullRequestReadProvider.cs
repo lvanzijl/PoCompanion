@@ -134,6 +134,14 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         return await _tfsClient.GetPullRequestIterationsAsync(pullRequestId, pr.RepositoryName, cancellationToken);
     }
 
+    public async Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("LivePullRequestReadProvider: Fetching iterations for PR {PullRequestId} from TFS (repository: {RepositoryName})", pullRequestId, repositoryName);
+        
+        // Fetch iterations from TFS directly using provided repository name
+        return await _tfsClient.GetPullRequestIterationsAsync(pullRequestId, repositoryName, cancellationToken);
+    }
+
     public async Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("LivePullRequestReadProvider: Fetching comments for PR {PullRequestId} from TFS", pullRequestId);
@@ -148,6 +156,14 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         
         // Fetch comments from TFS
         return await _tfsClient.GetPullRequestCommentsAsync(pullRequestId, pr.RepositoryName, cancellationToken);
+    }
+
+    public async Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("LivePullRequestReadProvider: Fetching comments for PR {PullRequestId} from TFS (repository: {RepositoryName})", pullRequestId, repositoryName);
+        
+        // Fetch comments from TFS directly using provided repository name
+        return await _tfsClient.GetPullRequestCommentsAsync(pullRequestId, repositoryName, cancellationToken);
     }
 
     public async Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, CancellationToken cancellationToken = default)
@@ -174,5 +190,23 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         
         // Fetch file changes from TFS
         return await _tfsClient.GetPullRequestFileChangesAsync(pullRequestId, pr.RepositoryName, latestIteration.IterationNumber, cancellationToken);
+    }
+
+    public async Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("LivePullRequestReadProvider: Fetching file changes for PR {PullRequestId} from TFS (repository: {RepositoryName})", pullRequestId, repositoryName);
+        
+        // Get iterations to find the latest one - use optimized overload
+        var iterations = await GetIterationsAsync(pullRequestId, repositoryName, cancellationToken);
+        var latestIteration = iterations.OrderByDescending(i => i.IterationNumber).FirstOrDefault();
+        
+        if (latestIteration == null)
+        {
+            _logger.LogWarning("No iterations found for pull request {PullRequestId}", pullRequestId);
+            return Enumerable.Empty<PullRequestFileChangeDto>();
+        }
+        
+        // Fetch file changes from TFS directly using provided repository name
+        return await _tfsClient.GetPullRequestFileChangesAsync(pullRequestId, repositoryName, latestIteration.IterationNumber, cancellationToken);
     }
 }
