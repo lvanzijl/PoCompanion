@@ -114,20 +114,19 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         
         // TFS API doesn't have a direct get-by-ID for PRs
         // Optimization: Only fetch PRs from configured repositories instead of all PRs
-        var configuredRepositories = await _repositoryConfigRepository.GetAllRepositoriesAsync(cancellationToken);
+        var repositories = (await _repositoryConfigRepository.GetAllRepositoriesAsync(cancellationToken)).ToList();
         
-        if (!configuredRepositories.Any())
+        if (repositories.Count == 0)
         {
             _logger.LogWarning("No repositories configured in the system, cannot fetch PR {PullRequestId}", pullRequestId);
             return null;
         }
         
-        var repositoryList = configuredRepositories.ToList();
         _logger.LogDebug("Searching for PR {PullRequestId} across {RepoCount} configured repositories", 
-            pullRequestId, repositoryList.Count);
+            pullRequestId, repositories.Count);
         
         // Search for the PR in each configured repository
-        foreach (var repo in repositoryList)
+        foreach (var repo in repositories)
         {
             try
             {
@@ -153,7 +152,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         }
         
         _logger.LogWarning("Pull request {PullRequestId} not found in any of the {RepoCount} configured repositories", 
-            pullRequestId, repositoryList.Count);
+            pullRequestId, repositories.Count);
         return null;
     }
 
