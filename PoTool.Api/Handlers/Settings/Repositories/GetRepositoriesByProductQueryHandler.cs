@@ -1,5 +1,5 @@
 using Mediator;
-using PoTool.Api.Repositories;
+using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Queries;
 
@@ -10,9 +10,9 @@ namespace PoTool.Api.Handlers.Settings.Repositories;
 /// </summary>
 public class GetRepositoriesByProductQueryHandler : IQueryHandler<GetRepositoriesByProductQuery, IEnumerable<RepositoryDto>>
 {
-    private readonly RepositoryRepository _repository;
+    private readonly IRepositoryConfigRepository _repository;
 
-    public GetRepositoriesByProductQueryHandler(RepositoryRepository repository)
+    public GetRepositoriesByProductQueryHandler(IRepositoryConfigRepository repository)
     {
         _repository = repository;
     }

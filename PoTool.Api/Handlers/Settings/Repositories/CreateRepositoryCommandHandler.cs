@@ -1,5 +1,5 @@
 using Mediator;
-using PoTool.Api.Repositories;
+using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Commands;
 
@@ -10,9 +10,9 @@ namespace PoTool.Api.Handlers.Settings.Repositories;
 /// </summary>
 public class CreateRepositoryCommandHandler : ICommandHandler<CreateRepositoryCommand, RepositoryDto>
 {
-    private readonly RepositoryRepository _repository;
+    private readonly IRepositoryConfigRepository _repository;
 
-    public CreateRepositoryCommandHandler(RepositoryRepository repository)
+    public CreateRepositoryCommandHandler(IRepositoryConfigRepository repository)
     {
         _repository = repository;
     }

@@ -1,5 +1,5 @@
 using Mediator;
-using PoTool.Api.Repositories;
+using PoTool.Core.Contracts;
 using PoTool.Core.Settings.Commands;
 
 namespace PoTool.Api.Handlers.Settings.Repositories;
@@ -9,9 +9,9 @@ namespace PoTool.Api.Handlers.Settings.Repositories;
 /// </summary>
 public class DeleteRepositoryCommandHandler : ICommandHandler<DeleteRepositoryCommand>
 {
-    private readonly RepositoryRepository _repository;
+    private readonly IRepositoryConfigRepository _repository;
 
-    public DeleteRepositoryCommandHandler(RepositoryRepository repository)
+    public DeleteRepositoryCommandHandler(IRepositoryConfigRepository repository)
     {
         _repository = repository;
     }
