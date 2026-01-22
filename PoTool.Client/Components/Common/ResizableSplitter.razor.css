@@ -1,0 +1,63 @@
+.resizable-splitter-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.resizable-pane {
+    overflow: auto;
+    position: relative;
+}
+
+.left-pane {
+    min-width: 0;
+}
+
+.right-pane {
+    flex: 1;
+    min-width: 0;
+}
+
+.splitter-handle {
+    width: 8px;
+    background-color: var(--color-border, #e0e0e0);
+    cursor: col-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+    transition: background-color 0.2s ease;
+    user-select: none;
+}
+
+.splitter-handle:hover {
+    background-color: var(--color-primary, #1976d2);
+}
+
+.splitter-handle:active {
+    background-color: var(--color-primary, #1976d2);
+}
+
+.splitter-handle-inner {
+    width: 2px;
+    height: 40px;
+    background-color: currentColor;
+    border-radius: 1px;
+    opacity: 0.5;
+}
+
+.splitter-handle:hover .splitter-handle-inner {
+    opacity: 1;
+}
+
+/* Prevent text selection during resize */
+.resizable-splitter-container.resizing {
+    user-select: none;
+}
+
+.resizable-splitter-container.resizing .resizable-pane {
+    pointer-events: none;
+}

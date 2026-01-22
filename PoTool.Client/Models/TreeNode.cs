@@ -158,4 +158,10 @@ public class TreeNode
     /// Gets whether this node has descendant validation issues.
     /// </summary>
     public bool HasDescendantIssues => InvalidDescendantIds.Count > 0;
+    
+    /// <summary>
+    /// Indicates whether this work item is in a Done state.
+    /// This is used to display a visual indicator (green checkmark).
+    /// </summary>
+    public bool IsDone { get; set; }
 }

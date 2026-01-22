@@ -12,6 +12,23 @@ public class TreeBuilderService : ITreeBuilderService
     // Special node IDs for non-work-item nodes
     private const int ProductNodeIdOffset = -1000;  // Product nodes get IDs like -1001, -1002, etc.
     private const int UnparentedNodeId = -1;         // Unparented node gets ID -1
+    
+    // Common Done state names - static to avoid repeated allocations
+    private static readonly string[] DoneStates = new[]
+    {
+        "Done", "Closed", "Resolved", "Completed", "Removed"
+    };
+    
+    /// <summary>
+    /// Simple heuristic to check if a state is commonly considered "Done".
+    /// This is a best-effort check without async state classification service calls.
+    /// </summary>
+    private static bool IsLikelyDoneState(string state)
+    {
+        if (string.IsNullOrEmpty(state)) return false;
+        
+        return DoneStates.Any(s => s.Equals(state, StringComparison.OrdinalIgnoreCase));
+    }
 
     /// <inheritdoc/>
     public List<TreeNode> BuildTree(IEnumerable<WorkItemDto> items, Dictionary<int, bool> expandedState)
@@ -31,6 +48,7 @@ public class TreeBuilderService : ITreeBuilderService
                     Title = dto.Title,
                     Type = dto.Type,
                     State = dto.State,
+                    IsDone = IsLikelyDoneState(dto.State),
                     ParentId = dto.ParentTfsId,
                     JsonPayload = System.Text.Json.JsonSerializer.Serialize(dto)
                 };
@@ -41,6 +59,7 @@ public class TreeBuilderService : ITreeBuilderService
                 node.Title = dto.Title;
                 node.Type = dto.Type;
                 node.State = dto.State;
+                node.IsDone = IsLikelyDoneState(dto.State);
                 node.JsonPayload = System.Text.Json.JsonSerializer.Serialize(dto);
             }
 
@@ -157,6 +176,7 @@ public class TreeBuilderService : ITreeBuilderService
                     Title = dto.Title,
                     Type = dto.Type,
                     State = dto.State,
+                    IsDone = IsLikelyDoneState(dto.State),
                     ParentId = dto.ParentTfsId,
                     JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto
                     {
@@ -179,6 +199,7 @@ public class TreeBuilderService : ITreeBuilderService
                 node.Title = dto.Title;
                 node.Type = dto.Type;
                 node.State = dto.State;
+                node.IsDone = IsLikelyDoneState(dto.State);
                 node.JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto
                 {
                     TfsId = dto.TfsId,
@@ -428,6 +449,7 @@ public class TreeBuilderService : ITreeBuilderService
                     Title = dto.Title,
                     Type = dto.Type,
                     State = dto.State,
+                    IsDone = IsLikelyDoneState(dto.State),
                     ParentId = dto.ParentTfsId,
                     JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto
                     {
@@ -450,6 +472,7 @@ public class TreeBuilderService : ITreeBuilderService
                 node.Title = dto.Title;
                 node.Type = dto.Type;
                 node.State = dto.State;
+                node.IsDone = IsLikelyDoneState(dto.State);
                 node.JsonPayload = System.Text.Json.JsonSerializer.Serialize(new WorkItemDto
                 {
                     TfsId = dto.TfsId,

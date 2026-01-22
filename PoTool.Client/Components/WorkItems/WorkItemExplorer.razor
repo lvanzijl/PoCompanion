@@ -25,11 +25,8 @@
 <PageTitle>Work Item Explorer</PageTitle>
 
 <div class="workitem-explorer">
-    <WorkItemToolbar FilterText="@_filterText"
-                     SelectedCount="@_selectedIds.Count"
+    <WorkItemToolbar SelectedCount="@_selectedIds.Count"
                      SelectedWorkItems="@_selectedWorkItems"
-                     OnClearState="@ClearExpandedState"
-                     OnFilterChanged="@HandleFilterChanged"
                      OnSelectAll="@SelectAllItems"
                      OnClearSelection="@ClearSelection" />
 
@@ -62,17 +59,28 @@
     </div>
 
     <div class="content" @onkeydown="HandleKeyDown" @onkeydown:preventDefault="true" tabindex="0" role="tree" aria-label="Work item hierarchy tree">
-        <WorkItemTreeGrid IsLoading="@_isLoading"
-                          TreeRoots="@_treeRoots"
-                          SelectedId="@_selectedWorkItem?.TfsId"
-                          SelectedIds="@_selectedIds"
-                          OnNodeToggled="@HandleNodeToggled"
-                          OnNodeSelectedWithModifiers="@HandleNodeSelectedWithModifiers"
-                          OnRevealInvalidItem="@HandleRevealInvalidItem" />
-
-        <WorkItemDetailPanel SelectedWorkItem="@_selectedWorkItem" 
-                            SelectedWorkItems="@_selectedWorkItems"
-                            ValidationIssues="@_selectedValidationIssues" />
+        <ResizableSplitter StorageKey="workitem-explorer-splitter" 
+                          DefaultLeftWidth="60" 
+                          MinLeftWidth="30" 
+                          MaxLeftWidth="80">
+            <LeftContent>
+                <WorkItemTreeGrid IsLoading="@_isLoading"
+                                  TreeRoots="@_treeRoots"
+                                  SelectedId="@_selectedWorkItem?.TfsId"
+                                  SelectedIds="@_selectedIds"
+                                  FilterText="@_filterText"
+                                  OnFilterChanged="@HandleFilterChanged"
+                                  OnClearState="@ClearExpandedState"
+                                  OnNodeToggled="@HandleNodeToggled"
+                                  OnNodeSelectedWithModifiers="@HandleNodeSelectedWithModifiers"
+                                  OnRevealInvalidItem="@HandleRevealInvalidItem" />
+            </LeftContent>
+            <RightContent>
+                <WorkItemDetailPanel SelectedWorkItem="@_selectedWorkItem" 
+                                    SelectedWorkItems="@_selectedWorkItems"
+                                    ValidationIssues="@_selectedValidationIssues" />
+            </RightContent>
+        </ResizableSplitter>
     </div>
 </div>
 

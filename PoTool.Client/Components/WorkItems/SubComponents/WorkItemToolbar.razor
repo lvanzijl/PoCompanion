@@ -8,36 +8,15 @@
 @inject TfsConfigService TfsConfigService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
-@implements IDisposable
 
 @* Toolbar for work item explorer actions *@
 
 <div class="workitem-toolbar">
     <div class="header">
         <h1>Work Item Explorer</h1>
-        <div class="header-actions">
-            <MudTooltip Text="Clears the expanded/collapsed state of all tree nodes"
-                        Placement="Placement.Bottom">
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Default" 
-                           OnClick="OnClearStateClicked"
-                           StartIcon="@Icons.Material.Filled.Clear"
-                           Size="Size.Small">
-                    Clear Tree State
-                </MudButton>
-            </MudTooltip>
-        </div>
     </div>
-
-
-
-    <div class="search-filter">
-        <input type="text" 
-               placeholder="Filter by title..." 
-               @bind="FilterText" 
-               @bind:event="oninput"
-               @onkeyup="OnFilterKeyUp" />
-        
+    
+    <div class="toolbar-content">
         @if (SelectedCount > 0)
         {
             <div class="selection-info">
@@ -109,15 +88,6 @@
 
 @code {
     [Parameter]
-    public string FilterText { get; set; } = string.Empty;
-
-    [Parameter]
-    public EventCallback OnClearState { get; set; }
-
-    [Parameter]
-    public EventCallback<string> OnFilterChanged { get; set; }
-
-    [Parameter]
     public int SelectedCount { get; set; }
 
     [Parameter]
@@ -129,43 +99,6 @@
     [Parameter]
     public List<WorkItemDto> SelectedWorkItems { get; set; } = new();
     
-    // Debouncing fields
-    private System.Threading.Timer? _debounceTimer;
-    private const int DebounceDelayMilliseconds = 300;
-
-    private async Task OnClearStateClicked()
-    {
-        await OnClearState.InvokeAsync();
-    }
-
-    private void OnFilterKeyUp()
-    {
-        // Cancel previous timer if it exists
-        _debounceTimer?.Dispose();
-        
-        // Create new timer that will fire after debounce delay
-        _debounceTimer = new System.Threading.Timer(async _ =>
-        {
-            try
-            {
-                await InvokeAsync(async () =>
-                {
-                    await OnFilterChanged.InvokeAsync(FilterText);
-                });
-            }
-            catch (Exception ex)
-            {
-                // Log error silently - don't crash the UI
-                Console.WriteLine($"[WorkItemToolbar] Error in filter debounce: {ex.Message}");
-            }
-        }, null, DebounceDelayMilliseconds, System.Threading.Timeout.Infinite);
-    }
-    
-    public void Dispose()
-    {
-        _debounceTimer?.Dispose();
-    }
-
     // Bulk operation handlers
     private async Task ExportToCsv()
     {
