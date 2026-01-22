@@ -46,9 +46,15 @@ public sealed class GetPipelineDefinitionsQueryHandler : IQueryHandler<GetPipeli
         {
             definitions = await _pipelineReadProvider.GetDefinitionsByProductIdAsync(query.ProductId.Value, cancellationToken);
         }
+        else if (query.RepositoryId.HasValue)
+        {
+            definitions = await _pipelineReadProvider.GetDefinitionsByRepositoryIdAsync(query.RepositoryId.Value, cancellationToken);
+        }
         else
         {
-            definitions = await _pipelineReadProvider.GetDefinitionsByRepositoryIdAsync(query.RepositoryId!.Value, cancellationToken);
+            // This should never happen due to the check above, but satisfies the compiler
+            throw new InvalidOperationException(
+                "Either ProductId or RepositoryId must be provided when retrieving pipeline definitions.");
         }
 
         var definitionsList = definitions.ToList();

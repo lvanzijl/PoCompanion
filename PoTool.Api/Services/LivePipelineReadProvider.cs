@@ -140,7 +140,8 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
     {
         _logger.LogDebug("LivePipelineReadProvider: Fetching pipeline definitions for repository {RepositoryId} from TFS", repositoryId);
         
-        // Get all repositories to find the repository by ID
+        // Note: This loads all repositories to find one by ID. 
+        // For better performance, consider adding GetRepositoryByIdAsync to IRepositoryConfigRepository
         var allRepositories = await _repositoryConfigRepository.GetAllRepositoriesAsync(cancellationToken);
         var repository = allRepositories.FirstOrDefault(r => r.Id == repositoryId);
         
