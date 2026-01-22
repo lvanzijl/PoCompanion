@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Repositories;
@@ -8,7 +9,7 @@ namespace PoTool.Api.Repositories;
 /// <summary>
 /// Repository implementation for repository configuration persistence.
 /// </summary>
-public class RepositoryRepository
+public class RepositoryRepository : IRepositoryConfigRepository
 {
     private readonly PoToolDbContext _context;
 
