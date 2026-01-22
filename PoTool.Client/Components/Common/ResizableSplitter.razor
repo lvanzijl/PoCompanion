@@ -2,8 +2,8 @@
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<div class="resizable-splitter-container" style="@ContainerStyle">
-    <div class="resizable-pane left-pane" style="@LeftPaneStyle">
+<div class="resizable-splitter-container">
+    <div class="resizable-pane left-pane" style="flex: 0 0 @(_leftWidthPercent)%;">
         @LeftContent
     </div>
     
@@ -13,7 +13,7 @@
         <div class="splitter-handle-inner"></div>
     </div>
     
-    <div class="resizable-pane right-pane" style="@RightPaneStyle">
+    <div class="resizable-pane right-pane">
         @RightContent
     </div>
 </div>
@@ -30,6 +30,9 @@
     
     [Parameter]
     public double DefaultLeftWidth { get; set; } = 50.0; // percentage
+    
+    private const string StorageKeyPrefix = "potool-"; // Prefix to prevent key injection
+    private string SafeStorageKey => $"{StorageKeyPrefix}{StorageKey}";
     
     [Parameter]
     public double MinLeftWidth { get; set; } = 20.0; // percentage
@@ -52,7 +55,7 @@
     {
         try
         {
-            var savedPosition = await JS.InvokeAsync<string?>("localStorage.getItem", StorageKey);
+            var savedPosition = await JS.InvokeAsync<string?>("localStorage.getItem", SafeStorageKey);
             if (!string.IsNullOrEmpty(savedPosition) && double.TryParse(savedPosition, out var position))
             {
                 _leftWidthPercent = Math.Clamp(position, MinLeftWidth, MaxLeftWidth);
@@ -73,7 +76,7 @@
     {
         try
         {
-            await JS.InvokeVoidAsync("localStorage.setItem", StorageKey, _leftWidthPercent.ToString());
+            await JS.InvokeVoidAsync("localStorage.setItem", SafeStorageKey, _leftWidthPercent.ToString());
         }
         catch (Exception ex)
         {
@@ -111,12 +114,6 @@
     {
         _isResizing = false;
     }
-    
-    private string ContainerStyle => "display: flex; width: 100%; height: 100%; position: relative;";
-    
-    private string LeftPaneStyle => $"flex: 0 0 {_leftWidthPercent}%; overflow: auto;";
-    
-    private string RightPaneStyle => $"flex: 1; overflow: auto;";
     
     public async ValueTask DisposeAsync()
     {

@@ -13,6 +13,12 @@ public class TreeBuilderService : ITreeBuilderService
     private const int ProductNodeIdOffset = -1000;  // Product nodes get IDs like -1001, -1002, etc.
     private const int UnparentedNodeId = -1;         // Unparented node gets ID -1
     
+    // Common Done state names - static to avoid repeated allocations
+    private static readonly string[] DoneStates = new[]
+    {
+        "Done", "Closed", "Resolved", "Completed", "Removed"
+    };
+    
     /// <summary>
     /// Simple heuristic to check if a state is commonly considered "Done".
     /// This is a best-effort check without async state classification service calls.
@@ -21,13 +27,7 @@ public class TreeBuilderService : ITreeBuilderService
     {
         if (string.IsNullOrEmpty(state)) return false;
         
-        // Common Done state names in Azure DevOps
-        var doneStates = new[]
-        {
-            "Done", "Closed", "Resolved", "Completed", "Removed"
-        };
-        
-        return doneStates.Any(s => s.Equals(state, StringComparison.OrdinalIgnoreCase));
+        return DoneStates.Any(s => s.Equals(state, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <inheritdoc/>

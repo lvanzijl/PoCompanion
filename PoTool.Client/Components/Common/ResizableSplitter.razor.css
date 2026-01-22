@@ -16,6 +16,7 @@
 }
 
 .right-pane {
+    flex: 1;
     min-width: 0;
 }
 
