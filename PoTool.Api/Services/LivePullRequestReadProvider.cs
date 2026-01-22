@@ -112,10 +112,49 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
     {
         _logger.LogDebug("LivePullRequestReadProvider: Fetching pull request by ID from TFS: {PullRequestId}", pullRequestId);
         
-        // Get all pull requests and find by ID
-        // Note: TFS API doesn't have a direct get-by-ID for PRs, so we fetch all and filter
-        var allPullRequests = await GetAllAsync(null, cancellationToken);
-        return allPullRequests.FirstOrDefault(pr => pr.Id == pullRequestId);
+        // TFS API doesn't have a direct get-by-ID for PRs
+        // Optimization: Only fetch PRs from configured repositories instead of all PRs
+        var configuredRepositories = await _repositoryConfigRepository.GetAllRepositoriesAsync(cancellationToken);
+        var repositoryList = configuredRepositories.ToList();
+        
+        if (repositoryList.Count == 0)
+        {
+            _logger.LogWarning("No repositories configured in the system, cannot fetch PR {PullRequestId}", pullRequestId);
+            return null;
+        }
+        
+        _logger.LogDebug("Searching for PR {PullRequestId} across {RepoCount} configured repositories", 
+            pullRequestId, repositoryList.Count);
+        
+        // Search for the PR in each configured repository
+        foreach (var repo in repositoryList)
+        {
+            try
+            {
+                var repoPullRequests = await _tfsClient.GetPullRequestsAsync(
+                    repositoryName: repo.Name,
+                    fromDate: null,
+                    toDate: null,
+                    cancellationToken);
+                
+                var foundPr = repoPullRequests.FirstOrDefault(pr => pr.Id == pullRequestId);
+                if (foundPr != null)
+                {
+                    _logger.LogDebug("Found PR {PullRequestId} in repository {RepoName}", pullRequestId, repo.Name);
+                    return foundPr;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to fetch PRs from repository {RepoName} while searching for PR {PullRequestId}", 
+                    repo.Name, pullRequestId);
+                // Continue searching in other repositories
+            }
+        }
+        
+        _logger.LogWarning("Pull request {PullRequestId} not found in any of the {RepoCount} configured repositories", 
+            pullRequestId, repositoryList.Count);
+        return null;
     }
 
     public async Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId, CancellationToken cancellationToken = default)
