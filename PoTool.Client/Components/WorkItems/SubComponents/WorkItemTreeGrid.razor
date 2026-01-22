@@ -7,12 +7,31 @@
 
 <div class="tree-grid-container">
     <div class="tree-grid-toolbar">
-        <MudButton Variant="Variant.Text" 
-                   StartIcon="@Icons.Material.Filled.ViewColumn" 
-                   Size="Size.Small"
-                   OnClick="OpenColumnPicker">
-            Columns
-        </MudButton>
+        <div class="filter-section">
+            <input type="text" 
+                   class="filter-input" 
+                   placeholder="Filter by title..." 
+                   value="@FilterText" 
+                   @oninput="@OnFilterInput" />
+        </div>
+        <div class="toolbar-buttons">
+            <MudButton Variant="Variant.Text" 
+                       StartIcon="@Icons.Material.Filled.ViewColumn" 
+                       Size="Size.Small"
+                       OnClick="OpenColumnPicker">
+                Columns
+            </MudButton>
+            
+            <MudTooltip Text="Clears the expanded/collapsed state of all tree nodes"
+                        Placement="Placement.Bottom">
+                <MudButton Variant="Variant.Text" 
+                           StartIcon="@Icons.Material.Filled.Clear" 
+                           Size="Size.Small"
+                           OnClick="@OnClearStateClicked">
+                    Clear Tree State
+                </MudButton>
+            </MudTooltip>
+        </div>
     </div>
 
     @if (IsLoading)
@@ -58,7 +77,7 @@
                             }
 
                             @* Type Icon Block *@
-                            <span class="type-icon-block" 
+                            <span class="type-icon-block @(context.Item.Node.IsDone ? "done-state" : "")" 
                                   style="background-color: @context.Item.Node.TypeColor" 
                                   title="@context.Item.Node.Type">
                                 <MudIcon Icon="@GetIconForType(context.Item.Node.Type)" Size="Size.Small" />
@@ -143,6 +162,15 @@
 
    [Parameter]
    public EventCallback<(TreeNode Node, bool CtrlKey, bool ShiftKey)> OnNodeSelectedWithModifiers { get; set; }
+   
+   [Parameter]
+   public string FilterText { get; set; } = string.Empty;
+   
+   [Parameter]
+   public EventCallback<string> OnFilterChanged { get; set; }
+   
+   [Parameter]
+   public EventCallback OnClearState { get; set; }
 
    [Parameter]
    public EventCallback<TreeNode> OnNodeSelected { get; set; }
@@ -358,6 +386,17 @@
     {
         var column = _columnConfigs.FirstOrDefault(c => c.Id == columnId);
         return column?.IsVisible ?? false;
+    }
+    
+    private async Task OnFilterInput(ChangeEventArgs e)
+    {
+        var newValue = e.Value?.ToString() ?? string.Empty;
+        await OnFilterChanged.InvokeAsync(newValue);
+    }
+    
+    private async Task OnClearStateClicked()
+    {
+        await OnClearState.InvokeAsync();
     }
 
     private async Task OpenColumnPicker()

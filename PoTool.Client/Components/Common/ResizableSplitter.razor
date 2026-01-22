@@ -1,0 +1,129 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="resizable-splitter-container" style="@ContainerStyle">
+    <div class="resizable-pane left-pane" style="@LeftPaneStyle">
+        @LeftContent
+    </div>
+    
+    <div class="splitter-handle" 
+         @onmousedown="OnMouseDown"
+         @ontouchstart="OnTouchStart">
+        <div class="splitter-handle-inner"></div>
+    </div>
+    
+    <div class="resizable-pane right-pane" style="@RightPaneStyle">
+        @RightContent
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? LeftContent { get; set; }
+    
+    [Parameter]
+    public RenderFragment? RightContent { get; set; }
+    
+    [Parameter]
+    public string StorageKey { get; set; } = "splitter-position";
+    
+    [Parameter]
+    public double DefaultLeftWidth { get; set; } = 50.0; // percentage
+    
+    [Parameter]
+    public double MinLeftWidth { get; set; } = 20.0; // percentage
+    
+    [Parameter]
+    public double MaxLeftWidth { get; set; } = 80.0; // percentage
+    
+    private double _leftWidthPercent;
+    private DotNetObjectReference<ResizableSplitter>? _dotNetRef;
+    private bool _isResizing = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        // Load saved position from localStorage
+        await LoadPositionAsync();
+        _dotNetRef = DotNetObjectReference.Create(this);
+    }
+    
+    private async Task LoadPositionAsync()
+    {
+        try
+        {
+            var savedPosition = await JS.InvokeAsync<string?>("localStorage.getItem", StorageKey);
+            if (!string.IsNullOrEmpty(savedPosition) && double.TryParse(savedPosition, out var position))
+            {
+                _leftWidthPercent = Math.Clamp(position, MinLeftWidth, MaxLeftWidth);
+            }
+            else
+            {
+                _leftWidthPercent = DefaultLeftWidth;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ResizableSplitter] Error loading position: {ex.Message}");
+            _leftWidthPercent = DefaultLeftWidth;
+        }
+    }
+    
+    private async Task SavePositionAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", StorageKey, _leftWidthPercent.ToString());
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ResizableSplitter] Error saving position: {ex.Message}");
+        }
+    }
+    
+    private async Task OnMouseDown(MouseEventArgs e)
+    {
+        _isResizing = true;
+        await JS.InvokeVoidAsync("PoTool.Splitter.initResize", _dotNetRef);
+    }
+    
+    private async Task OnTouchStart(TouchEventArgs e)
+    {
+        _isResizing = true;
+        await JS.InvokeVoidAsync("PoTool.Splitter.initResize", _dotNetRef);
+    }
+    
+    [JSInvokable]
+    public async Task UpdatePosition(double clientX, double containerLeft, double containerWidth)
+    {
+        if (!_isResizing) return;
+        
+        var relativeX = clientX - containerLeft;
+        var newLeftPercent = (relativeX / containerWidth) * 100.0;
+        
+        _leftWidthPercent = Math.Clamp(newLeftPercent, MinLeftWidth, MaxLeftWidth);
+        await SavePositionAsync();
+        StateHasChanged();
+    }
+    
+    [JSInvokable]
+    public void StopResize()
+    {
+        _isResizing = false;
+    }
+    
+    private string ContainerStyle => "display: flex; width: 100%; height: 100%; position: relative;";
+    
+    private string LeftPaneStyle => $"flex: 0 0 {_leftWidthPercent}%; overflow: auto;";
+    
+    private string RightPaneStyle => $"flex: 1; overflow: auto;";
+    
+    public async ValueTask DisposeAsync()
+    {
+        if (_dotNetRef != null)
+        {
+            await JS.InvokeVoidAsync("PoTool.Splitter.cleanup");
+            _dotNetRef.Dispose();
+        }
+    }
+}
