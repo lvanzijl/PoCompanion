@@ -4,7 +4,7 @@ using Moq;
 using MudBlazor;
 using MudBlazor.Services;
 using PoTool.Client.ApiClient;
-using PoTool.Client.Pages.Metrics;
+using PoTool.Client.Components.EffortDistribution;
 using PoTool.Client.Services;
 
 namespace PoTool.Tests.Blazor;
@@ -55,7 +55,7 @@ public class EffortDistributionTests : BunitTestContext
         {
             builder.OpenComponent<MudPopoverProvider>(0);
             builder.CloseComponent();
-            builder.OpenComponent<EffortDistribution>(1);
+            builder.OpenComponent<EffortDistributionPanel>(1);
             builder.CloseComponent();
         });
     }

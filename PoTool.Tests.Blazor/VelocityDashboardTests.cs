@@ -4,7 +4,7 @@ using Moq;
 using MudBlazor;
 using MudBlazor.Services;
 using PoTool.Client.ApiClient;
-using PoTool.Client.Pages.Metrics;
+using PoTool.Client.Components.Velocity;
 
 namespace PoTool.Tests.Blazor;
 
@@ -41,7 +41,7 @@ public class VelocityDashboardTests : BunitTestContext
         {
             builder.OpenComponent<MudPopoverProvider>(0);
             builder.CloseComponent();
-            builder.OpenComponent<VelocityDashboard>(1);
+            builder.OpenComponent<VelocityPanel>(1);
             builder.CloseComponent();
         });
     }

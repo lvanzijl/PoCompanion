@@ -4,7 +4,7 @@ using Moq;
 using MudBlazor;
 using MudBlazor.Services;
 using PoTool.Client.ApiClient;
-using PoTool.Client.Pages.Metrics;
+using PoTool.Client.Components.BacklogHealth;
 using PoTool.Client.Services;
 
 namespace PoTool.Tests.Blazor;
@@ -77,7 +77,7 @@ public class BacklogHealthTests : BunitTestContext
         {
             builder.OpenComponent<MudPopoverProvider>(0);
             builder.CloseComponent();
-            builder.OpenComponent<BacklogHealth>(1);
+            builder.OpenComponent<BacklogHealthPanel>(1);
             builder.CloseComponent();
         });
     }
