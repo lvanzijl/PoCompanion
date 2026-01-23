@@ -1424,15 +1424,14 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
 
 2. **Sub-Phase 7B.2: Embed Analysis Functionality** (into AnalysisWorkspace)
    - [x] Embed BacklogHealth.razor content into Health mode panel ✅
-   - [ ] Embed EffortDistribution.razor content into Effort mode panel
+   - [x] Embed EffortDistribution.razor content into Effort mode panel ✅
    - [ ] Embed PRInsight.razor + PipelineInsights.razor content into Flow mode panel
    - [ ] Embed EpicForecast.razor content into Forecast mode panel
    - [ ] Embed DependencyGraph.razor content into Dependencies mode panel
    - [ ] Embed StateTimeline.razor content into Timeline mode panel
    
-   **Note:** Created `<BacklogHealthPanel />` reusable component in 
-   `PoTool.Client/Components/BacklogHealth/BacklogHealthPanel.razor`. This component 
-   is now embedded in AnalysisWorkspace Health mode.
+   **Note:** Created `<BacklogHealthPanel />` and `<EffortDistributionPanel />` reusable 
+   components. Health and Effort modes now show embedded panels with full functionality.
 
 3. **Sub-Phase 7B.3: Embed Team Functionality** (into TeamWorkspace)
    - [x] Embed VelocityDashboard.razor content into Team Workspace ✅
@@ -1944,6 +1943,31 @@ Phase 7B cannot simply delete legacy pages because workspaces currently depend o
 
 ---
 
+### 2026-01-23 - Phase 7B.2 Continued - EffortDistributionPanel Created and Embedded
+
+**Changed:** 
+- Created new reusable `<EffortDistributionPanel />` component at `PoTool.Client/Components/EffortDistribution/EffortDistributionPanel.razor`
+- Embedded EffortDistributionPanel into AnalysisWorkspace Effort mode
+- Component displays summary cards, heat map (compact), iteration chart, and utilization table
+- Component accepts `AreaPath`, `MaxIterations`, and `DefaultCapacity` parameters for filtering
+
+**New Component:**
+- `PoTool.Client/Components/EffortDistribution/EffortDistributionPanel.razor`:
+  - Reusable effort distribution panel with core functionality
+  - Heat map limited to 5x5 for compact display
+  - Self-contained data loading from `IMetricsClient`
+
+**Code Changes:**
+- `PoTool.Client/Pages/Workspaces/AnalysisWorkspace.razor`:
+  - Added `@using PoTool.Client.Components.EffortDistribution`
+  - Replaced link-card section in Effort mode with embedded `<EffortDistributionPanel MaxIterations="6" />`
+
+**Reason:** Execute Sub-Phase 7B.2 (second item) of the migration plan - embed effort analysis per Approach A
+
+**Impact:** AnalysisWorkspace Effort mode now contains effort distribution data inline.
+
+---
+
 <!-- Future entries will be added here as the migration progresses -->
 
 ---
@@ -1964,7 +1988,7 @@ Phase 7B cannot simply delete legacy pages because workspaces currently depend o
 | `/workspace/planning` | PlanningWorkspace.razor | Planning hub | Active |
 | `/workspace/communication` | CommunicationWorkspace.razor | Communication hub | Active |
 | `/backlog-health` | BacklogHealth.razor | Health analysis | **EMBEDDED** in AnalysisWorkspace (Health) |
-| `/effort-distribution` | EffortDistribution.razor | Effort analysis | Legacy (pending embed) |
+| `/effort-distribution` | EffortDistribution.razor | Effort analysis | **EMBEDDED** in AnalysisWorkspace (Effort) |
 | `/velocity` | VelocityDashboard.razor | Velocity trends | **EMBEDDED** in TeamWorkspace |
 | `/state-timeline` | StateTimeline.razor | State history | Legacy (pending embed) |
 | `/state-timeline/{workItemId}` | StateTimeline.razor | Item state history | Legacy (pending embed) |

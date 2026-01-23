@@ -2,6 +2,7 @@
 @page "/workspace/analysis/{Mode}"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.BacklogHealth
+@using PoTool.Client.Components.EffortDistribution
 @using PoTool.Client.ApiClient
 @using PoTool.Shared.Contracts
 @using NavigationContext = PoTool.Client.Models.NavigationContext
@@ -111,20 +112,9 @@
                         Full Dashboard
                     </MudButton>
                 </MudStack>
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-                    Analyze how effort is distributed across work items and categories.
-                </MudText>
-                <MudGrid>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudCard Elevation="1" Style="cursor: pointer;" Class="mud-card-hover" @onclick='() => NavigateToLegacy("/effort-distribution")'>
-                            <MudCardContent Class="d-flex flex-column align-center pa-4">
-                                <MudIcon Icon="@Icons.Material.Filled.PieChart" Color="Color.Primary" Size="Size.Large" />
-                                <MudText Typo="Typo.subtitle1" Class="mt-2">Effort Charts</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Distribution visualization</MudText>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                </MudGrid>
+                
+                @* Embedded Effort Distribution Panel *@
+                <EffortDistributionPanel MaxIterations="6" />
             </MudPaper>
         }
         else if (_currentMode == "flow")
