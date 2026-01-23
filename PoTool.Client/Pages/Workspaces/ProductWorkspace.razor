@@ -332,9 +332,8 @@
             Mode = "health"
         };
         
-        // For now, navigate to legacy page until Analysis Workspace is built
         await NavigationContextService.NavigateWithContextAsync(
-            WorkspaceRoutes.LegacyTemporary.Begrijpen, 
+            WorkspaceRoutes.AnalysisWorkspace, 
             newContext);
     }
     
@@ -349,9 +348,8 @@
             TimeHorizon = TimeHorizon.Future
         };
         
-        // For now, navigate to legacy page until Planning Workspace is built
         await NavigationContextService.NavigateWithContextAsync(
-            WorkspaceRoutes.LegacyTemporary.Plannen, 
+            WorkspaceRoutes.PlanningWorkspace, 
             newContext);
     }
     
