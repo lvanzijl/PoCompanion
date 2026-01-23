@@ -1087,7 +1087,7 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
 
 ---
 
-### Phase 2: Entry Points — Profile Gating and Landing 🟡 IN PROGRESS
+### Phase 2: Entry Points — Profile Gating and Landing ✅ COMPLETE
 
 **Goals:**
 - Ensure profile selection is enforced
@@ -1120,8 +1120,10 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
 - [x] Four intent cards (Overzien, Begrijpen, Plannen, Delen) implemented
 - [x] Intent selection creates appropriate initial context
 - [x] "Return to Landing" action in header works
-- [ ] Profile gating verified (user cannot bypass profile selection)
-- [ ] Onboarding → profile selection flow verified
+- [x] Profile gating verified (already implemented in StartupGuard and ProfilesHome)
+- [x] Onboarding → profile selection flow verified (already implemented in MainLayout)
+
+**Completion Date:** 2026-01-23
 
 **What Became Deletable:**
 - Nothing (additive phase, sidebar still active)
@@ -1603,15 +1605,17 @@ This section tracks all updates to the migration plan.
 
 ---
 
-### 2026-01-23 - Phase 2 Started - Landing Page
+### 2026-01-23 - Phase 2 Complete - Landing Page and Routes
 
 **Changed:** 
 - Created `Landing.razor` page at `/landing` with four intent cards (Overzien, Begrijpen, Plannen, Delen)
 - Added "Return to Landing" button in MainLayout header
 - Intent selection sets navigation context and routes to temporary legacy pages (until workspaces exist)
+- Created `WorkspaceRoutes.cs` constants class for centralized route management
+- Verified profile gating and onboarding flows are already implemented
 
 **Reason:** Execute Phase 2 of the migration plan
-**Impact:** Phase 2 partially complete, Landing page functional but profile gating needs verification
+**Impact:** Phase 2 complete, intent-driven landing page functional with dual navigation support
 
 ---
 
