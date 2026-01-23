@@ -1371,14 +1371,23 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
 - [x] **Sidebar CSS/styling removed** (workspace-layout class added)
 - [x] All workspaces have cross-navigation actions
 - [x] No sidebar or feature-based navigation visible
-- [ ] **Stability period passed with no critical issues** (ongoing)
+- [x] **Workspace cross-navigation fixed** (uses actual workspace routes, not LegacyTemporary)
+- [ ] **Stability period passed with no critical issues** (started 2026-01-23)
 
 **Completion Date:** 2026-01-23
 
+**Stability Period Notes:**
+- Stability period began: 2026-01-23
+- Minimum duration: 1 sprint (as per plan)
+- Current status: ACTIVE - monitoring for issues
+- No critical issues reported
+
 **What Became Deletable (marked for deletion in 7B):**
-- NavMenu.razor (delete in 7B)
-- NavMenu.razor.css (delete in 7B)
-- All legacy page files (delete in 7B)
+- NavMenu.razor (delete in 7B - safe, not rendered)
+- NavMenu.razor.css (delete in 7B - safe, not used)
+- ProductHome.razor (delete in 7B - safe, redirect exists)
+- Help.razor (delete in 7B - safe, not used)
+- Other legacy pages: see Phase 7B strategy decision required
 
 **Lifecycle Transitions:**
 - No backend changes; all controllers remain Active
@@ -1387,10 +1396,27 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
 
 ### Phase 7B: Legacy Frontend Deletion
 
+**Status:** 🟡 PENDING - Requires planning decision
+
 **Goals:**
 - Delete all legacy page files
 - Delete unused frontend components
 - Verify application stability after deletions
+
+**Prerequisites (Added 2026-01-23):**
+Before executing Phase 7B, a strategy decision is required. The current workspaces link to legacy pages for detailed views. Choose one approach:
+
+| Approach | Description | Effort | Risk |
+|----------|-------------|--------|------|
+| **A. Embed** | Move detailed components from legacy pages into workspace mode panels | High | Low |
+| **B. Redirect** | Replace legacy routes with redirects to workspace mode URLs | Medium | Medium |
+| **C. Hybrid** | Keep essential detailed pages (ReleasePlanning, BacklogHealth), delete truly unused | Low | Low |
+
+**Recommended:** Approach C (Hybrid) for initial Phase 7B:
+1. Delete NavMenu.razor and CSS (safe - not rendered)
+2. Delete ProductHome.razor (safe - redirects to Product Workspace)
+3. Delete Help.razor (safe - not used)
+4. Keep detailed pages that workspaces link to until functionality is embedded
 
 **UI Changes:**
 - Delete NavMenu.razor
@@ -1419,10 +1445,13 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
 
 **Risks:**
 - Accidental deletion of referenced component
-- Mitigated: comprehensive testing before deletion
+- Breaking workspace "Full Dashboard" links
+- Mitigated: comprehensive testing before deletion, staged approach
 
 **Exit Criteria:**
-- [ ] All legacy page files deleted
+- [ ] Strategy decision made (A, B, or C)
+- [ ] Safe deletions completed (NavMenu, ProductHome, Help)
+- [ ] All legacy page files deleted (if strategy allows)
 - [ ] NavMenu.razor and CSS deleted
 - [ ] Application compiles without legacy pages
 - [ ] All routes work via redirects to workspaces
@@ -1720,6 +1749,37 @@ This section tracks all updates to the migration plan.
 **Reason:** All workspaces are now implemented per Phases 3-6, so cross-workspace navigation should use actual workspace routes instead of legacy temporary routes
 
 **Impact:** All workspace-to-workspace navigation now flows through the proper workspace routes, completing the intent-driven navigation model
+
+---
+
+### 2026-01-23 - Phase 7A Stability Period Status Update
+
+**Changed:** 
+- Documented current state of workspace-to-legacy page relationships
+- Clarified Phase 7B requirements based on current architecture
+- Updated stability period status
+
+**Current State:**
+- All five workspaces (Product, Team, Analysis, Planning, Communication) are implemented
+- Sidebar navigation is removed from MainLayout
+- Workspaces serve as **hub/overview pages** with "Full Dashboard" links to legacy pages:
+  - AnalysisWorkspace → links to: `/backlog-health`, `/effort-distribution`, `/pr-insights`, `/epic-forecast`, `/dependency-graph`, `/state-timeline`
+  - ProductWorkspace → links to: `/backlog-health`, `/velocity`, `/release-planning`, `/epic-forecast`, `/pr-insights`
+  - TeamWorkspace → links to: `/velocity`, `/state-timeline`, `/backlog-health`
+  - PlanningWorkspace → links to: `/release-planning`, `/epic-forecast`, `/velocity`
+- Legacy pages still contain **detailed functionality** (charts, tables, interactive elements)
+- `LegacyTemporary` class in WorkspaceRoutes.cs is no longer used by workspace cross-navigation but remains for cleanup
+
+**Phase 7B Requirements Clarification:**
+Phase 7B cannot simply delete legacy pages because workspaces currently depend on them for detailed views. Before Phase 7B can proceed, one of these approaches must be chosen:
+
+1. **Embed detailed views into workspaces** - Move chart/table components from legacy pages into workspace tabs/panels
+2. **Create redirect routes** - Replace legacy page routes with redirects to workspace equivalents with mode parameters (e.g., `/backlog-health` → `/workspace/analysis/health`)
+3. **Hybrid approach** - Keep essential detailed pages, delete truly unused ones
+
+**Reason:** Document the dependencies between workspaces and legacy pages to inform Phase 7B planning
+
+**Impact:** Provides clarity on Phase 7B scope and prevents premature deletion of legacy pages
 
 ---
 
