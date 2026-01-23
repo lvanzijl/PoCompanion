@@ -1434,7 +1434,7 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
    - [ ] Embed VelocityDashboard.razor content into Team Workspace
 
 4. **Sub-Phase 7B.4: Embed Planning Functionality** (into PlanningWorkspace)
-   - [ ] Embed ReleasePlanning.razor content into Planning Workspace
+   - [x] Embed ReleasePlanning.razor content into Planning Workspace
 
 5. **Sub-Phase 7B.5: Delete Legacy Pages** (after embedding complete)
    - [ ] Delete all embedded legacy pages
@@ -1479,7 +1479,7 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
 - [x] Sub-Phase 7B.1 complete: Safe deletions (NavMenu, ProductHome, Help, LegacyTemporary)
 - [ ] Sub-Phase 7B.2 complete: Analysis functionality embedded
 - [ ] Sub-Phase 7B.3 complete: Team functionality embedded
-- [ ] Sub-Phase 7B.4 complete: Planning functionality embedded
+- [x] Sub-Phase 7B.4 complete: Planning functionality embedded
 - [ ] Sub-Phase 7B.5 complete: Legacy pages deleted
 - [ ] Application compiles without legacy pages
 - [ ] All workspace modes contain embedded functionality
@@ -1853,6 +1853,31 @@ Phase 7B cannot simply delete legacy pages because workspaces currently depend o
 
 ---
 
+### 2026-01-23 - Phase 7B.4 Complete - Planning Functionality Embedded
+
+**Changed:** 
+- Embedded `<ReleasePlanningBoard />` component directly into PlanningWorkspace
+- Added board toolbar with Refresh Validation, Add Lane, Add Milestone, Add Iteration, Export buttons
+- Added board state management and dialog handler methods
+- Reorganized "Quick Links" section to show Epic Forecast and Velocity Data as related dashboards
+- Added necessary service injections: `ReleasePlanningService`, `IDialogService`
+- Added using directives for `PoTool.Client.Components.ReleasePlanning` and `PoTool.Shared.ReleasePlanning`
+
+**Code Changes:**
+- `PoTool.Client/Pages/Workspaces/PlanningWorkspace.razor`:
+  - Added `@using PoTool.Client.Components.ReleasePlanning`
+  - Added `@using PoTool.Shared.ReleasePlanning`
+  - Added `@inject ReleasePlanningService` and `@inject IDialogService`
+  - Replaced link-card section with embedded `<ReleasePlanningBoard />` and toolbar
+  - Added board handlers: `HandleRefreshValidation`, `HandleAddLane`, `HandleAddMilestone`, `HandleAddIteration`, `HandleExport`
+  - Added `_board` state field with full qualified type
+
+**Reason:** Execute Sub-Phase 7B.4 of the migration plan - embed planning functionality per Approach A
+
+**Impact:** PlanningWorkspace now contains the full Release Planning Board inline. Users no longer need to navigate to `/release-planning` page.
+
+---
+
 <!-- Future entries will be added here as the migration progresses -->
 
 ---
@@ -1882,7 +1907,7 @@ Phase 7B cannot simply delete legacy pages because workspaces currently depend o
 | `/dependency-graph` | DependencyGraph.razor | Dependencies | Legacy (pending embed) |
 | `/pr-insights` | PRInsight.razor | PR metrics | Legacy (pending embed) |
 | `/pipeline-insights` | PipelineInsights.razor | Pipeline metrics | Legacy (pending embed) |
-| `/release-planning` | ReleasePlanning.razor | Planning board | Legacy (pending embed) |
+| `/release-planning` | ReleasePlanning.razor | Planning board | **EMBEDDED** in PlanningWorkspace |
 | `/tfsconfig` | TfsConfig.razor | TFS configuration | Active |
 | `/settings/workitem-states` | WorkItemStates.razor | State config | Active |
 | `/settings/products` | ManageProducts.razor | Product config | Active |

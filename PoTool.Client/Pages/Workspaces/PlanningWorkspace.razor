@@ -1,12 +1,16 @@
 @page "/workspace/planning"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Components.ReleasePlanning
 @using PoTool.Client.ApiClient
 @using PoTool.Shared.Contracts
+@using PoTool.Shared.ReleasePlanning
 @using NavigationContext = PoTool.Client.Models.NavigationContext
 @inject INavigationContextService NavigationContextService
 @inject IProfileService ProfileService
 @inject ProductService ProductService
+@inject ReleasePlanningService ReleasePlanningService
 @inject NavigationManager NavigationManager
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
 <PageTitle>Planning Workspace - PO Companion</PageTitle>
@@ -87,36 +91,62 @@
             </MudPaper>
         }
 
-        @* Release Planning Quick Access *@
+        @* Embedded Release Planning Board *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
                 <MudText Typo="Typo.h5">
                     <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Class="mr-2" />
-                    Release Planning
+                    Release Planning Board
                 </MudText>
-                <MudButton Variant="Variant.Text"
-                           Color="Color.Primary"
-                           EndIcon="@Icons.Material.Filled.ArrowForward"
-                           Href="/release-planning">
-                    Open Board
-                </MudButton>
+                
+                @* Board Toolbar *@
+                <MudStack Row="true" Spacing="2">
+                    <MudButton StartIcon="@Icons.Material.Filled.Refresh"
+                               Size="Size.Small"
+                               Variant="Variant.Outlined"
+                               OnClick="HandleRefreshValidation">
+                        Refresh Validation
+                    </MudButton>
+                    <MudButton StartIcon="@Icons.Material.Filled.Add"
+                               Size="Size.Small"
+                               Variant="Variant.Outlined"
+                               OnClick="HandleAddLane">
+                        Add Lane
+                    </MudButton>
+                    <MudButton StartIcon="@Icons.Material.Filled.Timeline"
+                               Size="Size.Small"
+                               Variant="Variant.Text"
+                               OnClick="HandleAddMilestone">
+                        Add Milestone
+                    </MudButton>
+                    <MudButton StartIcon="@Icons.Material.Filled.Schedule"
+                               Size="Size.Small"
+                               Variant="Variant.Text"
+                               OnClick="HandleAddIteration">
+                        Add Iteration
+                    </MudButton>
+                    <MudButton StartIcon="@Icons.Material.Filled.Download"
+                               Size="Size.Small"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               OnClick="HandleExport">
+                        Export
+                    </MudButton>
+                </MudStack>
             </MudStack>
             
-            <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-                Plan and organize work across releases and sprints. Drag and drop items to prioritize.
+            @* Embedded Release Planning Board Component *@
+            <ReleasePlanningBoard />
+        </MudPaper>
+
+        @* Quick Links to Related Dashboards *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
+                Related Dashboards
             </MudText>
             
             <MudGrid>
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick='() => NavigateToLegacy("/release-planning")'>
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Color="Color.Primary" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Release Board</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Organize work by release</MudText>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-                
                 <MudItem xs="12" sm="6" md="4">
                     <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick='() => NavigateToLegacy("/epic-forecast")'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
@@ -211,6 +241,9 @@
     private List<ProductDto> _products = new();
     private int? _selectedProductId;
     
+    // Release Planning Board state
+    private PoTool.Shared.ReleasePlanning.ReleasePlanningBoardDto? _board;
+    
     protected override async Task OnInitializedAsync()
     {
         try
@@ -244,6 +277,9 @@
                 _selectedProductId = _currentContext.Scope.ProductId;
             }
             
+            // Load Release Planning Board
+            _board = await ReleasePlanningService.GetBoardAsync();
+            
             // Build breadcrumbs
             UpdateBreadcrumbs();
         }
@@ -265,6 +301,156 @@
             new("Planning", null, disabled: true, icon: Icons.Material.Filled.CalendarMonth)
         };
     }
+    
+    #region Release Planning Board Handlers
+    
+    private async Task HandleRefreshValidation()
+    {
+        var result = await ReleasePlanningService.RefreshValidationAsync();
+        
+        if (result?.Success == true)
+        {
+            Snackbar.Add($"Validation refreshed: {result.ErrorCount} errors, {result.WarningCount} warnings", 
+                result.ErrorCount > 0 ? Severity.Warning : Severity.Success);
+            _board = await ReleasePlanningService.GetBoardAsync();
+            StateHasChanged();
+        }
+        else
+        {
+            Snackbar.Add($"Failed to refresh validation: {result?.ErrorMessage ?? "Unknown error"}", Severity.Error);
+        }
+    }
+
+    private async Task HandleAddLane()
+    {
+        if (_board == null) return;
+
+        var existingObjectiveIds = _board.Lanes.Select(l => l.ObjectiveId).ToList();
+
+        var parameters = new DialogParameters<AddLaneDialog>
+        {
+            { x => x.ExistingObjectiveIds, existingObjectiveIds }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddLaneDialog>("Add Lane", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: int objectiveId })
+        {
+            var displayOrder = _board.Lanes.Count;
+            var createResult = await ReleasePlanningService.CreateLaneAsync(objectiveId, displayOrder);
+
+            if (createResult?.Success == true)
+            {
+                Snackbar.Add("Lane added successfully", Severity.Success);
+                _board = await ReleasePlanningService.GetBoardAsync();
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to add lane: {createResult?.ErrorMessage ?? "Unknown error"}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task HandleAddMilestone()
+    {
+        if (_board == null) return;
+
+        var parameters = new DialogParameters<AddMilestoneLineDialog>
+        {
+            { x => x.MaxRowIndex, _board.MaxRowIndex }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddMilestoneLineDialog>("Add Milestone Line", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: AddMilestoneLineDialog.MilestoneLineData data })
+        {
+            var createResult = await ReleasePlanningService.CreateMilestoneLineAsync(
+                data.Label, 
+                data.VerticalPosition, 
+                data.Type);
+
+            if (createResult?.Success == true)
+            {
+                Snackbar.Add("Milestone line added successfully", Severity.Success);
+                _board = await ReleasePlanningService.GetBoardAsync();
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to add milestone line: {createResult?.ErrorMessage ?? "Unknown error"}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task HandleAddIteration()
+    {
+        if (_board == null) return;
+
+        var parameters = new DialogParameters<AddIterationLineDialog>
+        {
+            { x => x.MaxRowIndex, _board.MaxRowIndex }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddIterationLineDialog>("Add Iteration Line", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: AddIterationLineDialog.IterationLineData data })
+        {
+            var createResult = await ReleasePlanningService.CreateIterationLineAsync(
+                data.Label, 
+                data.VerticalPosition);
+
+            if (createResult?.Success == true)
+            {
+                Snackbar.Add("Iteration line added successfully", Severity.Success);
+                _board = await ReleasePlanningService.GetBoardAsync();
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to add iteration line: {createResult?.ErrorMessage ?? "Unknown error"}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task HandleExport()
+    {
+        var parameters = new DialogParameters<ExportDialog>
+        {
+            { x => x.Board, _board }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<ExportDialog>("Export", parameters, options);
+    }
+    
+    #endregion
     
     private async Task OnProductChanged(int? productId)
     {
