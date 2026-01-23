@@ -6,9 +6,10 @@ namespace PoTool.Client.Services;
 /// <summary>
 /// Service for managing user profiles via the API.
 /// </summary>
-public class ProfileService
+public class ProfileService : IProfileService
 {
     private readonly IProfilesClient _profilesClient;
+    private int? _cachedActiveProfileId;
 
     public ProfileService(IProfilesClient profilesClient)
     {
@@ -150,6 +151,27 @@ public class ProfileService
         // Set it as active
         await SetActiveProfileAsync(profile.Id, cancellationToken);
 
+        // Update cached value
+        _cachedActiveProfileId = profile.Id;
+
         return profile;
+    }
+
+    /// <inheritdoc />
+    public int? GetActiveProfileId()
+    {
+        return _cachedActiveProfileId;
+    }
+
+    /// <inheritdoc />
+    public bool IsActiveProfileValid()
+    {
+        return _cachedActiveProfileId.HasValue;
+    }
+
+    /// <inheritdoc />
+    public void SetCachedActiveProfileId(int? profileId)
+    {
+        _cachedActiveProfileId = profileId;
     }
 }
