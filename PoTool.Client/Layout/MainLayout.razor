@@ -4,6 +4,7 @@
 @using PoTool.Client.Services
 @inject IOnboardingService OnboardingService
 @inject IStartupOrchestratorService StartupOrchestrator
+@inject INavigationContextService NavigationContextService
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 @inherits LayoutComponentBase
@@ -22,6 +23,13 @@
     <main>
         <div class="top-row px-4 d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
+                <MudTooltip Text="Return to Landing">
+                    <CompactIconButton Icon="@Icons.Material.Filled.Home" 
+                                  Color="Color.Inherit" 
+                                  OnClick="NavigateToLanding" 
+                                  Title="Landing" 
+                                  AriaLabel="Return to landing page" />
+                </MudTooltip>
                 <ProfileSelector @ref="_profileSelector" OnProfileChanged="HandleProfileChanged" />
             </div>
             <div class="d-flex align-items-center">
@@ -177,6 +185,11 @@
     private void OpenSettings()
     {
         _settingsVisible = true;
+    }
+
+    private void NavigateToLanding()
+    {
+        NavigationManager.NavigateTo("/landing");
     }
 
     private async Task OpenOnboardingWizard()
