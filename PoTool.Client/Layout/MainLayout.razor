@@ -15,12 +15,8 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<div class="page" @onkeydown="HandleGlobalKeyDown" tabindex="-1">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
+<div class="page workspace-layout" @onkeydown="HandleGlobalKeyDown" tabindex="-1">
+    <main class="workspace-main">
         <div class="top-row px-4 d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
                 <MudTooltip Text="Return to Landing">

@@ -8,6 +8,7 @@
 @inject IClipboardService ClipboardService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Communication Workspace - PO Companion</PageTitle>
 
@@ -67,12 +68,78 @@
     }
     else
     {
-        @* Current Context Summary *@
+        @* Template Selection *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudText Typo="Typo.h5" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.Summarize" Class="mr-2" />
-                Current Context
+                <MudIcon Icon="@Icons.Material.Filled.Article" Class="mr-2" />
+                Report Template
             </MudText>
+            
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="@(_selectedTemplate == "status" ? 3 : 1)" 
+                             Style="@GetTemplateCardStyle("status")" 
+                             Class="mud-card-hover" 
+                             @onclick='() => SelectTemplate("status")'>
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="@GetTemplateColor("status")" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Status Report</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                                Sprint/iteration status summary
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="@(_selectedTemplate == "health" ? 3 : 1)" 
+                             Style="@GetTemplateCardStyle("health")" 
+                             Class="mud-card-hover" 
+                             @onclick='() => SelectTemplate("health")'>
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Color="@GetTemplateColor("health")" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Health Summary</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                                Backlog health overview
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="@(_selectedTemplate == "planning" ? 3 : 1)" 
+                             Style="@GetTemplateCardStyle("planning")" 
+                             Class="mud-card-hover" 
+                             @onclick='() => SelectTemplate("planning")'>
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Color="@GetTemplateColor("planning")" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Planning Summary</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                                Release planning snapshot
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        @* Current Context Summary *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.Summarize" Class="mr-2" />
+                    Context Summary
+                </MudText>
+                @if (_currentContext != null)
+                {
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="RefreshPreview">
+                        Refresh
+                    </MudButton>
+                }
+            </MudStack>
             
             @if (_currentContext != null)
             {
@@ -113,6 +180,14 @@
                         </MudCard>
                     </MudItem>
                 </MudGrid>
+                
+                @* Generated Report Preview *@
+                <MudPaper Elevation="1" Class="pa-3 mt-4" Style="background-color: var(--mud-palette-background-gray);">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mb-2">Report Preview</MudText>
+                    <MudText Typo="Typo.body2" Style="font-family: monospace; white-space: pre-wrap;">
+                        @_reportPreview
+                    </MudText>
+                </MudPaper>
             }
             else
             {
@@ -122,33 +197,57 @@
             }
         </MudPaper>
 
-        @* Share Actions *@
+        @* Export Actions *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudText Typo="Typo.h5" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Class="mr-2" />
-                Share Actions
+                <MudIcon Icon="@Icons.Material.Filled.FileDownload" Class="mr-2" />
+                Export & Share
             </MudText>
             
             <MudGrid>
-                <MudItem xs="12" sm="6">
-                    <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick="CopyContextSummary">
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick="CopyToClipboard">
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
                             <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Primary" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Copy Context Summary</MudText>
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Copy to Clipboard</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
-                                Copy current navigation state to clipboard
+                                Copy formatted report
                             </MudText>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
                 
-                <MudItem xs="12" sm="6">
+                <MudItem xs="12" sm="6" md="3">
                     <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick="CopyDeepLink">
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
                             <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Secondary" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Copy Deep Link</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
-                                Copy shareable URL with context
+                                Shareable URL with context
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick="ExportAsMarkdown">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.Code" Color="Color.Info" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Export Markdown</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                                Copy as Markdown format
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick="ShareViaEmail">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.Email" Color="Color.Warning" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Email Report</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                                Open in email client
                             </MudText>
                         </MudCardContent>
                     </MudCard>
@@ -156,57 +255,27 @@
             </MudGrid>
         </MudPaper>
 
-        @* Export Options (Coming Soon) *@
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudText Typo="Typo.h5" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.FileDownload" Class="mr-2" />
-                Export Options
-                <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">Coming Soon</MudChip>
+        @* Quick Navigation *@
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Bolt" Class="mr-2" />
+                Other Workspaces
             </MudText>
             
-            <MudGrid>
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" Style="opacity: 0.6; cursor: not-allowed;">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Description" Color="Color.Default" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Status Report</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
-                                Generate formatted status report
-                            </MudText>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-                
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" Style="opacity: 0.6; cursor: not-allowed;">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.TableChart" Color="Color.Default" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Export to Excel</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
-                                Download data as spreadsheet
-                            </MudText>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-                
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" Style="opacity: 0.6; cursor: not-allowed;">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Slideshow" Color="Color.Default" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Presentation Mode</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
-                                View in presentation format
-                            </MudText>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-            </MudGrid>
-            
-            <MudAlert Severity="Severity.Info" Class="mt-4" Dense="true">
-                <MudText Typo="Typo.body2">
-                    Full export functionality will be added in a future phase. Currently, you can share context summaries and deep links.
-                </MudText>
-            </MudAlert>
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Inventory2" OnClick="NavigateToProduct">
+                    Product
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.Groups" OnClick="NavigateToTeam">
+                    Team
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Psychology" OnClick="NavigateToAnalysis">
+                    Analyze
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.CalendarMonth" OnClick="NavigateToPlanning">
+                    Plan
+                </MudButton>
+            </MudStack>
         </MudPaper>
     }
 </MudContainer>
@@ -223,6 +292,8 @@
     private NavigationContext? _currentContext;
     private string? _sourceLabel;
     private List<BreadcrumbItem> _breadcrumbs = new();
+    private string _selectedTemplate = "status";
+    private string _reportPreview = "";
     
     protected override async Task OnInitializedAsync()
     {
@@ -249,8 +320,9 @@
                 _currentContext = NavigationContextService.CurrentOrDefault;
             }
             
-            // Build breadcrumbs
+            // Build breadcrumbs and generate preview
             UpdateBreadcrumbs();
+            GenerateReportPreview();
         }
         catch (Exception)
         {
@@ -276,6 +348,106 @@
         }
     }
     
+    private void SelectTemplate(string template)
+    {
+        _selectedTemplate = template;
+        GenerateReportPreview();
+    }
+    
+    private string GetTemplateCardStyle(string template)
+    {
+        var baseStyle = "cursor: pointer; transition: all 0.2s;";
+        if (_selectedTemplate == template)
+        {
+            return $"{baseStyle} border: 2px solid var(--mud-palette-primary);";
+        }
+        return baseStyle;
+    }
+    
+    private Color GetTemplateColor(string template)
+    {
+        return _selectedTemplate == template ? Color.Primary : Color.Default;
+    }
+    
+    private void GenerateReportPreview()
+    {
+        if (_currentContext == null)
+        {
+            _reportPreview = "No context available";
+            return;
+        }
+        
+        var lines = new List<string>();
+        var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+        
+        switch (_selectedTemplate)
+        {
+            case "status":
+                lines.Add("═══════════════════════════════════════");
+                lines.Add("         STATUS REPORT");
+                lines.Add("═══════════════════════════════════════");
+                lines.Add($"Generated: {timestamp}");
+                lines.Add("");
+                lines.Add($"Intent:      {_currentContext.Intent}");
+                lines.Add($"Scope:       {_currentContext.Scope.Level}");
+                lines.Add($"Time Period: {_currentContext.TimeHorizon}");
+                if (_currentContext.Scope.ProductId.HasValue)
+                    lines.Add($"Product ID:  {_currentContext.Scope.ProductId}");
+                if (_currentContext.Scope.TeamId.HasValue)
+                    lines.Add($"Team ID:     {_currentContext.Scope.TeamId}");
+                lines.Add("");
+                lines.Add("───────────────────────────────────────");
+                lines.Add("This report was generated from PO Companion.");
+                break;
+                
+            case "health":
+                lines.Add("═══════════════════════════════════════");
+                lines.Add("       HEALTH SUMMARY");
+                lines.Add("═══════════════════════════════════════");
+                lines.Add($"Generated: {timestamp}");
+                lines.Add("");
+                lines.Add("Analysis Focus: Backlog Health");
+                lines.Add($"Scope:          {_currentContext.Scope.Level}");
+                lines.Add($"Time Horizon:   {_currentContext.TimeHorizon}");
+                lines.Add("");
+                lines.Add("Key Metrics:");
+                lines.Add("  • Health Score: [Navigate to dashboard]");
+                lines.Add("  • Issues Found: [Navigate to dashboard]");
+                lines.Add("  • Trend:        [Navigate to dashboard]");
+                lines.Add("");
+                lines.Add("───────────────────────────────────────");
+                lines.Add("Open the Health Dashboard for details.");
+                break;
+                
+            case "planning":
+                lines.Add("═══════════════════════════════════════");
+                lines.Add("      PLANNING SUMMARY");
+                lines.Add("═══════════════════════════════════════");
+                lines.Add($"Generated: {timestamp}");
+                lines.Add("");
+                lines.Add("Planning Focus: Release Planning");
+                lines.Add($"Scope:          {_currentContext.Scope.Level}");
+                lines.Add($"Time Horizon:   Future");
+                lines.Add("");
+                lines.Add("Release Status:");
+                lines.Add("  • Planned Items:  [Navigate to board]");
+                lines.Add("  • Capacity:       [Navigate to board]");
+                lines.Add("  • Forecast:       [Navigate to board]");
+                lines.Add("");
+                lines.Add("───────────────────────────────────────");
+                lines.Add("Open the Planning Board for details.");
+                break;
+        }
+        
+        _reportPreview = string.Join(Environment.NewLine, lines);
+    }
+    
+    private void RefreshPreview()
+    {
+        GenerateReportPreview();
+        Snackbar.Add("Preview refreshed", Severity.Info);
+    }
+    
     private void NavigateToLanding()
     {
         NavigationContextService.ClearContext();
@@ -287,17 +459,16 @@
         await NavigationContextService.NavigateBackAsync();
     }
     
-    private async Task CopyContextSummary()
+    private async Task CopyToClipboard()
     {
-        if (_currentContext == null)
+        if (string.IsNullOrEmpty(_reportPreview))
         {
-            Snackbar.Add("No context to share", Severity.Warning);
+            Snackbar.Add("No report to copy", Severity.Warning);
             return;
         }
         
-        var summary = BuildContextSummary();
-        await ClipboardService.CopyToClipboardAsync(summary);
-        Snackbar.Add("Context summary copied to clipboard!", Severity.Success);
+        await ClipboardService.CopyToClipboardAsync(_reportPreview);
+        Snackbar.Add("Report copied to clipboard!", Severity.Success);
     }
     
     private async Task CopyDeepLink()
@@ -317,40 +488,73 @@
         Snackbar.Add("Deep link copied to clipboard!", Severity.Success);
     }
     
-    private string BuildContextSummary()
+    private async Task ExportAsMarkdown()
     {
-        if (_currentContext == null) return "No context available";
+        if (_currentContext == null)
+        {
+            Snackbar.Add("No context to export", Severity.Warning);
+            return;
+        }
+        
+        var markdown = BuildMarkdownReport();
+        await ClipboardService.CopyToClipboardAsync(markdown);
+        Snackbar.Add("Markdown report copied to clipboard!", Severity.Success);
+    }
+    
+    private async Task ShareViaEmail()
+    {
+        if (_currentContext == null)
+        {
+            Snackbar.Add("No context to share", Severity.Warning);
+            return;
+        }
+        
+        var subject = Uri.EscapeDataString($"PO Companion - {GetTemplateDisplayName()} Report");
+        var body = Uri.EscapeDataString(_reportPreview);
+        var mailtoUrl = $"mailto:?subject={subject}&body={body}";
+        
+        await JSRuntime.InvokeVoidAsync("open", mailtoUrl, "_blank");
+        Snackbar.Add("Opening email client...", Severity.Info);
+    }
+    
+    private string GetTemplateDisplayName()
+    {
+        return _selectedTemplate switch
+        {
+            "status" => "Status",
+            "health" => "Health",
+            "planning" => "Planning",
+            _ => "Report"
+        };
+    }
+    
+    private string BuildMarkdownReport()
+    {
+        if (_currentContext == null) return "";
         
         var lines = new List<string>
         {
-            "=== PO Companion Context Summary ===",
-            $"Intent: {_currentContext.Intent}",
-            $"Scope: {_currentContext.Scope.Level}",
-            $"Time Horizon: {_currentContext.TimeHorizon}"
+            $"# {GetTemplateDisplayName()} Report",
+            "",
+            $"**Generated:** {DateTime.Now:yyyy-MM-dd HH:mm}",
+            "",
+            "## Context",
+            "",
+            $"| Property | Value |",
+            $"|----------|-------|",
+            $"| Intent | {_currentContext.Intent} |",
+            $"| Scope | {_currentContext.Scope.Level} |",
+            $"| Time Horizon | {_currentContext.TimeHorizon} |"
         };
         
         if (_currentContext.Scope.ProductId.HasValue)
-        {
-            lines.Add($"Product ID: {_currentContext.Scope.ProductId}");
-        }
-        
+            lines.Add($"| Product ID | {_currentContext.Scope.ProductId} |");
         if (_currentContext.Scope.TeamId.HasValue)
-        {
-            lines.Add($"Team ID: {_currentContext.Scope.TeamId}");
-        }
+            lines.Add($"| Team ID | {_currentContext.Scope.TeamId} |");
         
-        if (_currentContext.Trigger != null)
-        {
-            lines.Add($"Source: {_currentContext.Trigger.SourceLabel ?? _currentContext.Trigger.Type.ToString()}");
-        }
-        
-        if (!string.IsNullOrEmpty(_currentContext.Mode))
-        {
-            lines.Add($"Mode: {_currentContext.Mode}");
-        }
-        
-        lines.Add($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm}");
-        lines.Add("================================");
+        lines.Add("");
+        lines.Add("---");
+        lines.Add("*Generated by PO Companion*");
         
         return string.Join(Environment.NewLine, lines);
     }
@@ -365,5 +569,64 @@
             ScopeLevel.Product => WorkspaceRoutes.ProductWorkspace,
             _ => WorkspaceRoutes.ProductWorkspace
         };
+    }
+    
+    private async Task NavigateToProduct()
+    {
+        if (_currentContext == null) return;
+        
+        var newContext = _currentContext with
+        {
+            Intent = Intent.Overzien,
+            Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Communication Workspace" }
+        };
+        
+        await NavigationContextService.NavigateWithContextAsync(WorkspaceRoutes.ProductWorkspace, newContext);
+    }
+    
+    private async Task NavigateToTeam()
+    {
+        if (_currentContext == null) return;
+        
+        var newContext = _currentContext with
+        {
+            Intent = Intent.Overzien,
+            Scope = new Scope
+            {
+                Level = ScopeLevel.Team,
+                ProfileId = _currentContext.Scope.ProfileId,
+                ProductId = _currentContext.Scope.ProductId
+            },
+            Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Communication Workspace" }
+        };
+        
+        await NavigationContextService.NavigateWithContextAsync(WorkspaceRoutes.TeamWorkspace, newContext);
+    }
+    
+    private async Task NavigateToAnalysis()
+    {
+        if (_currentContext == null) return;
+        
+        var newContext = _currentContext with
+        {
+            Intent = Intent.Begrijpen,
+            Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Communication Workspace" }
+        };
+        
+        await NavigationContextService.NavigateWithContextAsync(WorkspaceRoutes.AnalysisWorkspace, newContext);
+    }
+    
+    private async Task NavigateToPlanning()
+    {
+        if (_currentContext == null) return;
+        
+        var newContext = _currentContext with
+        {
+            Intent = Intent.Plannen,
+            Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Communication Workspace" },
+            TimeHorizon = TimeHorizon.Future
+        };
+        
+        await NavigationContextService.NavigateWithContextAsync(WorkspaceRoutes.PlanningWorkspace, newContext);
     }
 }
