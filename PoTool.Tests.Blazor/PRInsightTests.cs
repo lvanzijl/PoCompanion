@@ -4,7 +4,7 @@ using Moq;
 using MudBlazor;
 using MudBlazor.Services;
 using PoTool.Client.ApiClient;
-using PoTool.Client.Pages.PullRequests;
+using PoTool.Client.Components.Flow;
 using PoTool.Client.Services;
 
 namespace PoTool.Tests.Blazor;
@@ -48,7 +48,7 @@ public class PRInsightTests : BunitTestContext
         {
             builder.OpenComponent<MudPopoverProvider>(0);
             builder.CloseComponent();
-            builder.OpenComponent<PRInsight>(1);
+            builder.OpenComponent<FlowPanel>(1);
             builder.CloseComponent();
         });
     }

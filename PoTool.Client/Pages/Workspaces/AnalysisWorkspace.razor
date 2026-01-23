@@ -1,6 +1,12 @@
 @page "/workspace/analysis"
 @page "/workspace/analysis/{Mode}"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Components.BacklogHealth
+@using PoTool.Client.Components.EffortDistribution
+@using PoTool.Client.Components.Flow
+@using PoTool.Client.Components.Forecast
+@using PoTool.Client.Components.Dependencies
+@using PoTool.Client.Components.Timeline
 @using PoTool.Client.ApiClient
 @using PoTool.Shared.Contracts
 @using NavigationContext = PoTool.Client.Models.NavigationContext
@@ -93,29 +99,9 @@
                         Full Dashboard
                     </MudButton>
                 </MudStack>
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-                    Monitor backlog quality metrics, validation issues, and health trends.
-                </MudText>
-                <MudGrid>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudCard Elevation="1" Style="cursor: pointer;" Class="mud-card-hover" @onclick='() => NavigateToLegacy("/backlog-health")'>
-                            <MudCardContent Class="d-flex flex-column align-center pa-4">
-                                <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Color="Color.Success" Size="Size.Large" />
-                                <MudText Typo="Typo.subtitle1" Class="mt-2">Health Dashboard</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Iteration health trends</MudText>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudCard Elevation="1" Style="cursor: pointer;" Class="mud-card-hover" @onclick='() => NavigateToLegacy("/workitems")'>
-                            <MudCardContent Class="d-flex flex-column align-center pa-4">
-                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
-                                <MudText Typo="Typo.subtitle1" Class="mt-2">Validation Issues</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Items needing attention</MudText>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                </MudGrid>
+                
+                @* Embedded Backlog Health Panel *@
+                <BacklogHealthPanel MaxIterations="5" />
             </MudPaper>
         }
         else if (_currentMode == "effort")
@@ -130,20 +116,9 @@
                         Full Dashboard
                     </MudButton>
                 </MudStack>
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-                    Analyze how effort is distributed across work items and categories.
-                </MudText>
-                <MudGrid>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudCard Elevation="1" Style="cursor: pointer;" Class="mud-card-hover" @onclick='() => NavigateToLegacy("/effort-distribution")'>
-                            <MudCardContent Class="d-flex flex-column align-center pa-4">
-                                <MudIcon Icon="@Icons.Material.Filled.PieChart" Color="Color.Primary" Size="Size.Large" />
-                                <MudText Typo="Typo.subtitle1" Class="mt-2">Effort Charts</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Distribution visualization</MudText>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                </MudGrid>
+                
+                @* Embedded Effort Distribution Panel *@
+                <EffortDistributionPanel MaxIterations="6" />
             </MudPaper>
         }
         else if (_currentMode == "flow")
@@ -154,33 +129,18 @@
                         <MudIcon Icon="@Icons.Material.Filled.MergeType" Class="mr-2" />
                         Flow Analysis
                     </MudText>
-                    <MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward" Href="/pr-insights">
-                        PR Insights
-                    </MudButton>
+                    <MudStack Row="true" Spacing="1">
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward" Href="/pr-insights">
+                            PR Dashboard
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Secondary" EndIcon="@Icons.Material.Filled.ArrowForward" Href="/pipeline-insights">
+                            Pipelines
+                        </MudButton>
+                    </MudStack>
                 </MudStack>
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-                    Analyze code flow through pull requests and CI/CD pipelines.
-                </MudText>
-                <MudGrid>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudCard Elevation="1" Style="cursor: pointer;" Class="mud-card-hover" @onclick='() => NavigateToLegacy("/pr-insights")'>
-                            <MudCardContent Class="d-flex flex-column align-center pa-4">
-                                <MudIcon Icon="@Icons.Material.Filled.MergeType" Color="Color.Info" Size="Size.Large" />
-                                <MudText Typo="Typo.subtitle1" Class="mt-2">PR Insights</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Pull request metrics</MudText>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudCard Elevation="1" Style="cursor: pointer;" Class="mud-card-hover" @onclick='() => NavigateToLegacy("/pipeline-insights")'>
-                            <MudCardContent Class="d-flex flex-column align-center pa-4">
-                                <MudIcon Icon="@Icons.Material.Filled.Engineering" Color="Color.Secondary" Size="Size.Large" />
-                                <MudText Typo="Typo.subtitle1" Class="mt-2">Pipeline Insights</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">CI/CD metrics</MudText>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                </MudGrid>
+                
+                @* Embedded Flow Panel *@
+                <FlowPanel />
             </MudPaper>
         }
         else if (_currentMode == "forecast")
@@ -195,29 +155,9 @@
                         Full Forecast
                     </MudButton>
                 </MudStack>
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-                    Project completion dates based on velocity and scope trends.
-                </MudText>
-                <MudGrid>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudCard Elevation="1" Style="cursor: pointer;" Class="mud-card-hover" @onclick='() => NavigateToLegacy("/epic-forecast")'>
-                            <MudCardContent Class="d-flex flex-column align-center pa-4">
-                                <MudIcon Icon="@Icons.Material.Filled.EventNote" Color="Color.Primary" Size="Size.Large" />
-                                <MudText Typo="Typo.subtitle1" Class="mt-2">Epic Forecast</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Completion predictions</MudText>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudCard Elevation="1" Style="cursor: pointer;" Class="mud-card-hover" @onclick='() => NavigateToLegacy("/velocity")'>
-                            <MudCardContent Class="d-flex flex-column align-center pa-4">
-                                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Success" Size="Size.Large" />
-                                <MudText Typo="Typo.subtitle1" Class="mt-2">Velocity Trends</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Historical performance</MudText>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                </MudGrid>
+                
+                @* Embedded Forecast Panel *@
+                <ForecastPanel />
             </MudPaper>
         }
         else if (_currentMode == "dependencies")
@@ -232,20 +172,9 @@
                         Full Graph
                     </MudButton>
                 </MudStack>
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-                    Visualize work item dependencies and identify blockers.
-                </MudText>
-                <MudGrid>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudCard Elevation="1" Style="cursor: pointer;" Class="mud-card-hover" @onclick='() => NavigateToLegacy("/dependency-graph")'>
-                            <MudCardContent Class="d-flex flex-column align-center pa-4">
-                                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Warning" Size="Size.Large" />
-                                <MudText Typo="Typo.subtitle1" Class="mt-2">Dependency Graph</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Visual dependency map</MudText>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                </MudGrid>
+                
+                @* Embedded Dependencies Panel *@
+                <DependenciesPanel />
             </MudPaper>
         }
         else if (_currentMode == "timeline")
@@ -260,20 +189,9 @@
                         Full Timeline
                     </MudButton>
                 </MudStack>
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-                    Track state changes over time for work items.
-                </MudText>
-                <MudGrid>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudCard Elevation="1" Style="cursor: pointer;" Class="mud-card-hover" @onclick='() => NavigateToLegacy("/state-timeline")'>
-                            <MudCardContent Class="d-flex flex-column align-center pa-4">
-                                <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Info" Size="Size.Large" />
-                                <MudText Typo="Typo.subtitle1" Class="mt-2">State Timeline</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">State change history</MudText>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                </MudGrid>
+                
+                @* Embedded Timeline Panel *@
+                <TimelinePanel />
             </MudPaper>
         }
 

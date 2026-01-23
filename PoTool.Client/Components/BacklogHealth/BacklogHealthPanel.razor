@@ -1,0 +1,187 @@
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Services
+@using PoTool.Client.Pages.Metrics.SubComponents
+@using System.Net.Http.Json
+@inject IMetricsClient MetricsClient
+@inject BacklogHealthCalculationService HealthCalculationService
+@inject ErrorMessageService ErrorMessageService
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+@* Backlog Health Panel - Reusable component for embedding backlog health data into workspaces *@
+
+<LoadingIndicator IsLoading="@_isLoading" />
+
+@if (!_isLoading && (_healthData == null || !_healthData.IterationHealth.Any()))
+{
+    <EmptyStateDisplay Title="No Backlog Health Data Available"
+                      Message="No work items found to analyze. Please sync work items first." />
+}
+else if (!_isLoading && _healthData != null)
+{
+    <ErrorDisplay ErrorResponse="@_errorResponse" 
+                  Class="mb-4"
+                  OnDismiss="ClearError" />
+
+    @* Trend Summary Card *@
+    <BacklogHealthTrendCard TrendSummary="@_healthData.Trend.Summary"
+                           IterationCount="@_healthData.IterationHealth.Count"
+                           TotalWorkItems="@_healthData.TotalWorkItems"
+                           TotalIssues="@_healthData.TotalIssues"
+                           EffortTrend="@_healthData.Trend.EffortTrend"
+                           ValidationTrend="@_healthData.Trend.ValidationTrend"
+                           BlockerTrend="@_healthData.Trend.BlockerTrend" />
+
+    @* Filters *@
+    <BacklogHealthFilters @bind-AreaPathFilter="@_areaPathFilter"
+                         @bind-MaxIterations="@_maxIterations"
+                         OnRefresh="@LoadDataAsync" />
+
+    @* Iteration Health Table *@
+    <IterationHealthTable Iterations="@_healthData.IterationHealth.ToList()" />
+
+    @* Comparison Chart *@
+    <MudPaper Elevation="1" Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Issue Comparison Across Iterations</MudText>
+        <MudChart ChartType="ChartType.Bar" 
+                  Width="100%" 
+                  Height="300px"
+                  ChartSeries="@GetComparisonData()" 
+                  XAxisLabels="@GetIterationLabels()"
+                  ChartOptions="@_chartOptions">
+        </MudChart>
+    </MudPaper>
+}
+
+@code {
+    private const string ApiEndpoint_MultiIterationHealth = "api/Metrics/multi-iteration-health";
+
+    /// <summary>
+    /// Optional product IDs to filter health data. If null, shows data for all products.
+    /// </summary>
+    [Parameter]
+    public IEnumerable<int>? ProductIds { get; set; }
+    
+    /// <summary>
+    /// Optional area path to filter health data.
+    /// </summary>
+    [Parameter]
+    public string? AreaPath { get; set; }
+    
+    /// <summary>
+    /// Maximum number of iterations to display. Default is 5.
+    /// </summary>
+    [Parameter]
+    public int MaxIterations { get; set; } = 5;
+
+    private bool _isLoading = true;
+    private MultiIterationBacklogHealthDto? _healthData;
+    private ErrorResponse? _errorResponse;
+    private string? _areaPathFilter;
+    private int _maxIterations = 5;
+
+    private ChartOptions _chartOptions = new()
+    {
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 10,
+        InterpolationOption = InterpolationOption.NaturalSpline
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _areaPathFilter = AreaPath;
+        _maxIterations = MaxIterations;
+        await LoadDataAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Reload data when parameters change
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            ClearError();
+            
+            var productIds = ProductIds?.ToArray();
+            
+            _healthData = await GetMultiIterationBacklogHealthAsync(
+                productIds, 
+                _areaPathFilter, 
+                _maxIterations);
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex, "Error loading backlog health data");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<MultiIterationBacklogHealthDto?> GetMultiIterationBacklogHealthAsync(
+        int[]? productIds,
+        string? areaPath,
+        int maxIterations)
+    {
+        var queryParams = new List<string>();
+        
+        if (productIds != null && productIds.Length > 0)
+        {
+            foreach (var id in productIds)
+            {
+                queryParams.Add($"productIds={id}");
+            }
+        }
+        
+        if (!string.IsNullOrWhiteSpace(areaPath))
+        {
+            queryParams.Add($"areaPath={Uri.EscapeDataString(areaPath)}");
+        }
+        
+        queryParams.Add($"maxIterations={maxIterations}");
+        
+        var url = $"{ApiEndpoint_MultiIterationHealth}?{string.Join("&", queryParams)}";
+        
+        try
+        {
+            return await Http.GetFromJsonAsync<MultiIterationBacklogHealthDto>(url);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new Exception($"Failed to retrieve backlog health data: {ex.Message}", ex);
+        }
+    }
+
+    private void ShowError(Exception ex, string context)
+    {
+        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+
+    private List<ChartSeries> GetComparisonData()
+    {
+        if (_healthData == null) return new List<ChartSeries>();
+        return HealthCalculationService.GenerateComparisonChartData(_healthData);
+    }
+
+    private string[] GetIterationLabels()
+    {
+        if (_healthData == null) return Array.Empty<string>();
+        return HealthCalculationService.GetIterationLabels(_healthData);
+    }
+}

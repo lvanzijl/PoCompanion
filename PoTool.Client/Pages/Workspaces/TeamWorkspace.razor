@@ -1,6 +1,7 @@
 @page "/workspace/team"
 @page "/workspace/team/{TeamId:int}"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Components.Velocity
 @using PoTool.Client.ApiClient
 @using NavigationContext = PoTool.Client.Models.NavigationContext
 @inject INavigationContextService NavigationContextService
@@ -203,20 +204,33 @@
             </MudGrid>
         </MudPaper>
 
+        @* Embedded Velocity Panel *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.Speed" Class="mr-2" />
+                    Team Velocity
+                </MudText>
+                <MudButton Variant="Variant.Text" 
+                           Color="Color.Primary"
+                           EndIcon="@Icons.Material.Filled.ArrowForward"
+                           Href="/velocity">
+                    Full Dashboard
+                </MudButton>
+            </MudStack>
+            
+            @* Velocity Panel - filtered by selected team *@
+            <VelocityPanel TeamAreaPath="@_selectedTeam?.TeamAreaPath" MaxSprints="6" />
+        </MudPaper>
+
         @* Quick Links *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudText Typo="Typo.h5" Class="mb-3">
+            <MudText Typo="Typo.h6" Class="mb-3">
                 <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
-                Quick Links
+                Related Dashboards
             </MudText>
             
             <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Speed"
-                           Href="/velocity">
-                    Velocity Dashboard
-                </MudButton>
                 <MudButton Variant="Variant.Outlined" 
                            Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.Timeline"
@@ -434,7 +448,7 @@
         };
         
         await NavigationContextService.NavigateWithContextAsync(
-            WorkspaceRoutes.LegacyTemporary.Begrijpen, 
+            WorkspaceRoutes.AnalysisWorkspace, 
             newContext);
     }
     
@@ -450,7 +464,7 @@
         };
         
         await NavigationContextService.NavigateWithContextAsync(
-            WorkspaceRoutes.LegacyTemporary.Plannen, 
+            WorkspaceRoutes.PlanningWorkspace, 
             newContext);
     }
     

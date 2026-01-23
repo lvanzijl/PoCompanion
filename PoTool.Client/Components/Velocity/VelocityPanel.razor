@@ -1,0 +1,228 @@
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Services
+@inject IMetricsClient MetricsClient
+@inject ISnackbar Snackbar
+
+@* Velocity Panel - Reusable component for embedding velocity data into workspaces *@
+
+<LoadingIndicator IsLoading="@_isLoading" />
+
+@if (!_isLoading && _velocityTrend == null)
+{
+    <EmptyStateDisplay Title="No Velocity Data Available"
+                      Message="There are no sprints with completed work items to display velocity metrics."
+                      AdditionalInfo="Make sure you have synced work items from Azure DevOps with iteration paths and completed story points." />
+}
+else if (!_isLoading && _velocityTrend != null)
+{
+    @* Velocity Summary Cards *@
+    <MudGrid Class="mb-4">
+        <MetricSummaryCard Label="Average Velocity"
+                          Value="@_velocityTrend.AverageVelocity.ToString("F1")"
+                          SubLabel="story points"
+                          Icon="@Icons.Material.Filled.Speed"
+                          IconColor="Color.Primary" />
+        
+        <MetricSummaryCard Label="Last 3 Sprints"
+                          Value="@_velocityTrend.ThreeSprintAverage.ToString("F1")"
+                          SubLabel="average velocity"
+                          Icon="@Icons.Material.Filled.CalendarMonth"
+                          IconColor="Color.Info" />
+
+        <MetricSummaryCard Label="Total Sprints"
+                          Value="@_velocityTrend.TotalSprints.ToString()"
+                          SubLabel="tracked"
+                          Icon="@Icons.Material.Filled.Timeline"
+                          IconColor="Color.Success" />
+
+        <MetricSummaryCard Label="Total Completed"
+                          Value="@_velocityTrend.TotalCompletedStoryPoints.ToString()"
+                          SubLabel="story points"
+                          Icon="@Icons.Material.Filled.CheckCircle"
+                          IconColor="Color.Tertiary" />
+    </MudGrid>
+
+    @* Velocity Chart *@
+    <MudCard Elevation="1" Class="mb-4">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Velocity Trend</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            @if (_velocityTrend.Sprints.Any())
+            {
+                <MudChart ChartType="ChartType.Line" 
+                          ChartSeries="@_chartSeries" 
+                          XAxisLabels="@_xAxisLabels.ToArray()"
+                          Width="100%" 
+                          Height="300px"
+                          ChartOptions="@_chartOptions" />
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="py-8">
+                    No sprint data available for chart
+                </MudText>
+            }
+        </MudCardContent>
+    </MudCard>
+
+    @* Sprint Details Table *@
+    <MudCard Elevation="1">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Sprint Details</MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
+                              Color="Color.Primary" 
+                              OnClick="LoadVelocityDataAsync"
+                              Disabled="@_isLoading" />
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudTable Items="@_velocityTrend.Sprints" 
+                      Hover="true" 
+                      Striped="true" 
+                      Dense="true"
+                      Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>Sprint</MudTh>
+                    <MudTh>Completed</MudTh>
+                    <MudTh>Planned</MudTh>
+                    <MudTh>Completion</MudTh>
+                    <MudTh>Items</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Sprint">
+                        <MudText Typo="Typo.body2"><strong>@context.SprintName</strong></MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Completed">
+                        <MudChip T="string" Color="Color.Primary" Size="Size.Small">@context.CompletedStoryPoints</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Planned">@context.PlannedStoryPoints</MudTd>
+                    <MudTd DataLabel="Completion">
+                        @{
+                            var completionPercent = context.PlannedStoryPoints > 0 
+                                ? (context.CompletedStoryPoints * 100.0 / context.PlannedStoryPoints) 
+                                : 0;
+                            var color = completionPercent >= 90 ? Color.Success : 
+                                       completionPercent >= 70 ? Color.Warning : Color.Error;
+                        }
+                        <MudProgressLinear Color="@color" 
+                                         Value="@completionPercent" 
+                                         Class="my-1" 
+                                         Size="Size.Small" />
+                    </MudTd>
+                    <MudTd DataLabel="Items">
+                        @context.CompletedWorkItemCount / @context.TotalWorkItemCount
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    /// <summary>
+    /// Optional product IDs to filter velocity data. If null, shows data for all products.
+    /// </summary>
+    [Parameter]
+    public IEnumerable<int>? ProductIds { get; set; }
+    
+    /// <summary>
+    /// Optional team area path to filter velocity data.
+    /// </summary>
+    [Parameter]
+    public string? TeamAreaPath { get; set; }
+    
+    /// <summary>
+    /// Maximum number of sprints to display. Default is 10.
+    /// </summary>
+    [Parameter]
+    public int MaxSprints { get; set; } = 10;
+
+    private bool _isLoading = true;
+    private VelocityTrendDto? _velocityTrend;
+    private List<ChartSeries> _chartSeries = new();
+    private List<string> _xAxisLabels = new();
+    
+    private ChartOptions _chartOptions = new() 
+    { 
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 10,
+        YAxisLines = true,
+        XAxisLines = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadVelocityDataAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Reload data when parameters change
+        await LoadVelocityDataAsync();
+    }
+
+    private async Task LoadVelocityDataAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            _velocityTrend = await MetricsClient.GetVelocityTrendAsync(
+                productIds: ProductIds, 
+                areaPath: TeamAreaPath, 
+                maxSprints: MaxSprints);
+            
+            if (_velocityTrend?.Sprints.Any() == true)
+            {
+                PrepareChartData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading velocity data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void PrepareChartData()
+    {
+        if (_velocityTrend == null || !_velocityTrend.Sprints.Any())
+            return;
+
+        // Reverse sprints to show oldest to newest (left to right)
+        var sprints = _velocityTrend.Sprints.Reverse().ToList();
+
+        _xAxisLabels = sprints.Select(s => s.SprintName).ToList();
+
+        _chartSeries = new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Completed",
+                Data = sprints.Select(s => (double)s.CompletedStoryPoints).ToArray()
+            },
+            new ChartSeries
+            {
+                Name = "Planned",
+                Data = sprints.Select(s => (double)s.PlannedStoryPoints).ToArray()
+            },
+            new ChartSeries
+            {
+                Name = "Average",
+                Data = Enumerable.Repeat(_velocityTrend.AverageVelocity, sprints.Count).ToArray()
+            }
+        };
+    }
+}
