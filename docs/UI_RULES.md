@@ -49,10 +49,16 @@
   - Consistent theming
 
 ## 6. Navigation
-- The application uses a **sidebar-driven navigation model**.
-- Primary navigation MUST be placed in the sidebar.
-- Contextual or secondary actions MAY exist within views but MUST NOT replace sidebar navigation.
-- Navigation must always be explicit and reversible.
+- The application uses an **intent-driven navigation model**.
+- Navigation is organized around **user intent**, not pages or features.
+- After profile selection, users MUST land on a **Landing page** with a limited set of **explicit intent entry points**.
+- Selecting an intent establishes **navigation context** for all subsequent views.
+- There is **no permanent feature-based navigation menu** (e.g. sidebar) in the final architecture.
+- Screens function as **context-aware workspaces**.
+- A workspace MAY be entered from multiple paths and MUST adapt its defaults based on context.
+- Navigation beyond the Landing page MUST be **contextual and progressive**, exposed through explicit next-step actions within the current view.
+- Global navigation is limited to **meta-level actions only** (e.g. Settings, Profile management, Return to Landing).
+- Navigation MUST remain explicit, reversible, and allow users to exit a flow without side effects.
 
 ## 7. UX Authority
 - **UX principles override UI or technical convenience.**
