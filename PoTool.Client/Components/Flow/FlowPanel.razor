@@ -1,0 +1,140 @@
+@using PoTool.Client.Services
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Pages.PullRequests.SubComponents
+@using PoTool.Client.Pages.Pipelines.SubComponents
+@inject PullRequestService PullRequestService
+@inject PipelineService PipelineService
+@inject ErrorMessageService ErrorMessageService
+@inject ISnackbar Snackbar
+
+@* Flow Panel - Combined PR and Pipeline metrics for embedding into workspaces *@
+
+<LoadingIndicator IsLoading="@_isLoading" />
+
+@if (!_isLoading)
+{
+    <ErrorDisplay ErrorResponse="@_errorResponse" 
+                  Class="mb-4"
+                  OnDismiss="ClearError" />
+
+    @* PR Metrics Section *@
+    @if (_prMetrics.Any())
+    {
+        <MudPaper Elevation="1" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudText Typo="Typo.h6">
+                    <MudIcon Icon="@Icons.Material.Filled.MergeType" Class="mr-2" />
+                    Pull Request Metrics
+                </MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
+                              Color="Color.Primary" 
+                              OnClick="LoadDataAsync"
+                              Disabled="@_isLoading" />
+            </MudStack>
+            
+            <PRMetricsSummaryPanel Metrics="@_prMetrics" />
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Elevation="1" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.MergeType" Class="mr-2" />
+                Pull Request Metrics
+            </MudText>
+            <MudAlert Severity="Severity.Info">No PR data available. Configure repositories in product settings.</MudAlert>
+        </MudPaper>
+    }
+
+    @* Pipeline Metrics Section *@
+    @if (_pipelineMetrics.Any())
+    {
+        <MudPaper Elevation="1" Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Engineering" Class="mr-2" />
+                Pipeline Metrics
+            </MudText>
+            
+            <PipelineMetricsSummaryPanel Metrics="@_pipelineMetrics" />
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Elevation="1" Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.Engineering" Class="mr-2" />
+                Pipeline Metrics
+            </MudText>
+            <MudAlert Severity="Severity.Info">No pipeline data available. Check that pipelines exist in your Azure DevOps project.</MudAlert>
+        </MudPaper>
+    }
+}
+
+@code {
+    /// <summary>
+    /// Optional product IDs to filter flow data.
+    /// </summary>
+    [Parameter]
+    public IEnumerable<int>? ProductIds { get; set; }
+
+    private bool _isLoading = true;
+    private List<PullRequestMetricsDto> _prMetrics = new();
+    private List<PipelineMetricsDto> _pipelineMetrics = new();
+    private ErrorResponse? _errorResponse;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            ClearError();
+            
+            // Load PR and Pipeline metrics in parallel
+            // Convert product IDs to comma-separated string for API
+            string? productIdsParam = ProductIds != null && ProductIds.Any() 
+                ? string.Join(",", ProductIds) 
+                : null;
+            
+            var prTask = PullRequestService.GetMetricsAsync(productIdsParam);
+            var pipelineTask = PipelineService.GetMetricsAsync(productIdsParam);
+            
+            await Task.WhenAll(prTask, pipelineTask);
+            
+            _prMetrics = prTask.Result.ToList();
+            _pipelineMetrics = pipelineTask.Result.ToList();
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex, "Error loading flow data");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowError(Exception ex, string context)
+    {
+        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearError()
+    {
+        _errorResponse = null;
+    }
+}

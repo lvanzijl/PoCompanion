@@ -1425,13 +1425,13 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
 2. **Sub-Phase 7B.2: Embed Analysis Functionality** (into AnalysisWorkspace)
    - [x] Embed BacklogHealth.razor content into Health mode panel ✅
    - [x] Embed EffortDistribution.razor content into Effort mode panel ✅
-   - [ ] Embed PRInsight.razor + PipelineInsights.razor content into Flow mode panel
+   - [x] Embed PRInsight.razor + PipelineInsights.razor content into Flow mode panel ✅
    - [ ] Embed EpicForecast.razor content into Forecast mode panel
    - [ ] Embed DependencyGraph.razor content into Dependencies mode panel
    - [ ] Embed StateTimeline.razor content into Timeline mode panel
    
-   **Note:** Created `<BacklogHealthPanel />` and `<EffortDistributionPanel />` reusable 
-   components. Health and Effort modes now show embedded panels with full functionality.
+   **Note:** Created `<BacklogHealthPanel />`, `<EffortDistributionPanel />`, and `<FlowPanel />` 
+   reusable components. Health, Effort, and Flow modes now show embedded panels with full functionality.
 
 3. **Sub-Phase 7B.3: Embed Team Functionality** (into TeamWorkspace)
    - [x] Embed VelocityDashboard.razor content into Team Workspace ✅
@@ -1968,6 +1968,32 @@ Phase 7B cannot simply delete legacy pages because workspaces currently depend o
 
 ---
 
+### 2026-01-23 - Phase 7B.2 Continued - FlowPanel Created and Embedded
+
+**Changed:** 
+- Created new reusable `<FlowPanel />` component at `PoTool.Client/Components/Flow/FlowPanel.razor`
+- Embedded FlowPanel into AnalysisWorkspace Flow mode
+- Component combines PR and Pipeline metrics using existing SubComponents
+- Displays PRMetricsSummaryPanel and PipelineMetricsSummaryPanel
+
+**New Component:**
+- `PoTool.Client/Components/Flow/FlowPanel.razor`:
+  - Combined PR and Pipeline metrics panel
+  - Uses existing SubComponents: PRMetricsSummaryPanel, PipelineMetricsSummaryPanel
+  - Self-contained data loading from PullRequestService and PipelineService
+
+**Code Changes:**
+- `PoTool.Client/Pages/Workspaces/AnalysisWorkspace.razor`:
+  - Added `@using PoTool.Client.Components.Flow`
+  - Replaced link-card section in Flow mode with embedded `<FlowPanel />`
+  - Added buttons to both PR Dashboard and Pipelines full dashboards
+
+**Reason:** Execute Sub-Phase 7B.2 (third item) of the migration plan - embed flow analysis per Approach A
+
+**Impact:** AnalysisWorkspace Flow mode now contains combined PR and Pipeline metrics inline.
+
+---
+
 <!-- Future entries will be added here as the migration progresses -->
 
 ---
@@ -1995,8 +2021,8 @@ Phase 7B cannot simply delete legacy pages because workspaces currently depend o
 | `/epic-forecast` | EpicForecast.razor | Forecasting | Legacy (pending embed) |
 | `/epic-forecast/{epicId}` | EpicForecast.razor | Epic forecast | Legacy (pending embed) |
 | `/dependency-graph` | DependencyGraph.razor | Dependencies | Legacy (pending embed) |
-| `/pr-insights` | PRInsight.razor | PR metrics | Legacy (pending embed) |
-| `/pipeline-insights` | PipelineInsights.razor | Pipeline metrics | Legacy (pending embed) |
+| `/pr-insights` | PRInsight.razor | PR metrics | **EMBEDDED** in AnalysisWorkspace (Flow) |
+| `/pipeline-insights` | PipelineInsights.razor | Pipeline metrics | **EMBEDDED** in AnalysisWorkspace (Flow) |
 | `/release-planning` | ReleasePlanning.razor | Planning board | **EMBEDDED** in PlanningWorkspace |
 | `/tfsconfig` | TfsConfig.razor | TFS configuration | Active |
 | `/settings/workitem-states` | WorkItemStates.razor | State config | Active |
