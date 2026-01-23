@@ -1,6 +1,6 @@
 # UI Migration Plan — PO Companion
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Status:** ACTIVE  
 **Last Updated:** 2026-01-23  
 **Document Type:** Living Artifact (Mandatory Continuous Maintenance)
@@ -28,10 +28,11 @@ This plan is:
 3. [Context Contract](#3-context-contract)
 4. [Workspace Specifications](#4-workspace-specifications)
 5. [Current-to-Target Mapping](#5-current-to-target-mapping)
-6. [Required User Flows](#6-required-user-flows)
-7. [Migration Phases](#7-migration-phases)
-8. [Completion Guards](#8-completion-guards)
-9. [Continuous Maintenance Log](#9-continuous-maintenance-log)
+6. [Capability-to-Workspace Mapping](#6-capability-to-workspace-mapping)
+7. [Required User Flows](#7-required-user-flows)
+8. [Migration Phases](#8-migration-phases)
+9. [Completion Guards](#9-completion-guards)
+10. [Continuous Maintenance Log](#10-continuous-maintenance-log)
 
 ---
 
@@ -71,15 +72,40 @@ These are **meta actions only** — not primary navigation.
 - The sidebar MUST be explicitly phased out
 - **Current Status:** 🔴 Active sidebar with 14 navigation items
 
-### 1.5 Anti-Regress Rule — No New Pages
+### 1.5 Anti-Regress Rule — No New Feature Pages
 
 During migration:
-- **No new standalone pages MAY be introduced**
-- All new functionality MUST be implemented as:
-  - Workspace extensions
-  - New workspace modes or states
-  - Context-driven variants of existing workspaces
-- Temporary or transitional pages are NOT allowed
+- **No new feature-specific pages MAY be introduced outside the allowed set**
+- Temporary or transitional feature pages are NOT allowed
+- Parallel page-based variants of existing functionality are FORBIDDEN
+
+#### 1.5.1 Allowed Screens/Pages (Exhaustive List)
+
+The final architecture permits ONLY the following screens:
+
+| Screen | Route Pattern | Purpose | Type |
+|--------|--------------|---------|------|
+| **Profile Selection** | `/profiles` | Mandatory profile gating | System |
+| **Onboarding** | `/onboarding` | Blocking first-time setup | System |
+| **Landing** | `/landing` | Intent-based entry | Navigation |
+| **Product Workspace** | `/workspace/product` | Product-scope work | Workspace |
+| **Team Workspace** | `/workspace/team` | Team-scope work | Workspace |
+| **Analysis Workspace** | `/workspace/analysis` | Diagnostics and analysis | Workspace |
+| **Planning Workspace** | `/workspace/planning` | Structuring and sequencing | Workspace |
+| **Communication Workspace** | `/workspace/communication` | Sharing and export | Workspace |
+| **Not Found** | `/not-found` | Error handling | System |
+
+#### 1.5.2 Explicitly Forbidden
+
+- New pages under `/pages/*` or any feature-specific route
+- "Lite" or "Advanced" variants of workspaces
+- Temporary pages "to be migrated later"
+- Any page not listed in the allowed set above
+
+All new functionality MUST be implemented as:
+- Workspace extensions (modes, tabs, panels)
+- New workspace modes or states
+- Context-driven variants of existing workspaces
 
 ---
 
@@ -217,21 +243,151 @@ public enum TimeHorizon
 ```csharp
 public interface INavigationContextService
 {
-    // Get current active context
+    // Get current active context (immutable)
     NavigationContext Current { get; }
     
-    // Navigate with new context
+    // Navigate with new context (creates new immutable context)
     Task NavigateWithContextAsync(string route, NavigationContext context);
     
     // Navigate back to parent context
     Task NavigateBackAsync();
     
-    // Update current context without navigation
-    void UpdateContext(Action<NavigationContext> update);
+    // Create new context based on current (immutable update pattern)
+    NavigationContext WithUpdates(Func<NavigationContext, NavigationContext> updater);
     
     // Check if context allows specific action
     bool CanPerform(string action);
+    
+    // Validate current context has required profile
+    bool HasValidProfile();
 }
+```
+
+### 3.4 Context Storage and Persistence
+
+Context is stored in multiple tiers to support different use cases:
+
+#### 3.4.1 Storage Locations
+
+| Location | Purpose | Lifetime | Deep-linkable |
+|----------|---------|----------|---------------|
+| **URL Query Parameters** | Primary context fields for deep-linking | Request | ✅ Yes |
+| **In-Memory State** | Full context including non-serializable data | Session | ❌ No |
+| **SessionStorage** | Context stack for back-navigation | Tab session | ❌ No |
+
+#### 3.4.2 URL-Serializable Fields
+
+The following context fields MUST be included in URL for deep-linking:
+
+```
+/workspace/analysis?intent=begrijpen&scope=product&productId=42&mode=health&time=current
+```
+
+| URL Parameter | Context Field | Required |
+|---------------|--------------|----------|
+| `intent` | `Intent` | Yes |
+| `scope` | `Scope.Level` | Yes |
+| `profileId` | `Scope.ProfileId` | Inferred from session |
+| `productId` | `Scope.ProductId` | If scope = Product/Team |
+| `teamId` | `Scope.TeamId` | If scope = Team |
+| `mode` | Workspace mode | Workspace-specific |
+| `time` | `TimeHorizon` | No (defaults to Current) |
+| `trigger` | `Trigger.Type` | No (defaults to Choice) |
+
+#### 3.4.3 Deep-Link Behavior
+
+When a user opens a deep-link URL:
+
+1. **Profile Validation**
+   - System checks if a valid profile is selected
+   - If no profile: redirect to `/profiles` with `returnUrl` parameter
+   - If profile exists but differs from URL: use URL's profileId if user has access
+
+2. **Context Reconstruction**
+   - Parse URL parameters into partial context
+   - Fill missing fields with defaults
+   - Validate context completeness
+
+3. **Fallback Rules**
+
+| Condition | Fallback Action |
+|-----------|-----------------|
+| Missing `intent` | Redirect to `/landing` |
+| Missing required scope ID | Redirect to Landing with partial context as hint |
+| Invalid workspace for intent | Redirect to default workspace for intent |
+| No profile selected | Redirect to `/profiles?returnUrl=...` |
+
+### 3.5 Profile Enforcement
+
+Profile selection is enforced at runtime before any context usage.
+
+#### 3.5.1 Enforcement Points
+
+```csharp
+// In NavigationContextService
+public NavigationContext Current
+{
+    get
+    {
+        if (!HasValidProfile())
+        {
+            throw new InvalidOperationException("No profile selected");
+        }
+        return _current;
+    }
+}
+
+public bool HasValidProfile()
+{
+    return _current?.Scope?.ProfileId != null 
+        && _profileService.IsValidProfile(_current.Scope.ProfileId.Value);
+}
+```
+
+#### 3.5.2 Guard Component
+
+```razor
+@* Wrap all workspace content *@
+<ProfileGuard>
+    <ChildContent>
+        @Body
+    </ChildContent>
+    <NoProfile>
+        <RedirectToProfiles ReturnUrl="@CurrentUrl" />
+    </NoProfile>
+</ProfileGuard>
+```
+
+### 3.6 Immutable Context Updates
+
+Context updates follow an **immutable pattern** to prevent hidden state mutation.
+
+#### 3.6.1 Update Pattern (Correct)
+
+```csharp
+// Create new context with modified values
+var newContext = contextService.WithUpdates(ctx => ctx with 
+{
+    TimeHorizon = TimeHorizon.Historical,
+    Trigger = new Trigger { Type = TriggerType.Choice }
+});
+
+// Navigate with new context
+await contextService.NavigateWithContextAsync("/workspace/team", newContext);
+```
+
+#### 3.6.2 Anti-Pattern (Forbidden)
+
+```csharp
+// ❌ FORBIDDEN: Direct property mutation (compile error with record/init)
+// contextService.Current.TimeHorizon = TimeHorizon.Historical;
+
+// ❌ FORBIDDEN: Void methods that mutate internal state
+// void UpdateContext(Action<NavigationContext> mutator); // Don't define this
+// contextService.UpdateContext(ctx => { ctx.SomeField = value; }); // Don't allow this
+
+// ❌ FORBIDDEN: Returning mutable state
+// NavigationContext Current { get; set; } // Don't expose setter
 ```
 
 ---
@@ -437,43 +593,43 @@ For each current sidebar entry point, this table specifies the target mapping.
 
 | Current Page / Route | Primary Purpose | Target Intent | Target Workspace | Entry Mode | Default Scope | Default Time | Replaced-by Phase | Decommission Phase |
 |---------------------|-----------------|---------------|------------------|------------|---------------|--------------|-------------------|-------------------|
-| ProductHome.razor (`/`, `/product-home`) | observe | Overzien | Product | Choice | Product | Current | Phase 4 | Phase 7 |
-| ProfilesHome.razor (`/profiles`) | configure | N/A | Profile Selection | N/A | N/A | N/A | Phase 2 | Phase 7 |
+| ProductHome.razor (`/`, `/product-home`) | observe | Overzien | Product | Choice | Product | Current | Phase 3 | Phase 7B |
+| ProfilesHome.razor (`/profiles`) | configure | N/A | Profile Selection | N/A | N/A | N/A | Phase 2 | N/A (keep) |
 | Onboarding.razor (`/onboarding`) | configure | N/A | Onboarding (blocking) | N/A | N/A | N/A | Phase 2 | N/A (keep) |
-| BacklogHealth.razor (`/backlog-health`) | analyze | Begrijpen | Analysis (Health) | Choice | Product | Current | Phase 5 | Phase 7 |
-| EffortDistribution.razor (`/effort-distribution`) | analyze | Begrijpen | Analysis (Effort) | Choice | Product | Current | Phase 5 | Phase 7 |
-| VelocityDashboard.razor (`/velocity`) | analyze | Begrijpen | Team | Choice | Team | Historical | Phase 5 | Phase 7 |
-| StateTimeline.razor (`/state-timeline`) | analyze | Begrijpen | Analysis (Timeline) | Choice | varies | Historical | Phase 5 | Phase 7 |
-| EpicForecast.razor (`/epic-forecast`) | analyze | Begrijpen | Analysis (Forecast) | Choice | Product | Future | Phase 5 | Phase 7 |
-| DependencyGraph.razor (`/dependency-graph`) | analyze | Begrijpen | Analysis (Dependencies) | Choice | Product | Current | Phase 5 | Phase 7 |
-| PRInsight.razor (`/pr-insights`) | analyze | Begrijpen | Analysis (Flow) | Choice | Product | Current | Phase 5 | Phase 7 |
-| PipelineInsights.razor (`/pipeline-insights`) | analyze | Begrijpen | Analysis (Flow) | Choice | Product | Current | Phase 5 | Phase 7 |
-| ReleasePlanning.razor (`/release-planning`) | plan | Plannen | Planning | Choice | Product | Future | Phase 6 | Phase 7 |
-| TfsConfig.razor (`/tfsconfig`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7 |
-| WorkItemStates.razor (`/settings/workitem-states`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7 |
-| ManageProducts.razor (`/settings/products`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7 |
-| ManageTeams.razor (`/settings/teams`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7 |
-| ManageProductOwner.razor (`/settings/productowner/{id}`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7 |
-| EditProductOwner.razor (`/settings/productowner/edit`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7 |
-| Help.razor (`/help`) | support | N/A | Help (header action) | N/A | N/A | N/A | Phase 2 | Phase 7 |
-| NotFound.razor (`/not-found`) | error | N/A | Error handling | N/A | N/A | N/A | Phase 7 | N/A (keep) |
+| BacklogHealth.razor (`/backlog-health`) | analyze | Begrijpen | Analysis (Health) | Choice | Product | Current | Phase 5 | Phase 7B |
+| EffortDistribution.razor (`/effort-distribution`) | analyze | Begrijpen | Analysis (Effort) | Choice | Product | Current | Phase 5 | Phase 7B |
+| VelocityDashboard.razor (`/velocity`) | analyze | Begrijpen | Team | Choice | Team | Historical | Phase 4 | Phase 7B |
+| StateTimeline.razor (`/state-timeline`) | analyze | Begrijpen | Analysis (Timeline) | Choice | varies | Historical | Phase 5 | Phase 7B |
+| EpicForecast.razor (`/epic-forecast`) | analyze | Begrijpen | Analysis (Forecast) | Choice | Product | Future | Phase 5 | Phase 7B |
+| DependencyGraph.razor (`/dependency-graph`) | analyze | Begrijpen | Analysis (Dependencies) | Choice | Product | Current | Phase 5 | Phase 7B |
+| PRInsight.razor (`/pr-insights`) | analyze | Begrijpen | Analysis (Flow) | Choice | Product | Current | Phase 5 | Phase 7B |
+| PipelineInsights.razor (`/pipeline-insights`) | analyze | Begrijpen | Analysis (Flow) | Choice | Product | Current | Phase 5 | Phase 7B |
+| ReleasePlanning.razor (`/release-planning`) | plan | Plannen | Planning | Choice | Product | Future | Phase 6 | Phase 7B |
+| TfsConfig.razor (`/tfsconfig`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7B |
+| WorkItemStates.razor (`/settings/workitem-states`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7B |
+| ManageProducts.razor (`/settings/products`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7B |
+| ManageTeams.razor (`/settings/teams`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7B |
+| ManageProductOwner.razor (`/settings/productowner/{id}`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7B |
+| EditProductOwner.razor (`/settings/productowner/edit`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7B |
+| Help.razor (`/help`) | support | N/A | Help (header action) | N/A | N/A | N/A | Phase 2 | Phase 7B |
+| NotFound.razor (`/not-found`) | error | N/A | Error handling | N/A | N/A | N/A | N/A | N/A (keep) |
 
 ### 5.3 Backend Endpoint/Handler Mapping
 
-| Controller | Primary Endpoints | Target Workspace(s) | Status | Legacy Phase | Delete Phase |
-|------------|------------------|---------------------|--------|--------------|--------------|
-| **ProfilesController** | GET/POST/PUT/DELETE profiles, POST active | Profile Selection, Settings | Remains | N/A | N/A |
-| **SettingsController** | GET/PUT settings, state-classifications | Settings | Remains | N/A | N/A |
-| **StartupController** | GET readiness, tfs-teams | Onboarding, Startup | Remains | N/A | N/A |
-| **ProductsController** | CRUD products, team assignments, repositories | Product Workspace, Settings | Remains | N/A | N/A |
-| **TeamsController** | CRUD teams | Team Workspace, Settings | Remains | N/A | N/A |
-| **WorkItemsController** | GET workitems, validated, goals, area-paths, revisions, dependency-graph, state-timeline | Product, Team, Analysis | Remains | N/A | N/A |
-| **FilteringController** | POST validation filters, goal filters | Analysis | Refactor | Phase 5 | Phase 8 |
-| **MetricsController** | GET sprint, velocity, backlog-health, effort-distribution, capacity, epic-forecast | Team, Analysis | Refactor | Phase 5 | Phase 8 |
-| **HealthCalculationController** | POST calculate-score | Analysis (Health mode) | Merge into MetricsController | Phase 5 | Phase 6 |
-| **PipelinesController** | GET pipelines, runs, metrics, definitions | Analysis (Flow mode) | Remains | N/A | N/A |
-| **PullRequestsController** | GET PRs, metrics, filter, iterations, comments, review-bottleneck | Analysis (Flow mode) | Remains | N/A | N/A |
-| **ReleasePlanningController** | Board, lanes, placements, milestones, iterations, validation, export | Planning | Remains | N/A | N/A |
+| Controller | Primary Endpoints | Target Workspace(s) | Lifecycle | Deprecated Phase | Deleted Phase |
+|------------|------------------|---------------------|-----------|------------------|---------------|
+| **ProfilesController** | GET/POST/PUT/DELETE profiles, POST active | Profile Selection, Settings | Active | N/A | N/A |
+| **SettingsController** | GET/PUT settings, state-classifications | Settings | Active | N/A | N/A |
+| **StartupController** | GET readiness, tfs-teams | Onboarding, Startup | Active | N/A | N/A |
+| **ProductsController** | CRUD products, team assignments, repositories | Product Workspace, Settings | Active | N/A | N/A |
+| **TeamsController** | CRUD teams | Team Workspace, Settings | Active | N/A | N/A |
+| **WorkItemsController** | GET workitems, validated, goals, area-paths, revisions, dependency-graph, state-timeline | Product, Team, Analysis | Active | N/A | N/A |
+| **FilteringController** | POST validation filters, goal filters | Analysis | Active → Deprecated → Deleted | Phase 7B | Phase 8 |
+| **MetricsController** | GET sprint, velocity, backlog-health, effort-distribution, capacity, epic-forecast | Team, Analysis | Active | N/A | N/A |
+| **HealthCalculationController** | POST calculate-score | Analysis (Health mode) | Active → Deprecated → Deleted | Phase 5 | Phase 6 |
+| **PipelinesController** | GET pipelines, runs, metrics, definitions | Analysis (Flow mode) | Active | N/A | N/A |
+| **PullRequestsController** | GET PRs, metrics, filter, iterations, comments, review-bottleneck | Analysis (Flow mode) | Active | N/A | N/A |
+| **ReleasePlanningController** | Board, lanes, placements, milestones, iterations, validation, export | Planning | Active | N/A | N/A |
 
 ### 5.4 Data/Computation Ownership
 
@@ -490,9 +646,9 @@ For each current sidebar entry point, this table specifies the target mapping.
 - Remove `HealthCalculationController.cs` in Phase 6
 
 **Compatibility Strategy:**
-- Phase 5: Add unified endpoint alongside existing
-- Phase 6: Migrate all clients to unified endpoint
-- Phase 7: Remove legacy endpoints
+- Phase 5: Add unified endpoint alongside existing (HealthCalculationController deprecated)
+- Phase 6: Migrate all clients to unified endpoint, delete HealthCalculationController
+- Phase 8: Final cleanup of any remaining legacy patterns
 
 #### Velocity/Sprint Metrics
 
@@ -516,9 +672,222 @@ For each current sidebar entry point, this table specifies the target mapping.
 
 ---
 
-## 6. Required User Flows
+## 6. Capability-to-Workspace Mapping
 
-### 6.1 Overzien Flows
+This section maps **capabilities** (functional features) to their target workspaces, ensuring no functionality is lost during migration.
+
+### 6.1 Work Item Explorer / Tree Navigation
+
+| Attribute | Value |
+|-----------|-------|
+| **Capability** | Hierarchical work item browsing, tree expand/collapse, filtering |
+| **Current Location(s)** | ProductHome.razor (embedded explorer) |
+| **Target Workspace** | Product Workspace |
+| **Intent(s)** | Overzien (primary), Begrijpen (drill-down) |
+| **Flow Position** | Entry view, main panel |
+| **Migration Phase** | Phase 3 |
+
+**Implementation Notes:**
+- Tree component moves as-is into Product Workspace
+- Context-aware: shows different default expansion based on intent
+- Drill-down actions create child contexts for Analysis Workspace
+
+### 6.2 Validation Rules and Drilldowns
+
+| Attribute | Value |
+|-----------|-------|
+| **Capability** | Validation issue display, rule explanations, fix suggestions, violation drilldown |
+| **Current Location(s)** | BacklogHealth.razor, ProductHome.razor (summary) |
+| **Target Workspace** | Analysis Workspace (Health mode) |
+| **Intent(s)** | Begrijpen (primary), Overzien (summary only) |
+| **Flow Position** | Main panel (Analysis), summary card (Product) |
+| **Migration Phase** | Phase 5 |
+
+**Implementation Notes:**
+- Full validation detail in Analysis Workspace
+- Summary indicators in Product Workspace with drill-down action
+- Entry via `Trigger=Deviation` highlights specific issues
+
+### 6.3 Product Health Summaries
+
+| Attribute | Value |
+|-----------|-------|
+| **Capability** | Health score display, trend indicators, status badges |
+| **Current Location(s)** | ProductHome.razor, BacklogHealth.razor |
+| **Target Workspace** | Product Workspace (summary), Analysis Workspace (detail) |
+| **Intent(s)** | Overzien (summary), Begrijpen (analysis) |
+| **Flow Position** | Header card (Product), overview panel (Analysis) |
+| **Migration Phase** | Phase 3 (summary), Phase 5 (detail) |
+
+**Implementation Notes:**
+- Summary cards in Product Workspace header
+- Click-through to Analysis Workspace (Health mode)
+- Shared health calculation service
+
+### 6.4 PR / Pull Request Insights
+
+| Attribute | Value |
+|-----------|-------|
+| **Capability** | PR metrics, review bottleneck analysis, cycle time charts |
+| **Current Location(s)** | PRInsight.razor |
+| **Target Workspace** | Analysis Workspace (Flow mode) |
+| **Intent(s)** | Begrijpen |
+| **Flow Position** | Main panel (Flow tab) |
+| **Migration Phase** | Phase 5 |
+
+**Implementation Notes:**
+- Combined with Pipeline Insights in Flow mode
+- Tab/toggle between PR and Pipeline views
+- Context-aware: team scope shows team-specific PR metrics
+
+### 6.5 Pipeline Insights
+
+| Attribute | Value |
+|-----------|-------|
+| **Capability** | Build success rates, pipeline duration trends, failure analysis |
+| **Current Location(s)** | PipelineInsights.razor |
+| **Target Workspace** | Analysis Workspace (Flow mode) |
+| **Intent(s)** | Begrijpen |
+| **Flow Position** | Main panel (Flow tab) |
+| **Migration Phase** | Phase 5 |
+
+**Implementation Notes:**
+- Combined with PR Insights in Flow mode
+- Shared "engineering flow" narrative
+
+### 6.6 Velocity and Sprint Metrics
+
+| Attribute | Value |
+|-----------|-------|
+| **Capability** | Velocity charts, sprint comparison, capacity tracking |
+| **Current Location(s)** | VelocityDashboard.razor |
+| **Target Workspace** | Team Workspace |
+| **Intent(s)** | Overzien (team overview), Begrijpen (trend analysis) |
+| **Flow Position** | Main panel |
+| **Migration Phase** | Phase 4 |
+
+**Implementation Notes:**
+- Primary capability of Team Workspace
+- Sprint navigation as context modifier
+- Historical view via `TimeHorizon.Historical`
+
+### 6.7 Epic Forecasting
+
+| Attribute | Value |
+|-----------|-------|
+| **Capability** | Completion predictions, velocity-based projections, confidence intervals |
+| **Current Location(s)** | EpicForecast.razor |
+| **Target Workspace** | Analysis Workspace (Forecast mode) |
+| **Intent(s)** | Begrijpen (primary), Plannen (validation) |
+| **Flow Position** | Main panel (Forecast tab) |
+| **Migration Phase** | Phase 5 |
+
+**Implementation Notes:**
+- Entry from Planning Workspace for validation
+- `TimeHorizon.Future` sets appropriate defaults
+
+### 6.8 Dependency Visualization
+
+| Attribute | Value |
+|-----------|-------|
+| **Capability** | Dependency graph, cross-team links, blocking item identification |
+| **Current Location(s)** | DependencyGraph.razor |
+| **Target Workspace** | Analysis Workspace (Dependencies mode) |
+| **Intent(s)** | Begrijpen |
+| **Flow Position** | Main panel (Dependencies tab) |
+| **Migration Phase** | Phase 5 |
+
+**Implementation Notes:**
+- Interactive graph component
+- Filter by scope (product/team)
+- Route to Planning for resolution actions
+
+### 6.9 State Timeline
+
+| Attribute | Value |
+|-----------|-------|
+| **Capability** | Work item state history, transition visualization, time-in-state analysis |
+| **Current Location(s)** | StateTimeline.razor |
+| **Target Workspace** | Analysis Workspace (Timeline mode), Team Workspace (team view) |
+| **Intent(s)** | Begrijpen |
+| **Flow Position** | Main panel (Timeline tab) |
+| **Migration Phase** | Phase 5 |
+
+**Implementation Notes:**
+- Item-level timeline in Analysis
+- Aggregate timeline in Team Workspace
+- `TimeHorizon.Historical` default
+
+### 6.10 Release Planning Board
+
+| Attribute | Value |
+|-----------|-------|
+| **Capability** | Epic ordering, lane management, milestone markers, drag-drop sequencing |
+| **Current Location(s)** | ReleasePlanning.razor |
+| **Target Workspace** | Planning Workspace |
+| **Intent(s)** | Plannen (primary) |
+| **Flow Position** | Main panel |
+| **Migration Phase** | Phase 6 |
+
+**Implementation Notes:**
+- Primary capability of Planning Workspace
+- Validation issues route to Analysis with `Trigger=Deviation`
+- Export actions route to Communication Workspace
+
+### 6.11 Export and Reporting
+
+| Attribute | Value |
+|-----------|-------|
+| **Capability** | PDF export, clipboard copy, stakeholder reports, snapshot generation |
+| **Current Location(s)** | Distributed (ReleasePlanning export, various copy buttons) |
+| **Target Workspace** | Communication Workspace |
+| **Intent(s)** | Delen |
+| **Flow Position** | Main panel, accessible from all workspaces |
+| **Migration Phase** | Phase 4 (v0), Phase 7 (full) |
+
+**Implementation Notes:**
+- v0: Basic "share current context" from any workspace
+- Full: Template selection, formatting, multi-format export
+- Context carries source workspace data for snapshot
+
+### 6.12 Settings and Configuration
+
+| Attribute | Value |
+|-----------|-------|
+| **Capability** | TFS config, work item states, product/team management, profile editing |
+| **Current Location(s)** | TfsConfig.razor, WorkItemStates.razor, ManageProducts.razor, ManageTeams.razor, EditProductOwner.razor |
+| **Target Workspace** | Settings (header modal/drawer) |
+| **Intent(s)** | N/A (meta action) |
+| **Flow Position** | Header action → modal/drawer |
+| **Migration Phase** | Phase 2 |
+
+**Implementation Notes:**
+- All settings accessible via header icon
+- Modal or drawer overlay, not a workspace
+- Organized by category within settings panel
+
+### 6.13 Capability Migration Summary Table
+
+| Capability | Current Page(s) | Target Workspace | Phase |
+|------------|----------------|------------------|-------|
+| Work Item Tree | ProductHome | Product | 3 |
+| Validation Drilldown | BacklogHealth | Analysis (Health) | 5 |
+| Health Summaries | ProductHome, BacklogHealth | Product, Analysis | 3, 5 |
+| PR Insights | PRInsight | Analysis (Flow) | 5 |
+| Pipeline Insights | PipelineInsights | Analysis (Flow) | 5 |
+| Velocity/Sprint | VelocityDashboard | Team | 4 |
+| Epic Forecast | EpicForecast | Analysis (Forecast) | 5 |
+| Dependencies | DependencyGraph | Analysis (Dependencies) | 5 |
+| State Timeline | StateTimeline | Analysis (Timeline), Team | 5 |
+| Release Planning | ReleasePlanning | Planning | 6 |
+| Export/Reports | Distributed | Communication | 4 (v0), 7 |
+| Settings/Config | Various /settings/* | Settings (header) | 2 |
+
+---
+
+## 7. Required User Flows
+
+### 7.1 Overzien Flows
 
 #### Flow Template: Scope Selection → Workspace → Deepen → Plan/Share
 
@@ -555,7 +924,7 @@ For each current sidebar entry point, this table specifies the target mapping.
 [Planning/Communication Workspace]
 ```
 
-### 6.2 Begrijpen Flows
+### 7.2 Begrijpen Flows
 
 #### Flow Template: Deviation-Driven Diagnosis
 
@@ -588,7 +957,7 @@ For each current sidebar entry point, this table specifies the target mapping.
 
 **Note:** Flows MAY end without action. Not all investigation leads to planning or sharing.
 
-### 6.3 Plannen Flows
+### 7.3 Plannen Flows
 
 #### Flow Template: Plan Construction
 
@@ -618,7 +987,7 @@ For each current sidebar entry point, this table specifies the target mapping.
     → apply resolution
 ```
 
-### 6.4 Delen Flows
+### 7.4 Delen Flows
 
 #### Flow Template: Status Update
 
@@ -644,7 +1013,40 @@ For each current sidebar entry point, this table specifies the target mapping.
 
 ---
 
-## 7. Migration Phases
+## 8. Migration Phases
+
+### 8.1 Backend Lifecycle Model
+
+All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-state lifecycle model** during migration:
+
+| State | Definition | Usage |
+|-------|------------|-------|
+| **Active** | Currently used by the UI, fully supported | Normal operation |
+| **Deprecated** | Not used by new UI, but still callable | Parallel run period |
+| **Deleted** | Fully removed from codebase | Post-migration cleanup |
+
+**Lifecycle Rules:**
+1. An artifact MUST be deprecated before deletion
+2. Deprecated artifacts MUST remain functional during parallel run
+3. Deletion only occurs after verification that no consumers remain
+4. Each phase specifies lifecycle transitions
+
+**Lifecycle Transition Table:**
+
+| Controller/Endpoint | Initial State | Phase 5 | Phase 6 | Phase 7A | Phase 7B | Phase 8 |
+|---------------------|--------------|---------|---------|----------|----------|---------|
+| ProfilesController | Active | Active | Active | Active | Active | Active |
+| SettingsController | Active | Active | Active | Active | Active | Active |
+| StartupController | Active | Active | Active | Active | Active | Active |
+| ProductsController | Active | Active | Active | Active | Active | Active |
+| TeamsController | Active | Active | Active | Active | Active | Active |
+| WorkItemsController | Active | Active | Active | Active | Active | Active |
+| FilteringController | Active | Active | Deprecated | Deprecated | Deprecated | Deleted |
+| MetricsController | Active | Active | Active | Active | Active | Active |
+| HealthCalculationController | Active | Deprecated | Deleted | — | — | — |
+| PipelinesController | Active | Active | Active | Active | Active | Active |
+| PullRequestsController | Active | Active | Active | Active | Active | Active |
+| ReleasePlanningController | Active | Active | Active | Active | Active | Active |
 
 ### Phase 1: Foundation — Context Model and Infrastructure
 
@@ -764,11 +1166,12 @@ For each current sidebar entry point, this table specifies the target mapping.
 
 ---
 
-### Phase 4: Complete Overzien Flow — Team Workspace
+### Phase 4: Team Workspace + Communication Workspace v0
 
 **Goals:**
 - Create Team Workspace
-- Complete one end-to-end Overzien flow
+- Create minimal Communication Workspace (v0)
+- Complete one end-to-end flow for ALL four intents
 - Validate context flow across workspaces
 
 **UI Changes:**
@@ -776,6 +1179,11 @@ For each current sidebar entry point, this table specifies the target mapping.
 - Implement sprint/time navigation
 - Add team-specific views (velocity, timeline)
 - Team Workspace accessible from Product Workspace or Landing
+- **Create `CommunicationWorkspace.razor` (v0) with minimal functionality**
+- v0 Communication supports:
+  - "Share current context" action from any workspace
+  - Basic clipboard copy of current state summary
+  - Simple export placeholder (prepares for full templates)
 
 **Backend Changes:**
 - None
@@ -783,20 +1191,29 @@ For each current sidebar entry point, this table specifies the target mapping.
 **Context Impacts:**
 - Team selection narrows scope from Product to Team
 - Sprint selection affects `TimeHorizon`
+- Delen intent now has a functional workspace target
 
 **Compatibility Strategy:**
 - VelocityDashboard.razor remains active
 - Team Workspace available at `/workspace/team`
+- Communication Workspace v0 available at `/workspace/communication`
 
 **Risks:**
 - Velocity page has significant functionality that must be preserved
+- Communication v0 may set user expectations for full functionality
 
 **Exit Criteria:**
 - [ ] TeamWorkspace.razor created
 - [ ] Sprint navigation implemented
 - [ ] Velocity trend display works
 - [ ] Context: Product → Team scope transition works
-- [ ] Complete Overzien flow: Landing → Product → Team → Analysis works
+- [ ] **CommunicationWorkspace.razor (v0) created**
+- [ ] **"Share this" action works from Product and Team workspaces**
+- [ ] **Basic context snapshot to clipboard works**
+- [ ] Complete flow for Overzien: Landing → Product → Team works
+- [ ] Complete flow for Begrijpen: Landing → Analysis works (uses existing pages)
+- [ ] Complete flow for Plannen: Landing → Planning works (uses existing pages)
+- [ ] Complete flow for Delen: Landing → Communication (v0) works
 
 **What Became Deletable:**
 - Nothing (legacy pages still primary)
@@ -900,81 +1317,130 @@ For each current sidebar entry point, this table specifies the target mapping.
 
 ---
 
-### Phase 7: Communication Workspace and Sidebar Removal
+### Phase 7A: Communication Workspace Full + Sidebar Removal
 
 **Goals:**
-- Create Communication Workspace
-- Complete Delen flows
+- Complete Communication Workspace (full version from v0)
+- Complete Delen flows with templates and formatting
 - Remove sidebar navigation
-- Route all traffic through Landing + Workspaces
+- Establish stability period before deletions
 
 **UI Changes:**
-- Create `CommunicationWorkspace.razor` component/page
-- Implement template selection, snapshot generation, export
+- Upgrade `CommunicationWorkspace.razor` from v0 to full:
+  - Template selection
+  - Snapshot generation with formatting
+  - Multi-format export (PDF, clipboard, email)
 - **Remove NavMenu.razor from MainLayout**
-- Update all workspace routes to be primary
-- Remove legacy page routes or redirect to workspaces
+- **Remove sidebar CSS/styling**
+- Update MainLayout to workspace-only navigation
+- Configure legacy route redirects to workspace equivalents
 
 **Backend Changes:**
 - None
 
 **Context Impacts:**
-- Delen intent fully supported
+- Delen intent fully supported with templates
 - All navigation flows through context-aware system
 
 **Compatibility Strategy:**
-- Legacy routes redirect to workspace equivalents
-- No parallel run: workspaces are primary
+- Legacy routes redirect to workspace equivalents (no 404s)
+- Workspaces are now primary
+- **Stability period**: minimum 1 sprint before proceeding to 7B
 
 **Risks:**
 - User disruption (mitigated: workspaces have been available for testing)
-- Missing edge case functionality
+- Missing edge case functionality discovered during stability period
 
 **Exit Criteria:**
-- [ ] CommunicationWorkspace.razor created
+- [ ] CommunicationWorkspace.razor upgraded to full functionality
 - [ ] Template selection implemented
-- [ ] Snapshot/export functionality works
+- [ ] Multi-format export works
 - [ ] **NavMenu.razor removed from MainLayout**
 - [ ] **Sidebar CSS/styling removed**
 - [ ] All legacy routes redirect to workspace equivalents
-- [ ] No sidebar or feature-based navigation exists
+- [ ] No sidebar or feature-based navigation visible
+- [ ] **Stability period passed with no critical issues**
 
-**What Became Deletable:**
-- NavMenu.razor (delete)
-- NavMenu.razor.css (delete)
-- ProductHome.razor (redirect to Product Workspace, then delete)
-- VelocityDashboard.razor (delete)
-- BacklogHealth.razor (delete)
-- EffortDistribution.razor (delete)
-- PRInsight.razor (delete)
-- PipelineInsights.razor (delete)
-- EpicForecast.razor (delete)
-- DependencyGraph.razor (delete)
-- StateTimeline.razor (delete)
-- ReleasePlanning.razor (delete)
-- Help.razor (integrate into header action, delete page)
+**What Became Deletable (marked for deletion in 7B):**
+- NavMenu.razor (delete in 7B)
+- NavMenu.razor.css (delete in 7B)
+- All legacy page files (delete in 7B)
+
+**Lifecycle Transitions:**
+- No backend changes; all controllers remain Active
 
 ---
 
-### Phase 8: Cleanup and Verification
+### Phase 7B: Legacy Frontend Deletion
 
 **Goals:**
-- Delete all legacy code
-- Verify end state
-- Document completion
+- Delete all legacy page files
+- Delete unused frontend components
+- Verify application stability after deletions
 
 **UI Changes:**
-- Delete all legacy page files marked for deletion in Phase 7
-- Delete unused components
-- Remove unused services
+- Delete NavMenu.razor
+- Delete NavMenu.razor.css
+- Delete ProductHome.razor (redirect to Product Workspace)
+- Delete VelocityDashboard.razor
+- Delete BacklogHealth.razor
+- Delete EffortDistribution.razor
+- Delete PRInsight.razor
+- Delete PipelineInsights.razor
+- Delete EpicForecast.razor
+- Delete DependencyGraph.razor
+- Delete StateTimeline.razor
+- Delete ReleasePlanning.razor
+- Delete Help.razor
+- Remove legacy route configurations
+
+**Backend Changes:**
+- None (backend deletion is in Phase 8)
+
+**Context Impacts:**
+- None (cleanup only)
+
+**Compatibility Strategy:**
+- N/A (all redirects configured in 7A)
+
+**Risks:**
+- Accidental deletion of referenced component
+- Mitigated: comprehensive testing before deletion
+
+**Exit Criteria:**
+- [ ] All legacy page files deleted
+- [ ] NavMenu.razor and CSS deleted
+- [ ] Application compiles without legacy pages
+- [ ] All routes work via redirects to workspaces
+- [ ] No broken imports or references
+
+**What Became Deletable:**
+- Legacy pages now deleted
+- Unused components identified for Phase 8
+
+**Lifecycle Transitions:**
+- FilteringController: Active → Deprecated
+
+---
+
+### Phase 8: Backend Cleanup and Verification
+
+**Goals:**
+- Delete deprecated backend endpoints
+- Delete unused handlers, services, and DTOs
+- Verify complete end state
+- Document migration completion
+
+**UI Changes:**
+- Delete any remaining unused client services
+- Final cleanup of unused components
 - Update documentation
 
 **Backend Changes:**
-- Delete deprecated endpoints:
-  - `/api/healthcalculation/*`
-  - Any unused filtering endpoints
-- Remove unused handlers/services
-- Clean up unused DTOs
+- Delete FilteringController.cs (Deprecated → Deleted)
+- Delete any filtering handlers no longer used
+- Remove unused DTOs from PoTool.Shared
+- Clean up orphaned services
 
 **Context Impacts:**
 - None (cleanup only)
@@ -986,24 +1452,29 @@ For each current sidebar entry point, this table specifies the target mapping.
 - Accidental deletion of needed code (mitigated: comprehensive testing before deletion)
 
 **Exit Criteria:**
-- [ ] All legacy pages deleted
+- [ ] FilteringController.cs deleted
 - [ ] All deprecated backend endpoints deleted
 - [ ] All unused client services deleted
+- [ ] All unused DTOs removed
 - [ ] Application fully functional with workspace-only navigation
 - [ ] All tests pass
 - [ ] Documentation updated
-- [ ] **Migration complete per Section 8 verification**
+- [ ] **Migration complete per Section 9 verification**
 
 **What Became Deletable:**
-- Deprecated backend handlers
-- Unused DTOs
-- Unused client services
+- Deprecated backend handlers (now deleted)
+- Unused DTOs (now deleted)
+- Unused client services (now deleted)
+
+**Lifecycle Transitions:**
+- FilteringController: Deprecated → Deleted
+- All remaining controllers: Active (final state)
 
 ---
 
-## 8. Completion Guards
+## 9. Completion Guards
 
-### 8.1 Migration End State (System-Level DoD)
+### 9.1 Migration End State (System-Level DoD)
 
 The migration is complete ONLY when:
 
@@ -1024,7 +1495,7 @@ The migration is complete ONLY when:
   - [ ] HealthCalculationController.cs
   - [ ] Deprecated filtering endpoints (if any)
 
-### 8.2 End State Verification Procedure
+### 9.2 End State Verification Procedure
 
 1. **Navigation Audit**
    - Start from fresh browser session
@@ -1051,17 +1522,19 @@ The migration is complete ONLY when:
    - Verify back navigation works correctly
    - Verify context is preserved across workspace transitions
 
-### 8.3 Sections Demonstrating Completion
+### 9.3 Sections Demonstrating Completion
 
 | Requirement | Demonstrated By |
 |-------------|-----------------|
-| No sidebar navigation | Phase 7 exit criteria + NavMenu.razor deleted |
+| No sidebar navigation | Phase 7A exit criteria + NavMenu.razor deleted in 7B |
 | Profile gating enforced | Phase 2 exit criteria + existing implementation |
 | Landing with intents | Phase 2 exit criteria |
 | Contextual workspaces | Phases 3-6 exit criteria |
-| All legacy deleted | Phase 8 exit criteria |
+| All four intents have flows | Phase 4 exit criteria (all intents usable) |
+| All legacy frontend deleted | Phase 7B exit criteria |
+| All legacy backend deleted | Phase 8 exit criteria |
 
-### 8.4 Context Contract Stability Verification
+### 9.4 Context Contract Stability Verification
 
 Before any phase completion, verify:
 - [ ] `NavigationContext` structure unchanged from Phase 1 definition
@@ -1071,7 +1544,7 @@ Before any phase completion, verify:
 
 ---
 
-## 9. Continuous Maintenance Log
+## 10. Continuous Maintenance Log
 
 This section tracks all updates to the migration plan.
 
@@ -1094,6 +1567,22 @@ This section tracks all updates to the migration plan.
 **Changed:** Initial plan document created
 **Reason:** Establish single source of truth for UI migration
 **Impact:** All phases defined, execution can begin
+
+---
+
+### 2026-01-23 - Revision 1.1 - Plan Strengthening
+
+**Changed:** 
+- Clarified "No New Pages" rule with exhaustive allowed screens list
+- Added Capability-to-Workspace Mapping section (§6)
+- Moved Communication Workspace v0 to Phase 4 for early Delen flow
+- Extended Context Contract with storage, deep-linking, and profile enforcement rules
+- Split Phase 7 into 7A (sidebar removal + stability) and 7B (legacy deletion)
+- Added 3-state Backend Lifecycle Model (Active/Deprecated/Deleted)
+- Updated section numbering throughout
+
+**Reason:** Address review feedback for clarity, completeness, and executability
+**Impact:** All phases updated, new section added, phase split reduces risk
 
 ---
 
