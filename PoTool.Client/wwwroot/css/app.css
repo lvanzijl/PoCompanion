@@ -1,12 +1,12 @@
 :root {
-    /* Color Palette - Dark Theme */
-    --color-primary: #7c4dff;
-    --color-secondary: #00bcd4;
-    --color-background: #121212;
-    --color-surface: #1e1e1e;
-    --color-surface-hover: #2a2a2a;
-    --color-text-primary: rgba(255, 255, 255, 0.87);
-    --color-text-secondary: rgba(255, 255, 255, 0.60);
+    /* Color Palette - Fluent Design Dark Theme */
+    --color-primary: #0078D4;
+    --color-secondary: #2D7D9A;
+    --color-background: #1B1C1E;
+    --color-surface: #252627;
+    --color-surface-hover: #2d2e2f;
+    --color-text-primary: #F3F3F3;
+    --color-text-secondary: #C8C8C8;
     --color-text-disabled: rgba(255, 255, 255, 0.38);
     --color-border: rgba(255, 255, 255, 0.12);
     --color-divider: rgba(255, 255, 255, 0.12);
