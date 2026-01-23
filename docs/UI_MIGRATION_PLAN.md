@@ -1372,22 +1372,22 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
 - [x] All workspaces have cross-navigation actions
 - [x] No sidebar or feature-based navigation visible
 - [x] **Workspace cross-navigation fixed** (uses actual workspace routes, not LegacyTemporary)
-- [ ] **Stability period passed with no critical issues** (started 2026-01-23)
+- [x] **Stability period passed with no critical issues** (completed 2026-01-23)
 
 **Completion Date:** 2026-01-23
 
 **Stability Period Notes:**
 - Stability period began: 2026-01-23
-- Minimum duration: 1 sprint (as per plan)
-- Current status: ACTIVE - monitoring for issues
-- No critical issues reported
+- Stability period ended: 2026-01-23 (per owner decision)
+- Status: COMPLETE - no critical issues reported
+- Phase 7B can proceed
 
 **What Became Deletable (marked for deletion in 7B):**
 - NavMenu.razor (delete in 7B - safe, not rendered)
 - NavMenu.razor.css (delete in 7B - safe, not used)
 - ProductHome.razor (delete in 7B - safe, redirect exists)
 - Help.razor (delete in 7B - safe, not used)
-- Other legacy pages: see Phase 7B strategy decision required
+- All legacy pages: will be deleted after functionality is embedded per Approach A
 
 **Lifecycle Transitions:**
 - No backend changes; all controllers remain Active
@@ -1396,65 +1396,93 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
 
 ### Phase 7B: Legacy Frontend Deletion
 
-**Status:** 🟡 PENDING - Requires planning decision
+**Status:** 🟢 IN PROGRESS - Approach A (Embed) selected
+
+**Decision (2026-01-23):** Approach A (Embed) - Move detailed components from legacy pages into workspace mode panels
 
 **Goals:**
-- Delete all legacy page files
+- Embed detailed functionality from legacy pages into workspace panels
+- Delete all legacy page files after embedding
 - Delete unused frontend components
 - Verify application stability after deletions
 
-**Prerequisites (Added 2026-01-23):**
-Before executing Phase 7B, a strategy decision is required. The current workspaces link to legacy pages for detailed views. Choose one approach:
+**Strategy Decision (2026-01-23):** ✅ **Approach A (Embed) selected**
 
-| Approach | Description | Effort | Risk |
-|----------|-------------|--------|------|
-| **A. Embed** | Move detailed components from legacy pages into workspace mode panels | High | Low |
-| **B. Redirect** | Replace legacy routes with redirects to workspace mode URLs | Medium | Medium |
-| **C. Hybrid** | Keep essential detailed pages (ReleasePlanning, BacklogHealth), delete truly unused | Low | Low |
+| Approach | Description | Effort | Risk | Status |
+|----------|-------------|--------|------|--------|
+| **A. Embed** | Move detailed components from legacy pages into workspace mode panels | High | Low | ✅ SELECTED |
+| B. Redirect | Replace legacy routes with redirects to workspace mode URLs | Medium | Medium | — |
+| C. Hybrid | Keep essential detailed pages, delete truly unused | Low | Low | — |
 
-**Recommended:** Approach C (Hybrid) for initial Phase 7B:
-1. Delete NavMenu.razor and CSS (safe - not rendered)
-2. Delete ProductHome.razor (safe - redirects to Product Workspace)
-3. Delete Help.razor (safe - not used)
-4. Keep detailed pages that workspaces link to until functionality is embedded
+**Execution Plan (Approach A):**
 
-**UI Changes:**
-- Delete NavMenu.razor
-- Delete NavMenu.razor.css
-- Delete ProductHome.razor (redirect to Product Workspace)
-- Delete VelocityDashboard.razor
-- Delete BacklogHealth.razor
-- Delete EffortDistribution.razor
-- Delete PRInsight.razor
-- Delete PipelineInsights.razor
-- Delete EpicForecast.razor
-- Delete DependencyGraph.razor
-- Delete StateTimeline.razor
-- Delete ReleasePlanning.razor
+1. **Sub-Phase 7B.1: Safe Deletions** (no embedding required)
+   - [x] Delete NavMenu.razor and CSS (not rendered)
+   - [x] Delete ProductHome.razor (Product Workspace is replacement)
+   - [x] Delete Help.razor (not used)
+   - [x] Delete WorkspaceRoutes.LegacyTemporary class
+
+2. **Sub-Phase 7B.2: Embed Analysis Functionality** (into AnalysisWorkspace)
+   - [ ] Embed BacklogHealth.razor content into Health mode panel
+   - [ ] Embed EffortDistribution.razor content into Effort mode panel
+   - [ ] Embed PRInsight.razor + PipelineInsights.razor content into Flow mode panel
+   - [ ] Embed EpicForecast.razor content into Forecast mode panel
+   - [ ] Embed DependencyGraph.razor content into Dependencies mode panel
+   - [ ] Embed StateTimeline.razor content into Timeline mode panel
+
+3. **Sub-Phase 7B.3: Embed Team Functionality** (into TeamWorkspace)
+   - [ ] Embed VelocityDashboard.razor content into Team Workspace
+
+4. **Sub-Phase 7B.4: Embed Planning Functionality** (into PlanningWorkspace)
+   - [ ] Embed ReleasePlanning.razor content into Planning Workspace
+
+5. **Sub-Phase 7B.5: Delete Legacy Pages** (after embedding complete)
+   - [ ] Delete all embedded legacy pages
+   - [ ] Update route configurations
+   - [ ] Verify all functionality works in workspaces
+
+**UI Changes (Approach A):**
+- Embed detailed components from legacy pages into workspace panels
+- Delete NavMenu.razor and NavMenu.razor.css
+- Delete ProductHome.razor
+- Delete VelocityDashboard.razor (after embedding)
+- Delete BacklogHealth.razor (after embedding)
+- Delete EffortDistribution.razor (after embedding)
+- Delete PRInsight.razor (after embedding)
+- Delete PipelineInsights.razor (after embedding)
+- Delete EpicForecast.razor (after embedding)
+- Delete DependencyGraph.razor (after embedding)
+- Delete StateTimeline.razor (after embedding)
+- Delete ReleasePlanning.razor (after embedding)
 - Delete Help.razor
-- Remove legacy route configurations
+- Remove legacy route configurations and LegacyTemporary class
 
 **Backend Changes:**
 - None (backend deletion is in Phase 8)
 
 **Context Impacts:**
-- None (cleanup only)
+- Workspaces become fully self-contained (no links to external pages)
+- All detailed views accessible within workspace context
 
 **Compatibility Strategy:**
-- N/A (all redirects configured in 7A)
+- Staged embedding: one page at a time with testing
+- Legacy routes remain until embedding is complete
+- Redirect legacy routes to workspace equivalents after embedding
 
 **Risks:**
-- Accidental deletion of referenced component
-- Breaking workspace "Full Dashboard" links
-- Mitigated: comprehensive testing before deletion, staged approach
+- Large scope of embedding work
+- Risk of losing functionality during migration
+- Mitigated: staged approach, comprehensive testing per sub-phase
 
 **Exit Criteria:**
-- [ ] Strategy decision made (A, B, or C)
-- [ ] Safe deletions completed (NavMenu, ProductHome, Help)
-- [ ] All legacy page files deleted (if strategy allows)
-- [ ] NavMenu.razor and CSS deleted
+- [x] Strategy decision made: Approach A (Embed)
+- [x] Sub-Phase 7B.1 complete: Safe deletions (NavMenu, ProductHome, Help, LegacyTemporary)
+- [ ] Sub-Phase 7B.2 complete: Analysis functionality embedded
+- [ ] Sub-Phase 7B.3 complete: Team functionality embedded
+- [ ] Sub-Phase 7B.4 complete: Planning functionality embedded
+- [ ] Sub-Phase 7B.5 complete: Legacy pages deleted
 - [ ] Application compiles without legacy pages
-- [ ] All routes work via redirects to workspaces
+- [ ] All workspace modes contain embedded functionality
 - [ ] No broken imports or references
 
 **What Became Deletable:**
@@ -1783,39 +1811,86 @@ Phase 7B cannot simply delete legacy pages because workspaces currently depend o
 
 ---
 
+### 2026-01-23 - Phase 7A Complete + Phase 7B Strategy Decision
+
+**Changed:** 
+- Marked Phase 7A stability period as COMPLETE per owner decision
+- Selected Approach A (Embed) for Phase 7B per owner decision
+- Updated Phase 7B with detailed execution plan (5 sub-phases)
+- Created sub-phase structure:
+  - 7B.1: Safe deletions (NavMenu, ProductHome, Help)
+  - 7B.2: Embed Analysis functionality (6 legacy pages → AnalysisWorkspace)
+  - 7B.3: Embed Team functionality (VelocityDashboard → TeamWorkspace)
+  - 7B.4: Embed Planning functionality (ReleasePlanning → PlanningWorkspace)
+  - 7B.5: Delete legacy pages after embedding
+
+**Reason:** Owner decision to proceed with Approach A (Embed) and consider stability period complete
+
+**Impact:** Phase 7B now in progress with clear execution plan. Workspaces will become fully self-contained with embedded detailed views.
+
+---
+
+### 2026-01-23 - Phase 7B.1 Complete - Safe Deletions
+
+**Changed:** 
+- Deleted NavMenu.razor and NavMenu.razor.css (not rendered since Phase 7A)
+- Deleted ProductHome.razor (Product Workspace is replacement)
+- Deleted Help.razor (not used)
+- Removed WorkspaceRoutes.LegacyTemporary class (no longer referenced)
+
+**Files Deleted:**
+- `PoTool.Client/Layout/NavMenu.razor`
+- `PoTool.Client/Layout/NavMenu.razor.css`
+- `PoTool.Client/Pages/ProductHome.razor`
+- `PoTool.Client/Pages/Help.razor`
+
+**Code Changes:**
+- `PoTool.Client/Models/WorkspaceRoutes.cs`: Removed `LegacyTemporary` nested class
+
+**Reason:** Execute Sub-Phase 7B.1 of the migration plan - safe deletions that don't break any functionality
+
+**Impact:** Application is now cleaner without unused files. Build verified successful.
+
+---
+
 <!-- Future entries will be added here as the migration progresses -->
 
 ---
 
 ## Appendix A: Current Application Structure Reference
 
-### A.1 Current Page Routes
+### A.1 Current Page Routes (Updated for Phase 7B)
 
-| Route | Page File | Purpose |
-|-------|-----------|---------|
-| `/` | ProductHome.razor | Main dashboard |
-| `/product-home` | ProductHome.razor | Alias |
-| `/profiles` | ProfilesHome.razor | Profile selection |
-| `/onboarding` | Onboarding.razor | First-time setup |
-| `/backlog-health` | BacklogHealth.razor | Health analysis |
-| `/effort-distribution` | EffortDistribution.razor | Effort analysis |
-| `/velocity` | VelocityDashboard.razor | Velocity trends |
-| `/state-timeline` | StateTimeline.razor | State history |
-| `/state-timeline/{workItemId}` | StateTimeline.razor | Item state history |
-| `/epic-forecast` | EpicForecast.razor | Forecasting |
-| `/epic-forecast/{epicId}` | EpicForecast.razor | Epic forecast |
-| `/dependency-graph` | DependencyGraph.razor | Dependencies |
-| `/pr-insights` | PRInsight.razor | PR metrics |
-| `/pipeline-insights` | PipelineInsights.razor | Pipeline metrics |
-| `/release-planning` | ReleasePlanning.razor | Planning board |
-| `/tfsconfig` | TfsConfig.razor | TFS configuration |
-| `/settings/workitem-states` | WorkItemStates.razor | State config |
-| `/settings/products` | ManageProducts.razor | Product config |
-| `/settings/teams` | ManageTeams.razor | Team config |
-| `/settings/productowner/{id}` | ManageProductOwner.razor | Profile view |
-| `/settings/productowner/edit` | EditProductOwner.razor | Profile edit |
-| `/help` | Help.razor | Help page |
-| `/not-found` | NotFound.razor | 404 page |
+| Route | Page File | Purpose | Status |
+|-------|-----------|---------|--------|
+| `/` | (redirect to /landing) | Root redirect | Workspace redirect |
+| `/landing` | Landing.razor | Intent selection | Active |
+| `/profiles` | ProfilesHome.razor | Profile selection | Active |
+| `/onboarding` | Onboarding.razor | First-time setup | Active |
+| `/workspace/product` | ProductWorkspace.razor | Product overview | Active |
+| `/workspace/team` | TeamWorkspace.razor | Team overview | Active |
+| `/workspace/analysis` | AnalysisWorkspace.razor | Analysis hub | Active |
+| `/workspace/planning` | PlanningWorkspace.razor | Planning hub | Active |
+| `/workspace/communication` | CommunicationWorkspace.razor | Communication hub | Active |
+| `/backlog-health` | BacklogHealth.razor | Health analysis | Legacy (pending embed) |
+| `/effort-distribution` | EffortDistribution.razor | Effort analysis | Legacy (pending embed) |
+| `/velocity` | VelocityDashboard.razor | Velocity trends | Legacy (pending embed) |
+| `/state-timeline` | StateTimeline.razor | State history | Legacy (pending embed) |
+| `/state-timeline/{workItemId}` | StateTimeline.razor | Item state history | Legacy (pending embed) |
+| `/epic-forecast` | EpicForecast.razor | Forecasting | Legacy (pending embed) |
+| `/epic-forecast/{epicId}` | EpicForecast.razor | Epic forecast | Legacy (pending embed) |
+| `/dependency-graph` | DependencyGraph.razor | Dependencies | Legacy (pending embed) |
+| `/pr-insights` | PRInsight.razor | PR metrics | Legacy (pending embed) |
+| `/pipeline-insights` | PipelineInsights.razor | Pipeline metrics | Legacy (pending embed) |
+| `/release-planning` | ReleasePlanning.razor | Planning board | Legacy (pending embed) |
+| `/tfsconfig` | TfsConfig.razor | TFS configuration | Active |
+| `/settings/workitem-states` | WorkItemStates.razor | State config | Active |
+| `/settings/products` | ManageProducts.razor | Product config | Active |
+| `/settings/teams` | ManageTeams.razor | Team config | Active |
+| `/settings/productowner/{id}` | ManageProductOwner.razor | Profile view | Active |
+| `/settings/productowner/edit` | EditProductOwner.razor | Profile edit | Active |
+| `/help` | ~~Help.razor~~ | ~~Help page~~ | DELETED in 7B.1 |
+| `/not-found` | NotFound.razor | 404 page | Active |
 
 ### A.2 Current Backend Controllers
 
