@@ -1435,11 +1435,12 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
    shared components that can be used in both legacy pages and workspaces.
 
 3. **Sub-Phase 7B.3: Embed Team Functionality** (into TeamWorkspace)
-   - [ ] Embed VelocityDashboard.razor content into Team Workspace
+   - [x] Embed VelocityDashboard.razor content into Team Workspace ✅
    
-   **Note:** VelocityDashboard has product/team selectors, chart state, and 
-   preference persistence. Requires refactoring into a `<VelocityPanel />` 
-   component before embedding.
+   **Note:** Created `<VelocityPanel />` reusable component in 
+   `PoTool.Client/Components/Velocity/VelocityPanel.razor`. This component 
+   is now embedded in TeamWorkspace and can accept ProductIds and TeamAreaPath 
+   parameters for filtering.
 
 4. **Sub-Phase 7B.4: Embed Planning Functionality** (into PlanningWorkspace)
    - [x] Embed ReleasePlanning.razor content into Planning Workspace ✅
@@ -1489,7 +1490,7 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
 - [x] Strategy decision made: Approach A (Embed)
 - [x] Sub-Phase 7B.1 complete: Safe deletions (NavMenu, ProductHome, Help, LegacyTemporary)
 - [ ] Sub-Phase 7B.2 complete: Analysis functionality embedded
-- [ ] Sub-Phase 7B.3 complete: Team functionality embedded
+- [x] Sub-Phase 7B.3 complete: Team functionality embedded (VelocityPanel created and embedded)
 - [x] Sub-Phase 7B.4 complete: Planning functionality embedded
 - [ ] Sub-Phase 7B.5 complete: Legacy pages deleted
 - [ ] Application compiles without legacy pages
@@ -1889,6 +1890,35 @@ Phase 7B cannot simply delete legacy pages because workspaces currently depend o
 
 ---
 
+### 2026-01-23 - Phase 7B.3 Complete - Team Functionality Embedded
+
+**Changed:** 
+- Created new reusable `<VelocityPanel />` component in `PoTool.Client/Components/Velocity/VelocityPanel.razor`
+- Embedded `<VelocityPanel />` into TeamWorkspace
+- VelocityPanel displays velocity summary cards, trend chart, and sprint details table
+- Component accepts `ProductIds`, `TeamAreaPath`, and `MaxSprints` parameters for filtering
+- Reorganized TeamWorkspace layout with embedded velocity panel and related dashboards section
+
+**New Component:**
+- `PoTool.Client/Components/Velocity/VelocityPanel.razor`:
+  - Reusable velocity panel with summary cards, chart, and sprint table
+  - Parameters: `ProductIds`, `TeamAreaPath`, `MaxSprints`
+  - Self-contained data loading from `IMetricsClient`
+  - Can be embedded in any workspace
+
+**Code Changes:**
+- `PoTool.Client/Pages/Workspaces/TeamWorkspace.razor`:
+  - Added `@using PoTool.Client.Components.Velocity`
+  - Embedded `<VelocityPanel TeamAreaPath="@_selectedTeam?.TeamAreaPath" MaxSprints="6" />`
+  - Reorganized Quick Links section to "Related Dashboards"
+  - Removed direct Velocity Dashboard link (now embedded)
+
+**Reason:** Execute Sub-Phase 7B.3 of the migration plan - embed team functionality per Approach A
+
+**Impact:** TeamWorkspace now contains velocity data inline. Users can see team velocity without navigating away.
+
+---
+
 <!-- Future entries will be added here as the migration progresses -->
 
 ---
@@ -1910,7 +1940,7 @@ Phase 7B cannot simply delete legacy pages because workspaces currently depend o
 | `/workspace/communication` | CommunicationWorkspace.razor | Communication hub | Active |
 | `/backlog-health` | BacklogHealth.razor | Health analysis | Legacy (pending embed) |
 | `/effort-distribution` | EffortDistribution.razor | Effort analysis | Legacy (pending embed) |
-| `/velocity` | VelocityDashboard.razor | Velocity trends | Legacy (pending embed) |
+| `/velocity` | VelocityDashboard.razor | Velocity trends | **EMBEDDED** in TeamWorkspace |
 | `/state-timeline` | StateTimeline.razor | State history | Legacy (pending embed) |
 | `/state-timeline/{workItemId}` | StateTimeline.razor | Item state history | Legacy (pending embed) |
 | `/epic-forecast` | EpicForecast.razor | Forecasting | Legacy (pending embed) |
