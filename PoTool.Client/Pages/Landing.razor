@@ -191,12 +191,13 @@
         // Route to actual workspaces if implemented, otherwise use legacy routes
         var route = intent switch
         {
-            // Phase 3: Product Workspace is now implemented
+            // Phase 3: Product Workspace is implemented
             Intent.Overzien => WorkspaceRoutes.ProductWorkspace,
-            // Phases 4-6: Still using legacy routes
+            // Phase 4: Communication Workspace v0 is implemented
+            Intent.Delen => WorkspaceRoutes.CommunicationWorkspace,
+            // Phases 5-6: Still using legacy routes
             Intent.Begrijpen => WorkspaceRoutes.LegacyTemporary.Begrijpen,
             Intent.Plannen => WorkspaceRoutes.LegacyTemporary.Plannen,
-            Intent.Delen => WorkspaceRoutes.LegacyTemporary.Delen,
             _ => WorkspaceRoutes.Landing
         };
         
