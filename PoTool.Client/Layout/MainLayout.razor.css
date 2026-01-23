@@ -4,12 +4,18 @@
     flex-direction: column;
 }
 
-main {
-    flex: 1;
+/* Full-width workspace layout (sidebar removed in Phase 7A) */
+.page.workspace-layout {
+    flex-direction: column;
 }
 
-.sidebar {
-    background-color: var(--color-surface);
+.page.workspace-layout .workspace-main {
+    flex: 1;
+    width: 100%;
+}
+
+main {
+    flex: 1;
 }
 
 .top-row {
@@ -47,17 +53,6 @@ main {
 }
 
 @media (min-width: 641px) {
-    .page {
-        flex-direction: row;
-    }
-
-    .sidebar {
-        width: 250px;
-        height: 100vh;
-        position: sticky;
-        top: 0;
-    }
-
     .top-row {
         position: sticky;
         top: 0;

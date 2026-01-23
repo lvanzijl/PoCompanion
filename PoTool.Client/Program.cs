@@ -139,7 +139,7 @@ builder.Services.AddScoped<PipelineService>();
 builder.Services.AddScoped<ITreeBuilderService, TreeBuilderService>();
 builder.Services.AddScoped<ICorrelationIdService, CorrelationIdService>();
 builder.Services.AddScoped<SettingsService>();
-builder.Services.AddScoped<ProfileService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<TeamService>();
 builder.Services.AddScoped<TfsConfigService>();
@@ -150,6 +150,7 @@ builder.Services.AddScoped<WorkItemVisibilityService>();
 builder.Services.AddScoped<IOnboardingService, OnboardingService>();
 builder.Services.AddScoped<IOnboardingWizardState, OnboardingWizardState>();
 builder.Services.AddScoped<IStartupOrchestratorService, StartupOrchestratorService>();
+builder.Services.AddScoped<INavigationContextService, NavigationContextService>();
 
 // Register browser-based storage services
 builder.Services.AddScoped<IPreferencesService, BrowserPreferencesService>();

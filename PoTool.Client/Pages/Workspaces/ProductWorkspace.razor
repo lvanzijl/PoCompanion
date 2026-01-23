@@ -1,0 +1,394 @@
+@page "/workspace/product"
+@page "/workspace/product/{ProductId:int}"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
+@using NavigationContext = PoTool.Client.Models.NavigationContext
+@inject INavigationContextService NavigationContextService
+@inject IProfileService ProfileService
+@inject ProductService ProductService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Product Workspace - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Workspace Header with Context Info *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">
+                        @if (_selectedProduct != null)
+                        {
+                            @_selectedProduct.Name
+                        }
+                        else if (_products.Count > 0)
+                        {
+                            <text>Portfolio Overview</text>
+                        }
+                        else
+                        {
+                            <text>Product Workspace</text>
+                        }
+                    </MudText>
+                </MudStack>
+                
+                @* Context Breadcrumb *@
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+            
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                @* Context Info Badge *@
+                @if (_currentContext != null)
+                {
+                    <MudChip T="string" 
+                             Icon="@Icons.Material.Filled.Visibility" 
+                             Size="Size.Small"
+                             Color="Color.Primary">
+                        @_currentContext.Intent.ToString()
+                    </MudChip>
+                }
+                
+                @* Back to Landing *@
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           OnClick="NavigateToLanding">
+                    Landing
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else if (_errorMessage != null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @_errorMessage
+        </MudAlert>
+    }
+    else
+    {
+        @* Product Selector Section *@
+        @if (_products.Count > 0)
+        {
+            <MudPaper Elevation="1" Class="pa-3 mb-3">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                    <MudIcon Icon="@Icons.Material.Filled.Folder" Color="Color.Secondary" />
+                    <MudSelect T="int?" 
+                               Value="@_selectedProductId"
+                               ValueChanged="OnProductChanged"
+                               Label="Select Product"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Style="min-width: 300px;">
+                        <MudSelectItem T="int?" Value="@((int?)null)">All products (Portfolio)</MudSelectItem>
+                        @foreach (var product in _products)
+                        {
+                            <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @_products.Count products available
+                    </MudText>
+                </MudStack>
+            </MudPaper>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-3">
+                No products configured for this profile. 
+                <MudLink Href="/settings/products" Color="Color.Primary">Add products</MudLink> to enable product-scoped features.
+            </MudAlert>
+        }
+
+        @* Quick Actions - Navigate to other workspaces/pages *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h5" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Bolt" Class="mr-2" />
+                Navigate
+            </MudText>
+            
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick="NavigateToAnalysis">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.Psychology" Color="Color.Secondary" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Analyze</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Deep dive into health issues</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick="NavigateToPlanning">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Color="Color.Info" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Plan</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Release planning board</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick="NavigateToTeam">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.Groups" Color="Color.Success" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Team View</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Velocity & sprint metrics</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick="NavigateToCommunication">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.Share" Color="Color.Warning" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Share</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Export & communicate</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        @* Quick Links to existing pages *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h5" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
+                Quick Links
+            </MudText>
+            
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
+                           Href="/backlog-health">
+                    Backlog Health
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Speed"
+                           Href="/velocity">
+                    Velocity Dashboard
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.ViewColumn"
+                           Href="/release-planning">
+                    Release Planning
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Timeline"
+                           Href="/epic-forecast">
+                    Epic Forecast
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.MergeType"
+                           Href="/pr-insights">
+                    PR Insights
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+</MudContainer>
+
+<style>
+    .mud-card-hover:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.2) !important;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int? ProductId { get; set; }
+    
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private NavigationContext? _currentContext;
+    private List<ProductDto> _products = new();
+    private ProductDto? _selectedProduct;
+    private int? _selectedProductId;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Get current context or create a new one
+            _currentContext = NavigationContextService.CurrentOrDefault;
+            
+            // Validate profile
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                NavigationManager.NavigateTo(WorkspaceRoutes.Profiles);
+                return;
+            }
+            
+            ProfileService.SetCachedActiveProfileId(activeProfile.Id);
+            
+            // If no context exists, create one for Overzien intent
+            if (_currentContext == null)
+            {
+                NavigationContextService.SetInitialContext(Intent.Overzien, activeProfile.Id);
+                _currentContext = NavigationContextService.CurrentOrDefault;
+            }
+            
+            // Load products for this profile
+            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            
+            // Set selected product from URL parameter or context
+            if (ProductId.HasValue)
+            {
+                _selectedProductId = ProductId.Value;
+                _selectedProduct = _products.FirstOrDefault(p => p.Id == ProductId.Value);
+            }
+            else if (_currentContext?.Scope.ProductId.HasValue == true)
+            {
+                _selectedProductId = _currentContext.Scope.ProductId;
+                _selectedProduct = _products.FirstOrDefault(p => p.Id == _selectedProductId);
+            }
+            
+            // Build breadcrumbs
+            UpdateBreadcrumbs();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading workspace: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+    
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Landing", WorkspaceRoutes.Landing, icon: Icons.Material.Filled.Home),
+            new("Product Workspace", null, disabled: true, icon: Icons.Material.Filled.Inventory2)
+        };
+        
+        if (_selectedProduct != null)
+        {
+            _breadcrumbs.Add(new(_selectedProduct.Name, null, disabled: true));
+        }
+    }
+    
+    private async Task OnProductChanged(int? productId)
+    {
+        _selectedProductId = productId;
+        _selectedProduct = productId.HasValue 
+            ? _products.FirstOrDefault(p => p.Id == productId) 
+            : null;
+        
+        // Update context with new product scope
+        if (_currentContext != null)
+        {
+            var newContext = _currentContext with
+            {
+                Scope = new Scope
+                {
+                    Level = productId.HasValue ? ScopeLevel.Product : ScopeLevel.Portfolio,
+                    ProfileId = _currentContext.Scope.ProfileId,
+                    ProductId = productId
+                }
+            };
+            
+            await NavigationContextService.NavigateWithContextAsync(
+                productId.HasValue 
+                    ? $"{WorkspaceRoutes.ProductWorkspace}/{productId}" 
+                    : WorkspaceRoutes.ProductWorkspace, 
+                newContext);
+        }
+        
+        UpdateBreadcrumbs();
+        StateHasChanged();
+    }
+    
+    private void NavigateToLanding()
+    {
+        NavigationContextService.ClearContext();
+        NavigationManager.NavigateTo(WorkspaceRoutes.Landing);
+    }
+    
+    private async Task NavigateToAnalysis()
+    {
+        if (_currentContext == null) return;
+        
+        var newContext = _currentContext with
+        {
+            Intent = Intent.Begrijpen,
+            Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Product Workspace" },
+            Mode = "health"
+        };
+        
+        // For now, navigate to legacy page until Analysis Workspace is built
+        await NavigationContextService.NavigateWithContextAsync(
+            WorkspaceRoutes.LegacyTemporary.Begrijpen, 
+            newContext);
+    }
+    
+    private async Task NavigateToPlanning()
+    {
+        if (_currentContext == null) return;
+        
+        var newContext = _currentContext with
+        {
+            Intent = Intent.Plannen,
+            Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Product Workspace" },
+            TimeHorizon = TimeHorizon.Future
+        };
+        
+        // For now, navigate to legacy page until Planning Workspace is built
+        await NavigationContextService.NavigateWithContextAsync(
+            WorkspaceRoutes.LegacyTemporary.Plannen, 
+            newContext);
+    }
+    
+    private async Task NavigateToTeam()
+    {
+        if (_currentContext == null) return;
+        
+        var newContext = _currentContext with
+        {
+            Intent = Intent.Overzien,
+            Scope = new Scope
+            {
+                Level = ScopeLevel.Team,
+                ProfileId = _currentContext.Scope.ProfileId,
+                ProductId = _selectedProductId,
+                TeamId = _selectedProduct?.TeamIds?.FirstOrDefault()
+            },
+            Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Product Workspace" }
+        };
+        
+        // Navigate to Team Workspace
+        await NavigationContextService.NavigateWithContextAsync(WorkspaceRoutes.TeamWorkspace, newContext);
+    }
+    
+    private async Task NavigateToCommunication()
+    {
+        if (_currentContext == null) return;
+        
+        var newContext = _currentContext with
+        {
+            Intent = Intent.Delen,
+            Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Product Workspace" }
+        };
+        
+        // Navigate to Communication Workspace
+        await NavigationContextService.NavigateWithContextAsync(
+            WorkspaceRoutes.CommunicationWorkspace, 
+            newContext);
+    }
+}
