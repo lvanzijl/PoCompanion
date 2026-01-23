@@ -372,8 +372,8 @@
             Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Product Workspace" }
         };
         
-        // For now, navigate to legacy velocity page until Team Workspace is built
-        await NavigationContextService.NavigateWithContextAsync("/velocity", newContext);
+        // Navigate to Team Workspace
+        await NavigationContextService.NavigateWithContextAsync(WorkspaceRoutes.TeamWorkspace, newContext);
     }
     
     private async Task NavigateToCommunication()
@@ -386,9 +386,9 @@
             Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Product Workspace" }
         };
         
-        // For now, navigate to legacy page until Communication Workspace is built
+        // Navigate to Communication Workspace
         await NavigationContextService.NavigateWithContextAsync(
-            WorkspaceRoutes.LegacyTemporary.Delen, 
+            WorkspaceRoutes.CommunicationWorkspace, 
             newContext);
     }
 }
