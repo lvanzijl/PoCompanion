@@ -1396,17 +1396,17 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
 
 ### Phase 7B: Legacy Frontend Deletion
 
-**Status:** 🟢 IN PROGRESS - Approach A (Embed) selected
+**Status:** ✅ **COMPLETE** (2026-01-23) - Approach A (Embed) executed
 
 **Decision (2026-01-23):** Approach A (Embed) - Move detailed components from legacy pages into workspace mode panels
 
 **Goals:**
-- Embed detailed functionality from legacy pages into workspace panels
-- Delete all legacy page files after embedding
-- Delete unused frontend components
-- Verify application stability after deletions
+- ✅ Embed detailed functionality from legacy pages into workspace panels
+- ✅ Delete all legacy page files after embedding
+- ✅ Delete unused frontend components
+- ✅ Verify application stability after deletions
 
-**Strategy Decision (2026-01-23):** ✅ **Approach A (Embed) selected**
+**Strategy Decision (2026-01-23):** ✅ **Approach A (Embed) selected and completed**
 
 | Approach | Description | Effort | Risk | Status |
 |----------|-------------|--------|------|--------|
@@ -1452,32 +1452,32 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
    **Note:** Successfully embedded. ReleasePlanning already used a 
    `<ReleasePlanningBoard />` component which made embedding straightforward.
 
-5. **Sub-Phase 7B.5: Delete Legacy Pages** (after embedding complete)
-   - [ ] Delete all embedded legacy pages
-   - [ ] Update route configurations
-   - [ ] Verify all functionality works in workspaces
+5. **Sub-Phase 7B.5: Delete Legacy Pages** (after embedding complete) ✅ **COMPLETE**
+   - [x] Delete all embedded legacy pages ✅
+   - [x] Verify all functionality works in workspaces ✅
+   - [x] Update UI_MIGRATION_PLAN.md with completion status ✅
 
-**UI Changes (Approach A):**
-- Embed detailed components from legacy pages into workspace panels
-- Delete NavMenu.razor and NavMenu.razor.css
-- Delete ProductHome.razor
-- Delete VelocityDashboard.razor (after embedding)
-- Delete BacklogHealth.razor (after embedding)
-- Delete EffortDistribution.razor (after embedding)
-- Delete PRInsight.razor (after embedding)
-- Delete PipelineInsights.razor (after embedding)
-- Delete EpicForecast.razor (after embedding)
-- Delete DependencyGraph.razor (after embedding)
-- Delete StateTimeline.razor (after embedding)
-- Delete ReleasePlanning.razor (after embedding)
-- Delete Help.razor
-- Remove legacy route configurations and LegacyTemporary class
+**Deleted Files (Sub-Phase 7B.5):**
+- ~~PoTool.Client/Pages/Metrics/BacklogHealth.razor~~ ✅
+- ~~PoTool.Client/Pages/Metrics/EffortDistribution.razor~~ ✅
+- ~~PoTool.Client/Pages/Metrics/VelocityDashboard.razor~~ ✅
+- ~~PoTool.Client/Pages/Metrics/EpicForecast.razor~~ ✅
+- ~~PoTool.Client/Pages/Metrics/DependencyGraph.razor~~ ✅
+- ~~PoTool.Client/Pages/Metrics/StateTimeline.razor~~ ✅
+- ~~PoTool.Client/Pages/PullRequests/PRInsight.razor~~ ✅
+- ~~PoTool.Client/Pages/Pipelines/PipelineInsights.razor~~ ✅
+- ~~PoTool.Client/Pages/ReleasePlanning.razor~~ ✅
+
+**Retained (SubComponents used by new panels):**
+- `PoTool.Client/Pages/Metrics/SubComponents/` - Used by embedded panels
+- `PoTool.Client/Pages/PullRequests/SubComponents/` - Used by FlowPanel
+- `PoTool.Client/Pages/Pipelines/SubComponents/` - Used by FlowPanel
 
 **Backend Changes:**
 - None (backend deletion is in Phase 8)
 
 **Context Impacts:**
-- Workspaces become fully self-contained (no links to external pages)
+- Workspaces are now fully self-contained (no links to external pages)
 - All detailed views accessible within workspace context
 
 **Compatibility Strategy:**
@@ -1493,17 +1493,17 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
 **Exit Criteria:**
 - [x] Strategy decision made: Approach A (Embed)
 - [x] Sub-Phase 7B.1 complete: Safe deletions (NavMenu, ProductHome, Help, LegacyTemporary)
-- [ ] Sub-Phase 7B.2 complete: Analysis functionality embedded
-- [x] Sub-Phase 7B.3 complete: Team functionality embedded (VelocityPanel created and embedded)
-- [x] Sub-Phase 7B.4 complete: Planning functionality embedded
-- [ ] Sub-Phase 7B.5 complete: Legacy pages deleted
-- [ ] Application compiles without legacy pages
-- [ ] All workspace modes contain embedded functionality
-- [ ] No broken imports or references
+- [x] Sub-Phase 7B.2 complete: Analysis functionality embedded (all 6 modes)
+- [x] Sub-Phase 7B.3 complete: Team functionality embedded (VelocityPanel)
+- [x] Sub-Phase 7B.4 complete: Planning functionality embedded (ReleasePlanningBoard)
+- [x] Sub-Phase 7B.5 complete: Legacy pages deleted (10 pages removed)
+- [x] Application compiles without legacy pages
+- [x] All workspace modes contain embedded functionality
+- [x] No broken imports or references
 
-**What Became Deletable:**
-- Legacy pages now deleted
-- Unused components identified for Phase 8
+**What Became Deletable (now deleted):**
+- 10 legacy pages deleted in Phase 7B.5
+- SubComponents retained for use by embedded panels
 
 **Lifecycle Transitions:**
 - FilteringController: Active → Deprecated
@@ -2040,13 +2040,42 @@ Phase 7B cannot simply delete legacy pages because workspaces currently depend o
 
 ---
 
+### 2026-01-23 - Phase 7B.5 Complete - Legacy Pages Deleted
+
+**Changed:** 
+- Deleted 10 legacy pages that are now embedded in workspaces
+- Retained SubComponents folders (still used by embedded panels)
+
+**Deleted Files:**
+- `PoTool.Client/Pages/Metrics/BacklogHealth.razor`
+- `PoTool.Client/Pages/Metrics/EffortDistribution.razor`
+- `PoTool.Client/Pages/Metrics/EffortDistribution.razor.full` (backup file)
+- `PoTool.Client/Pages/Metrics/VelocityDashboard.razor`
+- `PoTool.Client/Pages/Metrics/EpicForecast.razor`
+- `PoTool.Client/Pages/Metrics/DependencyGraph.razor`
+- `PoTool.Client/Pages/Metrics/StateTimeline.razor`
+- `PoTool.Client/Pages/PullRequests/PRInsight.razor`
+- `PoTool.Client/Pages/Pipelines/PipelineInsights.razor`
+- `PoTool.Client/Pages/ReleasePlanning.razor`
+
+**Retained:**
+- `PoTool.Client/Pages/Metrics/SubComponents/` - Used by BacklogHealthPanel, EffortDistributionPanel
+- `PoTool.Client/Pages/PullRequests/SubComponents/` - Used by FlowPanel
+- `PoTool.Client/Pages/Pipelines/SubComponents/` - Used by FlowPanel
+
+**Reason:** Complete Sub-Phase 7B.5 - delete legacy pages now that all functionality is embedded per Approach A
+
+**Impact:** **PHASE 7B COMPLETE!** All legacy frontend pages related to metrics and analysis have been deleted. Workspaces are now fully self-contained. The application compiles successfully without the legacy pages.
+
+---
+
 <!-- Future entries will be added here as the migration progresses -->
 
 ---
 
 ## Appendix A: Current Application Structure Reference
 
-### A.1 Current Page Routes (Updated for Phase 7B)
+### A.1 Current Page Routes (Updated for Phase 7B COMPLETE)
 
 | Route | Page File | Purpose | Status |
 |-------|-----------|---------|--------|
@@ -2059,17 +2088,15 @@ Phase 7B cannot simply delete legacy pages because workspaces currently depend o
 | `/workspace/analysis` | AnalysisWorkspace.razor | Analysis hub | Active |
 | `/workspace/planning` | PlanningWorkspace.razor | Planning hub | Active |
 | `/workspace/communication` | CommunicationWorkspace.razor | Communication hub | Active |
-| `/backlog-health` | BacklogHealth.razor | Health analysis | **EMBEDDED** in AnalysisWorkspace (Health) |
-| `/effort-distribution` | EffortDistribution.razor | Effort analysis | **EMBEDDED** in AnalysisWorkspace (Effort) |
-| `/velocity` | VelocityDashboard.razor | Velocity trends | **EMBEDDED** in TeamWorkspace |
-| `/state-timeline` | StateTimeline.razor | State history | **EMBEDDED** in AnalysisWorkspace (Timeline) |
-| `/state-timeline/{workItemId}` | StateTimeline.razor | Item state history | **EMBEDDED** in AnalysisWorkspace (Timeline) |
-| `/epic-forecast` | EpicForecast.razor | Forecasting | **EMBEDDED** in AnalysisWorkspace (Forecast) |
-| `/epic-forecast/{epicId}` | EpicForecast.razor | Epic forecast | **EMBEDDED** in AnalysisWorkspace (Forecast) |
-| `/dependency-graph` | DependencyGraph.razor | Dependencies | **EMBEDDED** in AnalysisWorkspace (Dependencies) |
-| `/pr-insights` | PRInsight.razor | PR metrics | **EMBEDDED** in AnalysisWorkspace (Flow) |
-| `/pipeline-insights` | PipelineInsights.razor | Pipeline metrics | **EMBEDDED** in AnalysisWorkspace (Flow) |
-| `/release-planning` | ReleasePlanning.razor | Planning board | **EMBEDDED** in PlanningWorkspace |
+| `/backlog-health` | ~~BacklogHealth.razor~~ | ~~Health analysis~~ | DELETED in 7B.5 (embedded in AnalysisWorkspace) |
+| `/effort-distribution` | ~~EffortDistribution.razor~~ | ~~Effort analysis~~ | DELETED in 7B.5 (embedded in AnalysisWorkspace) |
+| `/velocity` | ~~VelocityDashboard.razor~~ | ~~Velocity trends~~ | DELETED in 7B.5 (embedded in TeamWorkspace) |
+| `/state-timeline` | ~~StateTimeline.razor~~ | ~~State history~~ | DELETED in 7B.5 (embedded in AnalysisWorkspace) |
+| `/epic-forecast` | ~~EpicForecast.razor~~ | ~~Forecasting~~ | DELETED in 7B.5 (embedded in AnalysisWorkspace) |
+| `/dependency-graph` | ~~DependencyGraph.razor~~ | ~~Dependencies~~ | DELETED in 7B.5 (embedded in AnalysisWorkspace) |
+| `/pr-insights` | ~~PRInsight.razor~~ | ~~PR metrics~~ | DELETED in 7B.5 (embedded in AnalysisWorkspace) |
+| `/pipeline-insights` | ~~PipelineInsights.razor~~ | ~~Pipeline metrics~~ | DELETED in 7B.5 (embedded in AnalysisWorkspace) |
+| `/release-planning` | ~~ReleasePlanning.razor~~ | ~~Planning board~~ | DELETED in 7B.5 (embedded in PlanningWorkspace) |
 | `/tfsconfig` | TfsConfig.razor | TFS configuration | Active |
 | `/settings/workitem-states` | WorkItemStates.razor | State config | Active |
 | `/settings/products` | ManageProducts.razor | Product config | Active |
