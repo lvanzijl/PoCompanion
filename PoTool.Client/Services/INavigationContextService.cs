@@ -95,7 +95,7 @@ public class NavigationContextChangedEventArgs : EventArgs
     public NavigationContext? Previous { get; init; }
 
     /// <summary>
-    /// The new current context.
+    /// The new current context (may be null when context is cleared).
     /// </summary>
-    public required NavigationContext Current { get; init; }
+    public NavigationContext? Current { get; init; }
 }

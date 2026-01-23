@@ -130,7 +130,12 @@ public class ProfileService : IProfileService
             ProfileId = profileId
         };
 
-        return await _profilesClient.SetActiveProfileAsync(request, cancellationToken);
+        var result = await _profilesClient.SetActiveProfileAsync(request, cancellationToken);
+        
+        // Update cached value to maintain consistency
+        _cachedActiveProfileId = profileId;
+        
+        return result;
     }
 
     /// <summary>

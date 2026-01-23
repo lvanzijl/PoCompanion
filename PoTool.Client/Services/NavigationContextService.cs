@@ -162,7 +162,7 @@ public class NavigationContextService : INavigationContextService
             ContextChanged?.Invoke(this, new NavigationContextChangedEventArgs
             {
                 Previous = previous,
-                Current = null!
+                Current = null
             });
         }
     }
@@ -276,15 +276,7 @@ public class NavigationContextService : INavigationContextService
 
     private static string GetRouteForContext(NavigationContext context)
     {
-        return context.Intent switch
-        {
-            Intent.Overzien when context.Scope.Level == ScopeLevel.Team => "/workspace/team",
-            Intent.Overzien => "/workspace/product",
-            Intent.Begrijpen => "/workspace/analysis",
-            Intent.Plannen => "/workspace/planning",
-            Intent.Delen => "/workspace/communication",
-            _ => "/landing"
-        };
+        return WorkspaceRoutes.GetRouteForIntent(context.Intent, context.Scope.Level);
     }
 
     private static TimeHorizon GetDefaultTimeHorizonForIntent(Intent intent)

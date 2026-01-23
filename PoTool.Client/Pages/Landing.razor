@@ -181,41 +181,22 @@
         if (_profileId == null)
         {
             Snackbar.Add("Please select a profile first", Severity.Warning);
-            NavigationManager.NavigateTo("/profiles");
+            NavigationManager.NavigateTo(WorkspaceRoutes.Profiles);
             return;
         }
 
         // Set the initial navigation context
         NavigationContextService.SetInitialContext(intent, _profileId.Value);
 
-        // Navigate to the appropriate workspace based on intent
-        var route = intent switch
-        {
-            Intent.Overzien => "/workspace/product",
-            Intent.Begrijpen => "/workspace/analysis",
-            Intent.Plannen => "/workspace/planning",
-            Intent.Delen => "/workspace/communication",
-            _ => "/landing"
-        };
-
-        // For now, since workspaces are not yet implemented, navigate to existing pages
-        // This will be updated as workspaces are implemented
-        var temporaryRoute = intent switch
-        {
-            Intent.Overzien => "/product-home",       // Product Workspace (Phase 3)
-            Intent.Begrijpen => "/backlog-health",    // Analysis Workspace (Phase 5)
-            Intent.Plannen => "/release-planning",    // Planning Workspace (Phase 6)
-            Intent.Delen => "/product-home",          // Communication Workspace (Phase 4) - no equivalent yet
-            _ => "/landing"
-        };
-
-        // Use temporary routes until workspaces are implemented
-        NavigationManager.NavigateTo(temporaryRoute);
+        // Use temporary legacy routes until workspaces are implemented
+        // This will be updated as each workspace is completed (Phases 3-6)
+        var route = WorkspaceRoutes.LegacyTemporary.GetLegacyRouteForIntent(intent);
+        NavigationManager.NavigateTo(route);
     }
 
     private void SwitchProfile()
     {
         NavigationContextService.ClearContext();
-        NavigationManager.NavigateTo("/profiles");
+        NavigationManager.NavigateTo(WorkspaceRoutes.Profiles);
     }
 }

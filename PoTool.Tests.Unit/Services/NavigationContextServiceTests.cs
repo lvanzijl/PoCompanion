@@ -261,6 +261,7 @@ public class NavigationContextServiceTests
         // Assert
         Assert.IsNotNull(eventArgs);
         Assert.IsNull(eventArgs.Previous);
+        Assert.IsNotNull(eventArgs.Current);
         Assert.AreEqual(Intent.Overzien, eventArgs.Current.Intent);
     }
 
