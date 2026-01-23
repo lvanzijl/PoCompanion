@@ -188,16 +188,13 @@
         // Set the initial navigation context
         NavigationContextService.SetInitialContext(intent, _profileId.Value);
 
-        // Route to actual workspaces if implemented, otherwise use legacy routes
+        // Route to actual workspaces - all phases 3-6 are now implemented
         var route = intent switch
         {
-            // Phase 3: Product Workspace is implemented
             Intent.Overzien => WorkspaceRoutes.ProductWorkspace,
-            // Phase 4: Communication Workspace v0 is implemented
+            Intent.Begrijpen => WorkspaceRoutes.AnalysisWorkspace,
+            Intent.Plannen => WorkspaceRoutes.PlanningWorkspace,
             Intent.Delen => WorkspaceRoutes.CommunicationWorkspace,
-            // Phases 5-6: Still using legacy routes
-            Intent.Begrijpen => WorkspaceRoutes.LegacyTemporary.Begrijpen,
-            Intent.Plannen => WorkspaceRoutes.LegacyTemporary.Plannen,
             _ => WorkspaceRoutes.Landing
         };
         
