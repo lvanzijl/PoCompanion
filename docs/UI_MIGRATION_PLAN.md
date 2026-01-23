@@ -1429,12 +1429,23 @@ All backend artifacts (controllers, endpoints, services, DTOs) follow a **3-stat
    - [ ] Embed EpicForecast.razor content into Forecast mode panel
    - [ ] Embed DependencyGraph.razor content into Dependencies mode panel
    - [ ] Embed StateTimeline.razor content into Timeline mode panel
+   
+   **Note:** These pages have complex internal state and require refactoring into 
+   reusable components before embedding. Consider extracting core content into
+   shared components that can be used in both legacy pages and workspaces.
 
 3. **Sub-Phase 7B.3: Embed Team Functionality** (into TeamWorkspace)
    - [ ] Embed VelocityDashboard.razor content into Team Workspace
+   
+   **Note:** VelocityDashboard has product/team selectors, chart state, and 
+   preference persistence. Requires refactoring into a `<VelocityPanel />` 
+   component before embedding.
 
 4. **Sub-Phase 7B.4: Embed Planning Functionality** (into PlanningWorkspace)
-   - [x] Embed ReleasePlanning.razor content into Planning Workspace
+   - [x] Embed ReleasePlanning.razor content into Planning Workspace ✅
+   
+   **Note:** Successfully embedded. ReleasePlanning already used a 
+   `<ReleasePlanningBoard />` component which made embedding straightforward.
 
 5. **Sub-Phase 7B.5: Delete Legacy Pages** (after embedding complete)
    - [ ] Delete all embedded legacy pages
