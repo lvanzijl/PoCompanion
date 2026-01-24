@@ -28,7 +28,7 @@ builder.Services.AddScoped(sp =>
     return client;
 });
 
-// Register SignalR HubConnection for cache sync progress
+// Register SignalR HubConnection for cache synchronization progress
 builder.Services.AddScoped<HubConnection>(sp =>
 {
     var baseUri = new Uri(apiBaseUrl);
