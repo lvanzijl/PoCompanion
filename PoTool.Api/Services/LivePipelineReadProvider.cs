@@ -42,10 +42,8 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
     {
         _logger.LogDebug("LivePipelineReadProvider: Fetching pipeline by ID from TFS: {PipelineId}", pipelineId);
         
-        // Get all pipelines and find by ID
-        // Note: TFS API doesn't always have a direct get-by-ID for pipelines, so we fetch all and filter
-        var allPipelines = await GetAllAsync(cancellationToken);
-        return allPipelines.FirstOrDefault(p => p.Id == pipelineId);
+        // Use direct get-by-ID method for better performance
+        return await _tfsClient.GetPipelineByIdAsync(pipelineId, cancellationToken);
     }
 
     public async Task<IEnumerable<PipelineRunDto>> GetRunsAsync(int pipelineId, int top = 100, CancellationToken cancellationToken = default)
@@ -70,16 +68,17 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
         
         // Get all pipelines first
         var allPipelines = await GetAllAsync(cancellationToken);
+        var pipelineIds = allPipelines.Select(p => p.Id).ToList();
         
-        // Get runs for each pipeline (in-memory aggregation)
-        var allRuns = new List<PipelineRunDto>();
-        foreach (var pipeline in allPipelines)
+        if (!pipelineIds.Any())
         {
-            var runs = await GetRunsAsync(pipeline.Id, 100, cancellationToken);
-            allRuns.AddRange(runs);
+            _logger.LogInformation("No pipelines found, returning empty runs list");
+            return Enumerable.Empty<PipelineRunDto>();
         }
         
-        return allRuns;
+        // Use bulk method to get runs for all pipelines efficiently
+        _logger.LogDebug("Fetching runs for {Count} pipelines using bulk method", pipelineIds.Count);
+        return await _tfsClient.GetPipelineRunsAsync(pipelineIds, branchName: null, minStartTime: null, top: 100, cancellationToken);
     }
 
     public async Task<IEnumerable<PipelineRunDto>> GetRunsForPipelinesAsync(

@@ -555,6 +555,13 @@ public class MockTfsClient : ITfsClient
         return _mockDataFacade.GetPipelinesAsync(cancellationToken);
     }
 
+    public Task<PipelineDto?> GetPipelineByIdAsync(
+        int pipelineId,
+        CancellationToken cancellationToken = default)
+    {
+        return _mockDataFacade.GetPipelineByIdAsync(pipelineId, cancellationToken);
+    }
+
     public Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
         int pipelineId,
         int top = 100,

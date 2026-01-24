@@ -261,6 +261,16 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves a single pipeline definition by ID from TFS/Azure DevOps.
+    /// </summary>
+    /// <param name="pipelineId">The pipeline ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Pipeline DTO if found, null otherwise.</returns>
+    Task<PipelineDto?> GetPipelineByIdAsync(
+        int pipelineId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves pipeline runs for a specific pipeline.
     /// </summary>
     /// <param name="pipelineId">The pipeline ID.</param>

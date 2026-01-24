@@ -987,6 +987,24 @@ public class BattleshipMockDataFacade : ITfsClient
         return Task.FromResult<IEnumerable<PipelineDto>>(pipelines);
     }
 
+    public Task<PipelineDto?> GetPipelineByIdAsync(
+        int pipelineId,
+        CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: GetPipelineByIdAsync called for pipeline {PipelineId}", pipelineId);
+
+        var pipelines = GetMockPipelines();
+        var pipeline = pipelines.FirstOrDefault(p => p.Id == pipelineId);
+        
+        if (pipeline == null)
+        {
+            _logger.LogWarning("Mock TFS client: Pipeline {PipelineId} not found", pipelineId);
+        }
+
+        return Task.FromResult(pipeline);
+    }
+
     public Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
         int pipelineId,
         int top = 100,
