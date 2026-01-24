@@ -125,7 +125,10 @@ public class WorkItemSyncStage : ISyncStage
         {
             foreach (var dto in batch)
             {
-                // Track max retrieved date for watermark
+                // Track max date for watermark. Using RetrievedAt as proxy for TFS ChangedDate.
+                // Note: The TFS client filters by ChangedDate on the server side using the 'since' parameter.
+                // This ensures we don't miss updates - the watermark marks when we last synced.
+                // TODO: Consider extracting System.ChangedDate from JsonPayload for more accurate watermarks.
                 if (maxChangedDate == null || dto.RetrievedAt > maxChangedDate)
                 {
                     maxChangedDate = dto.RetrievedAt;
@@ -170,7 +173,8 @@ public class WorkItemSyncStage : ISyncStage
         entity.RetrievedAt = dto.RetrievedAt;
         entity.Effort = dto.Effort;
         entity.Description = dto.Description;
-        // Note: TfsRevision, TfsChangedDate, TfsETag are set during write-back operations, not during sync
+        // Write-back fields (TfsRevision, TfsChangedDate, TfsETag) are populated during 
+        // future write-back operations, not during sync. See TFS_CACHE_IMPLEMENTATION_PLAN.md Section 10.
     }
 
     private static WorkItemEntity MapToEntity(WorkItemDto dto)

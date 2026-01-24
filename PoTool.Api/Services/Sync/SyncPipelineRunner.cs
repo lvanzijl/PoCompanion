@@ -23,7 +23,8 @@ public class SyncPipelineRunner : ISyncPipeline
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _syncLocks = new();
     private readonly ConcurrentDictionary<int, CancellationTokenSource> _activeSyncs = new();
 
-    // Total stages in the pipeline (currently only Stage 1)
+    // Total stages in the full pipeline as per TFS_CACHE_IMPLEMENTATION_PLAN.md
+    // Phase 2 implements only Stage 1 (WorkItems). Stages 2-6 will be added in Phase 3.
     private const int TotalStages = 6;
 
     public SyncPipelineRunner(
