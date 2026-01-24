@@ -171,6 +171,47 @@ public class WorkspaceGuardMiddlewareTests
         Assert.IsTrue(_nextCalled);
     }
 
+    [TestMethod]
+    public async Task InvokeAsync_MetricsRoute_LiveMode_ThrowsException()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/metrics/multi-iteration-health");
+        var middleware = new WorkspaceGuardMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        _mockModeProvider.Setup(p => p.Mode).Returns(DataSourceMode.Live);
+
+        // Act & Assert
+        try
+        {
+            await middleware.InvokeAsync(context, _mockModeProvider.Object);
+            Assert.Fail("Expected InvalidOperationException was not thrown");
+        }
+        catch (InvalidOperationException)
+        {
+            // Expected exception
+        }
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_MetricsRoute_CacheMode_DoesNotThrow()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/metrics/backlog-health");
+        var middleware = new WorkspaceGuardMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        _mockModeProvider.Setup(p => p.Mode).Returns(DataSourceMode.Cache);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object);
+
+        // Assert
+        Assert.IsTrue(_nextCalled);
+    }
+
     private static DefaultHttpContext CreateHttpContext(string path)
     {
         var context = new DefaultHttpContext();

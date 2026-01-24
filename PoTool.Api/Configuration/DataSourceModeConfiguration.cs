@@ -53,7 +53,8 @@ public static class DataSourceModeConfiguration
         "/api/pullrequests",
         "/api/pipelines",
         "/api/releaseplanning",
-        "/api/filtering"
+        "/api/filtering",
+        "/api/metrics"
     };
 
     /// <summary>

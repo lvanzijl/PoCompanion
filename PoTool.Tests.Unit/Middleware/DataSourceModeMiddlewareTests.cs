@@ -161,6 +161,31 @@ public class DataSourceModeMiddlewareTests
         Assert.IsTrue(_nextCalled);
     }
 
+    [TestMethod]
+    public async Task InvokeAsync_MetricsRoute_WithCache_SetsCacheMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/metrics/multi-iteration-health");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        _mockProfileProvider
+            .Setup(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        _mockModeProvider
+            .Setup(p => p.GetModeAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DataSourceMode.Cache);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Cache), Times.Once);
+        Assert.IsTrue(_nextCalled);
+    }
+
     private static DefaultHttpContext CreateHttpContext(string path)
     {
         var context = new DefaultHttpContext();
