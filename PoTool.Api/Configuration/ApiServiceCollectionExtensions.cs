@@ -4,6 +4,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services;
 using PoTool.Api.Services.MockData;
+using PoTool.Api.Services.Sync;
 using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
 using PoTool.Core.WorkItems.Validators;
@@ -116,6 +117,10 @@ public static class ApiServiceCollectionExtensions
 
         // Register Work Item State Classification service
         services.AddScoped<IWorkItemStateClassificationService, WorkItemStateClassificationService>();
+
+        // Register Sync Pipeline services
+        services.AddScoped<WorkItemSyncStage>();
+        services.AddSingleton<ISyncPipeline, SyncPipelineRunner>();
 
         // Register Live-only Read Providers (no cache mode)
         // All data is fetched directly from TFS/Azure DevOps
