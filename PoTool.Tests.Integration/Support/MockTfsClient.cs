@@ -662,6 +662,18 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult<IEnumerable<PipelineDto>>(pipelines);
     }
 
+    public Task<PipelineDto?> GetPipelineByIdAsync(
+        int pipelineId,
+        CancellationToken cancellationToken = default)
+    {
+        var pipelines = new List<PipelineDto>
+        {
+            new PipelineDto(1, "TestBuild.CI", PipelineType.Build, "\\Test", DateTimeOffset.UtcNow),
+            new PipelineDto(2, "TestRelease.Deploy", PipelineType.Release, "\\Test", DateTimeOffset.UtcNow)
+        };
+        return Task.FromResult(pipelines.FirstOrDefault(p => p.Id == pipelineId));
+    }
+
     public Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
         int pipelineId,
         int top = 100,

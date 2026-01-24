@@ -3543,6 +3543,108 @@ public class RealTfsClient : ITfsClient
         }, cancellationToken);
     }
 
+    public async Task<PipelineDto?> GetPipelineByIdAsync(
+        int pipelineId,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+        var config = entity!;
+
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            // Determine if this is a build or release pipeline based on ID offset
+            var isRelease = pipelineId >= ReleaseIdOffset;
+            var actualId = isRelease ? pipelineId - ReleaseIdOffset : pipelineId;
+
+            if (isRelease)
+            {
+                // Try to get release definition by ID
+                try
+                {
+                    var releaseUrl = ProjectUrl(config, $"_apis/release/definitions/{actualId}");
+                    var releaseResponse = await httpClient.GetAsync(releaseUrl, cancellationToken);
+
+                    if (releaseResponse.IsSuccessStatusCode)
+                    {
+                        using var stream = await releaseResponse.Content.ReadAsStreamAsync(cancellationToken);
+                        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                        var def = doc.RootElement;
+                        var id = def.GetProperty("id").GetInt32();
+                        var name = def.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                        var path = def.TryGetProperty("path", out var p) ? p.GetString() : null;
+
+                        return new PipelineDto(
+                            Id: id + ReleaseIdOffset,
+                            Name: name,
+                            Type: PipelineType.Release,
+                            Path: path,
+                            RetrievedAt: DateTimeOffset.UtcNow
+                        );
+                    }
+                    else if (releaseResponse.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        _logger.LogInformation("Release pipeline {PipelineId} (API ID: {ActualId}) not found: {StatusCode}", pipelineId, actualId, releaseResponse.StatusCode);
+                        return null;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to get release pipeline {PipelineId} (API ID: {ActualId}): {StatusCode}", pipelineId, actualId, releaseResponse.StatusCode);
+                        return null;
+                    }
+                }
+                catch (HttpRequestException ex)
+                {
+                    _logger.LogWarning(ex, "HTTP error retrieving release pipeline {PipelineId} (API ID: {ActualId})", pipelineId, actualId);
+                    return null;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Release definitions API not available or error retrieving pipeline {PipelineId} (API ID: {ActualId})", pipelineId, actualId);
+                    return null;
+                }
+            }
+            else
+            {
+                // Get build definition by ID
+                var buildUrl = ProjectUrl(config, $"_apis/build/definitions/{actualId}");
+                var buildResponse = await httpClient.GetAsync(buildUrl, cancellationToken);
+
+                if (buildResponse.IsSuccessStatusCode)
+                {
+                    using var stream = await buildResponse.Content.ReadAsStreamAsync(cancellationToken);
+                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                    var def = doc.RootElement;
+                    var id = def.GetProperty("id").GetInt32();
+                    var name = def.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                    var path = def.TryGetProperty("path", out var p) ? p.GetString() : null;
+
+                    return new PipelineDto(
+                        Id: id,
+                        Name: name,
+                        Type: PipelineType.Build,
+                        Path: path,
+                        RetrievedAt: DateTimeOffset.UtcNow
+                    );
+                }
+                else if (buildResponse.StatusCode == HttpStatusCode.NotFound)
+                {
+                    _logger.LogInformation("Build pipeline {PipelineId} (API ID: {ActualId}) not found: {StatusCode}", pipelineId, actualId, buildResponse.StatusCode);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to get build pipeline {PipelineId} (API ID: {ActualId}): {StatusCode}", pipelineId, actualId, buildResponse.StatusCode);
+                }
+            }
+
+            return null;
+        }, cancellationToken);
+    }
+
     public async Task<IEnumerable<PipelineRunDto>> GetPipelineRunsAsync(
         int pipelineId,
         int top = 100,
