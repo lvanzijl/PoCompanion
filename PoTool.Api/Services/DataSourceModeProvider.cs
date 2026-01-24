@@ -16,7 +16,8 @@ public sealed class DataSourceModeProvider : IDataSourceModeProvider
     private readonly ILogger<DataSourceModeProvider> _logger;
 
     // Thread-local current mode for in-request switching
-    private DataSourceMode _currentMode = DataSourceMode.Live;
+    // Changed from defaulting to Live to nullable - mode MUST be explicitly set by middleware
+    private DataSourceMode? _currentMode = null;
 
     public DataSourceModeProvider(
         PoToolDbContext dbContext,
@@ -28,8 +29,14 @@ public sealed class DataSourceModeProvider : IDataSourceModeProvider
 
     /// <summary>
     /// Gets the current mode property (implements interface).
+    /// Throws exception if mode has not been explicitly set by middleware.
+    /// This enforces that all routes must have their mode set explicitly.
     /// </summary>
-    public DataSourceMode Mode => _currentMode;
+    public DataSourceMode Mode => _currentMode 
+        ?? throw new InvalidOperationException(
+            "DataSourceMode not set for this request. " +
+            "Mode must be explicitly set by DataSourceModeMiddleware. " +
+            "This indicates a middleware configuration issue.");
 
     /// <summary>
     /// Gets the data source mode for a product owner from the database.

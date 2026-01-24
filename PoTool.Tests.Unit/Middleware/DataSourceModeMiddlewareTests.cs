@@ -1,0 +1,170 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using PoTool.Api.Middleware;
+using PoTool.Core.Configuration;
+using PoTool.Core.Contracts;
+
+namespace PoTool.Tests.Unit.Middleware;
+
+/// <summary>
+/// Unit tests for DataSourceModeMiddleware.
+/// Verifies that the middleware correctly sets Cache or Live mode based on route and cache state.
+/// </summary>
+[TestClass]
+public class DataSourceModeMiddlewareTests
+{
+    private Mock<IDataSourceModeProvider> _mockModeProvider = null!;
+    private Mock<ICurrentProfileProvider> _mockProfileProvider = null!;
+    private Mock<ILogger<DataSourceModeMiddleware>> _mockLogger = null!;
+    private bool _nextCalled;
+
+    [TestInitialize]
+    public void Initialize()
+    {
+        _mockModeProvider = new Mock<IDataSourceModeProvider>();
+        _mockProfileProvider = new Mock<ICurrentProfileProvider>();
+        _mockLogger = new Mock<ILogger<DataSourceModeMiddleware>>();
+        _nextCalled = false;
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_WorkspaceRoute_WithCache_SetsCacheMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/workitems");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        _mockProfileProvider
+            .Setup(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        _mockModeProvider
+            .Setup(p => p.GetModeAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DataSourceMode.Cache);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Cache), Times.Once);
+        Assert.IsTrue(_nextCalled, "Next middleware should be called");
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_WorkspaceRoute_WithoutCache_SetsLiveMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/pullrequests");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        _mockProfileProvider
+            .Setup(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        _mockModeProvider
+            .Setup(p => p.GetModeAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DataSourceMode.Live);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_WorkspaceRoute_NoActiveProfile_SetsLiveMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/pipelines");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        _mockProfileProvider
+            .Setup(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int?)null);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_SettingsRoute_SetsLiveMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/settings");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
+        _mockProfileProvider.Verify(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()), Times.Never, 
+            "Profile provider should not be called for non-workspace routes");
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_TfsConfigRoute_SetsLiveMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/tfsconfig");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_ReleasePlanningRoute_WithCache_SetsCacheMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/releaseplanning/objectives");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        _mockProfileProvider
+            .Setup(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        _mockModeProvider
+            .Setup(p => p.GetModeAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DataSourceMode.Cache);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Cache), Times.Once);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    private static DefaultHttpContext CreateHttpContext(string path)
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Path = path;
+        return context;
+    }
+}
