@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
-using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
 
@@ -24,7 +23,6 @@ public class SyncPipelineRunner : ISyncPipeline
     private readonly ConcurrentDictionary<int, CancellationTokenSource> _activeSyncs = new();
 
     // Total stages in the full pipeline as per TFS_CACHE_IMPLEMENTATION_PLAN.md
-    // Phase 2 implements only Stage 1 (WorkItems). Stages 2-6 will be added in Phase 3.
     private const int TotalStages = 6;
 
     public SyncPipelineRunner(
@@ -109,88 +107,116 @@ public class SyncPipelineRunner : ISyncPipeline
                 yield break;
             }
 
-            // Execute Stage 1: Work Items
+            // Track results from each stage for finalization
+            SyncStageResult? workItemResult = null;
+            SyncStageResult? pullRequestResult = null;
+            SyncStageResult? pipelineResult = null;
+
+            // ============================================
+            // Stage 1: Sync Work Items
+            // ============================================
             var workItemStage = scope.ServiceProvider.GetRequiredService<WorkItemSyncStage>();
-            
-            await cacheStateRepo.UpdateSyncStatusAsync(
-                productOwnerId,
-                CacheSyncStatusDto.InProgress,
-                workItemStage.StageName,
-                0,
-                cts.Token);
+            var stage1Update = await ExecuteStageAsync(workItemStage, syncContext, cacheStateRepo, cts.Token);
+            yield return stage1Update;
 
-            yield return new SyncProgressUpdate
+            if (stage1Update.HasFailed)
             {
-                CurrentStage = workItemStage.StageName,
-                StageProgressPercent = 0,
-                IsComplete = false,
-                HasFailed = false,
-                StageNumber = workItemStage.StageNumber,
-                TotalStages = TotalStages
-            };
+                yield break;
+            }
+            workItemResult = await workItemStage.ExecuteAsync(syncContext, _ => { }, cts.Token);
 
-            var lastProgress = 0;
-            var workItemResult = await workItemStage.ExecuteAsync(
-                syncContext,
-                progress =>
-                {
-                    lastProgress = progress;
-                },
-                cts.Token);
+            // ============================================
+            // Stage 2: Sync Pull Requests
+            // ============================================
+            var pullRequestStage = scope.ServiceProvider.GetRequiredService<PullRequestSyncStage>();
+            var stage2Update = await ExecuteStageAsync(pullRequestStage, syncContext, cacheStateRepo, cts.Token);
+            yield return stage2Update;
 
-            if (!workItemResult.Success)
+            if (stage2Update.HasFailed)
             {
-                await cacheStateRepo.MarkSyncFailedAsync(
-                    productOwnerId,
-                    workItemResult.ErrorMessage ?? "Unknown error",
-                    workItemStage.StageName,
-                    cts.Token);
+                // Stage 1 watermark should still be committed
+                await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
+                    workItemResult?.NewWatermark, null, null, cts.Token);
+                yield break;
+            }
+            pullRequestResult = await pullRequestStage.ExecuteAsync(syncContext, _ => { }, cts.Token);
 
-                yield return new SyncProgressUpdate
-                {
-                    CurrentStage = workItemStage.StageName,
-                    StageProgressPercent = lastProgress,
-                    IsComplete = true,
-                    HasFailed = true,
-                    ErrorMessage = workItemResult.ErrorMessage,
-                    StageNumber = workItemStage.StageNumber,
-                    TotalStages = TotalStages
-                };
+            // ============================================
+            // Stage 3: Sync Pipelines
+            // ============================================
+            var pipelineStage = scope.ServiceProvider.GetRequiredService<PipelineSyncStage>();
+            var stage3Update = await ExecuteStageAsync(pipelineStage, syncContext, cacheStateRepo, cts.Token);
+            yield return stage3Update;
+
+            if (stage3Update.HasFailed)
+            {
+                await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
+                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, null, cts.Token);
+                yield break;
+            }
+            pipelineResult = await pipelineStage.ExecuteAsync(syncContext, _ => { }, cts.Token);
+
+            // ============================================
+            // Stage 4: Compute Validations
+            // ============================================
+            var validationStage = scope.ServiceProvider.GetRequiredService<ValidationComputeStage>();
+            var stage4Update = await ExecuteStageAsync(validationStage, syncContext, cacheStateRepo, cts.Token);
+            yield return stage4Update;
+
+            if (stage4Update.HasFailed)
+            {
+                await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
+                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, pipelineResult?.NewWatermark, cts.Token);
                 yield break;
             }
 
-            yield return new SyncProgressUpdate
-            {
-                CurrentStage = workItemStage.StageName,
-                StageProgressPercent = 100,
-                IsComplete = false,
-                HasFailed = false,
-                StageNumber = workItemStage.StageNumber,
-                TotalStages = TotalStages
-            };
+            // ============================================
+            // Stage 5: Compute Metrics
+            // ============================================
+            var metricsStage = scope.ServiceProvider.GetRequiredService<MetricsComputeStage>();
+            var stage5Update = await ExecuteStageAsync(metricsStage, syncContext, cacheStateRepo, cts.Token);
+            yield return stage5Update;
 
-            // Finalize (Stage 6) - Commit watermarks and update counts
-            // Note: Stages 2-5 will be implemented in Phase 3
+            if (stage5Update.HasFailed)
+            {
+                await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
+                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, pipelineResult?.NewWatermark, cts.Token);
+                yield break;
+            }
+
+            // ============================================
+            // Stage 6: Finalize Cache
+            // ============================================
+            var finalizeStage = scope.ServiceProvider.GetRequiredService<FinalizeCacheStage>();
+
+            // Set finalization data
             var workItemCount = await context.WorkItems.CountAsync(cts.Token);
             var pullRequestCount = await context.PullRequests.CountAsync(cts.Token);
             var pipelineCount = await context.CachedPipelineRuns
                 .Where(p => p.ProductOwnerId == productOwnerId)
                 .CountAsync(cts.Token);
 
-            await cacheStateRepo.MarkSyncSuccessAsync(
+            finalizeStage.WorkItemCount = workItemCount;
+            finalizeStage.PullRequestCount = pullRequestCount;
+            finalizeStage.PipelineCount = pipelineCount;
+            finalizeStage.WorkItemWatermark = workItemResult?.NewWatermark;
+            finalizeStage.PullRequestWatermark = pullRequestResult?.NewWatermark;
+            finalizeStage.PipelineWatermark = pipelineResult?.NewWatermark;
+
+            var stage6Update = await ExecuteStageAsync(finalizeStage, syncContext, cacheStateRepo, cts.Token);
+            yield return stage6Update;
+
+            if (stage6Update.HasFailed)
+            {
+                yield break;
+            }
+
+            _logger.LogInformation(
+                "Sync completed for ProductOwner {ProductOwnerId}: {WorkItems} work items, {PRs} PRs, {Pipelines} pipelines",
                 productOwnerId,
                 workItemCount,
                 pullRequestCount,
-                pipelineCount,
-                workItemResult.NewWatermark,
-                syncContext.PullRequestWatermark, // Unchanged until Stage 2 implemented
-                syncContext.PipelineWatermark,    // Unchanged until Stage 3 implemented
-                cts.Token);
-
-            _logger.LogInformation(
-                "Sync completed for ProductOwner {ProductOwnerId}: {WorkItems} work items",
-                productOwnerId,
-                workItemResult.ItemCount);
+                pipelineCount);
 
             yield return new SyncProgressUpdate
             {
@@ -207,6 +233,83 @@ public class SyncPipelineRunner : ISyncPipeline
             _activeSyncs.TryRemove(productOwnerId, out _);
             semaphore.Release();
         }
+    }
+
+    private async Task<SyncProgressUpdate> ExecuteStageAsync(
+        ISyncStage stage,
+        SyncContext syncContext,
+        ICacheStateRepository cacheStateRepo,
+        CancellationToken cancellationToken)
+    {
+        await cacheStateRepo.UpdateSyncStatusAsync(
+            syncContext.ProductOwnerId,
+            CacheSyncStatusDto.InProgress,
+            stage.StageName,
+            0,
+            cancellationToken);
+
+        var lastProgress = 0;
+        var result = await stage.ExecuteAsync(
+            syncContext,
+            progress => lastProgress = progress,
+            cancellationToken);
+
+        if (!result.Success)
+        {
+            await cacheStateRepo.MarkSyncFailedAsync(
+                syncContext.ProductOwnerId,
+                result.ErrorMessage ?? "Unknown error",
+                stage.StageName,
+                cancellationToken);
+
+            return new SyncProgressUpdate
+            {
+                CurrentStage = stage.StageName,
+                StageProgressPercent = lastProgress,
+                IsComplete = true,
+                HasFailed = true,
+                ErrorMessage = result.ErrorMessage,
+                StageNumber = stage.StageNumber,
+                TotalStages = TotalStages
+            };
+        }
+
+        return new SyncProgressUpdate
+        {
+            CurrentStage = stage.StageName,
+            StageProgressPercent = 100,
+            IsComplete = false,
+            HasFailed = false,
+            StageNumber = stage.StageNumber,
+            TotalStages = TotalStages
+        };
+    }
+
+    private async Task CommitPartialSuccessAsync(
+        ICacheStateRepository cacheStateRepo,
+        int productOwnerId,
+        PoToolDbContext context,
+        DateTimeOffset? workItemWatermark,
+        DateTimeOffset? pullRequestWatermark,
+        DateTimeOffset? pipelineWatermark,
+        CancellationToken cancellationToken)
+    {
+        // Commit successful watermarks even if later stages failed
+        var workItemCount = await context.WorkItems.CountAsync(cancellationToken);
+        var pullRequestCount = await context.PullRequests.CountAsync(cancellationToken);
+        var pipelineCount = await context.CachedPipelineRuns
+            .Where(p => p.ProductOwnerId == productOwnerId)
+            .CountAsync(cancellationToken);
+
+        await cacheStateRepo.MarkSyncSuccessAsync(
+            productOwnerId,
+            workItemCount,
+            pullRequestCount,
+            pipelineCount,
+            workItemWatermark,
+            pullRequestWatermark,
+            pipelineWatermark,
+            cancellationToken);
     }
 
     public void CancelSync(int productOwnerId)

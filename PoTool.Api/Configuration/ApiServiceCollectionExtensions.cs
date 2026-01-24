@@ -118,8 +118,13 @@ public static class ApiServiceCollectionExtensions
         // Register Work Item State Classification service
         services.AddScoped<IWorkItemStateClassificationService, WorkItemStateClassificationService>();
 
-        // Register Sync Pipeline services
+        // Register Sync Pipeline services (Stages 1-6)
         services.AddScoped<WorkItemSyncStage>();
+        services.AddScoped<PullRequestSyncStage>();
+        services.AddScoped<PipelineSyncStage>();
+        services.AddScoped<ValidationComputeStage>();
+        services.AddScoped<MetricsComputeStage>();
+        services.AddScoped<FinalizeCacheStage>();
         services.AddSingleton<ISyncPipeline, SyncPipelineRunner>();
 
         // Register Live-only Read Providers (no cache mode)
