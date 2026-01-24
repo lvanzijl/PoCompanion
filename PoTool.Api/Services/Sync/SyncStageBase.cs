@@ -10,9 +10,10 @@ namespace PoTool.Api.Services.Sync;
 public abstract class SyncStageBase : ISyncStage
 {
     private readonly ILogger _logger;
+    private readonly object _circuitBreakerLock = new();
     
-    // Retry configuration
-    private const int MaxRetries = 3;
+    // Retry configuration: 3 total attempts (1 initial + 2 retries)
+    private const int MaxAttempts = 3;
     private static readonly TimeSpan[] RetryDelays = { TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4) };
     
     // Circuit breaker configuration
@@ -45,15 +46,16 @@ public abstract class SyncStageBase : ISyncStage
         SyncStageResult? result = null;
         Exception? lastException = null;
 
-        for (int attempt = 0; attempt <= MaxRetries; attempt++)
+        for (int attempt = 1; attempt <= MaxAttempts; attempt++)
         {
             try
             {
-                if (attempt > 0)
+                if (attempt > 1)
                 {
-                    var delay = RetryDelays[Math.Min(attempt - 1, RetryDelays.Length - 1)];
-                    _logger.LogInformation("Retry attempt {Attempt}/{MaxRetries} for stage {StageName} after {Delay}s delay",
-                        attempt, MaxRetries, StageName, delay.TotalSeconds);
+                    var delayIndex = Math.Min(attempt - 2, RetryDelays.Length - 1);
+                    var delay = RetryDelays[delayIndex];
+                    _logger.LogInformation("Retry attempt {Attempt}/{MaxAttempts} for stage {StageName} after {Delay}s delay",
+                        attempt, MaxAttempts, StageName, delay.TotalSeconds);
                     await Task.Delay(delay, cancellationToken);
                 }
 
@@ -79,17 +81,17 @@ public abstract class SyncStageBase : ISyncStage
             catch (Exception ex)
             {
                 lastException = ex;
-                _logger.LogWarning(ex, "Attempt {Attempt}/{MaxRetries} failed for stage {StageName}: {Message}",
-                    attempt + 1, MaxRetries + 1, StageName, ex.Message);
+                _logger.LogWarning(ex, "Attempt {Attempt}/{MaxAttempts} failed for stage {StageName}: {Message}",
+                    attempt, MaxAttempts, StageName, ex.Message);
             }
         }
 
-        // All retries exhausted
+        // All attempts exhausted
         RecordFailure();
         
         var errorMessage = lastException?.Message ?? result?.ErrorMessage ?? "Unknown error";
-        _logger.LogError("Sync stage {StageName} failed after {MaxRetries} retries: {Error}",
-            StageName, MaxRetries, errorMessage);
+        _logger.LogError("Sync stage {StageName} failed after {MaxAttempts} attempts: {Error}",
+            StageName, MaxAttempts, errorMessage);
         
         return SyncStageResult.CreateFailure(errorMessage);
     }
@@ -101,38 +103,47 @@ public abstract class SyncStageBase : ISyncStage
 
     private bool IsCircuitOpen()
     {
-        if (_circuitOpenedAt == null)
-            return false;
-
-        if (DateTimeOffset.UtcNow - _circuitOpenedAt.Value > CircuitBreakerRecoveryTime)
+        lock (_circuitBreakerLock)
         {
-            // Recovery time elapsed, close the circuit (half-open state - allow one try)
-            _logger.LogInformation("Circuit breaker recovery time elapsed for stage {StageName}. Attempting recovery.", StageName);
-            _circuitOpenedAt = null;
-            _consecutiveFailures = 0;
-            return false;
-        }
+            if (_circuitOpenedAt == null)
+                return false;
 
-        return true;
+            if (DateTimeOffset.UtcNow - _circuitOpenedAt.Value > CircuitBreakerRecoveryTime)
+            {
+                // Recovery time elapsed, close the circuit (half-open state - allow one try)
+                _logger.LogInformation("Circuit breaker recovery time elapsed for stage {StageName}. Attempting recovery.", StageName);
+                _circuitOpenedAt = null;
+                _consecutiveFailures = 0;
+                return false;
+            }
+
+            return true;
+        }
     }
 
     private void RecordFailure()
     {
-        _consecutiveFailures++;
-        if (_consecutiveFailures >= FailureThreshold && _circuitOpenedAt == null)
+        lock (_circuitBreakerLock)
         {
-            _circuitOpenedAt = DateTimeOffset.UtcNow;
-            _logger.LogWarning("Circuit breaker opened for stage {StageName} after {FailureCount} consecutive failures",
-                StageName, _consecutiveFailures);
+            _consecutiveFailures++;
+            if (_consecutiveFailures >= FailureThreshold && _circuitOpenedAt == null)
+            {
+                _circuitOpenedAt = DateTimeOffset.UtcNow;
+                _logger.LogWarning("Circuit breaker opened for stage {StageName} after {FailureCount} consecutive failures",
+                    StageName, _consecutiveFailures);
+            }
         }
     }
 
     private void ResetCircuitBreaker()
     {
-        if (_consecutiveFailures > 0)
+        lock (_circuitBreakerLock)
         {
-            _consecutiveFailures = 0;
-            _circuitOpenedAt = null;
+            if (_consecutiveFailures > 0)
+            {
+                _consecutiveFailures = 0;
+                _circuitOpenedAt = null;
+            }
         }
     }
 }
