@@ -26,8 +26,9 @@ public class CacheSyncService
                 $"api/CacheSync/{productOwnerId}",
                 cancellationToken);
         }
-        catch (HttpRequestException)
+        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
         {
+            // Handle network errors and invalid JSON responses (e.g., empty response)
             return null;
         }
     }
