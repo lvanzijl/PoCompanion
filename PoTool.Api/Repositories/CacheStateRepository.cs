@@ -109,7 +109,7 @@ public class CacheStateRepository : ICacheStateRepository
 
         entity.SyncStatus = CacheSyncStatus.Failed;
         entity.LastAttemptSync = DateTimeOffset.UtcNow;
-        entity.LastErrorMessage = errorMessage.Length > 2000 ? errorMessage[..2000] : errorMessage;
+        entity.LastErrorMessage = errorMessage.Length > 2000 ? errorMessage[..1997] + "..." : errorMessage;
         entity.CurrentSyncStage = failedStage;
         // Note: Watermarks and LastSuccessfulSync remain unchanged on failure
 

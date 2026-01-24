@@ -46,7 +46,7 @@ public class ProductOwnerCacheStateEntity
     public int PullRequestCount { get; set; } = 0;
 
     /// <summary>
-    /// Count of cached pipeline definitions after last successful sync.
+    /// Count of cached pipeline runs after last successful sync.
     /// </summary>
     public int PipelineCount { get; set; } = 0;
 
