@@ -135,9 +135,9 @@
             
             Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
             
-            Console.WriteLine($"[ProfilesHome] Navigating to Product Home for profile: {profile.Name}");
-            // Navigate directly to Product Home (Live mode - no sync required)
-            NavigationManager.NavigateTo("/");
+            Console.WriteLine($"[ProfilesHome] Navigating to Landing page for profile: {profile.Name}");
+            // Navigate to Landing page to choose intent
+            NavigationManager.NavigateTo("/landing");
         }
         catch (Exception ex)
         {

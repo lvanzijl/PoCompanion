@@ -36,7 +36,8 @@ public class CacheSyncController : ControllerBase
     [ProducesResponseType(typeof(CacheStateDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<CacheStateDto>> GetCacheStatus(int productOwnerId, CancellationToken cancellationToken)
     {
-        var cacheState = await _cacheStateRepository.GetCacheStateAsync(productOwnerId, cancellationToken);
+        // Always return a valid cache state (create if doesn't exist)
+        var cacheState = await _cacheStateRepository.GetOrCreateCacheStateAsync(productOwnerId, cancellationToken);
         return Ok(cacheState);
     }
 

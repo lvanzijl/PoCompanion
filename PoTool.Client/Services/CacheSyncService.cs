@@ -30,6 +30,11 @@ public class CacheSyncService
         {
             return null;
         }
+        catch (System.Text.Json.JsonException)
+        {
+            // Handle invalid JSON response (e.g., empty response)
+            return null;
+        }
     }
 
     /// <summary>
