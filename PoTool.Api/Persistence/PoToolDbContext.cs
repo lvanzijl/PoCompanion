@@ -120,6 +120,21 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<WorkItemStateClassificationEntity> WorkItemStateClassifications => Set<WorkItemStateClassificationEntity>();
 
+    /// <summary>
+    /// Cache state tracking per ProductOwner.
+    /// </summary>
+    public DbSet<ProductOwnerCacheStateEntity> ProductOwnerCacheStates => Set<ProductOwnerCacheStateEntity>();
+
+    /// <summary>
+    /// Cached metrics per ProductOwner.
+    /// </summary>
+    public DbSet<CachedMetricsEntity> CachedMetrics => Set<CachedMetricsEntity>();
+
+    /// <summary>
+    /// Cached pipeline runs per ProductOwner.
+    /// </summary>
+    public DbSet<CachedPipelineRunEntity> CachedPipelineRuns => Set<CachedPipelineRunEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -341,6 +356,70 @@ public class PoToolDbContext : DbContext
             entity.Property(e => e.TfsProjectName).HasMaxLength(256).IsRequired();
             entity.Property(e => e.WorkItemType).HasMaxLength(100).IsRequired();
             entity.Property(e => e.StateName).HasMaxLength(100).IsRequired();
+        });
+
+        // ProductOwner cache state
+        modelBuilder.Entity<ProductOwnerCacheStateEntity>(entity =>
+        {
+            entity.HasIndex(e => e.ProductOwnerId)
+                .IsUnique();
+
+            entity.Property(e => e.LastErrorMessage).HasMaxLength(2000);
+            entity.Property(e => e.CurrentSyncStage).HasMaxLength(100);
+
+            entity.HasOne(e => e.ProductOwner)
+                .WithOne()
+                .HasForeignKey<ProductOwnerCacheStateEntity>(e => e.ProductOwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Cached metrics
+        modelBuilder.Entity<CachedMetricsEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.ProductOwnerId, e.MetricName })
+                .IsUnique();
+
+            entity.Property(e => e.MetricName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Unit).HasMaxLength(50);
+
+            entity.HasOne(e => e.ProductOwner)
+                .WithMany()
+                .HasForeignKey(e => e.ProductOwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Cached pipeline runs
+        modelBuilder.Entity<CachedPipelineRunEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.ProductOwnerId, e.PipelineDefinitionId, e.TfsRunId })
+                .IsUnique();
+
+            entity.HasIndex(e => e.FinishedDate);
+
+            entity.Property(e => e.RunName).HasMaxLength(200);
+            entity.Property(e => e.State).HasMaxLength(50);
+            entity.Property(e => e.Result).HasMaxLength(50);
+            entity.Property(e => e.SourceBranch).HasMaxLength(500);
+            entity.Property(e => e.SourceVersion).HasMaxLength(50);
+            entity.Property(e => e.Url).HasMaxLength(1000);
+
+            entity.HasOne(e => e.ProductOwner)
+                .WithMany()
+                .HasForeignKey(e => e.ProductOwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.PipelineDefinition)
+                .WithMany()
+                .HasForeignKey(e => e.PipelineDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Work item entity - add write-back field configurations
+        modelBuilder.Entity<WorkItemEntity>(entity =>
+        {
+            // Existing configuration is in the base entity block above
+            // Just adding the new field configurations here
+            entity.Property(e => e.TfsETag).HasMaxLength(100);
         });
     }
 }
