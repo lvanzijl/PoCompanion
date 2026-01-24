@@ -25,7 +25,7 @@ This solution follows a three-layer architecture as defined in `docs/ARCHITECTUR
 #### API Layer
 - `WorkItemsController` - REST API endpoints for work items
 - `WorkItemSyncService` - Background service for syncing work items from TFS
-- `WorkItemHub` - SignalR hub for real-time updates
+- `CacheSyncHub` - SignalR hub for cache sync progress updates
 - `PoToolDbContext` - EF Core database context
 - `WorkItemRepository` - Repository implementation with SQLite persistence
 
@@ -63,7 +63,7 @@ The API will be available at `http://localhost:5291` with:
 - **Main Application**: `http://localhost:5291`
 - **OpenAPI documentation**: `http://localhost:5291/swagger` (development only)
 - **Health endpoint**: `http://localhost:5291/health`
-- **SignalR hub**: `http://localhost:5291/hubs/workitems`
+- **SignalR hub (cache sync)**: `http://localhost:5291/hubs/cachesync`
 
 ## Database
 
@@ -79,7 +79,7 @@ The Work Item Tree feature (as described in `features/Simple_workitem_explorer.m
 2. **Local Caching** - SQLite-based caching for offline access
 3. **Pull & Cache** - Manual sync button to retrieve work items from TFS
 4. **Search & Filter** - Filter work items by title
-5. **Real-time Updates** - SignalR notifications for sync status
+5. **Cache Sync Progress** - SignalR notifications for cache synchronization status
 
 ### Current Implementation Status
 
