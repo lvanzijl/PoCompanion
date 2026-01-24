@@ -80,4 +80,23 @@ public class WorkItemEntity
     /// Work item description (nullable).
     /// </summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// TFS revision number for optimistic concurrency.
+    /// Used for future write-back functionality.
+    /// </summary>
+    public int TfsRevision { get; set; }
+
+    /// <summary>
+    /// TFS changed date for conflict detection.
+    /// Used for future write-back functionality.
+    /// </summary>
+    public DateTimeOffset TfsChangedDate { get; set; }
+
+    /// <summary>
+    /// HTTP ETag from TFS for PATCH preconditions.
+    /// Used for future write-back functionality.
+    /// </summary>
+    [MaxLength(100)]
+    public string? TfsETag { get; set; }
 }

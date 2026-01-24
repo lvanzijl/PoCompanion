@@ -132,6 +132,14 @@
                     Switch Profile
                 </MudButton>
             </MudStack>
+
+            @* Cache Status Section *@
+            @if (_profileId.HasValue)
+            {
+                <MudContainer MaxWidth="MaxWidth.Small" Class="mt-6">
+                    <CacheStatusSection ProductOwnerId="@_profileId.Value" AutoSync="true" />
+                </MudContainer>
+            }
         }
     </MudStack>
 </MudContainer>

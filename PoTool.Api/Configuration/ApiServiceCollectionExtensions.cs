@@ -1,9 +1,11 @@
 using Mediator;
 using Microsoft.EntityFrameworkCore;
+using PoTool.Api.Hubs;
 using PoTool.Api.Persistence;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services;
 using PoTool.Api.Services.MockData;
+using PoTool.Api.Services.Sync;
 using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
 using PoTool.Core.WorkItems.Validators;
@@ -109,6 +111,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<ISprintRepository, SprintRepository>();
         services.AddScoped<IRepositoryConfigRepository, Repositories.RepositoryRepository>();
+        services.AddScoped<ICacheStateRepository, CacheStateRepository>();
 
         // Register Classification service
         services.AddScoped<IWorkItemClassificationService, WorkItemClassificationService>();
@@ -116,11 +119,42 @@ public static class ApiServiceCollectionExtensions
         // Register Work Item State Classification service
         services.AddScoped<IWorkItemStateClassificationService, WorkItemStateClassificationService>();
 
-        // Register Live-only Read Providers (no cache mode)
-        // All data is fetched directly from TFS/Azure DevOps
-        services.AddScoped<IWorkItemReadProvider, LiveWorkItemReadProvider>();
-        services.AddScoped<IPullRequestReadProvider, LivePullRequestReadProvider>();
-        services.AddScoped<IPipelineReadProvider, LivePipelineReadProvider>();
+        // Register Sync Pipeline services (Stages 1-6)
+        services.AddScoped<WorkItemSyncStage>();
+        services.AddScoped<PullRequestSyncStage>();
+        services.AddScoped<PipelineSyncStage>();
+        services.AddScoped<ValidationComputeStage>();
+        services.AddScoped<MetricsComputeStage>();
+        services.AddScoped<FinalizeCacheStage>();
+        services.AddSingleton<ISyncPipeline, SyncPipelineRunner>();
+
+        // Register SignalR broadcaster for sync progress
+        services.AddSingleton<ISyncProgressBroadcaster, SyncProgressBroadcaster>();
+
+        // Register Data Source Mode Provider (for switching between Live and Cache)
+        services.AddScoped<IDataSourceModeProvider, DataSourceModeProvider>();
+
+        // Register Live Read Providers with keyed services
+        services.AddKeyedScoped<IWorkItemReadProvider, LiveWorkItemReadProvider>("Live");
+        services.AddKeyedScoped<IPullRequestReadProvider, LivePullRequestReadProvider>("Live");
+        services.AddKeyedScoped<IPipelineReadProvider, LivePipelineReadProvider>("Live");
+
+        // Register Cached Read Providers with keyed services
+        services.AddKeyedScoped<IWorkItemReadProvider, CachedWorkItemReadProvider>("Cached");
+        services.AddKeyedScoped<IPullRequestReadProvider, CachedPullRequestReadProvider>("Cached");
+        services.AddKeyedScoped<IPipelineReadProvider, CachedPipelineReadProvider>("Cached");
+
+        // Register the factory for data-source-aware provider resolution
+        services.AddScoped<DataSourceAwareReadProviderFactory>();
+
+        // Register default providers that delegate to the factory
+        // This allows existing handlers to continue using IWorkItemReadProvider without changes
+        services.AddScoped<IWorkItemReadProvider>(sp =>
+            sp.GetRequiredService<DataSourceAwareReadProviderFactory>().GetWorkItemReadProvider());
+        services.AddScoped<IPullRequestReadProvider>(sp =>
+            sp.GetRequiredService<DataSourceAwareReadProviderFactory>().GetPullRequestReadProvider());
+        services.AddScoped<IPipelineReadProvider>(sp =>
+            sp.GetRequiredService<DataSourceAwareReadProviderFactory>().GetPipelineReadProvider());
 
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();
