@@ -132,6 +132,12 @@ public class PullRequestSyncStage : ISyncStage
 
         foreach (var batch in pullRequests.Chunk(batchSize))
         {
+            // Load all existing entities for this batch in a single query
+            var batchIds = batch.Where(d => existingSet.Contains(d.Id)).Select(d => d.Id).ToList();
+            var existingEntities = await _context.PullRequests
+                .Where(p => batchIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, cancellationToken);
+
             foreach (var dto in batch)
             {
                 // Track max date for watermark (use RetrievedAt as proxy)
@@ -140,18 +146,16 @@ public class PullRequestSyncStage : ISyncStage
                     maxDate = dto.RetrievedAt;
                 }
 
-                if (existingSet.Contains(dto.Id))
+                if (existingEntities.TryGetValue(dto.Id, out var entity))
                 {
                     // Update existing
-                    var entity = await _context.PullRequests
-                        .FirstAsync(p => p.Id == dto.Id, cancellationToken);
                     UpdateEntity(entity, dto);
                 }
                 else
                 {
                     // Insert new
-                    var entity = MapToEntity(dto);
-                    await _context.PullRequests.AddAsync(entity, cancellationToken);
+                    var newEntity = MapToEntity(dto);
+                    await _context.PullRequests.AddAsync(newEntity, cancellationToken);
                     existingSet.Add(dto.Id);
                 }
             }

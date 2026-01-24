@@ -131,6 +131,19 @@ public class PipelineSyncStage : ISyncStage
 
         foreach (var batch in runs.Chunk(batchSize))
         {
+            // Get batch keys that should be updated
+            var batchKeysToUpdate = batch
+                .Where(dto => pipelineIdMapping.TryGetValue(dto.PipelineId, out _))
+                .Select(dto => (PipelineDefId: pipelineIdMapping[dto.PipelineId], dto.RunId))
+                .Where(k => existingSet.Contains(k))
+                .ToList();
+
+            // Load all existing entities for this batch in a single query
+            var runIds = batchKeysToUpdate.Select(k => k.RunId).ToList();
+            var existingEntities = await _context.CachedPipelineRuns
+                .Where(r => r.ProductOwnerId == productOwnerId && runIds.Contains(r.TfsRunId))
+                .ToDictionaryAsync(r => (r.PipelineDefinitionId, r.TfsRunId), cancellationToken);
+
             foreach (var dto in batch)
             {
                 if (!pipelineIdMapping.TryGetValue(dto.PipelineId, out var internalPipelineDefId))
@@ -145,20 +158,16 @@ public class PipelineSyncStage : ISyncStage
                 }
 
                 var key = (internalPipelineDefId, dto.RunId);
-                if (existingSet.Contains(key))
+                if (existingEntities.TryGetValue(key, out var entity))
                 {
                     // Update existing
-                    var entity = await _context.CachedPipelineRuns
-                        .FirstAsync(r => r.ProductOwnerId == productOwnerId &&
-                                        r.PipelineDefinitionId == internalPipelineDefId &&
-                                        r.TfsRunId == dto.RunId, cancellationToken);
                     UpdateEntity(entity, dto);
                 }
-                else
+                else if (!existingSet.Contains(key))
                 {
                     // Insert new
-                    var entity = MapToEntity(dto, productOwnerId, internalPipelineDefId);
-                    await _context.CachedPipelineRuns.AddAsync(entity, cancellationToken);
+                    var newEntity = MapToEntity(dto, productOwnerId, internalPipelineDefId);
+                    await _context.CachedPipelineRuns.AddAsync(newEntity, cancellationToken);
                     existingSet.Add(key);
                 }
             }

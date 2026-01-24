@@ -153,32 +153,30 @@ public class ValidationComputeStage : ISyncStage
             .ToList();
 
         var workItemIds = grouped.Select(r => r.WorkItemId).ToList();
-        var existingIds = await _context.CachedValidationResults
+        
+        // Load all existing entities in a single query
+        var existingEntities = await _context.CachedValidationResults
             .Where(v => workItemIds.Contains(v.EpicId))
-            .Select(v => v.EpicId)
-            .ToListAsync(cancellationToken);
+            .ToDictionaryAsync(v => v.EpicId, cancellationToken);
 
-        var existingSet = existingIds.ToHashSet();
         var now = DateTimeOffset.UtcNow;
 
         foreach (var (workItemId, indicator) in grouped)
         {
-            if (existingSet.Contains(workItemId))
+            if (existingEntities.TryGetValue(workItemId, out var entity))
             {
-                var entity = await _context.CachedValidationResults
-                    .FirstAsync(v => v.EpicId == workItemId, cancellationToken);
                 entity.Indicator = indicator;
                 entity.LastUpdated = now;
             }
             else
             {
-                var entity = new CachedValidationResultEntity
+                var newEntity = new CachedValidationResultEntity
                 {
                     EpicId = workItemId,
                     Indicator = indicator,
                     LastUpdated = now
                 };
-                await _context.CachedValidationResults.AddAsync(entity, cancellationToken);
+                await _context.CachedValidationResults.AddAsync(newEntity, cancellationToken);
             }
         }
 
