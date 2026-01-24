@@ -3585,10 +3585,25 @@ public class RealTfsClient : ITfsClient
                             RetrievedAt: DateTimeOffset.UtcNow
                         );
                     }
+                    else if (releaseResponse.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        _logger.LogInformation("Release pipeline {PipelineId} not found: {StatusCode}", pipelineId, releaseResponse.StatusCode);
+                        return null;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to get release pipeline {PipelineId}: {StatusCode}", pipelineId, releaseResponse.StatusCode);
+                        return null;
+                    }
+                }
+                catch (HttpRequestException ex)
+                {
+                    _logger.LogWarning(ex, "HTTP error retrieving release pipeline {PipelineId}", pipelineId);
+                    return null;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Release definitions API not available or pipeline {PipelineId} not found", pipelineId);
+                    _logger.LogWarning(ex, "Release definitions API not available or error retrieving pipeline {PipelineId}", pipelineId);
                     return null;
                 }
             }
@@ -3616,9 +3631,13 @@ public class RealTfsClient : ITfsClient
                         RetrievedAt: DateTimeOffset.UtcNow
                     );
                 }
+                else if (buildResponse.StatusCode == HttpStatusCode.NotFound)
+                {
+                    _logger.LogInformation("Build pipeline {PipelineId} not found: {StatusCode}", pipelineId, buildResponse.StatusCode);
+                }
                 else
                 {
-                    _logger.LogInformation("Pipeline {PipelineId} not found: {StatusCode}", pipelineId, buildResponse.StatusCode);
+                    _logger.LogWarning("Failed to get build pipeline {PipelineId}: {StatusCode}", pipelineId, buildResponse.StatusCode);
                 }
             }
 

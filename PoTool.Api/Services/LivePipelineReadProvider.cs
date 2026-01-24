@@ -12,6 +12,8 @@ namespace PoTool.Api.Services;
 /// </summary>
 public sealed class LivePipelineReadProvider : IPipelineReadProvider
 {
+    private const int DefaultMaxRunsPerPipeline = 100;
+    
     private readonly ITfsClient _tfsClient;
     private readonly IProductRepository _productRepository;
     private readonly IRepositoryConfigRepository _repositoryConfigRepository;
@@ -78,7 +80,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
         
         // Use bulk method to get runs for all pipelines efficiently
         _logger.LogDebug("Fetching runs for {Count} pipelines using bulk method", pipelineIds.Count);
-        return await _tfsClient.GetPipelineRunsAsync(pipelineIds, branchName: null, minStartTime: null, top: 100, cancellationToken);
+        return await _tfsClient.GetPipelineRunsAsync(pipelineIds, branchName: null, minStartTime: null, top: DefaultMaxRunsPerPipeline, cancellationToken);
     }
 
     public async Task<IEnumerable<PipelineRunDto>> GetRunsForPipelinesAsync(

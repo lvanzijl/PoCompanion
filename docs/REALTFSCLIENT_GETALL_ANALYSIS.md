@@ -251,7 +251,50 @@ All public methods in `RealTfsClient` and their purpose:
 
 Of the three "get all" methods identified:
 - **1 should be kept** (GetTfsTeamsAsync) - legitimate use case
-- **1 has clear refactoring opportunities** (GetPipelinesAsync) - some callers are inefficient
+- **1 has been refactored** (GetPipelinesAsync) - added GetPipelineByIdAsync for efficient single-item lookups
 - **1 is borderline** (GetWorkItemTypeDefinitionsAsync) - optimization depends on API capabilities
 
-The most impactful change would be eliminating the "fetch all pipelines to find one by ID" pattern in LivePipelineReadProvider, which unnecessarily loads the entire pipeline collection for single-item lookups.
+### Changes Implemented
+
+**✅ Completed Refactoring:**
+
+1. **Added `GetPipelineByIdAsync` method**
+   - New method in ITfsClient and RealTfsClient
+   - Directly queries Azure DevOps API for single pipeline by ID
+   - Handles both build and release pipelines (using ReleaseIdOffset)
+   - Returns `PipelineDto?` (null if not found)
+
+2. **Optimized `LivePipelineReadProvider.GetByIdAsync`**
+   - Changed from: Fetch all pipelines → filter in-memory
+   - Changed to: Direct API call via `GetPipelineByIdAsync`
+   - Eliminates wasteful "fetch all to find one" pattern
+
+3. **Optimized `LivePipelineReadProvider.GetAllRunsAsync`**
+   - Changed from: N separate calls (one per pipeline)
+   - Changed to: Single bulk call using existing `GetPipelineRunsAsync(IEnumerable<int>)`
+   - Reduces API calls from N to 1
+
+4. **Updated all mock implementations**
+   - MockTfsClient (in PoTool.Api/Services)
+   - BattleshipMockDataFacade (in PoTool.Api/Services/MockData)
+   - MockTfsClient (in PoTool.Tests.Integration/Support)
+   - All mocks now implement GetPipelineByIdAsync
+
+**⏸️ Deferred:**
+
+`GetWorkItemTypeDefinitionsAsync` optimization was deferred because:
+- Azure DevOps API may not support server-side filtering by type names
+- Only one caller (GetWorkItemTypeDefinitionsQueryHandler) would benefit
+- The in-memory filter is acceptable given the small size of the dataset (typically <20 types)
+- If API filtering is added in the future, we can add an optional `typeNames` parameter
+
+### Impact
+
+**Performance improvements:**
+- Single pipeline lookups: Reduced from O(n) to O(1) API calls
+- All pipeline runs: Reduced from N+1 to 2 API calls (1 for pipelines list, 1 bulk runs call)
+
+**Code quality:**
+- Eliminated inefficient "fetch all to filter one" anti-pattern
+- Leveraged existing bulk methods for better performance
+- Maintained backward compatibility (GetPipelinesAsync still exists for legitimate use cases)
