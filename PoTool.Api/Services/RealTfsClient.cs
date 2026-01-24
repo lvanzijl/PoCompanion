@@ -3587,23 +3587,23 @@ public class RealTfsClient : ITfsClient
                     }
                     else if (releaseResponse.StatusCode == HttpStatusCode.NotFound)
                     {
-                        _logger.LogInformation("Release pipeline {PipelineId} not found: {StatusCode}", pipelineId, releaseResponse.StatusCode);
+                        _logger.LogInformation("Release pipeline {PipelineId} (API ID: {ActualId}) not found: {StatusCode}", pipelineId, actualId, releaseResponse.StatusCode);
                         return null;
                     }
                     else
                     {
-                        _logger.LogWarning("Failed to get release pipeline {PipelineId}: {StatusCode}", pipelineId, releaseResponse.StatusCode);
+                        _logger.LogWarning("Failed to get release pipeline {PipelineId} (API ID: {ActualId}): {StatusCode}", pipelineId, actualId, releaseResponse.StatusCode);
                         return null;
                     }
                 }
                 catch (HttpRequestException ex)
                 {
-                    _logger.LogWarning(ex, "HTTP error retrieving release pipeline {PipelineId}", pipelineId);
+                    _logger.LogWarning(ex, "HTTP error retrieving release pipeline {PipelineId} (API ID: {ActualId})", pipelineId, actualId);
                     return null;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Release definitions API not available or error retrieving pipeline {PipelineId}", pipelineId);
+                    _logger.LogWarning(ex, "Release definitions API not available or error retrieving pipeline {PipelineId} (API ID: {ActualId})", pipelineId, actualId);
                     return null;
                 }
             }
@@ -3633,11 +3633,11 @@ public class RealTfsClient : ITfsClient
                 }
                 else if (buildResponse.StatusCode == HttpStatusCode.NotFound)
                 {
-                    _logger.LogInformation("Build pipeline {PipelineId} not found: {StatusCode}", pipelineId, buildResponse.StatusCode);
+                    _logger.LogInformation("Build pipeline {PipelineId} (API ID: {ActualId}) not found: {StatusCode}", pipelineId, actualId, buildResponse.StatusCode);
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to get build pipeline {PipelineId}: {StatusCode}", pipelineId, buildResponse.StatusCode);
+                    _logger.LogWarning("Failed to get build pipeline {PipelineId} (API ID: {ActualId}): {StatusCode}", pipelineId, actualId, buildResponse.StatusCode);
                 }
             }
 
