@@ -57,12 +57,14 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
             query = query.Where(pr => pr.ProductId.HasValue && productIds.Contains(pr.ProductId.Value));
         }
 
-        if (fromDate.HasValue)
+      var entities = await query.ToListAsync(cancellationToken);
+
+      if (fromDate.HasValue)
         {
-            query = query.Where(pr => pr.CreatedDate >= fromDate.Value);
+         entities = entities.Where(pr => pr.CreatedDate >= fromDate.Value).ToList();
         }
 
-        var entities = await query.ToListAsync(cancellationToken);
+        
         return entities.Select(MapToDto);
     }
 
@@ -115,10 +117,9 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
         var entities = await _dbContext.PullRequestComments
             .AsNoTracking()
             .Where(c => c.PullRequestId == pullRequestId)
-            .OrderBy(c => c.CreatedDate)
             .ToListAsync(cancellationToken);
 
-        return entities.Select(MapCommentToDto);
+        return entities.OrderBy(c => c.CreatedDate).Select(MapCommentToDto);
     }
 
     /// <summary>
