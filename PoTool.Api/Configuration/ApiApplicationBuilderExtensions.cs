@@ -151,6 +151,9 @@ public static class ApiApplicationBuilderExtensions
 
         app.UseCors("AllowBlazorClient");
 
+        // Add DataSourceMode middleware to set Cache/Live mode based on route and ProductOwner cache state
+        app.UseMiddleware<PoTool.Api.Middleware.DataSourceModeMiddleware>();
+
         app.MapControllers();
 
         // Map SignalR hub for cache sync progress updates
