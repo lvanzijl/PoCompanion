@@ -150,14 +150,12 @@ public static class ApiServiceCollectionExtensions
         // Register the factory for data-source-aware provider resolution
         services.AddScoped<DataSourceAwareReadProviderFactory>();
 
-        // Register default providers that delegate to the factory
-        // This allows existing handlers to continue using IWorkItemReadProvider without changes
-        services.AddScoped<IWorkItemReadProvider>(sp =>
-            sp.GetRequiredService<DataSourceAwareReadProviderFactory>().GetWorkItemReadProvider());
-        services.AddScoped<IPullRequestReadProvider>(sp =>
-            sp.GetRequiredService<DataSourceAwareReadProviderFactory>().GetPullRequestReadProvider());
-        services.AddScoped<IPipelineReadProvider>(sp =>
-            sp.GetRequiredService<DataSourceAwareReadProviderFactory>().GetPipelineReadProvider());
+        // Register lazy wrappers that delay provider resolution until method calls
+        // This ensures DataSourceModeMiddleware has set the correct mode before resolving
+        // the actual Live or Cached provider from the factory
+        services.AddScoped<IWorkItemReadProvider, LazyWorkItemReadProvider>();
+        services.AddScoped<IPullRequestReadProvider, LazyPullRequestReadProvider>();
+        services.AddScoped<IPipelineReadProvider, LazyPipelineReadProvider>();
 
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();
