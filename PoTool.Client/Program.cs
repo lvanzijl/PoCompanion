@@ -151,6 +151,7 @@ builder.Services.AddScoped<IOnboardingService, OnboardingService>();
 builder.Services.AddScoped<IOnboardingWizardState, OnboardingWizardState>();
 builder.Services.AddScoped<IStartupOrchestratorService, StartupOrchestratorService>();
 builder.Services.AddScoped<INavigationContextService, NavigationContextService>();
+builder.Services.AddScoped<CacheSyncService>();
 
 // Register browser-based storage services
 builder.Services.AddScoped<IPreferencesService, BrowserPreferencesService>();

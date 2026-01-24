@@ -1,0 +1,323 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@using PoTool.Client.Services
+@using PoTool.Shared.Settings
+@inject CacheSyncService CacheSyncService
+@inject HubConnection HubConnection
+@inject ISnackbar Snackbar
+@implements IAsyncDisposable
+
+@* Cache Status Section for Landing Page *@
+<MudPaper Elevation="2" Class="pa-4">
+    <MudStack Spacing="3">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Cached" Color="@GetStatusColor()" />
+                <MudText Typo="Typo.h6">Cache Status</MudText>
+            </MudStack>
+            <MudChip T="string" Color="@GetStatusColor()" Size="Size.Small" Variant="Variant.Filled">
+                @GetStatusText()
+            </MudChip>
+        </MudStack>
+
+        @if (_isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (_cacheState != null)
+        {
+            <MudGrid Spacing="2">
+                @if (_cacheState.SyncStatus == CacheSyncStatusDto.InProgress)
+                {
+                    <MudItem xs="12">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);">
+                                @(_cacheState.CurrentSyncStage ?? "Syncing...")
+                            </MudText>
+                            <MudProgressLinear Color="Color.Primary" Value="@_cacheState.StageProgressPercent" />
+                        </MudStack>
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="4">
+                        <MudStack AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h5">@_cacheState.WorkItemCount</MudText>
+                            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">Work Items</MudText>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <MudStack AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h5">@_cacheState.PullRequestCount</MudText>
+                            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">Pull Requests</MudText>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <MudStack AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h5">@_cacheState.PipelineCount</MudText>
+                            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">Pipelines</MudText>
+                        </MudStack>
+                    </MudItem>
+
+                    @if (_cacheState.LastSuccessfulSync.HasValue)
+                    {
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">
+                                Last synced: @_cacheState.LastSuccessfulSync.Value.LocalDateTime.ToString("g")
+                            </MudText>
+                        </MudItem>
+                    }
+                    else
+                    {
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">
+                                Never synced
+                            </MudText>
+                        </MudItem>
+                    }
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_cacheState.LastErrorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">
+                    @_cacheState.LastErrorMessage
+                </MudAlert>
+            }
+        }
+
+        <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
+            @if (_cacheState?.SyncStatus == CacheSyncStatusDto.InProgress)
+            {
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Warning"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Cancel"
+                           OnClick="CancelSyncAsync"
+                           Disabled="@_isProcessing">
+                    Cancel
+                </MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Error"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Delete"
+                           OnClick="DeleteCacheAsync"
+                           Disabled="@(_isProcessing || _cacheState?.SyncStatus == CacheSyncStatusDto.InProgress)">
+                    Clear Cache
+                </MudButton>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Sync"
+                           OnClick="TriggerSyncAsync"
+                           Disabled="@_isProcessing">
+                    @(_cacheState?.LastSuccessfulSync.HasValue == true ? "Update" : "Sync Now")
+                </MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired]
+    public int ProductOwnerId { get; set; }
+
+    [Parameter]
+    public bool AutoSync { get; set; } = true;
+
+    private CacheStateDto? _cacheState;
+    private bool _isLoading = true;
+    private bool _isProcessing = false;
+    private bool _hasAutoSyncTriggered = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCacheStatusAsync();
+        await SetupSignalRAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Trigger auto-sync if enabled, cache is empty, and not already triggered
+        if (AutoSync && !_hasAutoSyncTriggered && _cacheState != null)
+        {
+            if (_cacheState.SyncStatus == CacheSyncStatusDto.Idle && !_cacheState.LastSuccessfulSync.HasValue)
+            {
+                _hasAutoSyncTriggered = true;
+                await TriggerSyncAsync();
+            }
+        }
+    }
+
+    private async Task LoadCacheStatusAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            _cacheState = await CacheSyncService.GetCacheStatusAsync(ProductOwnerId);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SetupSignalRAsync()
+    {
+        try
+        {
+            if (HubConnection.State == HubConnectionState.Disconnected)
+            {
+                await HubConnection.StartAsync();
+            }
+
+            // Join the ProductOwner group for updates
+            await HubConnection.InvokeAsync("JoinProductOwnerGroup", ProductOwnerId);
+
+            // Handle progress updates
+            HubConnection.On<SyncProgressUpdateDto>("SyncProgress", OnSyncProgress);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"SignalR setup failed: {ex.Message}");
+            // Fall back to polling
+            _ = StartPollingAsync();
+        }
+    }
+
+    private void OnSyncProgress(SyncProgressUpdateDto update)
+    {
+        if (_cacheState != null)
+        {
+            _cacheState.SyncStatus = update.HasFailed ? CacheSyncStatusDto.Failed :
+                         update.IsComplete ? CacheSyncStatusDto.Success :
+                         CacheSyncStatusDto.InProgress;
+            _cacheState.CurrentSyncStage = update.CurrentStage;
+            _cacheState.StageProgressPercent = update.StageProgressPercent;
+            _cacheState.LastErrorMessage = update.ErrorMessage;
+            
+            InvokeAsync(StateHasChanged);
+
+            // Reload full state when complete
+            if (update.IsComplete)
+            {
+                _ = Task.Delay(500).ContinueWith(_ => InvokeAsync(LoadCacheStatusAsync));
+            }
+        }
+    }
+
+    private async Task StartPollingAsync()
+    {
+        while (_cacheState?.SyncStatus == CacheSyncStatusDto.InProgress)
+        {
+            await Task.Delay(2000);
+            await LoadCacheStatusAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task TriggerSyncAsync()
+    {
+        _isProcessing = true;
+        try
+        {
+            var result = await CacheSyncService.TriggerSyncAsync(ProductOwnerId);
+            if (result.Success)
+            {
+                // Update local state to show syncing
+                if (_cacheState != null)
+                {
+                    _cacheState.SyncStatus = CacheSyncStatusDto.InProgress;
+                }
+                Snackbar.Add("Sync started", Severity.Info);
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Failed to start sync", Severity.Warning);
+            }
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private async Task CancelSyncAsync()
+    {
+        _isProcessing = true;
+        try
+        {
+            var success = await CacheSyncService.CancelSyncAsync(ProductOwnerId);
+            if (success)
+            {
+                Snackbar.Add("Sync cancellation requested", Severity.Info);
+                await LoadCacheStatusAsync();
+            }
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private async Task DeleteCacheAsync()
+    {
+        _isProcessing = true;
+        try
+        {
+            var success = await CacheSyncService.DeleteCacheAsync(ProductOwnerId);
+            if (success)
+            {
+                Snackbar.Add("Cache cleared", Severity.Success);
+                await LoadCacheStatusAsync();
+            }
+            else
+            {
+                Snackbar.Add("Failed to clear cache", Severity.Error);
+            }
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private Color GetStatusColor()
+    {
+        return _cacheState?.SyncStatus switch
+        {
+            CacheSyncStatusDto.Success => Color.Success,
+            CacheSyncStatusDto.InProgress => Color.Info,
+            CacheSyncStatusDto.Failed => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private string GetStatusText()
+    {
+        return _cacheState?.SyncStatus switch
+        {
+            CacheSyncStatusDto.Success => "Synced",
+            CacheSyncStatusDto.InProgress => "Syncing...",
+            CacheSyncStatusDto.Failed => "Failed",
+            _ => "Not Synced"
+        };
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (HubConnection.State == HubConnectionState.Connected)
+            {
+                await HubConnection.InvokeAsync("LeaveProductOwnerGroup", ProductOwnerId);
+            }
+        }
+        catch
+        {
+            // Ignore disposal errors
+        }
+    }
+}

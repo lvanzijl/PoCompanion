@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.EntityFrameworkCore;
+using PoTool.Api.Hubs;
 using PoTool.Api.Persistence;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services;
@@ -126,6 +127,9 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<MetricsComputeStage>();
         services.AddScoped<FinalizeCacheStage>();
         services.AddSingleton<ISyncPipeline, SyncPipelineRunner>();
+
+        // Register SignalR broadcaster for sync progress
+        services.AddSingleton<ISyncProgressBroadcaster, SyncProgressBroadcaster>();
 
         // Register Live-only Read Providers (no cache mode)
         // All data is fetched directly from TFS/Azure DevOps

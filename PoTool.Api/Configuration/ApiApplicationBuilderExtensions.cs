@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
+using PoTool.Api.Hubs;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
@@ -151,6 +152,9 @@ public static class ApiApplicationBuilderExtensions
         app.UseCors("AllowBlazorClient");
 
         app.MapControllers();
+
+        // Map SignalR hub for cache sync progress updates
+        app.MapHub<CacheSyncHub>("/hubs/cachesync");
 
         // Health check endpoint
         app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow }));

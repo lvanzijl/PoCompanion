@@ -1199,11 +1199,11 @@ public class WorkItemEntity
 | UX confusion | Clear status messages and icons |
 
 **Exit Criteria:**
-- [ ] Cache status displays correctly
-- [ ] Update cache triggers sync
-- [ ] Delete cache resets state
-- [ ] Progress updates display during sync
-- [ ] Auto-sync triggers once per session
+- [x] Cache status displays correctly
+- [x] Update cache triggers sync
+- [x] Delete cache resets state
+- [x] Progress updates display during sync
+- [x] Auto-sync triggers once per session
 
 **Deletable After Phase:**
 - Nothing (additive only)
@@ -1386,7 +1386,7 @@ After every executed or deferred phase:
 | Phase 1 | ✅ Complete | 2026-01-24 | 2026-01-24 | Cache infrastructure entities and repository created |
 | Phase 2 | ✅ Complete | 2026-01-24 | 2026-01-24 | Sync pipeline core with WorkItemSyncStage implemented |
 | Phase 3 | ✅ Complete | 2026-01-24 | 2026-01-24 | Full sync pipeline with all 6 stages implemented |
-| Phase 4 | ⏳ Pending | - | - | - |
+| Phase 4 | ✅ Complete | 2026-01-24 | 2026-01-24 | Landing page integration with cache status section |
 | Phase 5 | ⏳ Pending | - | - | - |
 | Phase 6 | ⏳ Pending | - | - | - |
 | Phase 7 | ⏳ Pending | - | - | - |
