@@ -76,11 +76,6 @@ dotnet test PoTool.Tests.Integration --logger "console;verbosity=detailed"
 - [x] PUT /api/settings
 - [x] GET /health
 
-### SignalR Hubs
-- [x] WorkItemHub.Connect
-- [x] WorkItemHub.Disconnect
-- [x] WorkItemHub.RequestSync
-
 **Coverage: 100% ✅**
 
 ## Adding New Tests

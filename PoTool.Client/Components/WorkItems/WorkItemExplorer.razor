@@ -189,27 +189,6 @@
         }
     }
 
-    private async Task InitializeSignalRAsync()
-    {
-        // SignalR hub removed in Live-only mode
-        await Task.CompletedTask;
-    }
-
-    private void HandleSyncStatus(string status, string message)
-    {
-        if (status == "Completed")
-        {
-            _ = LoadWorkItems();
-            Snackbar.Add(message, Severity.Success);
-        }
-        else if (status == "Failed")
-        {
-            Snackbar.Add(message, Severity.Error);
-        }
-
-        StateHasChanged();
-    }
-
     private async Task<List<ProductDto>> GetProfileProductsAsync()
     {
         // Get active profile to determine which products to load

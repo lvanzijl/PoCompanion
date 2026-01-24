@@ -28,13 +28,11 @@ builder.Services.AddScoped(sp =>
     return client;
 });
 
-// Register SignalR HubConnection
+// Register SignalR HubConnection for cache synchronization progress
 builder.Services.AddScoped<HubConnection>(sp =>
 {
-    var hubPath = builder.Configuration["SignalR:HubPath"] ?? "/hubs/workitems";
-    // Ensure proper URL concatenation by using Uri
     var baseUri = new Uri(apiBaseUrl);
-    var hubUri = new Uri(baseUri, hubPath);
+    var hubUri = new Uri(baseUri, "/hubs/cachesync");
     return new HubConnectionBuilder()
         .WithUrl(hubUri.ToString())
         .WithAutomaticReconnect()
