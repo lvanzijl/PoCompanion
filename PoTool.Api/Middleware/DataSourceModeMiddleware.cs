@@ -1,3 +1,4 @@
+using PoTool.Api.Configuration;
 using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 
@@ -6,21 +7,12 @@ namespace PoTool.Api.Middleware;
 /// <summary>
 /// Middleware that sets the DataSourceMode (Live or Cache) based on the current route and ProductOwner's cache state.
 /// This is the core fix for ensuring workspace routes use cached data when available.
+/// Uses DataSourceModeConfiguration for centralized route rules.
 /// </summary>
 public sealed class DataSourceModeMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<DataSourceModeMiddleware> _logger;
-
-    // Routes that should use cached data when cache is available
-    private static readonly HashSet<string> WorkspaceRoutes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "/api/workitems",
-        "/api/pullrequests",
-        "/api/pipelines",
-        "/api/releaseplanning",
-        "/api/filtering"
-    };
 
     public DataSourceModeMiddleware(
         RequestDelegate next,
@@ -36,7 +28,7 @@ public sealed class DataSourceModeMiddleware
         ICurrentProfileProvider profileProvider)
     {
         var path = context.Request.Path.Value;
-        var isWorkspaceRoute = IsWorkspaceRoute(path);
+        var isWorkspaceRoute = DataSourceModeConfiguration.IsWorkspaceRoute(path);
 
         if (isWorkspaceRoute)
         {
@@ -75,15 +67,5 @@ public sealed class DataSourceModeMiddleware
         }
 
         await _next(context);
-    }
-
-    private static bool IsWorkspaceRoute(string? path)
-    {
-        if (string.IsNullOrEmpty(path))
-        {
-            return false;
-        }
-
-        return WorkspaceRoutes.Any(route => path.StartsWith(route, StringComparison.OrdinalIgnoreCase));
     }
 }

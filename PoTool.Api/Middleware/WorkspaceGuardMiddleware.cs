@@ -1,3 +1,4 @@
+using PoTool.Api.Configuration;
 using PoTool.Core.Configuration;
 
 namespace PoTool.Api.Middleware;
@@ -5,21 +6,12 @@ namespace PoTool.Api.Middleware;
 /// <summary>
 /// Development-only middleware that throws an exception if a workspace route attempts to use Live mode.
 /// This provides fast feedback during development if mode selection fails.
+/// Uses DataSourceModeConfiguration for centralized route rules.
 /// </summary>
 public sealed class WorkspaceGuardMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<WorkspaceGuardMiddleware> _logger;
-
-    // Routes that MUST use Cache mode (same as DataSourceModeMiddleware)
-    private static readonly HashSet<string> WorkspaceRoutes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "/api/workitems",
-        "/api/pullrequests",
-        "/api/pipelines",
-        "/api/releaseplanning",
-        "/api/filtering"
-    };
 
     public WorkspaceGuardMiddleware(
         RequestDelegate next,
@@ -38,7 +30,7 @@ public sealed class WorkspaceGuardMiddleware
 
         // After request processing, check if a workspace route used Live mode
         var path = context.Request.Path.Value;
-        var isWorkspaceRoute = IsWorkspaceRoute(path);
+        var isWorkspaceRoute = DataSourceModeConfiguration.IsWorkspaceRoute(path);
 
         if (isWorkspaceRoute && modeProvider.Mode == DataSourceMode.Live)
         {
@@ -55,15 +47,5 @@ public sealed class WorkspaceGuardMiddleware
                 $"Current mode: {modeProvider.Mode}. " +
                 $"This is a development-time check to ensure workspace cache boundary is enforced.");
         }
-    }
-
-    private static bool IsWorkspaceRoute(string? path)
-    {
-        if (string.IsNullOrEmpty(path))
-        {
-            return false;
-        }
-
-        return WorkspaceRoutes.Any(route => path.StartsWith(route, StringComparison.OrdinalIgnoreCase));
     }
 }
