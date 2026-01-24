@@ -10,12 +10,16 @@ namespace PoTool.Api.Services;
 /// <summary>
 /// Service for managing work item state classifications.
 /// Provides default mappings when no custom configuration exists.
+/// Implements in-memory caching to avoid repeated database queries.
 /// </summary>
 public class WorkItemStateClassificationService : IWorkItemStateClassificationService
 {
     private readonly PoToolDbContext _dbContext;
     private readonly TfsConfigurationService _configService;
     private readonly ILogger<WorkItemStateClassificationService> _logger;
+    private readonly object _cacheLock = new();
+    private GetStateClassificationsResponse? _cachedResponse;
+    private string? _cachedProjectName;
 
     public WorkItemStateClassificationService(
         PoToolDbContext dbContext,
@@ -33,6 +37,15 @@ public class WorkItemStateClassificationService : IWorkItemStateClassificationSe
         var config = await _configService.GetConfigEntityAsync(cancellationToken);
         var projectName = config?.Project ?? throw new InvalidOperationException("TFS configuration not found");
 
+        // Check cache first
+        lock (_cacheLock)
+        {
+            if (_cachedResponse != null && _cachedProjectName == projectName)
+            {
+                return _cachedResponse;
+            }
+        }
+
         _logger.LogInformation("Getting state classifications for project '{Project}'", projectName);
 
         // Try to get from database
@@ -40,6 +53,7 @@ public class WorkItemStateClassificationService : IWorkItemStateClassificationSe
             .Where(e => e.TfsProjectName == projectName)
             .ToListAsync(cancellationToken);
 
+        GetStateClassificationsResponse response;
         if (entities.Count > 0)
         {
             var classifications = entities.Select(e => new WorkItemStateClassificationDto
@@ -53,24 +67,35 @@ public class WorkItemStateClassificationService : IWorkItemStateClassificationSe
                 "Found {Count} custom state classifications for project '{Project}'",
                 classifications.Count, projectName);
 
-            return new GetStateClassificationsResponse
+            response = new GetStateClassificationsResponse
             {
                 ProjectName = projectName,
                 Classifications = classifications,
                 IsDefault = false
             };
         }
-
-        // Return defaults
-        _logger.LogInformation("No custom classifications found, returning defaults for project '{Project}'", projectName);
-        var defaults = GetDefaultClassifications();
-
-        return new GetStateClassificationsResponse
+        else
         {
-            ProjectName = projectName,
-            Classifications = defaults,
-            IsDefault = true
-        };
+            // Return defaults
+            _logger.LogInformation("No custom classifications found, returning defaults for project '{Project}'", projectName);
+            var defaults = GetDefaultClassifications();
+
+            response = new GetStateClassificationsResponse
+            {
+                ProjectName = projectName,
+                Classifications = defaults,
+                IsDefault = true
+            };
+        }
+
+        // Cache the response
+        lock (_cacheLock)
+        {
+            _cachedResponse = response;
+            _cachedProjectName = projectName;
+        }
+
+        return response;
     }
 
     public async Task<bool> SaveClassificationsAsync(
@@ -115,6 +140,13 @@ public class WorkItemStateClassificationService : IWorkItemStateClassificationSe
         await _dbContext.WorkItemStateClassifications.AddRangeAsync(newEntities, cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Invalidate cache
+        lock (_cacheLock)
+        {
+            _cachedResponse = null;
+            _cachedProjectName = null;
+        }
 
         _logger.LogInformation(
             "Successfully saved {Count} state classifications for project '{Project}'",
