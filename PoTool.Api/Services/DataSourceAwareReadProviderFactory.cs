@@ -31,7 +31,7 @@ public sealed class DataSourceAwareReadProviderFactory
     public IWorkItemReadProvider GetWorkItemReadProvider()
     {
         var mode = _modeProvider.Mode;
-        _logger.LogDebug("Resolving IWorkItemReadProvider for mode: {Mode}", mode);
+        _logger.LogWarning("Resolving IWorkItemReadProvider for mode: {Mode} — if Cache expected, this is a bug", mode);
 
         return mode switch
         {
@@ -46,7 +46,7 @@ public sealed class DataSourceAwareReadProviderFactory
     public IPullRequestReadProvider GetPullRequestReadProvider()
     {
         var mode = _modeProvider.Mode;
-        _logger.LogDebug("Resolving IPullRequestReadProvider for mode: {Mode}", mode);
+        _logger.LogWarning("Resolving IPullRequestReadProvider for mode: {Mode} — if Cache expected, this is a bug", mode);
 
         return mode switch
         {
@@ -61,7 +61,7 @@ public sealed class DataSourceAwareReadProviderFactory
     public IPipelineReadProvider GetPipelineReadProvider()
     {
         var mode = _modeProvider.Mode;
-        _logger.LogDebug("Resolving IPipelineReadProvider for mode: {Mode}", mode);
+        _logger.LogWarning("Resolving IPipelineReadProvider for mode: {Mode} — if Cache expected, this is a bug", mode);
 
         return mode switch
         {

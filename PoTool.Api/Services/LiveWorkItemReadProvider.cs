@@ -36,6 +36,7 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LiveWorkItemReadProvider.{Method} called — may indicate cache bypass", nameof(GetAllAsync));
         _logger.LogDebug("LiveWorkItemReadProvider: Fetching all work items from TFS");
 
         // Get the configured area path from TFS settings
@@ -56,6 +57,7 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
 
     public async Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LiveWorkItemReadProvider.{Method} called — may indicate cache bypass", nameof(GetFilteredAsync));
         _logger.LogDebug("LiveWorkItemReadProvider: Fetching filtered work items from TFS with filter: {Filter}", filter);
 
         // Get all work items first, then filter in-memory
@@ -74,6 +76,7 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
 
     public async Task<IEnumerable<WorkItemDto>> GetByAreaPathsAsync(List<string> areaPaths, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LiveWorkItemReadProvider.{Method} called — may indicate cache bypass", nameof(GetByAreaPathsAsync));
         _logger.LogDebug("LiveWorkItemReadProvider: Fetching work items by area paths from TFS: {AreaPaths}", 
             string.Join(", ", areaPaths));
 
@@ -94,6 +97,7 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
 
     public async Task<WorkItemDto?> GetByTfsIdAsync(int tfsId, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LiveWorkItemReadProvider.{Method} called — may indicate cache bypass", nameof(GetByTfsIdAsync));
         _logger.LogDebug("LiveWorkItemReadProvider: Fetching work item by ID from TFS: {TfsId}", tfsId);
 
         // Use the direct TFS API to get a single work item
@@ -102,6 +106,7 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
 
     public async Task<IEnumerable<WorkItemDto>> GetByRootIdsAsync(int[] rootWorkItemIds, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LiveWorkItemReadProvider.{Method} called — may indicate cache bypass", nameof(GetByRootIdsAsync));
         _logger.LogDebug("LiveWorkItemReadProvider: Fetching work items by root IDs from TFS: {RootIds}", 
             string.Join(", ", rootWorkItemIds));
 

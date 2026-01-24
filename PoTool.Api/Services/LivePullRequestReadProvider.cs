@@ -27,6 +27,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<IEnumerable<PullRequestDto>> GetAllAsync(DateTimeOffset? fromDate = null, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetAllAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching all pull requests from TFS (fromDate: {FromDate})", fromDate);
         
         // Fetch pull requests directly from TFS with date filtering
@@ -41,6 +42,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<IEnumerable<PullRequestDto>> GetByProductIdsAsync(List<int>? productIds, DateTimeOffset? fromDate = null, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetByProductIdsAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching pull requests by product IDs from TFS (fromDate: {FromDate})", fromDate);
         
         // If no product IDs specified, return all PRs
@@ -110,6 +112,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<PullRequestDto?> GetByIdAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetByIdAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching pull request by ID from TFS: {PullRequestId}", pullRequestId);
         
         // TFS API doesn't have a direct get-by-ID for PRs
@@ -158,6 +161,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetIterationsAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching iterations for PR {PullRequestId} from TFS", pullRequestId);
         
         // First get the PR to get its repository name
@@ -182,6 +186,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetCommentsAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching comments for PR {PullRequestId} from TFS", pullRequestId);
         
         // First get the PR to get its repository name
@@ -206,6 +211,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetFileChangesAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching file changes for PR {PullRequestId} from TFS", pullRequestId);
         
         // First get the PR to get its repository name

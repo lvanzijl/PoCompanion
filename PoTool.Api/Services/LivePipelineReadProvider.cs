@@ -33,6 +33,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
 
     public async Task<IEnumerable<PipelineDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetAllAsync));
         _logger.LogDebug("LivePipelineReadProvider: Fetching all pipelines from TFS");
         
         // Fetch pipelines directly from TFS
@@ -42,6 +43,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
 
     public async Task<PipelineDto?> GetByIdAsync(int pipelineId, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetByIdAsync));
         _logger.LogDebug("LivePipelineReadProvider: Fetching pipeline by ID from TFS: {PipelineId}", pipelineId);
         
         // Use direct get-by-ID method for better performance
@@ -50,6 +52,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
 
     public async Task<IEnumerable<PipelineRunDto>> GetRunsAsync(int pipelineId, int top = 100, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetRunsAsync));
         _logger.LogDebug("LivePipelineReadProvider: Fetching pipeline runs for pipeline {PipelineId} from TFS", pipelineId);
         
         // First get the pipeline to validate it exists
@@ -66,6 +69,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
 
     public async Task<IEnumerable<PipelineRunDto>> GetAllRunsAsync(CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetAllRunsAsync));
         _logger.LogDebug("LivePipelineReadProvider: Fetching all pipeline runs from TFS");
         
         // Get all pipelines first
@@ -90,6 +94,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
         int top = 100,
         CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetRunsForPipelinesAsync));
         _logger.LogDebug(
             "LivePipelineReadProvider: Fetching pipeline runs for {Count} pipelines with filters (branch: {Branch}, minTime: {MinTime})",
             pipelineIds.Count(), branchName ?? "none", minStartTime?.ToString("o") ?? "none");
@@ -100,6 +105,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
 
     public async Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByProductIdAsync(int productId, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetDefinitionsByProductIdAsync));
         _logger.LogDebug("LivePipelineReadProvider: Fetching pipeline definitions for product {ProductId} from TFS", productId);
         
         // Get repositories for the product
@@ -139,6 +145,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
 
     public async Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByRepositoryIdAsync(int repositoryId, CancellationToken cancellationToken = default)
     {
+        _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetDefinitionsByRepositoryIdAsync));
         _logger.LogDebug("LivePipelineReadProvider: Fetching pipeline definitions for repository {RepositoryId} from TFS", repositoryId);
         
         // Note: This loads all repositories to find one by ID. 

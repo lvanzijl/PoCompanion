@@ -134,6 +134,9 @@ public static class ApiServiceCollectionExtensions
         // Register Data Source Mode Provider (for switching between Live and Cache)
         services.AddScoped<IDataSourceModeProvider, DataSourceModeProvider>();
 
+        // Register Current Profile Provider (for getting active ProductOwner ID)
+        services.AddScoped<ICurrentProfileProvider, CurrentProfileProvider>();
+
         // Register Live Read Providers with keyed services
         services.AddKeyedScoped<IWorkItemReadProvider, LiveWorkItemReadProvider>("Live");
         services.AddKeyedScoped<IPullRequestReadProvider, LivePullRequestReadProvider>("Live");
