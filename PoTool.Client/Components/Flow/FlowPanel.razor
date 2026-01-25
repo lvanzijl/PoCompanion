@@ -148,8 +148,8 @@
 
     private string GetAvgTimeOpen()
     {
-        if (!_prMetrics.Any())
-            return "0d";
+        if (_prMetrics.Count == 0)
+            return "0.0d";
         
         var avgDays = _prMetrics.Average(m => m.TotalTimeOpen.TotalDays);
         return $"{avgDays:F1}d";
@@ -157,8 +157,8 @@
 
     private string GetAvgIterations()
     {
-        if (!_prMetrics.Any())
-            return "0";
+        if (_prMetrics.Count == 0)
+            return "0.0";
         
         var avgIterations = _prMetrics.Average(m => m.IterationCount);
         return avgIterations.ToString("F1");
@@ -166,8 +166,8 @@
 
     private string GetAvgFiles()
     {
-        if (!_prMetrics.Any())
-            return "0";
+        if (_prMetrics.Count == 0)
+            return "0.0";
         
         var avgFiles = _prMetrics.Average(m => m.TotalFileCount);
         return avgFiles.ToString("F1");
