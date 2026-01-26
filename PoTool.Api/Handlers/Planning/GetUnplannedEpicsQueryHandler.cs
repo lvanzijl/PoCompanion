@@ -52,18 +52,35 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
             .Select(p => p.EpicId)
             .ToHashSetAsync(cancellationToken);
 
-        // Get all epics under the product backlog roots that are not placed
-        var productIds = products.Select(p => p.Id).ToHashSet();
         var rootWorkItemIds = products.Select(p => p.BacklogRootWorkItemId).ToHashSet();
 
-        // Get epics that are children of the product backlogs
+        // Get all work items that are descendants of the backlog roots
+        // We'll need to do this in a more flexible way to find all epics in the hierarchy
+        var allWorkItems = await _dbContext.WorkItems
+            .Where(w => rootWorkItemIds.Contains(w.TfsId) || rootWorkItemIds.Contains(w.ParentTfsId ?? 0))
+            .Select(w => new { w.TfsId, w.ParentTfsId, w.Type })
+            .ToListAsync(cancellationToken);
+
+        // Build a mapping of TfsId to BacklogRootWorkItemId by traversing up the hierarchy
+        var workItemToRoot = new Dictionary<int, int>();
+        
+        foreach (var root in rootWorkItemIds)
+        {
+            workItemToRoot[root] = root;
+        }
+
+        // Add immediate children
+        foreach (var wi in allWorkItems)
+        {
+            if (wi.ParentTfsId.HasValue && workItemToRoot.ContainsKey(wi.ParentTfsId.Value))
+            {
+                workItemToRoot[wi.TfsId] = workItemToRoot[wi.ParentTfsId.Value];
+            }
+        }
+
+        // Get all epics that are not placed
         var epics = await _dbContext.WorkItems
             .Where(w => w.Type == "Epic" && !placedEpicIds.Contains(w.TfsId))
-            .Where(w => rootWorkItemIds.Contains(w.ParentTfsId ?? 0) || 
-                        // Also check if parent is a feature under the backlog root
-                        _dbContext.WorkItems.Any(parent => 
-                            parent.TfsId == w.ParentTfsId && 
-                            rootWorkItemIds.Contains(parent.ParentTfsId ?? 0)))
             .Select(w => new
             {
                 w.TfsId,
@@ -74,36 +91,48 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
             })
             .ToListAsync(cancellationToken);
 
-        // Map epics to their products based on parent hierarchy
+        // Map epics to their products
         var result = new List<UnplannedEpicDto>();
 
         foreach (var epic in epics)
         {
-            // Find which product this epic belongs to
-            var product = products.FirstOrDefault(p => p.BacklogRootWorkItemId == epic.ParentTfsId);
-            if (product == null && epic.ParentTfsId.HasValue)
+            // Try to find which product this epic belongs to
+            int? backlogRoot = null;
+            
+            // Check if epic's parent is in our mapping
+            if (epic.ParentTfsId.HasValue && workItemToRoot.TryGetValue(epic.ParentTfsId.Value, out var rootId))
             {
-                // Check if parent's parent is a backlog root
-                var parentWorkItem = await _dbContext.WorkItems
-                    .FirstOrDefaultAsync(w => w.TfsId == epic.ParentTfsId, cancellationToken);
+                backlogRoot = rootId;
+            }
+            else if (epic.ParentTfsId.HasValue)
+            {
+                // Try to find parent's parent
+                var parent = await _dbContext.WorkItems
+                    .Where(w => w.TfsId == epic.ParentTfsId.Value)
+                    .Select(w => new { w.ParentTfsId })
+                    .FirstOrDefaultAsync(cancellationToken);
                 
-                if (parentWorkItem?.ParentTfsId != null)
+                if (parent?.ParentTfsId.HasValue == true && workItemToRoot.TryGetValue(parent.ParentTfsId.Value, out rootId))
                 {
-                    product = products.FirstOrDefault(p => p.BacklogRootWorkItemId == parentWorkItem.ParentTfsId);
+                    backlogRoot = rootId;
                 }
             }
 
-            if (product != null)
+            if (backlogRoot.HasValue)
             {
-                result.Add(new UnplannedEpicDto
+                var product = products.FirstOrDefault(p => p.BacklogRootWorkItemId == backlogRoot.Value);
+                if (product != null)
                 {
-                    EpicId = epic.TfsId,
-                    Title = epic.Title ?? $"Epic {epic.TfsId}",
-                    ProductId = product.Id,
-                    ProductName = product.Name,
-                    Effort = epic.Effort,
-                    State = epic.State ?? "New"
-                });
+                    result.Add(new UnplannedEpicDto
+                    {
+                        EpicId = epic.TfsId,
+                        Title = epic.Title ?? $"Epic {epic.TfsId}",
+                        ProductId = product.Id,
+                        ProductName = product.Name,
+                        Effort = epic.Effort,
+                        State = epic.State ?? "New"
+                    });
+                }
             }
         }
 
