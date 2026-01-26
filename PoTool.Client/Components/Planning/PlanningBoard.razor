@@ -1,9 +1,25 @@
 @using PlanningDtos = PoTool.Shared.Planning
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Services
+@using PoTool.Client.Components.Common
 @inject ISnackbar Snackbar
 @inject ILogger<PlanningBoard> Logger
+@inject PlanningBoardService PlanningService
 
+@if (_isLoading)
+{
+    <LoadingIndicator IsLoading="true" Message="Loading Planning Board..." />
+}
+else
+{
 <div class="planning-board" @onkeydown="HandleKeyDown" tabindex="0" @ref="_boardElement">
+    @if (_isSaving)
+    {
+        <MudOverlay Visible="true" DarkBackground="true" Absolute="true">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        </MudOverlay>
+    }
+    
     @* Board Header: Scope Selector and Column Picker *@
     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
@@ -263,8 +279,15 @@
         </MudPaper>
     </MudStack>
 </div>
+}
 
 @code {
+    /// <summary>
+    /// Product Owner ID (required for API calls).
+    /// </summary>
+    [Parameter]
+    public int ProductOwnerId { get; set; }
+    
     /// <summary>
     /// All available products for the current profile.
     /// </summary>
@@ -284,6 +307,10 @@
     public EventCallback<int?> OnProductSelectionChanged { get; set; }
     
     private ElementReference _boardElement;
+    
+    // Loading state
+    private bool _isLoading = true;
+    private bool _isSaving;
     
     // Board state
     private PlanningDtos.BoardScope _scope = PlanningDtos.BoardScope.AllProducts;
@@ -308,31 +335,109 @@
     
     protected override async Task OnInitializedAsync()
     {
-        // Initialize scope from parameter
-        if (SelectedProductId.HasValue)
-        {
-            _scope = PlanningDtos.BoardScope.SingleProduct;
-            _selectedProductId = SelectedProductId;
-        }
-        else
-        {
-            _scope = PlanningDtos.BoardScope.AllProducts;
-        }
-        
-        // Initialize visible products
-        foreach (var product in Products)
-        {
-            _visibleProductIds.Add(product.Id);
-        }
-        
-        // Initialize default board layout if no data
-        await InitializeDefaultBoard();
-        
-        // Load mock unplanned epics for now
-        LoadMockUnplannedEpics();
+        await LoadBoardDataAsync();
     }
     
-    private async Task InitializeDefaultBoard()
+    private async Task LoadBoardDataAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            // Initialize scope from parameter
+            if (SelectedProductId.HasValue)
+            {
+                _scope = PlanningDtos.BoardScope.SingleProduct;
+                _selectedProductId = SelectedProductId;
+            }
+            else
+            {
+                _scope = PlanningDtos.BoardScope.AllProducts;
+            }
+            
+            // Initialize visible products
+            _visibleProductIds.Clear();
+            foreach (var product in Products)
+            {
+                _visibleProductIds.Add(product.Id);
+            }
+            
+            // Load board from API
+            var board = await PlanningService.GetBoardAsync(ProductOwnerId);
+            
+            if (board == null || board.Rows.Count == 0)
+            {
+                // Initialize board if empty
+                var initResult = await PlanningService.InitializeBoardAsync(ProductOwnerId);
+                if (initResult?.Success == true)
+                {
+                    board = await PlanningService.GetBoardAsync(ProductOwnerId);
+                }
+            }
+            
+            if (board != null)
+            {
+                _scope = board.Scope;
+                _selectedProductId = board.SelectedProductId;
+                _rows = board.Rows.ToList();
+                _placements = board.Placements.ToList();
+                _hiddenProductCount = board.HiddenColumnCount;
+                
+                // Update visible product IDs based on board settings
+                foreach (var column in board.ProductColumns.Where(c => !c.IsVisible))
+                {
+                    _visibleProductIds.Remove(column.ProductId);
+                }
+            }
+            else
+            {
+                // Fallback: create default layout locally
+                await InitializeDefaultBoardLocally();
+            }
+            
+            // Load unplanned epics
+            await LoadUnplannedEpicsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load Planning Board");
+            Snackbar.Add("Failed to load Planning Board", Severity.Error);
+            
+            // Fallback to local default
+            await InitializeDefaultBoardLocally();
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task LoadUnplannedEpicsAsync()
+    {
+        try
+        {
+            var productId = _scope == PlanningDtos.BoardScope.SingleProduct ? _selectedProductId : null;
+            var epics = await PlanningService.GetUnplannedEpicsAsync(ProductOwnerId, productId);
+            
+            if (epics != null)
+            {
+                _unplannedEpics = epics.ToList();
+            }
+            else
+            {
+                _unplannedEpics = new List<PlanningDtos.UnplannedEpicDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load unplanned epics");
+            _unplannedEpics = new List<PlanningDtos.UnplannedEpicDto>();
+        }
+    }
+    
+    private async Task InitializeDefaultBoardLocally()
     {
         // Default layout: 3 empty rows, Iteration line, 3 empty rows, Release line, 3 empty rows
         _rows = new List<PlanningDtos.BoardRowDto>
@@ -353,21 +458,6 @@
         _placements = new List<PlanningDtos.EpicPlacementDto>();
         
         await Task.CompletedTask;
-    }
-    
-    private void LoadMockUnplannedEpics()
-    {
-        // Generate mock unplanned epics based on products
-        var epicId = 1000;
-        _unplannedEpics = Products.SelectMany(p => Enumerable.Range(0, 3).Select(i => new PlanningDtos.UnplannedEpicDto
-        {
-            EpicId = epicId++,
-            Title = $"Epic {epicId} for {p.Name}",
-            ProductId = p.Id,
-            ProductName = p.Name,
-            Effort = (epicId % 5 + 1) * 5,
-            State = "New"
-        })).ToList();
     }
     
     private IEnumerable<PlanningDtos.ProductColumnDto> GetVisibleColumns()
@@ -447,6 +537,22 @@
             _selectedProductId = Products.First().Id;
         }
         
+        // Update scope via API
+        var request = new PlanningDtos.UpdateBoardScopeRequest
+        {
+            Scope = _scope,
+            SelectedProductId = _scope == PlanningDtos.BoardScope.SingleProduct ? _selectedProductId : null
+        };
+        
+        var result = await PlanningService.UpdateScopeAsync(ProductOwnerId, request);
+        if (result?.Success != true)
+        {
+            Logger.LogWarning("Failed to update board scope via API");
+        }
+        
+        // Reload unplanned epics for new scope
+        await LoadUnplannedEpicsAsync();
+        
         await OnProductSelectionChanged.InvokeAsync(_scope == PlanningDtos.BoardScope.SingleProduct ? _selectedProductId : null);
         StateHasChanged();
     }
@@ -454,16 +560,35 @@
     private async Task OnSingleProductChanged(int? productId)
     {
         _selectedProductId = productId;
+        
+        // Update scope via API
+        var request = new PlanningDtos.UpdateBoardScopeRequest
+        {
+            Scope = _scope,
+            SelectedProductId = productId
+        };
+        
+        var result = await PlanningService.UpdateScopeAsync(ProductOwnerId, request);
+        if (result?.Success != true)
+        {
+            Logger.LogWarning("Failed to update board scope via API");
+        }
+        
+        // Reload unplanned epics for new product
+        await LoadUnplannedEpicsAsync();
+        
         await OnProductSelectionChanged.InvokeAsync(productId);
         StateHasChanged();
     }
     
-    private void ToggleProductVisibility(int productId)
+    private async Task ToggleProductVisibility(int productId)
     {
         // Check if this product has selected epics
         var hasSelectedEpics = _selectedPlacementIds.Any(p => GetProductForPlacement(p) == productId);
         
-        if (_visibleProductIds.Contains(productId))
+        var isVisible = _visibleProductIds.Contains(productId);
+        
+        if (isVisible)
         {
             if (hasSelectedEpics)
             {
@@ -478,6 +603,28 @@
             _visibleProductIds.Add(productId);
         }
         
+        // Update visibility via API
+        var request = new PlanningDtos.UpdateProductVisibilityRequest
+        {
+            ProductId = productId,
+            IsVisible = !isVisible
+        };
+        
+        var result = await PlanningService.UpdateProductVisibilityAsync(ProductOwnerId, request);
+        if (result?.Success != true)
+        {
+            Logger.LogWarning("Failed to update product visibility via API");
+            // Revert local change
+            if (isVisible)
+            {
+                _visibleProductIds.Add(productId);
+            }
+            else
+            {
+                _visibleProductIds.Remove(productId);
+            }
+        }
+        
         _hiddenProductCount = Products.Count - _visibleProductIds.Count;
         StateHasChanged();
     }
@@ -488,56 +635,76 @@
     
     private async Task AddRowAbove(int rowId)
     {
-        var row = _rows.FirstOrDefault(r => r.Id == rowId);
-        if (row == null) return;
-        
-        var newRowId = _rows.Max(r => r.Id) + 1;
-        var newRow = new PlanningDtos.BoardRowDto
-        {
-            Id = newRowId,
-            DisplayOrder = row.DisplayOrder,
-            RowType = PlanningDtos.BoardRowType.Normal
-        };
-        
-        // Shift all rows at and after this position down
-        foreach (var r in _rows.Where(r => r.DisplayOrder >= row.DisplayOrder))
-        {
-            _rows[_rows.IndexOf(r)] = r with { DisplayOrder = r.DisplayOrder + 1 };
-        }
-        
-        _rows.Add(newRow);
-        _rows = _rows.OrderBy(r => r.DisplayOrder).ToList();
-        
-        await Task.CompletedTask;
+        _isSaving = true;
         StateHasChanged();
+        
+        try
+        {
+            var request = new PlanningDtos.CreateRowRequest
+            {
+                InsertBeforeRowId = rowId,
+                InsertBelow = false
+            };
+            
+            var result = await PlanningService.CreateRowAsync(request);
+            
+            if (result?.Success == true && result.RowId.HasValue)
+            {
+                // Reload board to get updated rows
+                await LoadBoardDataAsync();
+            }
+            else
+            {
+                Snackbar.Add(result?.ErrorMessage ?? "Failed to create row", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to add row above {RowId}", rowId);
+            Snackbar.Add("Failed to add row", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+            StateHasChanged();
+        }
     }
     
     private async Task AddRowBelow(int rowId)
     {
-        var row = _rows.FirstOrDefault(r => r.Id == rowId);
-        if (row == null) return;
-        
-        var newRowId = _rows.Max(r => r.Id) + 1;
-        var insertOrder = row.DisplayOrder + 1;
-        
-        var newRow = new PlanningDtos.BoardRowDto
-        {
-            Id = newRowId,
-            DisplayOrder = insertOrder,
-            RowType = PlanningDtos.BoardRowType.Normal
-        };
-        
-        // Shift all rows after this position down
-        foreach (var r in _rows.Where(r => r.DisplayOrder >= insertOrder))
-        {
-            _rows[_rows.IndexOf(r)] = r with { DisplayOrder = r.DisplayOrder + 1 };
-        }
-        
-        _rows.Add(newRow);
-        _rows = _rows.OrderBy(r => r.DisplayOrder).ToList();
-        
-        await Task.CompletedTask;
+        _isSaving = true;
         StateHasChanged();
+        
+        try
+        {
+            var request = new PlanningDtos.CreateRowRequest
+            {
+                InsertBeforeRowId = rowId,
+                InsertBelow = true
+            };
+            
+            var result = await PlanningService.CreateRowAsync(request);
+            
+            if (result?.Success == true && result.RowId.HasValue)
+            {
+                // Reload board to get updated rows
+                await LoadBoardDataAsync();
+            }
+            else
+            {
+                Snackbar.Add(result?.ErrorMessage ?? "Failed to create row", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to add row below {RowId}", rowId);
+            Snackbar.Add("Failed to add row", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+            StateHasChanged();
+        }
     }
     
     private async Task HandleRowContextMenu(MouseEventArgs e, PlanningDtos.BoardRowDto row)
@@ -551,17 +718,33 @@
             return;
         }
         
-        // For now, just delete the row (in real implementation, show context menu)
-        _rows.Remove(row);
-        
-        // Reorder remaining rows
-        var order = 0;
-        _rows = _rows.OrderBy(r => r.DisplayOrder)
-                     .Select(r => r with { DisplayOrder = order++ })
-                     .ToList();
-        
-        await Task.CompletedTask;
+        _isSaving = true;
         StateHasChanged();
+        
+        try
+        {
+            var result = await PlanningService.DeleteRowAsync(row.Id);
+            
+            if (result?.Success == true)
+            {
+                // Reload board to get updated rows
+                await LoadBoardDataAsync();
+            }
+            else
+            {
+                Snackbar.Add(result?.ErrorMessage ?? "Failed to delete row", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete row {RowId}", row.Id);
+            Snackbar.Add("Failed to delete row", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+            StateHasChanged();
+        }
     }
     
     #endregion
@@ -626,51 +809,78 @@
             return;
         }
         
-        // Handle unplanned epic drop
-        if (_dragEpicId.HasValue && !_dragPlacementId.HasValue)
-        {
-            var epic = _unplannedEpics.FirstOrDefault(e => e.EpicId == _dragEpicId);
-            if (epic != null)
-            {
-                // Create new placement
-                var newPlacementId = _placements.Count > 0 ? _placements.Max(p => p.Id) + 1 : 1;
-                var orderInCell = _placements.Count(p => p.RowId == rowId && p.ProductId == productId);
-                
-                _placements.Add(new PlanningDtos.EpicPlacementDto
-                {
-                    Id = newPlacementId,
-                    EpicId = epic.EpicId,
-                    EpicTitle = epic.Title,
-                    ProductId = epic.ProductId,
-                    RowId = rowId,
-                    OrderInCell = orderInCell,
-                    Effort = epic.Effort,
-                    State = epic.State
-                });
-                
-                // Remove from unplanned
-                _unplannedEpics.Remove(epic);
-            }
-        }
-        // Handle existing placement move
-        else if (_dragPlacementId.HasValue)
-        {
-            var placement = _placements.FirstOrDefault(p => p.Id == _dragPlacementId);
-            if (placement != null)
-            {
-                var orderInCell = _placements.Count(p => p.RowId == rowId && p.ProductId == productId && p.Id != placement.Id);
-                
-                _placements[_placements.IndexOf(placement)] = placement with
-                {
-                    RowId = rowId,
-                    OrderInCell = orderInCell
-                };
-            }
-        }
-        
-        HandleDragEnd();
-        await Task.CompletedTask;
+        _isSaving = true;
         StateHasChanged();
+        
+        try
+        {
+            // Handle unplanned epic drop
+            if (_dragEpicId.HasValue && !_dragPlacementId.HasValue)
+            {
+                var epic = _unplannedEpics.FirstOrDefault(e => e.EpicId == _dragEpicId);
+                if (epic != null)
+                {
+                    var orderInCell = _placements.Count(p => p.RowId == rowId && p.ProductId == productId);
+                    
+                    var request = new PlanningDtos.CreateEpicPlacementRequest
+                    {
+                        EpicId = epic.EpicId,
+                        RowId = rowId,
+                        OrderInCell = orderInCell
+                    };
+                    
+                    var result = await PlanningService.CreatePlacementAsync(request);
+                    
+                    if (result?.Success == true)
+                    {
+                        // Reload board to get updated placements
+                        await LoadBoardDataAsync();
+                    }
+                    else
+                    {
+                        Snackbar.Add(result?.ErrorMessage ?? "Failed to place epic", Severity.Error);
+                    }
+                }
+            }
+            // Handle existing placement move
+            else if (_dragPlacementId.HasValue)
+            {
+                var placement = _placements.FirstOrDefault(p => p.Id == _dragPlacementId);
+                if (placement != null)
+                {
+                    var orderInCell = _placements.Count(p => p.RowId == rowId && p.ProductId == productId && p.Id != placement.Id);
+                    
+                    var request = new PlanningDtos.MovePlanningEpicRequest
+                    {
+                        NewRowId = rowId,
+                        NewOrderInCell = orderInCell
+                    };
+                    
+                    var result = await PlanningService.MovePlacementAsync(_dragPlacementId.Value, request);
+                    
+                    if (result?.Success == true)
+                    {
+                        // Reload board to get updated placements
+                        await LoadBoardDataAsync();
+                    }
+                    else
+                    {
+                        Snackbar.Add(result?.ErrorMessage ?? "Failed to move epic", Severity.Error);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to handle drop");
+            Snackbar.Add("Failed to complete operation", Severity.Error);
+        }
+        finally
+        {
+            HandleDragEnd();
+            _isSaving = false;
+            StateHasChanged();
+        }
     }
     
     #endregion
@@ -710,32 +920,35 @@
     {
         if (e.Key == "Delete" && _selectedPlacementIds.Count > 0)
         {
-            // Remove selected epics from board, return to unplanned
-            foreach (var placementId in _selectedPlacementIds.ToList())
+            _isSaving = true;
+            StateHasChanged();
+            
+            try
             {
-                var placement = _placements.FirstOrDefault(p => p.Id == placementId);
-                if (placement != null)
+                // Delete selected placements via API
+                var result = await PlanningService.DeletePlacementsAsync(_selectedPlacementIds.ToList());
+                
+                if (result?.Success == true)
                 {
-                    // Add back to unplanned
-                    var product = Products.FirstOrDefault(p => p.Id == placement.ProductId);
-                    _unplannedEpics.Add(new PlanningDtos.UnplannedEpicDto
-                    {
-                        EpicId = placement.EpicId,
-                        Title = placement.EpicTitle,
-                        ProductId = placement.ProductId,
-                        ProductName = product?.Name ?? "Unknown",
-                        Effort = placement.Effort,
-                        State = placement.State
-                    });
-                    
-                    // Remove placement
-                    _placements.Remove(placement);
+                    _selectedPlacementIds.Clear();
+                    // Reload board to get updated state
+                    await LoadBoardDataAsync();
+                }
+                else
+                {
+                    Snackbar.Add(result?.ErrorMessage ?? "Failed to delete placements", Severity.Error);
                 }
             }
-            
-            _selectedPlacementIds.Clear();
-            await Task.CompletedTask;
-            StateHasChanged();
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to delete placements");
+                Snackbar.Add("Failed to delete placements", Severity.Error);
+            }
+            finally
+            {
+                _isSaving = false;
+                StateHasChanged();
+            }
         }
     }
     
