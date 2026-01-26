@@ -33,7 +33,10 @@
                               Disabled="@_isLoading" />
             </MudStack>
             
-            <PRMetricsSummaryPanel Metrics="@_prMetrics" />
+            <PRMetricsSummaryPanel TotalPRs="@GetTotalPRs()"
+                                   AvgTimeOpen="@GetAvgTimeOpen()"
+                                   AvgIterations="@GetAvgIterations()"
+                                   AvgFiles="@GetAvgFiles()" />
         </MudPaper>
     }
     else
@@ -136,5 +139,37 @@
     private void ClearError()
     {
         _errorResponse = null;
+    }
+
+    private string GetTotalPRs()
+    {
+        return _prMetrics.Count.ToString();
+    }
+
+    private string GetAvgTimeOpen()
+    {
+        if (_prMetrics.Count == 0)
+            return "0.0d";
+        
+        var avgDays = _prMetrics.Average(m => m.TotalTimeOpen.TotalDays);
+        return $"{avgDays:F1}d";
+    }
+
+    private string GetAvgIterations()
+    {
+        if (_prMetrics.Count == 0)
+            return "0.0";
+        
+        var avgIterations = _prMetrics.Average(m => m.IterationCount);
+        return avgIterations.ToString("F1");
+    }
+
+    private string GetAvgFiles()
+    {
+        if (_prMetrics.Count == 0)
+            return "0.0";
+        
+        var avgFiles = _prMetrics.Average(m => m.TotalFileCount);
+        return avgFiles.ToString("F1");
     }
 }
