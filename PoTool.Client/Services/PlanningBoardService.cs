@@ -157,6 +157,30 @@ public class PlanningBoardService
         }
     }
 
+    /// <summary>
+    /// Moves a row to a new position.
+    /// </summary>
+    public async Task<RowOperationResultDto?> MoveRowAsync(
+        int rowId,
+        MoveRowRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PutAsJsonAsync(
+                $"api/planning/rows/{rowId}/move",
+                request,
+                cancellationToken);
+
+            return await response.Content.ReadFromJsonAsync<RowOperationResultDto>(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to move row {RowId}", rowId);
+            return new RowOperationResultDto { Success = false, ErrorMessage = "Operation failed. Please try again." };
+        }
+    }
+
     #endregion
 
     #region Epic Placement Operations

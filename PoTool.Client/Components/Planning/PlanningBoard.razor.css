@@ -144,3 +144,15 @@
     border-left: 6px solid var(--mud-palette-error);
     border-right: 6px solid var(--mud-palette-error);
 }
+
+/* Row drop zone styles */
+.row-drop-zone {
+    background-color: transparent;
+    transition: background-color 0.2s ease;
+}
+
+.row-drop-zone:hover {
+    background-color: var(--mud-palette-primary-lighten);
+    border: 2px dashed var(--mud-palette-primary);
+    border-radius: 2px;
+}

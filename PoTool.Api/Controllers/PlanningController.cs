@@ -187,6 +187,39 @@ public class PlanningController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Moves a row to a new position.
+    /// </summary>
+    [HttpPut("rows/{rowId:int}/move")]
+    public async Task<ActionResult<RowOperationResultDto>> MoveRow(
+        int rowId,
+        [FromBody] MoveRowRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(
+                new MoveRowCommand(rowId, request.TargetRowId, request.InsertBelow), 
+                cancellationToken);
+
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error moving row {RowId}", rowId);
+            return StatusCode(500, new RowOperationResultDto 
+            { 
+                Success = false, 
+                ErrorMessage = "Error moving row" 
+            });
+        }
+    }
+
     #endregion
 
     #region Epic Placement Operations

@@ -193,15 +193,27 @@ else
                                 draggable="true"
                                 @ondragstart="@(() => HandleMarkerDragStart(row))"
                                 @ondragend="HandleDragEnd">
-                                <td class="row-controls pa-1">
-                                    @* Row controls on the left *@
+                                <td class="row-controls pa-1"
+                                    @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
+                                    @ondrop="@(() => HandleMarkerDrop(row.Id, false))">
+                                    @* Row controls on the left with drop zone *@
                                     <MudStack Spacing="0">
+                                        <div class="@(_isDragging && _dragMarkerRowId.HasValue ? "row-drop-zone" : "")"
+                                             style="height: 10px; margin-bottom: 2px;"
+                                             @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
+                                             @ondrop="@(() => HandleMarkerDrop(row.Id, false))">
+                                        </div>
                                         <MudIconButton Icon="@Icons.Material.Filled.Add" 
                                                        Size="Size.Small" 
                                                        OnClick="@(() => AddRowAbove(row.Id))" />
                                         <MudIconButton Icon="@Icons.Material.Filled.Add" 
                                                        Size="Size.Small" 
                                                        OnClick="@(() => AddRowBelow(row.Id))" />
+                                        <div class="@(_isDragging && _dragMarkerRowId.HasValue ? "row-drop-zone" : "")"
+                                             style="height: 10px; margin-top: 2px;"
+                                             @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
+                                             @ondrop="@(() => HandleMarkerDrop(row.Id, true))">
+                                        </div>
                                     </MudStack>
                                 </td>
                                 <td colspan="@GetVisibleColumns().Count()" class="marker-row-cell pa-2">
@@ -222,15 +234,27 @@ else
                             <tr class="board-row"
                                 @oncontextmenu="@(e => HandleRowContextMenu(e, row))"
                                 @oncontextmenu:preventDefault>
-                                <td class="row-controls pa-1">
-                                    @* Row controls on the left - visible on hover *@
+                                <td class="row-controls pa-1"
+                                    @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
+                                    @ondrop="@(() => HandleMarkerDrop(row.Id, false))">
+                                    @* Row controls on the left - visible on hover with drop zones *@
                                     <div class="row-control-buttons">
+                                        <div class="@(_isDragging && _dragMarkerRowId.HasValue ? "row-drop-zone" : "")"
+                                             style="height: 10px; margin-bottom: 2px;"
+                                             @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
+                                             @ondrop="@(() => HandleMarkerDrop(row.Id, false))">
+                                        </div>
                                         <MudIconButton Icon="@Icons.Material.Filled.Add" 
                                                        Size="Size.Small" 
                                                        OnClick="@(() => AddRowAbove(row.Id))" />
                                         <MudIconButton Icon="@Icons.Material.Filled.Add" 
                                                        Size="Size.Small" 
                                                        OnClick="@(() => AddRowBelow(row.Id))" />
+                                        <div class="@(_isDragging && _dragMarkerRowId.HasValue ? "row-drop-zone" : "")"
+                                             style="height: 10px; margin-top: 2px;"
+                                             @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
+                                             @ondrop="@(() => HandleMarkerDrop(row.Id, true))">
+                                        </div>
                                     </div>
                                 </td>
                                 
@@ -872,6 +896,53 @@ else
         {
             Logger.LogError(ex, "Failed to handle drop");
             Snackbar.Add("Failed to complete operation", Severity.Error);
+        }
+        finally
+        {
+            HandleDragEnd();
+            _isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task HandleMarkerDrop(int targetRowId, bool insertBelow)
+    {
+        if (!_isDragging || !_dragMarkerRowId.HasValue) return;
+        
+        // Don't allow dropping on itself
+        if (_dragMarkerRowId == targetRowId) 
+        {
+            HandleDragEnd();
+            return;
+        }
+        
+        _isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            var request = new PlanningDtos.MoveRowRequest
+            {
+                TargetRowId = targetRowId,
+                InsertBelow = insertBelow
+            };
+            
+            var result = await PlanningService.MoveRowAsync(_dragMarkerRowId.Value, request);
+            
+            if (result?.Success == true)
+            {
+                // Reload board to get updated row order
+                await LoadBoardDataAsync();
+            }
+            else
+            {
+                Snackbar.Add(result?.ErrorMessage ?? "Failed to move row", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to move marker row");
+            Snackbar.Add("Failed to move row", Severity.Error);
         }
         finally
         {
