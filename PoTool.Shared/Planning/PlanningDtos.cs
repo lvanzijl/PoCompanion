@@ -294,9 +294,9 @@ public sealed record CreateEpicPlacementRequest
 }
 
 /// <summary>
-/// Request to move an epic to a different row.
+/// Request to move an epic to a different row on the new Planning Board.
 /// </summary>
-public sealed record MoveEpicRequest
+public sealed record MovePlanningEpicRequest
 {
     /// <summary>
     /// New row ID.

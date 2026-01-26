@@ -61,22 +61,26 @@ public class PoToolDbContext : DbContext
     public DbSet<EffortEstimationSettingsEntity> EffortEstimationSettings => Set<EffortEstimationSettingsEntity>();
 
     /// <summary>
-    /// Release Planning Board lanes (Objectives).
+    /// [DEPRECATED] Release Planning Board lanes (Objectives).
+    /// Will be removed in a future version.
     /// </summary>
     public DbSet<LaneEntity> Lanes => Set<LaneEntity>();
 
     /// <summary>
-    /// Release Planning Board Epic placements.
+    /// [DEPRECATED] Release Planning Board Epic placements.
+    /// Replaced by PlanningEpicPlacements.
     /// </summary>
     public DbSet<EpicPlacementEntity> EpicPlacements => Set<EpicPlacementEntity>();
 
     /// <summary>
-    /// Release Planning Board milestone lines.
+    /// [DEPRECATED] Release Planning Board milestone lines.
+    /// Replaced by BoardRows with MarkerType=Release.
     /// </summary>
     public DbSet<MilestoneLineEntity> MilestoneLines => Set<MilestoneLineEntity>();
 
     /// <summary>
-    /// Release Planning Board iteration lines.
+    /// [DEPRECATED] Release Planning Board iteration lines.
+    /// Replaced by BoardRows with MarkerType=Iteration.
     /// </summary>
     public DbSet<IterationLineEntity> IterationLines => Set<IterationLineEntity>();
 
@@ -84,6 +88,21 @@ public class PoToolDbContext : DbContext
     /// Cached validation results for Release Planning Board Epics.
     /// </summary>
     public DbSet<CachedValidationResultEntity> CachedValidationResults => Set<CachedValidationResultEntity>();
+
+    /// <summary>
+    /// Planning Board rows (includes normal rows and marker rows).
+    /// </summary>
+    public DbSet<BoardRowEntity> BoardRows => Set<BoardRowEntity>();
+
+    /// <summary>
+    /// Planning Board Epic placements (new table-based board).
+    /// </summary>
+    public DbSet<PlanningEpicPlacementEntity> PlanningEpicPlacements => Set<PlanningEpicPlacementEntity>();
+
+    /// <summary>
+    /// Planning Board settings per Product Owner.
+    /// </summary>
+    public DbSet<PlanningBoardSettingsEntity> PlanningBoardSettings => Set<PlanningBoardSettingsEntity>();
 
     /// <summary>
     /// Products owned by Product Owners.
@@ -247,6 +266,50 @@ public class PoToolDbContext : DbContext
         {
             entity.HasIndex(e => e.EpicId)
                 .IsUnique();
+        });
+
+        // New Planning Board entities
+        modelBuilder.Entity<BoardRowEntity>(entity =>
+        {
+            entity.HasIndex(e => e.DisplayOrder);
+
+            entity.Property(e => e.MarkerLabel).HasMaxLength(200);
+
+            entity.HasMany(e => e.Placements)
+                .WithOne(p => p.Row)
+                .HasForeignKey(p => p.RowId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlanningEpicPlacementEntity>(entity =>
+        {
+            entity.HasIndex(e => e.EpicId)
+                .IsUnique();
+
+            entity.HasIndex(e => new { e.ProductId, e.RowId, e.OrderInCell });
+
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Row)
+                .WithMany(r => r.Placements)
+                .HasForeignKey(e => e.RowId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlanningBoardSettingsEntity>(entity =>
+        {
+            entity.HasIndex(e => e.ProductOwnerId)
+                .IsUnique();
+
+            entity.Property(e => e.HiddenProductIdsJson).HasMaxLength(4000);
+
+            entity.HasOne(e => e.ProductOwner)
+                .WithOne()
+                .HasForeignKey<PlanningBoardSettingsEntity>(e => e.ProductOwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Product entity
