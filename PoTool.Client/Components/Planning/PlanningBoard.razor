@@ -5,6 +5,7 @@
 @inject ISnackbar Snackbar
 @inject ILogger<PlanningBoard> Logger
 @inject PlanningBoardService PlanningService
+@inject IDialogService DialogService
 
 @if (_isLoading)
 {
@@ -736,7 +737,33 @@ else
         
         if (hasEpics)
         {
-            Snackbar.Add("Cannot delete row: contains epics. Remove epics first.", Severity.Warning);
+            // Show informational message - row cannot be deleted
+            await DialogService.ShowMessageBox(
+                "Cannot Delete Row",
+                "This row contains epics and cannot be deleted. Remove epics first.",
+                yesText: "OK"
+            );
+            return;
+        }
+        
+        // Show delete confirmation dialog
+        var options = new DialogOptions 
+        { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Small 
+        };
+        
+        var dialog = await DialogService.ShowMessageBox(
+            "Delete Row",
+            "Are you sure you want to delete this row?",
+            yesText: "Delete",
+            cancelText: "Cancel",
+            options: options
+        );
+        
+        // If user cancelled, don't delete
+        if (dialog != true)
+        {
             return;
         }
         
