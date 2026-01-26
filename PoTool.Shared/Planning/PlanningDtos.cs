@@ -273,6 +273,22 @@ public sealed record CreateMarkerRowRequest
 }
 
 /// <summary>
+/// Request to move a row to a new position.
+/// </summary>
+public sealed record MoveRowRequest
+{
+    /// <summary>
+    /// The target row ID to insert relative to.
+    /// </summary>
+    public int TargetRowId { get; init; }
+    
+    /// <summary>
+    /// If true, insert below the target row; otherwise insert above.
+    /// </summary>
+    public bool InsertBelow { get; init; }
+}
+
+/// <summary>
 /// Request to place an epic on the board.
 /// </summary>
 public sealed record CreateEpicPlacementRequest

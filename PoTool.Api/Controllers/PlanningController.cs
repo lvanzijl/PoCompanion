@@ -117,7 +117,11 @@ public class PlanningController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating board row");
-            return StatusCode(500, "Error creating row");
+            return StatusCode(500, new RowOperationResultDto 
+            { 
+                Success = false, 
+                ErrorMessage = "Error creating row" 
+            });
         }
     }
 
@@ -145,7 +149,11 @@ public class PlanningController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating marker row");
-            return StatusCode(500, "Error creating marker row");
+            return StatusCode(500, new RowOperationResultDto 
+            { 
+                Success = false, 
+                ErrorMessage = "Error creating marker row" 
+            });
         }
     }
 
@@ -171,7 +179,44 @@ public class PlanningController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting row {RowId}", rowId);
-            return StatusCode(500, "Error deleting row");
+            return StatusCode(500, new RowOperationResultDto 
+            { 
+                Success = false, 
+                ErrorMessage = "Error deleting row" 
+            });
+        }
+    }
+
+    /// <summary>
+    /// Moves a row to a new position.
+    /// </summary>
+    [HttpPut("rows/{rowId:int}/move")]
+    public async Task<ActionResult<RowOperationResultDto>> MoveRow(
+        int rowId,
+        [FromBody] MoveRowRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(
+                new MoveRowCommand(rowId, request.TargetRowId, request.InsertBelow), 
+                cancellationToken);
+
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error moving row {RowId}", rowId);
+            return StatusCode(500, new RowOperationResultDto 
+            { 
+                Success = false, 
+                ErrorMessage = "Error moving row" 
+            });
         }
     }
 

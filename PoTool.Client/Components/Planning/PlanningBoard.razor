@@ -102,13 +102,15 @@ else
     </MudStack>
     
     @* Main Board Layout *@
-    <MudStack Row="true" Spacing="3">
+    <MudStack Row="false" Spacing="3">
         @* Unplanned Epics Panel *@
-        <MudPaper Elevation="1" Class="unplanned-panel pa-3" Style="width: 280px; max-height: 600px; overflow-y: auto;">
-            <MudText Typo="Typo.subtitle1" Class="mb-2">
-                <MudIcon Icon="@Icons.Material.Filled.List" Class="mr-1" Size="Size.Small" />
-                Unplanned Epics
-            </MudText>
+        <MudPaper Elevation="1" Class="unplanned-panel pa-3" Style="max-height: 200px; overflow-y: auto;">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                <MudText Typo="Typo.subtitle1">
+                    <MudIcon Icon="@Icons.Material.Filled.List" Class="mr-1" Size="Size.Small" />
+                    Unplanned Epics
+                </MudText>
+            </MudStack>
             
             @if (_unplannedEpics.Count == 0)
             {
@@ -118,34 +120,29 @@ else
             }
             else
             {
+                <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
                 @if (_scope == PlanningDtos.BoardScope.AllProducts)
                 {
                     @* Group by product *@
                     @foreach (var productGroup in _unplannedEpics.GroupBy(e => e.ProductId))
                     {
                         var productName = Products.FirstOrDefault(p => p.Id == productGroup.Key)?.Name ?? "Unknown";
-                        <MudExpansionPanels Dense="true" Class="mb-1">
-                            <MudExpansionPanel Dense="true" Expanded="true">
-                                <TitleContent>
-                                    <MudText Typo="Typo.body2" Class="font-weight-bold">@productName (@productGroup.Count())</MudText>
-                                </TitleContent>
-                                <ChildContent>
-                                    @foreach (var epic in productGroup)
+                        <div style="min-width: 200px;">
+                            <MudText Typo="Typo.body2" Class="font-weight-bold mb-1">@productName (@productGroup.Count())</MudText>
+                            @foreach (var epic in productGroup)
+                            {
+                                <div class="unplanned-epic-card mb-1 pa-2"
+                                     draggable="true"
+                                     @ondragstart="@(() => HandleEpicDragStart(epic))"
+                                     @ondragend="HandleDragEnd">
+                                    <MudText Typo="Typo.body2">@epic.Title</MudText>
+                                    @if (epic.Effort.HasValue)
                                     {
-                                        <div class="unplanned-epic-card mb-1 pa-2"
-                                             draggable="true"
-                                             @ondragstart="@(() => HandleEpicDragStart(epic))"
-                                             @ondragend="HandleDragEnd">
-                                            <MudText Typo="Typo.body2">@epic.Title</MudText>
-                                            @if (epic.Effort.HasValue)
-                                            {
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@epic.Effort pts</MudText>
-                                            }
-                                        </div>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@epic.Effort pts</MudText>
                                     }
-                                </ChildContent>
-                            </MudExpansionPanel>
-                        </MudExpansionPanels>
+                                </div>
+                            }
+                        </div>
                     }
                 }
                 else
@@ -166,6 +163,7 @@ else
                         </div>
                     }
                 }
+                </MudStack>
             }
         </MudPaper>
         
@@ -195,15 +193,27 @@ else
                                 draggable="true"
                                 @ondragstart="@(() => HandleMarkerDragStart(row))"
                                 @ondragend="HandleDragEnd">
-                                <td class="row-controls pa-1">
-                                    @* Row controls on the left *@
+                                <td class="row-controls pa-1"
+                                    @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
+                                    @ondrop="@(() => HandleMarkerDrop(row.Id, false))">
+                                    @* Row controls on the left with drop zone *@
                                     <MudStack Spacing="0">
+                                        <div class="@(_isDragging && _dragMarkerRowId.HasValue ? "row-drop-zone" : "")"
+                                             style="height: 10px; margin-bottom: 2px;"
+                                             @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
+                                             @ondrop="@(() => HandleMarkerDrop(row.Id, false))">
+                                        </div>
                                         <MudIconButton Icon="@Icons.Material.Filled.Add" 
                                                        Size="Size.Small" 
                                                        OnClick="@(() => AddRowAbove(row.Id))" />
                                         <MudIconButton Icon="@Icons.Material.Filled.Add" 
                                                        Size="Size.Small" 
                                                        OnClick="@(() => AddRowBelow(row.Id))" />
+                                        <div class="@(_isDragging && _dragMarkerRowId.HasValue ? "row-drop-zone" : "")"
+                                             style="height: 10px; margin-top: 2px;"
+                                             @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
+                                             @ondrop="@(() => HandleMarkerDrop(row.Id, true))">
+                                        </div>
                                     </MudStack>
                                 </td>
                                 <td colspan="@GetVisibleColumns().Count()" class="marker-row-cell pa-2">
@@ -224,15 +234,27 @@ else
                             <tr class="board-row"
                                 @oncontextmenu="@(e => HandleRowContextMenu(e, row))"
                                 @oncontextmenu:preventDefault>
-                                <td class="row-controls pa-1">
-                                    @* Row controls on the left - visible on hover *@
+                                <td class="row-controls pa-1"
+                                    @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
+                                    @ondrop="@(() => HandleMarkerDrop(row.Id, false))">
+                                    @* Row controls on the left - visible on hover with drop zones *@
                                     <div class="row-control-buttons">
+                                        <div class="@(_isDragging && _dragMarkerRowId.HasValue ? "row-drop-zone" : "")"
+                                             style="height: 10px; margin-bottom: 2px;"
+                                             @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
+                                             @ondrop="@(() => HandleMarkerDrop(row.Id, false))">
+                                        </div>
                                         <MudIconButton Icon="@Icons.Material.Filled.Add" 
                                                        Size="Size.Small" 
                                                        OnClick="@(() => AddRowAbove(row.Id))" />
                                         <MudIconButton Icon="@Icons.Material.Filled.Add" 
                                                        Size="Size.Small" 
                                                        OnClick="@(() => AddRowBelow(row.Id))" />
+                                        <div class="@(_isDragging && _dragMarkerRowId.HasValue ? "row-drop-zone" : "")"
+                                             style="height: 10px; margin-top: 2px;"
+                                             @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
+                                             @ondrop="@(() => HandleMarkerDrop(row.Id, true))">
+                                        </div>
                                     </div>
                                 </td>
                                 
@@ -874,6 +896,53 @@ else
         {
             Logger.LogError(ex, "Failed to handle drop");
             Snackbar.Add("Failed to complete operation", Severity.Error);
+        }
+        finally
+        {
+            HandleDragEnd();
+            _isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task HandleMarkerDrop(int targetRowId, bool insertBelow)
+    {
+        if (!_isDragging || !_dragMarkerRowId.HasValue) return;
+        
+        // Don't allow dropping on itself
+        if (_dragMarkerRowId == targetRowId) 
+        {
+            HandleDragEnd();
+            return;
+        }
+        
+        _isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            var request = new PlanningDtos.MoveRowRequest
+            {
+                TargetRowId = targetRowId,
+                InsertBelow = insertBelow
+            };
+            
+            var result = await PlanningService.MoveRowAsync(_dragMarkerRowId.Value, request);
+            
+            if (result?.Success == true)
+            {
+                // Reload board to get updated row order
+                await LoadBoardDataAsync();
+            }
+            else
+            {
+                Snackbar.Add(result?.ErrorMessage ?? "Failed to move row", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to move marker row");
+            Snackbar.Add("Failed to move row", Severity.Error);
         }
         finally
         {
