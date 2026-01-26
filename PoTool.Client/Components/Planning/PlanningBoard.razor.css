@@ -1,0 +1,146 @@
+.planning-board {
+    outline: none;
+}
+
+.planning-board:focus {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.unplanned-panel {
+    background-color: var(--mud-palette-surface);
+    border-radius: 4px;
+}
+
+.unplanned-epic-card {
+    background-color: var(--mud-palette-background);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 4px;
+    cursor: grab;
+    transition: all 0.15s ease;
+}
+
+.unplanned-epic-card:hover {
+    background-color: var(--mud-palette-action-default-hover);
+    border-color: var(--mud-palette-primary);
+}
+
+.unplanned-epic-card:active {
+    cursor: grabbing;
+}
+
+.board-grid-container {
+    background-color: var(--mud-palette-surface);
+    border-radius: 4px;
+}
+
+.planning-board-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.planning-board-table th,
+.planning-board-table td {
+    border: 1px solid var(--mud-palette-lines-default);
+    vertical-align: top;
+}
+
+.row-controls-header {
+    background-color: var(--mud-palette-surface);
+}
+
+.product-column-header {
+    background-color: var(--mud-palette-background-grey);
+    text-align: center;
+    min-width: 180px;
+}
+
+.row-controls {
+    background-color: var(--mud-palette-surface);
+    vertical-align: middle;
+}
+
+.row-control-buttons {
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.board-row:hover .row-control-buttons {
+    opacity: 1;
+}
+
+.board-cell {
+    min-height: 60px;
+    min-width: 180px;
+    transition: background-color 0.15s ease;
+}
+
+.board-cell.drop-target {
+    background-color: var(--mud-palette-primary-lighten);
+}
+
+.drop-placeholder {
+    border: 2px dashed var(--mud-palette-primary);
+    border-radius: 4px;
+    padding: 8px;
+    text-align: center;
+}
+
+.epic-card {
+    background-color: var(--mud-palette-background);
+    border: 2px solid var(--mud-palette-success);
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 4px;
+    cursor: grab;
+    transition: all 0.15s ease;
+}
+
+.epic-card:hover {
+    border-color: var(--mud-palette-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.epic-card.selected {
+    border-color: var(--mud-palette-primary);
+    background-color: var(--mud-palette-primary-lighten);
+    box-shadow: 0 0 0 2px var(--mud-palette-primary);
+}
+
+.epic-card:active {
+    cursor: grabbing;
+}
+
+/* Marker row styles */
+.marker-row {
+    cursor: grab;
+}
+
+.marker-row:active {
+    cursor: grabbing;
+}
+
+.marker-row-cell {
+    text-align: center;
+}
+
+.marker-iteration {
+    background-color: rgba(var(--mud-palette-info-rgb), 0.15);
+}
+
+.marker-iteration .marker-row-cell {
+    border-left: 4px solid var(--mud-palette-info);
+    border-right: 4px solid var(--mud-palette-info);
+}
+
+.marker-release {
+    background-color: rgba(var(--mud-palette-error-rgb), 0.15);
+}
+
+.marker-release .marker-row-cell {
+    border-left: 6px solid var(--mud-palette-error);
+    border-right: 6px solid var(--mud-palette-error);
+}
