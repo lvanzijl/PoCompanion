@@ -56,13 +56,14 @@ public class TeamSprintSyncStage : ISyncStage
             }
 
             // Get all unique teams linked to these products
-            // Use SelectMany with distinct team IDs to avoid duplicates at the query level
+            // Query teams directly to ensure proper change tracking
             var teamIds = products
                 .SelectMany(p => p.ProductTeamLinks)
                 .Select(ptl => ptl.TeamId)
                 .Distinct()
                 .ToList();
 
+            // Load teams with tracking enabled (default behavior)
             var teams = await _context.Teams
                 .Where(t => teamIds.Contains(t.Id) 
                     && t.ProjectName != null 

@@ -134,7 +134,8 @@ public class SyncPipelineRunner : ISyncPipeline
 
             if (stage2Update.HasFailed)
             {
-                // Stage 1 watermark should still be committed
+                // Sprint sync failed, but preserve work item watermark to avoid re-syncing work items.
+                // Sprint sync failures are non-critical - sprints can be re-synced in next run.
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
                     workItemResult?.NewWatermark, null, null, cts.Token);
                 yield break;
