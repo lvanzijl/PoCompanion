@@ -76,6 +76,10 @@
     min-height: 60px;
     min-width: 180px;
     transition: background-color 0.15s ease;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 4px;
 }
 
 .board-cell.drop-target {
@@ -94,9 +98,10 @@
     border: 2px solid var(--mud-palette-success);
     border-radius: 4px;
     padding: 8px;
-    margin-bottom: 4px;
     cursor: grab;
     transition: all 0.15s ease;
+    flex: 0 0 auto;
+    max-width: fit-content;
 }
 
 .epic-card:hover {

@@ -5,6 +5,7 @@
 @inject ISnackbar Snackbar
 @inject ILogger<PlanningBoard> Logger
 @inject PlanningBoardService PlanningService
+@inject IDialogService DialogService
 
 @if (_isLoading)
 {
@@ -734,9 +735,33 @@ else
         // Check if row is empty
         var hasEpics = _placements.Any(p => p.RowId == row.Id);
         
-        if (hasEpics)
+        // Show delete confirmation dialog
+        var parameters = new DialogParameters
         {
-            Snackbar.Add("Cannot delete row: contains epics. Remove epics first.", Severity.Warning);
+            { "ContentText", hasEpics 
+                ? "This row contains epics and cannot be deleted. Remove epics first." 
+                : "Are you sure you want to delete this row?" },
+            { "ButtonText", "Delete" },
+            { "Color", Color.Error }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Small 
+        };
+        
+        var dialog = await DialogService.ShowMessageBox(
+            "Delete Row",
+            hasEpics ? "This row contains epics and cannot be deleted. Remove epics first." : "Are you sure you want to delete this row?",
+            yesText: "Delete",
+            cancelText: "Cancel",
+            options: options
+        );
+        
+        // If row has epics or user cancelled, don't delete
+        if (hasEpics || dialog != true)
+        {
             return;
         }
         
