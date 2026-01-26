@@ -3,6 +3,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
 using PoTool.Shared.ReleasePlanning;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Repositories;
 
@@ -13,15 +14,18 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
 {
     private readonly PoToolDbContext _context;
     private readonly IWorkItemRepository _workItemRepository;
+    private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<ReleasePlanningRepository> _logger;
 
     public ReleasePlanningRepository(
         PoToolDbContext context,
         IWorkItemRepository workItemRepository,
+        IWorkItemStateClassificationService stateClassificationService,
         ILogger<ReleasePlanningRepository> logger)
     {
         _context = context;
         _workItemRepository = workItemRepository;
+        _stateClassificationService = stateClassificationService;
         _logger = logger;
     }
 
@@ -226,6 +230,14 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
             var epic = await _workItemRepository.GetByTfsIdAsync(placement.EpicId, cancellationToken);
             var validation = await GetCachedValidationAsync(placement.EpicId, cancellationToken);
 
+            // Get state classification
+            var stateClassification = StateClassification.New;
+            if (epic != null)
+            {
+                stateClassification = await _stateClassificationService.GetClassificationAsync(
+                    epic.Type, epic.State, cancellationToken);
+            }
+
             result.Add(new EpicPlacementDto
             {
                 Id = placement.Id,
@@ -236,7 +248,8 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
                 OrderInRow = placement.OrderInRow,
                 Effort = epic?.Effort,
                 State = epic?.State ?? string.Empty,
-                ValidationIndicator = validation
+                ValidationIndicator = validation,
+                StateClassification = stateClassification
             });
         }
 

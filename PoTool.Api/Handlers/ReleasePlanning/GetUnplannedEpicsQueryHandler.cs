@@ -5,6 +5,7 @@ using PoTool.Shared.ReleasePlanning;
 using PoTool.Core.ReleasePlanning.Queries;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Handlers.ReleasePlanning;
 
@@ -12,12 +13,14 @@ namespace PoTool.Api.Handlers.ReleasePlanning;
 /// Handler for GetUnplannedEpicsQuery.
 /// Returns all Epics that are not yet placed on the Release Planning Board.
 /// Uses product-scoped hierarchical loading when products are configured.
+/// Filters out epics in Done or Removed state based on configured state mappings.
 /// </summary>
 public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEpicsQuery, IReadOnlyList<UnplannedEpicDto>>
 {
     private readonly IWorkItemRepository _workItemRepository;
     private readonly IReleasePlanningRepository _planningRepository;
     private readonly IProductRepository _productRepository;
+    private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly IMediator _mediator;
     private readonly ILogger<GetUnplannedEpicsQueryHandler> _logger;
 
@@ -25,12 +28,14 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
         IWorkItemRepository workItemRepository,
         IReleasePlanningRepository planningRepository,
         IProductRepository productRepository,
+        IWorkItemStateClassificationService stateClassificationService,
         IMediator mediator,
         ILogger<GetUnplannedEpicsQueryHandler> logger)
     {
         _workItemRepository = workItemRepository;
         _planningRepository = planningRepository;
         _productRepository = productRepository;
+        _stateClassificationService = stateClassificationService;
         _mediator = mediator;
         _logger = logger;
     }
@@ -75,10 +80,34 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
         var placedEpicIds = await _planningRepository.GetPlacedEpicIdsAsync(cancellationToken);
         var placedEpicIdsSet = new HashSet<int>(placedEpicIds);
 
-        // Filter to unplanned Epics only
-        var unplannedEpics = epics
-            .Where(e => !placedEpicIdsSet.Contains(e.TfsId))
-            .ToList();
+        // Filter to unplanned Epics only, excluding Done and Removed states
+        var unplannedEpics = new List<WorkItemDto>();
+        int excludedCount = 0;
+        foreach (var epic in epics)
+        {
+            if (placedEpicIdsSet.Contains(epic.TfsId))
+            {
+                continue;
+            }
+
+            // Check state classification
+            var classification = await _stateClassificationService.GetClassificationAsync(
+                epic.Type, epic.State, cancellationToken);
+
+            // Exclude Done and Removed epics from unplanned list
+            if (classification == StateClassification.Done || classification == StateClassification.Removed)
+            {
+                excludedCount++;
+                continue;
+            }
+
+            unplannedEpics.Add(epic);
+        }
+
+        if (excludedCount > 0)
+        {
+            _logger.LogDebug("Excluded {Count} epics in Done or Removed state from unplanned list", excludedCount);
+        }
 
         // Map to DTOs with parent Objective information
         var result = new List<UnplannedEpicDto>();
@@ -94,6 +123,10 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
             // Get cached validation
             var validation = await _planningRepository.GetCachedValidationAsync(epic.TfsId, cancellationToken);
 
+            // Get state classification
+            var stateClassification = await _stateClassificationService.GetClassificationAsync(
+                epic.Type, epic.State, cancellationToken);
+
             result.Add(new UnplannedEpicDto
             {
                 EpicId = epic.TfsId,
@@ -103,6 +136,7 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
                 Effort = epic.Effort,
                 State = epic.State,
                 ValidationIndicator = validation,
+                StateClassification = stateClassification,
                 TfsOrder = tfsOrder++
             });
         }

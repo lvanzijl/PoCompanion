@@ -1,4 +1,5 @@
 @using PoTool.Shared.ReleasePlanning
+@using PoTool.Shared.Settings
 
 <div class="epic-card-container" style="position: relative;">
     <MudPaper Class="@GetCardClass()" 
@@ -14,17 +15,34 @@
                 </MudText>
                 
                 <div class="d-flex align-center gap-1">
-                    <!-- Validation Indicator - always visible per spec -->
+                    <!-- State Classification Indicator - shows on top right -->
+                    @if (Placement.StateClassification == StateClassification.Done)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                                 Color="Color.Success"
+                                 Size="Size.Small"
+                                 Title="Done" />
+                    }
+                    else if (Placement.StateClassification == StateClassification.Removed)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.RemoveCircle" 
+                                 Color="Color.Secondary"
+                                 Size="Size.Small"
+                                 Title="Removed" />
+                    }
+                    else if (Placement.StateClassification == StateClassification.InProgress)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.PlayArrow" 
+                                 Color="Color.Info"
+                                 Size="Size.Small"
+                                 Title="In Progress" />
+                    }
+                    
+                    <!-- Validation Indicator -->
                     @if (Placement.ValidationIndicator != ValidationIndicator.None)
                     {
                         <MudIcon Icon="@GetValidationIcon()" 
                                  Color="@GetValidationColor()"
-                                 Size="Size.Small" />
-                    }
-                    else
-                    {
-                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
-                                 Color="Color.Success"
                                  Size="Size.Small" />
                     }
 
@@ -136,12 +154,12 @@
 
     private Color GetStateColor()
     {
-        return Placement.State.ToLowerInvariant() switch
+        return Placement.StateClassification switch
         {
-            "active" => Color.Primary,
-            "new" => Color.Default,
-            "resolved" or "closed" or "done" => Color.Success,
-            "removed" => Color.Secondary,
+            StateClassification.InProgress => Color.Primary,
+            StateClassification.Done => Color.Success,
+            StateClassification.Removed => Color.Secondary,
+            StateClassification.New => Color.Default,
             _ => Color.Default
         };
     }

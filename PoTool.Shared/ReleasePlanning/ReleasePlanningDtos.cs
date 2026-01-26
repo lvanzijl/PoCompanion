@@ -1,3 +1,5 @@
+using PoTool.Shared.Settings;
+
 namespace PoTool.Shared.ReleasePlanning;
 
 /// <summary>
@@ -35,6 +37,7 @@ public sealed record EpicPlacementDto
     public int? Effort { get; init; }
     public string State { get; init; } = string.Empty;
     public ValidationIndicator ValidationIndicator { get; init; } = ValidationIndicator.None;
+    public StateClassification StateClassification { get; init; } = StateClassification.New;
 }
 
 /// <summary>
@@ -115,6 +118,7 @@ public sealed record UnplannedEpicDto
     public int? Effort { get; init; }
     public string State { get; init; } = string.Empty;
     public ValidationIndicator ValidationIndicator { get; init; } = ValidationIndicator.None;
+    public StateClassification StateClassification { get; init; } = StateClassification.New;
     public int TfsOrder { get; init; }
 }
 

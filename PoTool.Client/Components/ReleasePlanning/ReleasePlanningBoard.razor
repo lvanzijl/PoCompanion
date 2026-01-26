@@ -149,7 +149,8 @@
                                                  Color="Color.Primary"
                                                  Icon="@Icons.Material.Filled.DragHandle"
                                                  Class="line-label"
-                                                 Style="pointer-events: inherit;">
+                                                 draggable="false"
+                                                 Style="pointer-events: auto; cursor: grab;">
                                             @line.Label
                                         </MudChip>
                                     </div>
@@ -176,7 +177,8 @@
                                                  Variant="Variant.Outlined"
                                                  Icon="@Icons.Material.Filled.DragHandle"
                                                  Class="line-label"
-                                                 Style="pointer-events: inherit;">
+                                                 draggable="false"
+                                                 Style="pointer-events: auto; cursor: grab;">
                                             @line.Label
                                         </MudChip>
                                     </div>
