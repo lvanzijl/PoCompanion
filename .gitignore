@@ -107,3 +107,5 @@ publish/
 /PoTool.Tests.Integration/Features/WorkItems.feature.cs
 /PoTool.Tests.Integration/Features/WorkItemsController.feature.cs
 /PoTool.Tests.Integration/Features/TfsVerification.feature.cs
+bin/
+obj/
