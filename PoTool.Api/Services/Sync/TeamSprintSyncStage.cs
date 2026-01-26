@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
 
 namespace PoTool.Api.Services.Sync;
@@ -55,12 +56,18 @@ public class TeamSprintSyncStage : ISyncStage
             }
 
             // Get all unique teams linked to these products
-            var teams = products
+            // Use SelectMany with distinct team IDs to avoid duplicates at the query level
+            var teamIds = products
                 .SelectMany(p => p.ProductTeamLinks)
-                .Select(ptl => ptl.Team)
-                .Where(t => t != null && !string.IsNullOrEmpty(t.ProjectName) && !string.IsNullOrEmpty(t.TfsTeamName))
-                .DistinctBy(t => t.Id)
+                .Select(ptl => ptl.TeamId)
+                .Distinct()
                 .ToList();
+
+            var teams = await _context.Teams
+                .Where(t => teamIds.Contains(t.Id) 
+                    && t.ProjectName != null 
+                    && t.TfsTeamName != null)
+                .ToListAsync(cancellationToken);
 
             if (!teams.Any())
             {
@@ -78,6 +85,9 @@ public class TeamSprintSyncStage : ISyncStage
             int totalSprintsSynced = 0;
             int teamsSynced = 0;
             var syncTime = DateTimeOffset.UtcNow;
+
+            // Track which teams need to be updated
+            var teamsToUpdate = new List<TeamEntity>();
 
             for (int i = 0; i < teams.Count; i++)
             {
@@ -106,9 +116,9 @@ public class TeamSprintSyncStage : ISyncStage
                         iterationsList,
                         cancellationToken);
 
-                    // Update the team's last synced timestamp
+                    // Update the team's last synced timestamp (will be saved in batch)
                     team.LastSyncedIterationsUtc = syncTime;
-                    await _context.SaveChangesAsync(cancellationToken);
+                    teamsToUpdate.Add(team);
 
                     totalSprintsSynced += iterationsList.Count;
                     teamsSynced++;
@@ -133,6 +143,12 @@ public class TeamSprintSyncStage : ISyncStage
                 // Update progress
                 var percent = (int)((i + 1) / (double)teams.Count * 100);
                 progressCallback(percent);
+            }
+
+            // Save all team updates in a single batch
+            if (teamsToUpdate.Any())
+            {
+                await _context.SaveChangesAsync(cancellationToken);
             }
 
             progressCallback(100);
