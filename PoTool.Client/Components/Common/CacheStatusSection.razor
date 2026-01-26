@@ -200,10 +200,10 @@
             
             InvokeAsync(StateHasChanged);
 
-            // Reload full state when complete
+            // Reload full state when complete to get updated counts
             if (update.IsComplete)
             {
-                _ = Task.Delay(500).ContinueWith(_ => InvokeAsync(LoadCacheStatusAsync));
+                _ = InvokeAsync(LoadCacheStatusAsync);
             }
         }
     }

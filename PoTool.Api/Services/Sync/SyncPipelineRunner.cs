@@ -23,7 +23,7 @@ public class SyncPipelineRunner : ISyncPipeline
     private readonly ConcurrentDictionary<int, CancellationTokenSource> _activeSyncs = new();
 
     // Total stages in the full pipeline as per TFS_CACHE_IMPLEMENTATION_PLAN.md
-    private const int TotalStages = 6;
+    private const int TotalStages = 7;
 
     public SyncPipelineRunner(
         IServiceScopeFactory scopeFactory,
@@ -126,10 +126,10 @@ public class SyncPipelineRunner : ISyncPipeline
             workItemResult = stage1Result;
 
             // ============================================
-            // Stage 2: Sync Pull Requests
+            // Stage 2: Sync Team Sprints
             // ============================================
-            var pullRequestStage = scope.ServiceProvider.GetRequiredService<PullRequestSyncStage>();
-            var (stage2Update, stage2Result) = await ExecuteStageAsync(pullRequestStage, syncContext, cacheStateRepo, cts.Token);
+            var teamSprintStage = scope.ServiceProvider.GetRequiredService<TeamSprintSyncStage>();
+            var (stage2Update, _) = await ExecuteStageAsync(teamSprintStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage2Update;
 
             if (stage2Update.HasFailed)
@@ -139,42 +139,43 @@ public class SyncPipelineRunner : ISyncPipeline
                     workItemResult?.NewWatermark, null, null, cts.Token);
                 yield break;
             }
-            pullRequestResult = stage2Result;
 
             // ============================================
-            // Stage 3: Sync Pipelines
+            // Stage 3: Sync Pull Requests
             // ============================================
-            var pipelineStage = scope.ServiceProvider.GetRequiredService<PipelineSyncStage>();
-            var (stage3Update, stage3Result) = await ExecuteStageAsync(pipelineStage, syncContext, cacheStateRepo, cts.Token);
+            var pullRequestStage = scope.ServiceProvider.GetRequiredService<PullRequestSyncStage>();
+            var (stage3Update, stage3Result) = await ExecuteStageAsync(pullRequestStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage3Update;
 
             if (stage3Update.HasFailed)
             {
+                // Stage 1 watermark should still be committed
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
-                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, null, cts.Token);
+                    workItemResult?.NewWatermark, null, null, cts.Token);
                 yield break;
             }
-            pipelineResult = stage3Result;
+            pullRequestResult = stage3Result;
 
             // ============================================
-            // Stage 4: Compute Validations
+            // Stage 4: Sync Pipelines
             // ============================================
-            var validationStage = scope.ServiceProvider.GetRequiredService<ValidationComputeStage>();
-            var (stage4Update, _) = await ExecuteStageAsync(validationStage, syncContext, cacheStateRepo, cts.Token);
+            var pipelineStage = scope.ServiceProvider.GetRequiredService<PipelineSyncStage>();
+            var (stage4Update, stage4Result) = await ExecuteStageAsync(pipelineStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage4Update;
 
             if (stage4Update.HasFailed)
             {
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
-                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, pipelineResult?.NewWatermark, cts.Token);
+                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, null, cts.Token);
                 yield break;
             }
+            pipelineResult = stage4Result;
 
             // ============================================
-            // Stage 5: Compute Metrics
+            // Stage 5: Compute Validations
             // ============================================
-            var metricsStage = scope.ServiceProvider.GetRequiredService<MetricsComputeStage>();
-            var (stage5Update, _) = await ExecuteStageAsync(metricsStage, syncContext, cacheStateRepo, cts.Token);
+            var validationStage = scope.ServiceProvider.GetRequiredService<ValidationComputeStage>();
+            var (stage5Update, _) = await ExecuteStageAsync(validationStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage5Update;
 
             if (stage5Update.HasFailed)
@@ -185,7 +186,21 @@ public class SyncPipelineRunner : ISyncPipeline
             }
 
             // ============================================
-            // Stage 6: Finalize Cache
+            // Stage 6: Compute Metrics
+            // ============================================
+            var metricsStage = scope.ServiceProvider.GetRequiredService<MetricsComputeStage>();
+            var (stage6Update, _) = await ExecuteStageAsync(metricsStage, syncContext, cacheStateRepo, cts.Token);
+            yield return stage6Update;
+
+            if (stage6Update.HasFailed)
+            {
+                await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
+                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, pipelineResult?.NewWatermark, cts.Token);
+                yield break;
+            }
+
+            // ============================================
+            // Stage 7: Finalize Cache
             // ============================================
             var finalizeStage = scope.ServiceProvider.GetRequiredService<FinalizeCacheStage>();
 
@@ -203,10 +218,10 @@ public class SyncPipelineRunner : ISyncPipeline
             finalizeStage.PullRequestWatermark = pullRequestResult?.NewWatermark;
             finalizeStage.PipelineWatermark = pipelineResult?.NewWatermark;
 
-            var (stage6Update, _) = await ExecuteStageAsync(finalizeStage, syncContext, cacheStateRepo, cts.Token);
-            yield return stage6Update;
+            var (stage7Update, _) = await ExecuteStageAsync(finalizeStage, syncContext, cacheStateRepo, cts.Token);
+            yield return stage7Update;
 
-            if (stage6Update.HasFailed)
+            if (stage7Update.HasFailed)
             {
                 yield break;
             }
