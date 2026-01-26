@@ -332,4 +332,12 @@ public class PlanningController : ControllerBase
 /// <summary>
 /// Request model for deleting placements.
 /// </summary>
-public record DeletePlacementsRequest(IReadOnlyList<int> PlacementIds);
+public record DeletePlacementsRequest
+{
+    /// <summary>
+    /// List of placement IDs to delete.
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.Required]
+    [System.ComponentModel.DataAnnotations.MinLength(1)]
+    public required IReadOnlyList<int> PlacementIds { get; init; }
+}

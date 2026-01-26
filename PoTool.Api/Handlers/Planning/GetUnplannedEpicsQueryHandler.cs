@@ -2,7 +2,6 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
 using PoTool.Core.Planning.Queries;
-using PlanningDtos = PoTool.Shared.Planning;
 using PoTool.Shared.Planning;
 
 namespace PoTool.Api.Handlers.Planning;

@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Planning.Commands;
-using PlanningDtos = PoTool.Shared.Planning;
 using PoTool.Shared.Planning;
 
 namespace PoTool.Api.Handlers.Planning;
