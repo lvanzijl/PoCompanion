@@ -1,3 +1,6 @@
+DEPRECATED, DONT USE ANYMORE
+
+
 # Feature: Release Planning Board (Agent-Ready Specification)
 
 > This document is written to be consumed by **Copilot coding agents**.  
