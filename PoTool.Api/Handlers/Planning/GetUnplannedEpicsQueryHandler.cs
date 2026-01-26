@@ -55,11 +55,11 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
         var rootWorkItemIds = products.Select(p => p.BacklogRootWorkItemId).ToHashSet();
 
         // Get all work items that are descendants of the backlog roots
-        // We'll need to do this in a more flexible way to find all epics in the hierarchy
-        var allWorkItems = await _dbContext.WorkItems
+        // Load all potentially relevant work items in one query to avoid N+1
+        var relevantWorkItemIds = await _dbContext.WorkItems
             .Where(w => rootWorkItemIds.Contains(w.TfsId) || rootWorkItemIds.Contains(w.ParentTfsId ?? 0))
-            .Select(w => new { w.TfsId, w.ParentTfsId, w.Type })
-            .ToListAsync(cancellationToken);
+            .Select(w => w.TfsId)
+            .ToHashSetAsync(cancellationToken);
 
         // Build a mapping of TfsId to BacklogRootWorkItemId by traversing up the hierarchy
         var workItemToRoot = new Dictionary<int, int>();
@@ -69,12 +69,18 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
             workItemToRoot[root] = root;
         }
 
+        // Load parent information for epics in batch
+        var parentInfo = await _dbContext.WorkItems
+            .Where(w => relevantWorkItemIds.Contains(w.TfsId))
+            .Select(w => new { w.TfsId, w.ParentTfsId })
+            .ToDictionaryAsync(w => w.TfsId, w => w.ParentTfsId, cancellationToken);
+
         // Add immediate children
-        foreach (var wi in allWorkItems)
+        foreach (var wi in parentInfo)
         {
-            if (wi.ParentTfsId.HasValue && workItemToRoot.ContainsKey(wi.ParentTfsId.Value))
+            if (wi.Value.HasValue && workItemToRoot.ContainsKey(wi.Value.Value))
             {
-                workItemToRoot[wi.TfsId] = workItemToRoot[wi.ParentTfsId.Value];
+                workItemToRoot[wi.Key] = workItemToRoot[wi.Value.Value];
             }
         }
 
@@ -104,15 +110,10 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
             {
                 backlogRoot = rootId;
             }
-            else if (epic.ParentTfsId.HasValue)
+            else if (epic.ParentTfsId.HasValue && parentInfo.TryGetValue(epic.ParentTfsId.Value, out var grandParentId))
             {
-                // Try to find parent's parent
-                var parent = await _dbContext.WorkItems
-                    .Where(w => w.TfsId == epic.ParentTfsId.Value)
-                    .Select(w => new { w.ParentTfsId })
-                    .FirstOrDefaultAsync(cancellationToken);
-                
-                if (parent?.ParentTfsId.HasValue == true && workItemToRoot.TryGetValue(parent.ParentTfsId.Value, out rootId))
+                // Check if grandparent is in our mapping
+                if (grandParentId.HasValue && workItemToRoot.TryGetValue(grandParentId.Value, out rootId))
                 {
                     backlogRoot = rootId;
                 }

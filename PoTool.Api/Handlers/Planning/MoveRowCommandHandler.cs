@@ -68,16 +68,6 @@ public sealed class MoveRowCommandHandler : ICommandHandler<MoveRowCommand, RowO
         var oldOrder = rowToMove.DisplayOrder;
         var newOrder = command.InsertBelow ? targetRow.DisplayOrder + 1 : targetRow.DisplayOrder;
 
-        // If moving within the same position, no change needed
-        if (oldOrder == newOrder || (command.InsertBelow && oldOrder == targetRow.DisplayOrder + 1))
-        {
-            return new RowOperationResultDto
-            {
-                Success = true,
-                RowId = rowToMove.Id
-            };
-        }
-
         // Get all rows to reorder
         var allRows = await _dbContext.BoardRows
             .OrderBy(r => r.DisplayOrder)
@@ -99,6 +89,18 @@ public sealed class MoveRowCommandHandler : ICommandHandler<MoveRowCommand, RowO
 
         // Clamp insertion index
         insertIndex = Math.Max(0, Math.Min(insertIndex, allRows.Count));
+
+        // Check if the position would actually change
+        var currentIndex = oldOrder;
+        if (currentIndex == insertIndex)
+        {
+            // No change needed
+            return new RowOperationResultDto
+            {
+                Success = true,
+                RowId = rowToMove.Id
+            };
+        }
 
         // Insert at new position
         allRows.Insert(insertIndex, rowToMove);
