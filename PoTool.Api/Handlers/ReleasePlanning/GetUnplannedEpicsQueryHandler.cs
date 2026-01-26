@@ -82,6 +82,7 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
 
         // Filter to unplanned Epics only, excluding Done and Removed states
         var unplannedEpics = new List<WorkItemDto>();
+        int excludedCount = 0;
         foreach (var epic in epics)
         {
             if (placedEpicIdsSet.Contains(epic.TfsId))
@@ -96,12 +97,16 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
             // Exclude Done and Removed epics from unplanned list
             if (classification == StateClassification.Done || classification == StateClassification.Removed)
             {
-                _logger.LogDebug("Excluding epic {EpicId} '{Title}' in state '{State}' (classification: {Classification}) from unplanned list",
-                    epic.TfsId, epic.Title, epic.State, classification);
+                excludedCount++;
                 continue;
             }
 
             unplannedEpics.Add(epic);
+        }
+
+        if (excludedCount > 0)
+        {
+            _logger.LogDebug("Excluded {Count} epics in Done or Removed state from unplanned list", excludedCount);
         }
 
         // Map to DTOs with parent Objective information

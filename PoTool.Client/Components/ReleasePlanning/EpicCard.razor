@@ -16,13 +16,19 @@
                 
                 <div class="d-flex align-center gap-1">
                     <!-- State Classification Indicator - shows on top right -->
-                    @if (Placement.StateClassification == StateClassification.Done || 
-                         Placement.StateClassification == StateClassification.Removed)
+                    @if (Placement.StateClassification == StateClassification.Done)
                     {
                         <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
                                  Color="Color.Success"
                                  Size="Size.Small"
-                                 Title="@(Placement.StateClassification == StateClassification.Done ? "Done" : "Removed")" />
+                                 Title="Done" />
+                    }
+                    else if (Placement.StateClassification == StateClassification.Removed)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.RemoveCircle" 
+                                 Color="Color.Secondary"
+                                 Size="Size.Small"
+                                 Title="Removed" />
                     }
                     else if (Placement.StateClassification == StateClassification.InProgress)
                     {
