@@ -119,8 +119,9 @@ public static class ApiServiceCollectionExtensions
         // Register Work Item State Classification service
         services.AddScoped<IWorkItemStateClassificationService, WorkItemStateClassificationService>();
 
-        // Register Sync Pipeline services (Stages 1-6)
+        // Register Sync Pipeline services (Stages 1-7)
         services.AddScoped<WorkItemSyncStage>();
+        services.AddScoped<TeamSprintSyncStage>();
         services.AddScoped<PullRequestSyncStage>();
         services.AddScoped<PipelineSyncStage>();
         services.AddScoped<ValidationComputeStage>();
