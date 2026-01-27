@@ -35,7 +35,7 @@
   - Sync logic uses local retrieval timestamps for incremental sync, risking missed updates if retrieval order diverges from server change order. A watermark is the last successful change timestamp used to drive incremental sync.  
   - A TODO hints at this but no invariant enforces correctness.
 - **Potential duplicate upserts in sync stage**  
-  - Work items are processed per DTO without de-duplication; duplicate IDs in the batch can cause multiple updates and nondeterministic last-write wins.
+  - Work items are processed per DTO without de-duplication; duplicate IDs in the batch can cause multiple updates and non-deterministic last-write wins.
 - **Repeated data loads in FlowPanel**  
   - `OnInitializedAsync` and `OnParametersSetAsync` both trigger loads without cancellation or version checks, creating race conditions and stale UI data.
 
@@ -51,7 +51,7 @@
 - **RealTfsClient is a monolith**  
   - One class owns URL building, throttling, multiple resource types, batching, and retries. This violates single-responsibility and will be difficult to evolve safely; it should be split into resource-focused clients.
 - **Sync stage contains ad-hoc mapping and persistence logic**  
-  - Mapping and DB updates live directly in the stage, preventing reuse and isolatable tests.
+  - Mapping and DB updates live directly in the stage, preventing reuse and isolable tests.
 - **UI components include networking details**  
   - When APIs evolve, every component becomes a refactor hot spot, raising risk of regression.
 
