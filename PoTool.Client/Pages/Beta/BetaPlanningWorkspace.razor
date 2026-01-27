@@ -2,13 +2,10 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.Planning
 @using PoTool.Client.ApiClient
-@using System.Web
+@inherits BetaWorkspaceBase
 @inject INavigationContextService NavigationContextService
-@inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject WorkItemService WorkItemService
-@inject NavigationManager NavigationManager
-@inject ISnackbar Snackbar
 
 <PageTitle>Planning (Future) - Beta - PO Companion</PageTitle>
 
@@ -251,9 +248,6 @@
     private List<ProductDto> _products = new();
     private List<BreadcrumbItem> _breadcrumbs = new();
     
-    // Context propagation
-    private int? _productId;
-    
     // Epic invalid items detection
     private int _epicsWithInvalidItems = 0;
     private List<EpicWithIssues> _epicItemsWithIssues = new();
@@ -262,26 +256,27 @@
     {
         try
         {
-            // Parse productId from query string for context propagation
-            ParseQueryParameters();
+            // Parse context from query string (inherited from base class)
+            ParseContextQueryParameters();
             
-            var activeProfile = await ProfileService.GetActiveProfileAsync();
-            if (activeProfile == null)
+            if (!await EnsureProfileAsync(WorkspaceRoutes.BetaPlanningWorkspace))
             {
-                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(WorkspaceRoutes.BetaPlanningWorkspace)}");
                 return;
             }
             
-            _activeProfileId = activeProfile.Id;
-            ProfileService.SetCachedActiveProfileId(activeProfile.Id);
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            _activeProfileId = activeProfile?.Id;
             
             // Load products
-            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            if (_activeProfileId.HasValue)
+            {
+                _products = (await ProductService.GetProductsByOwnerAsync(_activeProfileId.Value)).ToList();
+            }
             
             // If productId is specified via URL, preselect it
-            if (_productId.HasValue && _products.Any(p => p.Id == _productId.Value))
+            if (ProductId.HasValue && _products.Any(p => p.Id == ProductId.Value))
             {
-                _selectedProductId = _productId;
+                _selectedProductId = ProductId;
             }
             
             // Detect epics with invalid items
@@ -297,37 +292,6 @@
         {
             _isLoading = false;
         }
-    }
-    
-    private void ParseQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
-        
-        if (int.TryParse(queryParams["productId"], out var productId))
-        {
-            _productId = productId;
-        }
-    }
-    
-    /// <summary>
-    /// Builds query string with product context if set.
-    /// </summary>
-    private string BuildContextQuery(string? additionalParams = null)
-    {
-        var parameters = new List<string>();
-        
-        if (_productId.HasValue)
-        {
-            parameters.Add($"productId={_productId.Value}");
-        }
-        
-        if (!string.IsNullOrEmpty(additionalParams))
-        {
-            parameters.Add(additionalParams);
-        }
-        
-        return parameters.Count > 0 ? "?" + string.Join("&", parameters) : "";
     }
     
     private async Task LoadEpicInvalidItemsAsync()
@@ -395,11 +359,6 @@
     {
         _selectedProductId = productId;
         return Task.CompletedTask;
-    }
-    
-    private void NavigateToBetaHome()
-    {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
     }
     
     private void NavigateToVelocityTrend()

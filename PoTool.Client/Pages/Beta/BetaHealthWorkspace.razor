@@ -2,12 +2,9 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.BacklogHealth
 @using PoTool.Client.ApiClient
-@using System.Web
+@inherits BetaWorkspaceBase
 @inject INavigationContextService NavigationContextService
-@inject IProfileService ProfileService
 @inject WorkItemService WorkItemService
-@inject NavigationManager NavigationManager
-@inject ISnackbar Snackbar
 
 <PageTitle>Health (Now) - Beta - PO Companion</PageTitle>
 
@@ -218,9 +215,6 @@
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
     
-    // Context propagation
-    private int? _productId;
-    
     // Validation issue counts
     private int _missingEffortCount;
     private int _missingDescriptionCount;
@@ -232,18 +226,16 @@
     {
         try
         {
-            // Parse productId from query string for context propagation
-            ParseQueryParameters();
+            // Parse context from query string (inherited from base class)
+            ParseContextQueryParameters();
             
-            var activeProfile = await ProfileService.GetActiveProfileAsync();
-            if (activeProfile == null)
+            if (!await EnsureProfileAsync(WorkspaceRoutes.BetaHealthWorkspace))
             {
-                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(WorkspaceRoutes.BetaHealthWorkspace)}");
                 return;
             }
             
-            _profileId = activeProfile.Id;
-            ProfileService.SetCachedActiveProfileId(_profileId);
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            _profileId = activeProfile?.Id;
             
             await LoadValidationCountsAsync();
             UpdateBreadcrumbs();
@@ -256,37 +248,6 @@
         {
             _isLoading = false;
         }
-    }
-    
-    private void ParseQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
-        
-        if (int.TryParse(queryParams["productId"], out var productId))
-        {
-            _productId = productId;
-        }
-    }
-    
-    /// <summary>
-    /// Builds query string with product context if set.
-    /// </summary>
-    private string BuildContextQuery(string? additionalParams = null)
-    {
-        var parameters = new List<string>();
-        
-        if (_productId.HasValue)
-        {
-            parameters.Add($"productId={_productId.Value}");
-        }
-        
-        if (!string.IsNullOrEmpty(additionalParams))
-        {
-            parameters.Add(additionalParams);
-        }
-        
-        return parameters.Count > 0 ? "?" + string.Join("&", parameters) : "";
     }
     
     private async Task LoadValidationCountsAsync()
@@ -354,11 +315,6 @@
             new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
             new("Health (Now)", null, disabled: true, icon: Icons.Material.Filled.HealthAndSafety)
         };
-    }
-    
-    private void NavigateToBetaHome()
-    {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
     }
     
     private void NavigateToWorkItemExplorer(string validationType)
