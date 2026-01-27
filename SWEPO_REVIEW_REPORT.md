@@ -49,7 +49,7 @@
 
 ## 5. Maintainability & Evolution
 - **RealTfsClient is a monolith**  
-  - One class owns URL building, throttling, multiple resource types, batching, and retries. It will be difficult to modify safely as more endpoints are added.
+  - One class owns URL building, throttling, multiple resource types, batching, and retries. This violates single-responsibility and will be difficult to evolve safely; it should be split into resource-focused clients.
 - **Sync stage contains ad-hoc mapping and persistence logic**  
   - Mapping and DB updates live directly in the stage, preventing reuse and isolatable tests.
 - **UI components include networking details**  
@@ -78,9 +78,9 @@
    - Model effort changes, team availability, and scope shifts with immediate forecast impact.
 3. **Quality gate trend dashboard** (not in TFS)  
    - Track validation rule violations over time and correlate with delivery outcomes.
-4. **Goal-to-initiative traceability graph**  
+4. **Goal-to-initiative traceability graph** (not in TFS)  
    - Visualize strategic impact and detect orphaned work items.
-5. **PR review cycle friction analysis**  
+5. **PR review cycle friction analysis** (not in TFS)  
    - Identify long-running review steps and suggest policy changes.
 
 ## First-Action Plan (ordered)
