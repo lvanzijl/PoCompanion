@@ -4,6 +4,7 @@
 @using PoTool.Client.Components.Settings
 @using PoTool.Client.ApiClient
 @using ProfilePictureType = PoTool.Shared.Settings.ProfilePictureType
+@using System.Web
 @inject IProfileService ProfileService
 @inject SettingsService SettingsService
 @inject IDialogService DialogService
@@ -94,10 +95,20 @@
     private int? _activeProfileId;
     private bool _isLoading = true;
     private ErrorResponse? _errorResponse;
+    private string? _returnUrl;
 
     protected override async Task OnInitializedAsync()
     {
+        // Parse return URL from query parameters
+        ParseQueryParameters();
         await LoadProfilesAsync();
+    }
+    
+    private void ParseQueryParameters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+        _returnUrl = queryParams["returnUrl"];
     }
 
     private async Task LoadProfilesAsync()
@@ -135,9 +146,10 @@
             
             Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
             
-            Console.WriteLine($"[ProfilesHome] Navigating to Landing page for profile: {profile.Name}");
-            // Navigate to Landing page to choose intent
-            NavigationManager.NavigateTo("/landing");
+            // Navigate to return URL if provided, otherwise to Landing page
+            var targetUrl = !string.IsNullOrEmpty(_returnUrl) ? _returnUrl : "/landing";
+            Console.WriteLine($"[ProfilesHome] Navigating to {targetUrl} for profile: {profile.Name}");
+            NavigationManager.NavigateTo(targetUrl);
         }
         catch (Exception ex)
         {

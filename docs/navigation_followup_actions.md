@@ -78,9 +78,10 @@ This document tracks missing or incomplete capabilities identified during the Be
 | Field | Value |
 |-------|-------|
 | **Title** | Bug Detail — Implement save changes to backend |
-| **Description** | Connect the save button to the work item update API to persist severity and tag changes to TFS. |
+| **Description** | Connect the save button to the work item update API to persist severity and tag changes to TFS. **Note:** Backend currently lacks a direct work item field update API. This requires backend changes before frontend implementation. |
 | **Used in** | Bug Detail end-station |
-| **Complexity** | 2 |
+| **Complexity** | 2 (frontend) + 3 (backend) |
+| **Status** | ⏸️ Blocked — Requires backend API changes |
 
 ---
 
@@ -108,7 +109,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ---
 
-### 9. Beta Home — Real Health Signals
+### 9. Beta Home — Real Health Signals ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -116,6 +117,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | Replace placeholder health indicators with real-time signals from the health calculation service. Show aggregate health status, trend indicators, and sync state. |
 | **Used in** | Beta Home overview section |
 | **Complexity** | 3 |
+| **Status** | ✅ Implemented - Shows real validation issue counts, active bug counts, and total work items |
 
 ---
 
@@ -176,7 +178,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ---
 
-### 15. Deep Link Return URL Handling
+### 15. Deep Link Return URL Handling ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -184,6 +186,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | When redirected to profile selection due to missing PO context, implement return URL handling to resume navigation after profile selection. |
 | **Used in** | All Beta pages when accessed without profile |
 | **Complexity** | 2 |
+| **Status** | ✅ Implemented - ProfilesHome now parses returnUrl and navigates back after profile selection |
 
 ---
 
@@ -215,11 +218,11 @@ This document tracks missing or incomplete capabilities identified during the Be
 | Complexity | Count | Completed |
 |------------|-------|-----------|
 | 1 | 0 | 0 |
-| 2 | 8 | 6 |
-| 3 | 5 | 2 |
+| 2 | 8 | 7 |
+| 3 | 5 | 3 |
 | 4 | 2 | 0 |
 | 5 | 1 | 0 |
-| **Total** | **17** | **8** |
+| **Total** | **17** | **10** |
 
 **Completed Items:**
 - #1 Work Item Explorer — Root Item Parameter Support ✅
@@ -228,9 +231,14 @@ This document tracks missing or incomplete capabilities identified during the Be
 - #5 Bug Overview — Period Filtering ✅
 - #7 PR Overview — Real Data Integration ✅
 - #8 Pipeline Overview — Real Data Integration ✅
+- #9 Beta Home — Real Health Signals ✅
 - #10 Health Workspace — Validation Issue Counts ✅
 - #11 Trends Workspace — Velocity Chart Integration ✅
+- #15 Profile Selection — Return URL Handling ✅
 - #17 "All Products/Teams" Toggle ✅
+
+**Blocked Items:**
+- #6 Bug Detail — Save Changes (Requires backend API changes)
 
 ---
 

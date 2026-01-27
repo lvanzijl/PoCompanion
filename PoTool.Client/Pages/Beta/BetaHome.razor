@@ -1,7 +1,9 @@
 @page "/beta"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
 @inject INavigationContextService NavigationContextService
 @inject IProfileService ProfileService
+@inject WorkItemService WorkItemService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -37,23 +39,30 @@
                     High-level signals: health, trends, sync state
                 </MudText>
                 
-                @* Placeholder for overview signals - to be expanded *@
+                @* Real health signals from data *@
                 <MudGrid>
                     <MudItem xs="12" sm="4">
                         <MudCard Elevation="1" Class="pa-3">
                             <MudStack AlignItems="AlignItems.Center">
-                                <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Size="Size.Large" Color="Color.Success" />
+                                <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Size="Size.Large" Color="@GetHealthStatusColor()" />
                                 <MudText Typo="Typo.subtitle2">Health Status</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Overview available</MudText>
+                                @if (_totalValidationIssues == 0)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Success">All items valid</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Warning">@_workItemsWithIssues items with issues</MudText>
+                                }
                             </MudStack>
                         </MudCard>
                     </MudItem>
                     <MudItem xs="12" sm="4">
                         <MudCard Elevation="1" Class="pa-3">
                             <MudStack AlignItems="AlignItems.Center">
-                                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Large" Color="Color.Info" />
-                                <MudText Typo="Typo.subtitle2">Trends</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Last 6 months</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.BugReport" Size="Size.Large" Color="@GetBugStatusColor()" />
+                                <MudText Typo="Typo.subtitle2">Active Bugs</MudText>
+                                <MudText Typo="Typo.caption" Color="@GetBugStatusColor()">@_activeBugCount open</MudText>
                             </MudStack>
                         </MudCard>
                     </MudItem>
@@ -61,8 +70,8 @@
                         <MudCard Elevation="1" Class="pa-3">
                             <MudStack AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@Icons.Material.Filled.Sync" Size="Size.Large" Color="Color.Primary" />
-                                <MudText Typo="Typo.subtitle2">Sync State</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Data current</MudText>
+                                <MudText Typo="Typo.subtitle2">Work Items</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@_totalWorkItems total</MudText>
                             </MudStack>
                         </MudCard>
                     </MudItem>
@@ -193,6 +202,12 @@
 @code {
     private bool _isLoading = true;
     private int? _profileId;
+    
+    // Health signal data
+    private int _totalWorkItems = 0;
+    private int _totalValidationIssues = 0;
+    private int _workItemsWithIssues = 0;
+    private int _activeBugCount = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -211,6 +226,9 @@
             
             _profileId = activeProfile.Id;
             ProfileService.SetCachedActiveProfileId(_profileId);
+            
+            // Load health signals
+            await LoadHealthSignalsAsync();
         }
         catch (Exception ex)
         {
@@ -255,5 +273,49 @@
     private void NavigateToLegacyLanding()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.Landing);
+    }
+    
+    private async Task LoadHealthSignalsAsync()
+    {
+        try
+        {
+            // Load work items with validation data
+            var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync();
+            var workItemsList = workItemsWithValidation.ToList();
+            
+            _totalWorkItems = workItemsList.Count;
+            
+            // Count items with validation issues (unique work items)
+            var itemsWithIssues = workItemsList.Where(wi => wi.ValidationIssues?.Count > 0).ToList();
+            _workItemsWithIssues = itemsWithIssues.Count;
+            _totalValidationIssues = itemsWithIssues.Sum(wi => wi.ValidationIssues?.Count ?? 0);
+            
+            // Count active bugs
+            var allWorkItems = await WorkItemService.GetAllAsync();
+            _activeBugCount = allWorkItems.Count(wi => 
+                wi.Type?.Equals("Bug", StringComparison.OrdinalIgnoreCase) == true &&
+                wi.State?.Equals("Closed", StringComparison.OrdinalIgnoreCase) != true &&
+                wi.State?.Equals("Resolved", StringComparison.OrdinalIgnoreCase) != true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading health signals: {ex.Message}", Severity.Warning);
+            // Keep defaults (0s) if loading fails
+        }
+    }
+    
+    private Color GetHealthStatusColor()
+    {
+        if (_workItemsWithIssues == 0) return Color.Success;
+        if (_workItemsWithIssues <= 10) return Color.Warning;
+        return Color.Error;
+    }
+    
+    private Color GetBugStatusColor()
+    {
+        if (_activeBugCount == 0) return Color.Success;
+        if (_activeBugCount <= 5) return Color.Info;
+        if (_activeBugCount <= 15) return Color.Warning;
+        return Color.Error;
     }
 }
