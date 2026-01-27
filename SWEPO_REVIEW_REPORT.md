@@ -18,7 +18,7 @@
   - **What could break:** CI will be red once tests are enabled, and critical validation logic remains unverified.  
   - **Fix (conceptual):** Replace NotImplementedException placeholders with real assertions or remove tests until the behavior is defined.
 - **Compact UI wrapper policy is violated in Settings team picker**  
-  - **Why it is a problem:** Fluent_UI_compat_rules.md requires compact wrappers; raw MudSelect/MudCheckBox usage introduces density drift.  
+  - **Why it is a problem:** Fluent_UI_compat_rules.md §Wrapper Component Policy requires compact wrappers; raw MudSelect/MudCheckBox usage introduces density drift.  
   - **What could break:** Inconsistent UX density and future theme divergence.  
   - **Fix (conceptual):** Replace raw Mud components with Compact* wrappers or document explicit justification.
 
@@ -32,7 +32,7 @@
 
 ## 3. State & Data Integrity
 - **Watermark uses RetrievedAt instead of TFS ChangedDate**  
-  - Sync logic uses local retrieval timestamps for incremental sync, risking missed updates if retrieval order diverges from server change order.  
+  - Sync logic uses local retrieval timestamps for incremental sync, risking missed updates if retrieval order diverges from server change order. A watermark is the last successful change timestamp used to drive incremental sync.  
   - A TODO hints at this but no invariant enforces correctness.
 - **Potential duplicate upserts in sync stage**  
   - Work items are processed per DTO without de-duplication; duplicate IDs in the batch can cause multiple updates and nondeterministic last-write wins.
@@ -71,16 +71,16 @@
 3. **Split RealTfsClient by resource boundary**  
   - Introduce focused collaborators (WorkItemsClient, PullRequestsClient, PipelinesClient) to reduce cognitive load.
 
-## Feature Wishlist (PO, ordered)
-1. **Cross-team dependency risk heatmap** (not in TFS)  
+## Feature Wishlist (PO, ordered; all items not in TFS)
+1. **Cross-team dependency risk heatmap**  
    - Visualize and score dependency chains across teams, highlighting high-risk bottlenecks.
-2. **What-if capacity simulator** (not in TFS)  
+2. **What-if capacity simulator**  
    - Model effort changes, team availability, and scope shifts with immediate forecast impact.
-3. **Quality gate trend dashboard** (not in TFS)  
+3. **Quality gate trend dashboard**  
    - Track validation rule violations over time and correlate with delivery outcomes.
-4. **Goal-to-initiative traceability graph** (not in TFS)  
+4. **Goal-to-initiative traceability graph**  
    - Visualize strategic impact and detect orphaned work items.
-5. **PR review cycle friction analysis** (not in TFS)  
+5. **PR review cycle friction analysis**  
    - Identify long-running review steps and suggest policy changes.
 
 ## First-Action Plan (ordered)
