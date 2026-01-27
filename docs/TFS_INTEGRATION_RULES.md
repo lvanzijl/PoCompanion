@@ -29,16 +29,12 @@ Any deviation requires an explicit, documented exception.
 ## 3. Authentication and Authorization
 
 1. Authentication to TFS MUST use one of the supported mechanisms:
-   - Personal Access Tokens (PAT)
    - NTLM authentication (on-prem environments)
 
 2. The chosen authentication mechanism:
    - MUST be configurable
    - MUST NOT be hardcoded
    - MUST NOT leak outside the integration layer
-
-3. PAT handling is governed exclusively by:
-   PAT_STORAGE_BEST_PRACTICES.md
 
    Rules:
    - PATs MUST be stored client-side only
@@ -320,7 +316,6 @@ The following are forbidden:
 
 - This document is authoritative for TFS integration rules
 - Roadmaps, plans, and summaries are non-authoritative
-- Credential handling: see PAT_STORAGE_BEST_PRACTICES.md
 - Architectural constraints: see ARCHITECTURE_RULES.md
 
 If a document conflicts with this one, this document prevails.
