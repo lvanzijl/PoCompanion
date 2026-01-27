@@ -32,7 +32,7 @@ public class ServiceCollectionTests
         services.AddPoToolApiServices(configuration, isDevelopment: true);
 
         // Assert - Verify both concrete and interface registrations work
-        var serviceProvider = services.BuildServiceProvider();
+        using var serviceProvider = services.BuildServiceProvider();
         
         // Should be able to resolve concrete type
         var concreteService = serviceProvider.GetService<TfsConfigurationService>();
@@ -66,7 +66,7 @@ public class ServiceCollectionTests
         services.AddPoToolApiServices(configuration, isDevelopment: true);
 
         // Assert - Should be able to build service provider without DI exceptions
-        var serviceProvider = services.BuildServiceProvider();
+        using var serviceProvider = services.BuildServiceProvider();
         
         // Should be able to resolve WorkItemStateClassificationService which depends on TfsConfigurationService
         var stateClassificationService = serviceProvider.GetService<IWorkItemStateClassificationService>();
