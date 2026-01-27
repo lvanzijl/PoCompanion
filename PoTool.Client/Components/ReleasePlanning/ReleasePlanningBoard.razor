@@ -6,7 +6,7 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
-<div class="release-planning-board pa-4" @onkeydown="@HandleKeyDown" tabindex="0" @ref="_boardElement">
+<div class="release-planning-board pa-4" @onkeydown="@HandleKeyDown" tabindex="0" @ref="_boardElement" role="region" aria-label="Release planning board">
     <MudPaper Elevation="0">
     @if (_isLoading)
     {
@@ -676,7 +676,14 @@
     
     private async Task FocusBoardAsync()
     {
-        await _boardElement.FocusAsync();
+        try
+        {
+            await _boardElement.FocusAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            Logger.LogDebug(ex, "Unable to focus release planning board");
+        }
     }
 
     /// <summary>
