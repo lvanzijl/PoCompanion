@@ -308,6 +308,9 @@ public partial class RealTfsClient
             // Extract effort field with robust parsing
             int? effort = ParseEffortField(fields);
 
+            // Extract created date from TFS (System.CreatedDate)
+            DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
+
             var workItem = new WorkItemDto(
                 TfsId: id,
                 Type: type,
@@ -319,7 +322,8 @@ public partial class RealTfsClient
                 JsonPayload: item.GetRawText(), // Note: Contains fields only, not relations (TFS Server 2022 limitation)
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: effort,
-                Description: description
+                Description: description,
+                CreatedDate: createdDate
             );
 
             _logger.LogInformation("Retrieved work item {WorkItemId} from TFS: {Title}", id, title);
@@ -541,6 +545,9 @@ public partial class RealTfsClient
                     // Handle int, double, and string values safely
                     int? effort = ParseEffortField(fields);
 
+                    // Extract created date from TFS (System.CreatedDate)
+                    DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
+
                     results.Add(new WorkItemDto(
                         TfsId: id,
                         Type: type,
@@ -552,7 +559,8 @@ public partial class RealTfsClient
                         JsonPayload: item.GetRawText(),
                         RetrievedAt: DateTimeOffset.UtcNow,
                         Effort: effort,
-                        Description: description
+                        Description: description,
+                        CreatedDate: createdDate
                     ));
                 }
 

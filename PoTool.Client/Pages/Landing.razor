@@ -133,6 +133,22 @@
                 </MudButton>
             </MudStack>
 
+            @* Beta Navigation Entry Point *@
+            <MudPaper Elevation="2" Class="pa-4 mt-6" Style="background: linear-gradient(135deg, rgba(255,152,0,0.1) 0%, rgba(255,193,7,0.05) 100%); border: 1px solid var(--mud-palette-warning);">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="3">
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
+                    <MudText Typo="Typo.body1">
+                        Try the new workspace-based navigation
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Warning"
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               OnClick="NavigateToBeta">
+                        Enter Beta
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+
             @* Cache Status Section *@
             @if (_profileId.HasValue)
             {
@@ -213,5 +229,10 @@
     {
         NavigationContextService.ClearContext();
         NavigationManager.NavigateTo(WorkspaceRoutes.Profiles);
+    }
+
+    private void NavigateToBeta()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
     }
 }

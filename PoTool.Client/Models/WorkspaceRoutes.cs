@@ -41,6 +41,65 @@ public static class WorkspaceRoutes
     /// </summary>
     public const string CommunicationWorkspace = "/workspace/communication";
 
+    #region Beta Navigation Routes
+
+    /// <summary>
+    /// Beta Home route - entry point for new workspace-based navigation.
+    /// </summary>
+    public const string BetaHome = "/beta";
+
+    /// <summary>
+    /// Beta Health (Now) workspace route.
+    /// </summary>
+    public const string BetaHealthWorkspace = "/beta/health";
+
+    /// <summary>
+    /// Beta Overview/Trends (Past) workspace route.
+    /// </summary>
+    public const string BetaTrendsWorkspace = "/beta/trends";
+
+    /// <summary>
+    /// Beta Planning (Future) workspace route.
+    /// </summary>
+    public const string BetaPlanningWorkspace = "/beta/planning";
+
+    /// <summary>
+    /// Beta Work Item Explorer route.
+    /// </summary>
+    public const string BetaWorkItemExplorer = "/beta/work-items";
+
+    /// <summary>
+    /// Beta Bug Overview route.
+    /// </summary>
+    public const string BetaBugOverview = "/beta/bugs";
+
+    /// <summary>
+    /// Beta Bug Detail route.
+    /// </summary>
+    public const string BetaBugDetail = "/beta/bugs/detail";
+
+    /// <summary>
+    /// Beta PR Overview route (read-only).
+    /// </summary>
+    public const string BetaPrOverview = "/beta/pull-requests";
+
+    /// <summary>
+    /// Beta Pipeline Overview route (read-only).
+    /// </summary>
+    public const string BetaPipelineOverview = "/beta/pipelines";
+
+    /// <summary>
+    /// Beta Plan Board route.
+    /// </summary>
+    public const string BetaPlanBoard = "/beta/plan-board";
+
+    /// <summary>
+    /// Beta Dependency Overview route (read-only).
+    /// </summary>
+    public const string BetaDependencyOverview = "/beta/dependencies";
+
+    #endregion
+
     /// <summary>
     /// Gets the target workspace route for a given intent.
     /// </summary>

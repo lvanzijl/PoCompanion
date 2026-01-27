@@ -1,0 +1,580 @@
+@page "/beta/planning"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Components.Planning
+@using PoTool.Client.ApiClient
+@inherits BetaWorkspaceBase
+@inject INavigationContextService NavigationContextService
+@inject ProductService ProductService
+@inject WorkItemService WorkItemService
+@inject IMetricsClient MetricsClient
+
+<PageTitle>Planning (Future) - Beta - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Workspace Header *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
+                    <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Color="Color.Primary" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">
+                        Planning (Future)
+                    </MudText>
+                </MudStack>
+                
+                @* Breadcrumb *@
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+            
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <MudChip T="string" 
+                         Icon="@Icons.Material.Filled.EventNote" 
+                         Size="Size.Small"
+                         Color="Color.Primary">
+                    Current + 3 Iterations
+                </MudChip>
+                
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           OnClick="NavigateToBetaHome">
+                    Beta Home
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else
+    {
+        @* Planning Signals Grid *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h5" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Assessment" Class="mr-2" />
+                Planning Signals
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                Decision-making for upcoming work — click to explore details
+            </MudText>
+            
+            <MudGrid>
+                @* Epic Over Velocity Signal - Shows real counts *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="1" 
+                             Style="cursor: pointer; transition: all 0.2s;"
+                             Class="mud-card-hover"
+                             @onclick="NavigateToVelocityTrend">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.Speed" Color="@GetEpicVelocityColor()" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Epic Exceeds Velocity</MudText>
+                            @if (_epicsExceedingVelocity == 0)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Success">All epics within capacity</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="@GetEpicVelocityColor()">@_epicsExceedingVelocity epic(s) at risk</MudText>
+                            }
+                            @if (_averageVelocity > 0)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">
+                                    Avg: @_averageVelocity.ToString("F1") pts/sprint
+                                </MudChip>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                
+                @* Epic Invalid Items Signal - Shows real counts *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="1" 
+                             Style="cursor: pointer; transition: all 0.2s;"
+                             Class="mud-card-hover"
+                             @onclick="@(() => NavigateToEpicInvalidItems(null))">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="@GetEpicInvalidItemsColor()" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Epic Invalid Items</MudText>
+                            @if (_epicsWithInvalidItems == 0)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Success">All epics valid</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="@GetEpicInvalidItemsColor()">@_epicsWithInvalidItems epic(s) with issues</MudText>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                @* Epic Dependencies Signal (Read-Only) *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="1" 
+                             Style="cursor: pointer; transition: all 0.2s;"
+                             Class="mud-card-hover"
+                             @onclick="NavigateToDependencyOverview">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Secondary" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Epic Dependencies</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Dependency overview</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+        
+        @* Epics Exceeding Velocity Detail *@
+        @if (_epicsExceedingVelocityList.Count > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h5" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Warning" Class="mr-2" />
+                    Epics Exceeding Velocity Capacity (@_epicsExceedingVelocityList.Count)
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    These epics have remaining effort exceeding team velocity. Click to view velocity trends.
+                </MudText>
+                
+                <MudTable Items="@_epicsExceedingVelocityList" Hover="true" Dense="true" Elevation="0" Striped="true">
+                    <HeaderContent>
+                        <MudTh>ID</MudTh>
+                        <MudTh>Epic Title</MudTh>
+                        <MudTh>State</MudTh>
+                        <MudTh>Remaining Effort</MudTh>
+                        <MudTh>Sprints to Complete</MudTh>
+                        <MudTh>Confidence</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="ID">@context.EpicId</MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="State">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary">Active</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Remaining">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">@context.RemainingEffort pts</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Sprints">
+                            <MudChip T="string" Size="Size.Small" Color="@GetSprintCountColor(context.SprintsRemaining)">
+                                @context.SprintsRemaining sprints
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Confidence">
+                            <MudChip T="string" Size="Size.Small" Color="@GetConfidenceColor(context.Confidence)">
+                                @context.Confidence
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudTooltip Text="View Velocity Trends">
+                                <MudIconButton Icon="@Icons.Material.Filled.Timeline" 
+                                              Size="Size.Small" 
+                                              Color="Color.Primary"
+                                              OnClick="NavigateToVelocityTrend" />
+                            </MudTooltip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
+        
+        @* Epics with Invalid Items Detail *@
+        @if (_epicItemsWithIssues.Count > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h5" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="Color.Warning" Class="mr-2" />
+                    Epics with Invalid Items (@_epicItemsWithIssues.Count)
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    Click an epic to view its work items in the explorer
+                </MudText>
+                
+                <MudTable Items="@_epicItemsWithIssues" Hover="true" Dense="true" Elevation="0" Striped="true">
+                    <HeaderContent>
+                        <MudTh>ID</MudTh>
+                        <MudTh>Epic Title</MudTh>
+                        <MudTh>State</MudTh>
+                        <MudTh>Invalid Items</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="ID">@context.Epic.TfsId</MudTd>
+                        <MudTd DataLabel="Title">@context.Epic.Title</MudTd>
+                        <MudTd DataLabel="State">
+                            <MudChip T="string" Size="Size.Small" Color="GetStateColor(context.Epic.State)">@context.Epic.State</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Invalid Items">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">@context.InvalidItemCount items</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudTooltip Text="Open in Work Item Explorer">
+                                <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" 
+                                              Size="Size.Small" 
+                                              Color="Color.Primary"
+                                              OnClick="@(() => NavigateToEpicInvalidItems(context.Epic.TfsId))" />
+                            </MudTooltip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
+
+        @* Information Notice *@
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            <MudText Typo="Typo.body2">
+                <strong>Time Horizons:</strong> Planning shows current iteration + next 3 iterations only. 
+                Past iterations are never shown in planning.
+            </MudText>
+        </MudAlert>
+
+        @* Planning Board Section *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Class="mr-2" />
+                    Planning Board
+                </MudText>
+                <MudButton Variant="Variant.Text" 
+                           Color="Color.Primary" 
+                           EndIcon="@Icons.Material.Filled.OpenInNew" 
+                           Href="/release-planning">
+                    Full Release Planning
+                </MudButton>
+            </MudStack>
+            
+            @* Embedded Planning Board component *@
+            @if (_activeProfileId.HasValue)
+            {
+                <PlanningBoard 
+                    ProductOwnerId="@_activeProfileId.Value"
+                    Products="@_products"
+                    SelectedProductId="@_selectedProductId"
+                    OnProductSelectionChanged="OnProductChanged" />
+            }
+        </MudPaper>
+
+        @* End-Stations Section *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" />
+                Available Actions
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                End-stations for simple and batch edits
+            </MudText>
+            
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.SwapVert">Epic Repositioning</MudChip>
+                <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.Sort">Implicit Reprioritization</MudChip>
+            </MudStack>
+        </MudPaper>
+
+        @* Cross-Workspace Navigation *@
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
+                Navigate to Other Workspaces
+            </MudText>
+            
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Success" 
+                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
+                           OnClick="NavigateToHealth">
+                    Health (Now)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Info" 
+                           StartIcon="@Icons.Material.Filled.Timeline"
+                           OnClick="NavigateToTrends">
+                    Trends (Past)
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+</MudContainer>
+
+<style>
+    .mud-card-hover {
+        border: 2px solid transparent;
+    }
+    .mud-card-hover:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.2) !important;
+        border-color: var(--mud-palette-primary);
+    }
+</style>
+
+@code {
+    private bool _isLoading = true;
+    private int? _activeProfileId;
+    private int? _selectedProductId;
+    private List<ProductDto> _products = new();
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    
+    // Epic invalid items detection
+    private int _epicsWithInvalidItems = 0;
+    private List<EpicWithIssues> _epicItemsWithIssues = new();
+    
+    // Epic velocity analysis
+    private int _epicsExceedingVelocity = 0;
+    private double _averageVelocity = 0;
+    private List<EpicVelocityAnalysis> _epicsExceedingVelocityList = new();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Parse context from query string (inherited from base class)
+            ParseContextQueryParameters();
+            
+            if (!await EnsureProfileAsync(WorkspaceRoutes.BetaPlanningWorkspace))
+            {
+                return;
+            }
+            
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            _activeProfileId = activeProfile?.Id;
+            
+            // Load products
+            if (_activeProfileId.HasValue)
+            {
+                _products = (await ProductService.GetProductsByOwnerAsync(_activeProfileId.Value)).ToList();
+            }
+            
+            // If productId is specified via URL, preselect it
+            if (ProductId.HasValue && _products.Any(p => p.Id == ProductId.Value))
+            {
+                _selectedProductId = ProductId;
+            }
+            
+            // Load velocity data and analyze epics
+            await LoadVelocityAnalysisAsync();
+            
+            // Detect epics with invalid items
+            await LoadEpicInvalidItemsAsync();
+            
+            UpdateBreadcrumbs();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+    
+    private async Task LoadEpicInvalidItemsAsync()
+    {
+        try
+        {
+            // Load all work items with validation
+            var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync();
+            var workItemsList = workItemsWithValidation.ToList();
+            
+            // Find all epics
+            var epics = workItemsList.Where(wi => 
+                wi.Type?.Equals("Epic", StringComparison.OrdinalIgnoreCase) == true).ToList();
+            
+            // For each epic, find child items with validation issues
+            foreach (var epic in epics)
+            {
+                // Find descendants with validation issues (direct children or items referencing this epic as parent)
+                var childrenWithIssues = workItemsList.Where(wi =>
+                    wi.ParentTfsId == epic.TfsId &&
+                    wi.ValidationIssues?.Count > 0).ToList();
+                
+                if (childrenWithIssues.Count > 0)
+                {
+                    _epicItemsWithIssues.Add(new EpicWithIssues(epic, childrenWithIssues.Count));
+                }
+            }
+            
+            _epicsWithInvalidItems = _epicItemsWithIssues.Count;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading epic data: {ex.Message}", Severity.Warning);
+        }
+    }
+    
+    private Color GetEpicInvalidItemsColor()
+    {
+        if (_epicsWithInvalidItems == 0) return Color.Success;
+        if (_epicsWithInvalidItems <= 2) return Color.Warning;
+        return Color.Error;
+    }
+    
+    private Color GetStateColor(string? state) => state?.ToLowerInvariant() switch
+    {
+        "new" => Color.Info,
+        "active" or "in progress" => Color.Primary,
+        "resolved" or "done" => Color.Success,
+        "closed" or "removed" => Color.Dark,
+        _ => Color.Default
+    };
+    
+    private record EpicWithIssues(WorkItemWithValidationDto Epic, int InvalidItemCount);
+    
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
+            new("Planning (Future)", null, disabled: true, icon: Icons.Material.Filled.CalendarMonth)
+        };
+    }
+    
+    private Task OnProductChanged(int? productId)
+    {
+        _selectedProductId = productId;
+        return Task.CompletedTask;
+    }
+    
+    private void NavigateToVelocityTrend()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaTrendsWorkspace}{BuildContextQuery("metric=Velocity")}");
+    }
+    
+    private void NavigateToEpicInvalidItems(int? epicId)
+    {
+        // Navigate to work item explorer with epic as root (per deep link contract)
+        if (epicId.HasValue)
+        {
+            NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}{BuildContextQuery($"rootWorkItemId={epicId}")}");
+        }
+        else
+        {
+            // Navigate to explorer without filter (all items)
+            NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}{BuildContextQuery()}");
+        }
+    }
+    
+    private void NavigateToDependencyOverview()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaDependencyOverview}{BuildContextQuery()}");
+    }
+    
+    private void NavigateToHealth()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaHealthWorkspace}{BuildContextQuery()}");
+    }
+    
+    private void NavigateToTrends()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaTrendsWorkspace}{BuildContextQuery()}");
+    }
+    
+    /// <summary>
+    /// Load velocity data and analyze epics that exceed historical velocity capacity.
+    /// An epic is considered "at risk" if its remaining effort exceeds 3x average velocity.
+    /// </summary>
+    private async Task LoadVelocityAnalysisAsync()
+    {
+        try
+        {
+            // Get product IDs for velocity query
+            var productIds = _selectedProductId.HasValue 
+                ? new List<int> { _selectedProductId.Value } 
+                : _products.Select(p => p.Id).ToList();
+            
+            if (productIds.Count == 0)
+            {
+                // No products to analyze
+                return;
+            }
+            
+            // Load velocity trend (last 10 sprints)
+            var velocityTrend = await MetricsClient.GetVelocityTrendAsync(productIds, null, 10);
+            _averageVelocity = velocityTrend.AverageVelocity;
+            
+            if (_averageVelocity <= 0)
+            {
+                // No velocity data available
+                return;
+            }
+            
+            // Load all work items to find epics
+            var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync();
+            var workItemsList = workItemsWithValidation.ToList();
+            
+            // Find active epics (not closed/resolved)
+            var activeEpics = workItemsList.Where(wi => 
+                wi.Type?.Equals("Epic", StringComparison.OrdinalIgnoreCase) == true &&
+                !string.IsNullOrEmpty(wi.State) &&
+                !wi.State.Equals("Closed", StringComparison.OrdinalIgnoreCase) &&
+                !wi.State.Equals("Removed", StringComparison.OrdinalIgnoreCase) &&
+                !wi.State.Equals("Done", StringComparison.OrdinalIgnoreCase)).ToList();
+            
+            // Analyze each epic's effort against velocity
+            foreach (var epic in activeEpics)
+            {
+                try
+                {
+                    // Get epic forecast which includes remaining effort
+                    var forecast = await MetricsClient.GetEpicForecastAsync(epic.TfsId, 10);
+                    
+                    // Threshold: An epic is "at risk" if it needs more than 3 sprints at average velocity
+                    // This indicates the epic exceeds near-term capacity
+                    if (forecast.SprintsRemaining > 3 || forecast.RemainingEffort > _averageVelocity * 3)
+                    {
+                        _epicsExceedingVelocityList.Add(new EpicVelocityAnalysis(
+                            forecast.EpicId,
+                            forecast.Title,
+                            forecast.RemainingEffort,
+                            forecast.SprintsRemaining,
+                            forecast.Confidence
+                        ));
+                    }
+                }
+                catch
+                {
+                    // Skip epics that don't have forecast data
+                }
+            }
+            
+            _epicsExceedingVelocity = _epicsExceedingVelocityList.Count;
+        }
+        catch (Exception ex)
+        {
+            // Log but don't fail - velocity analysis is optional
+            Console.WriteLine($"Failed to load velocity analysis: {ex.Message}");
+        }
+    }
+    
+    private Color GetEpicVelocityColor()
+    {
+        if (_epicsExceedingVelocity == 0) return Color.Success;
+        if (_epicsExceedingVelocity <= 2) return Color.Warning;
+        return Color.Error;
+    }
+    
+    private Color GetSprintCountColor(int sprintsRemaining)
+    {
+        if (sprintsRemaining <= 3) return Color.Success;
+        if (sprintsRemaining <= 6) return Color.Warning;
+        return Color.Error;
+    }
+    
+    private Color GetConfidenceColor(ForecastConfidence confidence) => confidence switch
+    {
+        ForecastConfidence.High => Color.Success,
+        ForecastConfidence.Medium => Color.Warning,
+        ForecastConfidence.Low => Color.Error,
+        _ => Color.Default
+    };
+    
+    private record EpicVelocityAnalysis(
+        int EpicId,
+        string Title,
+        int RemainingEffort,
+        int SprintsRemaining,
+        ForecastConfidence Confidence
+    );
+}

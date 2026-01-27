@@ -161,7 +161,8 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
             JsonPayload: entity.JsonPayload,
             RetrievedAt: entity.RetrievedAt,
             Effort: entity.Effort,
-            Description: entity.Description
+            Description: entity.Description,
+            CreatedDate: entity.CreatedDate
         );
     }
 }

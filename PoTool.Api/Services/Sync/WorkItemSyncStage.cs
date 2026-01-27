@@ -173,6 +173,7 @@ public class WorkItemSyncStage : ISyncStage
         entity.RetrievedAt = dto.RetrievedAt;
         entity.Effort = dto.Effort;
         entity.Description = dto.Description;
+        entity.CreatedDate = dto.CreatedDate;
         // Write-back fields (TfsRevision, TfsChangedDate, TfsETag) are populated during 
         // future write-back operations, not during sync. See TFS_CACHE_IMPLEMENTATION_PLAN.md Section 10.
     }
@@ -191,7 +192,8 @@ public class WorkItemSyncStage : ISyncStage
             JsonPayload = dto.JsonPayload,
             RetrievedAt = dto.RetrievedAt,
             Effort = dto.Effort,
-            Description = dto.Description
+            Description = dto.Description,
+            CreatedDate = dto.CreatedDate
         };
     }
 }

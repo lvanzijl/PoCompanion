@@ -1,0 +1,395 @@
+@page "/beta/bugs"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
+@using System.Web
+@inject INavigationContextService NavigationContextService
+@inject IProfileService ProfileService
+@inject WorkItemService WorkItemService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Bug Overview - Beta - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Workspace Header *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
+                    <MudIcon Icon="@Icons.Material.Filled.BugReport" Color="Color.Error" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">
+                        Bug Overview
+                    </MudText>
+                </MudStack>
+                
+                @* Breadcrumb *@
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+            
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                @* Filter Status *@
+                @if (!string.IsNullOrEmpty(_period))
+                {
+                    <MudChip T="string" 
+                             Icon="@Icons.Material.Filled.DateRange" 
+                             Size="Size.Small"
+                             Color="Color.Info"
+                             OnClose="ClearPeriodFilter">
+                        Period: @_period
+                    </MudChip>
+                }
+                @if (_allProducts && _allTeams)
+                {
+                    <MudChip T="string" 
+                             Icon="@Icons.Material.Filled.Public" 
+                             Size="Size.Small"
+                             Color="Color.Default">
+                        All Products / All Teams
+                    </MudChip>
+                }
+                else
+                {
+                    @* View All Toggle - Show option to view all products/teams *@
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Public"
+                               OnClick="NavigateToViewAll">
+                        View All
+                    </MudButton>
+                }
+                
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           OnClick="NavigateToBetaHome">
+                    Beta Home
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @_errorMessage
+        </MudAlert>
+    }
+    else
+    {
+        @* Bug List Section *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudText Typo="Typo.h5">
+                        <MudIcon Icon="@Icons.Material.Filled.List" Class="mr-2" />
+                        Bugs
+                    </MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">@_bugs.Count items</MudChip>
+                </MudStack>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Click a bug to view details and edit
+                </MudText>
+            </MudStack>
+            
+            @if (_bugs.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">
+                    No bugs found matching the current filters.
+                </MudAlert>
+            }
+            else
+            {
+                @* Bug Table *@
+                <MudTable Items="@_bugs" Hover="true" Striped="true" Dense="true" OnRowClick="OnBugRowClick" T="BugItem" RowClass="cursor-pointer">
+                    <HeaderContent>
+                        <MudTh>ID</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Severity</MudTh>
+                        <MudTh>State</MudTh>
+                        <MudTh>Created</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="ID">@context.Id</MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="Severity">
+                            <MudChip T="string" Size="Size.Small" Color="@GetSeverityColor(context.Severity)">@context.Severity</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="State">@context.State</MudTd>
+                        <MudTd DataLabel="Created">@context.Created.ToString("MMM dd, yyyy")</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+            
+            @* Available End-Station Actions *@
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.h6" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" />
+                Available Edits
+            </MudText>
+            
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.PriorityHigh">Bug Severity</MudChip>
+                <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.Label">Tags</MudChip>
+                <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.PlaylistAddCheck">Batch Edits</MudChip>
+            </MudStack>
+        </MudPaper>
+
+        @* Navigation Options *@
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
+                Navigation
+            </MudText>
+            
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Success" 
+                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
+                           OnClick="NavigateToHealth">
+                    Health (Now)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Info" 
+                           StartIcon="@Icons.Material.Filled.Timeline"
+                           OnClick="NavigateToTrends">
+                    Trends (Past)
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+</MudContainer>
+
+<style>
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    .cursor-pointer:hover {
+        background-color: rgba(255, 255, 255, 0.04) !important;
+    }
+</style>
+
+@code {
+    private bool _isLoading = true;
+    private int? _profileId;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    private string? _errorMessage;
+    
+    // Filter parameters
+    private string? _period;
+    private bool _allProducts;
+    private bool _allTeams;
+    
+    // Bug data from backend
+    private List<BugItem> _bugs = new();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
+                return;
+            }
+            
+            _profileId = activeProfile.Id;
+            ProfileService.SetCachedActiveProfileId(_profileId);
+            
+            ParseQueryParameters();
+            UpdateBreadcrumbs();
+            await LoadBugsAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            Snackbar.Add($"Error loading bugs: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+    
+    private void ParseQueryParameters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+        
+        _period = queryParams["period"];
+        
+        var allProducts = queryParams["allProducts"];
+        if (!string.IsNullOrEmpty(allProducts))
+        {
+            _allProducts = bool.TryParse(allProducts, out var result) && result;
+        }
+        
+        var allTeams = queryParams["allTeams"];
+        if (!string.IsNullOrEmpty(allTeams))
+        {
+            _allTeams = bool.TryParse(allTeams, out var result) && result;
+        }
+    }
+    
+    private async Task LoadBugsAsync()
+    {
+        try
+        {
+            // Load work items and filter by Bug type
+            var workItems = await WorkItemService.GetAllAsync();
+            var bugs = workItems.Where(wi => wi.Type == "Bug");
+            
+            // Apply period filter if specified
+            if (!string.IsNullOrEmpty(_period))
+            {
+                bugs = ApplyPeriodFilter(bugs);
+            }
+            
+            // Convert to BugItem list
+            _bugs = bugs.Select(wi => new BugItem
+            {
+                Id = wi.TfsId,
+                Title = wi.Title ?? "(No title)",
+                Severity = ExtractSeverity(wi),
+                State = wi.State ?? "Unknown",
+                Created = wi.RetrievedAt.DateTime // Using RetrievedAt as approximation for Created
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load bugs: {ex.Message}";
+            _bugs = new List<BugItem>();
+        }
+    }
+    
+    private IEnumerable<WorkItemDto> ApplyPeriodFilter(IEnumerable<WorkItemDto> bugs)
+    {
+        // Parse period format like "January-2026" or "2026-01"
+        if (string.IsNullOrEmpty(_period))
+            return bugs;
+            
+        try
+        {
+            // Try to parse as month-year format
+            var parts = _period.Split('-');
+            if (parts.Length == 2)
+            {
+                // Filter by the retrieved date (as a proxy for creation date)
+                if (int.TryParse(parts[1], out var year))
+                {
+                    // Simple date filtering - show items from last 30 days as approximation
+                    var cutoffDate = DateTimeOffset.Now.AddDays(-30);
+                    return bugs.Where(b => b.RetrievedAt >= cutoffDate);
+                }
+            }
+        }
+        catch
+        {
+            // If parsing fails, return all bugs
+        }
+        
+        return bugs;
+    }
+    
+    private static string ExtractSeverity(WorkItemDto workItem)
+    {
+        // Try to extract severity from the JSON payload
+        if (!string.IsNullOrEmpty(workItem.JsonPayload))
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(workItem.JsonPayload);
+                if (doc.RootElement.TryGetProperty("Microsoft.VSTS.Common.Severity", out var severity))
+                {
+                    return severity.GetString() ?? "Unknown";
+                }
+            }
+            catch
+            {
+                // Ignore JSON parsing errors
+            }
+        }
+        return "Unknown";
+    }
+    
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
+            new("Bug Overview", null, disabled: true, icon: Icons.Material.Filled.BugReport)
+        };
+    }
+    
+    private Color GetSeverityColor(string severity)
+    {
+        return severity switch
+        {
+            "Critical" => Color.Error,
+            "High" => Color.Warning,
+            "Medium" => Color.Info,
+            "Low" => Color.Default,
+            _ => Color.Default
+        };
+    }
+    
+    private void OnBugRowClick(TableRowClickEventArgs<BugItem> args)
+    {
+        if (args.Item != null)
+        {
+            NavigateToBugDetail(args.Item.Id);
+        }
+    }
+    
+    private void NavigateToBugDetail(int bugId)
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaBugDetail}?bugId={bugId}");
+    }
+    
+    private void ClearPeriodFilter()
+    {
+        _period = null;
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaBugOverview);
+    }
+    
+    private void NavigateToViewAll()
+    {
+        // Navigate to the same view with allProducts=true and allTeams=true, preserving existing filters
+        var queryParams = new List<string> { "allProducts=true", "allTeams=true" };
+        
+        if (!string.IsNullOrEmpty(_period))
+            queryParams.Add($"period={Uri.EscapeDataString(_period)}");
+        
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaBugOverview}?{string.Join("&", queryParams)}");
+    }
+    
+    private void NavigateToBetaHome()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
+    }
+    
+    private void NavigateToHealth()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHealthWorkspace);
+    }
+    
+    private void NavigateToTrends()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaTrendsWorkspace);
+    }
+    
+    private class BugItem
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Severity { get; set; } = string.Empty;
+        public string State { get; set; } = string.Empty;
+        public DateTime Created { get; set; }
+    }
+}

@@ -1,0 +1,202 @@
+@* 
+    BetaTrendChart Component
+    Decision #12: Trend Chart Interaction - Hover = highlight, click = filter to that period (Option D)
+    
+    This component renders an interactive bar chart where:
+    - Hovering highlights the bar (visual feedback)
+    - Clicking navigates with the period as a filter parameter
+*@
+
+<MudPaper Elevation="1" Class="pa-4">
+    <MudText Typo="Typo.h6" Class="mb-3">
+        <MudIcon Icon="@Icon" Class="mr-2" />
+        @Title
+    </MudText>
+    
+    @if (Data == null || !Data.Any())
+    {
+        <MudAlert Severity="Severity.Info">No data available for this time period.</MudAlert>
+    }
+    else
+    {
+        <div class="d-flex align-end" style="height: 200px; gap: 4px;">
+            @foreach (var item in GetChartData())
+            {
+                var barItem = item; // Capture for closure
+                var isHovered = _hoveredPeriod == barItem.Period;
+                
+                <div class="d-flex flex-column align-center" 
+                     style="flex: 1; max-width: 60px; cursor: pointer;"
+                     tabindex="0"
+                     role="button"
+                     aria-label="@($"{barItem.Label}: {barItem.Value} items. Click to filter.")"
+                     @onmouseenter="() => OnBarHover(barItem.Period)"
+                     @onmouseleave="() => OnBarLeave()"
+                     @onclick="() => OnBarClick(barItem.Period)"
+                     @onkeydown="(e) => OnBarKeyDown(e, barItem.Period)">
+                    
+                    @* Value label *@
+                    <MudText Typo="Typo.caption" 
+                             Color="@(isHovered ? Color.Primary : Color.Default)"
+                             Style="@(isHovered ? "font-weight: bold;" : "")">
+                        @barItem.Value
+                    </MudText>
+                    
+                    @* Bar *@
+                    <div style="@GetBarStyle(barItem, isHovered)"></div>
+                    
+                    @* Period label *@
+                    <MudText Typo="Typo.caption" 
+                             Color="@(isHovered ? Color.Primary : Color.Secondary)"
+                             Style="@(isHovered ? "font-weight: bold; font-size: 0.7rem; white-space: nowrap;" : "font-size: 0.7rem; white-space: nowrap;")">
+                        @barItem.Label
+                    </MudText>
+                </div>
+            }
+        </div>
+        
+        @if (!string.IsNullOrEmpty(_hoveredPeriod))
+        {
+            <MudText Typo="Typo.caption" Color="Color.Primary" Class="mt-2 text-center">
+                Click to view details for @_hoveredPeriod
+            </MudText>
+        }
+    }
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// The title displayed above the chart.
+    /// </summary>
+    [Parameter]
+    public string Title { get; set; } = "Trend";
+    
+    /// <summary>
+    /// The icon to display next to the title.
+    /// </summary>
+    [Parameter]
+    public string Icon { get; set; } = Icons.Material.Filled.Timeline;
+    
+    /// <summary>
+    /// The trend data to display. Key = period (e.g., "2026-01"), Value = count/value.
+    /// </summary>
+    [Parameter]
+    public Dictionary<string, int>? Data { get; set; }
+    
+    /// <summary>
+    /// The color of the bars.
+    /// </summary>
+    [Parameter]
+    public Color BarColor { get; set; } = Color.Primary;
+    
+    /// <summary>
+    /// Callback when a bar is clicked. Parameter is the period (e.g., "2026-01").
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnPeriodClick { get; set; }
+    
+    /// <summary>
+    /// Maximum number of bars to display (default 10 per specification).
+    /// </summary>
+    [Parameter]
+    public int MaxBars { get; set; } = 10;
+    
+    private string? _hoveredPeriod;
+    
+    private record ChartDataItem(string Period, string Label, int Value, double Percentage);
+    
+    private IEnumerable<ChartDataItem> GetChartData()
+    {
+        if (Data == null || !Data.Any())
+        {
+            return Enumerable.Empty<ChartDataItem>();
+        }
+        
+        // Take the last MaxBars items (most recent)
+        var items = Data
+            .OrderBy(kvp => kvp.Key)
+            .TakeLast(MaxBars)
+            .ToList();
+        
+        var maxValue = items.Max(kvp => kvp.Value);
+        if (maxValue == 0) maxValue = 1; // Prevent division by zero
+        
+        return items.Select(kvp => 
+        {
+            // Convert period like "2026-01" to short label like "Jan"
+            var label = GetShortLabel(kvp.Key);
+            var percentage = (double)kvp.Value / maxValue * 100;
+            
+            return new ChartDataItem(kvp.Key, label, kvp.Value, percentage);
+        });
+    }
+    
+    private string GetShortLabel(string period)
+    {
+        // Try to parse as YYYY-MM format
+        if (period.Length >= 7 && period[4] == '-')
+        {
+            var parts = period.Split('-');
+            if (parts.Length >= 2 && int.TryParse(parts[1], out var month) && month >= 1 && month <= 12)
+            {
+                var monthNames = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+                return monthNames[month - 1];
+            }
+        }
+        
+        // Fall back to showing the period as-is
+        return period.Length > 6 ? period[..6] : period;
+    }
+    
+    private string GetBarStyle(ChartDataItem item, bool isHovered)
+    {
+        var color = BarColor switch
+        {
+            Color.Primary => "var(--mud-palette-primary)",
+            Color.Error => "var(--mud-palette-error)",
+            Color.Warning => "var(--mud-palette-warning)",
+            Color.Success => "var(--mud-palette-success)",
+            Color.Info => "var(--mud-palette-info)",
+            _ => "var(--mud-palette-primary)"
+        };
+        
+        var height = Math.Max(item.Percentage, 5); // Minimum 5% height for visibility
+        var opacity = isHovered ? "1" : "0.8";
+        var transform = isHovered ? "scaleX(1.1)" : "scaleX(1)";
+        var boxShadow = isHovered ? "0 0 8px rgba(0,0,0,0.3)" : "none";
+        
+        return $"width: 100%; height: {height}%; min-height: 8px; " +
+               $"background-color: {color}; opacity: {opacity}; " +
+               $"border-radius: 4px 4px 0 0; transition: all 0.2s ease; " +
+               $"transform: {transform}; box-shadow: {boxShadow};";
+    }
+    
+    private void OnBarHover(string period)
+    {
+        _hoveredPeriod = period;
+    }
+    
+    private void OnBarLeave()
+    {
+        _hoveredPeriod = null;
+    }
+    
+    private async Task OnBarClick(string period)
+    {
+        if (OnPeriodClick.HasDelegate)
+        {
+            await OnPeriodClick.InvokeAsync(period);
+        }
+    }
+    
+    /// <summary>
+    /// Keyboard handler for accessibility - Enter or Space activates the bar.
+    /// </summary>
+    private async Task OnBarKeyDown(KeyboardEventArgs e, string period)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+        {
+            await OnBarClick(period);
+        }
+    }
+}

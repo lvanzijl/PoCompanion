@@ -99,4 +99,10 @@ public class WorkItemEntity
     /// </summary>
     [MaxLength(100)]
     public string? TfsETag { get; set; }
+
+    /// <summary>
+    /// Work item creation date from TFS (System.CreatedDate).
+    /// Used for trend analysis and reporting.
+    /// </summary>
+    public DateTimeOffset? CreatedDate { get; set; }
 }

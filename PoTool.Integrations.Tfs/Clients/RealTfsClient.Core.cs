@@ -37,6 +37,7 @@ public partial class RealTfsClient
         "System.AreaPath",
         "System.IterationPath",
         "System.Description",
+        "System.CreatedDate",
         TfsFieldEffort,
         TfsFieldStoryPoints
     };

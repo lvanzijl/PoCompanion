@@ -1,0 +1,417 @@
+@page "/beta"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
+@inject INavigationContextService NavigationContextService
+@inject IProfileService ProfileService
+@inject ProductService ProductService
+@inject WorkItemService WorkItemService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Beta Home - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8 mb-8">
+    <MudStack AlignItems="AlignItems.Center" Spacing="6">
+        @* Beta Header *@
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
+            <MudText Typo="Typo.h3" Align="Align.Center">
+                Workspace Navigation
+            </MudText>
+        </MudStack>
+        
+        <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mb-4" Style="color: var(--mud-palette-text-secondary);">
+            Situation overview — no editing, no filtering, no forced workflow
+        </MudText>
+
+        @if (_isLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        }
+        else
+        {
+            @* High-level Overview Section *@
+            <MudPaper Elevation="2" Class="pa-4 mb-4" Style="width: 100%;">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
+                    Overview — All Products, All Teams
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    High-level signals: health, trends, sync state
+                </MudText>
+                
+                @* Real health signals from data *@
+                <MudGrid>
+                    <MudItem xs="12" sm="4">
+                        <MudCard Elevation="1" Class="pa-3">
+                            <MudStack AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Size="Size.Large" Color="@GetHealthStatusColor()" />
+                                <MudText Typo="Typo.subtitle2">Health Status</MudText>
+                                @if (_workItemsWithIssues == 0)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Success">All items valid</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="@GetHealthStatusColor()">@_workItemsWithIssues items with issues</MudText>
+                                }
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudCard Elevation="1" Class="pa-3">
+                            <MudStack AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.BugReport" Size="Size.Large" Color="@GetBugStatusColor()" />
+                                <MudText Typo="Typo.subtitle2">Active Bugs</MudText>
+                                <MudText Typo="Typo.caption" Color="@GetBugStatusColor()">@_activeBugCount open</MudText>
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudCard Elevation="1" Class="pa-3">
+                            <MudStack AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Sync" Size="Size.Large" Color="Color.Primary" />
+                                <MudText Typo="Typo.subtitle2">Work Items</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@_totalWorkItems total</MudText>
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+            
+            @* Product Context Filter *@
+            <MudPaper Elevation="2" Class="pa-4 mb-4" Style="width: 100%;">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
+                            Navigation Context
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Select a product to filter all workspaces (optional)
+                        </MudText>
+                    </MudStack>
+                    
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <MudSelect T="int?" 
+                                   @bind-Value="_selectedProductId" 
+                                   Label="Product Filter"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Clearable="true"
+                                   Style="min-width: 200px;">
+                            @foreach (var product in _products)
+                            {
+                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        
+                        @if (_selectedProductId.HasValue)
+                        {
+                            <MudChip T="string" Color="Color.Primary" Size="Size.Small">
+                                Context: @(_products.FirstOrDefault(p => p.Id == _selectedProductId)?.Name ?? "Product")
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Color="Color.Default" Size="Size.Small">
+                                All Products
+                            </MudChip>
+                        }
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+
+            @* Workspace-Driven Entry Section *@
+            <MudText Typo="Typo.h5" Align="Align.Center" Class="mt-4 mb-2">
+                Choose Your Workspace
+            </MudText>
+            
+            <MudGrid Spacing="4" Justify="Justify.Center">
+                @* Health (Now) Workspace *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Class="workspace-card" 
+                             Elevation="4"
+                             Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
+                             @onclick="NavigateToHealth">
+                        <MudCardContent Class="d-flex flex-column align-center justify-center pa-6" Style="height: 100%;">
+                            <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" 
+                                     Color="Color.Success" 
+                                     Style="font-size: 3.5rem;" />
+                            <MudText Typo="Typo.h5" Class="mt-4 text-center" Style="font-weight: 600;">
+                                Health (Now)
+                            </MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2" Style="color: var(--mud-palette-text-secondary);">
+                                Current-state problems, actionable issues
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                @* Trends (Past) Workspace *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Class="workspace-card" 
+                             Elevation="4"
+                             Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
+                             @onclick="NavigateToTrends">
+                        <MudCardContent Class="d-flex flex-column align-center justify-center pa-6" Style="height: 100%;">
+                            <MudIcon Icon="@Icons.Material.Filled.Timeline" 
+                                     Color="Color.Info" 
+                                     Style="font-size: 3.5rem;" />
+                            <MudText Typo="Typo.h5" Class="mt-4 text-center" Style="font-weight: 600;">
+                                Trends (Past)
+                            </MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2" Style="color: var(--mud-palette-text-secondary);">
+                                Structural behavior over last 6 months
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                @* Planning (Future) Workspace *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Class="workspace-card" 
+                             Elevation="4"
+                             Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
+                             @onclick="NavigateToPlanning">
+                        <MudCardContent Class="d-flex flex-column align-center justify-center pa-6" Style="height: 100%;">
+                            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" 
+                                     Color="Color.Primary" 
+                                     Style="font-size: 3.5rem;" />
+                            <MudText Typo="Typo.h5" Class="mt-4 text-center" Style="font-weight: 600;">
+                                Planning (Future)
+                            </MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2" Style="color: var(--mud-palette-text-secondary);">
+                                Decision-making for upcoming work
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+
+            @* Task-Driven Entry Section *@
+            <MudDivider Class="my-6" />
+            
+            <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-2">
+                Quick Actions (All Products / All Teams)
+            </MudText>
+            
+            <MudStack Row="true" Spacing="3" Justify="Justify.Center" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Search"
+                           OnClick="NavigateToWorkItemExplorer"
+                           Size="Size.Large">
+                    Work Item Explorer
+                </MudButton>
+                
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.BugReport"
+                           OnClick="NavigateToBugTriage"
+                           Size="Size.Large">
+                    Bug Triage
+                </MudButton>
+                
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Info"
+                           StartIcon="@Icons.Material.Filled.ViewColumn"
+                           OnClick="NavigateToPlanBoard"
+                           Size="Size.Large">
+                    Plan Board
+                </MudButton>
+            </MudStack>
+
+            @* Navigation Actions *@
+            <MudStack Row="true" Spacing="2" Class="mt-8">
+                <MudButton Variant="Variant.Text" 
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.ArrowBack"
+                           OnClick="NavigateToLegacyLanding">
+                    Back to Classic Navigation
+                </MudButton>
+            </MudStack>
+        }
+    </MudStack>
+</MudContainer>
+
+<style>
+    .workspace-card:hover {
+        border-color: var(--mud-palette-primary) !important;
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
+    }
+</style>
+
+@code {
+    private bool _isLoading = true;
+    private int? _profileId;
+    
+    // Health signal data
+    private int _totalWorkItems = 0;
+    private int _totalValidationIssues = 0;
+    private int _workItemsWithIssues = 0;
+    private int _activeBugCount = 0;
+    
+    // Context propagation - product/team filter
+    private int? _selectedProductId;
+    private List<ProductDto> _products = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        
+        try
+        {
+            // Get the active profile - mandatory for Beta navigation
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                // No profile selected, redirect to profiles with return URL
+                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(WorkspaceRoutes.BetaHome)}");
+                return;
+            }
+            
+            _profileId = activeProfile.Id;
+            ProfileService.SetCachedActiveProfileId(_profileId);
+            
+            // Load products for context filter
+            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            
+            // Load health signals
+            await LoadHealthSignalsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+    
+    /// <summary>
+    /// Builds query string with product context if selected.
+    /// </summary>
+    private string BuildContextQuery(string? additionalParams = null)
+    {
+        var parameters = new List<string>();
+        
+        if (_selectedProductId.HasValue)
+        {
+            parameters.Add($"productId={_selectedProductId.Value}");
+        }
+        
+        if (!string.IsNullOrEmpty(additionalParams))
+        {
+            parameters.Add(additionalParams);
+        }
+        
+        return parameters.Count > 0 ? "?" + string.Join("&", parameters) : "";
+    }
+
+    private void NavigateToHealth()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaHealthWorkspace}{BuildContextQuery()}");
+    }
+
+    private void NavigateToTrends()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaTrendsWorkspace}{BuildContextQuery()}");
+    }
+
+    private void NavigateToPlanning()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPlanningWorkspace}{BuildContextQuery()}");
+    }
+
+    private void NavigateToWorkItemExplorer()
+    {
+        // Task-driven entry always uses all products/teams
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}?allProducts=true&allTeams=true");
+    }
+
+    private void NavigateToBugTriage()
+    {
+        // Task-driven entry always uses all products/teams
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaBugOverview}?allProducts=true&allTeams=true");
+    }
+
+    private void NavigateToPlanBoard()
+    {
+        // Task-driven entry always uses all products
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPlanBoard}?allProducts=true");
+    }
+
+    private void NavigateToLegacyLanding()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.Landing);
+    }
+    
+    private async Task LoadHealthSignalsAsync()
+    {
+        try
+        {
+            // Load work items with validation data
+            var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync();
+            var workItemsList = workItemsWithValidation.ToList();
+            
+            _totalWorkItems = workItemsList.Count;
+            
+            // Count items with validation issues (unique work items)
+            var itemsWithIssues = workItemsList.Where(wi => wi.ValidationIssues?.Count > 0).ToList();
+            _workItemsWithIssues = itemsWithIssues.Count;
+            _totalValidationIssues = itemsWithIssues.Sum(wi => wi.ValidationIssues?.Count ?? 0);
+            
+            // Count active bugs from the same dataset (avoid duplicate API call)
+            _activeBugCount = workItemsList.Count(wi => 
+                wi.Type?.Equals("Bug", StringComparison.OrdinalIgnoreCase) == true &&
+                wi.State?.Equals("Closed", StringComparison.OrdinalIgnoreCase) != true &&
+                wi.State?.Equals("Resolved", StringComparison.OrdinalIgnoreCase) != true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading health signals: {ex.Message}", Severity.Warning);
+            // Keep defaults (0s) if loading fails
+        }
+    }
+    
+    /// <summary>
+    /// Gets the health level based on fixed thresholds.
+    /// Decision #2: Health Signal Thresholds
+    /// - 0 items = Healthy (Green)
+    /// - 1-9 items = Low (Info/Blue)
+    /// - 10-49 items = Warning (Yellow)
+    /// - 50+ items = Error (Red)
+    /// </summary>
+    private int GetHealthLevel(int count) => count switch
+    {
+        0 => 0,       // Healthy
+        < 10 => 1,    // Low
+        < 50 => 2,    // Warning
+        _ => 3        // Error
+    };
+    
+    private Color GetHealthStatusColor()
+    {
+        return GetHealthLevel(_workItemsWithIssues) switch
+        {
+            0 => Color.Success,
+            1 => Color.Info,
+            2 => Color.Warning,
+            _ => Color.Error
+        };
+    }
+    
+    private Color GetBugStatusColor()
+    {
+        return GetHealthLevel(_activeBugCount) switch
+        {
+            0 => Color.Success,
+            1 => Color.Info,
+            2 => Color.Warning,
+            _ => Color.Error
+        };
+    }
+}

@@ -7523,6 +7523,11 @@
             "items": {
               "$ref": "#/components/schemas/ValidationIssue"
             }
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         }
       },

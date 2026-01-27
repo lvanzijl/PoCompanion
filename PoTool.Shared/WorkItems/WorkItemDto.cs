@@ -33,5 +33,6 @@ public sealed record WorkItemDto(
     string JsonPayload,  // Consider making this optional in future (Phase 4.1)
     DateTimeOffset RetrievedAt,
     int? Effort,
-    string? Description
+    string? Description,
+    DateTimeOffset? CreatedDate = null
 );
