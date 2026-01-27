@@ -65,7 +65,13 @@ public static class ApiServiceCollectionExtensions
             if (!string.IsNullOrWhiteSpace(sqlServerConn))
             {
                 services.AddDbContext<PoToolDbContext>(options =>
-                    options.UseSqlServer(sqlServerConn));
+                {
+                    options.UseSqlServer(sqlServerConn);
+                    
+                    // Use SplitQuery to avoid cartesian explosion when loading multiple collections
+                    // This is the recommended approach for queries with multiple Include statements
+                    options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                });
             }
             else
             {
@@ -73,6 +79,10 @@ public static class ApiServiceCollectionExtensions
                 {
                     options.UseSqlite(configuration.GetConnectionString("DefaultConnection")
                         ?? "Data Source=potool.db");
+
+                    // Use SplitQuery to avoid cartesian explosion when loading multiple collections
+                    // This is the recommended approach for queries with multiple Include statements
+                    options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
 
                     // Suppress pending model changes warning in development for exploratory testing
                     if (isDevelopment)

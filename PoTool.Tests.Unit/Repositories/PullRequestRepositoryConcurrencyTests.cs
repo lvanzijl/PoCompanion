@@ -21,6 +21,7 @@ public class PullRequestRepositoryConcurrencyTests
     {
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
             .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
+            .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             .Options;
 
         _context = new PoToolDbContext(options);
@@ -324,6 +325,7 @@ public class PullRequestRepositoryConcurrencyTests
         // Arrange
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
             .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
+            .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             .Options;
 
         var context = new PoToolDbContext(options);
