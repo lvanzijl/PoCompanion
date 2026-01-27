@@ -5,7 +5,7 @@ using PoTool.Shared.PullRequests;
 
 namespace PoTool.Integrations.Tfs.Clients;
 
-public partial class RealTfsClient : ITfsClient
+public partial class RealTfsClient
 {
     // Pull Request methods - Phase 2 implementation with Phase 4 enhancements
     public async Task<IEnumerable<PullRequestDto>> GetPullRequestsAsync(

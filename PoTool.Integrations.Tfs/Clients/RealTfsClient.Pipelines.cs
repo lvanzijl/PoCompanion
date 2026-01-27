@@ -7,7 +7,7 @@ using PoTool.Shared.Pipelines;
 
 namespace PoTool.Integrations.Tfs.Clients;
 
-public partial class RealTfsClient : ITfsClient
+public partial class RealTfsClient
 {
     public async Task<IEnumerable<PipelineDto>> GetPipelinesAsync(
         CancellationToken cancellationToken = default)
