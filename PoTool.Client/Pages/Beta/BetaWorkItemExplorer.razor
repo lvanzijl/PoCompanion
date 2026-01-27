@@ -159,6 +159,10 @@
                         <MudTh>Type</MudTh>
                         <MudTh>State</MudTh>
                         <MudTh>Effort</MudTh>
+                        @if (_backlogDepthExceeded)
+                        {
+                            <MudTh>Depth</MudTh>
+                        }
                         <MudTh>Issues</MudTh>
                     </HeaderContent>
                     <RowTemplate>
@@ -169,6 +173,14 @@
                         </MudTd>
                         <MudTd DataLabel="State">@context.State</MudTd>
                         <MudTd DataLabel="Effort">@(context.Effort?.ToString() ?? "-")</MudTd>
+                        @if (_backlogDepthExceeded)
+                        {
+                            <MudTd DataLabel="Depth">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Error">
+                                    Level @(context.Depth ?? 0)
+                                </MudChip>
+                            </MudTd>
+                        }
                         <MudTd DataLabel="Issues">
                             @if (context.HasValidationIssues)
                             {
@@ -318,21 +330,30 @@
         try
         {
             var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync();
+            var workItemsList = workItemsWithValidation.ToList();
             
             // Apply validation type filter if specified
             if (!string.IsNullOrEmpty(_validationType))
             {
-                workItemsWithValidation = FilterByValidationType(workItemsWithValidation);
+                workItemsList = FilterByValidationType(workItemsList).ToList();
             }
             
             // Apply root work item filter if specified (show descendants)
             if (_rootWorkItemId.HasValue)
             {
-                workItemsWithValidation = FilterByRootWorkItem(workItemsWithValidation);
+                workItemsList = FilterByRootWorkItem(workItemsList).ToList();
             }
             
-            // Convert to display items
-            _workItems = workItemsWithValidation.Select(wi => new WorkItemExplorerItem
+            // Apply backlog depth exceeded filter if specified
+            if (_backlogDepthExceeded)
+            {
+                workItemsList = FilterByBacklogDepthExceeded(workItemsList).ToList();
+            }
+            
+            // Convert to display items, including depth if calculated
+            var depthMap = _backlogDepthExceeded ? CalculateDepthMap(workItemsList) : new Dictionary<int, int>();
+            
+            _workItems = workItemsList.Select(wi => new WorkItemExplorerItem
             {
                 Id = wi.TfsId,
                 Title = wi.Title ?? "(No title)",
@@ -340,7 +361,8 @@
                 State = wi.State ?? "Unknown",
                 Effort = wi.Effort,
                 HasValidationIssues = wi.ValidationIssues?.Count > 0,
-                ValidationIssueCount = wi.ValidationIssues?.Count ?? 0
+                ValidationIssueCount = wi.ValidationIssues?.Count ?? 0,
+                Depth = depthMap.TryGetValue(wi.TfsId, out var depth) ? depth : (int?)null
             }).ToList();
         }
         catch (Exception ex)
@@ -348,6 +370,67 @@
             _errorMessage = $"Failed to load work items: {ex.Message}";
             _workItems = new List<WorkItemExplorerItem>();
         }
+    }
+    
+    /// <summary>
+    /// Calculate the depth of each work item in the hierarchy.
+    /// Depth 0 = items with no parent in the dataset (root items)
+    /// </summary>
+    private Dictionary<int, int> CalculateDepthMap(List<WorkItemWithValidationDto> workItems)
+    {
+        var depthMap = new Dictionary<int, int>();
+        var workItemIds = new HashSet<int>(workItems.Select(wi => wi.TfsId));
+        
+        foreach (var wi in workItems)
+        {
+            if (depthMap.ContainsKey(wi.TfsId))
+                continue;
+                
+            var depth = CalculateItemDepth(wi, workItems, workItemIds, depthMap);
+            depthMap[wi.TfsId] = depth;
+        }
+        
+        return depthMap;
+    }
+    
+    private int CalculateItemDepth(WorkItemWithValidationDto item, List<WorkItemWithValidationDto> allItems, 
+        HashSet<int> itemIds, Dictionary<int, int> depthMap)
+    {
+        // Base case: no parent or parent not in our dataset = root (depth 0)
+        if (!item.ParentTfsId.HasValue || !itemIds.Contains(item.ParentTfsId.Value))
+        {
+            return 0;
+        }
+        
+        // Check cache
+        if (depthMap.TryGetValue(item.TfsId, out var cachedDepth))
+        {
+            return cachedDepth;
+        }
+        
+        // Recursive case: find parent and add 1
+        var parent = allItems.FirstOrDefault(wi => wi.TfsId == item.ParentTfsId.Value);
+        if (parent == null)
+        {
+            return 0;
+        }
+        
+        var parentDepth = CalculateItemDepth(parent, allItems, itemIds, depthMap);
+        return parentDepth + 1;
+    }
+    
+    /// <summary>
+    /// Filter work items that exceed the backlog depth threshold (default: 3 levels deep).
+    /// Items at depth > threshold are considered "too deep" in the backlog hierarchy.
+    /// </summary>
+    private IEnumerable<WorkItemWithValidationDto> FilterByBacklogDepthExceeded(List<WorkItemWithValidationDto> workItems)
+    {
+        const int depthThreshold = 3; // Maximum acceptable depth (0=root, 1=child, 2=grandchild, 3=great-grandchild)
+        
+        var depthMap = CalculateDepthMap(workItems);
+        
+        return workItems.Where(wi => 
+            depthMap.TryGetValue(wi.TfsId, out var depth) && depth > depthThreshold);
     }
     
     private IEnumerable<WorkItemWithValidationDto> FilterByValidationType(IEnumerable<WorkItemWithValidationDto> workItems)
@@ -530,5 +613,6 @@
         public int? Effort { get; set; }
         public bool HasValidationIssues { get; set; }
         public int ValidationIssueCount { get; set; }
+        public int? Depth { get; set; }
     }
 }

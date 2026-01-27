@@ -99,9 +99,11 @@
                              Class="mud-card-hover"
                              @onclick="NavigateToBacklogDepthExceeded">
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Layers" Color="Color.Error" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.Layers" Color="@(_backlogDepthExceededCount > 0 ? Color.Error : Color.Success)" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Backlog Too Deep</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Depth exceeded</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@(_backlogDepthExceededCount > 0 ? Color.Error : Color.Success)">
+                                @_backlogDepthExceededCount items
+                            </MudChip>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -221,6 +223,7 @@
     private int _invalidStateCount;
     private int _missingTagsCount;
     private int _bugCount;
+    private int _backlogDepthExceededCount;
     
     protected override async Task OnInitializedAsync()
     {
@@ -255,6 +258,12 @@
         try
         {
             var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync();
+            var workItemsList = workItemsWithValidation.ToList();
+            
+            // Calculate backlog depth for each work item
+            var depthMap = CalculateDepthMap(workItemsList);
+            const int depthThreshold = 3; // Maximum acceptable depth
+            _backlogDepthExceededCount = depthMap.Count(kvp => kvp.Value > depthThreshold);
             
             // Track which work items have each issue type (count work items, not issues)
             var workItemsWithEffortIssue = new HashSet<int>();
@@ -262,7 +271,7 @@
             var workItemsWithStateIssue = new HashSet<int>();
             var workItemsWithTagIssue = new HashSet<int>();
             
-            foreach (var wi in workItemsWithValidation)
+            foreach (var wi in workItemsList)
             {
                 if (wi.Type == "Bug")
                 {
@@ -306,6 +315,53 @@
             // Log the error but keep counts at 0
             Console.WriteLine($"Failed to load validation counts: {ex.Message}");
         }
+    }
+    
+    /// <summary>
+    /// Calculate the depth of each work item in the hierarchy.
+    /// Depth 0 = items with no parent in the dataset (root items)
+    /// </summary>
+    private Dictionary<int, int> CalculateDepthMap(List<WorkItemWithValidationDto> workItems)
+    {
+        var depthMap = new Dictionary<int, int>();
+        var workItemIds = new HashSet<int>(workItems.Select(wi => wi.TfsId));
+        
+        foreach (var wi in workItems)
+        {
+            if (depthMap.ContainsKey(wi.TfsId))
+                continue;
+                
+            var depth = CalculateItemDepth(wi, workItems, workItemIds, depthMap);
+            depthMap[wi.TfsId] = depth;
+        }
+        
+        return depthMap;
+    }
+    
+    private int CalculateItemDepth(WorkItemWithValidationDto item, List<WorkItemWithValidationDto> allItems, 
+        HashSet<int> itemIds, Dictionary<int, int> depthMap)
+    {
+        // Base case: no parent or parent not in our dataset = root (depth 0)
+        if (!item.ParentTfsId.HasValue || !itemIds.Contains(item.ParentTfsId.Value))
+        {
+            return 0;
+        }
+        
+        // Check cache
+        if (depthMap.TryGetValue(item.TfsId, out var cachedDepth))
+        {
+            return cachedDepth;
+        }
+        
+        // Recursive case: find parent and add 1
+        var parent = allItems.FirstOrDefault(wi => wi.TfsId == item.ParentTfsId.Value);
+        if (parent == null)
+        {
+            return 0;
+        }
+        
+        var parentDepth = CalculateItemDepth(parent, allItems, itemIds, depthMap);
+        return parentDepth + 1;
     }
     
     private void UpdateBreadcrumbs()

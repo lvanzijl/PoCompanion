@@ -38,7 +38,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ---
 
-### 3. Work Item Explorer — Backlog Depth Exceeded Filter
+### 3. Work Item Explorer — Backlog Depth Exceeded Filter ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -46,6 +46,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | When `backlogDepthExceeded=true` is passed, the explorer should filter to show only work items that exceed the configured backlog depth threshold. Requires integration with backlog health calculation service. |
 | **Used in** | Health → Backlog too deep signal |
 | **Complexity** | 4 |
+| **Status** | ✅ Implemented - Calculates hierarchy depth for each work item. Threshold is 3 levels (depth > 3 = too deep). Shows Depth column when filter is active. Health workspace now shows count on signal card. |
 
 ---
 
@@ -145,7 +146,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ---
 
-### 12. Planning Workspace — Epic Velocity Analysis
+### 12. Planning Workspace — Epic Velocity Analysis ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -153,6 +154,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | Implement logic to detect when an epic's total effort exceeds the team's historical velocity and provide navigation to velocity trends. |
 | **Used in** | Planning → Epic over velocity signal |
 | **Complexity** | 4 |
+| **Status** | ✅ Implemented - Loads velocity trend via IMetricsClient, gets epic forecasts to calculate sprints remaining. Epics needing >3 sprints or exceeding 3x average velocity are flagged as "at risk". Shows count on signal card and detailed table with remaining effort, sprints, and confidence level. |
 
 ---
 
@@ -222,13 +224,14 @@ This document tracks missing or incomplete capabilities identified during the Be
 | 1 | 0 | 0 |
 | 2 | 8 | 7 |
 | 3 | 5 | 5 |
-| 4 | 2 | 0 |
+| 4 | 2 | 2 |
 | 5 | 1 | 0 |
-| **Total** | **17** | **12** |
+| **Total** | **17** | **14** |
 
 **Completed Items:**
 - #1 Work Item Explorer — Root Item Parameter Support ✅
 - #2 Work Item Explorer — Validation Type Filtering ✅
+- #3 Work Item Explorer — Backlog Depth Exceeded Filter ✅
 - #4 Bug Overview — Real Data Integration ✅
 - #5 Bug Overview — Period Filtering ✅
 - #7 PR Overview — Real Data Integration ✅
@@ -236,6 +239,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 - #9 Beta Home — Real Health Signals ✅
 - #10 Health Workspace — Validation Issue Counts ✅
 - #11 Trends Workspace — Velocity Chart Integration ✅
+- #12 Planning Workspace — Epic Velocity Analysis ✅
 - #13 Planning Workspace — Epic Invalid Items Detection ✅
 - #15 Profile Selection — Return URL Handling ✅
 - #16 Context Propagation — Product Filter in Navigation ✅
@@ -243,6 +247,9 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 **Blocked Items:**
 - #6 Bug Detail — Save Changes (Requires backend API changes)
+
+**Remaining Items:**
+- #14 Batch Edit Functionality (Complexity 5)
 
 ---
 
