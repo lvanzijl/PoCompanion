@@ -377,18 +377,41 @@
         }
     }
     
+    /// <summary>
+    /// Gets the health level based on fixed thresholds.
+    /// Decision #2: Health Signal Thresholds
+    /// - 0 items = Healthy (Green)
+    /// - 1-9 items = Low (Info/Blue)
+    /// - 10-49 items = Warning (Yellow)
+    /// - 50+ items = Error (Red)
+    /// </summary>
+    private int GetHealthLevel(int count) => count switch
+    {
+        0 => 0,       // Healthy
+        < 10 => 1,    // Low
+        < 50 => 2,    // Warning
+        _ => 3        // Error
+    };
+    
     private Color GetHealthStatusColor()
     {
-        if (_workItemsWithIssues == 0) return Color.Success;
-        if (_workItemsWithIssues <= 10) return Color.Warning;
-        return Color.Error;
+        return GetHealthLevel(_workItemsWithIssues) switch
+        {
+            0 => Color.Success,
+            1 => Color.Info,
+            2 => Color.Warning,
+            _ => Color.Error
+        };
     }
     
     private Color GetBugStatusColor()
     {
-        if (_activeBugCount == 0) return Color.Success;
-        if (_activeBugCount <= 5) return Color.Info;
-        if (_activeBugCount <= 15) return Color.Warning;
-        return Color.Error;
+        return GetHealthLevel(_activeBugCount) switch
+        {
+            0 => Color.Success,
+            1 => Color.Info,
+            2 => Color.Warning,
+            _ => Color.Error
+        };
     }
 }

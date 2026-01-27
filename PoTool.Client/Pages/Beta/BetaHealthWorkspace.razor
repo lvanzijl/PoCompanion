@@ -59,6 +59,11 @@
                 Click a signal to navigate to related work items
             </MudText>
             
+            @* 
+                Decision #2: Health Signal Thresholds
+                Decision #9: Single click = navigate immediately
+                Decision #10: Show "0 items" badge (don't hide empty cards)
+            *@
             <MudGrid>
                 @* Validation Category Signal *@
                 <MudItem xs="12" sm="6" md="4">
@@ -67,9 +72,9 @@
                              Class="mud-card-hover"
                              @onclick='() => NavigateToWorkItemExplorer("missing-effort")'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Timer" Color="@(_missingEffortCount > 0 ? Color.Warning : Color.Success)" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.Timer" Color="@GetHealthColor(_missingEffortCount)" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Missing Effort</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@(_missingEffortCount > 0 ? Color.Warning : Color.Success)">
+                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_missingEffortCount)">
                                 @_missingEffortCount items
                             </MudChip>
                         </MudCardContent>
@@ -83,9 +88,9 @@
                              Class="mud-card-hover"
                              @onclick='() => NavigateToWorkItemExplorer("missing-description")'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Description" Color="@(_missingDescriptionCount > 0 ? Color.Warning : Color.Success)" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.Description" Color="@GetHealthColor(_missingDescriptionCount)" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Missing Description</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@(_missingDescriptionCount > 0 ? Color.Warning : Color.Success)">
+                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_missingDescriptionCount)">
                                 @_missingDescriptionCount items
                             </MudChip>
                         </MudCardContent>
@@ -99,9 +104,9 @@
                              Class="mud-card-hover"
                              @onclick="NavigateToBacklogDepthExceeded">
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Layers" Color="@(_backlogDepthExceededCount > 0 ? Color.Error : Color.Success)" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.Layers" Color="@GetHealthColor(_backlogDepthExceededCount)" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Backlog Too Deep</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@(_backlogDepthExceededCount > 0 ? Color.Error : Color.Success)">
+                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_backlogDepthExceededCount)">
                                 @_backlogDepthExceededCount items
                             </MudChip>
                         </MudCardContent>
@@ -115,9 +120,9 @@
                              Class="mud-card-hover"
                              @onclick="NavigateToBugOverview">
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.BugReport" Color="@(_bugCount > 0 ? Color.Error : Color.Success)" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.BugReport" Color="@GetHealthColor(_bugCount)" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Bugs</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@(_bugCount > 0 ? Color.Error : Color.Success)">
+                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_bugCount)">
                                 @_bugCount items
                             </MudChip>
                         </MudCardContent>
@@ -131,9 +136,9 @@
                              Class="mud-card-hover"
                              @onclick='() => NavigateToWorkItemExplorer("invalid-state")'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="@(_invalidStateCount > 0 ? Color.Warning : Color.Success)" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="@GetHealthColor(_invalidStateCount)" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Invalid States</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@(_invalidStateCount > 0 ? Color.Warning : Color.Success)">
+                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_invalidStateCount)">
                                 @_invalidStateCount items
                             </MudChip>
                         </MudCardContent>
@@ -147,9 +152,9 @@
                              Class="mud-card-hover"
                              @onclick='() => NavigateToWorkItemExplorer("missing-tags")'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Label" Color="@(_missingTagsCount > 0 ? Color.Info : Color.Success)" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.Label" Color="@GetHealthColor(_missingTagsCount)" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Missing Tags</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@(_missingTagsCount > 0 ? Color.Info : Color.Success)">
+                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_missingTagsCount)">
                                 @_missingTagsCount items
                             </MudChip>
                         </MudCardContent>
@@ -397,4 +402,20 @@
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPlanningWorkspace}{BuildContextQuery()}");
     }
+    
+    /// <summary>
+    /// Gets the color based on fixed thresholds.
+    /// Decision #2: Health Signal Thresholds
+    /// - 0 items = Healthy (Green)
+    /// - 1-9 items = Low (Info/Blue)
+    /// - 10-49 items = Warning (Yellow)
+    /// - 50+ items = Error (Red)
+    /// </summary>
+    private Color GetHealthColor(int count) => count switch
+    {
+        0 => Color.Success,
+        < 10 => Color.Info,
+        < 50 => Color.Warning,
+        _ => Color.Error
+    };
 }

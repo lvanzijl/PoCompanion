@@ -170,6 +170,9 @@ builder.Services.AddScoped<ExportService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<BrowserNavigationService>();
 
+// Beta navigation services
+builder.Services.AddScoped<IBetaEpicOrderingService, BetaEpicOrderingService>();
+
 // Add MudBlazor services
 builder.Services.AddMudServices();
 
