@@ -134,9 +134,7 @@
                                 {
                                     var isBeingDragged = _draggingLineId == line.Id;
                                     var isSelected = _selectedLineId == line.Id && _selectedLineIsMilestone;
-                                    var lineClass = isBeingDragged ? "milestone-line draggable-line line-being-dragged" 
-                                        : isSelected ? "milestone-line draggable-line line-selected"
-                                        : "milestone-line draggable-line";
+                                    var lineClass = GetLineClass("milestone-line", isBeingDragged, isSelected);
                                     @* Only enable pointer events when NOT dragging an epic - this allows epic drops to pass through *@
                                     var linePointerEvents = _isDraggingEpic ? "none" : "auto";
                                     <div class="@lineClass"
@@ -165,9 +163,7 @@
                                 {
                                     var isBeingDragged = _draggingLineId == line.Id;
                                     var isSelected = _selectedLineId == line.Id && !_selectedLineIsMilestone;
-                                    var lineClass = isBeingDragged ? "iteration-line draggable-line line-being-dragged" 
-                                        : isSelected ? "iteration-line draggable-line line-selected"
-                                        : "iteration-line draggable-line";
+                                    var lineClass = GetLineClass("iteration-line", isBeingDragged, isSelected);
                                     @* Only enable pointer events when NOT dragging an epic - this allows epic drops to pass through *@
                                     var linePointerEvents = _isDraggingEpic ? "none" : "auto";
                                     <div class="@lineClass"
@@ -819,8 +815,8 @@
         var isMilestone = _selectedLineIsMilestone;
 
         // Find the line
-        string label;
-        double currentPosition;
+        string? label = null;
+        double? currentPosition = null;
         MilestoneType milestoneType = default;
 
         if (isMilestone)
@@ -839,8 +835,14 @@
             currentPosition = line.VerticalPosition;
         }
 
+        // Guard against null values
+        if (label == null || currentPosition == null)
+        {
+            return;
+        }
+
         // Move by 1.0 (one row)
-        var newPosition = currentPosition + direction;
+        var newPosition = currentPosition.Value + direction;
         if (newPosition < 0.5)
         {
             return; // Can't move above first row
@@ -1214,6 +1216,25 @@
 
         // If the epic's relationship to the line changes, apply preview styling
         return (wasBeforeLine != wouldBeBeforeLine) ? "epic-preview-affected" : string.Empty;
+    }
+
+    /// <summary>
+    /// Gets the CSS class for a line based on its dragging and selection state.
+    /// </summary>
+    private string GetLineClass(string baseClass, bool isBeingDragged, bool isSelected)
+    {
+        if (isBeingDragged)
+        {
+            return $"{baseClass} draggable-line line-being-dragged";
+        }
+        else if (isSelected)
+        {
+            return $"{baseClass} draggable-line line-selected";
+        }
+        else
+        {
+            return $"{baseClass} draggable-line";
+        }
     }
 
     #endregion
