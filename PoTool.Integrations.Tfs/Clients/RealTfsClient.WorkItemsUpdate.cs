@@ -1,5 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using PoTool.Core.Contracts;
+using PoTool.Core.WorkItems;
 using PoTool.Shared.Contracts.TfsVerification;
 using PoTool.Shared.Exceptions;
 using PoTool.Shared.Settings;

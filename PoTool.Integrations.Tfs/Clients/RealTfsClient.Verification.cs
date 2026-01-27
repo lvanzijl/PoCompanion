@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using PoTool.Integrations.Tfs.Models.Internal;
 using PoTool.Shared.Contracts.TfsVerification;
 using PoTool.Shared.Exceptions;
 using PoTool.Shared.Settings;
@@ -10,7 +11,7 @@ namespace PoTool.Integrations.Tfs.Clients;
 /// <summary>
 /// Real Azure DevOps/TFS REST client implementation - Verification Methods
 /// </summary>
-public sealed partial class RealTfsClient
+public partial class RealTfsClient
 {
     public async Task<TfsVerificationReport> VerifyCapabilitiesAsync(
         bool includeWriteChecks = false,

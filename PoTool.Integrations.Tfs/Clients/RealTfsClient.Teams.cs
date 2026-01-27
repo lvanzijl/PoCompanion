@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Contracts.TfsVerification;
+using PoTool.Shared.Exceptions;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 
@@ -10,7 +11,7 @@ namespace PoTool.Integrations.Tfs.Clients;
 /// <summary>
 /// Real Azure DevOps/TFS REST client implementation - Team Methods
 /// </summary>
-public sealed partial class RealTfsClient
+public partial class RealTfsClient
 {
     public async Task<IEnumerable<TfsTeamDto>> GetTfsTeamsAsync(CancellationToken cancellationToken = default)
     {

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using PoTool.Integrations.Tfs.Models.Internal;
 using PoTool.Shared.Settings;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.WorkItems;
