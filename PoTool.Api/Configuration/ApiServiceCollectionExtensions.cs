@@ -6,6 +6,7 @@ using PoTool.Api.Repositories;
 using PoTool.Api.Services;
 using PoTool.Api.Services.MockData;
 using PoTool.Api.Services.Sync;
+using PoTool.Integrations.Tfs.Clients;
 using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
 using PoTool.Core.WorkItems.Validators;
@@ -217,7 +218,7 @@ public static class ApiServiceCollectionExtensions
         // Register TFS configuration and client
         services.AddDataProtection();
         services.AddScoped<IEfConcurrencyGate, EfConcurrencyGate>();
-        services.AddScoped<TfsConfigurationService>();
+        services.AddScoped<ITfsConfigurationService, TfsConfigurationService>();
         services.AddScoped<TfsAuthenticationProvider>();
         services.AddScoped<ProfileFilterService>();
 

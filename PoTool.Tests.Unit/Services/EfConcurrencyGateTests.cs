@@ -2,8 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Api.Persistence;
-using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Shared.Settings;
 using PoTool.Core.Contracts;
 
 namespace PoTool.Tests.Unit.Services;

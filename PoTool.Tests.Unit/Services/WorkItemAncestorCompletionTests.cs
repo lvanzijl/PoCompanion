@@ -13,6 +13,7 @@ using Moq;
 using Moq.Protected;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
+using PoTool.Integrations.Tfs.Clients;
 using PoTool.Core.Contracts;
 
 namespace PoTool.Tests.Unit.Services;
