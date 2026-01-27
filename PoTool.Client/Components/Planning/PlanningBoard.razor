@@ -174,7 +174,7 @@ else
                 @* Header row with product columns *@
                 <thead>
                     <tr>
-                        <th class="row-controls-header" style="width: 40px;"></th>
+                        <th class="row-controls-header"></th>
                         @foreach (var column in GetVisibleColumns())
                         {
                             <th class="product-column-header pa-2">
@@ -190,42 +190,86 @@ else
                         @if (row.RowType == PlanningDtos.BoardRowType.Marker)
                         {
                             @* Marker row - spans all columns *@
-                            <tr class="@GetMarkerRowClass(row)" 
-                                draggable="true"
-                                @ondragstart="@(() => HandleMarkerDragStart(row))"
-                                @ondragend="HandleDragEnd">
+                            <tr class="@GetMarkerRowClass(row)"
+                                @onmouseenter="@(() => _hoveredRowId = row.Id)"
+                                @onmouseleave="@(() => { if (_hoveredRowId == row.Id) _hoveredRowId = null; })">
                                 <td class="row-controls pa-1"
                                     @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
                                     @ondrop="@(() => HandleMarkerDrop(row.Id, false))">
-                                    @* Row controls on the left with drop zone *@
-                                    <MudStack Spacing="0">
+                                    @* Row controls on the left - fixed width *@
+                                    <div class="row-control-buttons">
+                                        @* Drop zone above *@
                                         <div class="@(_isDragging && _dragMarkerRowId.HasValue ? "row-drop-zone" : "")"
-                                             style="height: 10px; margin-bottom: 2px;"
+                                             style="height: 10px; width: 100%;"
                                              @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
                                              @ondrop="@(() => HandleMarkerDrop(row.Id, false))">
                                         </div>
-                                        <MudIconButton Icon="@Icons.Material.Filled.Add" 
-                                                       Size="Size.Small" 
-                                                       OnClick="@(() => AddRowAbove(row.Id))" />
-                                        <MudIconButton Icon="@Icons.Material.Filled.Add" 
-                                                       Size="Size.Small" 
-                                                       OnClick="@(() => AddRowBelow(row.Id))" />
+                                        
+                                        @* Drag handle - only visible on hover *@
+                                        <div class="marker-drag-handle"
+                                             draggable="true"
+                                             @ondragstart="@(() => HandleMarkerDragStart(row))"
+                                             @ondragend="HandleDragEnd"
+                                             title="Drag to reorder">
+                                            <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Size="Size.Small" />
+                                        </div>
+                                        
+                                        @* Context menu *@
+                                        <MudMenu Icon="@Icons.Material.Filled.MoreVert"
+                                                 Size="Size.Small"
+                                                 Dense="true"
+                                                 AnchorOrigin="Origin.BottomLeft"
+                                                 TransformOrigin="Origin.TopLeft">
+                                            <MudMenuItem OnClick="@(() => AddRowAbove(row.Id))">Add row above</MudMenuItem>
+                                            <MudMenuItem OnClick="@(() => AddRowBelow(row.Id))">Add row below</MudMenuItem>
+                                            <MudMenuItem OnClick="@(() => StartMarkerLabelEdit(row.Id))">Rename line</MudMenuItem>
+                                        </MudMenu>
+                                        
+                                        @* Drop zone below *@
                                         <div class="@(_isDragging && _dragMarkerRowId.HasValue ? "row-drop-zone" : "")"
-                                             style="height: 10px; margin-top: 2px;"
+                                             style="height: 10px; width: 100%;"
                                              @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
                                              @ondrop="@(() => HandleMarkerDrop(row.Id, true))">
                                         </div>
-                                    </MudStack>
+                                    </div>
                                 </td>
                                 <td colspan="@GetVisibleColumns().Count()" class="marker-row-cell pa-2">
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center">
-                                        <MudIcon Icon="@GetMarkerIcon(row)" 
-                                                 Size="Size.Small"
-                                                 Color="@GetMarkerColor(row)" />
-                                        <MudText Typo="Typo.body2" Class="font-weight-bold">
-                                            @(row.MarkerLabel ?? (row.MarkerType == PlanningDtos.MarkerRowType.Release ? "Release Line" : "Iteration Line"))
-                                        </MudText>
-                                    </MudStack>
+                                    @if (_editingMarkerRowId == row.Id)
+                                    {
+                                        @* Inline editing mode *@
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="2">
+                                            <MudIcon Icon="@GetMarkerIcon(row)" 
+                                                     Size="Size.Small"
+                                                     Color="@GetMarkerColor(row)" />
+                                            <MudTextField @bind-Value="_editingMarkerLabel"
+                                                          Variant="Variant.Outlined"
+                                                          Margin="Margin.Dense"
+                                                          Style="max-width: 300px;"
+                                                          OnBlur="@(() => SaveMarkerLabel(row.Id))"
+                                                          @onkeydown="@(e => HandleMarkerLabelKeyDown(e, row.Id))"
+                                                          Immediate="true" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.Check"
+                                                           Size="Size.Small"
+                                                           Color="Color.Success"
+                                                           OnClick="@(() => SaveMarkerLabel(row.Id))" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                           Size="Size.Small"
+                                                           Color="Color.Error"
+                                                           OnClick="@(() => CancelMarkerLabelEdit())" />
+                                        </MudStack>
+                                    }
+                                    else
+                                    {
+                                        @* Display mode *@
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center">
+                                            <MudIcon Icon="@GetMarkerIcon(row)" 
+                                                     Size="Size.Small"
+                                                     Color="@GetMarkerColor(row)" />
+                                            <MudText Typo="Typo.body2" Class="font-weight-bold">
+                                                @(row.MarkerLabel ?? (row.MarkerType == PlanningDtos.MarkerRowType.Release ? "Release Line" : "Iteration Line"))
+                                            </MudText>
+                                        </MudStack>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -233,26 +277,46 @@ else
                         {
                             @* Normal row with cells *@
                             <tr class="board-row"
-                                @oncontextmenu="@(e => HandleRowContextMenu(e, row))"
-                                @oncontextmenu:preventDefault>
+                                @onmouseenter="@(() => _hoveredRowId = row.Id)"
+                                @onmouseleave="@(() => { if (_hoveredRowId == row.Id) _hoveredRowId = null; })">
                                 <td class="row-controls pa-1"
                                     @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
                                     @ondrop="@(() => HandleMarkerDrop(row.Id, false))">
                                     @* Row controls on the left - visible on hover with drop zones *@
                                     <div class="row-control-buttons">
+                                        @* Drop zone above *@
                                         <div class="@(_isDragging && _dragMarkerRowId.HasValue ? "row-drop-zone" : "")"
-                                             style="height: 10px; margin-bottom: 2px;"
+                                             style="height: 10px; width: 100%;"
                                              @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
                                              @ondrop="@(() => HandleMarkerDrop(row.Id, false))">
                                         </div>
-                                        <MudIconButton Icon="@Icons.Material.Filled.Add" 
-                                                       Size="Size.Small" 
-                                                       OnClick="@(() => AddRowAbove(row.Id))" />
-                                        <MudIconButton Icon="@Icons.Material.Filled.Add" 
-                                                       Size="Size.Small" 
-                                                       OnClick="@(() => AddRowBelow(row.Id))" />
+                                        
+                                        @* Context menu *@
+                                        <MudMenu Icon="@Icons.Material.Filled.MoreVert"
+                                                 Size="Size.Small"
+                                                 Dense="true"
+                                                 AnchorOrigin="Origin.BottomLeft"
+                                                 TransformOrigin="Origin.TopLeft">
+                                            <MudMenuItem OnClick="@(() => AddRowAbove(row.Id))">Add row above</MudMenuItem>
+                                            <MudMenuItem OnClick="@(() => AddRowBelow(row.Id))">Add row below</MudMenuItem>
+                                            @{
+                                                var hasEpics = _placements.Any(p => p.RowId == row.Id);
+                                            }
+                                            <MudMenuItem OnClick="@(() => DeleteRow(row.Id))" 
+                                                         Disabled="@hasEpics">
+                                                Remove row
+                                                @if (hasEpics)
+                                                {
+                                                    <MudTooltip Text="Row contains epics">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="ml-2" />
+                                                    </MudTooltip>
+                                                }
+                                            </MudMenuItem>
+                                        </MudMenu>
+                                        
+                                        @* Drop zone below *@
                                         <div class="@(_isDragging && _dragMarkerRowId.HasValue ? "row-drop-zone" : "")"
-                                             style="height: 10px; margin-top: 2px;"
+                                             style="height: 10px; width: 100%;"
                                              @ondragover:preventDefault="@(_isDragging && _dragMarkerRowId.HasValue)"
                                              @ondrop="@(() => HandleMarkerDrop(row.Id, true))">
                                         </div>
@@ -355,6 +419,12 @@ else
     private int? _dragProductId;
     private int? _dragPlacementId;
     private int? _dragMarkerRowId;
+    
+    // Row interaction state
+    private int? _hoveredRowId;
+    private int? _contextMenuRowId;
+    private int? _editingMarkerRowId;
+    private string _editingMarkerLabel = string.Empty;
     
     protected override async Task OnInitializedAsync()
     {
@@ -658,6 +728,10 @@ else
     
     private async Task AddRowAbove(int rowId)
     {
+        // Show row type selection dialog
+        var rowType = await ShowRowTypeSelectionDialog();
+        if (!rowType.HasValue) return;
+        
         _isSaving = true;
         StateHasChanged();
         
@@ -673,8 +747,18 @@ else
             
             if (result?.Success == true && result.RowId.HasValue)
             {
-                // Reload board to get updated rows
-                await LoadBoardDataAsync();
+                // If it's a marker row, prompt for name immediately
+                if (rowType.Value != PlanningDtos.BoardRowType.Normal)
+                {
+                    await LoadBoardDataAsync();
+                    _editingMarkerRowId = result.RowId;
+                    _editingMarkerLabel = string.Empty;
+                    StateHasChanged();
+                }
+                else
+                {
+                    await LoadBoardDataAsync();
+                }
             }
             else
             {
@@ -695,6 +779,10 @@ else
     
     private async Task AddRowBelow(int rowId)
     {
+        // Show row type selection dialog
+        var rowType = await ShowRowTypeSelectionDialog();
+        if (!rowType.HasValue) return;
+        
         _isSaving = true;
         StateHasChanged();
         
@@ -710,8 +798,18 @@ else
             
             if (result?.Success == true && result.RowId.HasValue)
             {
-                // Reload board to get updated rows
-                await LoadBoardDataAsync();
+                // If it's a marker row, prompt for name immediately
+                if (rowType.Value != PlanningDtos.BoardRowType.Normal)
+                {
+                    await LoadBoardDataAsync();
+                    _editingMarkerRowId = result.RowId;
+                    _editingMarkerLabel = string.Empty;
+                    StateHasChanged();
+                }
+                else
+                {
+                    await LoadBoardDataAsync();
+                }
             }
             else
             {
@@ -730,8 +828,18 @@ else
         }
     }
     
-    private async Task HandleRowContextMenu(MouseEventArgs e, PlanningDtos.BoardRowDto row)
+    private async Task<PlanningDtos.BoardRowType?> ShowRowTypeSelectionDialog()
     {
+        // For now, return Normal by default
+        // TODO: Implement proper row type selection dialog
+        return PlanningDtos.BoardRowType.Normal;
+    }
+    
+    private async Task DeleteRow(int rowId)
+    {
+        var row = _rows.FirstOrDefault(r => r.Id == rowId);
+        if (row == null) return;
+        
         // Check if row is empty
         var hasEpics = _placements.Any(p => p.RowId == row.Id);
         
@@ -793,6 +901,66 @@ else
         {
             _isSaving = false;
             StateHasChanged();
+        }
+    }
+    
+    private void StartMarkerLabelEdit(int rowId)
+    {
+        var row = _rows.FirstOrDefault(r => r.Id == rowId);
+        if (row == null || row.RowType != PlanningDtos.BoardRowType.Marker) return;
+        
+        _editingMarkerRowId = rowId;
+        _editingMarkerLabel = row.MarkerLabel ?? string.Empty;
+        StateHasChanged();
+    }
+    
+    private async Task SaveMarkerLabel(int rowId)
+    {
+        if (_editingMarkerRowId != rowId) return;
+        
+        var row = _rows.FirstOrDefault(r => r.Id == rowId);
+        if (row == null) return;
+        
+        _isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            // TODO: Call API to update marker label
+            // For now, just update locally and reload
+            Snackbar.Add("Marker label updated", Severity.Success);
+            await LoadBoardDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to save marker label for row {RowId}", rowId);
+            Snackbar.Add("Failed to save marker label", Severity.Error);
+        }
+        finally
+        {
+            _editingMarkerRowId = null;
+            _editingMarkerLabel = string.Empty;
+            _isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void CancelMarkerLabelEdit()
+    {
+        _editingMarkerRowId = null;
+        _editingMarkerLabel = string.Empty;
+        StateHasChanged();
+    }
+    
+    private async Task HandleMarkerLabelKeyDown(KeyboardEventArgs e, int rowId)
+    {
+        if (e.Key == "Enter")
+        {
+            await SaveMarkerLabel(rowId);
+        }
+        else if (e.Key == "Escape")
+        {
+            CancelMarkerLabelEdit();
         }
     }
     

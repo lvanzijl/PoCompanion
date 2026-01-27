@@ -48,6 +48,9 @@
 
 .row-controls-header {
     background-color: var(--mud-palette-surface);
+    width: 60px;
+    min-width: 60px;
+    max-width: 60px;
 }
 
 .product-column-header {
@@ -59,17 +62,50 @@
 .row-controls {
     background-color: var(--mud-palette-surface);
     vertical-align: middle;
+    width: 60px;
+    min-width: 60px;
+    max-width: 60px;
+    position: relative;
 }
 
 .row-control-buttons {
     display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
     opacity: 0;
     transition: opacity 0.2s ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 4px;
 }
 
+/* Row-wide hover: hovering any cell activates the controls */
 .board-row:hover .row-control-buttons {
     opacity: 1;
+}
+
+.marker-row:hover .row-control-buttons {
+    opacity: 1;
+}
+
+/* Drag handle styling for marker rows */
+.marker-drag-handle {
+    cursor: grab;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    color: var(--mud-palette-text-secondary);
+}
+
+.marker-row:hover .marker-drag-handle {
+    opacity: 1;
+}
+
+.marker-drag-handle:active {
+    cursor: grabbing;
 }
 
 .board-cell {
@@ -121,11 +157,7 @@
 
 /* Marker row styles */
 .marker-row {
-    cursor: grab;
-}
-
-.marker-row:active {
-    cursor: grabbing;
+    cursor: default;
 }
 
 .marker-row-cell {
