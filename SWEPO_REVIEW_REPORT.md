@@ -72,7 +72,7 @@
   - Introduce focused collaborators (WorkItemsClient, PullRequestsClient, PipelinesClient) to reduce cognitive load.
 
 ## Feature Wishlist (PO, ordered; all items not in TFS)
-1. **Cross-team dependency risk heatmap**  
+1. **Cross-team dependency risk heat map**  
    - Visualize and score dependency chains across teams, highlighting high-risk bottlenecks.
 2. **What-if capacity simulator**  
    - Model effort changes, team availability, and scope shifts with immediate forecast impact.
