@@ -158,6 +158,31 @@ public class PlanningBoardService
     }
 
     /// <summary>
+    /// Updates a marker row's label.
+    /// </summary>
+    public async Task<RowOperationResultDto?> UpdateMarkerRowAsync(
+        int rowId,
+        string label,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = new UpdateMarkerRowRequest { Label = label };
+            var response = await _httpClient.PutAsJsonAsync(
+                $"api/planning/rows/marker/{rowId}",
+                request,
+                cancellationToken);
+
+            return await response.Content.ReadFromJsonAsync<RowOperationResultDto>(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update marker row {RowId}", rowId);
+            return new RowOperationResultDto { Success = false, ErrorMessage = "Operation failed. Please try again." };
+        }
+    }
+
+    /// <summary>
     /// Moves a row to a new position.
     /// </summary>
     public async Task<RowOperationResultDto?> MoveRowAsync(

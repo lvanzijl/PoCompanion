@@ -188,6 +188,39 @@ public class PlanningController : ControllerBase
     }
 
     /// <summary>
+    /// Updates a marker row's label.
+    /// </summary>
+    [HttpPut("rows/marker/{rowId:int}")]
+    public async Task<ActionResult<RowOperationResultDto>> UpdateMarkerRow(
+        int rowId,
+        [FromBody] UpdateMarkerRowRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(
+                new UpdateMarkerRowCommand(rowId, request.Label), 
+                cancellationToken);
+
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating marker row {RowId}", rowId);
+            return StatusCode(500, new RowOperationResultDto 
+            { 
+                Success = false, 
+                ErrorMessage = "Error updating marker row" 
+            });
+        }
+    }
+
+    /// <summary>
     /// Moves a row to a new position.
     /// </summary>
     [HttpPut("rows/{rowId:int}/move")]

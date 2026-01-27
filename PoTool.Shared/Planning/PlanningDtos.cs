@@ -273,6 +273,17 @@ public sealed record CreateMarkerRowRequest
 }
 
 /// <summary>
+/// Request to update a marker row's label.
+/// </summary>
+public sealed record UpdateMarkerRowRequest
+{
+    /// <summary>
+    /// New label for the marker row.
+    /// </summary>
+    public string Label { get; init; } = string.Empty;
+}
+
+/// <summary>
 /// Request to move a row to a new position.
 /// </summary>
 public sealed record MoveRowRequest

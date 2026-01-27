@@ -1006,15 +1006,35 @@ else
         var row = _rows.FirstOrDefault(r => r.Id == rowId);
         if (row == null) return;
         
-        // TODO: Implement backend API for updating marker labels
-        // Need: UpdateMarkerRowRequest DTO, UpdateMarkerRowCommand, API endpoint
-        // Required: PlanningService.UpdateMarkerRowAsync(int rowId, string label)
-        // For now, just cancel the edit and show a message
-        Snackbar.Add("Marker label update - backend API not yet implemented", Severity.Info);
-        
-        _editingMarkerRowId = null;
-        _editingMarkerLabel = string.Empty;
+        _isSaving = true;
         StateHasChanged();
+        
+        try
+        {
+            var result = await PlanningService.UpdateMarkerRowAsync(rowId, _editingMarkerLabel);
+            
+            if (result?.Success == true)
+            {
+                Snackbar.Add("Marker label updated successfully", Severity.Success);
+                await LoadBoardDataAsync();
+            }
+            else
+            {
+                Snackbar.Add(result?.ErrorMessage ?? "Failed to update marker label", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to save marker label for row {RowId}", rowId);
+            Snackbar.Add("Failed to update marker label", Severity.Error);
+        }
+        finally
+        {
+            _editingMarkerRowId = null;
+            _editingMarkerLabel = string.Empty;
+            _isSaving = false;
+            StateHasChanged();
+        }
     }
     
     private void CancelMarkerLabelEdit()
