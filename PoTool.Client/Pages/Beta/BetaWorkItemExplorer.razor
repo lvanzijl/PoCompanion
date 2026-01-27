@@ -376,13 +376,23 @@
     
     private IEnumerable<WorkItemWithValidationDto> FilterByRootWorkItem(IEnumerable<WorkItemWithValidationDto> workItems)
     {
-        // Build a set of all descendants of the root work item
+        // Build a set of all descendants of the root work item (including the root itself)
         var allWorkItemsList = workItems.ToList();
         var descendants = new HashSet<int>();
         var toProcess = new Queue<int>();
         
         if (_rootWorkItemId.HasValue)
         {
+            // Check if root work item exists in the dataset
+            var rootExists = allWorkItemsList.Any(wi => wi.TfsId == _rootWorkItemId.Value);
+            if (!rootExists)
+            {
+                // Root work item not found - return empty result
+                // The error message will be shown via the "No work items found" alert
+                return Enumerable.Empty<WorkItemWithValidationDto>();
+            }
+            
+            // Include the root item and all its descendants
             descendants.Add(_rootWorkItemId.Value);
             toProcess.Enqueue(_rootWorkItemId.Value);
             
@@ -483,8 +493,17 @@
     
     private void NavigateToViewAll()
     {
-        // Navigate to the same view with allProducts=true and allTeams=true
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}?allProducts=true&allTeams=true");
+        // Navigate to the same view with allProducts=true and allTeams=true, preserving existing filters
+        var queryParams = new List<string> { "allProducts=true", "allTeams=true" };
+        
+        if (!string.IsNullOrEmpty(_validationType))
+            queryParams.Add($"validationType={Uri.EscapeDataString(_validationType)}");
+        if (_backlogDepthExceeded)
+            queryParams.Add("backlogDepthExceeded=true");
+        if (_rootWorkItemId.HasValue)
+            queryParams.Add($"rootWorkItemId={_rootWorkItemId}");
+        
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}?{string.Join("&", queryParams)}");
     }
     
     private void NavigateToHealth()

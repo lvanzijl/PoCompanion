@@ -360,8 +360,13 @@
     
     private void NavigateToViewAll()
     {
-        // Navigate to the same view with allProducts=true and allTeams=true
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaBugOverview}?allProducts=true&allTeams=true");
+        // Navigate to the same view with allProducts=true and allTeams=true, preserving existing filters
+        var queryParams = new List<string> { "allProducts=true", "allTeams=true" };
+        
+        if (!string.IsNullOrEmpty(_period))
+            queryParams.Add($"period={Uri.EscapeDataString(_period)}");
+        
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaBugOverview}?{string.Join("&", queryParams)}");
     }
     
     private void NavigateToBetaHome()
