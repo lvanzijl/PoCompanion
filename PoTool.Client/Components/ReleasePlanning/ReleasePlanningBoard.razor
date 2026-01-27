@@ -6,7 +6,8 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
-<MudPaper Class="release-planning-board pa-4" Elevation="0" @onkeydown="@HandleKeyDown" tabindex="0">
+<div class="release-planning-board pa-4" @onkeydown="@HandleKeyDown" tabindex="0" @ref="_boardElement">
+    <MudPaper Elevation="0">
     @if (_isLoading)
     {
         <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
@@ -129,7 +130,7 @@
                             </div>
 
                             <!-- Horizontal Lines between rows - full width across all lanes -->
-                            <div class="lines-container" style="position: relative; pointer-events: none;">
+                            <div class="lines-container" style="@($"position: relative; pointer-events: {(_isDraggingEpic ? "none" : "auto")};")">
                                 @foreach (var line in linesAtPosition.MilestoneLines)
                                 {
                                     var isBeingDragged = _draggingLineId == line.Id;
@@ -229,7 +230,8 @@
             }
         </MudPaper>
     }
-</MudPaper>
+    </MudPaper>
+</div>
 
 @code {
     private ReleasePlanningBoardDto? _board;
@@ -246,6 +248,7 @@
     // Line selection state
     private int? _selectedLineId;
     private bool _selectedLineIsMilestone;
+    private ElementReference _boardElement;
 
     // Epic dragging state
     private int? _draggingEpicId;
@@ -630,7 +633,7 @@
     /// <summary>
     /// Handles epic selection (clicking on a card).
     /// </summary>
-    private void HandleEpicSelected(int placementId)
+    private async Task HandleEpicSelected(int placementId)
     {
         // Toggle selection: if already selected, deselect; otherwise select
         if (_selectedPlacementId == placementId)
@@ -644,13 +647,14 @@
             _selectedLineId = null;
         }
         StateHasChanged();
+        await FocusBoardAsync();
         Logger.LogDebug("Epic placement {PlacementId} selected: {IsSelected}", placementId, _selectedPlacementId.HasValue);
     }
 
     /// <summary>
     /// Handles line selection (clicking on a line).
     /// </summary>
-    private void HandleLineSelected(int lineId, bool isMilestone)
+    private async Task HandleLineSelected(int lineId, bool isMilestone)
     {
         // Toggle selection: if already selected, deselect; otherwise select
         if (_selectedLineId == lineId && _selectedLineIsMilestone == isMilestone)
@@ -665,8 +669,14 @@
             _selectedPlacementId = null;
         }
         StateHasChanged();
+        await FocusBoardAsync();
         Logger.LogDebug("{LineType} line {LineId} selected: {IsSelected}", 
             isMilestone ? "Milestone" : "Iteration", lineId, _selectedLineId.HasValue);
+    }
+    
+    private async Task FocusBoardAsync()
+    {
+        await _boardElement.FocusAsync();
     }
 
     /// <summary>
