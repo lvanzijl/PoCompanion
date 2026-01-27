@@ -124,6 +124,14 @@
     opacity: 0.4;
 }
 
+/* Line selected - highlighted */
+.line-selected {
+    outline: 3px solid var(--mud-palette-primary) !important;
+    outline-offset: 2px;
+    background-color: var(--mud-palette-primary-lighten) !important;
+    box-shadow: var(--mud-elevation-8) !important;
+}
+
 /* Preview line during drag */
 .milestone-line-preview,
 .iteration-line-preview {
@@ -176,6 +184,23 @@
     outline: 2px dashed var(--mud-palette-primary);
     outline-offset: -2px;
     transition: all 0.2s ease;
+}
+
+/* Line drop target - highlight the row border */
+.row-container.line-drop-target {
+    outline: 3px solid var(--mud-palette-warning);
+    outline-offset: -3px;
+    background-color: var(--mud-palette-warning-lighten);
+    animation: pulse-drop-target 0.8s ease-in-out infinite;
+}
+
+@keyframes pulse-drop-target {
+    0%, 100% {
+        outline-color: var(--mud-palette-warning);
+    }
+    50% {
+        outline-color: var(--mud-palette-warning-darken);
+    }
 }
 
 /* Epic being dragged should be semi-transparent */
