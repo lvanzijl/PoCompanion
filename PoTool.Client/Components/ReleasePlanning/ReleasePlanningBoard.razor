@@ -680,9 +680,9 @@
         {
             await _boardElement.FocusAsync();
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
-            Logger.LogDebug(ex, "Unable to focus release planning board");
+            Logger.LogDebug(ex, "Failed to focus release planning board element - element may not be rendered yet");
         }
     }
 
