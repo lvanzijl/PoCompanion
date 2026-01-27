@@ -43,7 +43,7 @@ public class ServiceCollectionTests
         Assert.IsNotNull(interfaceService, "ITfsConfigurationService interface should be resolvable");
         
         // Both should resolve to the same instance (scoped lifetime)
-        var scope = serviceProvider.CreateScope();
+        using var scope = serviceProvider.CreateScope();
         var concreteInScope = scope.ServiceProvider.GetRequiredService<TfsConfigurationService>();
         var interfaceInScope = scope.ServiceProvider.GetRequiredService<ITfsConfigurationService>();
         Assert.AreSame(concreteInScope, interfaceInScope, 
