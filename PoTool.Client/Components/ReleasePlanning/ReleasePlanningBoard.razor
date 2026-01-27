@@ -88,8 +88,10 @@
                         {
                             var currentRow = rowIdx;
                             var linesAtPosition = GetLinesAtPosition(currentRow + 0.5);
+                            var isLineDropTarget = IsPreviewLineAtPosition(currentRow + 0.5);
+                            var rowContainerClass = isLineDropTarget ? "row-container d-flex line-drop-target" : "row-container d-flex";
                             
-                            <div class="row-container d-flex" style="min-height: 80px; position: relative;">
+                            <div class="@rowContainerClass" style="min-height: 80px; position: relative;">
                                 @foreach (var renderLane in renderModel.Lanes)
                                 {
                                     var renderRow = renderLane.Rows.FirstOrDefault(r => r.RowIndex == currentRow);
@@ -131,12 +133,16 @@
                                 @foreach (var line in linesAtPosition.MilestoneLines)
                                 {
                                     var isBeingDragged = _draggingLineId == line.Id;
-                                    var lineClass = isBeingDragged ? "milestone-line draggable-line line-being-dragged" : "milestone-line draggable-line";
+                                    var isSelected = _selectedLineId == line.Id && _selectedLineIsMilestone;
+                                    var lineClass = isBeingDragged ? "milestone-line draggable-line line-being-dragged" 
+                                        : isSelected ? "milestone-line draggable-line line-selected"
+                                        : "milestone-line draggable-line";
                                     @* Only enable pointer events when NOT dragging an epic - this allows epic drops to pass through *@
                                     var linePointerEvents = _isDraggingEpic ? "none" : "auto";
                                     <div class="@lineClass"
                                          style="pointer-events: @linePointerEvents; width: 100%;"
                                          draggable="true"
+                                         @onclick="@(e => HandleLineSelected(line.Id, true))"
                                          @ondragstart="@(e => HandleLineStartDrag(line.Id, true, line.Label, line.Type, line.VerticalPosition))"
                                          @ondragover:preventDefault
                                          @ondragover="@(e => HandleLineDragOver(e, currentRow + 0.5))"
@@ -158,12 +164,16 @@
                                 @foreach (var line in linesAtPosition.IterationLines)
                                 {
                                     var isBeingDragged = _draggingLineId == line.Id;
-                                    var lineClass = isBeingDragged ? "iteration-line draggable-line line-being-dragged" : "iteration-line draggable-line";
+                                    var isSelected = _selectedLineId == line.Id && !_selectedLineIsMilestone;
+                                    var lineClass = isBeingDragged ? "iteration-line draggable-line line-being-dragged" 
+                                        : isSelected ? "iteration-line draggable-line line-selected"
+                                        : "iteration-line draggable-line";
                                     @* Only enable pointer events when NOT dragging an epic - this allows epic drops to pass through *@
                                     var linePointerEvents = _isDraggingEpic ? "none" : "auto";
                                     <div class="@lineClass"
                                          style="pointer-events: @linePointerEvents; width: 100%;"
                                          draggable="true"
+                                         @onclick="@(e => HandleLineSelected(line.Id, false))"
                                          @ondragstart="@(e => HandleLineStartDrag(line.Id, false, line.Label, default, line.VerticalPosition))"
                                          @ondragover:preventDefault
                                          @ondragover="@(e => HandleLineDragOver(e, currentRow + 0.5))"
@@ -236,6 +246,10 @@
 
     // Epic selection state (Issue #5)
     private int? _selectedPlacementId;
+
+    // Line selection state
+    private int? _selectedLineId;
+    private bool _selectedLineIsMilestone;
 
     // Epic dragging state
     private int? _draggingEpicId;
@@ -341,6 +355,9 @@
         _draggingPlacementId = null;
         _isDraggingFromUnplanned = true;
         
+        // Clear any line drag state to avoid conflicts
+        ResetLineDragState();
+        
         if (EnableDragDebugLogging)
         {
             Logger.LogInformation("[DRAG-START] Unplanned Epic {EpicId} from Objective {ObjectiveId}", epicId, objectiveId);
@@ -356,6 +373,9 @@
         _draggingObjectiveId = args.ObjectiveId;
         _draggingPlacementId = args.PlacementId;
         _isDraggingFromUnplanned = false;
+        
+        // Clear any line drag state to avoid conflicts
+        ResetLineDragState();
         
         if (EnableDragDebugLogging)
         {
@@ -580,15 +600,34 @@
     /// </summary>
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Delete" && _selectedPlacementId.HasValue)
+        if (e.Key == "Delete")
         {
-            await DeleteSelectedEpic();
+            if (_selectedPlacementId.HasValue)
+            {
+                await DeleteSelectedEpic();
+            }
+            else if (_selectedLineId.HasValue)
+            {
+                await DeleteSelectedLine();
+            }
         }
         else if (e.Key == "Escape")
         {
             // Clear selection on Escape
             _selectedPlacementId = null;
+            _selectedLineId = null;
             StateHasChanged();
+        }
+        else if (e.Key == "ArrowUp" || e.Key == "ArrowDown")
+        {
+            if (_selectedPlacementId.HasValue)
+            {
+                await MoveSelectedEpic(e.Key == "ArrowUp" ? -1 : 1);
+            }
+            else if (_selectedLineId.HasValue)
+            {
+                await MoveSelectedLine(e.Key == "ArrowUp" ? -1 : 1);
+            }
         }
     }
 
@@ -605,9 +644,33 @@
         else
         {
             _selectedPlacementId = placementId;
+            // Clear line selection when selecting an epic
+            _selectedLineId = null;
         }
         StateHasChanged();
         Logger.LogDebug("Epic placement {PlacementId} selected: {IsSelected}", placementId, _selectedPlacementId.HasValue);
+    }
+
+    /// <summary>
+    /// Handles line selection (clicking on a line).
+    /// </summary>
+    private void HandleLineSelected(int lineId, bool isMilestone)
+    {
+        // Toggle selection: if already selected, deselect; otherwise select
+        if (_selectedLineId == lineId && _selectedLineIsMilestone == isMilestone)
+        {
+            _selectedLineId = null;
+        }
+        else
+        {
+            _selectedLineId = lineId;
+            _selectedLineIsMilestone = isMilestone;
+            // Clear epic selection when selecting a line
+            _selectedPlacementId = null;
+        }
+        StateHasChanged();
+        Logger.LogDebug("{LineType} line {LineId} selected: {IsSelected}", 
+            isMilestone ? "Milestone" : "Iteration", lineId, _selectedLineId.HasValue);
     }
 
     /// <summary>
@@ -650,6 +713,172 @@
         {
             Logger.LogError(ex, "Error deleting epic placement {PlacementId}", placementId);
             Snackbar.Add("Error removing Epic from board", Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// Deletes the currently selected line from the board.
+    /// </summary>
+    private async Task DeleteSelectedLine()
+    {
+        if (!_selectedLineId.HasValue)
+        {
+            return;
+        }
+
+        var lineId = _selectedLineId.Value;
+        var isMilestone = _selectedLineIsMilestone;
+        
+        try
+        {
+            LineOperationResultDto? result;
+            if (isMilestone)
+            {
+                result = await ReleasePlanningService.DeleteMilestoneLineAsync(lineId);
+            }
+            else
+            {
+                result = await ReleasePlanningService.DeleteIterationLineAsync(lineId);
+            }
+            
+            if (result?.Success == true)
+            {
+                Snackbar.Add($"{(isMilestone ? "Milestone" : "Iteration")} line deleted successfully", Severity.Success);
+                _selectedLineId = null; // Clear selection
+                await LoadBoardAsync(); // Reload to reflect changes
+            }
+            else
+            {
+                Snackbar.Add($"Failed to delete {(isMilestone ? "milestone" : "iteration")} line: {result?.ErrorMessage}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting {LineType} line {LineId}", isMilestone ? "milestone" : "iteration", lineId);
+            Snackbar.Add($"Error deleting {(isMilestone ? "milestone" : "iteration")} line", Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// Moves the selected epic up or down by one row.
+    /// </summary>
+    private async Task MoveSelectedEpic(int direction)
+    {
+        if (!_selectedPlacementId.HasValue)
+        {
+            return;
+        }
+
+        var placement = _board?.Placements.FirstOrDefault(p => p.Id == _selectedPlacementId.Value);
+        if (placement == null)
+        {
+            return;
+        }
+
+        var newRowIndex = placement.RowIndex + direction;
+        if (newRowIndex < 0)
+        {
+            return; // Can't move above row 0
+        }
+
+        try
+        {
+            var result = await ReleasePlanningService.MoveEpicAsync(
+                placement.Id,
+                newRowIndex,
+                placement.OrderInRow);
+            
+            if (result?.Success == true)
+            {
+                Snackbar.Add($"Epic moved {(direction > 0 ? "down" : "up")}", Severity.Success);
+                await LoadBoardAsync(); // Reload to reflect changes
+            }
+            else
+            {
+                Snackbar.Add($"Failed to move epic: {result?.ErrorMessage}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error moving epic placement {PlacementId}", placement.Id);
+            Snackbar.Add("Error moving epic", Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// Moves the selected line up or down by one row position.
+    /// </summary>
+    private async Task MoveSelectedLine(int direction)
+    {
+        if (!_selectedLineId.HasValue)
+        {
+            return;
+        }
+
+        var lineId = _selectedLineId.Value;
+        var isMilestone = _selectedLineIsMilestone;
+
+        // Find the line
+        string label;
+        double currentPosition;
+        MilestoneType milestoneType = default;
+
+        if (isMilestone)
+        {
+            var line = _board?.MilestoneLines.FirstOrDefault(l => l.Id == lineId);
+            if (line == null) return;
+            label = line.Label;
+            currentPosition = line.VerticalPosition;
+            milestoneType = line.Type;
+        }
+        else
+        {
+            var line = _board?.IterationLines.FirstOrDefault(l => l.Id == lineId);
+            if (line == null) return;
+            label = line.Label;
+            currentPosition = line.VerticalPosition;
+        }
+
+        // Move by 1.0 (one row)
+        var newPosition = currentPosition + direction;
+        if (newPosition < 0.5)
+        {
+            return; // Can't move above first row
+        }
+
+        try
+        {
+            LineOperationResultDto? result;
+            if (isMilestone)
+            {
+                result = await ReleasePlanningService.UpdateMilestoneLineAsync(
+                    lineId,
+                    label,
+                    newPosition,
+                    milestoneType);
+            }
+            else
+            {
+                result = await ReleasePlanningService.UpdateIterationLineAsync(
+                    lineId,
+                    label,
+                    newPosition);
+            }
+            
+            if (result?.Success == true)
+            {
+                Snackbar.Add($"{(isMilestone ? "Milestone" : "Iteration")} line moved {(direction > 0 ? "down" : "up")}", Severity.Success);
+                await LoadBoardAsync(); // Reload to reflect changes
+            }
+            else
+            {
+                Snackbar.Add($"Failed to move {(isMilestone ? "milestone" : "iteration")} line: {result?.ErrorMessage}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error moving {LineType} line {LineId}", isMilestone ? "milestone" : "iteration", lineId);
+            Snackbar.Add($"Error moving {(isMilestone ? "milestone" : "iteration")} line", Severity.Error);
         }
     }
 
@@ -860,6 +1089,11 @@
         _draggingMilestoneType = type;
         _draggingOriginalPosition = verticalPosition;
         _draggingTargetPosition = null;
+        
+        // Clear any epic drag state to avoid conflicts
+        ResetEpicDragState();
+        ResetDropTargetState();
+        
         Logger.LogDebug("Started dragging {LineType} line {LineId} from position {Position}", 
             isMilestone ? "milestone" : "iteration", lineId, verticalPosition);
     }
