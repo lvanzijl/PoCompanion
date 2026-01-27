@@ -65,11 +65,11 @@
 
 ## 7. Design Improvements (Non-Blocking, ordered)
 1. **Refactor WorkItem sync to pre-load existing entities and apply updates in-memory**  
-   - Reduces N+1 queries and simplifies batch handling.
+  - Reduces N+1 queries and simplifies batch handling.
 2. **Extract onboarding orchestration into a client service**  
-   - Keeps UI pure, reduces duplicated error handling, and aligns with UI_RULES.md.
+  - Keeps UI pure, reduces duplicated error handling, and aligns with UI_RULES.md.
 3. **Split RealTfsClient by resource boundary**  
-   - Introduce focused collaborators (WorkItemsClient, PullRequestsClient, PipelinesClient) to reduce cognitive load.
+  - Introduce focused collaborators (WorkItemsClient, PullRequestsClient, PipelinesClient) to reduce cognitive load.
 
 ## Feature Wishlist (PO, ordered)
 1. **Cross-team dependency risk heatmap** (not in TFS)  
