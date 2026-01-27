@@ -238,7 +238,10 @@
     
     private void OnBugRowClick(TableRowClickEventArgs<BugItem> args)
     {
-        NavigateToBugDetail(args.Item!.Id);
+        if (args.Item != null)
+        {
+            NavigateToBugDetail(args.Item.Id);
+        }
     }
     
     private void NavigateToBugDetail(int bugId)

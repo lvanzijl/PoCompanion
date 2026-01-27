@@ -74,12 +74,7 @@
                     <MudTextField Label="State" Value="@_bugState" ReadOnly="true" Variant="Variant.Outlined" Class="mb-2" />
                 </MudItem>
                 <MudItem xs="12" md="3">
-                    <MudSelect T="string" Label="Severity" @bind-Value="_bugSeverity" Variant="Variant.Outlined" Class="mb-2">
-                        <MudSelectItem Value="@("Critical")">Critical</MudSelectItem>
-                        <MudSelectItem Value="@("High")">High</MudSelectItem>
-                        <MudSelectItem Value="@("Medium")">Medium</MudSelectItem>
-                        <MudSelectItem Value="@("Low")">Low</MudSelectItem>
-                    </MudSelect>
+                    <MudTextField Label="Severity" Value="@_bugSeverity" ReadOnly="true" Variant="Variant.Outlined" Class="mb-2" />
                 </MudItem>
             </MudGrid>
             

@@ -17,7 +17,7 @@
                     <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
                     <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Info" Size="Size.Large" />
                     <MudText Typo="Typo.h4">
-                        Overview / Trends (Past)
+                        Trends (Past)
                     </MudText>
                 </MudStack>
                 
@@ -175,10 +175,13 @@
 </MudContainer>
 
 <style>
+    .mud-card-hover {
+        border: 2px solid transparent;
+    }
     .mud-card-hover:hover {
         transform: translateY(-4px);
         box-shadow: 0 6px 20px rgba(0,0,0,0.2) !important;
-        border: 1px solid var(--mud-palette-primary);
+        border-color: var(--mud-palette-primary);
     }
 </style>
 
