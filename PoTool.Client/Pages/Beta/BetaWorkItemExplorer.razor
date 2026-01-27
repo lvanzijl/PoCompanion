@@ -1,0 +1,328 @@
+@page "/beta/work-items"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Components.WorkItems
+@using System.Web
+@inject INavigationContextService NavigationContextService
+@inject IProfileService ProfileService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Work Item Explorer - Beta - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Workspace Header *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
+                    <MudIcon Icon="@Icons.Material.Filled.Search" Color="Color.Primary" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">
+                        Work Item Explorer
+                    </MudText>
+                </MudStack>
+                
+                @* Breadcrumb *@
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+            
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                @* Filter Status *@
+                @if (!string.IsNullOrEmpty(_validationType))
+                {
+                    <MudChip T="string" 
+                             Icon="@Icons.Material.Filled.FilterAlt" 
+                             Size="Size.Small"
+                             Color="Color.Info"
+                             OnClose="ClearValidationTypeFilter">
+                        @GetValidationTypeLabel(_validationType)
+                    </MudChip>
+                }
+                @if (_backlogDepthExceeded)
+                {
+                    <MudChip T="string" 
+                             Icon="@Icons.Material.Filled.Layers" 
+                             Size="Size.Small"
+                             Color="Color.Error"
+                             OnClose="ClearBacklogDepthFilter">
+                        Backlog Depth Exceeded
+                    </MudChip>
+                }
+                @if (_rootWorkItemId.HasValue)
+                {
+                    <MudChip T="string" 
+                             Icon="@Icons.Material.Filled.AccountTree" 
+                             Size="Size.Small"
+                             Color="Color.Secondary"
+                             OnClose="ClearRootWorkItemFilter">
+                        Root: @_rootWorkItemId
+                    </MudChip>
+                }
+                @if (_allProducts && _allTeams)
+                {
+                    <MudChip T="string" 
+                             Icon="@Icons.Material.Filled.Public" 
+                             Size="Size.Small"
+                             Color="Color.Default">
+                        All Products / All Teams
+                    </MudChip>
+                }
+                
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           OnClick="NavigateToBetaHome">
+                    Beta Home
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else
+    {
+        @* Filter Parameters Info *@
+        @if (HasActiveFilters())
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                <MudText Typo="Typo.body2">
+                    <strong>Active Filters:</strong> 
+                    @if (!string.IsNullOrEmpty(_validationType))
+                    {
+                        <text>Validation Type: @GetValidationTypeLabel(_validationType). </text>
+                    }
+                    @if (_backlogDepthExceeded)
+                    {
+                        <text>Showing items with exceeded backlog depth. </text>
+                    }
+                    @if (_rootWorkItemId.HasValue)
+                    {
+                        <text>Showing descendants of work item @_rootWorkItemId. </text>
+                    }
+                </MudText>
+            </MudAlert>
+        }
+
+        @* Work Item Explorer Content *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.ListAlt" Class="mr-2" />
+                    Work Items
+                </MudText>
+                <MudButton Variant="Variant.Text" 
+                           Color="Color.Primary" 
+                           EndIcon="@Icons.Material.Filled.OpenInNew" 
+                           Href="/work-items">
+                    Full Work Item View
+                </MudButton>
+            </MudStack>
+            
+            @* Placeholder for work item list *@
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                Work items filtered by: @GetActiveFilterDescription()
+            </MudText>
+
+            @* Available End-Station Actions *@
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.h6" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" />
+                Available Edits
+            </MudText>
+            
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.SyncAlt">Work Item State</MudChip>
+                <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.Timer">Effort</MudChip>
+                <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.Description">Description</MudChip>
+                <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.Label">Tags</MudChip>
+                <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.PlaylistAddCheck">Batch Edits</MudChip>
+            </MudStack>
+        </MudPaper>
+
+        @* Navigation Back Options *@
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
+                Navigation
+            </MudText>
+            
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Success" 
+                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
+                           OnClick="NavigateToHealth">
+                    Health (Now)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Info" 
+                           StartIcon="@Icons.Material.Filled.Timeline"
+                           OnClick="NavigateToTrends">
+                    Trends (Past)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.CalendarMonth"
+                           OnClick="NavigateToPlanning">
+                    Planning (Future)
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private bool _isLoading = true;
+    private int? _profileId;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    
+    // Filter parameters from deep links
+    private string? _validationType;
+    private bool _backlogDepthExceeded;
+    private int? _rootWorkItemId;
+    private bool _allProducts;
+    private bool _allTeams;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
+                return;
+            }
+            
+            _profileId = activeProfile.Id;
+            ProfileService.SetCachedActiveProfileId(_profileId);
+            
+            // Parse query parameters
+            ParseQueryParameters();
+            
+            UpdateBreadcrumbs();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+    
+    private void ParseQueryParameters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+        
+        _validationType = queryParams["validationType"];
+        
+        var backlogDepth = queryParams["backlogDepthExceeded"];
+        if (!string.IsNullOrEmpty(backlogDepth))
+        {
+            _backlogDepthExceeded = bool.TryParse(backlogDepth, out var result) && result;
+        }
+        
+        var rootId = queryParams["rootWorkItemId"];
+        if (!string.IsNullOrEmpty(rootId))
+        {
+            _rootWorkItemId = int.TryParse(rootId, out var id) ? id : null;
+        }
+        
+        var allProducts = queryParams["allProducts"];
+        if (!string.IsNullOrEmpty(allProducts))
+        {
+            _allProducts = bool.TryParse(allProducts, out var result) && result;
+        }
+        
+        var allTeams = queryParams["allTeams"];
+        if (!string.IsNullOrEmpty(allTeams))
+        {
+            _allTeams = bool.TryParse(allTeams, out var result) && result;
+        }
+    }
+    
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
+            new("Work Item Explorer", null, disabled: true, icon: Icons.Material.Filled.Search)
+        };
+    }
+    
+    private bool HasActiveFilters()
+    {
+        return !string.IsNullOrEmpty(_validationType) || _backlogDepthExceeded || _rootWorkItemId.HasValue;
+    }
+    
+    private string GetActiveFilterDescription()
+    {
+        var filters = new List<string>();
+        
+        if (!string.IsNullOrEmpty(_validationType))
+            filters.Add(GetValidationTypeLabel(_validationType));
+        if (_backlogDepthExceeded)
+            filters.Add("Backlog Depth Exceeded");
+        if (_rootWorkItemId.HasValue)
+            filters.Add($"Root: {_rootWorkItemId}");
+        if (_allProducts && _allTeams)
+            filters.Add("All Products / All Teams");
+            
+        return filters.Count > 0 ? string.Join(", ", filters) : "No filters applied";
+    }
+    
+    private string GetValidationTypeLabel(string validationType)
+    {
+        return validationType switch
+        {
+            "missing-effort" => "Missing Effort",
+            "missing-description" => "Missing Description",
+            "invalid-state" => "Invalid State",
+            "missing-tags" => "Missing Tags",
+            _ => validationType
+        };
+    }
+    
+    private void ClearValidationTypeFilter()
+    {
+        _validationType = null;
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaWorkItemExplorer);
+    }
+    
+    private void ClearBacklogDepthFilter()
+    {
+        _backlogDepthExceeded = false;
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaWorkItemExplorer);
+    }
+    
+    private void ClearRootWorkItemFilter()
+    {
+        _rootWorkItemId = null;
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaWorkItemExplorer);
+    }
+    
+    private void NavigateToBetaHome()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
+    }
+    
+    private void NavigateToHealth()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHealthWorkspace);
+    }
+    
+    private void NavigateToTrends()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaTrendsWorkspace);
+    }
+    
+    private void NavigateToPlanning()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaPlanningWorkspace);
+    }
+}

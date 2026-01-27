@@ -1,0 +1,259 @@
+@page "/beta"
+@using PoTool.Client.Components.Common
+@inject INavigationContextService NavigationContextService
+@inject IProfileService ProfileService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Beta Home - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8 mb-8">
+    <MudStack AlignItems="AlignItems.Center" Spacing="6">
+        @* Beta Header *@
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
+            <MudText Typo="Typo.h3" Align="Align.Center">
+                Workspace Navigation
+            </MudText>
+        </MudStack>
+        
+        <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mb-4" Style="color: var(--mud-palette-text-secondary);">
+            Situation overview — no editing, no filtering, no forced workflow
+        </MudText>
+
+        @if (_isLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        }
+        else
+        {
+            @* High-level Overview Section *@
+            <MudPaper Elevation="2" Class="pa-4 mb-4" Style="width: 100%;">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
+                    Overview — All Products, All Teams
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    High-level signals: health, trends, sync state
+                </MudText>
+                
+                @* Placeholder for overview signals - to be expanded *@
+                <MudGrid>
+                    <MudItem xs="12" sm="4">
+                        <MudCard Elevation="1" Class="pa-3">
+                            <MudStack AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Size="Size.Large" Color="Color.Success" />
+                                <MudText Typo="Typo.subtitle2">Health Status</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Overview available</MudText>
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudCard Elevation="1" Class="pa-3">
+                            <MudStack AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Large" Color="Color.Info" />
+                                <MudText Typo="Typo.subtitle2">Trends</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Last 6 months</MudText>
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudCard Elevation="1" Class="pa-3">
+                            <MudStack AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Sync" Size="Size.Large" Color="Color.Primary" />
+                                <MudText Typo="Typo.subtitle2">Sync State</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Data current</MudText>
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            @* Workspace-Driven Entry Section *@
+            <MudText Typo="Typo.h5" Align="Align.Center" Class="mt-4 mb-2">
+                Choose Your Workspace
+            </MudText>
+            
+            <MudGrid Spacing="4" Justify="Justify.Center">
+                @* Health (Now) Workspace *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Class="workspace-card" 
+                             Elevation="4"
+                             Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
+                             @onclick="NavigateToHealth">
+                        <MudCardContent Class="d-flex flex-column align-center justify-center pa-6" Style="height: 100%;">
+                            <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" 
+                                     Color="Color.Success" 
+                                     Style="font-size: 3.5rem;" />
+                            <MudText Typo="Typo.h5" Class="mt-4 text-center" Style="font-weight: 600;">
+                                Health (Now)
+                            </MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2" Style="color: var(--mud-palette-text-secondary);">
+                                Current-state problems, actionable issues
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                @* Trends (Past) Workspace *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Class="workspace-card" 
+                             Elevation="4"
+                             Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
+                             @onclick="NavigateToTrends">
+                        <MudCardContent Class="d-flex flex-column align-center justify-center pa-6" Style="height: 100%;">
+                            <MudIcon Icon="@Icons.Material.Filled.Timeline" 
+                                     Color="Color.Info" 
+                                     Style="font-size: 3.5rem;" />
+                            <MudText Typo="Typo.h5" Class="mt-4 text-center" Style="font-weight: 600;">
+                                Overview / Trends (Past)
+                            </MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2" Style="color: var(--mud-palette-text-secondary);">
+                                Structural behavior over last 6 months
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                @* Planning (Future) Workspace *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Class="workspace-card" 
+                             Elevation="4"
+                             Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
+                             @onclick="NavigateToPlanning">
+                        <MudCardContent Class="d-flex flex-column align-center justify-center pa-6" Style="height: 100%;">
+                            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" 
+                                     Color="Color.Primary" 
+                                     Style="font-size: 3.5rem;" />
+                            <MudText Typo="Typo.h5" Class="mt-4 text-center" Style="font-weight: 600;">
+                                Planning (Future)
+                            </MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2" Style="color: var(--mud-palette-text-secondary);">
+                                Decision-making for upcoming work
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+
+            @* Task-Driven Entry Section *@
+            <MudDivider Class="my-6" />
+            
+            <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-2">
+                Quick Actions (All Products / All Teams)
+            </MudText>
+            
+            <MudStack Row="true" Spacing="3" Justify="Justify.Center" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Search"
+                           OnClick="NavigateToWorkItemExplorer"
+                           Size="Size.Large">
+                    Work Item Explorer
+                </MudButton>
+                
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.BugReport"
+                           OnClick="NavigateToBugTriage"
+                           Size="Size.Large">
+                    Bug Triage
+                </MudButton>
+                
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Info"
+                           StartIcon="@Icons.Material.Filled.ViewColumn"
+                           OnClick="NavigateToPlanBoard"
+                           Size="Size.Large">
+                    Plan Board
+                </MudButton>
+            </MudStack>
+
+            @* Navigation Actions *@
+            <MudStack Row="true" Spacing="2" Class="mt-8">
+                <MudButton Variant="Variant.Text" 
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.ArrowBack"
+                           OnClick="NavigateToLegacyLanding">
+                    Back to Classic Navigation
+                </MudButton>
+            </MudStack>
+        }
+    </MudStack>
+</MudContainer>
+
+<style>
+    .workspace-card:hover {
+        border-color: var(--mud-palette-primary) !important;
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
+    }
+</style>
+
+@code {
+    private bool _isLoading = true;
+    private int? _profileId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        
+        try
+        {
+            // Get the active profile - mandatory for Beta navigation
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                // No profile selected, redirect to profiles with return URL
+                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(WorkspaceRoutes.BetaHome)}");
+                return;
+            }
+            
+            _profileId = activeProfile.Id;
+            ProfileService.SetCachedActiveProfileId(_profileId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void NavigateToHealth()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHealthWorkspace);
+    }
+
+    private void NavigateToTrends()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaTrendsWorkspace);
+    }
+
+    private void NavigateToPlanning()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaPlanningWorkspace);
+    }
+
+    private void NavigateToWorkItemExplorer()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}?allProducts=true&allTeams=true");
+    }
+
+    private void NavigateToBugTriage()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaBugOverview}?allProducts=true&allTeams=true");
+    }
+
+    private void NavigateToPlanBoard()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPlanBoard}?allProducts=true");
+    }
+
+    private void NavigateToLegacyLanding()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.Landing);
+    }
+}

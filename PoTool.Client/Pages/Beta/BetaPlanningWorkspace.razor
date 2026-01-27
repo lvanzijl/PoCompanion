@@ -1,0 +1,275 @@
+@page "/beta/planning"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Components.Planning
+@using PoTool.Client.ApiClient
+@inject INavigationContextService NavigationContextService
+@inject IProfileService ProfileService
+@inject ProductService ProductService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Planning (Future) - Beta - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Workspace Header *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
+                    <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Color="Color.Primary" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">
+                        Planning (Future)
+                    </MudText>
+                </MudStack>
+                
+                @* Breadcrumb *@
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+            
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <MudChip T="string" 
+                         Icon="@Icons.Material.Filled.EventNote" 
+                         Size="Size.Small"
+                         Color="Color.Primary">
+                    Current + 3 Iterations
+                </MudChip>
+                
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           OnClick="NavigateToBetaHome">
+                    Beta Home
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else
+    {
+        @* Planning Signals Grid *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h5" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Assessment" Class="mr-2" />
+                Planning Signals
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                Decision-making for upcoming work — click to explore details
+            </MudText>
+            
+            <MudGrid>
+                @* Epic Over Velocity Signal *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="1" 
+                             Style="cursor: pointer; transition: all 0.2s;"
+                             Class="mud-card-hover"
+                             @onclick="NavigateToVelocityTrend">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Warning" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Epic Exceeds Velocity</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Velocity analysis</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                
+                @* Epic Invalid Items Signal *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="1" 
+                             Style="cursor: pointer; transition: all 0.2s;"
+                             Class="mud-card-hover"
+                             @onclick="NavigateToEpicInvalidItems">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="Color.Error" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Epic Invalid Items</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Work item explorer</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                @* Epic Dependencies Signal (Read-Only) *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="1" 
+                             Style="cursor: pointer; transition: all 0.2s;"
+                             Class="mud-card-hover"
+                             @onclick="NavigateToDependencyOverview">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Secondary" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Epic Dependencies</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Dependency overview</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        @* Information Notice *@
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            <MudText Typo="Typo.body2">
+                <strong>Time Horizons:</strong> Planning shows current iteration + next 3 iterations only. 
+                Past iterations are never shown in planning.
+            </MudText>
+        </MudAlert>
+
+        @* Planning Board Section *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Class="mr-2" />
+                    Planning Board
+                </MudText>
+                <MudButton Variant="Variant.Text" 
+                           Color="Color.Primary" 
+                           EndIcon="@Icons.Material.Filled.OpenInNew" 
+                           Href="/release-planning">
+                    Full Release Planning
+                </MudButton>
+            </MudStack>
+            
+            @* Embedded Planning Board component *@
+            @if (_activeProfileId.HasValue)
+            {
+                <PlanningBoard 
+                    ProductOwnerId="@_activeProfileId.Value"
+                    Products="@_products"
+                    SelectedProductId="@_selectedProductId"
+                    OnProductSelectionChanged="OnProductChanged" />
+            }
+        </MudPaper>
+
+        @* End-Stations Section *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" />
+                Available Actions
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                End-stations for simple and batch edits
+            </MudText>
+            
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.SwapVert">Epic Repositioning</MudChip>
+                <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.Sort">Implicit Reprioritization</MudChip>
+            </MudStack>
+        </MudPaper>
+
+        @* Cross-Workspace Navigation *@
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
+                Navigate to Other Workspaces
+            </MudText>
+            
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Success" 
+                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
+                           OnClick="NavigateToHealth">
+                    Health (Now)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Info" 
+                           StartIcon="@Icons.Material.Filled.Timeline"
+                           OnClick="NavigateToTrends">
+                    Trends (Past)
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+</MudContainer>
+
+<style>
+    .mud-card-hover:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.2) !important;
+        border: 1px solid var(--mud-palette-primary);
+    }
+</style>
+
+@code {
+    private bool _isLoading = true;
+    private int? _activeProfileId;
+    private int? _selectedProductId;
+    private List<ProductDto> _products = new();
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(WorkspaceRoutes.BetaPlanningWorkspace)}");
+                return;
+            }
+            
+            _activeProfileId = activeProfile.Id;
+            ProfileService.SetCachedActiveProfileId(activeProfile.Id);
+            
+            // Load products
+            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            
+            UpdateBreadcrumbs();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+    
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
+            new("Planning (Future)", null, disabled: true, icon: Icons.Material.Filled.CalendarMonth)
+        };
+    }
+    
+    private Task OnProductChanged(int? productId)
+    {
+        _selectedProductId = productId;
+        return Task.CompletedTask;
+    }
+    
+    private void NavigateToBetaHome()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
+    }
+    
+    private void NavigateToVelocityTrend()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaTrendsWorkspace}?metric=Velocity");
+    }
+    
+    private void NavigateToEpicInvalidItems()
+    {
+        // Navigate to work item explorer with epic as root
+        // Note: Epic ID would be passed as parameter in real implementation
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaWorkItemExplorer);
+    }
+    
+    private void NavigateToDependencyOverview()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaDependencyOverview);
+    }
+    
+    private void NavigateToHealth()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHealthWorkspace);
+    }
+    
+    private void NavigateToTrends()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaTrendsWorkspace);
+    }
+}

@@ -1,0 +1,221 @@
+# Navigation Follow-up Actions
+
+**Version:** 1.0  
+**Status:** Active  
+**Last Updated:** 2026-01-27
+
+---
+
+## Document Purpose
+
+This document tracks missing or incomplete capabilities identified during the Beta Navigation implementation. Each item represents functionality that needs to be built or completed to fully realize the new workspace-based navigation model.
+
+---
+
+## Follow-up Actions
+
+### 1. Work Item Explorer — Root Item Parameter Support
+
+| Field | Value |
+|-------|-------|
+| **Title** | Work Item Explorer — Support root item via parameters |
+| **Description** | The Work Item Explorer must accept a work item ID as root and show all descendants. Currently, the `rootWorkItemId` parameter is parsed but not used to filter the work item tree. |
+| **Used in** | Planning → Epic → Invalid items navigation path |
+| **Complexity** | 3 |
+
+---
+
+### 2. Work Item Explorer — Validation Type Filtering
+
+| Field | Value |
+|-------|-------|
+| **Title** | Work Item Explorer — Implement validation type filtering |
+| **Description** | The explorer receives `validationType` parameter but needs actual filtering logic to show only work items matching the validation issue type (missing-effort, missing-description, invalid-state, missing-tags). |
+| **Used in** | Health → Validation category signal navigation |
+| **Complexity** | 3 |
+
+---
+
+### 3. Work Item Explorer — Backlog Depth Exceeded Filter
+
+| Field | Value |
+|-------|-------|
+| **Title** | Work Item Explorer — Implement backlog depth exceeded filter |
+| **Description** | When `backlogDepthExceeded=true` is passed, the explorer should filter to show only work items that exceed the configured backlog depth threshold. Requires integration with backlog health calculation service. |
+| **Used in** | Health → Backlog too deep signal |
+| **Complexity** | 4 |
+
+---
+
+### 4. Bug Overview — Real Data Integration
+
+| Field | Value |
+|-------|-------|
+| **Title** | Bug Overview — Connect to actual bug data |
+| **Description** | Replace sample bug data with actual bug work items from the work item service. Filter by Bug work item type and apply relevant filters. |
+| **Used in** | Health → Bug signal, Trends → Bug trend, Bug Triage task entry |
+| **Complexity** | 2 |
+
+---
+
+### 5. Bug Overview — Period Filtering
+
+| Field | Value |
+|-------|-------|
+| **Title** | Bug Overview — Implement period-based filtering |
+| **Description** | When `period` parameter is provided (e.g., period=January-2026), filter bugs to show only those created or resolved within that time period. |
+| **Used in** | Trends → Bug spike navigation |
+| **Complexity** | 2 |
+
+---
+
+### 6. Bug Detail — Save Changes Implementation
+
+| Field | Value |
+|-------|-------|
+| **Title** | Bug Detail — Implement save changes to backend |
+| **Description** | Connect the save button to the work item update API to persist severity and tag changes to TFS. |
+| **Used in** | Bug Detail end-station |
+| **Complexity** | 2 |
+
+---
+
+### 7. PR Overview — Real Data Integration
+
+| Field | Value |
+|-------|-------|
+| **Title** | PR Overview — Connect to actual PR data |
+| **Description** | Replace sample PR data with actual pull request data from the PR service. This is a read-only view. |
+| **Used in** | Trends → PR trend navigation |
+| **Complexity** | 2 |
+
+---
+
+### 8. Pipeline Overview — Real Data Integration
+
+| Field | Value |
+|-------|-------|
+| **Title** | Pipeline Overview — Connect to actual pipeline data |
+| **Description** | Replace sample pipeline data with actual pipeline run data from the pipeline service. This is a read-only view. |
+| **Used in** | Trends → Pipeline failures navigation |
+| **Complexity** | 2 |
+
+---
+
+### 9. Beta Home — Real Health Signals
+
+| Field | Value |
+|-------|-------|
+| **Title** | Beta Home — Display actual health signals |
+| **Description** | Replace placeholder health indicators with real-time signals from the health calculation service. Show aggregate health status, trend indicators, and sync state. |
+| **Used in** | Beta Home overview section |
+| **Complexity** | 3 |
+
+---
+
+### 10. Health Workspace — Validation Issue Counts
+
+| Field | Value |
+|-------|-------|
+| **Title** | Health Workspace — Show issue counts on signal cards |
+| **Description** | Display actual counts of validation issues on each health signal card (e.g., "Missing Effort (47 items)"). |
+| **Used in** | Health workspace signal grid |
+| **Complexity** | 2 |
+
+---
+
+### 11. Trends Workspace — Velocity Chart Integration
+
+| Field | Value |
+|-------|-------|
+| **Title** | Trends Workspace — Embed velocity chart |
+| **Description** | Integrate the existing velocity chart component into the Trends workspace with a maximum of 10 bars as specified. |
+| **Used in** | Trends workspace velocity overview |
+| **Complexity** | 2 |
+
+---
+
+### 12. Planning Workspace — Epic Velocity Analysis
+
+| Field | Value |
+|-------|-------|
+| **Title** | Planning Workspace — Epic exceeds velocity detection |
+| **Description** | Implement logic to detect when an epic's total effort exceeds the team's historical velocity and provide navigation to velocity trends. |
+| **Used in** | Planning → Epic over velocity signal |
+| **Complexity** | 4 |
+
+---
+
+### 13. Planning Workspace — Epic Invalid Items Detection
+
+| Field | Value |
+|-------|-------|
+| **Title** | Planning Workspace — Epic invalid items detection |
+| **Description** | Implement logic to detect epics containing work items with validation issues and provide navigation to the Work Item Explorer with epic as root. |
+| **Used in** | Planning → Epic invalid items signal |
+| **Complexity** | 3 |
+
+---
+
+### 14. Batch Edit Functionality
+
+| Field | Value |
+|-------|-------|
+| **Title** | Work Item Explorer — Batch edit support |
+| **Description** | Implement multi-select capability and batch edit operations for work item state, effort, and tags. End-station requirement. |
+| **Used in** | Health workspace, Work Item Explorer, Bug Overview |
+| **Complexity** | 5 |
+
+---
+
+### 15. Deep Link Return URL Handling
+
+| Field | Value |
+|-------|-------|
+| **Title** | Profile Selection — Implement return URL handling |
+| **Description** | When redirected to profile selection due to missing PO context, implement return URL handling to resume navigation after profile selection. |
+| **Used in** | All Beta pages when accessed without profile |
+| **Complexity** | 2 |
+
+---
+
+### 16. Context Propagation in Beta Navigation
+
+| Field | Value |
+|-------|-------|
+| **Title** | Beta Navigation — Product/Team context propagation |
+| **Description** | When navigating from Beta Home with a specific product/team filter applied, propagate that context to downstream pages. Once set, context should be fixed during the navigation session. |
+| **Used in** | All cross-workspace navigation |
+| **Complexity** | 3 |
+
+---
+
+### 17. "All Products/Teams" Toggle
+
+| Field | Value |
+|-------|-------|
+| **Title** | Deep Navigation — Add "view all" toggle |
+| **Description** | When navigating with product/team scope, provide a link to open the same view with "all products / all teams" scope as specified in the requirements. |
+| **Used in** | Work Item Explorer, Bug Overview |
+| **Complexity** | 2 |
+
+---
+
+## Summary
+
+| Complexity | Count |
+|------------|-------|
+| 1 | 0 |
+| 2 | 8 |
+| 3 | 5 |
+| 4 | 2 |
+| 5 | 1 |
+| **Total** | **17** |
+
+---
+
+## Notes
+
+- Complexity ratings are on a scale of 1-5, where 1 is trivial and 5 is significant effort
+- Items are not prioritized in this document — prioritization is a product decision
+- Some items may have dependencies on others

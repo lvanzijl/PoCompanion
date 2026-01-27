@@ -1,0 +1,225 @@
+@page "/beta/pull-requests"
+@using PoTool.Client.Components.Common
+@using System.Web
+@inject IProfileService ProfileService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>PR Overview - Beta - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Workspace Header *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
+                    <MudIcon Icon="@Icons.Material.Filled.MergeType" Color="Color.Info" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">
+                        Pull Request Overview
+                    </MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.VisibilityOff">Read-only</MudChip>
+                </MudStack>
+                
+                @* Breadcrumb *@
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+            
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                @if (_insightOnly)
+                {
+                    <MudChip T="string" 
+                             Icon="@Icons.Material.Filled.Insights" 
+                             Size="Size.Small"
+                             Color="Color.Info">
+                        Insight Only
+                    </MudChip>
+                }
+                
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           OnClick="NavigateToBetaHome">
+                    Beta Home
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else
+    {
+        @* Read-Only Notice *@
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            <MudText Typo="Typo.body2">
+                <strong>Read-only view.</strong> PRs are insight-only in the Beta navigation. 
+                For full PR management, use the <MudLink Href="/pr-insights">PR Insights dashboard</MudLink>.
+            </MudText>
+        </MudAlert>
+
+        @* PR Insights Section *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" />
+                    PR Insights
+                </MudText>
+                <MudButton Variant="Variant.Text" 
+                           Color="Color.Primary" 
+                           EndIcon="@Icons.Material.Filled.OpenInNew" 
+                           Href="/pr-insights">
+                    Full Dashboard
+                </MudButton>
+            </MudStack>
+            
+            @* Sample PR Data *@
+            <MudTable Items="@_samplePRs" Hover="true" Striped="true" Dense="true">
+                <HeaderContent>
+                    <MudTh>ID</MudTh>
+                    <MudTh>Title</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Created</MudTh>
+                    <MudTh>Time Open</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="ID">@context.Id</MudTd>
+                    <MudTd DataLabel="Title">@context.Title</MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Created">@context.Created.ToString("MMM dd, yyyy")</MudTd>
+                    <MudTd DataLabel="Time Open">@context.TimeOpen</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+
+        @* Navigation Options *@
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
+                Navigation
+            </MudText>
+            
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Info" 
+                           StartIcon="@Icons.Material.Filled.Timeline"
+                           OnClick="NavigateToTrends">
+                    Trends (Past)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Success" 
+                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
+                           OnClick="NavigateToHealth">
+                    Health (Now)
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private bool _isLoading = true;
+    private int? _profileId;
+    private bool _insightOnly;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    private List<PRItem> _samplePRs = new();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
+                return;
+            }
+            
+            _profileId = activeProfile.Id;
+            ProfileService.SetCachedActiveProfileId(_profileId);
+            
+            ParseQueryParameters();
+            LoadSampleData();
+            UpdateBreadcrumbs();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+    
+    private void ParseQueryParameters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+        
+        var insightOnly = queryParams["insightOnly"];
+        if (!string.IsNullOrEmpty(insightOnly))
+        {
+            _insightOnly = bool.TryParse(insightOnly, out var result) && result;
+        }
+    }
+    
+    private void LoadSampleData()
+    {
+        _samplePRs = new List<PRItem>
+        {
+            new PRItem { Id = 101, Title = "Feature: Add user authentication", Status = "Active", Created = DateTime.Now.AddDays(-2), TimeOpen = "2 days" },
+            new PRItem { Id = 102, Title = "Fix: Dashboard rendering issue", Status = "Completed", Created = DateTime.Now.AddDays(-5), TimeOpen = "3 days" },
+            new PRItem { Id = 103, Title = "Refactor: Database queries", Status = "Active", Created = DateTime.Now.AddDays(-1), TimeOpen = "1 day" }
+        };
+    }
+    
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
+            new("Trends (Past)", WorkspaceRoutes.BetaTrendsWorkspace, icon: Icons.Material.Filled.Timeline),
+            new("PR Overview", null, disabled: true, icon: Icons.Material.Filled.MergeType)
+        };
+    }
+    
+    private Color GetStatusColor(string status)
+    {
+        return status switch
+        {
+            "Active" => Color.Info,
+            "Completed" => Color.Success,
+            "Abandoned" => Color.Error,
+            _ => Color.Default
+        };
+    }
+    
+    private void NavigateToBetaHome()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
+    }
+    
+    private void NavigateToTrends()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaTrendsWorkspace);
+    }
+    
+    private void NavigateToHealth()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHealthWorkspace);
+    }
+    
+    private class PRItem
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public DateTime Created { get; set; }
+        public string TimeOpen { get; set; } = string.Empty;
+    }
+}
