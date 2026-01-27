@@ -147,7 +147,12 @@
             Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
             
             // Navigate to return URL if provided, otherwise to Landing page
-            var targetUrl = !string.IsNullOrEmpty(_returnUrl) ? _returnUrl : "/landing";
+            // Validate return URL to prevent open redirects - must be a relative path
+            var targetUrl = "/landing";
+            if (!string.IsNullOrEmpty(_returnUrl) && IsValidReturnUrl(_returnUrl))
+            {
+                targetUrl = _returnUrl;
+            }
             Console.WriteLine($"[ProfilesHome] Navigating to {targetUrl} for profile: {profile.Name}");
             NavigationManager.NavigateTo(targetUrl);
         }
@@ -156,6 +161,27 @@
             Console.WriteLine($"[ProfilesHome] Error selecting profile: {ex.Message}");
             Snackbar.Add($"Error selecting profile: {ex.Message}", Severity.Error);
         }
+    }
+    
+    /// <summary>
+    /// Validates return URL to prevent open redirect vulnerabilities.
+    /// Only allows relative paths starting with "/" that don't contain "//" (protocol).
+    /// </summary>
+    private static bool IsValidReturnUrl(string url)
+    {
+        // Must be a relative path starting with "/"
+        if (!url.StartsWith("/"))
+            return false;
+        
+        // Must not contain "//" after the first character (could be a protocol like "//evil.com")
+        if (url.Length > 1 && url.Contains("//"))
+            return false;
+        
+        // Must not contain a colon (could be a protocol like "/https://evil.com")
+        if (url.Contains(':'))
+            return false;
+        
+        return true;
     }
 
     private void OpenAddProfileDialog()

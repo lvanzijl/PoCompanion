@@ -46,13 +46,13 @@
                             <MudStack AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Size="Size.Large" Color="@GetHealthStatusColor()" />
                                 <MudText Typo="Typo.subtitle2">Health Status</MudText>
-                                @if (_totalValidationIssues == 0)
+                                @if (_workItemsWithIssues == 0)
                                 {
                                     <MudText Typo="Typo.caption" Color="Color.Success">All items valid</MudText>
                                 }
                                 else
                                 {
-                                    <MudText Typo="Typo.caption" Color="Color.Warning">@_workItemsWithIssues items with issues</MudText>
+                                    <MudText Typo="Typo.caption" Color="@GetHealthStatusColor()">@_workItemsWithIssues items with issues</MudText>
                                 }
                             </MudStack>
                         </MudCard>
@@ -290,9 +290,8 @@
             _workItemsWithIssues = itemsWithIssues.Count;
             _totalValidationIssues = itemsWithIssues.Sum(wi => wi.ValidationIssues?.Count ?? 0);
             
-            // Count active bugs
-            var allWorkItems = await WorkItemService.GetAllAsync();
-            _activeBugCount = allWorkItems.Count(wi => 
+            // Count active bugs from the same dataset (avoid duplicate API call)
+            _activeBugCount = workItemsList.Count(wi => 
                 wi.Type?.Equals("Bug", StringComparison.OrdinalIgnoreCase) == true &&
                 wi.State?.Equals("Closed", StringComparison.OrdinalIgnoreCase) != true &&
                 wi.State?.Equals("Resolved", StringComparison.OrdinalIgnoreCase) != true);
