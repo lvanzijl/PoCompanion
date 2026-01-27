@@ -87,5 +87,5 @@
 1. **Remove sync-over-async usage in PoTool.Client and re-enable the CI guardrail** to enforce PROCESS_RULES §13.1.  
 2. **Replace direct HttpClient usage in UI components with typed client services** to align with UI_RULES §3.  
 3. **Implement or delete NotImplementedException test stubs** and get a green unit test baseline.  
-4. **Define and enforce a real sync watermark using TFS ChangedDate** to prevent data loss.  
+4. **Define and enforce an actual sync watermark using TFS ChangedDate** to prevent data loss.  
 5. **Modularize RealTfsClient and WorkItemSyncStage** for scalable evolution.
