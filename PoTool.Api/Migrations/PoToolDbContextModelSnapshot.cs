@@ -903,60 +903,6 @@ namespace PoTool.Api.Migrations
                     b.ToTable("Teams");
                 });
 
-            modelBuilder.Entity("PoTool.Api.Persistence.Entities.TfsConfigEntity", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ApiVersion")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DefaultAreaPath")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("HasTestedConnectionSuccessfully")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("HasVerifiedTfsApiSuccessfully")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset?>("LastValidated")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Project")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("TimeoutSeconds")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Url")
-                        .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("UseDefaultCredentials")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Url");
-
-                    b.ToTable("TfsConfigs");
-                });
-
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.WorkItemEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -966,6 +912,9 @@ namespace PoTool.Api.Migrations
                     b.Property<string>("AreaPath")
                         .IsRequired()
                         .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("CreatedDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
@@ -1065,6 +1014,60 @@ namespace PoTool.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("WorkItemStateClassifications");
+                });
+
+            modelBuilder.Entity("PoTool.Shared.Settings.TfsConfigEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApiVersion")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DefaultAreaPath")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("HasTestedConnectionSuccessfully")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasVerifiedTfsApiSuccessfully")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("LastValidated")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Project")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TimeoutSeconds")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("UseDefaultCredentials")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Url");
+
+                    b.ToTable("TfsConfigs");
                 });
 
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.CachedMetricsEntity", b =>

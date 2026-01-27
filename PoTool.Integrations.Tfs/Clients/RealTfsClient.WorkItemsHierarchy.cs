@@ -285,6 +285,7 @@ public partial class RealTfsClient
 
             var parentId = relationsMap.TryGetValue(id, out var pid) ? pid : null;
             int? effort = ParseEffortField(fields);
+            DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
 
             results.Add(new WorkItemDto(
                 TfsId: id,
@@ -297,7 +298,8 @@ public partial class RealTfsClient
                 JsonPayload: item.GetRawText(),
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: effort,
-                Description: description
+                Description: description,
+                CreatedDate: createdDate
             ));
          }
 
@@ -425,6 +427,27 @@ public partial class RealTfsClient
                     if (double.TryParse(strValue, out var parsedDouble))
                         return (int)Math.Round(parsedDouble);
                 }
+                break;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Parses a date/time field from work item fields.
+    /// Handles ISO 8601 date strings from TFS.
+    /// </summary>
+    private static DateTimeOffset? ParseDateTimeField(JsonElement fields, string fieldName)
+    {
+        if (!fields.TryGetProperty(fieldName, out var dateField))
+            return null;
+
+        switch (dateField.ValueKind)
+        {
+            case JsonValueKind.String:
+                var strValue = dateField.GetString();
+                if (!string.IsNullOrEmpty(strValue) && DateTimeOffset.TryParse(strValue, out var parsedDate))
+                    return parsedDate;
                 break;
         }
 

@@ -242,6 +242,8 @@
     /// <summary>
     /// Loads bug trend data for the last 6 months.
     /// Decision #3: Time horizon default is 6 months.
+    /// Uses CreatedDate from TFS (System.CreatedDate) for accurate bug creation timing.
+    /// Falls back to RetrievedAt for older cached data without CreatedDate.
     /// </summary>
     private async Task LoadBugTrendDataAsync()
     {
@@ -250,8 +252,8 @@
             var workItems = await WorkItemService.GetAllWithValidationAsync();
             var bugs = workItems.Where(wi => wi.Type?.Equals("Bug", StringComparison.OrdinalIgnoreCase) == true).ToList();
             
-            // Group bugs by month for the last 6 months using RetrievedAt date
-            // In production, this would use actual CreatedDate from TFS
+            // Group bugs by month for the last 6 months using CreatedDate from TFS
+            // Falls back to RetrievedAt if CreatedDate is not available (for older cached data)
             var now = DateTime.UtcNow;
             _bugTrendData = new Dictionary<string, int>();
             
@@ -260,11 +262,12 @@
                 var monthDate = now.AddMonths(-i);
                 var periodKey = monthDate.ToString("yyyy-MM");
                 
-                // Count bugs with RetrievedAt in that month
-                // This is a proxy - in production, use the actual bug creation date
-                var monthBugCount = bugs.Count(b => 
-                    b.RetrievedAt.Year == monthDate.Year && 
-                    b.RetrievedAt.Month == monthDate.Month);
+                // Count bugs with CreatedDate in that month (prefer CreatedDate, fall back to RetrievedAt)
+                var monthBugCount = bugs.Count(b =>
+                {
+                    var effectiveDate = b.CreatedDate ?? b.RetrievedAt;
+                    return effectiveDate.Year == monthDate.Year && effectiveDate.Month == monthDate.Month;
+                });
                 
                 _bugTrendData[periodKey] = monthBugCount;
             }

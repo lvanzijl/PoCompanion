@@ -223,10 +223,10 @@ This document tracks missing or incomplete capabilities identified during the Be
 |------------|-------|-----------|
 | 1 | 0 | 0 |
 | 2 | 8 | 7 |
-| 3 | 5 | 5 |
+| 3 | 6 | 6 |
 | 4 | 2 | 2 |
 | 5 | 1 | 0 |
-| **Total** | **17** | **14** |
+| **Total** | **18** | **16** |
 
 **Completed Items:**
 - #1 Work Item Explorer — Root Item Parameter Support ✅
@@ -244,6 +244,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 - #15 Profile Selection — Return URL Handling ✅
 - #16 Context Propagation — Product Filter in Navigation ✅
 - #17 "All Products/Teams" Toggle ✅
+- #18 Bug Trend Chart — Use Actual Creation Date ✅
 
 **Blocked Items:**
 - #6 Bug Detail — Save Changes (Requires backend API changes)
@@ -253,15 +254,15 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ---
 
-### 18. Bug Trend Chart — Use Actual Creation Date
+### 18. Bug Trend Chart — Use Actual Creation Date ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
 | **Title** | Bug Trend Chart — Use actual bug creation dates |
-| **Description** | The current bug trend chart uses `RetrievedAt` as a proxy for when bugs were created. This produces trend data based on sync timing rather than actual bug creation. The `WorkItemWithValidationDto` should be extended to include the actual creation date from TFS, and the trend chart should use that date instead. |
+| **Description** | The bug trend chart now uses `CreatedDate` from TFS (System.CreatedDate) for accurate bug creation timing. Falls back to `RetrievedAt` for older cached data without CreatedDate. |
 | **Used in** | Trends Workspace — Bug trend chart |
 | **Complexity** | 3 |
-| **Status** | ⚠️ Known limitation - Using RetrievedAt as proxy until CreatedDate is available |
+| **Status** | ✅ Implemented - Added CreatedDate to WorkItemDto, WorkItemWithValidationDto, WorkItemEntity, and all TFS client methods. Bug trend chart now uses CreatedDate. |
 
 ---
 
