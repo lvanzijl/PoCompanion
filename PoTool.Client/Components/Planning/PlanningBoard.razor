@@ -861,48 +861,57 @@ else
     
     private async Task<RowTypeSelection?> ShowRowTypeSelectionDialog()
     {
-        // Show simple menu dialog to select row type
+        // First dialog: Choose between Normal row or Marker row
         var dialog = await DialogService.ShowMessageBox(
-            "Select Row Type",
-            "Choose the type of row to add:",
+            "Add Row",
+            "What type of row would you like to add?",
             yesText: "Normal Row",
-            noText: "Cancel",
+            noText: "Marker Row",
+            cancelText: "Cancel",
             options: new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small }
         );
         
         if (dialog == true)
         {
+            // Normal row selected
             return new RowTypeSelection { IsMarker = false };
         }
-        
-        // For now, simplified: if they say No, we'll show another dialog for marker types
-        var markerDialog = await DialogService.ShowMessageBox(
-            "Select Marker Type",
-            "Choose the type of marker row:",
-            yesText: "Iteration",
-            noText: "Release",
-            cancelText: "Cancel",
-            options: new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small }
-        );
-        
-        if (markerDialog == true)
+        else if (dialog == false)
         {
-            return new RowTypeSelection 
-            { 
-                IsMarker = true, 
-                MarkerType = PlanningDtos.MarkerRowType.Iteration 
-            };
-        }
-        else if (markerDialog == false)
-        {
-            return new RowTypeSelection 
-            { 
-                IsMarker = true, 
-                MarkerType = PlanningDtos.MarkerRowType.Release 
-            };
+            // Marker row selected - show second dialog for type
+            var markerDialog = await DialogService.ShowMessageBox(
+                "Select Marker Type",
+                "What type of marker line?",
+                yesText: "Iteration",
+                noText: "Release",
+                cancelText: "Back",
+                options: new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small }
+            );
+            
+            if (markerDialog == true)
+            {
+                return new RowTypeSelection 
+                { 
+                    IsMarker = true, 
+                    MarkerType = PlanningDtos.MarkerRowType.Iteration 
+                };
+            }
+            else if (markerDialog == false)
+            {
+                return new RowTypeSelection 
+                { 
+                    IsMarker = true, 
+                    MarkerType = PlanningDtos.MarkerRowType.Release 
+                };
+            }
+            else
+            {
+                // User clicked "Back" or cancelled - return to first dialog
+                return await ShowRowTypeSelectionDialog();
+            }
         }
         
-        return null; // Cancelled
+        return null; // Cancelled from first dialog
     }
     
     private class RowTypeSelection
@@ -997,7 +1006,9 @@ else
         var row = _rows.FirstOrDefault(r => r.Id == rowId);
         if (row == null) return;
         
-        // TODO: Backend API for updating marker label doesn't exist yet
+        // TODO: Implement backend API for updating marker labels
+        // Need: UpdateMarkerRowRequest DTO, UpdateMarkerRowCommand, API endpoint
+        // Required: PlanningService.UpdateMarkerRowAsync(int rowId, string label)
         // For now, just cancel the edit and show a message
         Snackbar.Add("Marker label update - backend API not yet implemented", Severity.Info);
         
