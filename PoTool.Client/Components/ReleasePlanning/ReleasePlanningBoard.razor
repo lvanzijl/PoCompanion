@@ -130,7 +130,7 @@
                             </div>
 
                             <!-- Horizontal Lines between rows - full width across all lanes -->
-                            <div class="lines-container" style="@($"position: relative; pointer-events: {(_isDraggingEpic ? "none" : "auto")};")">
+                            <div class="lines-container" style="@GetLinesContainerStyle()">
                                 @foreach (var line in linesAtPosition.MilestoneLines)
                                 {
                                     var isBeingDragged = _draggingLineId == line.Id;
@@ -1245,6 +1245,12 @@
         {
             return $"{baseClass} draggable-line";
         }
+    }
+
+    private string GetLinesContainerStyle()
+    {
+        var pointerEvents = _isDraggingEpic ? "none" : "auto";
+        return $"position: relative; pointer-events: {pointerEvents};";
     }
 
     #endregion
