@@ -1,4 +1,4 @@
-# Senior SWE/PO Review Report — main branch
+# Senior SWE/PO Review Report – main branch
 
 ## 1. Blocking Issues
 - **Sync-over-async violations in PoTool.Client**  
@@ -32,7 +32,7 @@
 
 ## 3. State & Data Integrity
 - **Watermark uses RetrievedAt instead of TFS ChangedDate**  
-  - Sync logic uses local retrieval timestamps for incremental sync, risking missed updates if retrieval order differs from server change order.  
+  - Sync logic uses local retrieval timestamps for incremental sync, risking missed updates if retrieval order diverges from server change order.  
   - A TODO hints at this but no invariant enforces correctness.
 - **Potential duplicate upserts in sync stage**  
   - Work items are processed per DTO without de-duplication; duplicate IDs in the batch can cause multiple updates and nondeterministic last-write wins.
