@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
+using Microsoft.Extensions.Logging;
 
-namespace PoTool.Api.Services;
+namespace PoTool.Integrations.Tfs.Clients;
 
 /// <summary>
 /// Centralized HTTP request sender for TFS API calls with consistent headers,

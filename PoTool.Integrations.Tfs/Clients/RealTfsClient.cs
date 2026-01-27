@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
-using PoTool.Api.Persistence.Entities;
+using PoTool.Shared.Settings;
 using PoTool.Core.Contracts;
 using PoTool.Core.Pipelines;
 using PoTool.Core.PullRequests;
@@ -13,10 +13,9 @@ using PoTool.Shared.Contracts.TfsVerification;
 using PoTool.Shared.Exceptions;
 using PoTool.Shared.Pipelines;
 using PoTool.Shared.PullRequests;
-using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 
-namespace PoTool.Api.Services;
+namespace PoTool.Integrations.Tfs.Clients;
 
 /// <summary>
 /// Request payload for Azure DevOps Work Items Batch API.
@@ -55,7 +54,7 @@ internal sealed class WorkItemBatchRequest
 public class RealTfsClient : ITfsClient
 {
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly TfsConfigurationService _configService;
+    private readonly ITfsConfigurationService _configService;
     private readonly ILogger<RealTfsClient> _logger;
     private readonly TfsRequestThrottler _throttler;
     private readonly TfsRequestSender _requestSender;
@@ -86,7 +85,7 @@ public class RealTfsClient : ITfsClient
     // Batch size for Work Items Batch API calls
     // Azure DevOps supports up to 200 work items per batch for optimal performance
     // Larger batches (up to 500) may work but could impact response time
-    internal const int WorkItemBatchSize = 200;
+    public const int WorkItemBatchSize = 200;
 
     // Ancestor completion safety limits
     // MaxAncestorDepth: Prevents infinite loops in case of circular references or very deep hierarchies
@@ -101,7 +100,7 @@ public class RealTfsClient : ITfsClient
 
     public RealTfsClient(
         IHttpClientFactory httpClientFactory,
-        TfsConfigurationService configService,
+        ITfsConfigurationService configService,
         ILogger<RealTfsClient> logger,
         TfsRequestThrottler throttler,
         TfsRequestSender requestSender)

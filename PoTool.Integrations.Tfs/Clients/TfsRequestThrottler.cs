@@ -1,6 +1,7 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
-namespace PoTool.Api.Services;
+namespace PoTool.Integrations.Tfs.Clients;
 
 /// <summary>
 /// Provides throttling for TFS/Azure DevOps API requests to prevent overwhelming the server.

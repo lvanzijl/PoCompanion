@@ -3,6 +3,7 @@ using System.Text.Json;
 using Mediator;
 using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
+using PoTool.Shared.Settings;
 using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 using PoTool.Api.Services;
@@ -173,14 +174,14 @@ public sealed class GetGoalsFromTfsQueryHandler : IQueryHandler<GetGoalsFromTfsQ
         return value.Replace("'", "''");
     }
 
-    private string BuildCollectionUrl(PoTool.Api.Persistence.Entities.TfsConfigEntity config, string relativePath)
+    private string BuildCollectionUrl(TfsConfigEntity config, string relativePath)
     {
         var path = relativePath.TrimStart('/');
         var separator = path.Contains('?') ? "&" : "?";
         return $"{config.Url.TrimEnd('/')}/{path}{separator}api-version={config.ApiVersion}";
     }
 
-    private string BuildProjectUrl(PoTool.Api.Persistence.Entities.TfsConfigEntity config, string relativePath)
+    private string BuildProjectUrl(TfsConfigEntity config, string relativePath)
     {
         var encodedProject = Uri.EscapeDataString(config.Project);
         var path = relativePath.TrimStart('/');

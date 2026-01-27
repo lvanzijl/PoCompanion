@@ -8,7 +8,8 @@ using Moq;
 using Moq.Protected;
 using PoTool.Api.Services;
 using PoTool.Api.Persistence;
-using PoTool.Api.Persistence.Entities;
+using PoTool.Integrations.Tfs.Clients;
+using PoTool.Shared.Settings;
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 

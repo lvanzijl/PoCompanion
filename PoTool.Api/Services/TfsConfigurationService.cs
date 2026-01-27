@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
-using PoTool.Api.Persistence.Entities;
+using PoTool.Shared.Settings;
 using PoTool.Core.Contracts;
 
 namespace PoTool.Api.Services;
@@ -24,7 +24,7 @@ public sealed class TfsConfig
 /// All EF operations are protected by IEfConcurrencyGate to prevent concurrent DbContext access
 /// when this service is called from parallel code paths (e.g., Task.WhenAll in RealTfsClient).
 /// </summary>
-public class TfsConfigurationService
+public class TfsConfigurationService : ITfsConfigurationService
 {
     private readonly PoToolDbContext _db;
     private readonly ILogger<TfsConfigurationService> _logger;
