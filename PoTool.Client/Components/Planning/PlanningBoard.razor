@@ -727,37 +727,53 @@ else
     
     private async Task AddRowAbove(int rowId)
     {
-        // Show row type selection dialog
-        var rowType = await ShowRowTypeSelectionDialog();
-        if (!rowType.HasValue) return;
+        // Show row type selection - returns null if cancelled, or row type (including marker type)
+        var rowTypeResult = await ShowRowTypeSelectionDialog();
+        if (rowTypeResult == null) return;
         
         _isSaving = true;
         StateHasChanged();
         
         try
         {
-            var request = new PlanningDtos.CreateRowRequest
-            {
-                InsertBeforeRowId = rowId,
-                InsertBelow = false
-            };
+            PlanningDtos.RowOperationResultDto? result;
             
-            var result = await PlanningService.CreateRowAsync(request);
+            if (rowTypeResult.IsMarker)
+            {
+                // Prompt for label inline after creation
+                var request = new PlanningDtos.CreateMarkerRowRequest
+                {
+                    InsertBeforeRowId = rowId,
+                    InsertBelow = false,
+                    MarkerType = rowTypeResult.MarkerType!.Value,
+                    Label = string.Empty
+                };
+                
+                result = await PlanningService.CreateMarkerRowAsync(request);
+            }
+            else
+            {
+                var request = new PlanningDtos.CreateRowRequest
+                {
+                    InsertBeforeRowId = rowId,
+                    InsertBelow = false
+                };
+                
+                result = await PlanningService.CreateRowAsync(request);
+            }
             
             if (result?.Success == true && result.RowId.HasValue)
             {
-                // If it's a marker row, prompt for name immediately
-                if (rowType.Value != PlanningDtos.BoardRowType.Normal)
+                await LoadBoardDataAsync();
+                
+                // If it's a marker row, start inline editing immediately
+                if (rowTypeResult.IsMarker)
                 {
-                    await LoadBoardDataAsync();
                     _editingMarkerRowId = result.RowId;
                     _editingMarkerLabel = string.Empty;
-                    StateHasChanged();
                 }
-                else
-                {
-                    await LoadBoardDataAsync();
-                }
+                
+                StateHasChanged();
             }
             else
             {
@@ -778,37 +794,53 @@ else
     
     private async Task AddRowBelow(int rowId)
     {
-        // Show row type selection dialog
-        var rowType = await ShowRowTypeSelectionDialog();
-        if (!rowType.HasValue) return;
+        // Show row type selection - returns null if cancelled, or row type (including marker type)
+        var rowTypeResult = await ShowRowTypeSelectionDialog();
+        if (rowTypeResult == null) return;
         
         _isSaving = true;
         StateHasChanged();
         
         try
         {
-            var request = new PlanningDtos.CreateRowRequest
-            {
-                InsertBeforeRowId = rowId,
-                InsertBelow = true
-            };
+            PlanningDtos.RowOperationResultDto? result;
             
-            var result = await PlanningService.CreateRowAsync(request);
+            if (rowTypeResult.IsMarker)
+            {
+                // Prompt for label inline after creation
+                var request = new PlanningDtos.CreateMarkerRowRequest
+                {
+                    InsertBeforeRowId = rowId,
+                    InsertBelow = true,
+                    MarkerType = rowTypeResult.MarkerType!.Value,
+                    Label = string.Empty
+                };
+                
+                result = await PlanningService.CreateMarkerRowAsync(request);
+            }
+            else
+            {
+                var request = new PlanningDtos.CreateRowRequest
+                {
+                    InsertBeforeRowId = rowId,
+                    InsertBelow = true
+                };
+                
+                result = await PlanningService.CreateRowAsync(request);
+            }
             
             if (result?.Success == true && result.RowId.HasValue)
             {
-                // If it's a marker row, prompt for name immediately
-                if (rowType.Value != PlanningDtos.BoardRowType.Normal)
+                await LoadBoardDataAsync();
+                
+                // If it's a marker row, start inline editing immediately
+                if (rowTypeResult.IsMarker)
                 {
-                    await LoadBoardDataAsync();
                     _editingMarkerRowId = result.RowId;
                     _editingMarkerLabel = string.Empty;
-                    StateHasChanged();
                 }
-                else
-                {
-                    await LoadBoardDataAsync();
-                }
+                
+                StateHasChanged();
             }
             else
             {
@@ -827,11 +859,56 @@ else
         }
     }
     
-    private async Task<PlanningDtos.BoardRowType?> ShowRowTypeSelectionDialog()
+    private async Task<RowTypeSelection?> ShowRowTypeSelectionDialog()
     {
-        // For now, return Normal by default
-        // TODO: Implement proper row type selection dialog
-        return PlanningDtos.BoardRowType.Normal;
+        // Show simple menu dialog to select row type
+        var dialog = await DialogService.ShowMessageBox(
+            "Select Row Type",
+            "Choose the type of row to add:",
+            yesText: "Normal Row",
+            noText: "Cancel",
+            options: new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small }
+        );
+        
+        if (dialog == true)
+        {
+            return new RowTypeSelection { IsMarker = false };
+        }
+        
+        // For now, simplified: if they say No, we'll show another dialog for marker types
+        var markerDialog = await DialogService.ShowMessageBox(
+            "Select Marker Type",
+            "Choose the type of marker row:",
+            yesText: "Iteration",
+            noText: "Release",
+            cancelText: "Cancel",
+            options: new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small }
+        );
+        
+        if (markerDialog == true)
+        {
+            return new RowTypeSelection 
+            { 
+                IsMarker = true, 
+                MarkerType = PlanningDtos.MarkerRowType.Iteration 
+            };
+        }
+        else if (markerDialog == false)
+        {
+            return new RowTypeSelection 
+            { 
+                IsMarker = true, 
+                MarkerType = PlanningDtos.MarkerRowType.Release 
+            };
+        }
+        
+        return null; // Cancelled
+    }
+    
+    private class RowTypeSelection
+    {
+        public bool IsMarker { get; set; }
+        public PlanningDtos.MarkerRowType? MarkerType { get; set; }
     }
     
     private async Task DeleteRow(int rowId)
@@ -920,28 +997,13 @@ else
         var row = _rows.FirstOrDefault(r => r.Id == rowId);
         if (row == null) return;
         
-        _isSaving = true;
-        StateHasChanged();
+        // TODO: Backend API for updating marker label doesn't exist yet
+        // For now, just cancel the edit and show a message
+        Snackbar.Add("Marker label update - backend API not yet implemented", Severity.Info);
         
-        try
-        {
-            // TODO: Call API to update marker label
-            // For now, just update locally and reload
-            Snackbar.Add("Marker label updated", Severity.Success);
-            await LoadBoardDataAsync();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to save marker label for row {RowId}", rowId);
-            Snackbar.Add("Failed to save marker label", Severity.Error);
-        }
-        finally
-        {
-            _editingMarkerRowId = null;
-            _editingMarkerLabel = string.Empty;
-            _isSaving = false;
-            StateHasChanged();
-        }
+        _editingMarkerRowId = null;
+        _editingMarkerLabel = string.Empty;
+        StateHasChanged();
     }
     
     private void CancelMarkerLabelEdit()
