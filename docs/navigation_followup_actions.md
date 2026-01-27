@@ -156,7 +156,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ---
 
-### 13. Planning Workspace — Epic Invalid Items Detection
+### 13. Planning Workspace — Epic Invalid Items Detection ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -164,6 +164,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | Implement logic to detect epics containing work items with validation issues and provide navigation to the Work Item Explorer with epic as root. |
 | **Used in** | Planning → Epic invalid items signal |
 | **Complexity** | 3 |
+| **Status** | ✅ Implemented - Shows epics with child items that have validation issues, navigates to Work Item Explorer with rootWorkItemId |
 
 ---
 
@@ -219,10 +220,10 @@ This document tracks missing or incomplete capabilities identified during the Be
 |------------|-------|-----------|
 | 1 | 0 | 0 |
 | 2 | 8 | 7 |
-| 3 | 5 | 3 |
+| 3 | 5 | 4 |
 | 4 | 2 | 0 |
 | 5 | 1 | 0 |
-| **Total** | **17** | **10** |
+| **Total** | **17** | **11** |
 
 **Completed Items:**
 - #1 Work Item Explorer — Root Item Parameter Support ✅
@@ -234,6 +235,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 - #9 Beta Home — Real Health Signals ✅
 - #10 Health Workspace — Validation Issue Counts ✅
 - #11 Trends Workspace — Velocity Chart Integration ✅
+- #13 Planning Workspace — Epic Invalid Items Detection ✅
 - #15 Profile Selection — Return URL Handling ✅
 - #17 "All Products/Teams" Toggle ✅
 

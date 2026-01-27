@@ -5,6 +5,7 @@
 @inject INavigationContextService NavigationContextService
 @inject IProfileService ProfileService
 @inject ProductService ProductService
+@inject WorkItemService WorkItemService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -76,16 +77,23 @@
                     </MudCard>
                 </MudItem>
                 
-                @* Epic Invalid Items Signal *@
+                @* Epic Invalid Items Signal - Shows real counts *@
                 <MudItem xs="12" sm="6" md="4">
                     <MudCard Elevation="1" 
                              Style="cursor: pointer; transition: all 0.2s;"
                              Class="mud-card-hover"
-                             @onclick="NavigateToEpicInvalidItems">
+                             @onclick="@(() => NavigateToEpicInvalidItems(null))">
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="Color.Error" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="@GetEpicInvalidItemsColor()" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Epic Invalid Items</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Work item explorer</MudText>
+                            @if (_epicsWithInvalidItems == 0)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Success">All epics valid</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="@GetEpicInvalidItemsColor()">@_epicsWithInvalidItems epic(s) with issues</MudText>
+                            }
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -106,6 +114,48 @@
                 </MudItem>
             </MudGrid>
         </MudPaper>
+        
+        @* Epics with Invalid Items Detail *@
+        @if (_epicItemsWithIssues.Count > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h5" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="Color.Warning" Class="mr-2" />
+                    Epics with Invalid Items (@_epicItemsWithIssues.Count)
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    Click an epic to view its work items in the explorer
+                </MudText>
+                
+                <MudTable Items="@_epicItemsWithIssues" Hover="true" Dense="true" Elevation="0" Striped="true">
+                    <HeaderContent>
+                        <MudTh>ID</MudTh>
+                        <MudTh>Epic Title</MudTh>
+                        <MudTh>State</MudTh>
+                        <MudTh>Invalid Items</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="ID">@context.Epic.TfsId</MudTd>
+                        <MudTd DataLabel="Title">@context.Epic.Title</MudTd>
+                        <MudTd DataLabel="State">
+                            <MudChip T="string" Size="Size.Small" Color="GetStateColor(context.Epic.State)">@context.Epic.State</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Invalid Items">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">@context.InvalidItemCount items</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudTooltip Text="Open in Work Item Explorer">
+                                <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" 
+                                              Size="Size.Small" 
+                                              Color="Color.Primary"
+                                              OnClick="@(() => NavigateToEpicInvalidItems(context.Epic.TfsId))" />
+                            </MudTooltip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
 
         @* Information Notice *@
         <MudAlert Severity="Severity.Info" Class="mb-4">
@@ -200,6 +250,10 @@
     private List<ProductDto> _products = new();
     private List<BreadcrumbItem> _breadcrumbs = new();
     
+    // Epic invalid items detection
+    private int _epicsWithInvalidItems = 0;
+    private List<EpicWithIssues> _epicItemsWithIssues = new();
+    
     protected override async Task OnInitializedAsync()
     {
         try
@@ -217,6 +271,9 @@
             // Load products
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
             
+            // Detect epics with invalid items
+            await LoadEpicInvalidItemsAsync();
+            
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
@@ -228,6 +285,58 @@
             _isLoading = false;
         }
     }
+    
+    private async Task LoadEpicInvalidItemsAsync()
+    {
+        try
+        {
+            // Load all work items with validation
+            var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync();
+            var workItemsList = workItemsWithValidation.ToList();
+            
+            // Find all epics
+            var epics = workItemsList.Where(wi => 
+                wi.Type?.Equals("Epic", StringComparison.OrdinalIgnoreCase) == true).ToList();
+            
+            // For each epic, find child items with validation issues
+            foreach (var epic in epics)
+            {
+                // Find descendants with validation issues (direct children or items referencing this epic as parent)
+                var childrenWithIssues = workItemsList.Where(wi =>
+                    wi.ParentTfsId == epic.TfsId &&
+                    wi.ValidationIssues?.Count > 0).ToList();
+                
+                if (childrenWithIssues.Count > 0)
+                {
+                    _epicItemsWithIssues.Add(new EpicWithIssues(epic, childrenWithIssues.Count));
+                }
+            }
+            
+            _epicsWithInvalidItems = _epicItemsWithIssues.Count;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading epic data: {ex.Message}", Severity.Warning);
+        }
+    }
+    
+    private Color GetEpicInvalidItemsColor()
+    {
+        if (_epicsWithInvalidItems == 0) return Color.Success;
+        if (_epicsWithInvalidItems <= 2) return Color.Warning;
+        return Color.Error;
+    }
+    
+    private Color GetStateColor(string? state) => state?.ToLowerInvariant() switch
+    {
+        "new" => Color.Info,
+        "active" or "in progress" => Color.Primary,
+        "resolved" or "done" => Color.Success,
+        "closed" or "removed" => Color.Dark,
+        _ => Color.Default
+    };
+    
+    private record EpicWithIssues(WorkItemWithValidationDto Epic, int InvalidItemCount);
     
     private void UpdateBreadcrumbs()
     {
@@ -254,11 +363,18 @@
         NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaTrendsWorkspace}?metric=Velocity");
     }
     
-    private void NavigateToEpicInvalidItems()
+    private void NavigateToEpicInvalidItems(int? epicId)
     {
-        // Navigate to work item explorer with epic as root
-        // Note: Epic ID would be passed as parameter in real implementation
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaWorkItemExplorer);
+        // Navigate to work item explorer with epic as root (per deep link contract)
+        if (epicId.HasValue)
+        {
+            NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}?rootWorkItemId={epicId}");
+        }
+        else
+        {
+            // Navigate to explorer without filter (all items)
+            NavigationManager.NavigateTo(WorkspaceRoutes.BetaWorkItemExplorer);
+        }
     }
     
     private void NavigateToDependencyOverview()
