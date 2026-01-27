@@ -30,6 +30,25 @@ public sealed class UpdateMarkerRowCommandHandler : ICommandHandler<UpdateMarker
         _logger.LogDebug("Updating marker row {RowId} with label '{Label}'", 
             command.RowId, command.Label);
 
+        // Validate label
+        if (string.IsNullOrWhiteSpace(command.Label))
+        {
+            return new RowOperationResultDto
+            {
+                Success = false,
+                ErrorMessage = "Label cannot be empty"
+            };
+        }
+
+        if (command.Label.Length > 200)
+        {
+            return new RowOperationResultDto
+            {
+                Success = false,
+                ErrorMessage = "Label cannot exceed 200 characters"
+            };
+        }
+
         var row = await _dbContext.BoardRows
             .FirstOrDefaultAsync(r => r.Id == command.RowId, cancellationToken);
 
@@ -51,7 +70,7 @@ public sealed class UpdateMarkerRowCommandHandler : ICommandHandler<UpdateMarker
             };
         }
 
-        row.MarkerLabel = command.Label;
+        row.MarkerLabel = command.Label.Trim();
         row.LastModified = DateTimeOffset.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);

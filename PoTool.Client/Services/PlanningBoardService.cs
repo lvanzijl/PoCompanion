@@ -173,6 +173,17 @@ public class PlanningBoardService
                 request,
                 cancellationToken);
 
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to update marker row {RowId}. Status: {StatusCode}", 
+                    rowId, response.StatusCode);
+                return new RowOperationResultDto 
+                { 
+                    Success = false, 
+                    ErrorMessage = "Failed to update marker row" 
+                };
+            }
+
             return await response.Content.ReadFromJsonAsync<RowOperationResultDto>(cancellationToken);
         }
         catch (Exception ex)
