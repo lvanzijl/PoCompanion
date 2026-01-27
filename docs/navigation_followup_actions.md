@@ -14,7 +14,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ## Follow-up Actions
 
-### 1. Work Item Explorer — Root Item Parameter Support
+### 1. Work Item Explorer — Root Item Parameter Support ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -22,10 +22,11 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | The Work Item Explorer must accept a work item ID as root and show all descendants. Currently, the `rootWorkItemId` parameter is parsed but not used to filter the work item tree. |
 | **Used in** | Planning → Epic → Invalid items navigation path |
 | **Complexity** | 3 |
+| **Status** | ✅ Implemented - Now filters work items to show descendants of root item |
 
 ---
 
-### 2. Work Item Explorer — Validation Type Filtering
+### 2. Work Item Explorer — Validation Type Filtering ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -33,6 +34,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | The explorer receives `validationType` parameter but needs actual filtering logic to show only work items matching the validation issue type (missing-effort, missing-description, invalid-state, missing-tags). |
 | **Used in** | Health → Validation category signal navigation |
 | **Complexity** | 3 |
+| **Status** | ✅ Implemented - Now loads and filters work items by validation type |
 
 ---
 
@@ -129,7 +131,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ---
 
-### 11. Trends Workspace — Velocity Chart Integration
+### 11. Trends Workspace — Velocity Chart Integration ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -137,6 +139,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | Integrate the existing velocity chart component into the Trends workspace with a maximum of 10 bars as specified. |
 | **Used in** | Trends workspace velocity overview |
 | **Complexity** | 2 |
+| **Status** | ✅ Implemented - Embedded VelocityPanel component with MaxSprints=10 |
 
 ---
 
@@ -195,7 +198,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ---
 
-### 17. "All Products/Teams" Toggle
+### 17. "All Products/Teams" Toggle ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -203,6 +206,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | When navigating with product/team scope, provide a link to open the same view with "all products / all teams" scope as specified in the requirements. |
 | **Used in** | Work Item Explorer, Bug Overview |
 | **Complexity** | 2 |
+| **Status** | ✅ Implemented - Added "View All" button to Bug Overview and Work Item Explorer |
 
 ---
 
@@ -211,18 +215,22 @@ This document tracks missing or incomplete capabilities identified during the Be
 | Complexity | Count | Completed |
 |------------|-------|-----------|
 | 1 | 0 | 0 |
-| 2 | 8 | 5 |
-| 3 | 5 | 0 |
+| 2 | 8 | 6 |
+| 3 | 5 | 2 |
 | 4 | 2 | 0 |
 | 5 | 1 | 0 |
-| **Total** | **17** | **5** |
+| **Total** | **17** | **8** |
 
 **Completed Items:**
+- #1 Work Item Explorer — Root Item Parameter Support ✅
+- #2 Work Item Explorer — Validation Type Filtering ✅
 - #4 Bug Overview — Real Data Integration ✅
 - #5 Bug Overview — Period Filtering ✅
 - #7 PR Overview — Real Data Integration ✅
 - #8 Pipeline Overview — Real Data Integration ✅
 - #10 Health Workspace — Validation Issue Counts ✅
+- #11 Trends Workspace — Velocity Chart Integration ✅
+- #17 "All Products/Teams" Toggle ✅
 
 ---
 

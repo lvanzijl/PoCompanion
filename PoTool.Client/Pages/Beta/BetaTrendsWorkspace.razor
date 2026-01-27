@@ -143,10 +143,8 @@
                 </MudButton>
             </MudStack>
             
-            @* Embedded velocity component would go here *@
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                Velocity trends for the last 6 months
-            </MudText>
+            @* Embedded VelocityPanel component with max 10 bars *@
+            <VelocityPanel MaxSprints="10" />
         </MudPaper>
 
         @* Cross-Workspace Navigation *@

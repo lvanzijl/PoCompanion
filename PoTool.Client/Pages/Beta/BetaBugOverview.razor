@@ -48,6 +48,17 @@
                         All Products / All Teams
                     </MudChip>
                 }
+                else
+                {
+                    @* View All Toggle - Show option to view all products/teams *@
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Public"
+                               OnClick="NavigateToViewAll">
+                        View All
+                    </MudButton>
+                }
                 
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
@@ -345,6 +356,12 @@
     {
         _period = null;
         NavigationManager.NavigateTo(WorkspaceRoutes.BetaBugOverview);
+    }
+    
+    private void NavigateToViewAll()
+    {
+        // Navigate to the same view with allProducts=true and allTeams=true
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaBugOverview}?allProducts=true&allTeams=true");
     }
     
     private void NavigateToBetaHome()
