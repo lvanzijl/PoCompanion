@@ -1,7 +1,9 @@
 @page "/beta/pull-requests"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
 @using System.Web
 @inject IProfileService ProfileService
+@inject PullRequestService PullRequestService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -50,6 +52,12 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @_errorMessage
+        </MudAlert>
+    }
     else
     {
         @* Read-Only Notice *@
@@ -63,10 +71,13 @@
         @* PR Insights Section *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                <MudText Typo="Typo.h5">
-                    <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" />
-                    PR Insights
-                </MudText>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudText Typo="Typo.h5">
+                        <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" />
+                        PR Insights
+                    </MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">@_pullRequests.Count items</MudChip>
+                </MudStack>
                 <MudButton Variant="Variant.Text" 
                            Color="Color.Primary" 
                            EndIcon="@Icons.Material.Filled.OpenInNew" 
@@ -75,25 +86,34 @@
                 </MudButton>
             </MudStack>
             
-            @* Sample PR Data *@
-            <MudTable Items="@_samplePRs" Hover="true" Striped="true" Dense="true">
-                <HeaderContent>
-                    <MudTh>ID</MudTh>
-                    <MudTh>Title</MudTh>
-                    <MudTh>Status</MudTh>
-                    <MudTh>Created</MudTh>
-                    <MudTh>Time Open</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="ID">@context.Id</MudTd>
-                    <MudTd DataLabel="Title">@context.Title</MudTd>
-                    <MudTd DataLabel="Status">
-                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="Created">@context.Created.ToString("MMM dd, yyyy")</MudTd>
-                    <MudTd DataLabel="Time Open">@context.TimeOpen</MudTd>
-                </RowTemplate>
-            </MudTable>
+            @if (_pullRequests.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">
+                    No pull requests found.
+                </MudAlert>
+            }
+            else
+            {
+                @* PR Data Table *@
+                <MudTable Items="@_pullRequests" Hover="true" Striped="true" Dense="true">
+                    <HeaderContent>
+                        <MudTh>ID</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Created</MudTh>
+                        <MudTh>Time Open</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="ID">@context.Id</MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Created">@context.Created.ToString("MMM dd, yyyy")</MudTd>
+                        <MudTd DataLabel="Time Open">@context.TimeOpen</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
         </MudPaper>
 
         @* Navigation Options *@
@@ -125,8 +145,9 @@
     private bool _isLoading = true;
     private int? _profileId;
     private bool _insightOnly;
+    private string? _errorMessage;
     private List<BreadcrumbItem> _breadcrumbs = new();
-    private List<PRItem> _samplePRs = new();
+    private List<PRItem> _pullRequests = new();
     
     protected override async Task OnInitializedAsync()
     {
@@ -143,12 +164,13 @@
             ProfileService.SetCachedActiveProfileId(_profileId);
             
             ParseQueryParameters();
-            LoadSampleData();
+            await LoadPullRequestsAsync();
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+            _errorMessage = ex.Message;
+            Snackbar.Add($"Error loading pull requests: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -168,14 +190,48 @@
         }
     }
     
-    private void LoadSampleData()
+    private async Task LoadPullRequestsAsync()
     {
-        _samplePRs = new List<PRItem>
+        try
         {
-            new PRItem { Id = 101, Title = "Feature: Add user authentication", Status = "Active", Created = DateTime.Now.AddDays(-2), TimeOpen = "2 days" },
-            new PRItem { Id = 102, Title = "Fix: Dashboard rendering issue", Status = "Completed", Created = DateTime.Now.AddDays(-5), TimeOpen = "3 days" },
-            new PRItem { Id = 103, Title = "Refactor: Database queries", Status = "Active", Created = DateTime.Now.AddDays(-1), TimeOpen = "1 day" }
-        };
+            var prs = await PullRequestService.GetAllAsync();
+            
+            _pullRequests = prs.Select(pr => new PRItem
+            {
+                Id = pr.Id,
+                Title = pr.Title ?? "(No title)",
+                Status = pr.Status ?? "Unknown",
+                Created = pr.CreatedDate.DateTime,
+                TimeOpen = CalculateTimeOpen(pr.CreatedDate, pr.CompletedDate)
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load pull requests: {ex.Message}";
+            _pullRequests = new List<PRItem>();
+        }
+    }
+    
+    private static string CalculateTimeOpen(DateTimeOffset created, DateTimeOffset? completed)
+    {
+        var endDate = completed ?? DateTimeOffset.Now;
+        var duration = endDate - created;
+        
+        if (duration.TotalDays >= 1)
+        {
+            var days = (int)duration.TotalDays;
+            return days == 1 ? "1 day" : $"{days} days";
+        }
+        else if (duration.TotalHours >= 1)
+        {
+            var hours = (int)duration.TotalHours;
+            return hours == 1 ? "1 hour" : $"{hours} hours";
+        }
+        else
+        {
+            var minutes = (int)duration.TotalMinutes;
+            return minutes <= 1 ? "< 1 minute" : $"{minutes} minutes";
+        }
     }
     
     private void UpdateBreadcrumbs()

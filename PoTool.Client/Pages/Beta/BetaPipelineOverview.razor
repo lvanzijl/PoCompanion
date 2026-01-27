@@ -1,7 +1,9 @@
 @page "/beta/pipelines"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
 @using System.Web
 @inject IProfileService ProfileService
+@inject PipelineService PipelineService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -50,6 +52,12 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @_errorMessage
+        </MudAlert>
+    }
     else
     {
         @* Read-Only Notice *@
@@ -63,10 +71,13 @@
         @* Pipeline Insights Section *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                <MudText Typo="Typo.h5">
-                    <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" />
-                    Pipeline Insights
-                </MudText>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudText Typo="Typo.h5">
+                        <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" />
+                        Pipeline Insights
+                    </MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">@_pipelines.Count items</MudChip>
+                </MudStack>
                 <MudButton Variant="Variant.Text" 
                            Color="Color.Primary" 
                            EndIcon="@Icons.Material.Filled.OpenInNew" 
@@ -75,28 +86,37 @@
                 </MudButton>
             </MudStack>
             
-            @* Sample Pipeline Data *@
-            <MudTable Items="@_samplePipelines" Hover="true" Striped="true" Dense="true">
-                <HeaderContent>
-                    <MudTh>Pipeline</MudTh>
-                    <MudTh>Last Run</MudTh>
-                    <MudTh>Status</MudTh>
-                    <MudTh>Duration</MudTh>
-                    <MudTh>Success Rate</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Pipeline">@context.Name</MudTd>
-                    <MudTd DataLabel="Last Run">@context.LastRun.ToString("MMM dd, HH:mm")</MudTd>
-                    <MudTd DataLabel="Status">
-                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="Duration">@context.Duration</MudTd>
-                    <MudTd DataLabel="Success Rate">
-                        <MudProgressLinear Color="@GetSuccessRateColor(context.SuccessRate)" Value="@context.SuccessRate" Class="my-1" />
-                        <MudText Typo="Typo.caption">@context.SuccessRate%</MudText>
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
+            @if (_pipelines.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">
+                    No pipeline metrics found.
+                </MudAlert>
+            }
+            else
+            {
+                @* Pipeline Data Table *@
+                <MudTable Items="@_pipelines" Hover="true" Striped="true" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Pipeline</MudTh>
+                        <MudTh>Last Run</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Duration</MudTh>
+                        <MudTh>Success Rate</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Pipeline">@context.Name</MudTd>
+                        <MudTd DataLabel="Last Run">@context.LastRun.ToString("MMM dd, HH:mm")</MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Duration">@context.Duration</MudTd>
+                        <MudTd DataLabel="Success Rate">
+                            <MudProgressLinear Color="@GetSuccessRateColor(context.SuccessRate)" Value="@context.SuccessRate" Class="my-1" />
+                            <MudText Typo="Typo.caption">@context.SuccessRate%</MudText>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
         </MudPaper>
 
         @* Navigation Options *@
@@ -128,8 +148,9 @@
     private bool _isLoading = true;
     private int? _profileId;
     private bool _insightOnly;
+    private string? _errorMessage;
     private List<BreadcrumbItem> _breadcrumbs = new();
-    private List<PipelineItem> _samplePipelines = new();
+    private List<PipelineItem> _pipelines = new();
     
     protected override async Task OnInitializedAsync()
     {
@@ -146,12 +167,13 @@
             ProfileService.SetCachedActiveProfileId(_profileId);
             
             ParseQueryParameters();
-            LoadSampleData();
+            await LoadPipelinesAsync();
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+            _errorMessage = ex.Message;
+            Snackbar.Add($"Error loading pipelines: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -171,14 +193,28 @@
         }
     }
     
-    private void LoadSampleData()
+    private async Task LoadPipelinesAsync()
     {
-        _samplePipelines = new List<PipelineItem>
+        try
         {
-            new PipelineItem { Name = "Build - Main", LastRun = DateTime.Now.AddHours(-2), Status = "Succeeded", Duration = "4m 32s", SuccessRate = 95 },
-            new PipelineItem { Name = "Build - Feature", LastRun = DateTime.Now.AddHours(-5), Status = "Failed", Duration = "2m 15s", SuccessRate = 78 },
-            new PipelineItem { Name = "Deploy - Staging", LastRun = DateTime.Now.AddDays(-1), Status = "Succeeded", Duration = "8m 45s", SuccessRate = 100 }
-        };
+            // Load pipeline metrics which includes success rates
+            var metrics = await PipelineService.GetMetricsAsync();
+            
+            _pipelines = metrics.Select(m => new PipelineItem
+            {
+                Name = m.PipelineName ?? "(Unknown)",
+                LastRun = DateTime.Now, // Metrics don't include last run time, would need to fetch from runs
+                Status = m.TotalRuns > 0 && m.SuccessfulRuns == m.TotalRuns ? "Succeeded" : 
+                         m.FailedRuns > 0 ? "Failed" : "Unknown",
+                Duration = "-", // Duration not available in metrics
+                SuccessRate = m.TotalRuns > 0 ? (int)((double)m.SuccessfulRuns / m.TotalRuns * 100) : 0
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load pipelines: {ex.Message}";
+            _pipelines = new List<PipelineItem>();
+        }
     }
     
     private void UpdateBreadcrumbs()

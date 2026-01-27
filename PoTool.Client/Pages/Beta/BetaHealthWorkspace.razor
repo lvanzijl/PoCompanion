@@ -1,8 +1,10 @@
 @page "/beta/health"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.BacklogHealth
+@using PoTool.Client.ApiClient
 @inject INavigationContextService NavigationContextService
 @inject IProfileService ProfileService
+@inject WorkItemService WorkItemService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -67,9 +69,11 @@
                              Class="mud-card-hover"
                              @onclick='() => NavigateToWorkItemExplorer("missing-effort")'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Warning" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.Timer" Color="@(_missingEffortCount > 0 ? Color.Warning : Color.Success)" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Missing Effort</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Validation issues</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@(_missingEffortCount > 0 ? Color.Warning : Color.Success)">
+                                @_missingEffortCount items
+                            </MudChip>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -81,9 +85,11 @@
                              Class="mud-card-hover"
                              @onclick='() => NavigateToWorkItemExplorer("missing-description")'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Description" Color="Color.Warning" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.Description" Color="@(_missingDescriptionCount > 0 ? Color.Warning : Color.Success)" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Missing Description</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Content validation</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@(_missingDescriptionCount > 0 ? Color.Warning : Color.Success)">
+                                @_missingDescriptionCount items
+                            </MudChip>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -109,9 +115,11 @@
                              Class="mud-card-hover"
                              @onclick="NavigateToBugOverview">
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.BugReport" Color="Color.Error" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.BugReport" Color="@(_bugCount > 0 ? Color.Error : Color.Success)" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Bugs</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Active bug issues</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@(_bugCount > 0 ? Color.Error : Color.Success)">
+                                @_bugCount items
+                            </MudChip>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -123,9 +131,11 @@
                              Class="mud-card-hover"
                              @onclick='() => NavigateToWorkItemExplorer("invalid-state")'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="Color.Warning" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="@(_invalidStateCount > 0 ? Color.Warning : Color.Success)" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Invalid States</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">State validation</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@(_invalidStateCount > 0 ? Color.Warning : Color.Success)">
+                                @_invalidStateCount items
+                            </MudChip>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -137,9 +147,11 @@
                              Class="mud-card-hover"
                              @onclick='() => NavigateToWorkItemExplorer("missing-tags")'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Label" Color="Color.Info" Size="Size.Large" />
+                            <MudIcon Icon="@Icons.Material.Filled.Label" Color="@(_missingTagsCount > 0 ? Color.Info : Color.Success)" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Missing Tags</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Tag validation</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@(_missingTagsCount > 0 ? Color.Info : Color.Success)">
+                                @_missingTagsCount items
+                            </MudChip>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -205,6 +217,13 @@
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
     
+    // Validation issue counts
+    private int _missingEffortCount;
+    private int _missingDescriptionCount;
+    private int _invalidStateCount;
+    private int _missingTagsCount;
+    private int _bugCount;
+    
     protected override async Task OnInitializedAsync()
     {
         try
@@ -219,6 +238,7 @@
             _profileId = activeProfile.Id;
             ProfileService.SetCachedActiveProfileId(_profileId);
             
+            await LoadValidationCountsAsync();
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
@@ -228,6 +248,51 @@
         finally
         {
             _isLoading = false;
+        }
+    }
+    
+    private async Task LoadValidationCountsAsync()
+    {
+        try
+        {
+            var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync();
+            
+            foreach (var wi in workItemsWithValidation)
+            {
+                if (wi.Type == "Bug")
+                {
+                    _bugCount++;
+                }
+                
+                if (wi.ValidationIssues != null)
+                {
+                    foreach (var issue in wi.ValidationIssues)
+                    {
+                        var message = issue.Message?.ToLowerInvariant() ?? "";
+                        
+                        if (message.Contains("effort") || issue.RuleId?.Contains("effort", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            _missingEffortCount++;
+                        }
+                        else if (message.Contains("description") || issue.RuleId?.Contains("description", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            _missingDescriptionCount++;
+                        }
+                        else if (message.Contains("state") || issue.RuleId?.Contains("state", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            _invalidStateCount++;
+                        }
+                        else if (message.Contains("tag") || issue.RuleId?.Contains("tag", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            _missingTagsCount++;
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // If loading fails, keep counts at 0
         }
     }
     

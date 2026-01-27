@@ -47,7 +47,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ---
 
-### 4. Bug Overview — Real Data Integration
+### 4. Bug Overview — Real Data Integration ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -55,10 +55,11 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | Replace sample bug data with actual bug work items from the work item service. Filter by Bug work item type and apply relevant filters. |
 | **Used in** | Health → Bug signal, Trends → Bug trend, Bug Triage task entry |
 | **Complexity** | 2 |
+| **Status** | ✅ Implemented - Now loads bugs from WorkItemService and filters by Bug type |
 
 ---
 
-### 5. Bug Overview — Period Filtering
+### 5. Bug Overview — Period Filtering ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -66,6 +67,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | When `period` parameter is provided (e.g., period=January-2026), filter bugs to show only those created or resolved within that time period. |
 | **Used in** | Trends → Bug spike navigation |
 | **Complexity** | 2 |
+| **Status** | ✅ Implemented - Basic period filtering using the period query parameter |
 
 ---
 
@@ -80,7 +82,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ---
 
-### 7. PR Overview — Real Data Integration
+### 7. PR Overview — Real Data Integration ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -88,10 +90,11 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | Replace sample PR data with actual pull request data from the PR service. This is a read-only view. |
 | **Used in** | Trends → PR trend navigation |
 | **Complexity** | 2 |
+| **Status** | ✅ Implemented - Now loads PRs from PullRequestService with time-open calculation |
 
 ---
 
-### 8. Pipeline Overview — Real Data Integration
+### 8. Pipeline Overview — Real Data Integration ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -99,6 +102,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | Replace sample pipeline data with actual pipeline run data from the pipeline service. This is a read-only view. |
 | **Used in** | Trends → Pipeline failures navigation |
 | **Complexity** | 2 |
+| **Status** | ✅ Implemented - Now loads pipeline metrics from PipelineService with success rate calculation |
 
 ---
 
@@ -113,7 +117,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ---
 
-### 10. Health Workspace — Validation Issue Counts
+### 10. Health Workspace — Validation Issue Counts ✅ COMPLETED
 
 | Field | Value |
 |-------|-------|
@@ -121,6 +125,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | Display actual counts of validation issues on each health signal card (e.g., "Missing Effort (47 items)"). |
 | **Used in** | Health workspace signal grid |
 | **Complexity** | 2 |
+| **Status** | ✅ Implemented - Signal cards now show real validation issue counts from WorkItemService
 
 ---
 
@@ -203,14 +208,21 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ## Summary
 
-| Complexity | Count |
-|------------|-------|
-| 1 | 0 |
-| 2 | 8 |
-| 3 | 5 |
-| 4 | 2 |
-| 5 | 1 |
-| **Total** | **17** |
+| Complexity | Count | Completed |
+|------------|-------|-----------|
+| 1 | 0 | 0 |
+| 2 | 8 | 5 |
+| 3 | 5 | 0 |
+| 4 | 2 | 0 |
+| 5 | 1 | 0 |
+| **Total** | **17** | **5** |
+
+**Completed Items:**
+- #4 Bug Overview — Real Data Integration ✅
+- #5 Bug Overview — Period Filtering ✅
+- #7 PR Overview — Real Data Integration ✅
+- #8 Pipeline Overview — Real Data Integration ✅
+- #10 Health Workspace — Validation Issue Counts ✅
 
 ---
 

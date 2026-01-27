@@ -1,8 +1,10 @@
 @page "/beta/bugs"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
 @using System.Web
 @inject INavigationContextService NavigationContextService
 @inject IProfileService ProfileService
+@inject WorkItemService WorkItemService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -61,39 +63,57 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @_errorMessage
+        </MudAlert>
+    }
     else
     {
         @* Bug List Section *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                <MudText Typo="Typo.h5">
-                    <MudIcon Icon="@Icons.Material.Filled.List" Class="mr-2" />
-                    Bugs
-                </MudText>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudText Typo="Typo.h5">
+                        <MudIcon Icon="@Icons.Material.Filled.List" Class="mr-2" />
+                        Bugs
+                    </MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">@_bugs.Count items</MudChip>
+                </MudStack>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                     Click a bug to view details and edit
                 </MudText>
             </MudStack>
             
-            @* Bug Table *@
-            <MudTable Items="@_sampleBugs" Hover="true" Striped="true" Dense="true" OnRowClick="OnBugRowClick" T="BugItem" RowClass="cursor-pointer">
-                <HeaderContent>
-                    <MudTh>ID</MudTh>
-                    <MudTh>Title</MudTh>
-                    <MudTh>Severity</MudTh>
-                    <MudTh>State</MudTh>
-                    <MudTh>Created</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="ID">@context.Id</MudTd>
-                    <MudTd DataLabel="Title">@context.Title</MudTd>
-                    <MudTd DataLabel="Severity">
-                        <MudChip T="string" Size="Size.Small" Color="@GetSeverityColor(context.Severity)">@context.Severity</MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="State">@context.State</MudTd>
-                    <MudTd DataLabel="Created">@context.Created.ToString("MMM dd, yyyy")</MudTd>
-                </RowTemplate>
-            </MudTable>
+            @if (_bugs.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">
+                    No bugs found matching the current filters.
+                </MudAlert>
+            }
+            else
+            {
+                @* Bug Table *@
+                <MudTable Items="@_bugs" Hover="true" Striped="true" Dense="true" OnRowClick="OnBugRowClick" T="BugItem" RowClass="cursor-pointer">
+                    <HeaderContent>
+                        <MudTh>ID</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Severity</MudTh>
+                        <MudTh>State</MudTh>
+                        <MudTh>Created</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="ID">@context.Id</MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="Severity">
+                            <MudChip T="string" Size="Size.Small" Color="@GetSeverityColor(context.Severity)">@context.Severity</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="State">@context.State</MudTd>
+                        <MudTd DataLabel="Created">@context.Created.ToString("MMM dd, yyyy")</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
             
             @* Available End-Station Actions *@
             <MudDivider Class="my-4" />
@@ -147,14 +167,15 @@
     private bool _isLoading = true;
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
+    private string? _errorMessage;
     
     // Filter parameters
     private string? _period;
     private bool _allProducts;
     private bool _allTeams;
     
-    // Sample data for display
-    private List<BugItem> _sampleBugs = new();
+    // Bug data from backend
+    private List<BugItem> _bugs = new();
     
     protected override async Task OnInitializedAsync()
     {
@@ -172,11 +193,12 @@
             
             ParseQueryParameters();
             UpdateBreadcrumbs();
-            LoadSampleBugs();
+            await LoadBugsAsync();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+            _errorMessage = ex.Message;
+            Snackbar.Add($"Error loading bugs: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -204,15 +226,85 @@
         }
     }
     
-    private void LoadSampleBugs()
+    private async Task LoadBugsAsync()
     {
-        // Sample data - in real implementation, would load from backend
-        _sampleBugs = new List<BugItem>
+        try
         {
-            new BugItem { Id = 1001, Title = "Login fails on mobile devices", Severity = "Critical", State = "Active", Created = DateTime.Now.AddDays(-5) },
-            new BugItem { Id = 1002, Title = "Dashboard charts not rendering", Severity = "High", State = "Active", Created = DateTime.Now.AddDays(-3) },
-            new BugItem { Id = 1003, Title = "Export to PDF missing header", Severity = "Medium", State = "New", Created = DateTime.Now.AddDays(-1) }
-        };
+            // Load work items and filter by Bug type
+            var workItems = await WorkItemService.GetAllAsync();
+            var bugs = workItems.Where(wi => wi.Type == "Bug");
+            
+            // Apply period filter if specified
+            if (!string.IsNullOrEmpty(_period))
+            {
+                bugs = ApplyPeriodFilter(bugs);
+            }
+            
+            // Convert to BugItem list
+            _bugs = bugs.Select(wi => new BugItem
+            {
+                Id = wi.TfsId,
+                Title = wi.Title ?? "(No title)",
+                Severity = ExtractSeverity(wi),
+                State = wi.State ?? "Unknown",
+                Created = wi.RetrievedAt.DateTime // Using RetrievedAt as approximation for Created
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load bugs: {ex.Message}";
+            _bugs = new List<BugItem>();
+        }
+    }
+    
+    private IEnumerable<WorkItemDto> ApplyPeriodFilter(IEnumerable<WorkItemDto> bugs)
+    {
+        // Parse period format like "January-2026" or "2026-01"
+        if (string.IsNullOrEmpty(_period))
+            return bugs;
+            
+        try
+        {
+            // Try to parse as month-year format
+            var parts = _period.Split('-');
+            if (parts.Length == 2)
+            {
+                // Filter by the retrieved date (as a proxy for creation date)
+                if (int.TryParse(parts[1], out var year))
+                {
+                    // Simple date filtering - show items from last 30 days as approximation
+                    var cutoffDate = DateTimeOffset.Now.AddDays(-30);
+                    return bugs.Where(b => b.RetrievedAt >= cutoffDate);
+                }
+            }
+        }
+        catch
+        {
+            // If parsing fails, return all bugs
+        }
+        
+        return bugs;
+    }
+    
+    private static string ExtractSeverity(WorkItemDto workItem)
+    {
+        // Try to extract severity from the JSON payload
+        if (!string.IsNullOrEmpty(workItem.JsonPayload))
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(workItem.JsonPayload);
+                if (doc.RootElement.TryGetProperty("Microsoft.VSTS.Common.Severity", out var severity))
+                {
+                    return severity.GetString() ?? "Unknown";
+                }
+            }
+            catch
+            {
+                // Ignore JSON parsing errors
+            }
+        }
+        return "Unknown";
     }
     
     private void UpdateBreadcrumbs()
