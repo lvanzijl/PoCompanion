@@ -257,6 +257,12 @@
         {
             var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync();
             
+            // Track which work items have each issue type (count work items, not issues)
+            var workItemsWithEffortIssue = new HashSet<int>();
+            var workItemsWithDescriptionIssue = new HashSet<int>();
+            var workItemsWithStateIssue = new HashSet<int>();
+            var workItemsWithTagIssue = new HashSet<int>();
+            
             foreach (var wi in workItemsWithValidation)
             {
                 if (wi.Type == "Bug")
@@ -269,30 +275,37 @@
                     foreach (var issue in wi.ValidationIssues)
                     {
                         var message = issue.Message?.ToLowerInvariant() ?? "";
+                        var ruleId = issue.RuleId?.ToLowerInvariant() ?? "";
                         
-                        if (message.Contains("effort") || issue.RuleId?.Contains("effort", StringComparison.OrdinalIgnoreCase) == true)
+                        if (message.Contains("effort") || ruleId.Contains("effort"))
                         {
-                            _missingEffortCount++;
+                            workItemsWithEffortIssue.Add(wi.TfsId);
                         }
-                        else if (message.Contains("description") || issue.RuleId?.Contains("description", StringComparison.OrdinalIgnoreCase) == true)
+                        else if (message.Contains("description") || ruleId.Contains("description"))
                         {
-                            _missingDescriptionCount++;
+                            workItemsWithDescriptionIssue.Add(wi.TfsId);
                         }
-                        else if (message.Contains("state") || issue.RuleId?.Contains("state", StringComparison.OrdinalIgnoreCase) == true)
+                        else if (message.Contains("state") || ruleId.Contains("state"))
                         {
-                            _invalidStateCount++;
+                            workItemsWithStateIssue.Add(wi.TfsId);
                         }
-                        else if (message.Contains("tag") || issue.RuleId?.Contains("tag", StringComparison.OrdinalIgnoreCase) == true)
+                        else if (message.Contains("tag") || ruleId.Contains("tag"))
                         {
-                            _missingTagsCount++;
+                            workItemsWithTagIssue.Add(wi.TfsId);
                         }
                     }
                 }
             }
+            
+            _missingEffortCount = workItemsWithEffortIssue.Count;
+            _missingDescriptionCount = workItemsWithDescriptionIssue.Count;
+            _invalidStateCount = workItemsWithStateIssue.Count;
+            _missingTagsCount = workItemsWithTagIssue.Count;
         }
-        catch
+        catch (Exception ex)
         {
-            // If loading fails, keep counts at 0
+            // Log the error but keep counts at 0
+            Console.WriteLine($"Failed to load validation counts: {ex.Message}");
         }
     }
     

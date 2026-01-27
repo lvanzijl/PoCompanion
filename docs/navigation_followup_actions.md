@@ -125,7 +125,7 @@ This document tracks missing or incomplete capabilities identified during the Be
 | **Description** | Display actual counts of validation issues on each health signal card (e.g., "Missing Effort (47 items)"). |
 | **Used in** | Health workspace signal grid |
 | **Complexity** | 2 |
-| **Status** | ✅ Implemented - Signal cards now show real validation issue counts from WorkItemService
+| **Status** | ✅ Implemented - Signal cards now show real validation issue counts from WorkItemService |
 
 ---
 

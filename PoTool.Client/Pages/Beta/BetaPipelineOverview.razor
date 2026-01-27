@@ -105,7 +105,7 @@
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="Pipeline">@context.Name</MudTd>
-                        <MudTd DataLabel="Last Run">@context.LastRun.ToString("MMM dd, HH:mm")</MudTd>
+                        <MudTd DataLabel="Last Run">@(context.LastRun?.ToString("MMM dd, HH:mm") ?? "N/A")</MudTd>
                         <MudTd DataLabel="Status">
                             <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
                         </MudTd>
@@ -203,9 +203,8 @@
             _pipelines = metrics.Select(m => new PipelineItem
             {
                 Name = m.PipelineName ?? "(Unknown)",
-                LastRun = DateTime.Now, // Metrics don't include last run time, would need to fetch from runs
-                Status = m.TotalRuns > 0 && m.SuccessfulRuns == m.TotalRuns ? "Succeeded" : 
-                         m.FailedRuns > 0 ? "Failed" : "Unknown",
+                LastRun = null, // Last run time not available in metrics
+                Status = DeterminePipelineStatus(m.TotalRuns, m.SuccessfulRuns, m.FailedRuns),
                 Duration = "-", // Duration not available in metrics
                 SuccessRate = m.TotalRuns > 0 ? (int)((double)m.SuccessfulRuns / m.TotalRuns * 100) : 0
             }).ToList();
@@ -215,6 +214,15 @@
             _errorMessage = $"Failed to load pipelines: {ex.Message}";
             _pipelines = new List<PipelineItem>();
         }
+    }
+    
+    private static string DeterminePipelineStatus(int totalRuns, int successfulRuns, int failedRuns)
+    {
+        if (totalRuns == 0) return "No runs";
+        if (successfulRuns == totalRuns) return "Succeeded";
+        if (failedRuns > 0) return "Has failures";
+        // Some runs were neither successful nor failed (e.g., cancelled, in progress)
+        return "Mixed";
     }
     
     private void UpdateBreadcrumbs()
@@ -232,9 +240,10 @@
         return status switch
         {
             "Succeeded" => Color.Success,
-            "Failed" => Color.Error,
+            "Failed" or "Has failures" => Color.Error,
             "Running" => Color.Info,
-            "Canceled" => Color.Warning,
+            "Canceled" or "Mixed" => Color.Warning,
+            "No runs" => Color.Default,
             _ => Color.Default
         };
     }
@@ -267,7 +276,7 @@
     private class PipelineItem
     {
         public string Name { get; set; } = string.Empty;
-        public DateTime LastRun { get; set; }
+        public DateTime? LastRun { get; set; }
         public string Status { get; set; } = string.Empty;
         public string Duration { get; set; } = string.Empty;
         public int SuccessRate { get; set; }
