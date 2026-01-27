@@ -51,9 +51,10 @@ public class BetaEpicOrderingService : IBetaEpicOrderingService
             
             return System.Text.Json.JsonSerializer.Deserialize<List<int>>(json) ?? new List<int>();
         }
-        catch
+        catch (Exception ex)
         {
-            // If localStorage fails, return empty list
+            // Log the error for debugging
+            Console.WriteLine($"Failed to get epic order from localStorage: {ex.Message}");
             return new List<int>();
         }
     }
@@ -66,9 +67,10 @@ public class BetaEpicOrderingService : IBetaEpicOrderingService
             var json = System.Text.Json.JsonSerializer.Serialize(epicIds);
             await _jsRuntime.InvokeVoidAsync("localStorage.setItem", key, json);
         }
-        catch
+        catch (Exception ex)
         {
-            // Silently fail if localStorage is not available
+            // Log the error for debugging
+            Console.WriteLine($"Failed to save epic order to localStorage: {ex.Message}");
         }
     }
 
@@ -79,9 +81,10 @@ public class BetaEpicOrderingService : IBetaEpicOrderingService
             var key = GetStorageKey(profileId);
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", key);
         }
-        catch
+        catch (Exception ex)
         {
-            // Silently fail if localStorage is not available
+            // Log the error for debugging
+            Console.WriteLine($"Failed to clear epic order from localStorage: {ex.Message}");
         }
     }
 

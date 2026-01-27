@@ -27,9 +27,13 @@
                 
                 <div class="d-flex flex-column align-center" 
                      style="flex: 1; max-width: 60px; cursor: pointer;"
+                     tabindex="0"
+                     role="button"
+                     aria-label="@($"{barItem.Label}: {barItem.Value} items. Click to filter.")"
                      @onmouseenter="() => OnBarHover(barItem.Period)"
                      @onmouseleave="() => OnBarLeave()"
-                     @onclick="() => OnBarClick(barItem.Period)">
+                     @onclick="() => OnBarClick(barItem.Period)"
+                     @onkeydown="(e) => OnBarKeyDown(e, barItem.Period)">
                     
                     @* Value label *@
                     <MudText Typo="Typo.caption" 
@@ -182,6 +186,17 @@
         if (OnPeriodClick.HasDelegate)
         {
             await OnPeriodClick.InvokeAsync(period);
+        }
+    }
+    
+    /// <summary>
+    /// Keyboard handler for accessibility - Enter or Space activates the bar.
+    /// </summary>
+    private async Task OnBarKeyDown(KeyboardEventArgs e, string period)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+        {
+            await OnBarClick(period);
         }
     }
 }

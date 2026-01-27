@@ -253,6 +253,18 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ---
 
+### 18. Bug Trend Chart — Use Actual Creation Date
+
+| Field | Value |
+|-------|-------|
+| **Title** | Bug Trend Chart — Use actual bug creation dates |
+| **Description** | The current bug trend chart uses `RetrievedAt` as a proxy for when bugs were created. This produces trend data based on sync timing rather than actual bug creation. The `WorkItemWithValidationDto` should be extended to include the actual creation date from TFS, and the trend chart should use that date instead. |
+| **Used in** | Trends Workspace — Bug trend chart |
+| **Complexity** | 3 |
+| **Status** | ⚠️ Known limitation - Using RetrievedAt as proxy until CreatedDate is available |
+
+---
+
 ## Notes
 
 - Complexity ratings are on a scale of 1-5, where 1 is trivial and 5 is significant effort
