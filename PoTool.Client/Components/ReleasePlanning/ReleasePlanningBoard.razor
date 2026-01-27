@@ -6,7 +6,7 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
-<div class="release-planning-board pa-4" @onkeydown="@HandleKeyDown" tabindex="0" @ref="_boardElement" role="region" aria-label="Release planning board">
+<div class="release-planning-board pa-4" @onkeydown="@HandleKeyDown" tabindex="0" @ref="_boardElement" role="application" aria-label="Release planning board">
     <MudPaper Elevation="0">
     @if (_isLoading)
     {
@@ -682,7 +682,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogDebug(ex, "Failed to set keyboard focus on release planning board");
+            Logger.LogDebug(ex, "Failed to set keyboard focus on release planning board. This may occur if the element is not visible or the DOM is not ready.");
         }
     }
 
