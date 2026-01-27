@@ -3,6 +3,7 @@
 @using PoTool.Client.ApiClient
 @inject INavigationContextService NavigationContextService
 @inject IProfileService ProfileService
+@inject ProductService ProductService
 @inject WorkItemService WorkItemService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -76,6 +77,49 @@
                         </MudCard>
                     </MudItem>
                 </MudGrid>
+            </MudPaper>
+            
+            @* Product Context Filter *@
+            <MudPaper Elevation="2" Class="pa-4 mb-4" Style="width: 100%;">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
+                            Navigation Context
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Select a product to filter all workspaces (optional)
+                        </MudText>
+                    </MudStack>
+                    
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <MudSelect T="int?" 
+                                   @bind-Value="_selectedProductId" 
+                                   Label="Product Filter"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Clearable="true"
+                                   Style="min-width: 200px;">
+                            @foreach (var product in _products)
+                            {
+                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        
+                        @if (_selectedProductId.HasValue)
+                        {
+                            <MudChip T="string" Color="Color.Primary" Size="Size.Small">
+                                Context: @(_products.FirstOrDefault(p => p.Id == _selectedProductId)?.Name ?? "Product")
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Color="Color.Default" Size="Size.Small">
+                                All Products
+                            </MudChip>
+                        }
+                    </MudStack>
+                </MudStack>
             </MudPaper>
 
             @* Workspace-Driven Entry Section *@
@@ -208,6 +252,10 @@
     private int _totalValidationIssues = 0;
     private int _workItemsWithIssues = 0;
     private int _activeBugCount = 0;
+    
+    // Context propagation - product/team filter
+    private int? _selectedProductId;
+    private List<ProductDto> _products = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -227,6 +275,9 @@
             _profileId = activeProfile.Id;
             ProfileService.SetCachedActiveProfileId(_profileId);
             
+            // Load products for context filter
+            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            
             // Load health signals
             await LoadHealthSignalsAsync();
         }
@@ -239,34 +290,57 @@
             _isLoading = false;
         }
     }
+    
+    /// <summary>
+    /// Builds query string with product context if selected.
+    /// </summary>
+    private string BuildContextQuery(string? additionalParams = null)
+    {
+        var parameters = new List<string>();
+        
+        if (_selectedProductId.HasValue)
+        {
+            parameters.Add($"productId={_selectedProductId.Value}");
+        }
+        
+        if (!string.IsNullOrEmpty(additionalParams))
+        {
+            parameters.Add(additionalParams);
+        }
+        
+        return parameters.Count > 0 ? "?" + string.Join("&", parameters) : "";
+    }
 
     private void NavigateToHealth()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHealthWorkspace);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaHealthWorkspace}{BuildContextQuery()}");
     }
 
     private void NavigateToTrends()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaTrendsWorkspace);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaTrendsWorkspace}{BuildContextQuery()}");
     }
 
     private void NavigateToPlanning()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaPlanningWorkspace);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPlanningWorkspace}{BuildContextQuery()}");
     }
 
     private void NavigateToWorkItemExplorer()
     {
+        // Task-driven entry always uses all products/teams
         NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}?allProducts=true&allTeams=true");
     }
 
     private void NavigateToBugTriage()
     {
+        // Task-driven entry always uses all products/teams
         NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaBugOverview}?allProducts=true&allTeams=true");
     }
 
     private void NavigateToPlanBoard()
     {
+        // Task-driven entry always uses all products
         NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPlanBoard}?allProducts=true");
     }
 

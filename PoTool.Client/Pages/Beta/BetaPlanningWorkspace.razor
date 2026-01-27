@@ -2,6 +2,7 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.Planning
 @using PoTool.Client.ApiClient
+@using System.Web
 @inject INavigationContextService NavigationContextService
 @inject IProfileService ProfileService
 @inject ProductService ProductService
@@ -250,6 +251,9 @@
     private List<ProductDto> _products = new();
     private List<BreadcrumbItem> _breadcrumbs = new();
     
+    // Context propagation
+    private int? _productId;
+    
     // Epic invalid items detection
     private int _epicsWithInvalidItems = 0;
     private List<EpicWithIssues> _epicItemsWithIssues = new();
@@ -258,6 +262,9 @@
     {
         try
         {
+            // Parse productId from query string for context propagation
+            ParseQueryParameters();
+            
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
             {
@@ -270,6 +277,12 @@
             
             // Load products
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            
+            // If productId is specified via URL, preselect it
+            if (_productId.HasValue && _products.Any(p => p.Id == _productId.Value))
+            {
+                _selectedProductId = _productId;
+            }
             
             // Detect epics with invalid items
             await LoadEpicInvalidItemsAsync();
@@ -284,6 +297,37 @@
         {
             _isLoading = false;
         }
+    }
+    
+    private void ParseQueryParameters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+        
+        if (int.TryParse(queryParams["productId"], out var productId))
+        {
+            _productId = productId;
+        }
+    }
+    
+    /// <summary>
+    /// Builds query string with product context if set.
+    /// </summary>
+    private string BuildContextQuery(string? additionalParams = null)
+    {
+        var parameters = new List<string>();
+        
+        if (_productId.HasValue)
+        {
+            parameters.Add($"productId={_productId.Value}");
+        }
+        
+        if (!string.IsNullOrEmpty(additionalParams))
+        {
+            parameters.Add(additionalParams);
+        }
+        
+        return parameters.Count > 0 ? "?" + string.Join("&", parameters) : "";
     }
     
     private async Task LoadEpicInvalidItemsAsync()
@@ -360,7 +404,7 @@
     
     private void NavigateToVelocityTrend()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaTrendsWorkspace}?metric=Velocity");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaTrendsWorkspace}{BuildContextQuery("metric=Velocity")}");
     }
     
     private void NavigateToEpicInvalidItems(int? epicId)
@@ -368,27 +412,27 @@
         // Navigate to work item explorer with epic as root (per deep link contract)
         if (epicId.HasValue)
         {
-            NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}?rootWorkItemId={epicId}");
+            NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}{BuildContextQuery($"rootWorkItemId={epicId}")}");
         }
         else
         {
             // Navigate to explorer without filter (all items)
-            NavigationManager.NavigateTo(WorkspaceRoutes.BetaWorkItemExplorer);
+            NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}{BuildContextQuery()}");
         }
     }
     
     private void NavigateToDependencyOverview()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaDependencyOverview);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaDependencyOverview}{BuildContextQuery()}");
     }
     
     private void NavigateToHealth()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHealthWorkspace);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaHealthWorkspace}{BuildContextQuery()}");
     }
     
     private void NavigateToTrends()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaTrendsWorkspace);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaTrendsWorkspace}{BuildContextQuery()}");
     }
 }
