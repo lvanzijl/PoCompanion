@@ -29,7 +29,6 @@ public class EfConcurrencyGateTests
         // Arrange: Create in-memory database and services
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
             .UseInMemoryDatabase(databaseName: $"ConcurrencyTest_{Guid.NewGuid()}")
-            .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             .Options;
 
         await using var context = new PoToolDbContext(options);

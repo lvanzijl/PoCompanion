@@ -34,10 +34,6 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Progra
             services.AddDbContext<PoToolDbContext>(options =>
             {
                 options.UseInMemoryDatabase(dbName);
-                
-                // Use SplitQuery to avoid cartesian explosion when loading multiple collections
-                // This matches the production configuration
-                options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
             });
 
             // Replace ITfsClient with mock implementation

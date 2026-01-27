@@ -21,8 +21,10 @@ public class PullRequestRepositorySqliteTests
     {
         // Use in-memory SQLite database for real query translation testing
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
-            .UseSqlite("Data Source=:memory:")
-            .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+            .UseSqlite("Data Source=:memory:", sqliteOptions =>
+            {
+                sqliteOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+            })
             .Options;
         _context = new PoToolDbContext(options);
         // Important: Keep connection open for in-memory database to persist

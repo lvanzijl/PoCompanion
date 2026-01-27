@@ -33,7 +33,6 @@ public class RealTfsClientVerificationTests
         // Create in-memory database for config service
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
             .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
-            .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             .Options;
         _dbContext = new PoToolDbContext(options);
 

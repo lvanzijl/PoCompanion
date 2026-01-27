@@ -17,7 +17,6 @@ public class PullRequestRepositoryBulkSaveTests
     {
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
             .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
-            .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             .Options;
 
         _context = new PoToolDbContext(options);

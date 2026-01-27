@@ -66,11 +66,12 @@ public static class ApiServiceCollectionExtensions
             {
                 services.AddDbContext<PoToolDbContext>(options =>
                 {
-                    options.UseSqlServer(sqlServerConn);
-                    
-                    // Use SplitQuery to avoid cartesian explosion when loading multiple collections
-                    // This is the recommended approach for queries with multiple Include statements
-                    options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                    options.UseSqlServer(sqlServerConn, sqlOptions =>
+                    {
+                        // Use SplitQuery to avoid cartesian explosion when loading multiple collections
+                        // This is the recommended approach for queries with multiple Include statements
+                        sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                    });
                 });
             }
             else
@@ -78,11 +79,12 @@ public static class ApiServiceCollectionExtensions
                 services.AddDbContext<PoToolDbContext>(options =>
                 {
                     options.UseSqlite(configuration.GetConnectionString("DefaultConnection")
-                        ?? "Data Source=potool.db");
-
-                    // Use SplitQuery to avoid cartesian explosion when loading multiple collections
-                    // This is the recommended approach for queries with multiple Include statements
-                    options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                        ?? "Data Source=potool.db", sqliteOptions =>
+                    {
+                        // Use SplitQuery to avoid cartesian explosion when loading multiple collections
+                        // This is the recommended approach for queries with multiple Include statements
+                        sqliteOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                    });
 
                     // Suppress pending model changes warning in development for exploratory testing
                     if (isDevelopment)
