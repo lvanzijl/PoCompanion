@@ -258,7 +258,7 @@
                 Title = wi.Title ?? "(No title)",
                 Severity = ExtractSeverity(wi),
                 State = wi.State ?? "Unknown",
-                Created = (wi.CreatedDate ?? wi.RetrievedAt).DateTime // Use CreatedDate from TFS, fallback to RetrievedAt
+                Created = (wi.CreatedDate ?? DateTime.MinValue).DateTime // Use CreatedDate from TFS, fallback to MinValue if not available
             }).ToList();
         }
         catch (Exception ex)

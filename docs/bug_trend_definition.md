@@ -60,11 +60,11 @@ The Bug Trend chart displays three metrics for each of the last 6 months:
 **Calculation**:
 - Count bugs where `CreatedDate` (from TFS field `System.CreatedDate`) falls within the month
 - Uses `WorkItemDto.CreatedDate` property
-- Falls back to `RetrievedAt` for older cached data without `CreatedDate`
+- Bugs without `CreatedDate` are excluded from the trend (treated as invalid data)
 
 **Data Source**:
-- Primary: `System.CreatedDate` from TFS/Azure DevOps
-- Fallback: `RetrievedAt` (cache timestamp) for backward compatibility
+- `System.CreatedDate` from TFS/Azure DevOps
+- Bugs missing `CreatedDate` will not appear in any trend calculations
 
 ## State Categories
 

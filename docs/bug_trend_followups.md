@@ -24,31 +24,25 @@ We cannot accurately determine when a bug transitioned to "Done" state because s
 - Update sync stage to track state changes
 - Update DTOs and queries
 
-### 2. No "Completed Date" Field
+### 2. ClosedDate Field Now Available (✅ Implemented)
 
-**Problem**:
-TFS/Azure DevOps has a "Closed Date" or "Resolved Date" field that we're not currently extracting.
+**Status**: ✅ **COMPLETED**
 
-**Impact**:
-- Cannot accurately determine when bugs were fixed
-- Must rely on state transition history (see #1) or approximate using current state
+**What Was Done**:
+- Extracted `Microsoft.VSTS.Common.ClosedDate` from TFS
+- Added `ClosedDate` field to `WorkItemEntity` and `WorkItemDto`
+- Updated sync stage to populate from TFS payload
+- Database migration created
 
-**Required Enhancement**:
-- Extract `Microsoft.VSTS.Common.ClosedDate` or `System.ResolvedDate` from TFS
-- Add `CompletedDate` or `ClosedDate` field to `WorkItemEntity`
-- Update `WorkItemDto` to include this field
-- Update sync stage to populate from TFS payload
+**Next Steps for Using ClosedDate**:
+- Update bug trend calculations to use `ClosedDate` for "Bugs Fixed" metric
+- Filter bugs where `ClosedDate` falls within the target month
+- This will provide accurate "bugs fixed in that month" counts
 
-**Estimated Effort**: Small (2-4 hours)
-- Database migration for new field
-- Update TFS client field list
-- Update entity/DTO mapping
-- Test with real TFS data
-
-**TFS Fields to Consider**:
-- `Microsoft.VSTS.Common.ClosedDate` - When work item was closed
-- `Microsoft.VSTS.Common.ResolvedDate` - When bug was resolved
-- `Microsoft.VSTS.Common.StateChangeDate` - Last state change timestamp
+**Benefits**:
+- Accurate "Bugs Fixed" count without state history
+- Simple, well-defined field from TFS
+- No complex temporal queries needed
 
 ### 3. Historical Snapshot Calculation
 
@@ -84,20 +78,22 @@ To show accurate "Total Bug Count" at month-end, we need to know what the state 
 - Use current state approximation for other metrics
 - Document limitations clearly
 
-### Phase 2: Extract Completed Date (Recommended Next)
+### Phase 2: Extract ClosedDate (✅ COMPLETED)
 Priority: **High**  
 Effort: **Small**  
 Impact: **High**
 
-Extract `Microsoft.VSTS.Common.ClosedDate` from TFS:
-1. Add `CompletedDate` field to `WorkItemEntity` and `WorkItemDto`
-2. Update `RealTfsClient.WorkItems.cs` to include `Microsoft.VSTS.Common.ClosedDate` in field list
-3. Update `ParseWorkItemFromJson` to extract and map this field
-4. Update sync stage to persist this field
-5. Use `CompletedDate` for "Bugs Fixed" metric
+**Status**: ✅ **COMPLETED** - ClosedDate extraction is now implemented.
 
-Benefits:
-- Accurate "Bugs Fixed" count without state history
+What was completed:
+1. ✅ Added `ClosedDate` field to `WorkItemEntity` and `WorkItemDto`
+2. ✅ Updated `RealTfsClient` to include `Microsoft.VSTS.Common.ClosedDate` in field list
+3. ✅ Extraction and mapping implemented in all TFS client methods
+4. ✅ Sync stage persists this field
+5. ⏳ **TODO**: Use `ClosedDate` for "Bugs Fixed" metric in trend calculations
+
+Benefits achieved:
+- Can now provide accurate "Bugs Fixed" count
 - Simple, well-defined field from TFS
 - No complex temporal queries needed
 
