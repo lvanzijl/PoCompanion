@@ -251,10 +251,11 @@
                 {
                     foreach (var issue in wi.ValidationIssues)
                     {
-                        // Group by validation category
-                        if (issue.Category.HasValue)
+                        // Determine category from rule ID prefix
+                        var category = GetCategoryFromRuleId(issue.RuleId);
+                        if (category.HasValue)
                         {
-                            workItemsByCategory[issue.Category.Value].Add(wi.TfsId);
+                            workItemsByCategory[category.Value].Add(wi.TfsId);
                         }
                     }
                 }
@@ -269,6 +270,34 @@
             // Log the error but keep counts at 0
             Console.WriteLine($"Failed to load validation counts: {ex.Message}");
         }
+    }
+    
+    /// <summary>
+    /// Determines the validation category from a rule ID.
+    /// Maps rule ID prefixes to ValidationCategory enum values.
+    /// </summary>
+    private ValidationCategory? GetCategoryFromRuleId(string? ruleId)
+    {
+        if (string.IsNullOrEmpty(ruleId))
+        {
+            return null;
+        }
+        
+        // Rule IDs follow pattern: SI-1, RR-1, RC-1
+        if (ruleId.StartsWith("SI-", StringComparison.OrdinalIgnoreCase))
+        {
+            return ValidationCategory.StructuralIntegrity;
+        }
+        else if (ruleId.StartsWith("RR-", StringComparison.OrdinalIgnoreCase))
+        {
+            return ValidationCategory.RefinementReadiness;
+        }
+        else if (ruleId.StartsWith("RC-", StringComparison.OrdinalIgnoreCase))
+        {
+            return ValidationCategory.RefinementCompleteness;
+        }
+        
+        return null;
     }
     
     private void UpdateBreadcrumbs()
