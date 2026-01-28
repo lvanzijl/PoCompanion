@@ -36,7 +36,7 @@ else if (!_isLoading && _healthData != null)
     @* Iteration Health Table - Show only current + 2 future (first 3 iterations) *@
     <IterationHealthTable Iterations="@_healthData.IterationHealth.Take(3).ToList()" />
 
-    @* Comparison Chart - Show all iterations (3 past + current + 2 future = 6 total) *@
+    @* Comparison Chart - Show all 6 iterations for Issue Comparison window *@
     <MudPaper Elevation="1" Class="pa-4 mt-4">
         <MudText Typo="Typo.h6" GutterBottom="true">Issue Comparison Across Iterations</MudText>
         <MudChart ChartType="ChartType.Bar" 

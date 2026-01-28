@@ -190,6 +190,7 @@
 @code {
     private bool _isLoading = true;
     private int? _profileId;
+    private ProfileDto? _activeProfile;
     private List<BreadcrumbItem> _breadcrumbs = new();
     
     // Validation issue counts by category
@@ -210,8 +211,8 @@
                 return;
             }
             
-            var activeProfile = await ProfileService.GetActiveProfileAsync();
-            _profileId = activeProfile?.Id;
+            _activeProfile = await ProfileService.GetActiveProfileAsync();
+            _profileId = _activeProfile?.Id;
             
             await LoadValidationCountsAsync();
             UpdateBreadcrumbs();
@@ -230,15 +231,20 @@
     {
         try
         {
+            // Reset counts before loading
+            _structuralIntegrityCount = 0;
+            _refinementReadinessCount = 0;
+            _refinementCompletenessCount = 0;
+            _bugCount = 0;
+            
             // Get products for the active profile (matching WorkItemExplorer approach)
-            var activeProfile = await ProfileService.GetActiveProfileAsync();
             List<ProductDto> profileProducts;
             
-            if (activeProfile != null)
+            if (_activeProfile != null)
             {
                 // Load products for the active profile (Product Owner)
-                profileProducts = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
-                Console.WriteLine($"[BetaHealthWorkspace] Loaded {profileProducts.Count} products for active profile '{activeProfile.Name}' (ID: {activeProfile.Id})");
+                profileProducts = (await ProductService.GetProductsByOwnerAsync(_activeProfile.Id)).ToList();
+                Console.WriteLine($"[BetaHealthWorkspace] Loaded {profileProducts.Count} products for active profile '{_activeProfile.Name}' (ID: {_activeProfile.Id})");
             }
             else
             {

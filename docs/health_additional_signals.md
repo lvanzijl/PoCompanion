@@ -99,7 +99,7 @@ Count of open pull requests that haven't been updated in N days (e.g., 7, 14, 30
 Average time from PR creation to first review comment or approval. High latency indicates bottlenecks in code review process and slows delivery.
 
 **Data Source:**  
-- **New:** Azure DevOs Git Repos REST API
+- **New:** Azure DevOps Git Repos REST API
 - PR creation timestamp
 - First review/comment timestamp
 - Calculate median and P95 latency
