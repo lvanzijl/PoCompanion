@@ -208,7 +208,8 @@ public class WorkItemRepository : IWorkItemRepository
             JsonPayload: entity.JsonPayload,
             RetrievedAt: entity.RetrievedAt,
             Effort: entity.Effort,
-            Description: entity.Description
+            Description: entity.Description,
+            CreatedDate: entity.CreatedDate
         );
     }
 
@@ -226,7 +227,8 @@ public class WorkItemRepository : IWorkItemRepository
             JsonPayload = dto.JsonPayload,
             RetrievedAt = dto.RetrievedAt,
             Effort = dto.Effort,
-            Description = dto.Description
+            Description = dto.Description,
+            CreatedDate = dto.CreatedDate
         };
     }
 }

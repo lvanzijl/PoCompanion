@@ -223,4 +223,71 @@ public sealed class WorkItemRepositoryTests
         // Assert
         Assert.IsNull(result);
     }
+
+    [TestMethod]
+    public async Task ReplaceAllAsync_PreservesCreatedDate()
+    {
+        // Arrange
+        using var context = CreateInMemoryContext();
+        var repository = new WorkItemRepository(context);
+
+        var createdDate = new DateTimeOffset(2025, 1, 15, 10, 30, 0, TimeSpan.Zero);
+        var workItem = new WorkItemDto(
+            TfsId: 100,
+            Type: "Epic",
+            Title: "Epic with CreatedDate",
+            ParentTfsId: null,
+            AreaPath: "Project\\Team",
+            IterationPath: "Sprint 1",
+            State: "Active",
+            JsonPayload: "{}",
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: null,
+            Description: "Test description",
+            CreatedDate: createdDate
+        );
+
+        // Act
+        await repository.ReplaceAllAsync(new[] { workItem });
+        var result = await repository.GetByTfsIdAsync(100);
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(createdDate, result.CreatedDate, "CreatedDate should be preserved when saving and retrieving work items");
+        Assert.AreEqual("Test description", result.Description);
+    }
+
+    [TestMethod]
+    public async Task UpsertManyAsync_PreservesCreatedDate()
+    {
+        // Arrange
+        using var context = CreateInMemoryContext();
+        var repository = new WorkItemRepository(context);
+
+        var createdDate = new DateTimeOffset(2025, 2, 20, 14, 45, 0, TimeSpan.Zero);
+        var workItem = new WorkItemDto(
+            TfsId: 200,
+            Type: "Feature",
+            Title: "Feature with CreatedDate",
+            ParentTfsId: 100,
+            AreaPath: "Project\\Team",
+            IterationPath: "Sprint 2",
+            State: "New",
+            JsonPayload: "{}",
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: 10,
+            Description: "Feature description",
+            CreatedDate: createdDate
+        );
+
+        // Act
+        await repository.UpsertManyAsync(new[] { workItem });
+        var result = await repository.GetByTfsIdAsync(200);
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(createdDate, result.CreatedDate, "CreatedDate should be preserved during upsert operations");
+        Assert.AreEqual("Feature description", result.Description);
+        Assert.AreEqual(10, result.Effort);
+    }
 }
