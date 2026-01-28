@@ -73,9 +73,9 @@
                              Class="mud-card-hover"
                              @onclick='() => NavigateToValidationCategory(ValidationCategory.StructuralIntegrity)'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="@GetHealthColor(_structuralIntegrityCount)" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Structural Integrity</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_structuralIntegrityCount)">
+                            <MudIcon Icon="@Icons.Material.Filled.Error" Color="@GetHealthColorBySeverity(_structuralIntegrityCount, HealthSignalSeverity.Error)" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Structural integrity errors</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColorBySeverity(_structuralIntegrityCount, HealthSignalSeverity.Error)">
                                 @_structuralIntegrityCount items
                             </MudChip>
                         </MudCardContent>
@@ -89,9 +89,9 @@
                              Class="mud-card-hover"
                              @onclick='() => NavigateToValidationCategory(ValidationCategory.RefinementReadiness)'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Rule" Color="@GetHealthColor(_refinementReadinessCount)" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Refinement Readiness</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_refinementReadinessCount)">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="@GetHealthColorBySeverity(_refinementReadinessCount, HealthSignalSeverity.Warning)" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Refinement blockers</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColorBySeverity(_refinementReadinessCount, HealthSignalSeverity.Warning)">
                                 @_refinementReadinessCount items
                             </MudChip>
                         </MudCardContent>
@@ -105,9 +105,9 @@
                              Class="mud-card-hover"
                              @onclick='() => NavigateToValidationCategory(ValidationCategory.RefinementCompleteness)'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="@GetHealthColor(_refinementCompletenessCount)" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Refinement Completeness</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_refinementCompletenessCount)">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="@GetHealthColorBySeverity(_refinementCompletenessCount, HealthSignalSeverity.Warning)" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Refinement needed</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColorBySeverity(_refinementCompletenessCount, HealthSignalSeverity.Warning)">
                                 @_refinementCompletenessCount items
                             </MudChip>
                         </MudCardContent>
@@ -147,7 +147,7 @@
                 </MudButton>
             </MudStack>
             
-            <BacklogHealthPanel MaxIterations="6" />
+            <BacklogHealthPanel MaxIterations="3" />
         </MudPaper>
 
         @* Cross-Workspace Navigation *@
@@ -332,12 +332,42 @@
     }
     
     /// <summary>
-    /// Gets the color based on fixed thresholds.
-    /// Decision #2: Health Signal Thresholds
-    /// - 0 items = Healthy (Green)
-    /// - 1-9 items = Low (Info/Blue)
-    /// - 10-49 items = Warning (Yellow)
-    /// - 50+ items = Error (Red)
+    /// Enum representing the severity level of a health signal.
+    /// </summary>
+    private enum HealthSignalSeverity
+    {
+        Error,
+        Warning,
+        Info
+    }
+    
+    /// <summary>
+    /// Gets the color based on severity and count.
+    /// - Count == 0: Neutral (Default/Gray) - indicates no detected issues, not necessarily "good"
+    /// - Count > 0 with Error severity: Error (Red) - critical issues requiring immediate attention
+    /// - Count > 0 with Warning severity: Warning (Yellow/Orange) - important issues requiring attention
+    /// - Count > 0 with Info severity: Info (Blue) - informational issues
+    /// </summary>
+    private Color GetHealthColorBySeverity(int count, HealthSignalSeverity severity)
+    {
+        if (count == 0)
+        {
+            // Zero count is neutral - absence of detected issues, not a positive indicator
+            return Color.Default;
+        }
+        
+        return severity switch
+        {
+            HealthSignalSeverity.Error => Color.Error,
+            HealthSignalSeverity.Warning => Color.Warning,
+            HealthSignalSeverity.Info => Color.Info,
+            _ => Color.Default
+        };
+    }
+    
+    /// <summary>
+    /// Legacy method for bug count - uses old threshold-based approach.
+    /// Kept for backward compatibility with Bug Overview signal.
     /// </summary>
     private Color GetHealthColor(int count) => count switch
     {

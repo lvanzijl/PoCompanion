@@ -1,7 +1,6 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
-@using PoTool.Client.Pages.Metrics.SubComponents
 @using System.Net.Http.Json
 @inject IMetricsClient MetricsClient
 @inject BacklogHealthCalculationService HealthCalculationService
@@ -32,11 +31,6 @@ else if (!_isLoading && _healthData != null)
                            EffortTrend="@_healthData.Trend.EffortTrend"
                            ValidationTrend="@_healthData.Trend.ValidationTrend"
                            BlockerTrend="@_healthData.Trend.BlockerTrend" />
-
-    @* Filters *@
-    <BacklogHealthFilters @bind-AreaPathFilter="@_areaPathFilter"
-                         @bind-MaxIterations="@_maxIterations"
-                         OnRefresh="@LoadDataAsync" />
 
     @* Iteration Health Table - Show only current + 2 future (first 3 iterations) *@
     <IterationHealthTable Iterations="@_healthData.IterationHealth.Take(3).ToList()" />
@@ -78,8 +72,6 @@ else if (!_isLoading && _healthData != null)
     private bool _isLoading = true;
     private MultiIterationBacklogHealthDto? _healthData;
     private ErrorResponse? _errorResponse;
-    private string? _areaPathFilter;
-    private int _maxIterations = 5;
 
     private ChartOptions _chartOptions = new()
     {
@@ -90,8 +82,6 @@ else if (!_isLoading && _healthData != null)
 
     protected override async Task OnInitializedAsync()
     {
-        _areaPathFilter = AreaPath;
-        _maxIterations = MaxIterations;
         await LoadDataAsync();
     }
 
@@ -114,8 +104,8 @@ else if (!_isLoading && _healthData != null)
             
             _healthData = await GetMultiIterationBacklogHealthAsync(
                 productIds, 
-                _areaPathFilter, 
-                _maxIterations);
+                AreaPath, 
+                MaxIterations);
         }
         catch (Exception ex)
         {
