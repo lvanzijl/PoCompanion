@@ -86,22 +86,42 @@
 
 @code {
     // Beta navigation parameters (query string)
+    /// <summary>
+    /// Validation type filter for Beta navigation deep links.
+    /// Supported values: "missing-effort", "missing-description", "invalid-state", "missing-tags"
+    /// </summary>
     [Parameter]
     [SupplyParameterFromQuery(Name = "validationType")]
     public string? ValidationType { get; set; }
     
+    /// <summary>
+    /// When true, filters to work items that exceed the backlog depth threshold (>3 levels deep).
+    /// Used by Beta Health workspace to identify overly nested backlogs.
+    /// </summary>
     [Parameter]
     [SupplyParameterFromQuery(Name = "backlogDepthExceeded")]
     public bool BacklogDepthExceeded { get; set; }
     
+    /// <summary>
+    /// When set, filters to show only descendants (and the root itself) of the specified work item ID.
+    /// Used by Beta Planning workspace for epic-centric navigation.
+    /// </summary>
     [Parameter]
     [SupplyParameterFromQuery(Name = "rootWorkItemId")]
     public int? RootWorkItemId { get; set; }
     
+    /// <summary>
+    /// When true, loads all products instead of just profile-scoped products.
+    /// Used by Beta task-driven entry points to provide full organizational visibility.
+    /// </summary>
     [Parameter]
     [SupplyParameterFromQuery(Name = "allProducts")]
     public bool AllProducts { get; set; }
     
+    /// <summary>
+    /// When true, indicates all teams scope for Beta navigation.
+    /// Note: Currently for display/context purposes only; team-based filtering not yet implemented.
+    /// </summary>
     [Parameter]
     [SupplyParameterFromQuery(Name = "allTeams")]
     public bool AllTeams { get; set; }
@@ -606,6 +626,11 @@
     
     // Beta filter methods
     
+    /// <summary>
+    /// Filters work items by validation type using string matching on validation issue messages and rule IDs.
+    /// Note: This matches the Beta explorer's original logic. While fragile (depends on message text),
+    /// it's kept for backward compatibility with existing validation rules.
+    /// </summary>
     private IEnumerable<WorkItemWithValidationDto> FilterByValidationType(IEnumerable<WorkItemWithValidationDto> workItems)
     {
         return workItems.Where(wi =>
@@ -710,14 +735,47 @@
             return cachedDepth;
         }
         
-        // Recursive case: find parent and add 1
-        var parent = allItems.FirstOrDefault(wi => wi.TfsId == item.ParentTfsId.Value);
-        if (parent == null)
+        // Detect cycles by tracking visited items in this path
+        var visited = new HashSet<int> { item.TfsId };
+        var current = item;
+        var depth = 0;
+        const int maxDepth = 100; // Safety limit to prevent infinite loops
+        
+        while (current.ParentTfsId.HasValue && itemIds.Contains(current.ParentTfsId.Value) && depth < maxDepth)
         {
-            return 0;
+            var parentId = current.ParentTfsId.Value;
+            
+            // Cycle detection: if we've seen this parent in our path, we have a cycle
+            if (visited.Contains(parentId))
+            {
+                Console.WriteLine($"[WorkItemExplorer] Cycle detected in work item hierarchy at item {item.TfsId}");
+                return 0; // Treat cyclic items as roots
+            }
+            
+            // Check if parent depth is already cached
+            if (depthMap.TryGetValue(parentId, out var parentDepth))
+            {
+                return parentDepth + depth + 1;
+            }
+            
+            // Find parent and continue
+            var parent = allItems.FirstOrDefault(wi => wi.TfsId == parentId);
+            if (parent == null)
+            {
+                return depth;
+            }
+            
+            visited.Add(parentId);
+            current = parent;
+            depth++;
+            
+            // Base case: parent has no parent
+            if (!current.ParentTfsId.HasValue || !itemIds.Contains(current.ParentTfsId.Value))
+            {
+                return depth;
+            }
         }
         
-        var parentDepth = CalculateItemDepth(parent, allItems, itemIds, depthMap);
-        return parentDepth + 1;
+        return depth;
     }
 }
