@@ -74,7 +74,7 @@ public static class WorkspaceRoutes
     public const string BetaBugDetail = "/beta/bugs/detail";
 
     /// <summary>
-    /// Beta PR Overview route (read-only).
+    /// Beta PR Insights route - shows metrics dashboard with Team/Product selectors.
     /// </summary>
     public const string BetaPrOverview = "/beta/pull-requests";
 

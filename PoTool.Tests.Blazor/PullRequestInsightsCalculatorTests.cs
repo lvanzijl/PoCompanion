@@ -30,10 +30,10 @@ public class PullRequestInsightsCalculatorTests
             CreatePullRequest(2, createdDate: DateTime.UtcNow.AddDays(-3), completedDate: DateTime.UtcNow, status: "Completed"),
             CreatePullRequest(3, createdDate: DateTime.UtcNow.AddDays(-7), completedDate: DateTime.UtcNow, status: "Completed"),
         };
-        var metrics = new List<PullRequestMetricsDto>();
+        // Metrics not needed for this test
 
         // Act
-        var result = _calculator.CalculateLeadTimeToMerge(prs, metrics);
+        var result = _calculator.CalculateLeadTimeToMerge(prs);
 
         // Assert
         Assert.IsNotNull(result);
@@ -54,10 +54,10 @@ public class PullRequestInsightsCalculatorTests
             CreatePullRequest(2, createdDate: DateTime.UtcNow.AddDays(-3), completedDate: null, status: "Active"),
             CreatePullRequest(3, createdDate: DateTime.UtcNow.AddDays(-7), completedDate: DateTime.UtcNow, status: "Abandoned"),
         };
-        var metrics = new List<PullRequestMetricsDto>();
+        // Metrics not needed for this test
 
         // Act
-        var result = _calculator.CalculateLeadTimeToMerge(prs, metrics);
+        var result = _calculator.CalculateLeadTimeToMerge(prs);
 
         // Assert
         Assert.AreEqual(1, result.Count); // Only 1 completed PR
@@ -68,10 +68,10 @@ public class PullRequestInsightsCalculatorTests
     {
         // Arrange
         var prs = new List<PullRequestDto>();
-        var metrics = new List<PullRequestMetricsDto>();
+        // Metrics not needed for this test
 
         // Act
-        var result = _calculator.CalculateLeadTimeToMerge(prs, metrics);
+        var result = _calculator.CalculateLeadTimeToMerge(prs);
 
         // Assert
         Assert.AreEqual(0, result.Count);
@@ -105,10 +105,10 @@ public class PullRequestInsightsCalculatorTests
                 } 
             },
         };
-        var metrics = new List<PullRequestMetricsDto>();
+        // Metrics not needed for this test
 
         // Act
-        var result = _calculator.CalculateTimeToFirstReview(prs, metrics, prComments);
+        var result = _calculator.CalculateTimeToFirstReview(prs, prComments);
 
         // Assert
         Assert.AreEqual(2, result.Count);
@@ -137,10 +137,10 @@ public class PullRequestInsightsCalculatorTests
             },
             // PR 2 and 3 have no comments
         };
-        var metrics = new List<PullRequestMetricsDto>();
+        // Metrics not needed for this test
 
         // Act
-        var result = _calculator.CalculateTimeToFirstReview(prs, metrics, prComments);
+        var result = _calculator.CalculateTimeToFirstReview(prs, prComments);
 
         // Assert
         Assert.AreEqual(1, result.Count);
@@ -157,10 +157,10 @@ public class PullRequestInsightsCalculatorTests
             CreatePullRequest(1, createdDate: DateTime.UtcNow.AddDays(-5)),
         };
         var prComments = new Dictionary<int, List<PullRequestCommentDto>>();
-        var metrics = new List<PullRequestMetricsDto>();
+        // Metrics not needed for this test
 
         // Act
-        var result = _calculator.CalculateTimeToFirstReview(prs, metrics, prComments);
+        var result = _calculator.CalculateTimeToFirstReview(prs, prComments);
 
         // Assert
         Assert.AreEqual(0, result.Count);
@@ -189,10 +189,10 @@ public class PullRequestInsightsCalculatorTests
                 } 
             },
         };
-        var metrics = new List<PullRequestMetricsDto>();
+        // Metrics not needed for this test
 
         // Act
-        var result = _calculator.CalculateReviewDuration(prs, metrics, prComments);
+        var result = _calculator.CalculateReviewDuration(prs, prComments);
 
         // Assert
         Assert.AreEqual(1, result.Count);
@@ -217,10 +217,10 @@ public class PullRequestInsightsCalculatorTests
                 } 
             },
         };
-        var metrics = new List<PullRequestMetricsDto>();
+        // Metrics not needed for this test
 
         // Act
-        var result = _calculator.CalculateReviewDuration(prs, metrics, prComments);
+        var result = _calculator.CalculateReviewDuration(prs, prComments);
 
         // Assert
         Assert.AreEqual(0, result.Count); // PR with < 2 comments ignored
@@ -243,7 +243,7 @@ public class PullRequestInsightsCalculatorTests
         };
 
         // Act
-        var (linesResult, filesResult) = _calculator.CalculatePRSize(prs, metrics);
+        var (linesResult, filesResult) = _calculator.CalculatePRSize(metrics);
 
         // Assert
         Assert.AreEqual(3, linesResult.Count);
@@ -259,11 +259,10 @@ public class PullRequestInsightsCalculatorTests
     public void CalculatePRSize_WithNoMetrics_ReturnsEmptyResults()
     {
         // Arrange
-        var prs = new List<PullRequestDto>();
         var metrics = new List<PullRequestMetricsDto>();
 
         // Act
-        var (linesResult, filesResult) = _calculator.CalculatePRSize(prs, metrics);
+        var (linesResult, filesResult) = _calculator.CalculatePRSize(metrics);
 
         // Assert
         Assert.AreEqual(0, linesResult.Count);
@@ -300,10 +299,10 @@ public class PullRequestInsightsCalculatorTests
                 } 
             },
         };
-        var metrics = new List<PullRequestMetricsDto>();
+        // Metrics not needed for this test
 
         // Act
-        var result = _calculator.CalculateReworkRate(prs, metrics, prComments, prIterations);
+        var result = _calculator.CalculateReworkRate(prs, prComments, prIterations);
 
         // Assert
         Assert.AreEqual(1, result.Count);
@@ -338,10 +337,10 @@ public class PullRequestInsightsCalculatorTests
                 } 
             },
         };
-        var metrics = new List<PullRequestMetricsDto>();
+        // Metrics not needed for this test
 
         // Act
-        var result = _calculator.CalculateReworkRate(prs, metrics, prComments, prIterations);
+        var result = _calculator.CalculateReworkRate(prs, prComments, prIterations);
 
         // Assert
         Assert.AreEqual(1, result.Count);

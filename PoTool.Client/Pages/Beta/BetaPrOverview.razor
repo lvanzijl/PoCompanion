@@ -297,25 +297,47 @@
                 productIds: productIdsStr
             )).ToList();
             
-            // Load comments and iterations for each PR
-            _prComments.Clear();
-            _prIterations.Clear();
-            
-            foreach (var pr in _pullRequests)
+            // Load comments and iterations for each PR in parallel
+            var prIds = _pullRequests.Select(pr => pr.Id).ToList();
+            var commentTasks = prIds.Select(async prId =>
             {
                 try
                 {
-                    var comments = await PullRequestService.GetCommentsAsync(pr.Id);
-                    _prComments[pr.Id] = comments.ToList();
-                    
-                    var iterations = await PullRequestService.GetIterationsAsync(pr.Id);
-                    _prIterations[pr.Id] = iterations.ToList();
+                    var comments = await PullRequestService.GetCommentsAsync(prId);
+                    return (prId, comments: comments.ToList());
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    // Log but don't fail - some PRs might not have comments/iterations
-                    Console.WriteLine($"Warning: Could not load comments/iterations for PR {pr.Id}: {ex.Message}");
+                    return (prId, comments: new List<PullRequestCommentDto>());
                 }
+            });
+            
+            var iterationTasks = prIds.Select(async prId =>
+            {
+                try
+                {
+                    var iterations = await PullRequestService.GetIterationsAsync(prId);
+                    return (prId, iterations: iterations.ToList());
+                }
+                catch (Exception)
+                {
+                    return (prId, iterations: new List<PullRequestIterationDto>());
+                }
+            });
+            
+            var commentResults = await Task.WhenAll(commentTasks);
+            var iterationResults = await Task.WhenAll(iterationTasks);
+            
+            _prComments.Clear();
+            foreach (var (prId, comments) in commentResults)
+            {
+                _prComments[prId] = comments;
+            }
+            
+            _prIterations.Clear();
+            foreach (var (prId, iterations) in iterationResults)
+            {
+                _prIterations[prId] = iterations;
             }
             
             // Calculate metrics
@@ -335,26 +357,26 @@
     
     private void CalculateMetrics()
     {
-        _leadTimeToMerge = _calculator.CalculateLeadTimeToMerge(_pullRequests, _metrics);
-        _cycleTime = _calculator.CalculateCycleTime(_pullRequests, _metrics);
-        _timeToFirstReview = _calculator.CalculateTimeToFirstReview(_pullRequests, _metrics, _prComments);
-        _reviewDuration = _calculator.CalculateReviewDuration(_pullRequests, _metrics, _prComments);
+        _leadTimeToMerge = _calculator.CalculateLeadTimeToMerge(_pullRequests);
+        _cycleTime = _calculator.CalculateCycleTime(_pullRequests);
+        _timeToFirstReview = _calculator.CalculateTimeToFirstReview(_pullRequests, _prComments);
+        _reviewDuration = _calculator.CalculateReviewDuration(_pullRequests, _prComments);
         
-        var prSize = _calculator.CalculatePRSize(_pullRequests, _metrics);
+        var prSize = _calculator.CalculatePRSize(_metrics);
         _prSizeLines = prSize.LinesChanged;
         _prSizeFiles = prSize.FilesChanged;
         
-        _reworkRate = _calculator.CalculateReworkRate(_pullRequests, _metrics, _prComments, _prIterations);
+        _reworkRate = _calculator.CalculateReworkRate(_pullRequests, _prComments, _prIterations);
     }
     
-    private async void OnTeamChanged(int? teamId)
+    private async Task OnTeamChanged(int? teamId)
     {
         _selectedTeamId = teamId;
         UpdateUrlParameters();
         await LoadPullRequestDataAsync();
     }
     
-    private async void OnProductChanged(int? productId)
+    private async Task OnProductChanged(int? productId)
     {
         _selectedProductId = productId;
         UpdateUrlParameters();

@@ -12,11 +12,8 @@ public class PullRequestInsightsCalculator
     /// Calculates lead time to merge metric (creation to merge).
     /// </summary>
     /// <param name="prs">Pull requests to analyze.</param>
-    /// <param name="metrics">PR metrics with file and iteration data.</param>
     /// <returns>Metric with Median, P75, and count.</returns>
-    public MetricResult CalculateLeadTimeToMerge(
-        IEnumerable<PullRequestDto> prs,
-        IEnumerable<PullRequestMetricsDto> metrics)
+    public MetricResult CalculateLeadTimeToMerge(IEnumerable<PullRequestDto> prs)
     {
         // Filter to completed/merged PRs only
         var completedPrs = prs.Where(pr => 
@@ -46,9 +43,7 @@ public class PullRequestInsightsCalculator
     /// Calculates cycle time metric (first commit to merge).
     /// Falls back to creation time if first commit time unavailable.
     /// </summary>
-    public MetricResult CalculateCycleTime(
-        IEnumerable<PullRequestDto> prs,
-        IEnumerable<PullRequestMetricsDto> metrics)
+    public MetricResult CalculateCycleTime(IEnumerable<PullRequestDto> prs)
     {
         var completedPrs = prs.Where(pr => 
             pr.CompletedDate.HasValue && 
@@ -80,7 +75,6 @@ public class PullRequestInsightsCalculator
     /// </summary>
     public MetricResult CalculateTimeToFirstReview(
         IEnumerable<PullRequestDto> prs,
-        IEnumerable<PullRequestMetricsDto> metrics,
         Dictionary<int, List<PullRequestCommentDto>> prComments)
     {
         var prsList = prs.ToList();
@@ -118,7 +112,6 @@ public class PullRequestInsightsCalculator
     /// </summary>
     public MetricResult CalculateReviewDuration(
         IEnumerable<PullRequestDto> prs,
-        IEnumerable<PullRequestMetricsDto> metrics,
         Dictionary<int, List<PullRequestCommentDto>> prComments)
     {
         var prsList = prs.ToList();
@@ -156,7 +149,6 @@ public class PullRequestInsightsCalculator
     /// Calculates PR size metrics (lines changed and files changed).
     /// </summary>
     public (MetricResult LinesChanged, MetricResult FilesChanged) CalculatePRSize(
-        IEnumerable<PullRequestDto> prs,
         IEnumerable<PullRequestMetricsDto> metrics)
     {
         var metricsList = metrics.ToList();
@@ -201,7 +193,6 @@ public class PullRequestInsightsCalculator
     /// </summary>
     public MetricResult CalculateReworkRate(
         IEnumerable<PullRequestDto> prs,
-        IEnumerable<PullRequestMetricsDto> metrics,
         Dictionary<int, List<PullRequestCommentDto>> prComments,
         Dictionary<int, List<PullRequestIterationDto>> prIterations)
     {

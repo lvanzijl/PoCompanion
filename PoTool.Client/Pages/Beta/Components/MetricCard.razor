@@ -42,7 +42,7 @@
                 <MudText Typo="Typo.caption" Color="Color.Default">
                     @if (Result.Coverage.HasValue)
                     {
-                        <text>@Result.Count PRs (@Result.Coverage.Value.ToString("F1")% coverage)</text>
+                        @:@Result.Count PRs (@($"{Result.Coverage.Value:F1}") % coverage)
                     }
                     else
                     {
