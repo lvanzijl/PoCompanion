@@ -218,7 +218,8 @@ public static class ApiServiceCollectionExtensions
         // Register TFS configuration and client
         services.AddDataProtection();
         services.AddScoped<IEfConcurrencyGate, EfConcurrencyGate>();
-        services.AddScoped<ITfsConfigurationService, TfsConfigurationService>();
+        services.AddScoped<TfsConfigurationService>();
+        services.AddScoped<ITfsConfigurationService>(sp => sp.GetRequiredService<TfsConfigurationService>());
         services.AddScoped<TfsAuthenticationProvider>();
         services.AddScoped<ProfileFilterService>();
 
