@@ -1,6 +1,7 @@
 using Mediator;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics.Models;
 using PoTool.Core.Metrics.Services;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.Settings;
@@ -187,52 +188,82 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
             sprintMetricsList.Add(sprintMetrics);
         }
 
-        // Use SprintWindowSelector to get appropriate iteration window
+        // Use SprintWindowSelector to get appropriate iteration window with placeholders
         var selector = new SprintWindowSelector();
         var today = DateTimeOffset.UtcNow;
         
         // Determine which sprints to analyze based on MaxIterations parameter
-        // For Health workspace: use date-based selection
-        IReadOnlyList<SprintMetricsDto> selectedSprints;
+        // For Health workspace: use date-based selection with placeholder support
+        IReadOnlyList<SprintSlot> selectedSlots;
         
         if (query.MaxIterations <= 3)
         {
-            // Backlog Health Analysis: current + 2 future (no past)
-            selectedSprints = selector.GetBacklogHealthSprints(sprintMetricsList, today);
-            _logger.LogDebug("Using Backlog Health sprint selection (current + 2 future)");
+            // Backlog Health Analysis: current + 2 future (exactly 3 slots with placeholders)
+            selectedSlots = selector.GetBacklogHealthWindow(sprintMetricsList, today);
+            _logger.LogDebug("Using Backlog Health sprint window (current + 2 future, 3 slots total)");
         }
         else
         {
-            // Issue Comparison: 3 past + current + 2 future
-            selectedSprints = selector.GetIssueComparisonSprints(sprintMetricsList, today);
-            _logger.LogDebug("Using Issue Comparison sprint selection (3 past + current + 2 future)");
+            // Issue Comparison: 3 past + current + 2 future (exactly 6 slots with placeholders)
+            selectedSlots = selector.GetIssueComparisonWindow(sprintMetricsList, today);
+            _logger.LogDebug("Using Issue Comparison sprint window (3 past + current + 2 future, 6 slots total)");
         }
 
-        // If no sprints with dates, fall back to path-based ordering with warning
-        if (selectedSprints.Count == 0 && sprintMetricsList.Count > 0)
-        {
-            _logger.LogWarning(
-                "No sprints with valid dates found. Falling back to lexicographic path ordering for {Count} iterations. " +
-                "This may produce incorrect results. Ensure sprint data is synced from TFS.",
-                distinctIterationPaths.Count);
-            
-            selectedSprints = sprintMetricsList
-                .OrderByDescending(s => s.IterationPath)
-                .Take(query.MaxIterations)
-                .ToList();
-        }
+        _logger.LogInformation("Selected {Count} slots for analysis ({RealCount} real sprints, {PlaceholderCount} placeholders)", 
+            selectedSlots.Count,
+            selectedSlots.Count(s => !s.IsPlaceholder),
+            selectedSlots.Count(s => s.IsPlaceholder));
 
-        _logger.LogInformation("Selected {Count} iterations for analysis", selectedSprints.Count);
-
-        // Calculate health for each selected iteration
+        // Calculate health for each selected slot (real sprints only; placeholders get empty health)
         var iterationHealthList = new List<BacklogHealthDto>();
-        foreach (var sprint in selectedSprints)
+        foreach (var slot in selectedSlots)
         {
-            var health = await CalculateIterationHealth(sprint.IterationPath, allWorkItems, cancellationToken);
-            if (health != null)
+            BacklogHealthDto health;
+            if (slot.IsPlaceholder)
             {
-                iterationHealthList.Add(health);
+                // Create placeholder health DTO with zero metrics
+                health = new BacklogHealthDto(
+                    IterationPath: slot.IterationPath,
+                    SprintName: slot.DisplayName,
+                    TotalWorkItems: 0,
+                    WorkItemsWithoutEffort: 0,
+                    WorkItemsInProgressWithoutEffort: 0,
+                    ParentProgressIssues: 0,
+                    BlockedItems: 0,
+                    InProgressAtIterationEnd: 0,
+                    IterationStart: slot.StartDate,
+                    IterationEnd: slot.EndDate,
+                    ValidationIssues: Array.Empty<ValidationIssueSummary>()
+                );
             }
+            else
+            {
+                // Calculate health for real sprint
+                var calculatedHealth = await CalculateIterationHealth(slot.IterationPath, allWorkItems, cancellationToken);
+                if (calculatedHealth == null)
+                {
+                    // Sprint has no work items, create empty health DTO
+                    health = new BacklogHealthDto(
+                        IterationPath: slot.IterationPath,
+                        SprintName: slot.DisplayName,
+                        TotalWorkItems: 0,
+                        WorkItemsWithoutEffort: 0,
+                        WorkItemsInProgressWithoutEffort: 0,
+                        ParentProgressIssues: 0,
+                        BlockedItems: 0,
+                        InProgressAtIterationEnd: 0,
+                        IterationStart: slot.StartDate,
+                        IterationEnd: slot.EndDate,
+                        ValidationIssues: Array.Empty<ValidationIssueSummary>()
+                    );
+                }
+                else
+                {
+                    health = calculatedHealth;
+                }
+            }
+            
+            iterationHealthList.Add(health);
         }
 
         // Calculate trend

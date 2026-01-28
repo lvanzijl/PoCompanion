@@ -21,24 +21,30 @@ public class SprintRepository : ISprintRepository
     /// <inheritdoc />
     public async Task<IEnumerable<SprintDto>> GetAllSprintsAsync(CancellationToken cancellationToken = default)
     {
+        // Load all sprints into memory first (SQLite doesn't support DateTimeOffset in ORDER BY)
         var entities = await _context.Sprints
-            .OrderBy(s => s.StartUtc.HasValue ? s.StartUtc : DateTimeOffset.MaxValue)
-            .ThenBy(s => s.Name)
             .ToListAsync(cancellationToken);
 
-        return entities.Select(MapToDto);
+        // Sort in memory: sprints with dates first (by StartUtc), then sprints without dates (by Name)
+        return entities
+            .OrderBy(s => s.StartUtc ?? DateTimeOffset.MaxValue)
+            .ThenBy(s => s.Name)
+            .Select(MapToDto);
     }
 
     /// <inheritdoc />
     public async Task<IEnumerable<SprintDto>> GetSprintsForTeamAsync(int teamId, CancellationToken cancellationToken = default)
     {
+        // Load sprints for team into memory first (SQLite doesn't support DateTimeOffset in ORDER BY)
         var entities = await _context.Sprints
             .Where(s => s.TeamId == teamId)
-            .OrderBy(s => s.StartUtc.HasValue ? s.StartUtc : DateTimeOffset.MaxValue)
-            .ThenBy(s => s.Name)
             .ToListAsync(cancellationToken);
 
-        return entities.Select(MapToDto);
+        // Sort in memory: sprints with dates first (by StartUtc), then sprints without dates (by Name)
+        return entities
+            .OrderBy(s => s.StartUtc ?? DateTimeOffset.MaxValue)
+            .ThenBy(s => s.Name)
+            .Select(MapToDto);
     }
 
     /// <inheritdoc />

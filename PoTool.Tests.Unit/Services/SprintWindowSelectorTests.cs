@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PoTool.Core.Metrics.Models;
 using PoTool.Core.Metrics.Services;
 using PoTool.Shared.Metrics;
 
@@ -247,6 +248,183 @@ public class SprintWindowSelectorTests
 
         // Assert
         Assert.HasCount(0, result, "Should return empty list");
+    }
+
+    #endregion
+
+    #region Placeholder Tests (GetBacklogHealthWindow)
+
+    [TestMethod]
+    public void GetBacklogHealthWindow_StandardCase_ReturnsExactly3Slots()
+    {
+        // Arrange
+        var today = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        var sprints = new List<SprintMetricsDto>
+        {
+            CreateSprint("Current", new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 1, 31, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Future1", new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 2, 28, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Future2", new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 3, 31, 0, 0, 0, TimeSpan.Zero)),
+        };
+
+        // Act
+        var result = _selector.GetBacklogHealthWindow(sprints, today);
+
+        // Assert
+        Assert.HasCount(3, result, "Should return exactly 3 slots");
+        Assert.IsFalse(result[0].IsPlaceholder, "First should be real sprint");
+        Assert.IsFalse(result[1].IsPlaceholder, "Second should be real sprint");
+        Assert.IsFalse(result[2].IsPlaceholder, "Third should be real sprint");
+        Assert.AreEqual("Current", result[0].DisplayName);
+        Assert.AreEqual("Future1", result[1].DisplayName);
+        Assert.AreEqual("Future2", result[2].DisplayName);
+    }
+
+    [TestMethod]
+    public void GetBacklogHealthWindow_Missing1Future_ReturnsPlaceholder()
+    {
+        // Arrange
+        var today = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        var sprints = new List<SprintMetricsDto>
+        {
+            CreateSprint("Current", new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 1, 31, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Future1", new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 2, 28, 0, 0, 0, TimeSpan.Zero)),
+        };
+
+        // Act
+        var result = _selector.GetBacklogHealthWindow(sprints, today);
+
+        // Assert
+        Assert.HasCount(3, result, "Should return exactly 3 slots");
+        Assert.IsFalse(result[0].IsPlaceholder, "First should be real sprint");
+        Assert.IsFalse(result[1].IsPlaceholder, "Second should be real sprint");
+        Assert.IsTrue(result[2].IsPlaceholder, "Third should be placeholder");
+        Assert.AreEqual("[undefined]", result[2].DisplayName);
+        Assert.AreEqual("newer sprints aren't available", result[2].PlaceholderMessage);
+    }
+
+    [TestMethod]
+    public void GetBacklogHealthWindow_Missing2Future_ReturnsPlaceholders()
+    {
+        // Arrange
+        var today = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        var sprints = new List<SprintMetricsDto>
+        {
+            CreateSprint("Current", new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 1, 31, 0, 0, 0, TimeSpan.Zero)),
+        };
+
+        // Act
+        var result = _selector.GetBacklogHealthWindow(sprints, today);
+
+        // Assert
+        Assert.HasCount(3, result, "Should return exactly 3 slots");
+        Assert.IsFalse(result[0].IsPlaceholder, "First should be real sprint");
+        Assert.IsTrue(result[1].IsPlaceholder, "Second should be placeholder");
+        Assert.IsTrue(result[2].IsPlaceholder, "Third should be placeholder");
+        Assert.AreEqual("[undefined]", result[1].DisplayName);
+        Assert.AreEqual("[undefined]", result[2].DisplayName);
+    }
+
+    [TestMethod]
+    public void GetBacklogHealthWindow_NoSprints_Returns3Placeholders()
+    {
+        // Arrange
+        var today = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        var sprints = new List<SprintMetricsDto>();
+
+        // Act
+        var result = _selector.GetBacklogHealthWindow(sprints, today);
+
+        // Assert
+        Assert.HasCount(3, result, "Should return exactly 3 slots");
+        Assert.IsTrue(result[0].IsPlaceholder, "All should be placeholders");
+        Assert.IsTrue(result[1].IsPlaceholder, "All should be placeholders");
+        Assert.IsTrue(result[2].IsPlaceholder, "All should be placeholders");
+    }
+
+    #endregion
+
+    #region Placeholder Tests (GetIssueComparisonWindow)
+
+    [TestMethod]
+    public void GetIssueComparisonWindow_StandardCase_ReturnsExactly6Slots()
+    {
+        // Arrange
+        var today = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        var sprints = new List<SprintMetricsDto>
+        {
+            CreateSprint("Past3", new DateTimeOffset(2025, 10, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2025, 10, 31, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Past2", new DateTimeOffset(2025, 11, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2025, 11, 30, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Past1", new DateTimeOffset(2025, 12, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2025, 12, 31, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Current", new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 1, 31, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Future1", new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 2, 28, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Future2", new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 3, 31, 0, 0, 0, TimeSpan.Zero)),
+        };
+
+        // Act
+        var result = _selector.GetIssueComparisonWindow(sprints, today);
+
+        // Assert
+        Assert.HasCount(6, result, "Should return exactly 6 slots");
+        for (int i = 0; i < 6; i++)
+        {
+            Assert.IsFalse(result[i].IsPlaceholder, $"Slot {i} should be real sprint");
+        }
+        Assert.AreEqual("Past3", result[0].DisplayName);
+        Assert.AreEqual("Past2", result[1].DisplayName);
+        Assert.AreEqual("Past1", result[2].DisplayName);
+        Assert.AreEqual("Current", result[3].DisplayName);
+        Assert.AreEqual("Future1", result[4].DisplayName);
+        Assert.AreEqual("Future2", result[5].DisplayName);
+    }
+
+    [TestMethod]
+    public void GetIssueComparisonWindow_Missing1Future_ReturnsPlaceholder()
+    {
+        // Arrange
+        var today = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        var sprints = new List<SprintMetricsDto>
+        {
+            CreateSprint("Past3", new DateTimeOffset(2025, 10, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2025, 10, 31, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Past2", new DateTimeOffset(2025, 11, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2025, 11, 30, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Past1", new DateTimeOffset(2025, 12, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2025, 12, 31, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Current", new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 1, 31, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Future1", new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 2, 28, 0, 0, 0, TimeSpan.Zero)),
+        };
+
+        // Act
+        var result = _selector.GetIssueComparisonWindow(sprints, today);
+
+        // Assert
+        Assert.HasCount(6, result, "Should return exactly 6 slots");
+        Assert.IsFalse(result[4].IsPlaceholder, "5th should be real sprint");
+        Assert.IsTrue(result[5].IsPlaceholder, "6th should be placeholder");
+        Assert.AreEqual("[undefined]", result[5].DisplayName);
+        Assert.AreEqual("newer sprints aren't available", result[5].PlaceholderMessage);
+    }
+
+    [TestMethod]
+    public void GetIssueComparisonWindow_Missing2Future_ReturnsPlaceholders()
+    {
+        // Arrange
+        var today = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        var sprints = new List<SprintMetricsDto>
+        {
+            CreateSprint("Past3", new DateTimeOffset(2025, 10, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2025, 10, 31, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Past2", new DateTimeOffset(2025, 11, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2025, 11, 30, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Past1", new DateTimeOffset(2025, 12, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2025, 12, 31, 0, 0, 0, TimeSpan.Zero)),
+            CreateSprint("Current", new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 1, 31, 0, 0, 0, TimeSpan.Zero)),
+        };
+
+        // Act
+        var result = _selector.GetIssueComparisonWindow(sprints, today);
+
+        // Assert
+        Assert.HasCount(6, result, "Should return exactly 6 slots");
+        Assert.IsFalse(result[3].IsPlaceholder, "4th should be real sprint (current)");
+        Assert.IsTrue(result[4].IsPlaceholder, "5th should be placeholder");
+        Assert.IsTrue(result[5].IsPlaceholder, "6th should be placeholder");
+        Assert.AreEqual("[undefined]", result[4].DisplayName);
+        Assert.AreEqual("[undefined]", result[5].DisplayName);
     }
 
     #endregion
