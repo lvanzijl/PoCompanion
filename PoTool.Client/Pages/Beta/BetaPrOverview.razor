@@ -1,13 +1,17 @@
 @page "/beta/pull-requests"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Services
+@using PoTool.Client.Pages.Beta.Components
 @using System.Web
 @inject IProfileService ProfileService
 @inject PullRequestService PullRequestService
+@inject ProductService ProductService
+@inject TeamService TeamService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
-<PageTitle>PR Overview - Beta - PO Companion</PageTitle>
+<PageTitle>Pull Request Insights - Beta - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @* Workspace Header *@
@@ -16,35 +20,22 @@
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
-                    <MudIcon Icon="@Icons.Material.Filled.MergeType" Color="Color.Info" Size="Size.Large" />
+                    <MudIcon Icon="@Icons.Material.Filled.Insights" Color="Color.Info" Size="Size.Large" />
                     <MudText Typo="Typo.h4">
-                        Pull Request Overview
+                        Pull Request Insights
                     </MudText>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.VisibilityOff">Read-only</MudChip>
                 </MudStack>
                 
                 @* Breadcrumb *@
                 <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
             </MudStack>
             
-            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                @if (_insightOnly)
-                {
-                    <MudChip T="string" 
-                             Icon="@Icons.Material.Filled.Insights" 
-                             Size="Size.Small"
-                             Color="Color.Info">
-                        Insight Only
-                    </MudChip>
-                }
-                
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           StartIcon="@Icons.Material.Filled.Home"
-                           OnClick="NavigateToBetaHome">
-                    Beta Home
-                </MudButton>
-            </MudStack>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       StartIcon="@Icons.Material.Filled.Home"
+                       OnClick="NavigateToBetaHome">
+                Beta Home
+            </MudButton>
         </MudStack>
     </MudPaper>
 
@@ -60,94 +51,150 @@
     }
     else
     {
-        @* Read-Only Notice *@
-        <MudAlert Severity="Severity.Warning" Class="mb-4">
-            <MudText Typo="Typo.body2">
-                <strong>Read-only view.</strong> PRs are insight-only in the Beta navigation. 
-                For full PR management, use the <MudLink Href="/pr-insights">PR Insights dashboard</MudLink>.
-            </MudText>
-        </MudAlert>
-
-        @* PR Insights Section *@
+        @* Team & Product Selectors *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudText Typo="Typo.h5">
-                        <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" />
-                        PR Insights
-                    </MudText>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Default">@_pullRequests.Count items</MudChip>
-                </MudStack>
-                <MudButton Variant="Variant.Text" 
-                           Color="Color.Primary" 
-                           EndIcon="@Icons.Material.Filled.OpenInNew" 
-                           Href="/pr-insights">
-                    Full Dashboard
-                </MudButton>
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.h6">
+                    <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
+                    Filters
+                </MudText>
+                
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="int?"
+                                   @bind-Value="_selectedTeamId"
+                                   Label="Team"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   OnClearButtonClick="@(() => OnTeamChanged(null))"
+                                   ValueChanged="OnTeamChanged">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
+                            @foreach (var team in _teams)
+                            {
+                                <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="int?"
+                                   @bind-Value="_selectedProductId"
+                                   Label="Product"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   OnClearButtonClick="@(() => OnProductChanged(null))"
+                                   ValueChanged="OnProductChanged">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
+                            @foreach (var product in _products)
+                            {
+                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
             </MudStack>
-            
-            @if (_pullRequests.Count == 0)
-            {
-                <MudAlert Severity="Severity.Info">
-                    No pull requests found.
-                </MudAlert>
-            }
-            else
-            {
-                @* PR Data Table *@
-                <MudTable Items="@_pullRequests" Hover="true" Striped="true" Dense="true">
-                    <HeaderContent>
-                        <MudTh>ID</MudTh>
-                        <MudTh>Title</MudTh>
-                        <MudTh>Status</MudTh>
-                        <MudTh>Created</MudTh>
-                        <MudTh>Time Open</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="ID">@context.Id</MudTd>
-                        <MudTd DataLabel="Title">@context.Title</MudTd>
-                        <MudTd DataLabel="Status">
-                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
-                        </MudTd>
-                        <MudTd DataLabel="Created">@context.Created.ToString("MMM dd, yyyy")</MudTd>
-                        <MudTd DataLabel="Time Open">@context.TimeOpen</MudTd>
-                    </RowTemplate>
-                </MudTable>
-            }
         </MudPaper>
 
-        @* Navigation Options *@
-        <MudPaper Elevation="2" Class="pa-4">
-            <MudText Typo="Typo.h6" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
-                Navigation
-            </MudText>
-            
-            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Info" 
-                           StartIcon="@Icons.Material.Filled.Timeline"
-                           OnClick="NavigateToTrends">
-                    Trends (Past)
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Success" 
-                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
-                           OnClick="NavigateToHealth">
-                    Health (Now)
-                </MudButton>
-            </MudStack>
-        </MudPaper>
+        @* Metrics Grid *@
+        <MudGrid Spacing="3">
+            @* Lead Time to Merge *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="Lead Time to Merge"
+                           Result="_leadTimeToMerge"
+                           ValueFormat="MetricValueFormat.Hours"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+
+            @* Cycle Time *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="Cycle Time"
+                           Result="_cycleTime"
+                           ValueFormat="MetricValueFormat.Hours"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+
+            @* Time to First Review *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="Time to First Review"
+                           Result="_timeToFirstReview"
+                           ValueFormat="MetricValueFormat.Hours"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+
+            @* Review Duration *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="Review Duration"
+                           Result="_reviewDuration"
+                           ValueFormat="MetricValueFormat.Hours"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+
+            @* PR Size - Lines Changed *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="PR Size (Lines Changed)"
+                           Result="_prSizeLines"
+                           ValueFormat="MetricValueFormat.Count"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+
+            @* PR Size - Files Changed *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="PR Size (Files Changed)"
+                           Result="_prSizeFiles"
+                           ValueFormat="MetricValueFormat.Count"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+
+            @* Rework Rate *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="Rework Rate (Post-Review Commits)"
+                           Result="_reworkRate"
+                           ValueFormat="MetricValueFormat.Count"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+        </MudGrid>
+
+        @if (_pullRequests.Count == 0 && !_metricsLoading)
+        {
+            <MudPaper Elevation="2" Class="pa-6 mt-4">
+                <MudAlert Severity="Severity.Info">
+                    No pull request data found for the selected team/product and time range.
+                </MudAlert>
+            </MudPaper>
+        }
     }
 </MudContainer>
 
 @code {
     private bool _isLoading = true;
+    private bool _metricsLoading = false;
     private int? _profileId;
-    private bool _insightOnly;
     private string? _errorMessage;
     private List<BreadcrumbItem> _breadcrumbs = new();
-    private List<PRItem> _pullRequests = new();
+    
+    // Selectors
+    private int? _selectedTeamId;
+    private int? _selectedProductId;
+    private List<TeamDto> _teams = new();
+    private List<ProductDto> _products = new();
+    
+    // PR Data
+    private List<PullRequestDto> _pullRequests = new();
+    private List<PullRequestMetricsDto> _metrics = new();
+    private Dictionary<int, List<PullRequestCommentDto>> _prComments = new();
+    private Dictionary<int, List<PullRequestIterationDto>> _prIterations = new();
+    
+    // Calculated Metrics
+    private MetricResult? _leadTimeToMerge;
+    private MetricResult? _cycleTime;
+    private MetricResult? _timeToFirstReview;
+    private MetricResult? _reviewDuration;
+    private MetricResult? _prSizeLines;
+    private MetricResult? _prSizeFiles;
+    private MetricResult? _reworkRate;
+    
+    // Calculator
+    private readonly PullRequestInsightsCalculator _calculator = new();
     
     protected override async Task OnInitializedAsync()
     {
@@ -163,14 +210,22 @@
             _profileId = activeProfile.Id;
             ProfileService.SetCachedActiveProfileId(_profileId);
             
+            // Load teams and products
+            _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
+            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            
+            // Parse URL parameters
             ParseQueryParameters();
-            await LoadPullRequestsAsync();
+            
+            // Load PR data and calculate metrics
+            await LoadPullRequestDataAsync();
+            
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
         {
             _errorMessage = ex.Message;
-            Snackbar.Add($"Error loading pull requests: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error loading pull request insights: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -183,55 +238,149 @@
         var uri = new Uri(NavigationManager.Uri);
         var queryParams = HttpUtility.ParseQueryString(uri.Query);
         
-        var insightOnly = queryParams["insightOnly"];
-        if (!string.IsNullOrEmpty(insightOnly))
+        // Parse teamId
+        var teamIdStr = queryParams["teamId"];
+        if (!string.IsNullOrEmpty(teamIdStr) && int.TryParse(teamIdStr, out var teamId))
         {
-            _insightOnly = bool.TryParse(insightOnly, out var result) && result;
+            _selectedTeamId = teamId;
+        }
+        
+        // Parse productId
+        var productIdStr = queryParams["productId"];
+        if (!string.IsNullOrEmpty(productIdStr) && int.TryParse(productIdStr, out var productId))
+        {
+            _selectedProductId = productId;
         }
     }
     
-    private async Task LoadPullRequestsAsync()
+    private async Task LoadPullRequestDataAsync()
     {
+        _metricsLoading = true;
+        StateHasChanged();
+        
         try
         {
-            var prs = await PullRequestService.GetAllAsync();
+            // Determine product IDs to filter by
+            List<int>? productIds = null;
             
-            _pullRequests = prs.Select(pr => new PRItem
+            if (_selectedProductId.HasValue)
             {
-                Id = pr.Id,
-                Title = pr.Title ?? "(No title)",
-                Status = pr.Status ?? "Unknown",
-                Created = pr.CreatedDate.DateTime,
-                TimeOpen = CalculateTimeOpen(pr.CreatedDate, pr.CompletedDate)
-            }).ToList();
+                productIds = new List<int> { _selectedProductId.Value };
+            }
+            else if (_selectedTeamId.HasValue)
+            {
+                // Filter products by team
+                var teamProducts = _products.Where(p => 
+                {
+                    // Note: Team-to-Product relationship would need to be checked
+                    // For now, we'll load all products if a team is selected
+                    // This should be enhanced with proper team-product filtering
+                    return true;
+                }).Select(p => p.Id).ToList();
+                
+                if (teamProducts.Any())
+                {
+                    productIds = teamProducts;
+                }
+            }
+            
+            // Build product IDs string
+            var productIdsStr = productIds != null ? string.Join(",", productIds) : null;
+            
+            // Load PRs (filtered by product, last 6 months)
+            var fromDate = DateTimeOffset.UtcNow.AddMonths(-6);
+            _pullRequests = (await PullRequestService.GetFilteredAsync(
+                productIds: productIdsStr,
+                fromDate: fromDate
+            )).ToList();
+            
+            // Load metrics
+            _metrics = (await PullRequestService.GetMetricsAsync(
+                productIds: productIdsStr
+            )).ToList();
+            
+            // Load comments and iterations for each PR
+            _prComments.Clear();
+            _prIterations.Clear();
+            
+            foreach (var pr in _pullRequests)
+            {
+                try
+                {
+                    var comments = await PullRequestService.GetCommentsAsync(pr.Id);
+                    _prComments[pr.Id] = comments.ToList();
+                    
+                    var iterations = await PullRequestService.GetIterationsAsync(pr.Id);
+                    _prIterations[pr.Id] = iterations.ToList();
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail - some PRs might not have comments/iterations
+                    Console.WriteLine($"Warning: Could not load comments/iterations for PR {pr.Id}: {ex.Message}");
+                }
+            }
+            
+            // Calculate metrics
+            CalculateMetrics();
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to load pull requests: {ex.Message}";
-            _pullRequests = new List<PRItem>();
+            _errorMessage = $"Failed to load pull request data: {ex.Message}";
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+        finally
+        {
+            _metricsLoading = false;
+            StateHasChanged();
         }
     }
     
-    private static string CalculateTimeOpen(DateTimeOffset created, DateTimeOffset? completed)
+    private void CalculateMetrics()
     {
-        var endDate = completed ?? DateTimeOffset.Now;
-        var duration = endDate - created;
+        _leadTimeToMerge = _calculator.CalculateLeadTimeToMerge(_pullRequests, _metrics);
+        _cycleTime = _calculator.CalculateCycleTime(_pullRequests, _metrics);
+        _timeToFirstReview = _calculator.CalculateTimeToFirstReview(_pullRequests, _metrics, _prComments);
+        _reviewDuration = _calculator.CalculateReviewDuration(_pullRequests, _metrics, _prComments);
         
-        if (duration.TotalDays >= 1)
+        var prSize = _calculator.CalculatePRSize(_pullRequests, _metrics);
+        _prSizeLines = prSize.LinesChanged;
+        _prSizeFiles = prSize.FilesChanged;
+        
+        _reworkRate = _calculator.CalculateReworkRate(_pullRequests, _metrics, _prComments, _prIterations);
+    }
+    
+    private async void OnTeamChanged(int? teamId)
+    {
+        _selectedTeamId = teamId;
+        UpdateUrlParameters();
+        await LoadPullRequestDataAsync();
+    }
+    
+    private async void OnProductChanged(int? productId)
+    {
+        _selectedProductId = productId;
+        UpdateUrlParameters();
+        await LoadPullRequestDataAsync();
+    }
+    
+    private void UpdateUrlParameters()
+    {
+        var queryParams = new List<string>();
+        
+        if (_selectedTeamId.HasValue)
         {
-            var days = (int)duration.TotalDays;
-            return days == 1 ? "1 day" : $"{days} days";
+            queryParams.Add($"teamId={_selectedTeamId.Value}");
         }
-        else if (duration.TotalHours >= 1)
+        
+        if (_selectedProductId.HasValue)
         {
-            var hours = (int)duration.TotalHours;
-            return hours == 1 ? "1 hour" : $"{hours} hours";
+            queryParams.Add($"productId={_selectedProductId.Value}");
         }
-        else
-        {
-            var minutes = (int)duration.TotalMinutes;
-            return minutes <= 1 ? "< 1 minute" : $"{minutes} minutes";
-        }
+        
+        var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
+        var newUrl = $"{WorkspaceRoutes.BetaPrOverview}{queryString}";
+        
+        NavigationManager.NavigateTo(newUrl, forceLoad: false);
     }
     
     private void UpdateBreadcrumbs()
@@ -240,42 +389,12 @@
         {
             new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
             new("Trends (Past)", WorkspaceRoutes.BetaTrendsWorkspace, icon: Icons.Material.Filled.Timeline),
-            new("PR Overview", null, disabled: true, icon: Icons.Material.Filled.MergeType)
-        };
-    }
-    
-    private Color GetStatusColor(string status)
-    {
-        return status switch
-        {
-            "Active" => Color.Info,
-            "Completed" => Color.Success,
-            "Abandoned" => Color.Error,
-            _ => Color.Default
+            new("PR Insights", null, disabled: true, icon: Icons.Material.Filled.Insights)
         };
     }
     
     private void NavigateToBetaHome()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
-    }
-    
-    private void NavigateToTrends()
-    {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaTrendsWorkspace);
-    }
-    
-    private void NavigateToHealth()
-    {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHealthWorkspace);
-    }
-    
-    private class PRItem
-    {
-        public int Id { get; set; }
-        public string Title { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
-        public DateTime Created { get; set; }
-        public string TimeOpen { get; set; } = string.Empty;
     }
 }
