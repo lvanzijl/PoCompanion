@@ -253,7 +253,7 @@
     /// Series 3 (Added): Bugs created in that month (accurate using System.CreatedDate).
     /// 
     /// Uses CreatedDate from TFS (System.CreatedDate) for accurate bug creation timing.
-    /// Bugs without CreatedDate are excluded from trend calculations (DateTime.MinValue).
+    /// Bugs without CreatedDate are excluded from trend calculations (DateTimeOffset.MinValue).
     /// </summary>
     private async Task LoadBugTrendDataAsync()
     {
@@ -289,7 +289,7 @@
                 // Series 3: Bugs Added - bugs created in this month (accurate)
                 var addedCount = bugs.Count(b =>
                 {
-                    var effectiveDate = b.CreatedDate ?? DateTime.MinValue;
+                    var effectiveDate = b.CreatedDate ?? DateTimeOffset.MinValue;
                     return effectiveDate >= monthStart && effectiveDate < nextMonthStart;
                 });
                 _bugTrendAdded[periodKey] = addedCount;
@@ -300,8 +300,8 @@
                 // See docs/bug_trend_followups.md for improvement plan.
                 var fixedCount = bugs.Count(b =>
                 {
-                    var effectiveDate = b.CreatedDate ?? DateTime.MinValue;
-                    var createdBeforeOrDuringMonth = effectiveDate < nextMonthStart && effectiveDate > DateTime.MinValue;
+                    var effectiveDate = b.CreatedDate ?? DateTimeOffset.MinValue;
+                    var createdBeforeOrDuringMonth = effectiveDate < nextMonthStart && effectiveDate > DateTimeOffset.MinValue;
                     
                     if (!createdBeforeOrDuringMonth)
                         return false;
@@ -315,8 +315,8 @@
                 // Count bugs created before/during this month that are NOT in "Done" or "Removed" state
                 var totalCount = bugs.Count(b =>
                 {
-                    var effectiveDate = b.CreatedDate ?? DateTime.MinValue;
-                    var createdBeforeOrDuringMonth = effectiveDate < nextMonthStart && effectiveDate > DateTime.MinValue;
+                    var effectiveDate = b.CreatedDate ?? DateTimeOffset.MinValue;
+                    var createdBeforeOrDuringMonth = effectiveDate < nextMonthStart && effectiveDate > DateTimeOffset.MinValue;
                     
                     if (!createdBeforeOrDuringMonth)
                         return false;
