@@ -26,27 +26,27 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ---
 
-### 2. Work Item Explorer — Validation Type Filtering ✅ COMPLETED
+### 2. Work Item Explorer — Validation Type Filtering ✅ UPDATED
 
 | Field | Value |
 |-------|-------|
-| **Title** | Work Item Explorer — Implement validation type filtering |
-| **Description** | The explorer receives `validationType` parameter but needs actual filtering logic to show only work items matching the validation issue type (missing-effort, missing-description, invalid-state, missing-tags). |
+| **Title** | Work Item Explorer — Implement validation category filtering |
+| **Description** | The explorer receives `validationCategory` parameter (1=StructuralIntegrity, 2=RefinementReadiness, 3=RefinementCompleteness) and filters work items by these categories. This replaces the deprecated ad-hoc validation type filtering (missing-effort, missing-description, etc.). |
 | **Used in** | Health → Validation category signal navigation |
 | **Complexity** | 3 |
-| **Status** | ✅ Implemented - Now loads and filters work items by validation type |
+| **Status** | ✅ Updated - Now filters by ValidationCategory enum instead of ad-hoc types (2026-01-28) |
 
 ---
 
-### 3. Work Item Explorer — Backlog Depth Exceeded Filter ✅ COMPLETED
+### 3. Work Item Explorer — Backlog Depth Exceeded Filter ❌ DEPRECATED
 
 | Field | Value |
 |-------|-------|
 | **Title** | Work Item Explorer — Implement backlog depth exceeded filter |
-| **Description** | When `backlogDepthExceeded=true` is passed, the explorer should filter to show only work items that exceed the configured backlog depth threshold. Requires integration with backlog health calculation service. |
-| **Used in** | Health → Backlog too deep signal |
+| **Description** | ~~When `backlogDepthExceeded=true` is passed, the explorer should filter to show only work items that exceed the configured backlog depth threshold. Requires integration with backlog health calculation service.~~ **DEPRECATED: This feature has been removed per Health Workspace feedback updates. The backlog depth exceeded validation and related UI elements have been removed from both the Health workspace and Work Item Explorer.** |
+| **Used in** | ~~Health → Backlog too deep signal~~ |
 | **Complexity** | 4 |
-| **Status** | ✅ Implemented - Calculates hierarchy depth for each work item. Threshold is 3 levels (depth > 3 = too deep). Shows Depth column when filter is active. Health workspace now shows count on signal card. |
+| **Status** | ❌ Deprecated - Feature removed (2026-01-28) |
 
 ---
 
@@ -219,19 +219,18 @@ This document tracks missing or incomplete capabilities identified during the Be
 
 ## Summary
 
-| Complexity | Count | Completed |
-|------------|-------|-----------|
-| 1 | 0 | 0 |
-| 2 | 8 | 7 |
-| 3 | 6 | 6 |
-| 4 | 2 | 2 |
-| 5 | 1 | 0 |
-| **Total** | **18** | **16** |
+| Complexity | Count | Completed | Deprecated |
+|------------|-------|-----------|------------|
+| 1 | 0 | 0 | 0 |
+| 2 | 8 | 7 | 0 |
+| 3 | 6 | 6 | 0 |
+| 4 | 2 | 1 | 1 |
+| 5 | 1 | 0 | 0 |
+| **Total** | **18** | **15** | **1** |
 
 **Completed Items:**
 - #1 Work Item Explorer — Root Item Parameter Support ✅
-- #2 Work Item Explorer — Validation Type Filtering ✅
-- #3 Work Item Explorer — Backlog Depth Exceeded Filter ✅
+- #2 Work Item Explorer — Validation Category Filtering ✅ (Updated)
 - #4 Bug Overview — Real Data Integration ✅
 - #5 Bug Overview — Period Filtering ✅
 - #7 PR Overview — Real Data Integration ✅
@@ -245,6 +244,9 @@ This document tracks missing or incomplete capabilities identified during the Be
 - #16 Context Propagation — Product Filter in Navigation ✅
 - #17 "All Products/Teams" Toggle ✅
 - #18 Bug Trend Chart — Use Actual Creation Date ✅
+
+**Deprecated Items:**
+- #3 Work Item Explorer — Backlog Depth Exceeded Filter ❌ (Removed 2026-01-28)
 
 **Blocked Items:**
 - #6 Bug Detail — Save Changes (Requires backend API changes)
