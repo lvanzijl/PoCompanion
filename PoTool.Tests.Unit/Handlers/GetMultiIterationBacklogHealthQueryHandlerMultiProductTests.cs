@@ -78,7 +78,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
             .ReturnsAsync(product1);
         _mockProductRepository.Setup(r => r.GetProductByIdAsync(2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product2);
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
@@ -124,7 +124,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
             .ReturnsAsync(product1);
         _mockProductRepository.Setup(r => r.GetProductByIdAsync(2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product2);
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
@@ -161,7 +161,8 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
 
         _mockProductRepository.Setup(r => r.GetProductByIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product);
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        // Mock the mediator to return work items for the product hierarchy
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
@@ -197,7 +198,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
             .ReturnsAsync(product1);
         _mockProductRepository.Setup(r => r.GetProductByIdAsync(999, It.IsAny<CancellationToken>()))
             .ReturnsAsync((ProductDto?)null); // Product 999 doesn't exist
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
