@@ -141,23 +141,42 @@
         
         // Pre-calculate health scores for non-placeholder iterations only
         _healthScores.Clear();
+        var index = 0;
         foreach (var iteration in Iterations)
         {
-            // Skip placeholder sprints
+            // Skip placeholder sprints - use index as unique key since multiple placeholders have same name
             if (iteration.SprintName == "[undefined]")
             {
-                _healthScores[iteration.SprintName] = 0;
-                continue;
+                _healthScores[$"[undefined]_{index}"] = 0;
             }
-            
-            var score = await HealthCalculationService.CalculateHealthScoreAsync(iteration);
-            _healthScores[iteration.SprintName] = score;
+            else
+            {
+                var score = await HealthCalculationService.CalculateHealthScoreAsync(iteration);
+                _healthScores[iteration.SprintName] = score;
+            }
+            index++;
         }
     }
 
     private int GetHealthScore(BacklogHealthDto iteration)
     {
-        return _healthScores.GetValueOrDefault(iteration.SprintName, 0);
+        // Try exact match first
+        if (_healthScores.TryGetValue(iteration.SprintName, out var score))
+        {
+            return score;
+        }
+        
+        // For placeholders, find by index (fallback)
+        if (iteration.SprintName == "[undefined]")
+        {
+            var index = Iterations.IndexOf(iteration);
+            if (index >= 0 && _healthScores.TryGetValue($"[undefined]_{index}", out var placeholderScore))
+            {
+                return placeholderScore;
+            }
+        }
+        
+        return 0;
     }
 
     private Color GetSeverityColor(string severity)

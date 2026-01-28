@@ -39,7 +39,8 @@ public class SprintWindowSelector
             {
                 var start = baseDate.AddDays(i * DefaultSprintLengthDays);
                 var end = start.AddDays(DefaultSprintLengthDays);
-                result.Add(SprintSlot.CreatePlaceholder(start, end, "newer sprints aren't available"));
+                // Use generic message when no sprint data exists
+                result.Add(SprintSlot.CreatePlaceholder(start, end, "sprint data unavailable"));
             }
             return result;
         }
@@ -112,10 +113,11 @@ public class SprintWindowSelector
         DateTimeOffset today)
     {
         var slots = GetBacklogHealthWindow(allSprints, today);
+        // Filter out placeholders and extract Sprint objects safely
         return slots
-            .Where(slot => !slot.IsPlaceholder)
-            .Select(slot => slot.Sprint!)
-            .ToList();
+            .Where(slot => !slot.IsPlaceholder && slot.Sprint != null)
+            .Select(slot => slot.Sprint)
+            .ToList()!;
     }
     
     /// <summary>
@@ -140,14 +142,13 @@ public class SprintWindowSelector
         
         if (sprintsWithDates.Count == 0)
         {
-            // No sprints at all - return 6 placeholders
+            // No sprints at all - return 6 placeholders with generic message
             var baseDate = today.AddDays(-3 * DefaultSprintLengthDays); // Start 3 sprints ago
             for (int i = 0; i < 6; i++)
             {
                 var start = baseDate.AddDays(i * DefaultSprintLengthDays);
                 var end = start.AddDays(DefaultSprintLengthDays);
-                var message = i >= 4 ? "newer sprints aren't available" : null;
-                result.Add(SprintSlot.CreatePlaceholder(start, end, message ?? string.Empty));
+                result.Add(SprintSlot.CreatePlaceholder(start, end, "sprint data unavailable"));
             }
             return result;
         }
@@ -240,10 +241,11 @@ public class SprintWindowSelector
         DateTimeOffset today)
     {
         var slots = GetIssueComparisonWindow(allSprints, today);
+        // Filter out placeholders and extract Sprint objects safely
         return slots
-            .Where(slot => !slot.IsPlaceholder)
-            .Select(slot => slot.Sprint!)
-            .ToList();
+            .Where(slot => !slot.IsPlaceholder && slot.Sprint != null)
+            .Select(slot => slot.Sprint)
+            .ToList()!;
     }
     
     /// <summary>

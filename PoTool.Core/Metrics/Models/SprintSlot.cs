@@ -73,9 +73,14 @@ public sealed class SprintSlot
     /// </summary>
     /// <param name="startDate">Synthetic start date for ordering (typically after the last known sprint)</param>
     /// <param name="endDate">Synthetic end date for ordering</param>
-    /// <param name="message">Message to display (e.g., "newer sprints aren't available")</param>
+    /// <param name="message">Message to display (e.g., "newer sprints aren't available"). Cannot be null.</param>
     public static SprintSlot CreatePlaceholder(DateTimeOffset startDate, DateTimeOffset endDate, string message)
     {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            throw new ArgumentException("Placeholder message cannot be null or empty", nameof(message));
+        }
+        
         return new SprintSlot
         {
             Sprint = null,
