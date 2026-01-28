@@ -87,20 +87,13 @@
 @code {
     // Beta navigation parameters (query string)
     /// <summary>
-    /// Validation type filter for Beta navigation deep links.
-    /// Supported values: "missing-effort", "missing-description", "invalid-state", "missing-tags"
+    /// Validation category filter ID for Beta navigation deep links.
+    /// When combined with filter=issues, pre-enables the specified validation category filter.
+    /// Values: 1 = Structural Integrity, 2 = Refinement Readiness, 3 = Refinement Completeness
     /// </summary>
     [Parameter]
-    [SupplyParameterFromQuery(Name = "validationType")]
-    public string? ValidationType { get; set; }
-    
-    /// <summary>
-    /// When true, filters to work items that exceed the backlog depth threshold (>3 levels deep).
-    /// Used by Beta Health workspace to identify overly nested backlogs.
-    /// </summary>
-    [Parameter]
-    [SupplyParameterFromQuery(Name = "backlogDepthExceeded")]
-    public bool BacklogDepthExceeded { get; set; }
+    [SupplyParameterFromQuery(Name = "validationCategory")]
+    public int? ValidationCategoryId { get; set; }
     
     /// <summary>
     /// When set, filters to show only descendants (and the root itself) of the specified work item ID.
@@ -211,10 +204,23 @@
         if (queryParams.TryGetValue("filter", out var filterValue) && 
             filterValue.Equals("issues", StringComparison.OrdinalIgnoreCase))
         {
-            // Enable all validation filters when navigating from Product Home
-            foreach (var filter in _validationFilters)
+            // If validationCategory is specified, enable only that category
+            if (ValidationCategoryId.HasValue)
             {
-                filter.IsEnabled = true;
+                var categoryFilterId = ValidationCategoryId.Value.ToString();
+                var filter = _validationFilters.FirstOrDefault(f => f.Id == categoryFilterId);
+                if (filter != null)
+                {
+                    filter.IsEnabled = true;
+                }
+            }
+            else
+            {
+                // Otherwise enable all validation filters
+                foreach (var filter in _validationFilters)
+                {
+                    filter.IsEnabled = true;
+                }
             }
         }
         
@@ -274,18 +280,6 @@
             {
                 allWorkItems = FilterByRootWorkItem(allWorkItems).ToList();
                 Console.WriteLine($"[WorkItemExplorer] After root work item filter: {allWorkItems.Count} items");
-            }
-            
-            if (!string.IsNullOrEmpty(ValidationType))
-            {
-                allWorkItems = FilterByValidationType(allWorkItems).ToList();
-                Console.WriteLine($"[WorkItemExplorer] After validation type filter: {allWorkItems.Count} items");
-            }
-            
-            if (BacklogDepthExceeded)
-            {
-                allWorkItems = FilterByBacklogDepthExceeded(allWorkItems).ToList();
-                Console.WriteLine($"[WorkItemExplorer] After backlog depth filter: {allWorkItems.Count} items");
             }
 
             // All work items are already scoped by products, no goal filtering needed
@@ -626,35 +620,6 @@
     
     // Beta filter methods
     
-    /// <summary>
-    /// Filters work items by validation type using string matching on validation issue messages and rule IDs.
-    /// Note: This matches the Beta explorer's original logic. While fragile (depends on message text),
-    /// it's kept for backward compatibility with existing validation rules.
-    /// </summary>
-    private IEnumerable<WorkItemWithValidationDto> FilterByValidationType(IEnumerable<WorkItemWithValidationDto> workItems)
-    {
-        return workItems.Where(wi =>
-        {
-            if (wi.ValidationIssues == null || wi.ValidationIssues.Count == 0)
-                return false;
-                
-            return wi.ValidationIssues.Any(issue =>
-            {
-                var message = issue.Message?.ToLowerInvariant() ?? "";
-                var ruleId = issue.RuleId?.ToLowerInvariant() ?? "";
-                
-                return ValidationType switch
-                {
-                    "missing-effort" => message.Contains("effort") || ruleId.Contains("effort"),
-                    "missing-description" => message.Contains("description") || ruleId.Contains("description"),
-                    "invalid-state" => message.Contains("state") || ruleId.Contains("state"),
-                    "missing-tags" => message.Contains("tag") || ruleId.Contains("tag"),
-                    _ => false
-                };
-            });
-        });
-    }
-    
     private IEnumerable<WorkItemWithValidationDto> FilterByRootWorkItem(IEnumerable<WorkItemWithValidationDto> workItems)
     {
         // Build a set of all descendants of the root work item (including the root itself)
@@ -691,91 +656,5 @@
         }
         
         return allWorkItemsList.Where(wi => descendants.Contains(wi.TfsId));
-    }
-    
-    private IEnumerable<WorkItemWithValidationDto> FilterByBacklogDepthExceeded(List<WorkItemWithValidationDto> workItems)
-    {
-        const int depthThreshold = 3; // Maximum acceptable depth (0=root, 1=child, 2=grandchild, 3=great-grandchild)
-        
-        var depthMap = CalculateDepthMap(workItems);
-        
-        return workItems.Where(wi => 
-            depthMap.TryGetValue(wi.TfsId, out var depth) && depth > depthThreshold);
-    }
-    
-    private Dictionary<int, int> CalculateDepthMap(List<WorkItemWithValidationDto> workItems)
-    {
-        var depthMap = new Dictionary<int, int>();
-        var workItemIds = new HashSet<int>(workItems.Select(wi => wi.TfsId));
-        
-        foreach (var wi in workItems)
-        {
-            if (depthMap.ContainsKey(wi.TfsId))
-                continue;
-                
-            var depth = CalculateItemDepth(wi, workItems, workItemIds, depthMap);
-            depthMap[wi.TfsId] = depth;
-        }
-        
-        return depthMap;
-    }
-    
-    private int CalculateItemDepth(WorkItemWithValidationDto item, List<WorkItemWithValidationDto> allItems, 
-        HashSet<int> itemIds, Dictionary<int, int> depthMap)
-    {
-        // Base case: no parent or parent not in our dataset = root (depth 0)
-        if (!item.ParentTfsId.HasValue || !itemIds.Contains(item.ParentTfsId.Value))
-        {
-            return 0;
-        }
-        
-        // Check cache
-        if (depthMap.TryGetValue(item.TfsId, out var cachedDepth))
-        {
-            return cachedDepth;
-        }
-        
-        // Detect cycles by tracking visited items in this path
-        var visited = new HashSet<int> { item.TfsId };
-        var current = item;
-        var depth = 0;
-        const int maxDepth = 100; // Safety limit to prevent infinite loops
-        
-        while (current.ParentTfsId.HasValue && itemIds.Contains(current.ParentTfsId.Value) && depth < maxDepth)
-        {
-            var parentId = current.ParentTfsId.Value;
-            
-            // Cycle detection: if we've seen this parent in our path, we have a cycle
-            if (visited.Contains(parentId))
-            {
-                Console.WriteLine($"[WorkItemExplorer] Cycle detected in work item hierarchy at item {item.TfsId}");
-                return 0; // Treat cyclic items as roots
-            }
-            
-            // Check if parent depth is already cached
-            if (depthMap.TryGetValue(parentId, out var parentDepth))
-            {
-                return parentDepth + depth + 1;
-            }
-            
-            // Find parent and continue
-            var parent = allItems.FirstOrDefault(wi => wi.TfsId == parentId);
-            if (parent == null)
-            {
-                return depth;
-            }
-            
-            visited.Add(parentId);
-            current = parent;
-            depth++;
-            
-            // Base case: parent has no parent
-            if (!current.ParentTfsId.HasValue || !itemIds.Contains(current.ParentTfsId.Value))
-            {
-                return depth;
-            }
-        }
-        
-        return depth;
     }
 }

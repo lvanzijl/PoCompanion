@@ -2,6 +2,7 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.BacklogHealth
 @using PoTool.Client.ApiClient
+@using PoTool.Shared.WorkItems
 @inherits BetaWorkspaceBase
 @inject INavigationContextService NavigationContextService
 @inject WorkItemService WorkItemService
@@ -65,49 +66,49 @@
                 Decision #10: Show "0 items" badge (don't hide empty cards)
             *@
             <MudGrid>
-                @* Validation Category Signal *@
+                @* Structural Integrity Validation Category *@
                 <MudItem xs="12" sm="6" md="4">
                     <MudCard Elevation="1" 
                              Style="cursor: pointer; transition: all 0.2s;"
                              Class="mud-card-hover"
-                             @onclick='() => NavigateToWorkItemExplorer("missing-effort")'>
+                             @onclick='() => NavigateToValidationCategory(ValidationCategory.StructuralIntegrity)'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Timer" Color="@GetHealthColor(_missingEffortCount)" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Missing Effort</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_missingEffortCount)">
-                                @_missingEffortCount items
+                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="@GetHealthColor(_structuralIntegrityCount)" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Structural Integrity</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_structuralIntegrityCount)">
+                                @_structuralIntegrityCount items
                             </MudChip>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
                 
-                @* Missing Description Signal *@
+                @* Refinement Readiness Validation Category *@
                 <MudItem xs="12" sm="6" md="4">
                     <MudCard Elevation="1" 
                              Style="cursor: pointer; transition: all 0.2s;"
                              Class="mud-card-hover"
-                             @onclick='() => NavigateToWorkItemExplorer("missing-description")'>
+                             @onclick='() => NavigateToValidationCategory(ValidationCategory.RefinementReadiness)'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Description" Color="@GetHealthColor(_missingDescriptionCount)" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Missing Description</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_missingDescriptionCount)">
-                                @_missingDescriptionCount items
+                            <MudIcon Icon="@Icons.Material.Filled.Rule" Color="@GetHealthColor(_refinementReadinessCount)" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Refinement Readiness</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_refinementReadinessCount)">
+                                @_refinementReadinessCount items
                             </MudChip>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
 
-                @* Backlog Depth Signal *@
+                @* Refinement Completeness Validation Category *@
                 <MudItem xs="12" sm="6" md="4">
                     <MudCard Elevation="1" 
                              Style="cursor: pointer; transition: all 0.2s;"
                              Class="mud-card-hover"
-                             @onclick="NavigateToBacklogDepthExceeded">
+                             @onclick='() => NavigateToValidationCategory(ValidationCategory.RefinementCompleteness)'>
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Layers" Color="@GetHealthColor(_backlogDepthExceededCount)" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Backlog Too Deep</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_backlogDepthExceededCount)">
-                                @_backlogDepthExceededCount items
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="@GetHealthColor(_refinementCompletenessCount)" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Refinement Completeness</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_refinementCompletenessCount)">
+                                @_refinementCompletenessCount items
                             </MudChip>
                         </MudCardContent>
                     </MudCard>
@@ -124,38 +125,6 @@
                             <MudText Typo="Typo.subtitle1" Class="mt-2">Bugs</MudText>
                             <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_bugCount)">
                                 @_bugCount items
-                            </MudChip>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-
-                @* State Issues Signal *@
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" 
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick='() => NavigateToWorkItemExplorer("invalid-state")'>
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="@GetHealthColor(_invalidStateCount)" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Invalid States</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_invalidStateCount)">
-                                @_invalidStateCount items
-                            </MudChip>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-
-                @* Tag Issues Signal *@
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" 
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick='() => NavigateToWorkItemExplorer("missing-tags")'>
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Label" Color="@GetHealthColor(_missingTagsCount)" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Missing Tags</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_missingTagsCount)">
-                                @_missingTagsCount items
                             </MudChip>
                         </MudCardContent>
                     </MudCard>
@@ -222,13 +191,11 @@
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
     
-    // Validation issue counts
-    private int _missingEffortCount;
-    private int _missingDescriptionCount;
-    private int _invalidStateCount;
-    private int _missingTagsCount;
+    // Validation issue counts by category
+    private int _structuralIntegrityCount;
+    private int _refinementReadinessCount;
+    private int _refinementCompletenessCount;
     private int _bugCount;
-    private int _backlogDepthExceededCount;
     
     protected override async Task OnInitializedAsync()
     {
@@ -265,16 +232,13 @@
             var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync();
             var workItemsList = workItemsWithValidation.ToList();
             
-            // Calculate backlog depth for each work item
-            var depthMap = CalculateDepthMap(workItemsList);
-            const int depthThreshold = 3; // Maximum acceptable depth
-            _backlogDepthExceededCount = depthMap.Count(kvp => kvp.Value > depthThreshold);
-            
-            // Track which work items have each issue type (count work items, not issues)
-            var workItemsWithEffortIssue = new HashSet<int>();
-            var workItemsWithDescriptionIssue = new HashSet<int>();
-            var workItemsWithStateIssue = new HashSet<int>();
-            var workItemsWithTagIssue = new HashSet<int>();
+            // Track which work items have issues in each validation category
+            var workItemsByCategory = new Dictionary<ValidationCategory, HashSet<int>>
+            {
+                { ValidationCategory.StructuralIntegrity, new HashSet<int>() },
+                { ValidationCategory.RefinementReadiness, new HashSet<int>() },
+                { ValidationCategory.RefinementCompleteness, new HashSet<int>() }
+            };
             
             foreach (var wi in workItemsList)
             {
@@ -287,86 +251,24 @@
                 {
                     foreach (var issue in wi.ValidationIssues)
                     {
-                        var message = issue.Message?.ToLowerInvariant() ?? "";
-                        var ruleId = issue.RuleId?.ToLowerInvariant() ?? "";
-                        
-                        if (message.Contains("effort") || ruleId.Contains("effort"))
+                        // Group by validation category
+                        if (issue.Category.HasValue)
                         {
-                            workItemsWithEffortIssue.Add(wi.TfsId);
-                        }
-                        else if (message.Contains("description") || ruleId.Contains("description"))
-                        {
-                            workItemsWithDescriptionIssue.Add(wi.TfsId);
-                        }
-                        else if (message.Contains("state") || ruleId.Contains("state"))
-                        {
-                            workItemsWithStateIssue.Add(wi.TfsId);
-                        }
-                        else if (message.Contains("tag") || ruleId.Contains("tag"))
-                        {
-                            workItemsWithTagIssue.Add(wi.TfsId);
+                            workItemsByCategory[issue.Category.Value].Add(wi.TfsId);
                         }
                     }
                 }
             }
             
-            _missingEffortCount = workItemsWithEffortIssue.Count;
-            _missingDescriptionCount = workItemsWithDescriptionIssue.Count;
-            _invalidStateCount = workItemsWithStateIssue.Count;
-            _missingTagsCount = workItemsWithTagIssue.Count;
+            _structuralIntegrityCount = workItemsByCategory[ValidationCategory.StructuralIntegrity].Count;
+            _refinementReadinessCount = workItemsByCategory[ValidationCategory.RefinementReadiness].Count;
+            _refinementCompletenessCount = workItemsByCategory[ValidationCategory.RefinementCompleteness].Count;
         }
         catch (Exception ex)
         {
             // Log the error but keep counts at 0
             Console.WriteLine($"Failed to load validation counts: {ex.Message}");
         }
-    }
-    
-    /// <summary>
-    /// Calculate the depth of each work item in the hierarchy.
-    /// Depth 0 = items with no parent in the dataset (root items)
-    /// </summary>
-    private Dictionary<int, int> CalculateDepthMap(List<WorkItemWithValidationDto> workItems)
-    {
-        var depthMap = new Dictionary<int, int>();
-        var workItemIds = new HashSet<int>(workItems.Select(wi => wi.TfsId));
-        
-        foreach (var wi in workItems)
-        {
-            if (depthMap.ContainsKey(wi.TfsId))
-                continue;
-                
-            var depth = CalculateItemDepth(wi, workItems, workItemIds, depthMap);
-            depthMap[wi.TfsId] = depth;
-        }
-        
-        return depthMap;
-    }
-    
-    private int CalculateItemDepth(WorkItemWithValidationDto item, List<WorkItemWithValidationDto> allItems, 
-        HashSet<int> itemIds, Dictionary<int, int> depthMap)
-    {
-        // Base case: no parent or parent not in our dataset = root (depth 0)
-        if (!item.ParentTfsId.HasValue || !itemIds.Contains(item.ParentTfsId.Value))
-        {
-            return 0;
-        }
-        
-        // Check cache
-        if (depthMap.TryGetValue(item.TfsId, out var cachedDepth))
-        {
-            return cachedDepth;
-        }
-        
-        // Recursive case: find parent and add 1
-        var parent = allItems.FirstOrDefault(wi => wi.TfsId == item.ParentTfsId.Value);
-        if (parent == null)
-        {
-            return 0;
-        }
-        
-        var parentDepth = CalculateItemDepth(parent, allItems, itemIds, depthMap);
-        return parentDepth + 1;
     }
     
     private void UpdateBreadcrumbs()
@@ -378,14 +280,11 @@
         };
     }
     
-    private void NavigateToWorkItemExplorer(string validationType)
+    private void NavigateToValidationCategory(ValidationCategory category)
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.WorkItems}{BuildContextQuery($"validationType={validationType}")}");
-    }
-    
-    private void NavigateToBacklogDepthExceeded()
-    {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.WorkItems}{BuildContextQuery("backlogDepthExceeded=true")}");
+        // Navigate to Work Item Explorer with the validation category filter
+        // The filter ID matches the category enum value (1, 2, 3)
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.WorkItems}{BuildContextQuery($"filter=issues&validationCategory={(int)category}")}");
     }
     
     private void NavigateToBugOverview()
