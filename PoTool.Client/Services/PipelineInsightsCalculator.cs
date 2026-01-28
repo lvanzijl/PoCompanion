@@ -1,4 +1,4 @@
-using PoTool.Shared.Pipelines;
+using PoTool.Client.ApiClient;
 
 namespace PoTool.Client.Services;
 
