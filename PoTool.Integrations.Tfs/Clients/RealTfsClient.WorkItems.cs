@@ -311,6 +311,9 @@ public partial class RealTfsClient
             // Extract created date from TFS (System.CreatedDate)
             DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
 
+            // Extract closed date from TFS (Microsoft.VSTS.Common.ClosedDate)
+            DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
+
             var workItem = new WorkItemDto(
                 TfsId: id,
                 Type: type,
@@ -323,7 +326,8 @@ public partial class RealTfsClient
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: effort,
                 Description: description,
-                CreatedDate: createdDate
+                CreatedDate: createdDate,
+                ClosedDate: closedDate
             );
 
             _logger.LogInformation("Retrieved work item {WorkItemId} from TFS: {Title}", id, title);
@@ -548,6 +552,9 @@ public partial class RealTfsClient
                     // Extract created date from TFS (System.CreatedDate)
                     DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
 
+                    // Extract closed date from TFS (Microsoft.VSTS.Common.ClosedDate)
+                    DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
+
                     results.Add(new WorkItemDto(
                         TfsId: id,
                         Type: type,
@@ -560,7 +567,8 @@ public partial class RealTfsClient
                         RetrievedAt: DateTimeOffset.UtcNow,
                         Effort: effort,
                         Description: description,
-                        CreatedDate: createdDate
+                        CreatedDate: createdDate,
+                        ClosedDate: closedDate
                     ));
                 }
 

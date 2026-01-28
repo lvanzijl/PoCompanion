@@ -38,6 +38,7 @@ public partial class RealTfsClient
         "System.IterationPath",
         "System.Description",
         "System.CreatedDate",
+        "Microsoft.VSTS.Common.ClosedDate",
         TfsFieldEffort,
         TfsFieldStoryPoints
     };

@@ -105,4 +105,10 @@ public class WorkItemEntity
     /// Used for trend analysis and reporting.
     /// </summary>
     public DateTimeOffset? CreatedDate { get; set; }
+
+    /// <summary>
+    /// Work item closed date from TFS (Microsoft.VSTS.Common.ClosedDate).
+    /// Used for tracking when bugs were fixed/completed.
+    /// </summary>
+    public DateTimeOffset? ClosedDate { get; set; }
 }

@@ -7475,6 +7475,16 @@
           "description": {
             "type": "string",
             "nullable": true
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "closedDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         }
       },
@@ -7525,6 +7535,11 @@
             }
           },
           "createdDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "closedDate": {
             "type": "string",
             "format": "date-time",
             "nullable": true

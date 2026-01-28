@@ -15,5 +15,6 @@ public sealed record WorkItemWithValidationDto(
     DateTimeOffset RetrievedAt,
     int? Effort,
     List<ValidationIssue> ValidationIssues,
-    DateTimeOffset? CreatedDate = null
+    DateTimeOffset? CreatedDate = null,
+    DateTimeOffset? ClosedDate = null
 );
