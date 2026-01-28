@@ -286,6 +286,7 @@ public partial class RealTfsClient
             var parentId = relationsMap.TryGetValue(id, out var pid) ? pid : null;
             int? effort = ParseEffortField(fields);
             DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
+            DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
 
             results.Add(new WorkItemDto(
                 TfsId: id,
@@ -299,7 +300,8 @@ public partial class RealTfsClient
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: effort,
                 Description: description,
-                CreatedDate: createdDate
+                CreatedDate: createdDate,
+                ClosedDate: closedDate
             ));
          }
 

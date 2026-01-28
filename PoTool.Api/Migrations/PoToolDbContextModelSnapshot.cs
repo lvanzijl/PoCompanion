@@ -914,6 +914,9 @@ namespace PoTool.Api.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTimeOffset?>("ClosedDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTimeOffset?>("CreatedDate")
                         .HasColumnType("TEXT");
 
