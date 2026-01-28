@@ -2,9 +2,11 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.Velocity
 @using PoTool.Client.Pages.Beta.Components
+@using PoTool.Shared.Settings
 @inherits BetaWorkspaceBase
 @inject INavigationContextService NavigationContextService
 @inject WorkItemService WorkItemService
+@inject StateClassificationService StateClassificationService
 
 @* 
     Decision #3: Time Horizon Default - Always 6 months per user decision
@@ -135,15 +137,16 @@
             </MudText>
         </MudAlert>
 
-        @* Bug Trend Chart with Interactive Click-to-Filter *@
+        @* Bug Trend Chart with Interactive Click-to-Filter - 3 Series *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <BetaTrendChart 
+            <BetaTrendMultiSeriesChart 
                 Title="Bug Trend (Last 6 Months)"
                 Icon="@Icons.Material.Filled.BugReport"
-                Data="@_bugTrendData"
-                BarColor="Color.Error"
+                SeriesTotal="@_bugTrendTotal"
+                SeriesFixed="@_bugTrendFixed"
+                SeriesAdded="@_bugTrendAdded"
                 OnPeriodClick="OnBugTrendPeriodClick"
-                MaxBars="6" />
+                MaxPeriods="6" />
         </MudPaper>
 
         @* Velocity Overview Section *@
@@ -206,8 +209,10 @@
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
     
-    // Decision #12: Interactive trend chart data
-    private Dictionary<string, int> _bugTrendData = new();
+    // Decision #12: Interactive trend chart data - 3 series
+    private Dictionary<string, int> _bugTrendTotal = new();   // Bugs existing/active in that month
+    private Dictionary<string, int> _bugTrendFixed = new();   // Bugs moved to Done in that month
+    private Dictionary<string, int> _bugTrendAdded = new();   // Bugs created in that month
     
     protected override async Task OnInitializedAsync()
     {
@@ -240,8 +245,13 @@
     }
     
     /// <summary>
-    /// Loads bug trend data for the last 6 months.
+    /// Loads bug trend data for the last 6 months with 3 series: Total, Fixed, Added.
     /// Decision #3: Time horizon default is 6 months.
+    /// 
+    /// Series 1 (Total): Bugs open at month-end (approximate using current state).
+    /// Series 2 (Fixed): Bugs currently in "Done" state (approximate, see docs/bug_trend_followups.md).
+    /// Series 3 (Added): Bugs created in that month (accurate using System.CreatedDate).
+    /// 
     /// Uses CreatedDate from TFS (System.CreatedDate) for accurate bug creation timing.
     /// Falls back to RetrievedAt for older cached data without CreatedDate.
     /// </summary>
@@ -252,41 +262,70 @@
             var workItems = await WorkItemService.GetAllWithValidationAsync();
             var bugs = workItems.Where(wi => wi.Type?.Equals("Bug", StringComparison.OrdinalIgnoreCase) == true).ToList();
             
-            // Group bugs by month for the last 6 months using CreatedDate from TFS
-            // Falls back to RetrievedAt if CreatedDate is not available (for older cached data)
-            var now = DateTime.UtcNow;
-            _bugTrendData = new Dictionary<string, int>();
+            // Get state classifications for determining "Done" state
+            var classifications = await StateClassificationService.GetClassificationsAsync();
             
+            var now = DateTime.UtcNow;
+            _bugTrendTotal = new Dictionary<string, int>();
+            _bugTrendFixed = new Dictionary<string, int>();
+            _bugTrendAdded = new Dictionary<string, int>();
+            
+            // Process each of the last 6 months
             for (var i = 5; i >= 0; i--)
             {
                 var monthDate = now.AddMonths(-i);
                 var periodKey = monthDate.ToString("yyyy-MM");
+                var monthStart = new DateTime(monthDate.Year, monthDate.Month, 1);
+                var monthEnd = monthStart.AddMonths(1).AddDays(-1);
                 
-                // Count bugs with CreatedDate in that month (prefer CreatedDate, fall back to RetrievedAt)
-                var monthBugCount = bugs.Count(b =>
+                // Series 3: Bugs Added - bugs created in this month (accurate)
+                var addedCount = bugs.Count(b =>
                 {
                     var effectiveDate = b.CreatedDate ?? b.RetrievedAt;
                     return effectiveDate.Year == monthDate.Year && effectiveDate.Month == monthDate.Month;
                 });
+                _bugTrendAdded[periodKey] = addedCount;
                 
-                _bugTrendData[periodKey] = monthBugCount;
-            }
-            
-            // If all months have 0 (data hasn't spread over 6 months), show current distribution
-            if (_bugTrendData.Values.All(v => v == 0) && bugs.Any())
-            {
-                // Show total current bugs in the most recent month
-                var latestKey = now.ToString("yyyy-MM");
-                if (_bugTrendData.ContainsKey(latestKey))
+                // Series 2: Bugs Fixed - bugs currently in "Done" state (approximate)
+                // Note: This is an approximation as we don't track state transition history.
+                // See docs/bug_trend_followups.md for improvement plan.
+                var fixedCount = bugs.Count(b =>
                 {
-                    _bugTrendData[latestKey] = bugs.Count;
-                }
+                    var classification = classifications.Classifications.FirstOrDefault(c =>
+                        c.WorkItemType.Equals("Bug", StringComparison.OrdinalIgnoreCase) &&
+                        c.StateName.Equals(b.State, StringComparison.OrdinalIgnoreCase));
+                    
+                    return classification?.Classification == StateClassification.Done;
+                });
+                // For now, distribute fixed bugs evenly across months (placeholder logic)
+                // In a real implementation with state history, we'd count transitions to "Done" in this month
+                _bugTrendFixed[periodKey] = i == 0 ? fixedCount : 0; // Show in current month only as approximation
+                
+                // Series 1: Total Bugs - bugs open at month-end (approximate using current state)
+                // Count bugs created before/during this month that are NOT in "Done" or "Removed" state
+                var totalCount = bugs.Count(b =>
+                {
+                    var effectiveDate = b.CreatedDate ?? b.RetrievedAt;
+                    var createdBeforeOrDuringMonth = effectiveDate <= monthEnd;
+                    
+                    if (!createdBeforeOrDuringMonth)
+                        return false;
+                    
+                    var classification = classifications.Classifications.FirstOrDefault(c =>
+                        c.WorkItemType.Equals("Bug", StringComparison.OrdinalIgnoreCase) &&
+                        c.StateName.Equals(b.State, StringComparison.OrdinalIgnoreCase));
+                    
+                    // Exclude bugs in "Done" or "Removed" state
+                    return classification?.Classification != StateClassification.Done &&
+                           classification?.Classification != StateClassification.Removed;
+                });
+                _bugTrendTotal[periodKey] = totalCount;
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to load bug trend data: {ex.Message}");
-            // Keep empty dictionary on failure
+            // Keep empty dictionaries on failure
         }
     }
     
