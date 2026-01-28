@@ -23,6 +23,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
 {
     private Mock<IWorkItemReadProvider> _mockProvider = null!;
     private Mock<IProductRepository> _mockProductRepository = null!;
+    private Mock<ISprintRepository> _mockSprintRepository = null!;
     private Mock<IMediator> _mockMediator = null!;
     private Mock<IWorkItemValidator> _mockValidator = null!;
     private Mock<ILogger<GetMultiIterationBacklogHealthQueryHandler>> _mockLogger = null!;
@@ -33,6 +34,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
     {
         _mockProvider = new Mock<IWorkItemReadProvider>();
         _mockProductRepository = new Mock<IProductRepository>();
+        _mockSprintRepository = new Mock<ISprintRepository>();
         _mockMediator = new Mock<IMediator>();
         _mockValidator = new Mock<IWorkItemValidator>();
         _mockLogger = new Mock<ILogger<GetMultiIterationBacklogHealthQueryHandler>>();
@@ -40,10 +42,13 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
         // Setup default mock behaviors
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto>());
+        _mockSprintRepository.Setup(r => r.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SprintDto>());
 
         _handler = new GetMultiIterationBacklogHealthQueryHandler(
             _mockProvider.Object,
             _mockProductRepository.Object,
+            _mockSprintRepository.Object,
             _mockMediator.Object,
             _mockValidator.Object,
             _mockLogger.Object);

@@ -1,7 +1,9 @@
 using Mediator;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics.Services;
 using PoTool.Shared.Metrics;
+using PoTool.Shared.Settings;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Validators;
@@ -21,6 +23,7 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
 {
     private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly IProductRepository _productRepository;
+    private readonly ISprintRepository _sprintRepository;
     private readonly IMediator _mediator;
     private readonly IWorkItemValidator _validator;
     private readonly ILogger<GetMultiIterationBacklogHealthQueryHandler> _logger;
@@ -28,12 +31,14 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
     public GetMultiIterationBacklogHealthQueryHandler(
         IWorkItemReadProvider workItemReadProvider,
         IProductRepository productRepository,
+        ISprintRepository sprintRepository,
         IMediator mediator,
         IWorkItemValidator validator,
         ILogger<GetMultiIterationBacklogHealthQueryHandler> logger)
     {
         _workItemReadProvider = workItemReadProvider;
         _productRepository = productRepository;
+        _sprintRepository = sprintRepository;
         _mediator = mediator;
         _validator = validator;
         _logger = logger;
@@ -133,22 +138,97 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
             }
         }
 
-        // Get distinct iteration paths, sorted
-        var iterationPaths = allWorkItems
+        // Get distinct iteration paths from work items
+        var distinctIterationPaths = allWorkItems
             .Where(wi => !string.IsNullOrWhiteSpace(wi.IterationPath))
             .Select(wi => wi.IterationPath)
             .Distinct()
-            .OrderByDescending(path => path) // Most recent first
-            .Take(query.MaxIterations)
             .ToList();
 
-        _logger.LogDebug("Found {Count} iteration paths", iterationPaths.Count);
+        _logger.LogDebug("Found {Count} distinct iteration paths in work items", distinctIterationPaths.Count);
 
-        // Calculate health for each iteration
-        var iterationHealthList = new List<BacklogHealthDto>();
-        foreach (var iterationPath in iterationPaths)
+        // Build SprintMetricsDto for each iteration path with dates from SprintRepository
+        var sprintMetricsList = new List<SprintMetricsDto>();
+        IEnumerable<SprintDto> allSprints = Enumerable.Empty<SprintDto>();
+        
+        try
         {
-            var health = await CalculateIterationHealth(iterationPath, allWorkItems, cancellationToken);
+            allSprints = await _sprintRepository.GetAllSprintsAsync(cancellationToken);
+            _logger.LogDebug("Retrieved {Count} sprints from repository", allSprints.Count());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve sprint data from repository, will use iteration paths without dates");
+        }
+
+        foreach (var iterationPath in distinctIterationPaths)
+        {
+            // Try to find matching sprint by path (case-insensitive)
+            var matchingSprint = allSprints.FirstOrDefault(s => 
+                s.Path.Equals(iterationPath, StringComparison.OrdinalIgnoreCase));
+            
+            var separators = new[] { '\\', '/' };
+            var sprintName = iterationPath.Split(separators, StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? iterationPath;
+            
+            var sprintMetrics = new SprintMetricsDto(
+                IterationPath: iterationPath,
+                SprintName: sprintName,
+                StartDate: matchingSprint?.StartUtc,
+                EndDate: matchingSprint?.EndUtc,
+                CompletedStoryPoints: 0,  // Not needed for iteration selection
+                PlannedStoryPoints: 0,
+                CompletedWorkItemCount: 0,
+                TotalWorkItemCount: 0,
+                CompletedPBIs: 0,
+                CompletedBugs: 0,
+                CompletedTasks: 0
+            );
+            
+            sprintMetricsList.Add(sprintMetrics);
+        }
+
+        // Use SprintWindowSelector to get appropriate iteration window
+        var selector = new SprintWindowSelector();
+        var today = DateTimeOffset.UtcNow;
+        
+        // Determine which sprints to analyze based on MaxIterations parameter
+        // For Health workspace: use date-based selection
+        IReadOnlyList<SprintMetricsDto> selectedSprints;
+        
+        if (query.MaxIterations <= 3)
+        {
+            // Backlog Health Analysis: current + 2 future (no past)
+            selectedSprints = selector.GetBacklogHealthSprints(sprintMetricsList, today);
+            _logger.LogDebug("Using Backlog Health sprint selection (current + 2 future)");
+        }
+        else
+        {
+            // Issue Comparison: 3 past + current + 2 future
+            selectedSprints = selector.GetIssueComparisonSprints(sprintMetricsList, today);
+            _logger.LogDebug("Using Issue Comparison sprint selection (3 past + current + 2 future)");
+        }
+
+        // If no sprints with dates, fall back to path-based ordering with warning
+        if (selectedSprints.Count == 0 && sprintMetricsList.Count > 0)
+        {
+            _logger.LogWarning(
+                "No sprints with valid dates found. Falling back to lexicographic path ordering for {Count} iterations. " +
+                "This may produce incorrect results. Ensure sprint data is synced from TFS.",
+                distinctIterationPaths.Count);
+            
+            selectedSprints = sprintMetricsList
+                .OrderByDescending(s => s.IterationPath)
+                .Take(query.MaxIterations)
+                .ToList();
+        }
+
+        _logger.LogInformation("Selected {Count} iterations for analysis", selectedSprints.Count);
+
+        // Calculate health for each selected iteration
+        var iterationHealthList = new List<BacklogHealthDto>();
+        foreach (var sprint in selectedSprints)
+        {
+            var health = await CalculateIterationHealth(sprint.IterationPath, allWorkItems, cancellationToken);
             if (health != null)
             {
                 iterationHealthList.Add(health);
