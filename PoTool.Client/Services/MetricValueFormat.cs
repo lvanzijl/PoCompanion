@@ -18,5 +18,10 @@ public enum MetricValueFormat
     /// <summary>
     /// Display as raw count/number.
     /// </summary>
-    Count
+    Count,
+
+    /// <summary>
+    /// Display as percentage.
+    /// </summary>
+    Percentage
 }

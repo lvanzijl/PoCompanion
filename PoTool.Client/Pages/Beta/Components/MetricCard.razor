@@ -93,6 +93,7 @@
             MetricValueFormat.Hours => FormatHours(value.Value),
             MetricValueFormat.Days => FormatDays(value.Value),
             MetricValueFormat.Count => value.Value.ToString("F1"),
+            MetricValueFormat.Percentage => $"{value.Value:F1}%",
             _ => value.Value.ToString("F1")
         };
     }
