@@ -1,6 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
-using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -27,21 +27,22 @@ public class BugInsightsCalculatorTests
             ? $"{{\"Microsoft.VSTS.Common.Severity\":\"{severity}\"}}"
             : "{}";
 
-        return new WorkItemDto(
-            TfsId: tfsId,
-            Type: "Bug",
-            Title: $"Bug {tfsId}",
-            ParentTfsId: null,
-            AreaPath: "TestArea",
-            IterationPath: "TestIteration",
-            State: state,
-            JsonPayload: jsonPayload,
-            RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: null,
-            Description: null,
-            CreatedDate: created,
-            ClosedDate: closedDate
-        );
+        return new WorkItemDto
+        {
+            TfsId = tfsId,
+            Type = "Bug",
+            Title = $"Bug {tfsId}",
+            ParentTfsId = null,
+            AreaPath = "TestArea",
+            IterationPath = "TestIteration",
+            State = state,
+            JsonPayload = jsonPayload,
+            RetrievedAt = DateTimeOffset.UtcNow,
+            Effort = null,
+            Description = null,
+            CreatedDate = created,
+            ClosedDate = closedDate
+        };
     }
 
     #region Total Open Bugs Tests

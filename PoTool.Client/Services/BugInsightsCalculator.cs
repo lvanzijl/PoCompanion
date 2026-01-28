@@ -1,4 +1,4 @@
-using PoTool.Shared.WorkItems;
+using PoTool.Client.ApiClient;
 using System.Text.Json;
 
 namespace PoTool.Client.Services;
