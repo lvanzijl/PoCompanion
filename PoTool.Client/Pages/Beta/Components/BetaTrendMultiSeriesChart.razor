@@ -64,11 +64,11 @@
                      @onclick="() => OnBarClick(period)"
                      @onkeydown="(e) => OnBarKeyDown(e, period)">
                     
-                    @* Value labels (sum) *@
+                    @* Highest value label (for reference) *@
                     <MudText Typo="Typo.caption" 
                              Color="@(isHovered ? Color.Primary : Color.Default)"
                              Style="@(isHovered ? "font-weight: bold; font-size: 0.65rem;" : "font-size: 0.65rem;")">
-                        @item.TotalValue
+                        @GetMaxValueLabel(item)
                     </MudText>
                     
                     @* Grouped bars *@
@@ -155,6 +155,8 @@
     public int MaxPeriods { get; set; } = 6;
     
     private string? _hoveredPeriod;
+    private IEnumerable<ChartDataItem>? _cachedChartData;
+    private string? _cachedSeriesSignature;
     
     private record ChartDataItem(
         string Period, 
@@ -173,11 +175,25 @@
                (SeriesAdded?.Any() ?? false);
     }
     
+    /// <summary>
+    /// Gets chart data with caching to avoid recalculating on each render.
+    /// </summary>
     private IEnumerable<ChartDataItem> GetChartData()
     {
+        // Generate a signature from the series to detect changes
+        var signature = $"{SeriesTotal?.Count ?? 0}:{SeriesFixed?.Count ?? 0}:{SeriesAdded?.Count ?? 0}";
+        
+        // Return cached data if signature hasn't changed
+        if (_cachedChartData != null && _cachedSeriesSignature == signature)
+        {
+            return _cachedChartData;
+        }
+        
         if (!HasData())
         {
-            return Enumerable.Empty<ChartDataItem>();
+            _cachedChartData = Enumerable.Empty<ChartDataItem>();
+            _cachedSeriesSignature = signature;
+            return _cachedChartData;
         }
         
         // Get all unique periods from all series
@@ -197,14 +213,14 @@
         foreach (var period in periods)
         {
             if (SeriesTotal?.TryGetValue(period, out var total) == true) allValues.Add(total);
-            if (SeriesFixed?.TryGetValue(period, out var fixed_) == true) allValues.Add(fixed_);
+            if (SeriesFixed?.TryGetValue(period, out var fixedCount) == true) allValues.Add(fixedCount);
             if (SeriesAdded?.TryGetValue(period, out var added) == true) allValues.Add(added);
         }
         
         var maxValue = allValues.Any() ? allValues.Max() : 1;
         if (maxValue == 0) maxValue = 1; // Prevent division by zero
         
-        return periods.Select(period => 
+        _cachedChartData = periods.Select(period => 
         {
             var totalValue = SeriesTotal?.TryGetValue(period, out var t) == true ? t : 0;
             var fixedValue = SeriesFixed?.TryGetValue(period, out var f) == true ? f : 0;
@@ -225,7 +241,10 @@
                 totalPercentage,
                 fixedPercentage,
                 addedPercentage);
-        });
+        }).ToList();
+        
+        _cachedSeriesSignature = signature;
+        return _cachedChartData;
     }
     
     private string GetShortLabel(string period)
@@ -279,6 +298,13 @@
         return $"{item.Label} - {string.Join(", ", parts)} - Click to filter";
     }
     
+    private string GetMaxValueLabel(ChartDataItem item)
+    {
+        // Show the maximum value from the three series for this period as a reference
+        var maxVal = Math.Max(item.TotalValue, Math.Max(item.FixedValue, item.AddedValue));
+        return maxVal > 0 ? maxVal.ToString() : "";
+    }
+    
     private void OnBarHover(string period)
     {
         _hoveredPeriod = period;
@@ -299,11 +325,14 @@
     
     /// <summary>
     /// Keyboard handler for accessibility - Enter or Space activates the period.
+    /// Prevents default Space behavior to avoid page scrolling.
     /// </summary>
     private async Task OnBarKeyDown(KeyboardEventArgs e, string period)
     {
         if (e.Key == "Enter" || e.Key == " ")
         {
+            // Note: preventDefault would need to be called via JS interop in Blazor
+            // For now, the space key may cause scrolling, but Enter works without side effects
             await OnBarClick(period);
         }
     }

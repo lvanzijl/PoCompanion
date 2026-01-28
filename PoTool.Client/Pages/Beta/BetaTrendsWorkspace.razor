@@ -249,7 +249,7 @@
     /// Decision #3: Time horizon default is 6 months.
     /// 
     /// Series 1 (Total): Bugs open at month-end (approximate using current state).
-    /// Series 2 (Fixed): Bugs currently in "Done" state (approximate, see docs/bug_trend_followups.md).
+    /// Series 2 (Fixed): Bugs in "Done" state (approximate - no state transition history).
     /// Series 3 (Added): Bugs created in that month (accurate using System.CreatedDate).
     /// 
     /// Uses CreatedDate from TFS (System.CreatedDate) for accurate bug creation timing.
@@ -265,6 +265,14 @@
             // Get state classifications for determining "Done" state
             var classifications = await StateClassificationService.GetClassificationsAsync();
             
+            // Build lookup dictionary for O(1) state classification lookups
+            var classificationLookup = classifications.Classifications
+                .Where(c => c.WorkItemType.Equals("Bug", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(
+                    c => c.StateName,
+                    c => c.Classification,
+                    StringComparer.OrdinalIgnoreCase);
+            
             var now = DateTime.UtcNow;
             _bugTrendTotal = new Dictionary<string, int>();
             _bugTrendFixed = new Dictionary<string, int>();
@@ -276,48 +284,48 @@
                 var monthDate = now.AddMonths(-i);
                 var periodKey = monthDate.ToString("yyyy-MM");
                 var monthStart = new DateTime(monthDate.Year, monthDate.Month, 1);
-                var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+                var nextMonthStart = monthStart.AddMonths(1);
                 
                 // Series 3: Bugs Added - bugs created in this month (accurate)
                 var addedCount = bugs.Count(b =>
                 {
                     var effectiveDate = b.CreatedDate ?? b.RetrievedAt;
-                    return effectiveDate.Year == monthDate.Year && effectiveDate.Month == monthDate.Month;
+                    return effectiveDate >= monthStart && effectiveDate < nextMonthStart;
                 });
                 _bugTrendAdded[periodKey] = addedCount;
                 
-                // Series 2: Bugs Fixed - bugs currently in "Done" state (approximate)
+                // Series 2: Bugs Fixed - bugs in "Done" state created before/during this month
                 // Note: This is an approximation as we don't track state transition history.
+                // Without state history, we show bugs currently in "Done" state as a rough indicator.
                 // See docs/bug_trend_followups.md for improvement plan.
                 var fixedCount = bugs.Count(b =>
                 {
-                    var classification = classifications.Classifications.FirstOrDefault(c =>
-                        c.WorkItemType.Equals("Bug", StringComparison.OrdinalIgnoreCase) &&
-                        c.StateName.Equals(b.State, StringComparison.OrdinalIgnoreCase));
+                    var effectiveDate = b.CreatedDate ?? b.RetrievedAt;
+                    var createdBeforeOrDuringMonth = effectiveDate < nextMonthStart;
                     
-                    return classification?.Classification == StateClassification.Done;
+                    if (!createdBeforeOrDuringMonth)
+                        return false;
+                    
+                    classificationLookup.TryGetValue(b.State, out var classification);
+                    return classification == StateClassification.Done;
                 });
-                // For now, distribute fixed bugs evenly across months (placeholder logic)
-                // In a real implementation with state history, we'd count transitions to "Done" in this month
-                _bugTrendFixed[periodKey] = i == 0 ? fixedCount : 0; // Show in current month only as approximation
+                _bugTrendFixed[periodKey] = fixedCount;
                 
                 // Series 1: Total Bugs - bugs open at month-end (approximate using current state)
                 // Count bugs created before/during this month that are NOT in "Done" or "Removed" state
                 var totalCount = bugs.Count(b =>
                 {
                     var effectiveDate = b.CreatedDate ?? b.RetrievedAt;
-                    var createdBeforeOrDuringMonth = effectiveDate <= monthEnd;
+                    var createdBeforeOrDuringMonth = effectiveDate < nextMonthStart;
                     
                     if (!createdBeforeOrDuringMonth)
                         return false;
                     
-                    var classification = classifications.Classifications.FirstOrDefault(c =>
-                        c.WorkItemType.Equals("Bug", StringComparison.OrdinalIgnoreCase) &&
-                        c.StateName.Equals(b.State, StringComparison.OrdinalIgnoreCase));
+                    classificationLookup.TryGetValue(b.State, out var classification);
                     
                     // Exclude bugs in "Done" or "Removed" state
-                    return classification?.Classification != StateClassification.Done &&
-                           classification?.Classification != StateClassification.Removed;
+                    return classification != StateClassification.Done &&
+                           classification != StateClassification.Removed;
                 });
                 _bugTrendTotal[periodKey] = totalCount;
             }
