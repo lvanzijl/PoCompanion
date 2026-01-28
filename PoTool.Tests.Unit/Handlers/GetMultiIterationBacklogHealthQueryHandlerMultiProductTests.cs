@@ -42,8 +42,84 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
         // Setup default mock behaviors
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto>());
+        
+        // Setup default sprint data to ensure tests work with date-based selection
+        // Create sprints that span past, current, and future periods
+        var now = DateTimeOffset.UtcNow;
+        var defaultSprints = new List<SprintDto>
+        {
+            // Past sprints
+            new SprintDto(
+                Id: 1,
+                TeamId: 1,
+                TfsIterationId: "past3-guid",
+                Path: "Past Sprint 3",
+                Name: "Past Sprint 3",
+                StartUtc: now.AddDays(-90),
+                EndUtc: now.AddDays(-76),
+                TimeFrame: "past",
+                LastSyncedUtc: now
+            ),
+            new SprintDto(
+                Id: 2,
+                TeamId: 1,
+                TfsIterationId: "past2-guid",
+                Path: "Past Sprint 2",
+                Name: "Past Sprint 2",
+                StartUtc: now.AddDays(-75),
+                EndUtc: now.AddDays(-61),
+                TimeFrame: "past",
+                LastSyncedUtc: now
+            ),
+            new SprintDto(
+                Id: 3,
+                TeamId: 1,
+                TfsIterationId: "past1-guid",
+                Path: "Past Sprint 1",
+                Name: "Past Sprint 1",
+                StartUtc: now.AddDays(-60),
+                EndUtc: now.AddDays(-46),
+                TimeFrame: "past",
+                LastSyncedUtc: now
+            ),
+            // Current sprint (Sprint 1 - where test work items are)
+            new SprintDto(
+                Id: 4,
+                TeamId: 1,
+                TfsIterationId: "sprint1-guid",
+                Path: "Sprint 1",
+                Name: "Sprint 1",
+                StartUtc: now.AddDays(-45),
+                EndUtc: now.AddDays(1),
+                TimeFrame: "current",
+                LastSyncedUtc: now
+            ),
+            // Future sprints
+            new SprintDto(
+                Id: 5,
+                TeamId: 1,
+                TfsIterationId: "future1-guid",
+                Path: "Future Sprint 1",
+                Name: "Future Sprint 1",
+                StartUtc: now.AddDays(2),
+                EndUtc: now.AddDays(16),
+                TimeFrame: "future",
+                LastSyncedUtc: now
+            ),
+            new SprintDto(
+                Id: 6,
+                TeamId: 1,
+                TfsIterationId: "future2-guid",
+                Path: "Future Sprint 2",
+                Name: "Future Sprint 2",
+                StartUtc: now.AddDays(17),
+                EndUtc: now.AddDays(31),
+                TimeFrame: "future",
+                LastSyncedUtc: now
+            )
+        };
         _mockSprintRepository.Setup(r => r.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SprintDto>());
+            .ReturnsAsync(defaultSprints);
 
         _handler = new GetMultiIterationBacklogHealthQueryHandler(
             _mockProvider.Object,
