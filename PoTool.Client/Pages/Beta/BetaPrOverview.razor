@@ -62,11 +62,10 @@
                 <MudGrid Spacing="2">
                     <MudItem xs="12" sm="6">
                         <MudSelect T="int?"
-                                   @bind-Value="_selectedTeamId"
+                                   Value="_selectedTeamId"
                                    Label="Team"
                                    Variant="Variant.Outlined"
                                    Clearable="true"
-                                   OnClearButtonClick="@(() => OnTeamChanged(null))"
                                    ValueChanged="OnTeamChanged">
                             <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
                             @foreach (var team in _teams)
@@ -78,11 +77,10 @@
                     
                     <MudItem xs="12" sm="6">
                         <MudSelect T="int?"
-                                   @bind-Value="_selectedProductId"
+                                   Value="_selectedProductId"
                                    Label="Product"
                                    Variant="Variant.Outlined"
                                    Clearable="true"
-                                   OnClearButtonClick="@(() => OnProductChanged(null))"
                                    ValueChanged="OnProductChanged">
                             <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
                             @foreach (var product in _products)
