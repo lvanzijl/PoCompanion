@@ -177,11 +177,15 @@
     
     /// <summary>
     /// Gets chart data with caching to avoid recalculating on each render.
+    /// Cache is invalidated when series data changes.
     /// </summary>
     private IEnumerable<ChartDataItem> GetChartData()
     {
-        // Generate a signature from the series to detect changes
-        var signature = $"{SeriesTotal?.Count ?? 0}:{SeriesFixed?.Count ?? 0}:{SeriesAdded?.Count ?? 0}";
+        // Generate a signature from the series including value checksums to detect any data changes
+        var totalChecksum = SeriesTotal != null ? SeriesTotal.Sum(kvp => kvp.Value) : 0;
+        var fixedChecksum = SeriesFixed != null ? SeriesFixed.Sum(kvp => kvp.Value) : 0;
+        var addedChecksum = SeriesAdded != null ? SeriesAdded.Sum(kvp => kvp.Value) : 0;
+        var signature = $"{totalChecksum}:{fixedChecksum}:{addedChecksum}";
         
         // Return cached data if signature hasn't changed
         if (_cachedChartData != null && _cachedSeriesSignature == signature)

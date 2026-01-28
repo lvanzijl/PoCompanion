@@ -14,47 +14,44 @@ The Bug Trend chart displays three metrics for each of the last 6 months:
 
 ### 1. Total Bug Count
 
-**Definition**: Number of bugs that were **open at month-end** (snapshot approach).
+**Current Implementation (v1)**: Approximate count of open bugs at each month using current state.
 
 **Calculation**:
-- At the end of each month, count all bugs where:
-  - `CreatedDate <= end of month`
-  - AND State classification is NOT "Done" or "Removed" at month-end
+- For each month, count all bugs where:
+  - `CreatedDate < start of next month` (bug existed by end of the month)
+  - AND current state is NOT "Done" or "Removed"
 
-**Rationale**: 
-- Provides a consistent snapshot of bug debt at the end of each month
-- Easier to interpret than "bugs active at any time during month"
-- Aligns with typical product health reporting
+**Limitation**: This uses the bug's *current* state, not its historical state at month-end. For example, a bug created in January and fixed in March will NOT appear in January or February counts, even though it was open then.
 
-**Implementation Note**:
-- This requires tracking state transitions over time
-- For current implementation without state history, we use a simplified approach:
-  - Count bugs where `CreatedDate` is in or before the month
-  - AND current state is not "Done" or "Removed"
-- Future enhancement: Track state history for accurate month-end snapshots
+**Ideal Definition** (future): Number of bugs that were **open at month-end** (snapshot approach).
+
+**Rationale for current approach**: 
+- Simple to implement without state history tracking
+- Provides a reasonable approximation for recent trends
+- Always shows a consistent view based on current data
 
 ### 2. Bugs Fixed
 
-**Definition**: Number of bugs that transitioned to a "Done" state during that month.
+**Current Implementation (v1)**: Approximate count based on bugs currently in "Done" state.
+
+**Calculation**:
+- For each month, count bugs where:
+  - `CreatedDate < start of next month` (bug existed by end of the month)
+  - AND current state is classified as "Done"
+
+**Limitation**: This counts the *current* population of fixed bugs that existed in each month, not bugs that transitioned to "Done" during that specific month. The same fixed bug appears in all months from its creation onward.
+
+**Ideal Definition** (future): Number of bugs that transitioned to a "Done" state during that month.
 
 **State Classification**: 
 - Uses the `StateClassification` enum from `WorkItemStateClassificationDto`
 - States classified as `StateClassification.Done` count as fixed
 - Common "Done" states: "Done", "Closed", "Resolved", "Completed"
 
-**Calculation**:
-- Count bugs where the state transition to "Done" occurred during the month
-- Uses state history/transition data if available
-
-**Current Limitation**:
+**Why this approximation?**:
 - State transition history is not currently tracked in the cache
-- Current implementation may not accurately capture when bugs were fixed
-- Workaround: Show bugs currently in "Done" state that were created before/during the period
-
-**Future Enhancement**: 
-- Track state transition history in `WorkItemEntity`
-- Store `CompletedDate` field to accurately capture when bugs were fixed
-- See `docs/bug_trend_followups.md` for details
+- Provides visibility into the fixed bug population trend
+- Better than no data, useful for seeing overall fixed/open ratios
 
 ### 3. Bugs Added
 
@@ -112,14 +109,21 @@ public enum StateClassification
 ## Data Accuracy Notes
 
 ### Current State (v1)
-- ✅ Bugs Added: Accurate using `System.CreatedDate` from TFS
-- ⚠️ Bugs Fixed: Approximate (uses current state, not transition date)
-- ⚠️ Total Bug Count: Approximate (uses current state, not month-end snapshot)
+- ✅ **Bugs Added**: Accurate using `System.CreatedDate` from TFS
+- ⚠️ **Bugs Fixed**: Approximate - shows cumulative fixed bugs using current state
+- ⚠️ **Total Bug Count**: Approximate - uses current state, not month-end snapshot
 
 ### Known Limitations
 1. No state transition history tracking
 2. No "completed date" or "resolved date" field
-3. Total count is current state, not historical snapshot
+3. Fixed and Total counts show the same bugs across multiple months (cumulative view)
+4. Total and Fixed counts may not reflect historical reality due to state changes over time
+
+### What This Means for Users
+- **Added** series is reliable for tracking bug creation trends
+- **Total** and **Fixed** series show the current state of bugs, projected back in time
+- Trends are still valuable for seeing overall patterns, but specific monthly values should be interpreted carefully
+- For example: A bug created in January and fixed in March will NOT appear in January/February Total counts
 
 ### Future Improvements
 See `docs/bug_trend_followups.md` for planned enhancements.
