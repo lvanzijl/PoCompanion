@@ -175,6 +175,7 @@
             </MudStack>
         </MudPaper>
 
+        @* Empty State *@
         @if (_allBugs.Count == 0 && !_metricsLoading)
         {
             <MudPaper Elevation="2" Class="pa-6 mt-4">
@@ -287,19 +288,20 @@
             var bugs = allWorkItems.Where(wi => wi.Type.Equals("Bug", StringComparison.OrdinalIgnoreCase)).ToList();
             
             // Apply product filter if selected
+            // Note: Full product-team filtering requires ProductTeamLink relationships
+            // which would need to be implemented similar to PR/Pipeline insights
             if (_selectedProductId.HasValue)
             {
-                // Filter by product - work items are associated with products via area path
-                // For now, we'll use all bugs if product is selected
-                // TODO: Implement proper product filtering based on ProductTeamLink
+                // For now, show all bugs when a product is selected
+                // TODO: Implement proper product filtering using area path or ProductTeamLink
                 bugs = bugs.ToList();
             }
             
             // Apply team filter if selected
             if (_selectedTeamId.HasValue)
             {
-                // Filter by team - similar to product filtering
-                // TODO: Implement proper team filtering
+                // For now, show all bugs when a team is selected
+                // TODO: Implement proper team filtering using team area paths
                 bugs = bugs.ToList();
             }
             
@@ -368,27 +370,26 @@
         _breadcrumbs = new List<BreadcrumbItem>
         {
             new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
-            new("Trends (Past)", WorkspaceRoutes.BetaTrendsWorkspace, icon: Icons.Material.Filled.Timeline),
             new("Bug Insights", null, disabled: true, icon: Icons.Material.Filled.Insights)
         };
     }
     
     private Color GetSeverityColor(string severity)
     {
-        // Handle both "1 - Critical" format and simple "Critical" format
-        if (severity.Contains("Critical", StringComparison.OrdinalIgnoreCase) || severity.StartsWith("1"))
+        // ExtractSeverity returns "1 - Critical", "2 - High", etc., or "Unknown"
+        if (severity.StartsWith("1"))
         {
             return Color.Error;
         }
-        if (severity.Contains("High", StringComparison.OrdinalIgnoreCase) || severity.StartsWith("2"))
+        if (severity.StartsWith("2"))
         {
             return Color.Warning;
         }
-        if (severity.Contains("Medium", StringComparison.OrdinalIgnoreCase) || severity.StartsWith("3"))
+        if (severity.StartsWith("3"))
         {
             return Color.Info;
         }
-        if (severity.Contains("Low", StringComparison.OrdinalIgnoreCase) || severity.StartsWith("4"))
+        if (severity.StartsWith("4"))
         {
             return Color.Default;
         }

@@ -190,9 +190,10 @@ public class BugInsightsCalculator
                     }
                 }
             }
-            catch
+            catch (JsonException)
             {
-                // Ignore JSON parsing errors
+                // Ignore JSON parsing errors - JsonPayload may be malformed or empty
+                // This is expected for work items without proper severity fields
             }
         }
         return "Unknown";
