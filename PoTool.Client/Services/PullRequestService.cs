@@ -61,4 +61,34 @@ public class PullRequestService
         return await _pullRequestsClient.GetFilteredAsync(productIds, iterationPath, createdBy, fromDate, toDate, status)
             ?? Array.Empty<PullRequestDto>();
     }
+
+    /// <summary>
+    /// Gets comments for a specific pull request.
+    /// </summary>
+    public async Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId)
+    {
+        try
+        {
+            return await _pullRequestsClient.GetCommentsAsync(pullRequestId) ?? Array.Empty<PullRequestCommentDto>();
+        }
+        catch (ApiException ex) when (ex.StatusCode == 404)
+        {
+            return Array.Empty<PullRequestCommentDto>();
+        }
+    }
+
+    /// <summary>
+    /// Gets iterations for a specific pull request.
+    /// </summary>
+    public async Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId)
+    {
+        try
+        {
+            return await _pullRequestsClient.GetIterationsAsync(pullRequestId) ?? Array.Empty<PullRequestIterationDto>();
+        }
+        catch (ApiException ex) when (ex.StatusCode == 404)
+        {
+            return Array.Empty<PullRequestIterationDto>();
+        }
+    }
 }
