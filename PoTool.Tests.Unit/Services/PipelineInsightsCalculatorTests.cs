@@ -136,7 +136,7 @@ public class PipelineInsightsCalculatorTests
     }
 
     [TestMethod]
-    public void CalculateBuildFailureRate_PartialSuccessCoundsAsFailure()
+    public void CalculateBuildFailureRate_PartialSuccessCountsAsFailure()
     {
         // Arrange
         var runs = new List<PipelineRunDto>
