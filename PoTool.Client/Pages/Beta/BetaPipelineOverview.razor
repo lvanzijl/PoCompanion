@@ -1,13 +1,17 @@
 @page "/beta/pipelines"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Services
+@using PoTool.Client.Pages.Beta.Components
 @using System.Web
 @inject IProfileService ProfileService
 @inject PipelineService PipelineService
+@inject ProductService ProductService
+@inject TeamService TeamService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
-<PageTitle>Pipeline Overview - Beta - PO Companion</PageTitle>
+<PageTitle>Pipeline Insights - Beta - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @* Workspace Header *@
@@ -16,35 +20,22 @@
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
-                    <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Secondary" Size="Size.Large" />
+                    <MudIcon Icon="@Icons.Material.Filled.Insights" Color="Color.Info" Size="Size.Large" />
                     <MudText Typo="Typo.h4">
-                        Pipeline Overview
+                        Pipeline Insights
                     </MudText>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.VisibilityOff">Read-only</MudChip>
                 </MudStack>
                 
                 @* Breadcrumb *@
                 <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
             </MudStack>
             
-            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                @if (_insightOnly)
-                {
-                    <MudChip T="string" 
-                             Icon="@Icons.Material.Filled.Insights" 
-                             Size="Size.Small"
-                             Color="Color.Info">
-                        Insight Only
-                    </MudChip>
-                }
-                
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           StartIcon="@Icons.Material.Filled.Home"
-                           OnClick="NavigateToBetaHome">
-                    Beta Home
-                </MudButton>
-            </MudStack>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       StartIcon="@Icons.Material.Filled.Home"
+                       OnClick="NavigateToBetaHome">
+                Beta Home
+            </MudButton>
         </MudStack>
     </MudPaper>
 
@@ -54,103 +45,145 @@
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
-        <MudAlert Severity="Severity.Error" Class="mb-4">
+        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
             @_errorMessage
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadPipelineDataAsync" Class="ml-2">
+                Retry
+            </MudButton>
         </MudAlert>
     }
     else
     {
-        @* Read-Only Notice *@
-        <MudAlert Severity="Severity.Warning" Class="mb-4">
-            <MudText Typo="Typo.body2">
-                <strong>Read-only view.</strong> Pipelines are insight-only in the Beta navigation. 
-                For full pipeline management, use the <MudLink Href="/pipeline-insights">Pipeline Insights dashboard</MudLink>.
-            </MudText>
-        </MudAlert>
-
-        @* Pipeline Insights Section *@
+        @* Team & Product Selectors *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudText Typo="Typo.h5">
-                        <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" />
-                        Pipeline Insights
-                    </MudText>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Default">@_pipelines.Count items</MudChip>
-                </MudStack>
-                <MudButton Variant="Variant.Text" 
-                           Color="Color.Primary" 
-                           EndIcon="@Icons.Material.Filled.OpenInNew" 
-                           Href="/pipeline-insights">
-                    Full Dashboard
-                </MudButton>
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.h6">
+                    <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
+                    Filters
+                </MudText>
+                
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="int?"
+                                   Value="_selectedTeamId"
+                                   Label="Team"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   ValueChanged="OnTeamChanged">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
+                            @foreach (var team in _teams)
+                            {
+                                <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="int?"
+                                   Value="_selectedProductId"
+                                   Label="Product"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   ValueChanged="OnProductChanged">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
+                            @foreach (var product in _products)
+                            {
+                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
             </MudStack>
-            
-            @if (_pipelines.Count == 0)
-            {
-                <MudAlert Severity="Severity.Info">
-                    No pipeline metrics found.
-                </MudAlert>
-            }
-            else
-            {
-                @* Pipeline Data Table *@
-                <MudTable Items="@_pipelines" Hover="true" Striped="true" Dense="true">
-                    <HeaderContent>
-                        <MudTh>Pipeline</MudTh>
-                        <MudTh>Last Run</MudTh>
-                        <MudTh>Status</MudTh>
-                        <MudTh>Duration</MudTh>
-                        <MudTh>Success Rate</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="Pipeline">@context.Name</MudTd>
-                        <MudTd DataLabel="Last Run">@(context.LastRun?.ToString("MMM dd, HH:mm") ?? "N/A")</MudTd>
-                        <MudTd DataLabel="Status">
-                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
-                        </MudTd>
-                        <MudTd DataLabel="Duration">@context.Duration</MudTd>
-                        <MudTd DataLabel="Success Rate">
-                            <MudProgressLinear Color="@GetSuccessRateColor(context.SuccessRate)" Value="@context.SuccessRate" Class="my-1" />
-                            <MudText Typo="Typo.caption">@context.SuccessRate%</MudText>
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
-            }
         </MudPaper>
 
-        @* Navigation Options *@
-        <MudPaper Elevation="2" Class="pa-4">
-            <MudText Typo="Typo.h6" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
-                Navigation
-            </MudText>
-            
-            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Info" 
-                           StartIcon="@Icons.Material.Filled.Timeline"
-                           OnClick="NavigateToTrends">
-                    Trends (Past)
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Success" 
-                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
-                           OnClick="NavigateToHealth">
-                    Health (Now)
-                </MudButton>
-            </MudStack>
-        </MudPaper>
+        @* Metrics Grid *@
+        <MudGrid Spacing="3">
+            @* Build Success Rate *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="Build Success Rate"
+                           Result="_buildSuccessRate"
+                           ValueFormat="MetricValueFormat.Percentage"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+
+            @* Build Failure Rate *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="Build Failure Rate"
+                           Result="_buildFailureRate"
+                           ValueFormat="MetricValueFormat.Percentage"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+
+            @* Mean Time To Repair (MTTR) *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="Mean Time To Repair (MTTR)"
+                           Result="_mttr"
+                           ValueFormat="MetricValueFormat.Hours"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+
+            @* Pipeline Duration *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="Pipeline Duration"
+                           Result="_pipelineDuration"
+                           ValueFormat="MetricValueFormat.Hours"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+
+            @* Time to First Failure Detection *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="Time to First Failure Detection"
+                           Result="_timeToFirstFailure"
+                           ValueFormat="MetricValueFormat.Hours"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+
+            @* Flakiness Rate *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="Flakiness Rate"
+                           Result="_flakinessRate"
+                           ValueFormat="MetricValueFormat.Percentage"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+        </MudGrid>
+
+        @if (_pipelineRuns.Count == 0 && !_metricsLoading)
+        {
+            <MudPaper Elevation="2" Class="pa-6 mt-4">
+                <MudAlert Severity="Severity.Info">
+                    No pipeline data found for the selected team/product and time range.
+                </MudAlert>
+            </MudPaper>
+        }
     }
 </MudContainer>
 
 @code {
     private bool _isLoading = true;
+    private bool _metricsLoading = false;
     private int? _profileId;
-    private bool _insightOnly;
     private string? _errorMessage;
     private List<BreadcrumbItem> _breadcrumbs = new();
-    private List<PipelineItem> _pipelines = new();
+    
+    // Selectors
+    private int? _selectedTeamId;
+    private int? _selectedProductId;
+    private List<TeamDto> _teams = new();
+    private List<ProductDto> _products = new();
+    
+    // Pipeline Data
+    private List<PipelineRunDto> _pipelineRuns = new();
+    
+    // Calculated Metrics
+    private MetricResult? _buildSuccessRate;
+    private MetricResult? _buildFailureRate;
+    private MetricResult? _mttr;
+    private MetricResult? _pipelineDuration;
+    private MetricResult? _timeToFirstFailure;
+    private MetricResult? _flakinessRate;
+    
+    // Calculator
+    private readonly PipelineInsightsCalculator _calculator = new();
     
     protected override async Task OnInitializedAsync()
     {
@@ -166,14 +199,22 @@
             _profileId = activeProfile.Id;
             ProfileService.SetCachedActiveProfileId(_profileId);
             
+            // Load teams and products
+            _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
+            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            
+            // Parse URL parameters
             ParseQueryParameters();
-            await LoadPipelinesAsync();
+            
+            // Load pipeline data and calculate metrics
+            await LoadPipelineDataAsync();
+            
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
         {
             _errorMessage = ex.Message;
-            Snackbar.Add($"Error loading pipelines: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error loading pipeline insights: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -186,43 +227,208 @@
         var uri = new Uri(NavigationManager.Uri);
         var queryParams = HttpUtility.ParseQueryString(uri.Query);
         
-        var insightOnly = queryParams["insightOnly"];
-        if (!string.IsNullOrEmpty(insightOnly))
+        // Parse teamId
+        var teamIdStr = queryParams["teamId"];
+        if (!string.IsNullOrEmpty(teamIdStr) && int.TryParse(teamIdStr, out var teamId))
         {
-            _insightOnly = bool.TryParse(insightOnly, out var result) && result;
+            _selectedTeamId = teamId;
+        }
+        
+        // Parse productId
+        var productIdStr = queryParams["productId"];
+        if (!string.IsNullOrEmpty(productIdStr) && int.TryParse(productIdStr, out var productId))
+        {
+            _selectedProductId = productId;
         }
     }
     
-    private async Task LoadPipelinesAsync()
+    private async Task LoadPipelineDataAsync()
     {
+        _metricsLoading = true;
+        _errorMessage = null;
+        StateHasChanged();
+        
         try
         {
-            // Load pipeline metrics which includes success rates
-            var metrics = await PipelineService.GetMetricsAsync();
+            // Determine product IDs to filter by
+            List<int>? productIds = null;
             
-            _pipelines = metrics.Select(m => new PipelineItem
+            if (_selectedProductId.HasValue)
             {
-                Name = m.PipelineName ?? "(Unknown)",
-                LastRun = null, // Last run time not available in metrics
-                Status = DeterminePipelineStatus(m.TotalRuns, m.SuccessfulRuns, m.FailedRuns),
-                Duration = "-", // Duration not available in metrics
-                SuccessRate = m.TotalRuns > 0 ? (int)((double)m.SuccessfulRuns / m.TotalRuns * 100) : 0
-            }).ToList();
+                productIds = new List<int> { _selectedProductId.Value };
+            }
+            else if (_selectedTeamId.HasValue)
+            {
+                // Filter products by team
+                var teamProducts = _products.Where(p => 
+                {
+                    // Note: Team-to-Product relationship would need to be checked
+                    // For now, we'll load all products if a team is selected
+                    // This should be enhanced with proper team-product filtering
+                    return true;
+                }).Select(p => p.Id).ToList();
+                
+                if (teamProducts.Any())
+                {
+                    productIds = teamProducts;
+                }
+            }
+            
+            // Build product IDs string
+            var productIdsStr = productIds != null ? string.Join(",", productIds) : null;
+            
+            // Load pipeline runs (will be empty until API client is regenerated)
+            // For now, we'll use metrics to simulate the data
+            _pipelineRuns = (await PipelineService.GetRunsForProductsAsync(productIdsStr)).ToList();
+            
+            // If we don't have runs yet (API not ready), use metrics as fallback
+            if (_pipelineRuns.Count == 0)
+            {
+                var metrics = (await PipelineService.GetMetricsAsync(productIdsStr)).ToList();
+                
+                // Calculate metrics from aggregated data
+                CalculateMetricsFromAggregates(metrics);
+            }
+            else
+            {
+                // Calculate metrics from individual runs
+                CalculateMetrics();
+            }
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to load pipelines: {ex.Message}";
-            _pipelines = new List<PipelineItem>();
+            _errorMessage = $"Failed to load pipeline data: {ex.Message}";
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+        finally
+        {
+            _metricsLoading = false;
+            StateHasChanged();
         }
     }
     
-    private static string DeterminePipelineStatus(int totalRuns, int successfulRuns, int failedRuns)
+    private void CalculateMetrics()
     {
-        if (totalRuns == 0) return "No runs";
-        if (successfulRuns == totalRuns) return "Succeeded";
-        if (failedRuns > 0) return "Has failures";
-        // Some runs were neither successful nor failed (e.g., cancelled, in progress)
-        return "Mixed";
+        _buildSuccessRate = _calculator.CalculateBuildSuccessRate(_pipelineRuns);
+        _buildFailureRate = _calculator.CalculateBuildFailureRate(_pipelineRuns);
+        _mttr = _calculator.CalculateMTTR(_pipelineRuns);
+        _pipelineDuration = _calculator.CalculatePipelineDuration(_pipelineRuns);
+        _timeToFirstFailure = _calculator.CalculateTimeToFirstFailureDetection(_pipelineRuns);
+        _flakinessRate = _calculator.CalculateFlakinessRate(_pipelineRuns);
+    }
+    
+    private void CalculateMetricsFromAggregates(List<PipelineMetricsDto> metrics)
+    {
+        // Calculate success and failure rates from aggregated metrics
+        var totalRuns = metrics.Sum(m => m.TotalRuns);
+        var totalSuccessful = metrics.Sum(m => m.SuccessfulRuns);
+        var totalFailed = metrics.Sum(m => m.FailedRuns + m.PartiallySucceededRuns);
+        
+        if (totalRuns > 0)
+        {
+            var successRate = (double)totalSuccessful / totalRuns * 100;
+            _buildSuccessRate = new MetricResult(successRate, null, totalRuns, null);
+            
+            var failureRate = (double)totalFailed / totalRuns * 100;
+            _buildFailureRate = new MetricResult(failureRate, null, totalRuns, null);
+        }
+        else
+        {
+            _buildSuccessRate = new MetricResult(null, null, 0, null);
+            _buildFailureRate = new MetricResult(null, null, 0, null);
+        }
+        
+        // Calculate duration from average durations
+        var durationsInHours = metrics
+            .Where(m => m.AverageDuration.HasValue)
+            .Select(m => m.AverageDuration!.Value.TotalHours)
+            .OrderBy(x => x)
+            .ToList();
+        
+        if (durationsInHours.Count > 0)
+        {
+            var medianDuration = CalculateMedian(durationsInHours);
+            var p75Duration = CalculatePercentile(durationsInHours, 75);
+            _pipelineDuration = new MetricResult(medianDuration, p75Duration, durationsInHours.Count, null);
+        }
+        else
+        {
+            _pipelineDuration = new MetricResult(null, null, 0, null);
+        }
+        
+        // MTTR, time to first failure, and flakiness require individual run data
+        // These will be null until we have access to detailed runs
+        _mttr = new MetricResult(null, null, 0, null);
+        _timeToFirstFailure = new MetricResult(null, null, 0, null);
+        _flakinessRate = new MetricResult(null, null, 0, null);
+    }
+    
+    private double? CalculateMedian(List<double> sortedValues)
+    {
+        if (sortedValues.Count == 0)
+            return null;
+
+        int mid = sortedValues.Count / 2;
+        if (sortedValues.Count % 2 == 0)
+        {
+            return (sortedValues[mid - 1] + sortedValues[mid]) / 2.0;
+        }
+        return sortedValues[mid];
+    }
+    
+    private double? CalculatePercentile(List<double> sortedValues, int percentile)
+    {
+        if (sortedValues.Count == 0)
+            return null;
+
+        double rank = (percentile / 100.0) * (sortedValues.Count - 1);
+        int lowerIndex = (int)Math.Floor(rank);
+        int upperIndex = (int)Math.Ceiling(rank);
+
+        if (lowerIndex == upperIndex)
+        {
+            return sortedValues[lowerIndex];
+        }
+
+        double lowerValue = sortedValues[lowerIndex];
+        double upperValue = sortedValues[upperIndex];
+        double fraction = rank - lowerIndex;
+
+        return lowerValue + (upperValue - lowerValue) * fraction;
+    }
+    
+    private async Task OnTeamChanged(int? teamId)
+    {
+        _selectedTeamId = teamId;
+        UpdateUrlParameters();
+        await LoadPipelineDataAsync();
+    }
+    
+    private async Task OnProductChanged(int? productId)
+    {
+        _selectedProductId = productId;
+        UpdateUrlParameters();
+        await LoadPipelineDataAsync();
+    }
+    
+    private void UpdateUrlParameters()
+    {
+        var queryParams = new List<string>();
+        
+        if (_selectedTeamId.HasValue)
+        {
+            queryParams.Add($"teamId={_selectedTeamId.Value}");
+        }
+        
+        if (_selectedProductId.HasValue)
+        {
+            queryParams.Add($"productId={_selectedProductId.Value}");
+        }
+        
+        var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
+        var newUrl = $"{WorkspaceRoutes.BetaPipelineOverview}{queryString}";
+        
+        NavigationManager.NavigateTo(newUrl, forceLoad: false);
     }
     
     private void UpdateBreadcrumbs()
@@ -231,54 +437,12 @@
         {
             new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
             new("Trends (Past)", WorkspaceRoutes.BetaTrendsWorkspace, icon: Icons.Material.Filled.Timeline),
-            new("Pipeline Overview", null, disabled: true, icon: Icons.Material.Filled.AccountTree)
-        };
-    }
-    
-    private Color GetStatusColor(string status)
-    {
-        return status switch
-        {
-            "Succeeded" => Color.Success,
-            "Failed" or "Has failures" => Color.Error,
-            "Running" => Color.Info,
-            "Canceled" or "Mixed" => Color.Warning,
-            "No runs" => Color.Default,
-            _ => Color.Default
-        };
-    }
-    
-    private Color GetSuccessRateColor(int rate)
-    {
-        return rate switch
-        {
-            >= 90 => Color.Success,
-            >= 70 => Color.Warning,
-            _ => Color.Error
+            new("Pipeline Insights", null, disabled: true, icon: Icons.Material.Filled.Insights)
         };
     }
     
     private void NavigateToBetaHome()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
-    }
-    
-    private void NavigateToTrends()
-    {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaTrendsWorkspace);
-    }
-    
-    private void NavigateToHealth()
-    {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHealthWorkspace);
-    }
-    
-    private class PipelineItem
-    {
-        public string Name { get; set; } = string.Empty;
-        public DateTime? LastRun { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public string Duration { get; set; } = string.Empty;
-        public int SuccessRate { get; set; }
     }
 }

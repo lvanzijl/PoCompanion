@@ -96,6 +96,37 @@ public class PipelinesController : ControllerBase
     }
 
     /// <summary>
+    /// Gets all pipeline runs for specified products (last 6 months, main branch).
+    /// </summary>
+    [HttpGet("runs")]
+    public async Task<ActionResult<IEnumerable<PipelineRunDto>>> GetRunsForProducts(
+        [FromQuery] string? productIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Parse productIds string to list
+            List<int>? productIdsList = null;
+            if (!string.IsNullOrWhiteSpace(productIds))
+            {
+                productIdsList = productIds
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(id => int.TryParse(id.Trim(), out var parsedId) ? parsedId : 0)
+                    .Where(id => id > 0)
+                    .ToList();
+            }
+
+            var runs = await _mediator.Send(new GetPipelineRunsForProductsQuery(productIdsList), cancellationToken);
+            return Ok(runs);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving pipeline runs for products");
+            return StatusCode(500, "Error retrieving pipeline runs");
+        }
+    }
+
+    /// <summary>
     /// Gets all pipeline definitions.
     /// </summary>
     [HttpGet("definitions")]
