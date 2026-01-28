@@ -16,6 +16,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
 {
     private readonly IWorkItemRepository _repository;
     private readonly IProductRepository _productRepository;
+    private readonly ISprintRepository _sprintRepository;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly IMediator _mediator;
     private readonly ILogger<GetSprintMetricsQueryHandler> _logger;
@@ -23,12 +24,14 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
     public GetSprintMetricsQueryHandler(
         IWorkItemRepository repository,
         IProductRepository productRepository,
+        ISprintRepository sprintRepository,
         IWorkItemStateClassificationService stateClassificationService,
         IMediator mediator,
         ILogger<GetSprintMetricsQueryHandler> logger)
     {
         _repository = repository;
         _productRepository = productRepository;
+        _sprintRepository = sprintRepository;
         _stateClassificationService = stateClassificationService;
         _mediator = mediator;
         _logger = logger;
@@ -112,11 +115,38 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         var separators = new[] { '\\', '/' };
         var sprintName = query.IterationPath.Split(separators, StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? query.IterationPath;
 
+        // Try to find sprint dates from SprintRepository
+        DateTimeOffset? startDate = null;
+        DateTimeOffset? endDate = null;
+        
+        try
+        {
+            var allSprints = await _sprintRepository.GetAllSprintsAsync(cancellationToken);
+            var matchingSprint = allSprints.FirstOrDefault(s => 
+                s.Path.Equals(query.IterationPath, StringComparison.OrdinalIgnoreCase));
+            
+            if (matchingSprint != null)
+            {
+                startDate = matchingSprint.StartUtc;
+                endDate = matchingSprint.EndUtc;
+                _logger.LogDebug("Found sprint dates for {IterationPath}: Start={Start}, End={End}", 
+                    query.IterationPath, startDate, endDate);
+            }
+            else
+            {
+                _logger.LogDebug("No sprint data found for iteration path: {IterationPath}", query.IterationPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve sprint dates for {IterationPath}", query.IterationPath);
+        }
+
         var metrics = new SprintMetricsDto(
             IterationPath: query.IterationPath,
             SprintName: sprintName,
-            StartDate: null, // Could be extracted from TFS iteration data if available
-            EndDate: null,   // Could be extracted from TFS iteration data if available
+            StartDate: startDate,
+            EndDate: endDate,
             CompletedStoryPoints: completedStoryPoints,
             PlannedStoryPoints: plannedStoryPoints,
             CompletedWorkItemCount: completedItems.Count,

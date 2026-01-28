@@ -8,6 +8,12 @@ namespace PoTool.Core.Contracts;
 public interface ISprintRepository
 {
     /// <summary>
+    /// Gets all sprints across all teams, ordered by start date (nulls last).
+    /// Used for iteration path matching when team context is not available.
+    /// </summary>
+    Task<IEnumerable<SprintDto>> GetAllSprintsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets all sprints for a specific team, ordered by start date (nulls last).
     /// </summary>
     Task<IEnumerable<SprintDto>> GetSprintsForTeamAsync(int teamId, CancellationToken cancellationToken = default);

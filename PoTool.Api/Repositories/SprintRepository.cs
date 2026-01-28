@@ -19,6 +19,17 @@ public class SprintRepository : ISprintRepository
     }
 
     /// <inheritdoc />
+    public async Task<IEnumerable<SprintDto>> GetAllSprintsAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _context.Sprints
+            .OrderBy(s => s.StartUtc.HasValue ? s.StartUtc : DateTimeOffset.MaxValue)
+            .ThenBy(s => s.Name)
+            .ToListAsync(cancellationToken);
+
+        return entities.Select(MapToDto);
+    }
+
+    /// <inheritdoc />
     public async Task<IEnumerable<SprintDto>> GetSprintsForTeamAsync(int teamId, CancellationToken cancellationToken = default)
     {
         var entities = await _context.Sprints

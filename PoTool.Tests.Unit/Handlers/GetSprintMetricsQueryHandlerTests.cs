@@ -19,6 +19,7 @@ public class GetSprintMetricsQueryHandlerTests
 {
     private Mock<IWorkItemRepository> _mockRepository = null!;
     private Mock<IProductRepository> _mockProductRepository = null!;
+    private Mock<ISprintRepository> _mockSprintRepository = null!;
     private Mock<IWorkItemStateClassificationService> _mockStateService = null!;
     private Mock<IMediator> _mockMediator = null!;
     private Mock<ILogger<GetSprintMetricsQueryHandler>> _mockLogger = null!;
@@ -29,6 +30,7 @@ public class GetSprintMetricsQueryHandlerTests
     {
         _mockRepository = new Mock<IWorkItemRepository>();
         _mockProductRepository = new Mock<IProductRepository>();
+        _mockSprintRepository = new Mock<ISprintRepository>();
         _mockStateService = new Mock<IWorkItemStateClassificationService>();
         _mockMediator = new Mock<IMediator>();
         _mockLogger = new Mock<ILogger<GetSprintMetricsQueryHandler>>();
@@ -46,10 +48,13 @@ public class GetSprintMetricsQueryHandlerTests
             .ReturnsAsync(new List<ProductDto>());
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto>());
+        _mockSprintRepository.Setup(r => r.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SprintDto>());
         
         _handler = new GetSprintMetricsQueryHandler(
             _mockRepository.Object, 
             _mockProductRepository.Object,
+            _mockSprintRepository.Object,
             _mockStateService.Object, 
             _mockMediator.Object,
             _mockLogger.Object);
