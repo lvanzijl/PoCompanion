@@ -380,12 +380,12 @@
     
     private void NavigateToWorkItemExplorer(string validationType)
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}{BuildContextQuery($"validationType={validationType}")}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.WorkItems}{BuildContextQuery($"validationType={validationType}")}");
     }
     
     private void NavigateToBacklogDepthExceeded()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}{BuildContextQuery("backlogDepthExceeded=true")}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.WorkItems}{BuildContextQuery("backlogDepthExceeded=true")}");
     }
     
     private void NavigateToBugOverview()

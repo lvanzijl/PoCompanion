@@ -64,11 +64,6 @@ public static class WorkspaceRoutes
     public const string BetaPlanningWorkspace = "/beta/planning";
 
     /// <summary>
-    /// Beta Work Item Explorer route.
-    /// </summary>
-    public const string BetaWorkItemExplorer = "/beta/work-items";
-
-    /// <summary>
     /// Beta Bug Overview route.
     /// </summary>
     public const string BetaBugOverview = "/beta/bugs";
@@ -99,6 +94,11 @@ public static class WorkspaceRoutes
     public const string BetaDependencyOverview = "/beta/dependencies";
 
     #endregion
+
+    /// <summary>
+    /// Work Item Explorer route.
+    /// </summary>
+    public const string WorkItems = "/workitems";
 
     /// <summary>
     /// Gets the target workspace route for a given intent.

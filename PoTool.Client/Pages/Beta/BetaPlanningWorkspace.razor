@@ -447,12 +447,12 @@
         // Navigate to work item explorer with epic as root (per deep link contract)
         if (epicId.HasValue)
         {
-            NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}{BuildContextQuery($"rootWorkItemId={epicId}")}");
+            NavigationManager.NavigateTo($"{WorkspaceRoutes.WorkItems}{BuildContextQuery($"rootWorkItemId={epicId}")}");
         }
         else
         {
             // Navigate to explorer without filter (all items)
-            NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaWorkItemExplorer}{BuildContextQuery()}");
+            NavigationManager.NavigateTo($"{WorkspaceRoutes.WorkItems}{BuildContextQuery()}");
         }
     }
     

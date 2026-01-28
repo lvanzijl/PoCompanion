@@ -85,6 +85,46 @@
 </div>
 
 @code {
+    // Beta navigation parameters (query string)
+    /// <summary>
+    /// Validation type filter for Beta navigation deep links.
+    /// Supported values: "missing-effort", "missing-description", "invalid-state", "missing-tags"
+    /// </summary>
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "validationType")]
+    public string? ValidationType { get; set; }
+    
+    /// <summary>
+    /// When true, filters to work items that exceed the backlog depth threshold (>3 levels deep).
+    /// Used by Beta Health workspace to identify overly nested backlogs.
+    /// </summary>
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "backlogDepthExceeded")]
+    public bool BacklogDepthExceeded { get; set; }
+    
+    /// <summary>
+    /// When set, filters to show only descendants (and the root itself) of the specified work item ID.
+    /// Used by Beta Planning workspace for epic-centric navigation.
+    /// </summary>
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "rootWorkItemId")]
+    public int? RootWorkItemId { get; set; }
+    
+    /// <summary>
+    /// When true, loads all products instead of just profile-scoped products.
+    /// Used by Beta task-driven entry points to provide full organizational visibility.
+    /// </summary>
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "allProducts")]
+    public bool AllProducts { get; set; }
+    
+    /// <summary>
+    /// When true, indicates all teams scope for Beta navigation.
+    /// Note: Currently for display/context purposes only; team-based filtering not yet implemented.
+    /// </summary>
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "allTeams")]
+    public bool AllTeams { get; set; }
 
     private List<WorkItemDto> _workItems = new();
     private List<WorkItemWithValidationDto> _workItemsWithValidation = new();
@@ -215,8 +255,10 @@
         _isLoading = true;
         try
         {
-            // Get products for the active profile
-            var profileProducts = await GetProfileProductsAsync();
+            // Get products for the active profile (or all products if AllProducts is true)
+            var profileProducts = AllProducts ? 
+                (await ProductService.GetAllProductsAsync()).ToList() : 
+                await GetProfileProductsAsync();
 
             // Extract product IDs to pass to the backend for efficient filtering
             var productIds = profileProducts.Select(p => p.Id).ToArray();
@@ -226,6 +268,25 @@
             // Backend will only load hierarchies for the specified products
             var allWorkItems = (await WorkItemService.GetAllWithValidationAsync(productIds)).ToList();
             Console.WriteLine($"[WorkItemExplorer] Loaded {allWorkItems.Count} total work items from product hierarchies");
+
+            // Apply Beta filters if provided
+            if (RootWorkItemId.HasValue)
+            {
+                allWorkItems = FilterByRootWorkItem(allWorkItems).ToList();
+                Console.WriteLine($"[WorkItemExplorer] After root work item filter: {allWorkItems.Count} items");
+            }
+            
+            if (!string.IsNullOrEmpty(ValidationType))
+            {
+                allWorkItems = FilterByValidationType(allWorkItems).ToList();
+                Console.WriteLine($"[WorkItemExplorer] After validation type filter: {allWorkItems.Count} items");
+            }
+            
+            if (BacklogDepthExceeded)
+            {
+                allWorkItems = FilterByBacklogDepthExceeded(allWorkItems).ToList();
+                Console.WriteLine($"[WorkItemExplorer] After backlog depth filter: {allWorkItems.Count} items");
+            }
 
             // All work items are already scoped by products, no goal filtering needed
             _workItemsWithValidation = allWorkItems;
@@ -561,5 +622,160 @@
         {
             AddNodeToMap(child, map);
         }
+    }
+    
+    // Beta filter methods
+    
+    /// <summary>
+    /// Filters work items by validation type using string matching on validation issue messages and rule IDs.
+    /// Note: This matches the Beta explorer's original logic. While fragile (depends on message text),
+    /// it's kept for backward compatibility with existing validation rules.
+    /// </summary>
+    private IEnumerable<WorkItemWithValidationDto> FilterByValidationType(IEnumerable<WorkItemWithValidationDto> workItems)
+    {
+        return workItems.Where(wi =>
+        {
+            if (wi.ValidationIssues == null || wi.ValidationIssues.Count == 0)
+                return false;
+                
+            return wi.ValidationIssues.Any(issue =>
+            {
+                var message = issue.Message?.ToLowerInvariant() ?? "";
+                var ruleId = issue.RuleId?.ToLowerInvariant() ?? "";
+                
+                return ValidationType switch
+                {
+                    "missing-effort" => message.Contains("effort") || ruleId.Contains("effort"),
+                    "missing-description" => message.Contains("description") || ruleId.Contains("description"),
+                    "invalid-state" => message.Contains("state") || ruleId.Contains("state"),
+                    "missing-tags" => message.Contains("tag") || ruleId.Contains("tag"),
+                    _ => false
+                };
+            });
+        });
+    }
+    
+    private IEnumerable<WorkItemWithValidationDto> FilterByRootWorkItem(IEnumerable<WorkItemWithValidationDto> workItems)
+    {
+        // Build a set of all descendants of the root work item (including the root itself)
+        var allWorkItemsList = workItems.ToList();
+        var descendants = new HashSet<int>();
+        var toProcess = new Queue<int>();
+        
+        if (RootWorkItemId.HasValue)
+        {
+            // Check if root work item exists in the dataset
+            var rootExists = allWorkItemsList.Any(wi => wi.TfsId == RootWorkItemId.Value);
+            if (!rootExists)
+            {
+                // Root work item not found - return empty result
+                return Enumerable.Empty<WorkItemWithValidationDto>();
+            }
+            
+            // Include the root item and all its descendants
+            descendants.Add(RootWorkItemId.Value);
+            toProcess.Enqueue(RootWorkItemId.Value);
+            
+            while (toProcess.Count > 0)
+            {
+                var parentId = toProcess.Dequeue();
+                var children = allWorkItemsList.Where(wi => wi.ParentTfsId == parentId);
+                foreach (var child in children)
+                {
+                    if (descendants.Add(child.TfsId))
+                    {
+                        toProcess.Enqueue(child.TfsId);
+                    }
+                }
+            }
+        }
+        
+        return allWorkItemsList.Where(wi => descendants.Contains(wi.TfsId));
+    }
+    
+    private IEnumerable<WorkItemWithValidationDto> FilterByBacklogDepthExceeded(List<WorkItemWithValidationDto> workItems)
+    {
+        const int depthThreshold = 3; // Maximum acceptable depth (0=root, 1=child, 2=grandchild, 3=great-grandchild)
+        
+        var depthMap = CalculateDepthMap(workItems);
+        
+        return workItems.Where(wi => 
+            depthMap.TryGetValue(wi.TfsId, out var depth) && depth > depthThreshold);
+    }
+    
+    private Dictionary<int, int> CalculateDepthMap(List<WorkItemWithValidationDto> workItems)
+    {
+        var depthMap = new Dictionary<int, int>();
+        var workItemIds = new HashSet<int>(workItems.Select(wi => wi.TfsId));
+        
+        foreach (var wi in workItems)
+        {
+            if (depthMap.ContainsKey(wi.TfsId))
+                continue;
+                
+            var depth = CalculateItemDepth(wi, workItems, workItemIds, depthMap);
+            depthMap[wi.TfsId] = depth;
+        }
+        
+        return depthMap;
+    }
+    
+    private int CalculateItemDepth(WorkItemWithValidationDto item, List<WorkItemWithValidationDto> allItems, 
+        HashSet<int> itemIds, Dictionary<int, int> depthMap)
+    {
+        // Base case: no parent or parent not in our dataset = root (depth 0)
+        if (!item.ParentTfsId.HasValue || !itemIds.Contains(item.ParentTfsId.Value))
+        {
+            return 0;
+        }
+        
+        // Check cache
+        if (depthMap.TryGetValue(item.TfsId, out var cachedDepth))
+        {
+            return cachedDepth;
+        }
+        
+        // Detect cycles by tracking visited items in this path
+        var visited = new HashSet<int> { item.TfsId };
+        var current = item;
+        var depth = 0;
+        const int maxDepth = 100; // Safety limit to prevent infinite loops
+        
+        while (current.ParentTfsId.HasValue && itemIds.Contains(current.ParentTfsId.Value) && depth < maxDepth)
+        {
+            var parentId = current.ParentTfsId.Value;
+            
+            // Cycle detection: if we've seen this parent in our path, we have a cycle
+            if (visited.Contains(parentId))
+            {
+                Console.WriteLine($"[WorkItemExplorer] Cycle detected in work item hierarchy at item {item.TfsId}");
+                return 0; // Treat cyclic items as roots
+            }
+            
+            // Check if parent depth is already cached
+            if (depthMap.TryGetValue(parentId, out var parentDepth))
+            {
+                return parentDepth + depth + 1;
+            }
+            
+            // Find parent and continue
+            var parent = allItems.FirstOrDefault(wi => wi.TfsId == parentId);
+            if (parent == null)
+            {
+                return depth;
+            }
+            
+            visited.Add(parentId);
+            current = parent;
+            depth++;
+            
+            // Base case: parent has no parent
+            if (!current.ParentTfsId.HasValue || !itemIds.Contains(current.ParentTfsId.Value))
+            {
+                return depth;
+            }
+        }
+        
+        return depth;
     }
 }
