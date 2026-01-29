@@ -92,13 +92,14 @@
             
             // Subscribe to navigation changes to refresh profile selector when needed
             NavigationManager.LocationChanged += OnLocationChanged;
-        }
-        
-        // Perform startup routing on first render (only for root path)
-        if (firstRender && !_hasCheckedStartupRouting)
-        {
-            _hasCheckedStartupRouting = true;
-            await PerformStartupRoutingAsync();
+            
+            // Only perform startup routing after onboarding check is complete
+            // This ensures we don't redirect to /tfsconfig when onboarding hasn't been done yet
+            if (!_hasCheckedStartupRouting)
+            {
+                _hasCheckedStartupRouting = true;
+                await PerformStartupRoutingAsync();
+            }
         }
     }
     

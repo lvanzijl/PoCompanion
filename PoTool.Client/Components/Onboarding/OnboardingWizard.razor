@@ -512,16 +512,30 @@
         return false;
     }
 
-    private void OnUrlChanged(string value)
+    private async Task OnUrlChanged(string value)
     {
         _url = value;
         WizardState.MarkTfsUnverified();
+        
+        // Trigger form validation to update button state while typing
+        if (_configForm != null)
+        {
+            await _configForm.Validate();
+        }
+        StateHasChanged();
     }
 
-    private void OnProjectChanged(string value)
+    private async Task OnProjectChanged(string value)
     {
         _project = value;
         WizardState.MarkTfsUnverified();
+        
+        // Trigger form validation to update button state while typing
+        if (_configForm != null)
+        {
+            await _configForm.Validate();
+        }
+        StateHasChanged();
     }
 
     private async Task Next()
@@ -575,7 +589,7 @@
             var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
             response.EnsureSuccessStatusCode();
 
-            var stream = await response.Content.ReadAsStreamAsync();
+            var stream = await response.Content.ReadAsStreamAsync(CancellationToken.None);
             using var reader = new StreamReader(stream);
 
             while (!reader.EndOfStream)
