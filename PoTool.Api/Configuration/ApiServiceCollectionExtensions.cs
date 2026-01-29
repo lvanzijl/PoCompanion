@@ -144,6 +144,9 @@ public static class ApiServiceCollectionExtensions
 
         // Register SignalR broadcaster for sync progress
         services.AddSingleton<ISyncProgressBroadcaster, SyncProgressBroadcaster>();
+        
+        // Register SignalR broadcaster for TFS config progress
+        services.AddSingleton<ITfsConfigProgressBroadcaster, TfsConfigProgressBroadcaster>();
 
         // Register Data Source Mode Provider (for switching between Live and Cache)
         services.AddScoped<IDataSourceModeProvider, DataSourceModeProvider>();

@@ -2,8 +2,11 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
+@using PoTool.Shared.Contracts
 @using PoTool.Shared.Settings
 @using System.Text.Json
+@using System.Text.Json.Serialization
+@using Microsoft.AspNetCore.SignalR.Client
 @inject IOnboardingService OnboardingService
 @inject IOnboardingWizardState WizardState
 @inject NavigationManager NavigationManager
@@ -15,6 +18,7 @@
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 @inject HttpClient HttpClient
+@implements IAsyncDisposable
 
 @if (_isVisible)
 {
@@ -83,15 +87,15 @@
                                     @foreach (var update in _progressUpdates)
                                     {
                                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                            @if (update.State == "Running")
+                                            @if (update.State == ProgressState.Running)
                                             {
                                                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Info" />
                                             }
-                                            else if (update.State == "Succeeded")
+                                            else if (update.State == ProgressState.Succeeded)
                                             {
                                                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
                                             }
-                                            else if (update.State == "Failed")
+                                            else if (update.State == ProgressState.Failed)
                                             {
                                                 <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Small" />
                                             }
@@ -416,6 +420,9 @@
 
     private int _currentStep = 0;
     private bool _isVisible = true;
+    
+    // SignalR connection for TFS config progress
+    private HubConnection? _tfsConfigHub;
 
     // Configuration form fields
     private MudForm? _configForm;
@@ -424,7 +431,7 @@
     private string _url = string.Empty;
     private string _project = string.Empty;
     private ErrorResponse? _configErrorResponse;
-    private List<ProgressUpdate> _progressUpdates = new();
+    private List<TfsConfigProgressUpdate> _progressUpdates = new();
     private bool? _configCompleted;
 
     // Profile form fields
@@ -461,6 +468,55 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadExistingConfig();
+        await SetupSignalRAsync();
+    }
+
+    private async Task SetupSignalRAsync()
+    {
+        try
+        {
+            // Get the API base URL from the injected HttpClient
+            var baseUri = HttpClient.BaseAddress ?? new Uri(NavigationManager.BaseUri);
+            var hubUri = new Uri(baseUri, "/hubs/tfsconfig");
+            
+            _tfsConfigHub = new HubConnectionBuilder()
+                .WithUrl(hubUri.ToString())
+                .WithAutomaticReconnect()
+                .Build();
+            
+            // Handle progress updates from SignalR
+            _tfsConfigHub.On<TfsConfigProgressUpdate>("ConfigProgress", OnConfigProgress);
+            
+            await _tfsConfigHub.StartAsync();
+            
+            // Join the progress group to receive updates
+            await _tfsConfigHub.InvokeAsync("JoinConfigProgressGroup");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"SignalR setup failed: {ex.Message}");
+            // Fall back to HTTP polling - the existing code will still work
+        }
+    }
+    
+    private void OnConfigProgress(TfsConfigProgressUpdate update)
+    {
+        // Only process updates when we're actively saving
+        if (!_isSaving) return;
+        
+        // Avoid duplicates by checking if we already have this update
+        if (!_progressUpdates.Any(p => p.Phase == update.Phase && p.State == update.State))
+        {
+            _progressUpdates.Add(update);
+            
+            // Check if this is the final update
+            if (update.Phase == "Complete" || update.Phase == "Error")
+            {
+                _configCompleted = update.State == ProgressState.Succeeded;
+            }
+            
+            InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task LoadExistingConfig()
@@ -570,6 +626,7 @@
         _isSaving = true;
         _progressUpdates.Clear();
         _configCompleted = null;
+        StateHasChanged();
         
         try
         {
@@ -588,28 +645,37 @@
                 Content = JsonContent.Create(requestBody)
             };
 
+            // Send request - progress updates arrive via SignalR in real-time
             var response = await HttpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadAsStringAsync();
-            var lines = content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (var line in lines)
+            // If SignalR didn't provide updates (fallback), parse from HTTP response
+            if (!_progressUpdates.Any())
             {
-                var update = JsonSerializer.Deserialize<ProgressUpdate>(line, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                var content = await response.Content.ReadAsStringAsync();
+                var lines = content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+                
+                var jsonOptions = new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true,
+                    Converters = { new JsonStringEnumConverter() }
+                };
 
-                if (update != null)
+                foreach (var line in lines)
                 {
-                    _progressUpdates.Add(update);
-                    StateHasChanged();
+                    var update = JsonSerializer.Deserialize<TfsConfigProgressUpdate>(line, jsonOptions);
+                    if (update != null)
+                    {
+                        _progressUpdates.Add(update);
+                        StateHasChanged();
+                        await Task.Yield();
+                    }
                 }
             }
 
+            // Determine final result from the last update
             var lastUpdate = _progressUpdates.LastOrDefault();
-            _configCompleted = lastUpdate?.State == "Succeeded";
+            _configCompleted = lastUpdate?.State == ProgressState.Succeeded;
             
             if (_configCompleted == true)
             {
@@ -631,6 +697,7 @@
         finally
         {
             _isSaving = false;
+            StateHasChanged();
         }
     }
 
@@ -835,17 +902,27 @@
         await OnCompleted.InvokeAsync();
         MudDialog?.Close(DialogResult.Ok(true));
     }
+    
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_tfsConfigHub is not null)
+            {
+                if (_tfsConfigHub.State == HubConnectionState.Connected)
+                {
+                    await _tfsConfigHub.InvokeAsync("LeaveConfigProgressGroup");
+                }
+                await _tfsConfigHub.DisposeAsync();
+            }
+        }
+        catch
+        {
+            // Ignore disposal errors
+        }
+    }
 
     private record ConnectionTestResult(bool Success, string Message);
-    
-    private class ProgressUpdate
-    {
-        public string Phase { get; set; } = string.Empty;
-        public string State { get; set; } = string.Empty;
-        public string Message { get; set; } = string.Empty;
-        public int? PercentComplete { get; set; }
-        public string? Details { get; set; }
-    }
     
     // DTO for TFS teams from API
     private class TfsTeamDto
