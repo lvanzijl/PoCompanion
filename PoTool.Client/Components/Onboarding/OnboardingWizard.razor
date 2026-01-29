@@ -449,6 +449,7 @@
     private bool _isSavingProduct;
     private string _productName = string.Empty;
     private string _backlogRootWorkItemId = string.Empty;
+    private int? _createdProductId;
     private ConnectionTestResult? _productSaveResult;
     private ErrorResponse? _productErrorResponse;
 
@@ -462,6 +463,7 @@
     private bool _overrideAreaPath;
     private string _teamAreaPath = string.Empty;
     private int _selectedPictureId = 0;
+    private int? _createdTeamId;
     private ConnectionTestResult? _teamSaveResult;
     private ErrorResponse? _teamErrorResponse;
 
@@ -770,6 +772,9 @@
                 _productName,
                 workItemId);
             
+            // Track created product ID for linking with team later
+            _createdProductId = product.Id;
+            
             _productSaveResult = new ConnectionTestResult(true, $"Product '{product.Name}' created successfully!");
             Snackbar.Add("Product saved successfully", Severity.Success);
         }
@@ -845,8 +850,30 @@
                 tfsTeamId: _selectedTfsTeam.Id,
                 tfsTeamName: _selectedTfsTeam.Name);
             
-            _teamSaveResult = new ConnectionTestResult(true, $"Team '{team.Name}' created successfully!");
-            Snackbar.Add("Team saved successfully", Severity.Success);
+            // Track created team ID
+            _createdTeamId = team.Id;
+            
+            // If we have both a product and a team created, link them together
+            if (_createdProductId.HasValue && _createdTeamId.HasValue)
+            {
+                try
+                {
+                    await ProductService.LinkTeamAsync(_createdProductId.Value, _createdTeamId.Value);
+                    _teamSaveResult = new ConnectionTestResult(true, $"Team '{team.Name}' created and linked to product successfully!");
+                    Snackbar.Add("Team saved and linked successfully", Severity.Success);
+                }
+                catch (Exception linkEx)
+                {
+                    // Team was created but linking failed - report partial success
+                    _teamSaveResult = new ConnectionTestResult(true, $"Team '{team.Name}' created but linking failed: {linkEx.Message}");
+                    Snackbar.Add("Team saved but linking failed", Severity.Warning);
+                }
+            }
+            else
+            {
+                _teamSaveResult = new ConnectionTestResult(true, $"Team '{team.Name}' created successfully!");
+                Snackbar.Add("Team saved successfully", Severity.Success);
+            }
         }
         catch (Exception ex)
         {
