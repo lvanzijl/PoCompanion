@@ -288,21 +288,51 @@
             var bugs = allWorkItems.Where(wi => wi.Type.Equals("Bug", StringComparison.OrdinalIgnoreCase)).ToList();
             
             // Apply product filter if selected
-            // Note: Full product-team filtering requires ProductTeamLink relationships
-            // which would need to be implemented similar to PR/Pipeline insights
             if (_selectedProductId.HasValue)
             {
-                // For now, show all bugs when a product is selected
-                // TODO: Implement proper product filtering using area path or ProductTeamLink
-                bugs = bugs.ToList();
+                // Find the selected product to get its team links
+                var selectedProduct = _products.FirstOrDefault(p => p.Id == _selectedProductId.Value);
+                if (selectedProduct != null && selectedProduct.TeamIds.Any())
+                {
+                    // Get area paths for teams linked to this product
+                    var linkedTeams = _teams.Where(t => selectedProduct.TeamIds.Contains(t.Id)).ToList();
+                    var teamAreaPaths = linkedTeams.Select(t => t.TeamAreaPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    
+                    // Filter bugs by area path matching team area paths
+                    bugs = bugs.Where(b => 
+                        teamAreaPaths.Any(path => 
+                            b.AreaPath?.StartsWith(path, StringComparison.OrdinalIgnoreCase) == true
+                        )
+                    ).ToList();
+                }
+                else if (selectedProduct == null)
+                {
+                    // Product not found, show no bugs
+                    bugs = new List<WorkItemDto>();
+                }
+                // If product has no teams, show no bugs
+                else
+                {
+                    bugs = new List<WorkItemDto>();
+                }
             }
             
-            // Apply team filter if selected
+            // Apply team filter if selected (and no product filter, or additional filtering)
             if (_selectedTeamId.HasValue)
             {
-                // For now, show all bugs when a team is selected
-                // TODO: Implement proper team filtering using team area paths
-                bugs = bugs.ToList();
+                var selectedTeam = _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value);
+                if (selectedTeam != null)
+                {
+                    // Filter bugs by area path matching the team's area path
+                    bugs = bugs.Where(b => 
+                        b.AreaPath?.StartsWith(selectedTeam.TeamAreaPath, StringComparison.OrdinalIgnoreCase) == true
+                    ).ToList();
+                }
+                else
+                {
+                    // Team not found, show no bugs
+                    bugs = new List<WorkItemDto>();
+                }
             }
             
             _allBugs = bugs;
