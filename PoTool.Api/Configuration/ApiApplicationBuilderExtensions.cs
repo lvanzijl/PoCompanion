@@ -194,6 +194,9 @@ public static class ApiApplicationBuilderExtensions
 
         // Map SignalR hub for cache sync progress updates
         app.MapHub<CacheSyncHub>("/hubs/cachesync");
+        
+        // Map SignalR hub for TFS config progress updates
+        app.MapHub<TfsConfigHub>("/hubs/tfsconfig");
 
         // Health check endpoint
         app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow }));
@@ -293,10 +296,11 @@ public static class ApiApplicationBuilderExtensions
         })
         .Produces<TfsVerificationReport>(StatusCodes.Status200OK);
 
-        // Combined save, test, and verify with streaming progress
+        // Combined save, test, and verify with SignalR progress broadcasting
         app.MapPost("/api/tfsconfig/save-and-verify", async (
             TfsConfigurationService configService,
             ITfsClient client,
+            ITfsConfigProgressBroadcaster progressBroadcaster,
             TfsConfigRequest req,
             HttpResponse response,
             ILogger<Program> logger,
@@ -307,11 +311,19 @@ public static class ApiApplicationBuilderExtensions
             response.Headers.Append("X-Accel-Buffering", "no"); // Disable nginx buffering
 
             var writer = new StreamWriter(response.Body);
+            
+            // Helper to broadcast via SignalR AND write to HTTP stream for compatibility
+            async Task BroadcastAndWriteAsync(string phase, ProgressState state, string message, int? percentComplete, string? details)
+            {
+                var update = new TfsConfigProgressUpdate(phase, state, message, percentComplete, details);
+                await progressBroadcaster.BroadcastProgressAsync(update, ct);
+                await WriteProgressAsync(writer, phase, state, message, percentComplete, details, ct);
+            }
 
             try
             {
                 // Phase 1: Save configuration
-                await WriteProgressAsync(writer, "Saving Configuration", ProgressState.Running, "Saving TFS configuration...", 10, null, ct);
+                await BroadcastAndWriteAsync("Saving Configuration", ProgressState.Running, "Saving TFS configuration...", 10, null);
                 // DefaultAreaPath is now derived from Project name, but accept parameter for backward compatibility
                 await configService.SaveConfigAsync(
                     req.Url ?? string.Empty,
@@ -321,10 +333,10 @@ public static class ApiApplicationBuilderExtensions
                     req.TimeoutSeconds,
                     req.ApiVersion ?? "7.0",
                     ct);
-                await WriteProgressAsync(writer, "Saving Configuration", ProgressState.Succeeded, "Configuration saved successfully", 20, null, ct);
+                await BroadcastAndWriteAsync("Saving Configuration", ProgressState.Succeeded, "Configuration saved successfully", 20, null);
 
                 // Phase 2: Test connection
-                await WriteProgressAsync(writer, "Testing Connection", ProgressState.Running, "Validating TFS connection...", 30, null, ct);
+                await BroadcastAndWriteAsync("Testing Connection", ProgressState.Running, "Validating TFS connection...", 30, null);
                 var connectionOk = await client.ValidateConnectionAsync(ct);
                 if (connectionOk)
                 {
@@ -336,16 +348,16 @@ public static class ApiApplicationBuilderExtensions
                         config.LastValidated = DateTimeOffset.UtcNow;
                         await configService.SaveConfigEntityAsync(config, ct);
                     }
-                    await WriteProgressAsync(writer, "Testing Connection", ProgressState.Succeeded, "Connection validated successfully", 40, null, ct);
+                    await BroadcastAndWriteAsync("Testing Connection", ProgressState.Succeeded, "Connection validated successfully", 40, null);
                 }
                 else
                 {
-                    await WriteProgressAsync(writer, "Testing Connection", ProgressState.Failed, "Connection validation failed", 40, "The TFS server did not respond successfully", ct);
+                    await BroadcastAndWriteAsync("Testing Connection", ProgressState.Failed, "Connection validation failed", 40, "The TFS server did not respond successfully");
                     return;
                 }
 
                 // Phase 3: Verify TFS API capabilities
-                await WriteProgressAsync(writer, "Verifying API", ProgressState.Running, "Running TFS API capability checks...", 50, null, ct);
+                await BroadcastAndWriteAsync("Verifying API", ProgressState.Running, "Running TFS API capability checks...", 50, null);
                 var report = await client.VerifyCapabilitiesAsync(false, null, ct);
                 
                 // Report individual check results as sub-progress
@@ -357,14 +369,12 @@ public static class ApiApplicationBuilderExtensions
                     int progressPercent = 50 + (int)((checkIndex / (double)totalChecks) * 40);
                     var checkState = check.Success ? ProgressState.Succeeded : ProgressState.Failed;
                     var errorDetails = check.Success ? null : check.RawEvidence ?? check.ObservedBehavior;
-                    await WriteProgressAsync(
-                        writer,
+                    await BroadcastAndWriteAsync(
                         $"Verifying API - {check.CapabilityId}",
                         checkState,
                         check.Success ? $"✓ {check.CapabilityId}" : $"✗ {check.CapabilityId}",
                         progressPercent,
-                        errorDetails,
-                        ct);
+                        errorDetails);
                 }
 
                 if (report.Success)
@@ -377,28 +387,26 @@ public static class ApiApplicationBuilderExtensions
                         config.LastValidated = DateTimeOffset.UtcNow;
                         await configService.SaveConfigEntityAsync(config, ct);
                     }
-                    await WriteProgressAsync(writer, "Verifying API", ProgressState.Succeeded, $"All {report.Checks.Count} API checks passed", 90, null, ct);
+                    await BroadcastAndWriteAsync("Verifying API", ProgressState.Succeeded, $"All {report.Checks.Count} API checks passed", 90, null);
                 }
                 else
                 {
                     var failedCount = report.Checks.Count(c => !c.Success);
-                    await WriteProgressAsync(
-                        writer,
+                    await BroadcastAndWriteAsync(
                         "Verifying API",
                         ProgressState.Failed,
                         $"{failedCount} of {report.Checks.Count} API checks failed",
                         90,
-                        report.Summary,
-                        ct);
+                        report.Summary);
                 }
 
                 // Phase 4: Complete
-                await WriteProgressAsync(writer, "Complete", ProgressState.Succeeded, "TFS configuration and verification complete", 100, null, ct);
+                await BroadcastAndWriteAsync("Complete", ProgressState.Succeeded, "TFS configuration and verification complete", 100, null);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error during save and verify operation");
-                await WriteProgressAsync(writer, "Error", ProgressState.Failed, "An error occurred", null, ex.Message, ct);
+                await BroadcastAndWriteAsync("Error", ProgressState.Failed, "An error occurred", null, ex.Message);
             }
             finally
             {
