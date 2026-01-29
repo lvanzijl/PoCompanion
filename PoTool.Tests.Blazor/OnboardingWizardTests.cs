@@ -138,6 +138,24 @@ public class OnboardingWizardTests : BunitTestContext
         Assert.IsNull(line4);
     }
 
+    [TestMethod]
+    public async Task StreamLineReader_ReadsEmptyLinesAndHandlesEndings()
+    {
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes("\n\n\r\n"));
+        using var reader = new StreamReader(stream);
+        var lineReader = new OnboardingWizard.StreamLineReader(reader);
+
+        var line1 = await lineReader.ReadLineAsync(CancellationToken.None);
+        var line2 = await lineReader.ReadLineAsync(CancellationToken.None);
+        var line3 = await lineReader.ReadLineAsync(CancellationToken.None);
+        var line4 = await lineReader.ReadLineAsync(CancellationToken.None);
+
+        Assert.AreEqual(string.Empty, line1);
+        Assert.AreEqual(string.Empty, line2);
+        Assert.AreEqual(string.Empty, line3);
+        Assert.IsNull(line4);
+    }
+
     /// <summary>
     /// Mock NavigationManager for testing
     /// </summary>
