@@ -57,10 +57,15 @@ public class PipelineService
             return Array.Empty<PipelineRunDto>();
         }
         
+        // Parse and validate the first product ID
+        if (!int.TryParse(productIds.Split(',').FirstOrDefault(), out var firstId) || firstId <= 0)
+        {
+            // Invalid product ID format - return empty to avoid invalid API call
+            return Array.Empty<PipelineRunDto>();
+        }
+        
         // Get pipeline definitions for the first product (temporary limitation)
-        var definitions = (await GetDefinitionsAsync(
-            productId: int.TryParse(productIds.Split(',').FirstOrDefault(), out var firstId) ? firstId : null
-        )).ToList();
+        var definitions = (await GetDefinitionsAsync(productId: firstId)).ToList();
 
         if (definitions.Count == 0)
         {

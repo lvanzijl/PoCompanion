@@ -61,6 +61,48 @@ public class PipelineServiceTests
     }
 
     [TestMethod]
+    public async Task GetRunsForProductsAsync_WithInvalidProductId_ReturnsEmptyList()
+    {
+        // Act
+        var result = await _service.GetRunsForProductsAsync("invalid");
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(0, result.Count());
+        
+        // Verify GetDefinitionsAsync was not called (would throw if called with null)
+        _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task GetRunsForProductsAsync_WithNegativeProductId_ReturnsEmptyList()
+    {
+        // Act
+        var result = await _service.GetRunsForProductsAsync("-123");
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(0, result.Count());
+        
+        // Verify GetDefinitionsAsync was not called
+        _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task GetRunsForProductsAsync_WithZeroProductId_ReturnsEmptyList()
+    {
+        // Act
+        var result = await _service.GetRunsForProductsAsync("0");
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(0, result.Count());
+        
+        // Verify GetDefinitionsAsync was not called
+        _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
+    }
+
+    [TestMethod]
     public async Task GetRunsForProductsAsync_WithValidProductId_CallsGetDefinitionsAsync()
     {
         // Arrange
