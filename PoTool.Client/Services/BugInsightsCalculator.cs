@@ -103,12 +103,19 @@ public class BugInsightsCalculator
     }
 
     /// <summary>
-    /// Calculates bug resolution time (lead time to close).
+    /// Calculates bug resolution time (lead time to close) for bugs resolved in the last 6 months.
     /// </summary>
     /// <param name="bugs">Bug work items to analyze.</param>
+    /// <param name="fromDate">Start of time window (default: 6 months ago).</param>
+    /// <param name="toDate">End of time window (default: now).</param>
     /// <returns>Metric with Median and P75 resolution time in hours.</returns>
-    public MetricResult CalculateBugResolutionTime(IEnumerable<WorkItemDto> bugs)
+    public MetricResult CalculateBugResolutionTime(
+        IEnumerable<WorkItemDto> bugs,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null)
     {
+        var startDate = fromDate ?? DateTimeOffset.UtcNow.AddMonths(-6);
+        var endDate = toDate ?? DateTimeOffset.UtcNow;
         var bugsList = bugs.ToList();
 
         if (bugsList.Count == 0)
@@ -116,9 +123,13 @@ public class BugInsightsCalculator
             return new MetricResult(null, null, 0, null);
         }
 
-        // Calculate resolution time for bugs that have both created and closed dates
+        // Calculate resolution time for bugs that were resolved within the time window
         var resolutionTimes = bugsList
-            .Where(b => b.CreatedDate.HasValue && b.ClosedDate.HasValue)
+            .Where(b => 
+                b.CreatedDate.HasValue && 
+                b.ClosedDate.HasValue &&
+                b.ClosedDate.Value >= startDate &&
+                b.ClosedDate.Value <= endDate)
             .Select(b => (b.ClosedDate!.Value - b.CreatedDate!.Value).TotalHours)
             .OrderBy(x => x)
             .ToList();

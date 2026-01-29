@@ -33,20 +33,22 @@
                 </MudText>
 
                 @* Secondary Value (P75) *@
-                <MudText Typo="Typo.body2" Color="Color.Secondary">
-                    P75: @FormatValue(Result.P75, ValueFormat)
-                </MudText>
+                <MudTooltip Text="75th percentile: 75% of values are at or below this value">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        75th percentile: @FormatValue(Result.P75, ValueFormat)
+                    </MudText>
+                </MudTooltip>
 
                 @* Footer (Count or Coverage) *@
                 <MudDivider Class="my-1" />
                 <MudText Typo="Typo.caption" Color="Color.Default">
                     @if (Result.Coverage.HasValue)
                     {
-                        @:@Result.Count PRs (@($"{Result.Coverage.Value:F1}") % coverage)
+                        @:@Result.Count @ItemLabel (@($"{Result.Coverage.Value:F1}") % coverage)
                     }
                     else
                     {
-                        <text>@Result.Count PRs</text>
+                        <text>@Result.Count @ItemLabel</text>
                     }
                 </MudText>
             }
@@ -79,6 +81,12 @@
     /// </summary>
     [Parameter]
     public bool IsLoading { get; set; }
+
+    /// <summary>
+    /// Label for the items being counted (e.g., "PRs", "Bugs"). Defaults to "items".
+    /// </summary>
+    [Parameter]
+    public string ItemLabel { get; set; } = "items";
 
     /// <summary>
     /// Formats a nullable double value based on the specified format.

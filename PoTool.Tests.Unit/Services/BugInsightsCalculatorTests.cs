@@ -361,6 +361,58 @@ public class BugInsightsCalculatorTests
         Assert.AreEqual(66.67, result.Coverage!.Value, 0.01); // 2 out of 3 = 66.67%
     }
 
+    [TestMethod]
+    public void CalculateBugResolutionTime_BugsResolvedOutsideWindow_ExcludesThem()
+    {
+        // Arrange
+        var fromDate = DateTimeOffset.UtcNow.AddMonths(-6);
+        var now = DateTimeOffset.UtcNow;
+        var bugs = new List<WorkItemDto>
+        {
+            CreateBug(1, "Closed", 
+                createdDate: now.AddMonths(-8), 
+                closedDate: now.AddMonths(-7)), // Closed before window
+            CreateBug(2, "Closed", 
+                createdDate: now.AddMonths(-6), 
+                closedDate: now.AddMonths(-4)), // Closed in window
+            CreateBug(3, "Closed", 
+                createdDate: now.AddMonths(-5), 
+                closedDate: now.AddMonths(-2)) // Closed in window
+        };
+
+        // Act
+        var result = _calculator.CalculateBugResolutionTime(bugs, fromDate);
+
+        // Assert
+        Assert.AreEqual(2, result.Count); // Only bugs 2 and 3
+        Assert.IsNotNull(result.Median);
+        Assert.IsNotNull(result.P75);
+    }
+
+    [TestMethod]
+    public void CalculateBugResolutionTime_NoResolvedBugsInWindow_ReturnsEmpty()
+    {
+        // Arrange
+        var fromDate = DateTimeOffset.UtcNow.AddMonths(-6);
+        var now = DateTimeOffset.UtcNow;
+        var bugs = new List<WorkItemDto>
+        {
+            CreateBug(1, "Active", createdDate: now.AddMonths(-5)), // Not closed
+            CreateBug(2, "Closed", 
+                createdDate: now.AddMonths(-8), 
+                closedDate: now.AddMonths(-7)) // Closed before window
+        };
+
+        // Act
+        var result = _calculator.CalculateBugResolutionTime(bugs, fromDate);
+
+        // Assert
+        Assert.AreEqual(0, result.Count);
+        Assert.IsNull(result.Median);
+        Assert.IsNull(result.P75);
+        Assert.AreEqual(0.0, result.Coverage);
+    }
+
     #endregion
 
     #region Bugs By Severity Distribution Tests

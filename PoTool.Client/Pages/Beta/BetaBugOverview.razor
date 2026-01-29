@@ -103,6 +103,7 @@
                 <MetricCard Title="Total Open Bugs"
                            Result="_totalOpenBugs"
                            ValueFormat="MetricValueFormat.Count"
+                           ItemLabel="bugs"
                            IsLoading="_metricsLoading" />
             </MudItem>
 
@@ -111,6 +112,7 @@
                 <MetricCard Title="Bugs Created (Last 6 Months)"
                            Result="_bugsCreated"
                            ValueFormat="MetricValueFormat.Count"
+                           ItemLabel="bugs"
                            IsLoading="_metricsLoading" />
             </MudItem>
 
@@ -119,6 +121,7 @@
                 <MetricCard Title="Bugs Resolved (Last 6 Months)"
                            Result="_bugsResolved"
                            ValueFormat="MetricValueFormat.Count"
+                           ItemLabel="bugs"
                            IsLoading="_metricsLoading" />
             </MudItem>
 
@@ -127,6 +130,7 @@
                 <MetricCard Title="Bug Resolution Time"
                            Result="_resolutionTime"
                            ValueFormat="MetricValueFormat.Hours"
+                           ItemLabel="bugs"
                            IsLoading="_metricsLoading" />
             </MudItem>
         </MudGrid>
@@ -357,7 +361,7 @@
         _totalOpenBugs = _calculator.CalculateTotalOpenBugs(_allBugs);
         _bugsCreated = _calculator.CalculateBugsCreatedPerPeriod(_allBugs, _fromDate);
         _bugsResolved = _calculator.CalculateBugsResolvedPerPeriod(_allBugs, _fromDate);
-        _resolutionTime = _calculator.CalculateBugResolutionTime(_allBugs);
+        _resolutionTime = _calculator.CalculateBugResolutionTime(_allBugs, _fromDate);
         _severityDistribution = _calculator.CalculateBugsBySeverityDistribution(_allBugs);
     }
     
