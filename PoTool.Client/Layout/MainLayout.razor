@@ -64,6 +64,7 @@
     private bool _hasCheckedOnboarding = false;
     private bool _onboardingCompleted = false;
     private ProfileSelector? _profileSelector;
+    private StartupReadinessDto? _cachedReadiness;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -73,8 +74,22 @@
         {
             _hasCheckedOnboarding = true;
             
-            // Check if user needs onboarding (cache result for reuse)
-            _onboardingCompleted = await OnboardingService.HasCompletedOnboardingAsync();
+            // Check backend readiness first to detect clean start (database removed)
+            // Cache result to avoid duplicate call in PerformStartupRoutingAsync
+            _cachedReadiness = await StartupOrchestrator.GetStartupReadinessAsync();
+            
+            // If backend has no TFS configuration, reset onboarding state
+            // This ensures users see the onboarding wizard on clean start (e.g., after database removal)
+            if (_cachedReadiness != null && !_cachedReadiness.HasSavedTfsConfig)
+            {
+                await OnboardingService.ResetOnboardingAsync();
+                _onboardingCompleted = false;
+            }
+            else
+            {
+                // Check if user needs onboarding (cache result for reuse)
+                _onboardingCompleted = await OnboardingService.HasCompletedOnboardingAsync();
+            }
             
             if (!_onboardingCompleted)
             {
@@ -146,7 +161,8 @@
         
         try
         {
-            var readiness = await StartupOrchestrator.GetStartupReadinessAsync();
+            // Use cached readiness if available, otherwise fetch it
+            var readiness = _cachedReadiness ?? await StartupOrchestrator.GetStartupReadinessAsync();
             if (readiness == null)
             {
                 return; // Graceful degradation
