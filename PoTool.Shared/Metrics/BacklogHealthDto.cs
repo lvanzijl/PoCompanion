@@ -15,7 +15,9 @@ public sealed record BacklogHealthDto(
     int InProgressAtIterationEnd,
     DateTimeOffset? IterationStart,
     DateTimeOffset? IterationEnd,
-    IReadOnlyList<ValidationIssueSummary> ValidationIssues
+    IReadOnlyList<ValidationIssueSummary> ValidationIssues,
+    int RefinementBlockers = 0,
+    int RefinementNeeded = 0
 );
 
 /// <summary>

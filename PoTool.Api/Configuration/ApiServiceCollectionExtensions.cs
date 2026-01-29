@@ -210,6 +210,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IHierarchicalValidationRule, FeatureDescriptionEmptyRule>();
         services.AddScoped<IHierarchicalValidationRule, PbiDescriptionEmptyRule>();
         services.AddScoped<IHierarchicalValidationRule, PbiEffortEmptyRule>();
+        services.AddScoped<IHierarchicalValidationRule, FeatureWithoutChildrenRule>();
 
         // Register hierarchical work item validator
         services.AddScoped<IHierarchicalWorkItemValidator, HierarchicalWorkItemValidator>();

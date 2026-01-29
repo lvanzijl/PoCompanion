@@ -22,7 +22,7 @@ public class GetBacklogHealthQueryHandlerTests
     private Mock<IWorkItemReadProvider> _mockProvider = null!;
     private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<IMediator> _mockMediator = null!;
-    private Mock<IWorkItemValidator> _mockValidator = null!;
+    private Mock<IHierarchicalWorkItemValidator> _mockValidator = null!;
     private Mock<ILogger<GetBacklogHealthQueryHandler>> _mockLogger = null!;
     private GetBacklogHealthQueryHandler _handler = null!;
 
@@ -32,7 +32,7 @@ public class GetBacklogHealthQueryHandlerTests
         _mockProvider = new Mock<IWorkItemReadProvider>();
         _mockProductRepository = new Mock<IProductRepository>();
         _mockMediator = new Mock<IMediator>();
-        _mockValidator = new Mock<IWorkItemValidator>();
+        _mockValidator = new Mock<IHierarchicalWorkItemValidator>();
         _mockLogger = new Mock<ILogger<GetBacklogHealthQueryHandler>>();
 
         // Setup default mock behaviors
@@ -79,7 +79,7 @@ public class GetBacklogHealthQueryHandlerTests
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(new Dictionary<int, List<ValidationIssue>>());
+            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetBacklogHealthQuery("Sprint 1");
 
@@ -109,7 +109,7 @@ public class GetBacklogHealthQueryHandlerTests
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(new Dictionary<int, List<ValidationIssue>>());
+            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetBacklogHealthQuery("Sprint 1");
 
@@ -131,19 +131,18 @@ public class GetBacklogHealthQueryHandlerTests
             CreateWorkItem(2, "PBI", "Done", "Sprint 1", 5)
         };
 
-        var validationResults = new Dictionary<int, List<ValidationIssue>>
+        var validationResults = new List<HierarchicalValidationResult>
         {
-            { 1, new List<ValidationIssue>
+            new HierarchicalValidationResult(
+                RootWorkItemId: 1,
+                BacklogHealthProblems: Array.Empty<ValidationRuleResult>(),
+                RefinementBlockers: Array.Empty<ValidationRuleResult>(),
+                IncompleteRefinementIssues: new List<ValidationRuleResult>
                 {
-                    new ValidationIssue("Error", "Work item in progress without effort")
-                }
-            },
-            { 2, new List<ValidationIssue>
-                {
-                    new ValidationIssue("Warning", "Parent progress issue"),
-                    new ValidationIssue("Warning", "Another parent issue")
-                }
-            }
+                    CreateValidationRuleResult(1, "RC-2", ValidationConsequence.IncompleteRefinement)
+                },
+                WasSuppressed: false
+            )
         };
 
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -171,18 +170,19 @@ public class GetBacklogHealthQueryHandlerTests
             CreateWorkItem(2, "Task", "Done", "Sprint 1", 3)
         };
 
-        var validationResults = new Dictionary<int, List<ValidationIssue>>
+        var validationResults = new List<HierarchicalValidationResult>
         {
-            { 1, new List<ValidationIssue>
+            new HierarchicalValidationResult(
+                RootWorkItemId: 1,
+                BacklogHealthProblems: new List<ValidationRuleResult>
                 {
-                    new ValidationIssue("Warning", "Parent work item progress mismatch")
-                }
-            },
-            { 2, new List<ValidationIssue>
-                {
-                    new ValidationIssue("Warning", "Ancestor progress inconsistency")
-                }
-            }
+                    CreateValidationRuleResult(1, "SI-1", ValidationConsequence.BacklogHealthProblem),
+                    CreateValidationRuleResult(2, "SI-2", ValidationConsequence.BacklogHealthProblem)
+                },
+                RefinementBlockers: Array.Empty<ValidationRuleResult>(),
+                IncompleteRefinementIssues: Array.Empty<ValidationRuleResult>(),
+                WasSuppressed: false
+            )
         };
 
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -197,7 +197,7 @@ public class GetBacklogHealthQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(2, result.ParentProgressIssues); // Both issues contain "Parent" or "Ancestor"
+        Assert.AreEqual(2, result.ParentProgressIssues); // Both structural integrity issues
     }
 
     [TestMethod]
@@ -214,7 +214,7 @@ public class GetBacklogHealthQueryHandlerTests
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(new Dictionary<int, List<ValidationIssue>>());
+            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetBacklogHealthQuery("Sprint 1");
 
@@ -240,7 +240,7 @@ public class GetBacklogHealthQueryHandlerTests
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(new Dictionary<int, List<ValidationIssue>>());
+            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetBacklogHealthQuery("sprint 1");
 
@@ -264,7 +264,7 @@ public class GetBacklogHealthQueryHandlerTests
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(new Dictionary<int, List<ValidationIssue>>());
+            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetBacklogHealthQuery("Project\\Team A\\2024\\Sprint 5");
 
@@ -291,7 +291,7 @@ public class GetBacklogHealthQueryHandlerTests
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(new Dictionary<int, List<ValidationIssue>>());
+            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetBacklogHealthQuery("Sprint 1");
 
@@ -323,5 +323,17 @@ public class GetBacklogHealthQueryHandlerTests
             Effort: effort,
                     Description: null
         );
+    }
+
+    private static ValidationRuleResult CreateValidationRuleResult(int workItemId, string ruleId, ValidationConsequence consequence)
+    {
+        var rule = new ValidationRule(
+            RuleId: ruleId,
+            Category: ValidationCategory.StructuralIntegrity,
+            Consequence: consequence,
+            ResponsibleParty: ResponsibleParty.ProductOwner,
+            Message: $"Test validation rule {ruleId}"
+        );
+        return new ValidationRuleResult(rule, workItemId, true);
     }
 }
