@@ -62,35 +62,60 @@ public static class ApiApplicationBuilderExtensions
                                 connection.OpenAsync().GetAwaiter().GetResult();
 
                                 // Check if any tables exist (indicates database was created with EnsureCreated)
+                                // Use provider-specific SQL to check for tables
+                                bool hasTables = false;
                                 using var checkCmd = connection.CreateCommand();
-                                checkCmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
-                                var tableCount = Convert.ToInt32(checkCmd.ExecuteScalarAsync().GetAwaiter().GetResult());
+                                
+                                if (db.Database.IsSqlite())
+                                {
+                                    checkCmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
+                                    var tableCount = Convert.ToInt32(checkCmd.ExecuteScalarAsync().GetAwaiter().GetResult());
+                                    hasTables = tableCount > 0;
+                                }
+                                else if (db.Database.IsSqlServer())
+                                {
+                                    checkCmd.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
+                                    var tableCount = Convert.ToInt32(checkCmd.ExecuteScalarAsync().GetAwaiter().GetResult());
+                                    hasTables = tableCount > 0;
+                                }
 
-                                if (tableCount > 0)
+                                if (hasTables)
                                 {
                                     // Database has tables but no migration history - was created with EnsureCreated
                                     var dbPath = connection.DataSource;
 
-                                    // Get the full absolute path for the database file
-                                    var fullDbPath = Path.GetFullPath(dbPath);
-
-                                    // Detect OS and provide appropriate delete command
-                                    var isWindows = OperatingSystem.IsWindows();
-                                    var deleteCommand = isWindows
-                                        ? $"del \"{fullDbPath}\""
-                                        : $"rm \"{fullDbPath}\"";
-                                    var osLabel = isWindows ? "Windows" : "Linux/Mac";
+                                    // Get appropriate instructions based on database provider
+                                    string deleteInstructions;
+                                    if (db.Database.IsSqlite())
+                                    {
+                                        // For SQLite, provide file deletion command
+                                        var fullDbPath = Path.GetFullPath(dbPath);
+                                        var isWindows = OperatingSystem.IsWindows();
+                                        var deleteCommand = isWindows
+                                            ? $"del \"{fullDbPath}\""
+                                            : $"rm \"{fullDbPath}\"";
+                                        var osLabel = isWindows ? "Windows" : "Linux/Mac";
+                                        
+                                        deleteInstructions = $"Command ({osLabel}): {deleteCommand}";
+                                        logger.LogCritical("Database location: {DatabasePath}", fullDbPath);
+                                    }
+                                    else
+                                    {
+                                        // For SQL Server, provide DROP DATABASE command
+                                        var dbName = connection.Database;
+                                        deleteInstructions = $"DROP DATABASE [{dbName}] (must be executed by a database administrator)";
+                                        logger.LogCritical("Database name: {DatabaseName} on server: {ServerName}", dbName, dbPath);
+                                    }
 
                                     logger.LogCritical("INCOMPATIBLE DATABASE DETECTED: Database was created without migrations.");
                                     logger.LogCritical("This usually happens when the database was created with EnsureCreated() instead of migrations.");
-                                    logger.LogCritical("Database location: {DatabasePath}", fullDbPath);
-                                    logger.LogCritical("To fix this issue, delete the database file and restart the application:");
-                                    logger.LogCritical("  Command ({OS}): {DeleteCommand}", osLabel, deleteCommand);
+                                    logger.LogCritical("To fix this issue, delete the database and restart the application:");
+                                    logger.LogCritical("  {DeleteInstructions}", deleteInstructions);
 
                                     throw new InvalidOperationException(
-                                        $"Database at '{fullDbPath}' was created without migration history. " +
+                                        $"Database was created without migration history. " +
                                         $"This can cause migration failures when trying to apply schema changes. " +
-                                        $"Please delete the database file using: {deleteCommand}. " +
+                                        $"Please delete the database and restart. " +
                                         $"A new database with proper migration tracking will be created automatically on restart.");
                                 }
                             }
