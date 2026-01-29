@@ -294,7 +294,8 @@
             
             // Load metrics
             _metrics = (await PullRequestService.GetMetricsAsync(
-                productIds: productIdsStr
+                productIds: productIdsStr,
+                fromDate: fromDate
             )).ToList();
             
             // Load comments and iterations for each PR in parallel

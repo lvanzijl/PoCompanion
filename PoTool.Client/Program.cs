@@ -129,6 +129,14 @@ builder.Services.AddScoped<ITeamsClient>(sp =>
     return client;
 });
 
+builder.Services.AddScoped<ISprintsClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new SprintsClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
 // Register client services
 builder.Services.AddScoped<WorkItemService>();
 builder.Services.AddScoped<WorkItemLoadCoordinatorService>();
@@ -140,6 +148,7 @@ builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<TeamService>();
+builder.Services.AddScoped<SprintService>();
 builder.Services.AddScoped<TfsConfigService>();
 builder.Services.AddScoped<ModeIsolatedStateService>();
 builder.Services.AddScoped<ErrorMessageService>();

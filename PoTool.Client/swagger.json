@@ -123,6 +123,257 @@
         }
       }
     },
+    "/api/CacheSync/{productOwnerId}": {
+      "get": {
+        "tags": [
+          "CacheSync"
+        ],
+        "operationId": "CacheSync_GetCacheStatus",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CacheStateDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "CacheSync"
+        ],
+        "operationId": "CacheSync_DeleteCache",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/CacheSync/{productOwnerId}/sync": {
+      "post": {
+        "tags": [
+          "CacheSync"
+        ],
+        "operationId": "CacheSync_TriggerSync",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncTriggerResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncTriggerResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/CacheSync/{productOwnerId}/cancel": {
+      "post": {
+        "tags": [
+          "CacheSync"
+        ],
+        "operationId": "CacheSync_CancelSync",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/CacheSync/{productOwnerId}/status": {
+      "get": {
+        "tags": [
+          "CacheSync"
+        ],
+        "operationId": "CacheSync_GetSyncStatus",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/datasource/{productOwnerId}": {
+      "get": {
+        "tags": [
+          "DataSourceMode"
+        ],
+        "operationId": "DataSourceMode_GetMode",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataSourceModeResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "DataSourceMode"
+        ],
+        "operationId": "DataSourceMode_SetMode",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetDataSourceModeRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Filtering/by-validation-with-ancestors": {
       "post": {
         "tags": [
@@ -978,6 +1229,40 @@
         }
       }
     },
+    "/api/Pipelines/runs": {
+      "get": {
+        "tags": [
+          "Pipelines"
+        ],
+        "operationId": "Pipelines_GetRunsForProducts",
+        "parameters": [
+          {
+            "name": "productIds",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PipelineRunDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Pipelines/definitions": {
       "get": {
         "tags": [
@@ -1016,6 +1301,495 @@
                   "items": {
                     "$ref": "#/components/schemas/PipelineDefinitionDto"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Planning/board/{productOwnerId}": {
+      "get": {
+        "tags": [
+          "Planning"
+        ],
+        "operationId": "Planning_GetBoard",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanningBoardDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Planning/unplanned-epics/{productOwnerId}": {
+      "get": {
+        "tags": [
+          "Planning"
+        ],
+        "operationId": "Planning_GetUnplannedEpics",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "productId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UnplannedEpicDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Planning/board/{productOwnerId}/initialize": {
+      "post": {
+        "tags": [
+          "Planning"
+        ],
+        "operationId": "Planning_InitializeBoard",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardOperationResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Planning/rows": {
+      "post": {
+        "tags": [
+          "Planning"
+        ],
+        "operationId": "Planning_CreateRow",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRowRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RowOperationResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Planning/rows/marker": {
+      "post": {
+        "tags": [
+          "Planning"
+        ],
+        "operationId": "Planning_CreateMarkerRow",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMarkerRowRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RowOperationResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Planning/rows/{rowId}": {
+      "delete": {
+        "tags": [
+          "Planning"
+        ],
+        "operationId": "Planning_DeleteRow",
+        "parameters": [
+          {
+            "name": "rowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RowOperationResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Planning/rows/marker/{rowId}": {
+      "put": {
+        "tags": [
+          "Planning"
+        ],
+        "operationId": "Planning_UpdateMarkerRow",
+        "parameters": [
+          {
+            "name": "rowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMarkerRowRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RowOperationResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Planning/rows/{rowId}/move": {
+      "put": {
+        "tags": [
+          "Planning"
+        ],
+        "operationId": "Planning_MoveRow",
+        "parameters": [
+          {
+            "name": "rowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveRowRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RowOperationResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Planning/placements": {
+      "post": {
+        "tags": [
+          "Planning"
+        ],
+        "operationId": "Planning_CreatePlacement",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEpicPlacementRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementOperationResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Planning/placements/{placementId}/move": {
+      "put": {
+        "tags": [
+          "Planning"
+        ],
+        "operationId": "Planning_MovePlacement",
+        "parameters": [
+          {
+            "name": "placementId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovePlanningEpicRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementOperationResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Planning/placements/delete": {
+      "post": {
+        "tags": [
+          "Planning"
+        ],
+        "operationId": "Planning_DeletePlacements",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePlacementsRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementOperationResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Planning/board/{productOwnerId}/scope": {
+      "put": {
+        "tags": [
+          "Planning"
+        ],
+        "operationId": "Planning_UpdateScope",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBoardScopeRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardOperationResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Planning/board/{productOwnerId}/visibility": {
+      "put": {
+        "tags": [
+          "Planning"
+        ],
+        "operationId": "Planning_UpdateProductVisibility",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductVisibilityRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardOperationResultDto"
                 }
               }
             }
@@ -1900,6 +2674,16 @@
               "nullable": true
             },
             "x-position": 1
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "nullable": true
+            },
+            "x-position": 2
           }
         ],
         "responses": {
@@ -2181,7 +2965,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/UnplannedEpicDto"
+                    "$ref": "#/components/schemas/UnplannedEpicDto2"
                   }
                 }
               }
@@ -2949,6 +3733,101 @@
         "responses": {
           "200": {
             "description": ""
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Sprints": {
+      "get": {
+        "tags": [
+          "Sprints"
+        ],
+        "operationId": "Sprints_GetSprintsForTeam",
+        "parameters": [
+          {
+            "name": "teamId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SprintDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Sprints/current": {
+      "get": {
+        "tags": [
+          "Sprints"
+        ],
+        "operationId": "Sprints_GetCurrentSprintForTeam",
+        "parameters": [
+          {
+            "name": "teamId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SprintDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           },
           "400": {
             "description": "",
@@ -4211,6 +5090,140 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          }
+        }
+      },
+      "CacheStateDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productOwnerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "syncStatus": {
+            "$ref": "#/components/schemas/CacheSyncStatusDto"
+          },
+          "lastAttemptSync": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastSuccessfulSync": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "workItemCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pullRequestCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pipelineCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lastErrorMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "currentSyncStage": {
+            "type": "string",
+            "nullable": true
+          },
+          "stageProgressPercent": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "CacheSyncStatusDto": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Idle",
+          "InProgress",
+          "Success",
+          "Failed"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "SyncTriggerResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "additionalProperties": {
+          "nullable": true
+        },
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "SyncStatusResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "isSyncing": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DataSourceModeResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "isCache": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetDataSourceModeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string"
           }
         }
       },
@@ -5748,6 +6761,376 @@
           }
         }
       },
+      "PlanningBoardDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/BoardScope"
+          },
+          "selectedProductId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "productColumns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductColumnDto"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardRowDto"
+            }
+          },
+          "placements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EpicPlacementDto"
+            }
+          },
+          "hiddenColumnCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "BoardScope": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "AllProducts",
+          "SingleProduct"
+        ],
+        "enum": [
+          0,
+          1
+        ]
+      },
+      "ProductColumnDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "isVisible": {
+            "type": "boolean"
+          },
+          "displayOrder": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "BoardRowDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "displayOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rowType": {
+            "$ref": "#/components/schemas/BoardRowType"
+          },
+          "markerType": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MarkerRowType"
+              }
+            ]
+          },
+          "markerLabel": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "BoardRowType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Normal",
+          "Marker"
+        ],
+        "enum": [
+          0,
+          1
+        ]
+      },
+      "MarkerRowType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Iteration",
+          "Release"
+        ],
+        "enum": [
+          0,
+          1
+        ]
+      },
+      "EpicPlacementDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "epicId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "epicTitle": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rowId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "orderInCell": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isSelected": {
+            "type": "boolean"
+          },
+          "effort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "state": {
+            "type": "string"
+          }
+        }
+      },
+      "UnplannedEpicDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "epicId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "effort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "state": {
+            "type": "string"
+          }
+        }
+      },
+      "BoardOperationResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "RowOperationResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "rowId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "CreateRowRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "insertBeforeRowId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "insertBelow": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateMarkerRowRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "insertBeforeRowId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "insertBelow": {
+            "type": "boolean"
+          },
+          "markerType": {
+            "$ref": "#/components/schemas/MarkerRowType"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateMarkerRowRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "MoveRowRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "targetRowId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "insertBelow": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PlacementOperationResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "placementId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "CreateEpicPlacementRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "epicId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rowId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "orderInCell": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "MovePlanningEpicRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "newRowId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "newOrderInCell": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "DeletePlacementsRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "placementIds"
+        ],
+        "properties": {
+          "placementIds": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "UpdateBoardScopeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/BoardScope"
+          },
+          "selectedProductId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateProductVisibilityRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isVisible": {
+            "type": "boolean"
+          }
+        }
+      },
       "ProductDto": {
         "type": "object",
         "additionalProperties": false,
@@ -5841,35 +7224,6 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
-          }
-        }
-      },
-      "ProblemDetails": {
-        "type": "object",
-        "additionalProperties": {
-          "nullable": true
-        },
-        "properties": {
-          "type": {
-            "type": "string",
-            "nullable": true
-          },
-          "title": {
-            "type": "string",
-            "nullable": true
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "detail": {
-            "type": "string",
-            "nullable": true
-          },
-          "instance": {
-            "type": "string",
-            "nullable": true
           }
         }
       },
@@ -6474,7 +7828,7 @@
           "placements": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/EpicPlacementDto"
+              "$ref": "#/components/schemas/EpicPlacementDto2"
             }
           },
           "milestoneLines": {
@@ -6526,7 +7880,7 @@
           }
         }
       },
-      "EpicPlacementDto": {
+      "EpicPlacementDto2": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -6563,6 +7917,9 @@
           },
           "validationIndicator": {
             "$ref": "#/components/schemas/ValidationIndicator"
+          },
+          "stateClassification": {
+            "$ref": "#/components/schemas/StateClassification"
           }
         }
       },
@@ -6578,6 +7935,22 @@
           0,
           1,
           2
+        ]
+      },
+      "StateClassification": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "New",
+          "InProgress",
+          "Done",
+          "Removed"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3
         ]
       },
       "MilestoneLineDto": {
@@ -6664,7 +8037,7 @@
           3
         ]
       },
-      "UnplannedEpicDto": {
+      "UnplannedEpicDto2": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -6692,6 +8065,9 @@
           },
           "validationIndicator": {
             "$ref": "#/components/schemas/ValidationIndicator"
+          },
+          "stateClassification": {
+            "$ref": "#/components/schemas/StateClassification"
           },
           "tfsOrder": {
             "type": "integer",
@@ -7209,22 +8585,6 @@
           }
         }
       },
-      "StateClassification": {
-        "type": "integer",
-        "description": "",
-        "x-enumNames": [
-          "New",
-          "InProgress",
-          "Done",
-          "Removed"
-        ],
-        "enum": [
-          0,
-          1,
-          2,
-          3
-        ]
-      },
       "SaveStateClassificationsRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -7237,6 +8597,48 @@
             "items": {
               "$ref": "#/components/schemas/WorkItemStateClassificationDto"
             }
+          }
+        }
+      },
+      "SprintDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "tfsIterationId": {
+            "type": "string",
+            "nullable": true
+          },
+          "path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "startUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "timeFrame": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastSyncedUtc": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
