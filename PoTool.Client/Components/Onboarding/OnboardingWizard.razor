@@ -594,6 +594,7 @@
 
             var stream = await response.Content.ReadAsStreamAsync(CancellationToken.None);
             using var reader = new StreamReader(stream);
+            // StreamReader.ReadLineAsync is not supported in WASM.
             var lineReader = new StreamLineReader(reader);
 
             while (true)
@@ -739,10 +740,11 @@
         _productSaveResult = null;
     }
 
-    private sealed class StreamLineReader
+    internal sealed class StreamLineReader
     {
+        private const int BufferSize = 256;
         private readonly TextReader _reader;
-        private readonly char[] _buffer = new char[256];
+        private readonly char[] _buffer = new char[BufferSize];
         private int _bufferLength;
         private int _bufferIndex;
 
