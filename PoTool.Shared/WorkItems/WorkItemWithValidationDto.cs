@@ -14,6 +14,7 @@ public sealed record WorkItemWithValidationDto(
     string JsonPayload,
     DateTimeOffset RetrievedAt,
     int? Effort,
+    string? Description,
     List<ValidationIssue> ValidationIssues,
     DateTimeOffset? CreatedDate = null,
     DateTimeOffset? ClosedDate = null

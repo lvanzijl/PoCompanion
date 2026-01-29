@@ -189,7 +189,8 @@ public class TreeBuilderService : ITreeBuilderService
                         State = dto.State,
                         JsonPayload = dto.JsonPayload,
                         RetrievedAt = dto.RetrievedAt,
-                        Effort = dto.Effort
+                        Effort = dto.Effort,
+                        Description = dto.Description
                     })
                 };
                 nodeMap[id] = node;
@@ -211,7 +212,8 @@ public class TreeBuilderService : ITreeBuilderService
                     State = dto.State,
                     JsonPayload = dto.JsonPayload,
                     RetrievedAt = dto.RetrievedAt,
-                    Effort = dto.Effort
+                    Effort = dto.Effort,
+                    Description = dto.Description
                 });
             }
 
@@ -462,7 +464,8 @@ public class TreeBuilderService : ITreeBuilderService
                         State = dto.State,
                         JsonPayload = dto.JsonPayload,
                         RetrievedAt = dto.RetrievedAt,
-                        Effort = dto.Effort
+                        Effort = dto.Effort,
+                        Description = dto.Description
                     })
                 };
                 nodeMap[id] = node;
@@ -484,7 +487,8 @@ public class TreeBuilderService : ITreeBuilderService
                     State = dto.State,
                     JsonPayload = dto.JsonPayload,
                     RetrievedAt = dto.RetrievedAt,
-                    Effort = dto.Effort
+                    Effort = dto.Effort,
+                    Description = dto.Description
                 });
             }
 

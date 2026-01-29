@@ -18604,6 +18604,9 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
         public int? Effort { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string? Description { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("validationIssues")]
         public System.Collections.Generic.ICollection<ValidationIssue> ValidationIssues { get; set; } = default!;
 
