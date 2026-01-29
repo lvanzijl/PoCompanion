@@ -53,7 +53,7 @@ public static class ApiApplicationBuilderExtensions
                         var appliedMigrations = db.Database.GetAppliedMigrationsAsync().GetAwaiter().GetResult();
                         var pendingMigrations = db.Database.GetPendingMigrationsAsync().GetAwaiter().GetResult();
 
-                        // Detect legacy database: has tables but no migration history
+                        // Detect database created with EnsureCreated: has tables but no migration history
                         if (!appliedMigrations.Any() && pendingMigrations.Any())
                         {
                             var connection = db.Database.GetDbConnection();
@@ -61,14 +61,14 @@ public static class ApiApplicationBuilderExtensions
                             {
                                 connection.OpenAsync().GetAwaiter().GetResult();
 
-                                // Check if TfsConfigs or WorkItems tables exist (legacy database indicators)
+                                // Check if any tables exist (indicates database was created with EnsureCreated)
                                 using var checkCmd = connection.CreateCommand();
-                                checkCmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('TfsConfigs', 'WorkItems')";
-                                var legacyTableCount = Convert.ToInt32(checkCmd.ExecuteScalarAsync().GetAwaiter().GetResult());
+                                checkCmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
+                                var tableCount = Convert.ToInt32(checkCmd.ExecuteScalarAsync().GetAwaiter().GetResult());
 
-                                if (legacyTableCount > 0)
+                                if (tableCount > 0)
                                 {
-                                    // Legacy database detected - provide clear error message
+                                    // Database has tables but no migration history - was created with EnsureCreated
                                     var dbPath = connection.DataSource;
 
                                     // Get the full absolute path for the database file
@@ -81,16 +81,17 @@ public static class ApiApplicationBuilderExtensions
                                         : $"rm \"{fullDbPath}\"";
                                     var osLabel = isWindows ? "Windows" : "Linux/Mac";
 
-                                    logger.LogCritical("LEGACY DATABASE DETECTED: Cannot start application with incompatible database schema.");
+                                    logger.LogCritical("INCOMPATIBLE DATABASE DETECTED: Database was created without migrations.");
+                                    logger.LogCritical("This usually happens when the database was created with EnsureCreated() instead of migrations.");
                                     logger.LogCritical("Database location: {DatabasePath}", fullDbPath);
                                     logger.LogCritical("To fix this issue, delete the database file and restart the application:");
                                     logger.LogCritical("  Command ({OS}): {DeleteCommand}", osLabel, deleteCommand);
 
                                     throw new InvalidOperationException(
-                                        $"Legacy database detected at '{fullDbPath}'. " +
-                                        $"The database schema is incompatible with the current version. " +
+                                        $"Database at '{fullDbPath}' was created without migration history. " +
+                                        $"This can cause migration failures when trying to apply schema changes. " +
                                         $"Please delete the database file using: {deleteCommand}. " +
-                                        $"A new database with the correct schema will be created automatically on restart.");
+                                        $"A new database with proper migration tracking will be created automatically on restart.");
                                 }
                             }
                             finally
@@ -106,14 +107,18 @@ public static class ApiApplicationBuilderExtensions
             }
             catch (InvalidOperationException)
             {
-                // Re-throw legacy database exceptions
+                // Re-throw database compatibility exceptions
                 throw;
             }
             catch (Exception ex)
             {
-                // If migrations fail for other reasons, fallback to EnsureCreated
-                logger.LogWarning(ex, "EF migrations could not be applied; falling back to EnsureCreated. Create migrations locally using 'dotnet ef migrations add <Name> --project PoTool.Api --startup-project PoTool.Api'");
-                db.Database.EnsureCreatedAsync().GetAwaiter().GetResult();
+                // Log migration failures and re-throw for visibility
+                // Do NOT fallback to EnsureCreated as it creates databases without migration history
+                // which will cause failures on subsequent runs
+                logger.LogCritical(ex, "EF migrations could not be applied. This may indicate a corrupt database or migration issue.");
+                logger.LogCritical("If the database exists, try deleting it and restarting the application.");
+                logger.LogCritical("To create migrations locally, use: dotnet ef migrations add <Name> --project PoTool.Api --startup-project PoTool.Api");
+                throw;
             }
         }
 
