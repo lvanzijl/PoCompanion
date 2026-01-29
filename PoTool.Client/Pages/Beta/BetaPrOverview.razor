@@ -167,6 +167,12 @@
                     {
                         <text>No products configured. Please configure products in your profile settings to view pull request data.</text>
                     }
+                    else if (_selectedProductId.HasValue)
+                    {
+                        var selectedProduct = _products.FirstOrDefault(p => p.Id == _selectedProductId.Value);
+                        var productName = selectedProduct?.Name ?? "selected product";
+                        <text>No pull request data found for @productName and the selected time range.</text>
+                    }
                     else if (_selectedTeamId.HasValue)
                     {
                         var selectedTeam = _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value);
