@@ -129,7 +129,8 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
             validationResults.TryGetValue(wi.TfsId, out var issues)
                 ? issues
                 : new List<ValidationIssue>(),
-            wi.CreatedDate
+            wi.CreatedDate,
+            wi.ClosedDate
         )).ToList();
     }
 }
