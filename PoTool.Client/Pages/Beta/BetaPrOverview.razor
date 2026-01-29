@@ -288,9 +288,15 @@
                     productIds = teamProducts;
                 }
             }
+            else
+            {
+                // Default: Load PRs for all user's products when no specific filter is selected
+                // This ensures the cached read provider returns relevant data
+                productIds = _products.Select(p => p.Id).ToList();
+            }
             
             // Build product IDs string
-            var productIdsStr = productIds != null ? string.Join(",", productIds) : null;
+            var productIdsStr = productIds != null && productIds.Any() ? string.Join(",", productIds) : null;
             
             // Load PRs (filtered by product, last 6 months)
             var fromDate = DateTimeOffset.UtcNow.AddMonths(-6);
