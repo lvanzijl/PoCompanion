@@ -272,26 +272,12 @@
             {
                 productIds = new List<int> { _selectedProductId.Value };
             }
-            else if (_selectedTeamId.HasValue)
-            {
-                // Filter products by team
-                var teamProducts = _products.Where(p => 
-                {
-                    // Note: Team-to-Product relationship would need to be checked
-                    // For now, we'll load all products if a team is selected
-                    // This should be enhanced with proper team-product filtering
-                    return true;
-                }).Select(p => p.Id).ToList();
-                
-                if (teamProducts.Any())
-                {
-                    productIds = teamProducts;
-                }
-            }
             else
             {
                 // Default: Load PRs for all user's products when no specific filter is selected
                 // This ensures the cached read provider returns relevant data
+                // Note: Team filter is not yet implemented - proper team-product filtering
+                // should be added when the team-to-product relationship is available
                 productIds = _products.Select(p => p.Id).ToList();
             }
             
