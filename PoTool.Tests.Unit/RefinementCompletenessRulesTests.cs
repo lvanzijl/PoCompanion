@@ -240,6 +240,138 @@ public class RefinementCompletenessRulesTests
         Assert.IsTrue(results.Any(r => r.WorkItemId == 3));
     }
 
+    [TestMethod]
+    public void RC2_PbiWithoutEffortButParentIsBlocker_Suppressed()
+    {
+        // Arrange: PBI without effort but parent Feature has invalid description (refinement blocker)
+        // The PBI's validation should be suppressed
+        var rule = new PbiEffortEmptyRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "New", null, "Short", null), // Invalid description (< 10 chars)
+            CreateWorkItem(2, "Product Backlog Item", "New", 1, "Description", null) // No effort, but suppressed
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results, "PBI validation should be suppressed when parent Feature is a refinement blocker");
+    }
+
+    [TestMethod]
+    public void RC2_PbiWithoutEffortAndParentHasValidDescription_NotSuppressed()
+    {
+        // Arrange: PBI without effort and parent Feature has valid description
+        var rule = new PbiEffortEmptyRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "New", null, "Valid description with more than 10 characters", null),
+            CreateWorkItem(2, "Product Backlog Item", "New", 1, "Description", null) // No effort
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.HasCount(1, results);
+        Assert.AreEqual(2, results[0].WorkItemId);
+    }
+
+    #endregion
+
+    #region RC-3: Feature without children
+
+    [TestMethod]
+    public void RC3_FeatureWithChildren_NoViolation()
+    {
+        // Arrange
+        var rule = new FeatureWithoutChildrenRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "New", null, "Valid description", null),
+            CreateWorkItem(2, "Product Backlog Item", "New", 1, "PBI Description", null)
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results);
+    }
+
+    [TestMethod]
+    public void RC3_FeatureWithoutChildren_HasViolation()
+    {
+        // Arrange
+        var rule = new FeatureWithoutChildrenRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "New", null, "Valid description", null)
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.HasCount(1, results);
+        Assert.AreEqual(1, results[0].WorkItemId);
+        Assert.AreEqual("RC-3", results[0].Rule.RuleId);
+        Assert.AreEqual(ValidationCategory.RefinementCompleteness, results[0].Rule.Category);
+        Assert.AreEqual(ValidationConsequence.IncompleteRefinement, results[0].Rule.Consequence);
+    }
+
+    [TestMethod]
+    public void RC3_FeatureWithInvalidDescription_NoViolation()
+    {
+        // Arrange: Feature with invalid description (refinement blocker) should not be flagged for missing children
+        var rule = new FeatureWithoutChildrenRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "New", null, "Short", null) // < 10 chars
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results, "Feature with invalid description should not trigger RC-3");
+    }
+
+    [TestMethod]
+    public void RC3_DoneFeatureWithoutChildren_NoViolation()
+    {
+        // Arrange: Done items should not be validated
+        var rule = new FeatureWithoutChildrenRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "Done", null, "Valid description", null)
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results, "Done items should be skipped");
+    }
+
+    [TestMethod]
+    public void RC3_EpicWithoutChildren_NoViolation()
+    {
+        // Arrange: This rule only applies to Features
+        var rule = new FeatureWithoutChildrenRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Valid description", null)
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results, "Rule only applies to Features");
+    }
+
     #endregion
     
     /// <summary>
