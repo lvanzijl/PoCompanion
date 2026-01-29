@@ -163,7 +163,26 @@
         {
             <MudPaper Elevation="2" Class="pa-6 mt-4">
                 <MudAlert Severity="Severity.Info">
-                    No pull request data found for the selected team/product and time range.
+                    @if (_products.Count == 0)
+                    {
+                        <text>No products configured. Please configure products in your profile settings to view pull request data.</text>
+                    }
+                    else if (_selectedProductId.HasValue)
+                    {
+                        var selectedProduct = _products.FirstOrDefault(p => p.Id == _selectedProductId.Value);
+                        var productName = selectedProduct?.Name ?? "selected product";
+                        <text>No pull request data found for @productName and the selected time range.</text>
+                    }
+                    else if (_selectedTeamId.HasValue)
+                    {
+                        var selectedTeam = _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value);
+                        var teamName = selectedTeam?.Name ?? "selected team";
+                        <text>No pull request data found for @teamName and the selected time range. The team may not be linked to any products with pull request data.</text>
+                    }
+                    else
+                    {
+                        <text>No pull request data found for the selected filters and time range.</text>
+                    }
                 </MudAlert>
             </MudPaper>
         }
@@ -270,27 +289,36 @@
             
             if (_selectedProductId.HasValue)
             {
+                // Specific product selected
                 productIds = new List<int> { _selectedProductId.Value };
             }
             else if (_selectedTeamId.HasValue)
             {
-                // Filter products by team
-                var teamProducts = _products.Where(p => 
+                // Team selected: find all products linked to this team
+                var selectedTeam = _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value);
+                if (selectedTeam != null)
                 {
-                    // Note: Team-to-Product relationship would need to be checked
-                    // For now, we'll load all products if a team is selected
-                    // This should be enhanced with proper team-product filtering
-                    return true;
-                }).Select(p => p.Id).ToList();
-                
-                if (teamProducts.Any())
-                {
-                    productIds = teamProducts;
+                    // Filter products that have this team in their TeamIds list
+                    productIds = _products
+                        .Where(p => p.TeamIds != null && p.TeamIds.Contains(_selectedTeamId.Value))
+                        .Select(p => p.Id)
+                        .ToList();
                 }
+                else
+                {
+                    // Team not found, show no PRs
+                    productIds = new List<int>();
+                }
+            }
+            else
+            {
+                // Default: Load PRs for all user's products when no specific filter is selected
+                // This ensures the cached read provider returns relevant data
+                productIds = _products.Select(p => p.Id).ToList();
             }
             
             // Build product IDs string
-            var productIdsStr = productIds != null ? string.Join(",", productIds) : null;
+            var productIdsStr = productIds != null && productIds.Any() ? string.Join(",", productIds) : null;
             
             // Load PRs (filtered by product, last 6 months)
             var fromDate = DateTimeOffset.UtcNow.AddMonths(-6);
