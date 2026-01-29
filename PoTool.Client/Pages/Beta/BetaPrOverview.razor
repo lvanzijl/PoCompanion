@@ -66,6 +66,7 @@
                                    Label="Team"
                                    Variant="Variant.Outlined"
                                    Clearable="true"
+                                   Disabled="true"
                                    ValueChanged="OnTeamChanged">
                             <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
                             @foreach (var team in _teams)
@@ -73,6 +74,9 @@
                                 <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
                             }
                         </MudSelect>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                            Team filtering is not yet implemented
+                        </MudText>
                     </MudItem>
                     
                     <MudItem xs="12" sm="6">
@@ -163,7 +167,14 @@
         {
             <MudPaper Elevation="2" Class="pa-6 mt-4">
                 <MudAlert Severity="Severity.Info">
-                    No pull request data found for the selected team/product and time range.
+                    @if (_products.Count == 0)
+                    {
+                        <text>No products configured. Please configure products in your profile settings to view pull request data.</text>
+                    }
+                    else
+                    {
+                        <text>No pull request data found for the selected product and time range.</text>
+                    }
                 </MudAlert>
             </MudPaper>
         }
