@@ -51,9 +51,15 @@ public class PipelineService
         // TODO: Replace with direct API call once client is regenerated:
         // return await _pipelinesClient.GetRunsForProductsAsync(productIds) ?? Array.Empty<PipelineRunDto>();
         
+        // Return empty if no products specified (GetDefinitionsAsync requires at least productId or repositoryId)
+        if (string.IsNullOrWhiteSpace(productIds))
+        {
+            return Array.Empty<PipelineRunDto>();
+        }
+        
         // Get pipeline definitions for the first product (temporary limitation)
         var definitions = (await GetDefinitionsAsync(
-            productId: !string.IsNullOrWhiteSpace(productIds) && int.TryParse(productIds.Split(',').FirstOrDefault(), out var firstId) ? firstId : null
+            productId: int.TryParse(productIds.Split(',').FirstOrDefault(), out var firstId) ? firstId : null
         )).ToList();
 
         if (definitions.Count == 0)
