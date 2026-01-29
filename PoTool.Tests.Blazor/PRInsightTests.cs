@@ -55,13 +55,13 @@ public class PRInsightTests : BunitTestContext
 
     private void SetupMockWithMetrics(List<PullRequestMetricsDto> metrics)
     {
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>(), It.IsAny<DateTimeOffset?>()))
             .ReturnsAsync(metrics);
     }
 
     private void SetupMockWithEmptyMetrics()
     {
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>(), It.IsAny<DateTimeOffset?>()))
             .ReturnsAsync(new List<PullRequestMetricsDto>());
     }
 
@@ -104,7 +104,7 @@ public class PRInsightTests : BunitTestContext
     public void PRInsight_ShowsEmptyState_WhenNoData()
     {
         // Arrange
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>(), It.IsAny<DateTimeOffset?>()))
             .ReturnsAsync(new List<PullRequestMetricsDto>());
 
         // Act
@@ -121,7 +121,7 @@ public class PRInsightTests : BunitTestContext
     {
         // Arrange - Setup to delay the async call
         var tcs = new TaskCompletionSource<ICollection<PullRequestMetricsDto>>();
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>(), It.IsAny<DateTimeOffset?>()))
             .Returns(tcs.Task);
 
         // Act
@@ -146,7 +146,7 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(3, "PR 3", "User3", "Active", 3, 15, 8)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>(), It.IsAny<DateTimeOffset?>()))
             .ReturnsAsync(metrics);
 
         // Act
@@ -176,7 +176,7 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(2, "PR 2", "User2", "Completed", 3, 15, 8)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>(), It.IsAny<DateTimeOffset?>()))
             .ReturnsAsync(metrics);
 
         // Act
@@ -202,7 +202,7 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(1, "PR 1", "User1", "Active", 2, 10, 5)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>(), It.IsAny<DateTimeOffset?>()))
             .ReturnsAsync(metrics);
 
         // Act
@@ -228,7 +228,7 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(1, "PR 1", "User1", "Active", 2, 10, 5)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>(), It.IsAny<DateTimeOffset?>()))
             .ReturnsAsync(metrics);
 
         // Act
@@ -255,7 +255,7 @@ public class PRInsightTests : BunitTestContext
             CreateMetric(1, "Test PR Title", "TestUser", "Active", 2, 10, 5)
         };
 
-        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>()))
+        _mockPullRequestsClient.Setup(x => x.GetMetricsAsync(It.IsAny<string?>(), It.IsAny<DateTimeOffset?>()))
             .ReturnsAsync(metrics);
 
         // Act
