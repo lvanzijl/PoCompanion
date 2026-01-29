@@ -58,7 +58,10 @@ public class PipelineService
         }
         
         // Parse and validate the first product ID
-        if (!int.TryParse(productIds.Split(',').FirstOrDefault(), out var firstId) || firstId <= 0)
+        var firstProductIdStr = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim();
+        if (string.IsNullOrWhiteSpace(firstProductIdStr) || 
+            !int.TryParse(firstProductIdStr, out var firstId) || 
+            firstId <= 0)
         {
             // Invalid product ID format - return empty to avoid invalid API call
             return Array.Empty<PipelineRunDto>();

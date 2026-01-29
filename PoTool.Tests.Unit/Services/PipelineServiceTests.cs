@@ -12,7 +12,7 @@ public class PipelineServiceTests
     private PipelineService _service = null!;
 
     [TestInitialize]
-    public void Setup()
+    public void TestInitialize()
     {
         _mockClient = new Mock<IPipelinesClient>();
         _service = new PipelineService(_mockClient.Object);
@@ -103,6 +103,20 @@ public class PipelineServiceTests
     }
 
     [TestMethod]
+    public async Task GetRunsForProductsAsync_WithCommasOnly_ReturnsEmptyList()
+    {
+        // Act
+        var result = await _service.GetRunsForProductsAsync(",,,");
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(0, result.Count());
+        
+        // Verify GetDefinitionsAsync was not called
+        _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
+    }
+
+    [TestMethod]
     public async Task GetRunsForProductsAsync_WithValidProductId_CallsGetDefinitionsAsync()
     {
         // Arrange
@@ -133,10 +147,12 @@ public class PipelineServiceTests
                 new PipelineRunDto
                 {
                     PipelineId = 1,
+                    PipelineName = "TestPipeline",
                     RunId = 101,
                     Result = PipelineRunResult.Succeeded,
                     StartTime = DateTimeOffset.UtcNow.AddHours(-1),
-                    FinishTime = DateTimeOffset.UtcNow
+                    FinishTime = DateTimeOffset.UtcNow,
+                    RetrievedAt = DateTimeOffset.UtcNow
                 }
             });
 
