@@ -66,7 +66,6 @@
                                    Label="Team"
                                    Variant="Variant.Outlined"
                                    Clearable="true"
-                                   Disabled="true"
                                    ValueChanged="OnTeamChanged">
                             <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
                             @foreach (var team in _teams)
@@ -74,9 +73,6 @@
                                 <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
                             }
                         </MudSelect>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                            Team filtering is not yet implemented
-                        </MudText>
                     </MudItem>
                     
                     <MudItem xs="12" sm="6">
@@ -171,9 +167,15 @@
                     {
                         <text>No products configured. Please configure products in your profile settings to view pull request data.</text>
                     }
+                    else if (_selectedTeamId.HasValue)
+                    {
+                        var selectedTeam = _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value);
+                        var teamName = selectedTeam?.Name ?? "selected team";
+                        <text>No pull request data found for @teamName and the selected time range. The team may not be linked to any products with pull request data.</text>
+                    }
                     else
                     {
-                        <text>No pull request data found for the selected product and time range.</text>
+                        <text>No pull request data found for the selected filters and time range.</text>
                     }
                 </MudAlert>
             </MudPaper>
@@ -281,14 +283,31 @@
             
             if (_selectedProductId.HasValue)
             {
+                // Specific product selected
                 productIds = new List<int> { _selectedProductId.Value };
+            }
+            else if (_selectedTeamId.HasValue)
+            {
+                // Team selected: find all products linked to this team
+                var selectedTeam = _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value);
+                if (selectedTeam != null)
+                {
+                    // Filter products that have this team in their TeamIds list
+                    productIds = _products
+                        .Where(p => p.TeamIds != null && p.TeamIds.Contains(_selectedTeamId.Value))
+                        .Select(p => p.Id)
+                        .ToList();
+                }
+                else
+                {
+                    // Team not found, show no PRs
+                    productIds = new List<int>();
+                }
             }
             else
             {
                 // Default: Load PRs for all user's products when no specific filter is selected
                 // This ensures the cached read provider returns relevant data
-                // Note: Team filter is not yet implemented - proper team-product filtering
-                // should be added when the team-to-product relationship is available
                 productIds = _products.Select(p => p.Id).ToList();
             }
             
