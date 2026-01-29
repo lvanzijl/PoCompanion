@@ -38,14 +38,14 @@
                         
                         <MudForm @ref="_configForm" @bind-IsValid="_configFormValid">
                             <CompactTextField Value="@_url"
-                                         ValueChanged="@((string value) => OnUrlChanged(value))"
+                                         ValueChanged="@(async (string value) => await OnUrlChanged(value))"
                                          Label="Organization URL" 
                                          Placeholder="https://dev.azure.com/yourorg"
                                          Required="true"
                                          HelperText="The URL of your Azure DevOps organization" />
 
                             <CompactTextField Value="@_project"
-                                         ValueChanged="@((string value) => OnProjectChanged(value))"
+                                         ValueChanged="@(async (string value) => await OnProjectChanged(value))"
                                          Label="Project Name" 
                                          Placeholder="MyProject"
                                          Required="true"
