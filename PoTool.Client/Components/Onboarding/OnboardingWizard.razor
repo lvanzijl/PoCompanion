@@ -3,6 +3,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
 @using PoTool.Shared.Settings
+@using System.Text
 @using System.Text.Json
 @inject IOnboardingService OnboardingService
 @inject IOnboardingWizardState WizardState
@@ -593,10 +594,17 @@
 
             var stream = await response.Content.ReadAsStreamAsync(CancellationToken.None);
             using var reader = new StreamReader(stream);
+            // StreamReader.ReadLineAsync is not supported in WASM.
+            var lineReader = new StreamLineReader(reader);
 
-            while (!reader.EndOfStream)
+            while (true)
             {
-                var line = await reader.ReadLineAsync(CancellationToken.None);
+                var line = await lineReader.ReadLineAsync(CancellationToken.None);
+                if (line == null)
+                {
+                    break;
+                }
+
                 if (string.IsNullOrEmpty(line)) continue;
 
                 var update = JsonSerializer.Deserialize<ProgressUpdate>(line, new JsonSerializerOptions
@@ -730,6 +738,73 @@
     {
         _productErrorResponse = null;
         _productSaveResult = null;
+    }
+
+    /// <summary>
+    /// WASM-safe line reader for streamed text responses.
+    /// </summary>
+    internal sealed class StreamLineReader
+    {
+        // Small buffer to limit allocations for streaming progress updates in WASM.
+        private const int BufferSize = 256;
+        private readonly TextReader _reader;
+        private readonly char[] _buffer = new char[BufferSize];
+        private int _bufferLength;
+        private int _bufferIndex;
+        private readonly StringBuilder _builder = new StringBuilder();
+
+        public StreamLineReader(TextReader reader)
+        {
+            _reader = reader;
+        }
+
+        public async Task<string?> ReadLineAsync(CancellationToken cancellationToken)
+        {
+            _builder.Clear();
+
+            while (true)
+            {
+                if (_bufferIndex >= _bufferLength)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    _bufferLength = await _reader.ReadAsync(_buffer, 0, _buffer.Length);
+                    _bufferIndex = 0;
+                    if (_bufferLength == 0)
+                    {
+                        return _builder.Length > 0 ? _builder.ToString() : null;
+                    }
+                }
+
+                var current = _buffer[_bufferIndex++];
+                if (current == '\n')
+                {
+                    return _builder.ToString();
+                }
+
+                if (current == '\r')
+                {
+                    if (_bufferIndex >= _bufferLength)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        _bufferLength = await _reader.ReadAsync(_buffer, 0, _buffer.Length);
+                        _bufferIndex = 0;
+                        if (_bufferLength == 0)
+                        {
+                            return _builder.ToString();
+                        }
+                    }
+
+                    if (_buffer[_bufferIndex] == '\n')
+                    {
+                        _bufferIndex++;
+                    }
+
+                    return _builder.ToString();
+                }
+
+                _builder.Append(current);
+            }
+        }
     }
 
     private async Task LoadTfsTeams()
