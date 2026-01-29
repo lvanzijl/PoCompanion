@@ -118,6 +118,15 @@ This requires explicit justification in code review.
 
 ---
 
+## Migration rules:
+
+- Always commit and push every generated migration pair together: <MigrationName>.cs and <MigrationName>.Designer.cs — never one without the other.
+- Do not edit or delete *.Designer.cs files manually; treat them as generated artifacts that must stay in sync with the migration.
+- Generate migrations only from a clean, successfully building solution and verified model changes — never create speculative or placeholder migrations.
+- After creating a migration, immediately apply it to a local database and verify upgrade and rollback both succeed before committing.
+
+---
+
 ## Enforcement Expectation
 
 Any PR that violates these rules:
