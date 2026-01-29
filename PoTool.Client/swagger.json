@@ -8930,6 +8930,10 @@
             "format": "int32",
             "nullable": true
           },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
           "validationIssues": {
             "type": "array",
             "items": {

@@ -125,6 +125,7 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
             wi.JsonPayload,
             wi.RetrievedAt,
             wi.Effort,
+            wi.Description,
             validationResults.TryGetValue(wi.TfsId, out var issues)
                 ? issues
                 : new List<ValidationIssue>(),
