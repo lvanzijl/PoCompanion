@@ -11,12 +11,6 @@ namespace PoTool.Api.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<int>(
-                name: "Effort",
-                table: "WorkItems",
-                type: "INTEGER",
-                nullable: true);
-
             migrationBuilder.AddColumn<string>(
                 name: "ApiVersion",
                 table: "TfsConfigs",
@@ -196,10 +190,6 @@ namespace PoTool.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "PullRequests");
-
-            migrationBuilder.DropColumn(
-                name: "Effort",
-                table: "WorkItems");
 
             migrationBuilder.DropColumn(
                 name: "ApiVersion",
