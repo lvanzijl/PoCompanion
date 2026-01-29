@@ -48,7 +48,7 @@ public sealed class FeatureWithoutChildrenRule : HierarchicalValidationRuleBase
             }
 
             // Skip if the Feature itself is a refinement blocker (invalid description)
-            if (string.IsNullOrWhiteSpace(feature.Description) || feature.Description.Length < 10)
+            if (string.IsNullOrWhiteSpace(feature.Description) || feature.Description.Length < ValidationRuleConstants.MinimumDescriptionLength)
             {
                 continue;
             }

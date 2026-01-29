@@ -60,7 +60,7 @@ public sealed class PbiEffortEmptyRule : HierarchicalValidationRuleBase
 
                     // If parent is a Feature with invalid description (refinement blocker), suppress this PBI's validation
                     if (parentFeature != null &&
-                        (string.IsNullOrWhiteSpace(parentFeature.Description) || parentFeature.Description.Length < 10))
+                        (string.IsNullOrWhiteSpace(parentFeature.Description) || parentFeature.Description.Length < ValidationRuleConstants.MinimumDescriptionLength))
                     {
                         continue;
                     }

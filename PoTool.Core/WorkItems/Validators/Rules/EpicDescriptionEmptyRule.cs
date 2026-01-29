@@ -36,7 +36,7 @@ public sealed class EpicDescriptionEmptyRule : HierarchicalValidationRuleBase
         var results = new List<ValidationRuleResult>();
         var itemsList = workItems as List<WorkItemDto> ?? workItems.ToList();
 
-        // Find all Epics with empty descriptions
+        // Find all Epics with invalid descriptions (empty or too short)
         var epics = itemsList.Where(w =>
             string.Equals(w.Type, WorkItemType.Epic, StringComparison.OrdinalIgnoreCase));
 
@@ -48,7 +48,7 @@ public sealed class EpicDescriptionEmptyRule : HierarchicalValidationRuleBase
                 continue;
             }
 
-            if (string.IsNullOrWhiteSpace(epic.Description) || epic.Description.Length < 10)
+            if (string.IsNullOrWhiteSpace(epic.Description) || epic.Description.Length < ValidationRuleConstants.MinimumDescriptionLength)
             {
                 results.Add(CreateViolation(epic.TfsId));
             }

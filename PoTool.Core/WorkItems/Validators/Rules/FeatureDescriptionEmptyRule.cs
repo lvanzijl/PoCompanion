@@ -36,7 +36,7 @@ public sealed class FeatureDescriptionEmptyRule : HierarchicalValidationRuleBase
         var results = new List<ValidationRuleResult>();
         var itemsList = workItems as List<WorkItemDto> ?? workItems.ToList();
 
-        // Find all Features with empty descriptions
+        // Find all Features with invalid descriptions (empty or too short)
         var features = itemsList.Where(w =>
             string.Equals(w.Type, WorkItemType.Feature, StringComparison.OrdinalIgnoreCase));
 
@@ -48,7 +48,7 @@ public sealed class FeatureDescriptionEmptyRule : HierarchicalValidationRuleBase
                 continue;
             }
 
-            if (string.IsNullOrWhiteSpace(feature.Description) || feature.Description.Length < 10)
+            if (string.IsNullOrWhiteSpace(feature.Description) || feature.Description.Length < ValidationRuleConstants.MinimumDescriptionLength)
             {
                 results.Add(CreateViolation(feature.TfsId));
             }
