@@ -41,9 +41,10 @@ public class PullRequestService
     /// Gets aggregated metrics for pull requests.
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
-    public async Task<IEnumerable<PullRequestMetricsDto>> GetMetricsAsync(string? productIds = null)
+    /// <param name="fromDate">Optional start date filter</param>
+    public async Task<IEnumerable<PullRequestMetricsDto>> GetMetricsAsync(string? productIds = null, DateTimeOffset? fromDate = null)
     {
-        return await _pullRequestsClient.GetMetricsAsync(productIds) ?? Array.Empty<PullRequestMetricsDto>();
+        return await _pullRequestsClient.GetMetricsAsync(productIds, fromDate) ?? Array.Empty<PullRequestMetricsDto>();
     }
 
     /// <summary>

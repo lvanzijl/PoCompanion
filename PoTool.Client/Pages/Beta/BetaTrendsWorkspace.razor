@@ -3,13 +3,17 @@
 @using PoTool.Client.Components.Velocity
 @using PoTool.Client.Pages.Beta.Components
 @using PoTool.Shared.Settings
+@using System.Web
+@using PoTool.Client.ApiClient
 @inherits BetaWorkspaceBase
 @inject INavigationContextService NavigationContextService
 @inject WorkItemService WorkItemService
 @inject StateClassificationService StateClassificationService
+@inject TeamService TeamService
+@inject SprintService SprintService
 
 @* 
-    Decision #3: Time Horizon Default - Always 6 months per user decision
+    Decision #3: Time Horizon Default - Configurable sprint range (defaults to last 6 months if no sprints selected)
     Decision #12: Trend Chart Interaction - Hover highlight, click to filter (Option D)
 *@
 
@@ -33,12 +37,77 @@
             </MudStack>
             
             <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                <MudChip T="string" 
-                         Icon="@Icons.Material.Filled.History" 
-                         Size="Size.Small"
-                         Color="Color.Info">
-                    Last 6 Months
-                </MudChip>
+                @* Sprint Range Selector *@
+                @if (!_isLoading)
+                {
+                    <MudSelect T="int?"
+                               Value="_selectedTeamId"
+                               Label="Team"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Clearable="true"
+                               ValueChanged="OnTeamSelectionChanged"
+                               Style="min-width: 180px;">
+                        <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
+                        @foreach (var team in _teams)
+                        {
+                            <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                    
+                    @if (_selectedTeamId.HasValue && _sprints.Any())
+                    {
+                        <MudSelect T="int?"
+                                   Value="_selectedFromSprintId"
+                                   Label="From Sprint"
+                                   Variant="Variant.Outlined"
+                                   Dense="true"
+                                   Clearable="true"
+                                   ValueChanged="OnFromSprintChanged"
+                                   Style="min-width: 200px;">
+                            @foreach (var sprint in _sprints)
+                            {
+                                <MudSelectItem T="int?" Value="@sprint.Id">
+                                    @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "Unknown"))
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                        
+                        <MudSelect T="int?"
+                                   Value="_selectedToSprintId"
+                                   Label="To Sprint"
+                                   Variant="Variant.Outlined"
+                                   Dense="true"
+                                   Clearable="true"
+                                   ValueChanged="OnToSprintChanged"
+                                   Style="min-width: 200px;">
+                            @foreach (var sprint in _sprints)
+                            {
+                                <MudSelectItem T="int?" Value="@sprint.Id">
+                                    @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "Unknown"))
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    else if (_selectedTeamId.HasValue)
+                    {
+                        <MudChip T="string" 
+                                 Icon="@Icons.Material.Filled.Info" 
+                                 Size="Size.Small"
+                                 Color="Color.Default">
+                            No sprints synced for this team
+                        </MudChip>
+                    }
+                    else if (!_selectedFromSprintId.HasValue && !_selectedToSprintId.HasValue)
+                    {
+                        <MudChip T="string" 
+                                 Icon="@Icons.Material.Filled.History" 
+                                 Size="Size.Small"
+                                 Color="Color.Info">
+                            Last 6 Months (Default)
+                        </MudChip>
+                    }
+                }
                 
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
@@ -209,6 +278,15 @@
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
     
+    // Sprint range selector state
+    private int? _selectedTeamId;
+    private int? _selectedFromSprintId;
+    private int? _selectedToSprintId;
+    private List<PoTool.Client.ApiClient.TeamDto> _teams = new();
+    private List<PoTool.Client.ApiClient.SprintDto> _sprints = new();
+    private DateTimeOffset _fromDate;
+    private DateTimeOffset _toDate;
+    
     // Decision #12: Interactive trend chart data - 3 series
     private Dictionary<string, int> _bugTrendTotal = new();   // Bugs existing/active in that month
     private Dictionary<string, int> _bugTrendFixed = new();   // Bugs moved to Done in that month
@@ -229,7 +307,22 @@
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             _profileId = activeProfile?.Id;
             
-            // Load bug trend data (Decision #3: 6 month time horizon)
+            // Load teams for sprint selector
+            _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
+            
+            // Parse URL parameters for sprint selection
+            ParseSprintQueryParameters();
+            
+            // Load sprints if team is selected
+            if (_selectedTeamId.HasValue)
+            {
+                await LoadSprintsForTeamAsync(_selectedTeamId.Value);
+            }
+            
+            // Calculate date range (default to 6 months if no sprints selected)
+            CalculateDateRange();
+            
+            // Load bug trend data with calculated date range
             await LoadBugTrendDataAsync();
             
             UpdateBreadcrumbs();
@@ -245,8 +338,8 @@
     }
     
     /// <summary>
-    /// Loads bug trend data for the last 6 months with 3 series: Total, Fixed, Added.
-    /// Decision #3: Time horizon default is 6 months.
+    /// Loads bug trend data with configurable date range (sprint-based or default 6 months).
+    /// Decision #3: Time horizon is configurable via sprint selection (defaults to 6 months).
     /// 
     /// Series 1 (Total): Bugs open at month-end (approximate using current state).
     /// Series 2 (Fixed): Bugs in "Done" state (approximate - no state transition history).
@@ -273,15 +366,17 @@
                     c => c.Classification,
                     StringComparer.OrdinalIgnoreCase);
             
-            var now = DateTime.UtcNow;
             _bugTrendTotal = new Dictionary<string, int>();
             _bugTrendFixed = new Dictionary<string, int>();
             _bugTrendAdded = new Dictionary<string, int>();
             
-            // Process each of the last 6 months
-            for (var i = 5; i >= 0; i--)
+            // Calculate number of months to process based on date range
+            var monthsCount = CalculateMonthsBetween(_fromDate.DateTime, _toDate.DateTime);
+            
+            // Process each month in the date range
+            for (var i = monthsCount - 1; i >= 0; i--)
             {
-                var monthDate = now.AddMonths(-i);
+                var monthDate = _toDate.DateTime.AddMonths(-i);
                 var periodKey = monthDate.ToString("yyyy-MM");
                 var monthStart = new DateTime(monthDate.Year, monthDate.Month, 1);
                 var nextMonthStart = monthStart.AddMonths(1);
@@ -307,7 +402,7 @@
                         return false;
                     
                     classificationLookup.TryGetValue(b.State, out var classification);
-                    return classification == StateClassification.Done;
+                    return classification == PoTool.Shared.Settings.StateClassification.Done;
                 });
                 _bugTrendFixed[periodKey] = fixedCount;
                 
@@ -324,8 +419,8 @@
                     classificationLookup.TryGetValue(b.State, out var classification);
                     
                     // Exclude bugs in "Done" or "Removed" state
-                    return classification != StateClassification.Done &&
-                           classification != StateClassification.Removed;
+                    return classification != PoTool.Shared.Settings.StateClassification.Done &&
+                           classification != PoTool.Shared.Settings.StateClassification.Removed;
                 });
                 _bugTrendTotal[periodKey] = totalCount;
             }
@@ -386,5 +481,157 @@
     private void NavigateToPlanning()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPlanningWorkspace}{BuildContextQuery()}");
+    }
+    
+    /// <summary>
+    /// Parses sprint selection parameters from URL query string.
+    /// </summary>
+    private void ParseSprintQueryParameters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+        
+        // Parse teamId
+        var teamIdStr = queryParams["teamId"];
+        if (!string.IsNullOrEmpty(teamIdStr) && int.TryParse(teamIdStr, out var teamId))
+        {
+            _selectedTeamId = teamId;
+        }
+        
+        // Parse fromSprintId
+        var fromSprintIdStr = queryParams["fromSprintId"];
+        if (!string.IsNullOrEmpty(fromSprintIdStr) && int.TryParse(fromSprintIdStr, out var fromSprintId))
+        {
+            _selectedFromSprintId = fromSprintId;
+        }
+        
+        // Parse toSprintId
+        var toSprintIdStr = queryParams["toSprintId"];
+        if (!string.IsNullOrEmpty(toSprintIdStr) && int.TryParse(toSprintIdStr, out var toSprintId))
+        {
+            _selectedToSprintId = toSprintId;
+        }
+    }
+    
+    /// <summary>
+    /// Loads sprints for the selected team.
+    /// </summary>
+    private async Task LoadSprintsForTeamAsync(int teamId)
+    {
+        try
+        {
+            _sprints = (await SprintService.GetSprintsForTeamAsync(teamId)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading sprints: {ex.Message}", Severity.Warning);
+            _sprints = new List<PoTool.Client.ApiClient.SprintDto>();
+        }
+    }
+    
+    /// <summary>
+    /// Calculates the date range based on sprint selection or defaults to 6 months.
+    /// </summary>
+    private void CalculateDateRange()
+    {
+        // If both sprints are selected, use their date range
+        if (_selectedFromSprintId.HasValue && _selectedToSprintId.HasValue)
+        {
+            var fromSprint = _sprints.FirstOrDefault(s => s.Id == _selectedFromSprintId.Value);
+            var toSprint = _sprints.FirstOrDefault(s => s.Id == _selectedToSprintId.Value);
+            
+            if (fromSprint?.StartUtc.HasValue == true && toSprint?.EndUtc.HasValue == true)
+            {
+                _fromDate = fromSprint.StartUtc.Value;
+                _toDate = toSprint.EndUtc.Value;
+                return;
+            }
+        }
+        
+        // Default to last 6 months
+        _toDate = DateTimeOffset.UtcNow;
+        _fromDate = _toDate.AddMonths(-6);
+    }
+    
+    /// <summary>
+    /// Updates URL parameters with sprint selection.
+    /// </summary>
+    private void UpdateSprintUrlParameters()
+    {
+        var queryParams = new List<string>();
+        
+        if (_selectedTeamId.HasValue)
+        {
+            queryParams.Add($"teamId={_selectedTeamId.Value}");
+        }
+        
+        if (_selectedFromSprintId.HasValue)
+        {
+            queryParams.Add($"fromSprintId={_selectedFromSprintId.Value}");
+        }
+        
+        if (_selectedToSprintId.HasValue)
+        {
+            queryParams.Add($"toSprintId={_selectedToSprintId.Value}");
+        }
+        
+        var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
+        var newUrl = $"{WorkspaceRoutes.BetaTrendsWorkspace}{queryString}";
+        
+        NavigationManager.NavigateTo(newUrl, forceLoad: false);
+    }
+    
+    /// <summary>
+    /// Handles team selection change.
+    /// </summary>
+    private async Task OnTeamSelectionChanged(int? teamId)
+    {
+        _selectedTeamId = teamId;
+        _selectedFromSprintId = null;
+        _selectedToSprintId = null;
+        _sprints.Clear();
+        
+        if (teamId.HasValue)
+        {
+            await LoadSprintsForTeamAsync(teamId.Value);
+        }
+        
+        CalculateDateRange();
+        UpdateSprintUrlParameters();
+        await LoadBugTrendDataAsync();
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Handles from sprint selection change.
+    /// </summary>
+    private async Task OnFromSprintChanged(int? sprintId)
+    {
+        _selectedFromSprintId = sprintId;
+        CalculateDateRange();
+        UpdateSprintUrlParameters();
+        await LoadBugTrendDataAsync();
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Handles to sprint selection change.
+    /// </summary>
+    private async Task OnToSprintChanged(int? sprintId)
+    {
+        _selectedToSprintId = sprintId;
+        CalculateDateRange();
+        UpdateSprintUrlParameters();
+        await LoadBugTrendDataAsync();
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Calculates the number of months between two dates.
+    /// </summary>
+    private int CalculateMonthsBetween(DateTime fromDate, DateTime toDate)
+    {
+        var months = ((toDate.Year - fromDate.Year) * 12) + toDate.Month - fromDate.Month + 1;
+        return Math.Max(1, Math.Min(months, 12)); // Cap at 12 months for performance
     }
 }
