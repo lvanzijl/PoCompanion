@@ -854,19 +854,21 @@
             _createdTeamId = team.Id;
             
             // If we have both a product and a team created, link them together
+            // If linking fails, it will be caught by outer exception handler
+            // User can manually link via Settings UI if needed
             if (_createdProductId.HasValue && _createdTeamId.HasValue)
             {
-                try
+                var linked = await ProductService.LinkTeamAsync(_createdProductId.Value, _createdTeamId.Value);
+                if (linked)
                 {
-                    await ProductService.LinkTeamAsync(_createdProductId.Value, _createdTeamId.Value);
                     _teamSaveResult = new ConnectionTestResult(true, $"Team '{team.Name}' created and linked to product successfully!");
                     Snackbar.Add("Team saved and linked successfully", Severity.Success);
                 }
-                catch (Exception linkEx)
+                else
                 {
-                    // Team was created but linking failed - report partial success
-                    _teamSaveResult = new ConnectionTestResult(true, $"Team '{team.Name}' created but linking failed: {linkEx.Message}");
-                    Snackbar.Add("Team saved but linking failed", Severity.Warning);
+                    // LinkTeamAsync returns false only for 404 errors (product or team not found)
+                    _teamSaveResult = new ConnectionTestResult(true, $"Team '{team.Name}' created but product not found for linking");
+                    Snackbar.Add("Team saved but linking failed - product not found", Severity.Warning);
                 }
             }
             else
