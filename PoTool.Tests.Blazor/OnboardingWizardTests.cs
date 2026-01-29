@@ -5,6 +5,8 @@ using MudBlazor.Services;
 using PoTool.Client.Components.Onboarding;
 using PoTool.Client.Services;
 using Moq;
+using System.Reflection;
+using System.Text;
 
 namespace PoTool.Tests.Blazor;
 
@@ -117,6 +119,37 @@ public class OnboardingWizardTests : BunitTestContext
         // This test verifies that ISnackbar is properly injected
         Assert.IsNotNull(_mockSnackbar);
         Assert.IsNotNull(_mockSnackbar.Object);
+    }
+
+    [TestMethod]
+    public async Task StreamLineReader_ReadsLinesFromStream()
+    {
+        var readerType = typeof(OnboardingWizard).GetNestedType("StreamLineReader", BindingFlags.NonPublic);
+        Assert.IsNotNull(readerType);
+
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes("line1\r\nline2\nline3"));
+        using var reader = new StreamReader(stream);
+
+        var instance = Activator.CreateInstance(readerType, BindingFlags.Instance | BindingFlags.NonPublic, null, new object[] { reader }, null);
+        Assert.IsNotNull(instance);
+
+        var readMethod = readerType.GetMethod("ReadLineAsync", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        Assert.IsNotNull(readMethod);
+
+        var line1 = await InvokeReadLineAsync(instance, readMethod);
+        var line2 = await InvokeReadLineAsync(instance, readMethod);
+        var line3 = await InvokeReadLineAsync(instance, readMethod);
+        var line4 = await InvokeReadLineAsync(instance, readMethod);
+
+        Assert.AreEqual("line1", line1);
+        Assert.AreEqual("line2", line2);
+        Assert.AreEqual("line3", line3);
+        Assert.IsNull(line4);
+    }
+
+    private static async Task<string?> InvokeReadLineAsync(object instance, MethodInfo method)
+    {
+        return await (Task<string?>)method.Invoke(instance, new object[] { CancellationToken.None })!;
     }
 
     /// <summary>
