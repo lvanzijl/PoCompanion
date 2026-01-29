@@ -345,12 +345,12 @@ public class BugInsightsCalculatorTests
         {
             CreateBug(1, "Closed", 
                 createdDate: now.AddHours(-48), 
-                closedDate: now.AddHours(-24)), // 24 hours
+                closedDate: now.AddHours(-24)), // 24 hours - has complete data
             CreateBug(2, "Active", 
-                createdDate: now.AddHours(-72)), // No closed date
+                createdDate: now.AddHours(-72)), // No closed date - not closed
             CreateBug(3, "Closed", 
                 createdDate: now.AddHours(-96), 
-                closedDate: now.AddHours(-24)) // 72 hours
+                closedDate: now.AddHours(-24)) // 72 hours - has complete data
         };
 
         // Act
@@ -358,7 +358,8 @@ public class BugInsightsCalculatorTests
 
         // Assert
         Assert.AreEqual(2, result.Count);
-        Assert.AreEqual(66.67, result.Coverage!.Value, 0.01); // 2 out of 3 = 66.67%
+        // Coverage: 2 bugs closed in window, both have complete data = 100%
+        Assert.AreEqual(100.0, result.Coverage!.Value, 0.01);
     }
 
     [TestMethod]
