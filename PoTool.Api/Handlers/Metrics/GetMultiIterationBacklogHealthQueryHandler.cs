@@ -26,7 +26,7 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
     private readonly IProductRepository _productRepository;
     private readonly ISprintRepository _sprintRepository;
     private readonly IMediator _mediator;
-    private readonly IWorkItemValidator _validator;
+    private readonly IHierarchicalWorkItemValidator _validator;
     private readonly ILogger<GetMultiIterationBacklogHealthQueryHandler> _logger;
 
     public GetMultiIterationBacklogHealthQueryHandler(
@@ -34,7 +34,7 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
         IProductRepository productRepository,
         ISprintRepository sprintRepository,
         IMediator mediator,
-        IWorkItemValidator validator,
+        IHierarchicalWorkItemValidator validator,
         ILogger<GetMultiIterationBacklogHealthQueryHandler> logger)
     {
         _workItemReadProvider = workItemReadProvider;
@@ -312,13 +312,17 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
         var workItemsInProgressWithoutEffort = iterationWorkItems
             .Count(wi => wi.State.Equals("In Progress", StringComparison.OrdinalIgnoreCase) && !wi.Effort.HasValue);
 
-        var allIssues = validationResults.Values.SelectMany(issues => issues).ToList();
-        var parentProgressIssues = allIssues.Count(issue =>
-            issue.Message.Contains("Parent", StringComparison.OrdinalIgnoreCase) ||
-            issue.Message.Contains("Ancestor", StringComparison.OrdinalIgnoreCase));
+        // Count refinement blockers and refinement needed from hierarchical validation
+        var refinementBlockers = validationResults.Sum(r => r.RefinementBlockers.Count);
+        var refinementNeeded = validationResults.Sum(r => r.IncompleteRefinementIssues.Count);
+
+        // Count structural integrity issues (for legacy compatibility)
+        var structuralIntegrityIssues = validationResults.Sum(r => r.BacklogHealthProblems.Count);
+        var parentProgressIssues = structuralIntegrityIssues;
+
         var blockedItems = CountBlockedItems(iterationWorkItems);
         var inProgressAtIterationEnd = CountInProgressAtEnd(iterationWorkItems, endDate);
-        var validationIssuesSummary = GroupValidationIssues(validationResults);
+        var validationIssuesSummary = GroupValidationIssuesByConsequence(validationResults);
 
         return new BacklogHealthDto(
             IterationPath: iterationPath,
@@ -331,7 +335,9 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
             InProgressAtIterationEnd: inProgressAtIterationEnd,
             IterationStart: startDate,
             IterationEnd: endDate,
-            ValidationIssues: validationIssuesSummary
+            ValidationIssues: validationIssuesSummary,
+            RefinementBlockers: refinementBlockers,
+            RefinementNeeded: refinementNeeded
         );
     }
 
@@ -464,26 +470,33 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
             wi.State.Equals("Active", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static IReadOnlyList<ValidationIssueSummary> GroupValidationIssues(
-        Dictionary<int, List<ValidationIssue>> validationResults)
+    private static IReadOnlyList<ValidationIssueSummary> GroupValidationIssuesByConsequence(
+        IReadOnlyList<HierarchicalValidationResult> validationResults)
     {
-        // Group by severity since we don't have a status property
-        var issuesBySeverity = new Dictionary<string, HashSet<int>>();
+        // Group by validation consequence
+        var issuesByConsequence = new Dictionary<string, HashSet<int>>();
 
-        foreach (var (workItemId, issues) in validationResults)
+        foreach (var treeResult in validationResults)
         {
-            foreach (var issue in issues)
+            // Group by consequence type
+            void AddIssues(string consequenceType, IEnumerable<ValidationRuleResult> violations)
             {
-                var severity = issue.Severity;
-                if (!issuesBySeverity.ContainsKey(severity))
+                foreach (var violation in violations)
                 {
-                    issuesBySeverity[severity] = new HashSet<int>();
+                    if (!issuesByConsequence.ContainsKey(consequenceType))
+                    {
+                        issuesByConsequence[consequenceType] = new HashSet<int>();
+                    }
+                    issuesByConsequence[consequenceType].Add(violation.WorkItemId);
                 }
-                issuesBySeverity[severity].Add(workItemId);
             }
+
+            AddIssues("Structural Integrity", treeResult.BacklogHealthProblems);
+            AddIssues("Refinement Blocker", treeResult.RefinementBlockers);
+            AddIssues("Refinement Needed", treeResult.IncompleteRefinementIssues);
         }
 
-        return issuesBySeverity.Select(kvp => new ValidationIssueSummary(
+        return issuesByConsequence.Select(kvp => new ValidationIssueSummary(
             ValidationType: kvp.Key,
             Count: kvp.Value.Count,
             AffectedWorkItemIds: kvp.Value.ToList()

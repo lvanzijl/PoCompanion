@@ -138,6 +138,41 @@ public class RefinementReadinessRulesTests
         Assert.IsEmpty(results, "Rule only applies to Epics");
     }
 
+    [TestMethod]
+    public void RR1_EpicWithShortDescription_HasViolation()
+    {
+        // Arrange: Description must be at least 10 characters
+        var rule = new EpicDescriptionEmptyRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Short")
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.HasCount(1, results);
+        Assert.AreEqual(1, results[0].WorkItemId);
+    }
+
+    [TestMethod]
+    public void RR1_EpicWithExactly10CharDescription_NoViolation()
+    {
+        // Arrange: Description with exactly 10 characters should pass
+        var rule = new EpicDescriptionEmptyRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "1234567890")
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results);
+    }
+
     #endregion
 
     #region RR-2: Feature description empty
@@ -211,6 +246,41 @@ public class RefinementReadinessRulesTests
 
         // Assert
         Assert.IsEmpty(results, "Rule only applies to Features");
+    }
+
+    [TestMethod]
+    public void RR2_FeatureWithShortDescription_HasViolation()
+    {
+        // Arrange: Description must be at least 10 characters
+        var rule = new FeatureDescriptionEmptyRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "New", null, "Short")
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.HasCount(1, results);
+        Assert.AreEqual(1, results[0].WorkItemId);
+    }
+
+    [TestMethod]
+    public void RR2_FeatureWithExactly10CharDescription_NoViolation()
+    {
+        // Arrange: Description with exactly 10 characters should pass
+        var rule = new FeatureDescriptionEmptyRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "New", null, "1234567890")
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results);
     }
 
     [TestMethod]

@@ -4,8 +4,9 @@ using PoTool.Core.Contracts;
 namespace PoTool.Core.WorkItems.Validators.Rules;
 
 /// <summary>
-/// RR-1: Epic description is empty → invalid.
+/// RR-1: Epic description is empty or too short → invalid.
 /// Ensures intent and context exist before refinement proceeds.
+/// Description must be at least 10 characters long.
 /// </summary>
 public sealed class EpicDescriptionEmptyRule : HierarchicalValidationRuleBase
 {
@@ -27,7 +28,7 @@ public sealed class EpicDescriptionEmptyRule : HierarchicalValidationRuleBase
     public override ResponsibleParty ResponsibleParty => ResponsibleParty.ProductOwner;
 
     /// <inheritdoc />
-    protected override string MessageTemplate => "Epic description is empty.";
+    protected override string MessageTemplate => "Epic description is empty or too short (must be at least 10 characters).";
 
     /// <inheritdoc />
     public override IReadOnlyList<ValidationRuleResult> Evaluate(IEnumerable<WorkItemDto> workItems)
@@ -35,7 +36,7 @@ public sealed class EpicDescriptionEmptyRule : HierarchicalValidationRuleBase
         var results = new List<ValidationRuleResult>();
         var itemsList = workItems as List<WorkItemDto> ?? workItems.ToList();
 
-        // Find all Epics with empty descriptions
+        // Find all Epics with invalid descriptions (empty or too short)
         var epics = itemsList.Where(w =>
             string.Equals(w.Type, WorkItemType.Epic, StringComparison.OrdinalIgnoreCase));
 
@@ -47,7 +48,7 @@ public sealed class EpicDescriptionEmptyRule : HierarchicalValidationRuleBase
                 continue;
             }
 
-            if (string.IsNullOrWhiteSpace(epic.Description))
+            if (string.IsNullOrWhiteSpace(epic.Description) || epic.Description.Length < ValidationRuleConstants.MinimumDescriptionLength)
             {
                 results.Add(CreateViolation(epic.TfsId));
             }

@@ -7,6 +7,7 @@ namespace PoTool.Core.WorkItems.Validators.Rules;
 /// RC-2: PBI effort is empty → invalid.
 /// Assesses whether PBIs are ready for implementation.
 /// Only evaluated if all Refinement Readiness rules pass.
+/// Suppressed if parent Feature is a Refinement Blocker (invalid description).
 /// </summary>
 public sealed class PbiEffortEmptyRule : HierarchicalValidationRuleBase
 {
@@ -47,8 +48,24 @@ public sealed class PbiEffortEmptyRule : HierarchicalValidationRuleBase
                 continue;
             }
 
+            // Check if PBI has no effort
             if (!pbi.Effort.HasValue || pbi.Effort.Value == 0)
             {
+                // Suppression rule: Skip if parent Feature is a Refinement Blocker
+                if (pbi.ParentTfsId.HasValue)
+                {
+                    var parentFeature = itemsList.FirstOrDefault(w =>
+                        w.TfsId == pbi.ParentTfsId.Value &&
+                        string.Equals(w.Type, WorkItemType.Feature, StringComparison.OrdinalIgnoreCase));
+
+                    // If parent is a Feature with invalid description (refinement blocker), suppress this PBI's validation
+                    if (parentFeature != null &&
+                        (string.IsNullOrWhiteSpace(parentFeature.Description) || parentFeature.Description.Length < ValidationRuleConstants.MinimumDescriptionLength))
+                    {
+                        continue;
+                    }
+                }
+
                 results.Add(CreateViolation(pbi.TfsId));
             }
         }

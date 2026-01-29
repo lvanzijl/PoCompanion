@@ -25,7 +25,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
     private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<ISprintRepository> _mockSprintRepository = null!;
     private Mock<IMediator> _mockMediator = null!;
-    private Mock<IWorkItemValidator> _mockValidator = null!;
+    private Mock<IHierarchicalWorkItemValidator> _mockValidator = null!;
     private Mock<ILogger<GetMultiIterationBacklogHealthQueryHandler>> _mockLogger = null!;
     private GetMultiIterationBacklogHealthQueryHandler _handler = null!;
 
@@ -36,7 +36,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
         _mockProductRepository = new Mock<IProductRepository>();
         _mockSprintRepository = new Mock<ISprintRepository>();
         _mockMediator = new Mock<IMediator>();
-        _mockValidator = new Mock<IWorkItemValidator>();
+        _mockValidator = new Mock<IHierarchicalWorkItemValidator>();
         _mockLogger = new Mock<ILogger<GetMultiIterationBacklogHealthQueryHandler>>();
 
         // Setup default mock behaviors
@@ -157,7 +157,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(new Dictionary<int, List<ValidationIssue>>());
+            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetMultiIterationBacklogHealthQuery(ProductIds: new[] { 1, 2 }, MaxIterations: 5);
 
@@ -203,7 +203,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(new Dictionary<int, List<ValidationIssue>>());
+            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetMultiIterationBacklogHealthQuery(ProductIds: new[] { 1, 2 }, MaxIterations: 5);
 
@@ -241,7 +241,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(new Dictionary<int, List<ValidationIssue>>());
+            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetMultiIterationBacklogHealthQuery(ProductIds: new[] { 1 }, MaxIterations: 5);
 
@@ -277,7 +277,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(new Dictionary<int, List<ValidationIssue>>());
+            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetMultiIterationBacklogHealthQuery(ProductIds: new[] { 1, 999 }, MaxIterations: 5);
 
