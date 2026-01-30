@@ -87,12 +87,21 @@ public static class ApiServiceCollectionExtensions
                         sqliteOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
                     });
 
-                    // Suppress pending model changes warning in development for exploratory testing
-                    if (isDevelopment)
+                    // Configure warnings
+                    options.ConfigureWarnings(warnings =>
                     {
-                        options.ConfigureWarnings(warnings =>
-                            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-                    }
+                        // Suppress pending model changes warning in development for exploratory testing
+                        if (isDevelopment)
+                        {
+                            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning);
+                        }
+                        
+                        // Suppress SQLite PRAGMA foreign_keys transaction warnings
+                        // SQLite migrations that alter tables require temporarily disabling foreign keys,
+                        // which cannot be done inside a transaction. This is expected SQLite behavior
+                        // and does not indicate an issue with the migrations.
+                        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.AmbientTransactionWarning);
+                    });
                 });
             }
         }
