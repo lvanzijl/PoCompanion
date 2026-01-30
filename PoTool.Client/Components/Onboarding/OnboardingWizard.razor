@@ -150,7 +150,7 @@
 
                         <MudForm @ref="_profileForm" @bind-IsValid="_profileFormValid">
                             <CompactTextField Value="@_profileName"
-                                         ValueChanged="@(async (string value) => await OnProfileNameChanged(value))"
+                                         ValueChanged="@((string value) => OnProfileNameChanged(value))"
                                          Label="Profile Name" 
                                          Placeholder="e.g., John Doe"
                                          Required="true"
@@ -838,15 +838,16 @@
                     u.State == ProgressState.Succeeded && 
                     u.Message.Contains("All"));
                 
-                // Only show failed checks when all checks passed
+                // Hide individual successful checks when all checks passed
+                // Only show individual checks (including successes) when some failed
                 if (allChecksPassed)
                 {
-                    // Skip this individual check (don't show it)
+                    // Skip this individual check (don't show it since all passed)
                     continue;
                 }
                 else
                 {
-                    // Show all individual checks (including successes) when some failed
+                    // Show all individual checks when some failed
                     filtered.AddRange(updates);
                 }
             }
@@ -871,14 +872,14 @@
         return filtered;
     }
 
-    private async Task OnProfileNameChanged(string value)
+    private void OnProfileNameChanged(string value)
     {
         _profileName = value;
         
         // Trigger form validation to update button state while typing
         if (_profileForm != null)
         {
-            await _profileForm.Validate();
+            _profileForm.Validate();
         }
         StateHasChanged();
     }
