@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using MudBlazor.Services;
 using PoTool.Client.ApiClient;
@@ -20,6 +21,11 @@ public class BacklogHealthFiltersTests : BunitTestContext
     {
         // Add MudBlazor services
         Services.AddMudServices();
+
+        // Mock logger for WorkItemLoadCoordinatorService
+        var mockCoordinatorLogger = new Mock<ILogger<WorkItemLoadCoordinatorService>>();
+        Services.AddSingleton(mockCoordinatorLogger.Object);
+        Services.AddSingleton<WorkItemLoadCoordinatorService>();
 
         // Mock IWorkItemsClient for WorkItemService
         var mockWorkItemsClient = new Mock<IWorkItemsClient>();
