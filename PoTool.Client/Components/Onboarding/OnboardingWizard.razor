@@ -1081,9 +1081,10 @@
         try
         {
             var successCount = 0;
-            var failedRepos = new List<string>();
+            var failedRepos = new List<(string Name, string Error)>();
 
-            foreach (var repoName in _selectedRepositoryNames)
+            // Save repositories in parallel for better performance
+            var saveTasks = _selectedRepositoryNames.Select(async repoName =>
             {
                 try
                 {
@@ -1094,24 +1095,34 @@
                     
                     if (response.IsSuccessStatusCode)
                     {
-                        successCount++;
+                        return (Success: true, Name: repoName, Error: (string?)null);
                     }
                     else
                     {
-                        failedRepos.Add(repoName);
+                        var errorContent = await response.Content.ReadAsStringAsync();
+                        return (Success: false, Name: repoName, Error: $"HTTP {(int)response.StatusCode}: {errorContent}");
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    failedRepos.Add(repoName);
+                    return (Success: false, Name: repoName, Error: ex.Message);
                 }
-            }
+            });
+
+            var results = await Task.WhenAll(saveTasks);
+            
+            successCount = results.Count(r => r.Success);
+            failedRepos = results
+                .Where(r => !r.Success)
+                .Select(r => (r.Name, r.Error ?? "Unknown error"))
+                .ToList();
 
             if (failedRepos.Any())
             {
+                var failedDetails = string.Join(", ", failedRepos.Select(f => $"{f.Name} ({f.Error})"));
                 _repositorySaveResult = new ConnectionTestResult(
                     successCount > 0, 
-                    $"Saved {successCount} repository(ies). Failed: {string.Join(", ", failedRepos)}");
+                    $"Saved {successCount} repository(ies). Failed: {failedDetails}");
                 Snackbar.Add($"Partially saved repositories", Severity.Warning);
             }
             else

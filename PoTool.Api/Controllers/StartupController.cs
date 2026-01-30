@@ -50,13 +50,13 @@ public class StartupController : ControllerBase
     /// Gets all Git repositories for the configured project (live from TFS).
     /// </summary>
     [HttpGet("git-repositories")]
-    [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<GitRepositoryInfoDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<IEnumerable<object>>> GetGitRepositories(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<GitRepositoryInfoDto>>> GetGitRepositories(CancellationToken cancellationToken)
     {
         var repositories = await _tfsClient.GetGitRepositoriesAsync(cancellationToken);
-        // Convert tuple to anonymous object for JSON serialization
-        var result = repositories.Select(r => new { Name = r.Name, Id = r.Id });
+        // Convert tuple to GitRepositoryInfoDto
+        var result = repositories.Select(r => new GitRepositoryInfoDto(r.Name, r.Id));
         return Ok(result);
     }
 }
