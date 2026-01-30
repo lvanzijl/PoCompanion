@@ -338,6 +338,14 @@ public interface ITfsClient
     /// <returns>Collection of TFS team DTOs with ID, name, project, and derived area path.</returns>
     Task<IEnumerable<TfsTeamDto>> GetTfsTeamsAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Retrieves all Git repositories for the configured TFS project.
+    /// Used for repository selection during onboarding and product configuration.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of repository names and IDs.</returns>
+    Task<IEnumerable<(string Name, string Id)>> GetGitRepositoriesAsync(CancellationToken cancellationToken = default);
+
     // ============================================
     // TEAM ITERATIONS (SPRINTS)
     // ============================================

@@ -380,6 +380,92 @@
                         </MudAlert>
                     </MudStack>
                 }
+                else if (_currentStep == 4)
+                {
+                    <!-- Step 5: Repository Configuration -->
+                    <MudStack Spacing="4">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Source" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h6" Color="Color.Primary">Configure Repositories</MudText>
+                        </MudStack>
+                        <MudText Typo="Typo.body1">
+                            Select Git repositories for pipeline discovery and metrics. This enables the Pipeline Insights feature.
+                        </MudText>
+
+                        @if (_isLoadingRepositories)
+                        {
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                <MudText>Loading repositories from TFS...</MudText>
+                            </MudStack>
+                        }
+                        else if (_gitRepositories != null && _gitRepositories.Any())
+                        {
+                            <MudForm @ref="_repositoryForm" @bind-IsValid="_repositoryFormValid">
+                                <MudText Typo="Typo.subtitle2" Class="mb-2">Select Repositories (optional)</MudText>
+                                
+                                @foreach (var repo in _gitRepositories)
+                                {
+                                    <MudCheckBox T="bool" 
+                                                Value="@_selectedRepositoryNames.Contains(repo.Name)"
+                                                ValueChanged="@((bool selected) => ToggleRepository(repo.Name, selected))"
+                                                Label="@repo.Name"
+                                                Color="Color.Primary"
+                                                Dense="true" />
+                                }
+
+                                @if (_selectedRepositoryNames.Any())
+                                {
+                                    <MudStack Row="true" Spacing="2" Class="mt-2">
+                                        <CompactButton Variant="Variant.Filled" 
+                                                      Color="Color.Primary" 
+                                                      OnClick="SaveRepositories"
+                                                      Disabled="@_isSavingRepositories"
+                                                      StartIcon="@Icons.Material.Filled.Save">
+                                            @if (_isSavingRepositories)
+                                            {
+                                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                                <span>Saving...</span>
+                                            }
+                                            else
+                                            {
+                                                <span>Save Repositories</span>
+                                            }
+                                        </CompactButton>
+                                    </MudStack>
+                                }
+                            </MudForm>
+
+                            @if (_repositorySaveResult != null)
+                            {
+                                <MudAlert Severity="@(_repositorySaveResult.Success ? Severity.Success : Severity.Error)" Dense="true">
+                                    @_repositorySaveResult.Message
+                                </MudAlert>
+                            }
+
+                            @if (_repositoryErrorResponse != null)
+                            {
+                                <ErrorDisplay ErrorResponse="@_repositoryErrorResponse" 
+                                             OnDismiss="ClearRepositoryError" />
+                            }
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true">
+                                No Git repositories found. Please ensure TFS configuration is correct and you have access to the project.
+                            </MudAlert>
+                        }
+                        
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            You can skip this step and configure repositories later from the Product Settings page.
+                            @if (_selectedRepositoryNames.Any())
+                            {
+                                <br /><br />
+                                <strong>@_selectedRepositoryNames.Count repository(ies) selected.</strong>
+                            }
+                        </MudAlert>
+                    </MudStack>
+                }
             </MudStack>
         </DialogContent>
         <DialogActions>
@@ -392,7 +478,7 @@
                     Previous
                 </CompactButton>
             }
-            @if (_currentStep < 3)
+            @if (_currentStep < 4)
             {
                 <CompactButton OnClick="Next" 
                               Color="Color.Primary" 
@@ -449,6 +535,7 @@
     private bool _isSavingProduct;
     private string _productName = string.Empty;
     private string _backlogRootWorkItemId = string.Empty;
+    private int? _createdProductId;
     private ConnectionTestResult? _productSaveResult;
     private ErrorResponse? _productErrorResponse;
 
@@ -462,8 +549,19 @@
     private bool _overrideAreaPath;
     private string _teamAreaPath = string.Empty;
     private int _selectedPictureId = 0;
+    private int? _createdTeamId;
     private ConnectionTestResult? _teamSaveResult;
     private ErrorResponse? _teamErrorResponse;
+
+    // Repository configuration fields
+    private MudForm? _repositoryForm;
+    private bool _repositoryFormValid;
+    private bool _isLoadingRepositories;
+    private bool _isSavingRepositories;
+    private List<GitRepositoryDto>? _gitRepositories;
+    private HashSet<string> _selectedRepositoryNames = new();
+    private ConnectionTestResult? _repositorySaveResult;
+    private ErrorResponse? _repositoryErrorResponse;
 
     protected override async Task OnInitializedAsync()
     {
@@ -551,13 +649,14 @@
             1 => "Create Product Owner Profile",
             2 => "Create Product",
             3 => "Select Your Team",
+            4 => "Configure Repositories",
             _ => "Getting Started"
         };
     }
 
     private double GetProgress()
     {
-        return (_currentStep + 1) * 25.0; // 4 steps (0-3)
+        return (_currentStep + 1) * 20.0; // 5 steps (0-4)
     }
 
     private bool IsNextDisabled()
@@ -598,7 +697,7 @@
 
     private async Task Next()
     {
-        if (_currentStep < 3) // Maximum step is 3
+        if (_currentStep < 4) // Maximum step is 4
         {
             _currentStep++;
             
@@ -606,6 +705,12 @@
             if (_currentStep == 3 && _configCompleted == true && _tfsTeams == null)
             {
                 await LoadTfsTeams();
+            }
+            
+            // Load repositories when entering repository configuration step (step 4)
+            if (_currentStep == 4 && _configCompleted == true && _gitRepositories == null)
+            {
+                await LoadGitRepositories();
             }
         }
     }
@@ -770,6 +875,9 @@
                 _productName,
                 workItemId);
             
+            // Track created product ID for linking with team later
+            _createdProductId = product.Id;
+            
             _productSaveResult = new ConnectionTestResult(true, $"Product '{product.Name}' created successfully!");
             Snackbar.Add("Product saved successfully", Severity.Success);
         }
@@ -845,8 +953,32 @@
                 tfsTeamId: _selectedTfsTeam.Id,
                 tfsTeamName: _selectedTfsTeam.Name);
             
-            _teamSaveResult = new ConnectionTestResult(true, $"Team '{team.Name}' created successfully!");
-            Snackbar.Add("Team saved successfully", Severity.Success);
+            // Track created team ID
+            _createdTeamId = team.Id;
+            
+            // If we have both a product and a team created, link them together
+            // If linking fails, it will be caught by outer exception handler
+            // User can manually link via Settings UI if needed
+            if (_createdProductId.HasValue && _createdTeamId.HasValue)
+            {
+                var linked = await ProductService.LinkTeamAsync(_createdProductId.Value, _createdTeamId.Value);
+                if (linked)
+                {
+                    _teamSaveResult = new ConnectionTestResult(true, $"Team '{team.Name}' created and linked to product successfully!");
+                    Snackbar.Add("Team saved and linked successfully", Severity.Success);
+                }
+                else
+                {
+                    // LinkTeamAsync returns false only for 404 errors (product or team not found)
+                    _teamSaveResult = new ConnectionTestResult(true, $"Team '{team.Name}' created but product not found for linking");
+                    Snackbar.Add("Team saved but linking failed - product not found", Severity.Warning);
+                }
+            }
+            else
+            {
+                _teamSaveResult = new ConnectionTestResult(true, $"Team '{team.Name}' created successfully!");
+                Snackbar.Add("Team saved successfully", Severity.Success);
+            }
         }
         catch (Exception ex)
         {
@@ -887,6 +1019,139 @@
             9 => Icons.Material.Filled.Security,
             _ => Icons.Material.Filled.Groups
         };
+    }
+
+    private async Task LoadGitRepositories()
+    {
+        _isLoadingRepositories = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await HttpClient.GetAsync("/api/startup/git-repositories");
+            response.EnsureSuccessStatusCode();
+
+            _gitRepositories = await response.Content.ReadFromJsonAsync<List<GitRepositoryDto>>(new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load repositories: {ex.Message}", Severity.Error);
+            _gitRepositories = new List<GitRepositoryDto>();
+        }
+        finally
+        {
+            _isLoadingRepositories = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleRepository(string repositoryName, bool selected)
+    {
+        if (selected)
+        {
+            _selectedRepositoryNames.Add(repositoryName);
+        }
+        else
+        {
+            _selectedRepositoryNames.Remove(repositoryName);
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveRepositories()
+    {
+        if (!_createdProductId.HasValue)
+        {
+            _repositorySaveResult = new ConnectionTestResult(false, "No product created yet. Please complete the product creation step first.");
+            return;
+        }
+
+        if (!_selectedRepositoryNames.Any())
+        {
+            _repositorySaveResult = new ConnectionTestResult(false, "No repositories selected.");
+            return;
+        }
+
+        ClearRepositoryError();
+        _isSavingRepositories = true;
+        
+        try
+        {
+            var successCount = 0;
+            var failedRepos = new List<(string Name, string Error)>();
+
+            // Save repositories in parallel for better performance
+            var saveTasks = _selectedRepositoryNames.Select(async repoName =>
+            {
+                try
+                {
+                    var requestBody = new { Name = repoName };
+                    var response = await HttpClient.PostAsJsonAsync(
+                        $"/api/products/{_createdProductId.Value}/repositories", 
+                        requestBody);
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        return (Success: true, Name: repoName, Error: (string?)null);
+                    }
+                    else
+                    {
+                        var errorContent = await response.Content.ReadAsStringAsync();
+                        return (Success: false, Name: repoName, Error: $"HTTP {(int)response.StatusCode}: {errorContent}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return (Success: false, Name: repoName, Error: ex.Message);
+                }
+            });
+
+            var results = await Task.WhenAll(saveTasks);
+            
+            successCount = results.Count(r => r.Success);
+            failedRepos = results
+                .Where(r => !r.Success)
+                .Select(r => (r.Name, r.Error ?? "Unknown error"))
+                .ToList();
+
+            if (failedRepos.Any())
+            {
+                var failedDetails = string.Join(", ", failedRepos.Select(f => $"{f.Name} ({f.Error})"));
+                _repositorySaveResult = new ConnectionTestResult(
+                    successCount > 0, 
+                    $"Saved {successCount} repository(ies). Failed: {failedDetails}");
+                Snackbar.Add($"Partially saved repositories", Severity.Warning);
+            }
+            else
+            {
+                _repositorySaveResult = new ConnectionTestResult(true, $"Successfully saved {successCount} repository(ies)!");
+                Snackbar.Add("Repositories saved successfully", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            _repositorySaveResult = new ConnectionTestResult(false, "Repository save failed.");
+            ShowRepositoryError(ex, "Error saving repositories");
+        }
+        finally
+        {
+            _isSavingRepositories = false;
+        }
+    }
+
+    private void ShowRepositoryError(Exception ex, string context)
+    {
+        _repositoryErrorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        StateHasChanged();
+    }
+
+    private void ClearRepositoryError()
+    {
+        _repositoryErrorResponse = null;
+        _repositorySaveResult = null;
     }
 
     private async Task Skip()
@@ -932,6 +1197,13 @@
         public string ProjectName { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string DefaultAreaPath { get; set; } = string.Empty;
+    }
+    
+    // DTO for Git repositories from API
+    private class GitRepositoryDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Id { get; set; } = string.Empty;
     }
 }
 }
