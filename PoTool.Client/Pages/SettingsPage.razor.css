@@ -1,0 +1,44 @@
+.settings-page {
+    display: flex;
+    height: calc(100vh - 120px);
+    margin: -16px;
+    overflow: hidden;
+}
+
+.settings-sidebar {
+    width: 280px;
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-border);
+    padding: var(--spacing-lg) 0;
+    overflow-y: auto;
+}
+
+.settings-sidebar .mud-nav-link {
+    padding: var(--d2) var(--spacing-lg);
+    margin: 2px 0;
+}
+
+.settings-sidebar .settings-nav-selected {
+    background: rgba(0, 120, 212, 0.12);
+    border-left: 3px solid var(--color-primary);
+}
+
+.settings-content-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-lg);
+}
+
+.settings-section {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.settings-section .mud-alert {
+    margin-bottom: var(--spacing-md);
+}
+
+.settings-section .mud-text-field,
+.settings-section .mud-form-control {
+    margin-bottom: var(--spacing-sm);
+}

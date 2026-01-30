@@ -1,0 +1,30 @@
+@using PoTool.Client.Services
+@inject IOnboardingService OnboardingService
+@inject NavigationManager NavigationManager
+
+<div class="settings-section">
+    <MudText Typo="Typo.h4" Class="mb-3">Getting Started</MudText>
+    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+        Need help setting up? Run the getting started wizard to configure your connection and team.
+    </MudAlert>
+    <MudButton OnClick="OpenOnboardingWizard"
+               Variant="Variant.Outlined"
+               Color="Color.Info"
+               StartIcon="@Icons.Material.Filled.Rocket">
+        Run Getting Started Wizard
+    </MudButton>
+</div>
+
+@code {
+    private async Task OpenOnboardingWizard()
+    {
+        // Reset onboarding state so the wizard can be shown again
+        await OnboardingService.ResetOnboardingAsync();
+        
+        // Small delay to ensure state is reset
+        await Task.Delay(100);
+        
+        // Navigate to onboarding page (force reload to ensure clean state after reset)
+        NavigationManager.NavigateTo("/onboarding", forceLoad: true);
+    }
+}
