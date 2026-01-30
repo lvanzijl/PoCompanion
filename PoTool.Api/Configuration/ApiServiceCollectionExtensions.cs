@@ -100,7 +100,7 @@ public static class ApiServiceCollectionExtensions
                         // SQLite migrations that alter tables require temporarily disabling foreign keys,
                         // which cannot be done inside a transaction. This is expected SQLite behavior
                         // and does not indicate an issue with the migrations.
-                        warnings.Ignore(new Microsoft.Extensions.Logging.EventId(20410, "MigrationsNotAppliedInTransaction"));
+                        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.NonTransactionalMigrationOperationWarning);
                     });
                 });
             }
