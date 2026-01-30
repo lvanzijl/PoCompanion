@@ -1,0 +1,58 @@
+@page "/"
+@using PoTool.Client.Services
+@inject IOnboardingService OnboardingService
+@inject IStartupOrchestratorService StartupOrchestrator
+@inject NavigationManager NavigationManager
+
+<MudContainer Class="d-flex justify-center align-center" Style="height: 100vh;">
+    <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+</MudContainer>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if onboarding is needed
+        var readiness = await StartupOrchestrator.GetStartupReadinessAsync();
+        
+        // If backend has no TFS configuration, reset onboarding state
+        if (readiness != null && !readiness.HasSavedTfsConfig)
+        {
+            await OnboardingService.ResetOnboardingAsync();
+        }
+        
+        var onboardingCompleted = await OnboardingService.HasCompletedOnboardingAsync();
+        
+        if (!onboardingCompleted)
+        {
+            // Redirect to onboarding for first-time users
+            NavigationManager.NavigateTo("/onboarding", replace: true);
+            return;
+        }
+        
+        // If onboarding is complete, perform startup routing
+        if (readiness != null)
+        {
+            var routingResult = StartupOrchestrator.DetermineRoute(readiness);
+            
+            // Route based on startup readiness
+            switch (routingResult.Route)
+            {
+                case StartupRoute.Configuration:
+                    NavigationManager.NavigateTo("/tfsconfig", replace: true);
+                    break;
+                case StartupRoute.CreateFirstProfile:
+                case StartupRoute.ProfilesHome:
+                    NavigationManager.NavigateTo("/profiles", replace: true);
+                    break;
+                default:
+                    NavigationManager.NavigateTo("/landing", replace: true);
+                    break;
+            }
+        }
+        else
+        {
+            // Fallback to landing if readiness check fails
+            NavigationManager.NavigateTo("/landing", replace: true);
+        }
+    }
+}
