@@ -45,14 +45,14 @@
                     NavigationManager.NavigateTo("/profiles", replace: true);
                     break;
                 default:
-                    NavigationManager.NavigateTo("/landing", replace: true);
+                    NavigationManager.NavigateTo("/home", replace: true);
                     break;
             }
         }
         else
         {
-            // Fallback to landing if readiness check fails
-            NavigationManager.NavigateTo("/landing", replace: true);
+            // Fallback to home if readiness check fails
+            NavigationManager.NavigateTo("/home", replace: true);
         }
     }
 }

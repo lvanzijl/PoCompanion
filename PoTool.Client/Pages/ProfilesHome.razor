@@ -146,9 +146,9 @@
             
             Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
             
-            // Navigate to return URL if provided, otherwise to Landing page
+            // Navigate to return URL if provided, otherwise to Home page
             // Validate return URL to prevent open redirects - must be a relative path
-            var targetUrl = "/landing";
+            var targetUrl = "/home";
             if (!string.IsNullOrEmpty(_returnUrl) && IsValidReturnUrl(_returnUrl))
             {
                 targetUrl = _returnUrl;
