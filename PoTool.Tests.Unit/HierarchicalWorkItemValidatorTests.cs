@@ -45,7 +45,7 @@ public class HierarchicalWorkItemValidatorTests
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "New", null, "", null),
-            CreateWorkItem(2, "Feature", "New", 1, "Feature desc", null),
+            CreateWorkItem(2, "Feature", "New", 1, "Feature description", null),
             CreateWorkItem(3, "Product Backlog Item", "New", 2, "", null) // Missing desc and effort
         };
 
@@ -65,7 +65,7 @@ public class HierarchicalWorkItemValidatorTests
         // Arrange: Feature has empty description, PBI has empty description
         var items = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Epic", "New", null, "Epic desc", null),
+            CreateWorkItem(1, "Epic", "New", null, "Epic description", null),
             CreateWorkItem(2, "Feature", "New", 1, "", null), // Empty description
             CreateWorkItem(3, "Product Backlog Item", "New", 2, "", null) // Missing desc and effort
         };
@@ -86,8 +86,8 @@ public class HierarchicalWorkItemValidatorTests
         // Arrange: Epic and Feature have descriptions, but PBI has empty description
         var items = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Epic", "New", null, "Epic desc", null),
-            CreateWorkItem(2, "Feature", "New", 1, "Feature desc", null),
+            CreateWorkItem(1, "Epic", "New", null, "Epic description", null),
+            CreateWorkItem(2, "Feature", "New", 1, "Feature description", null),
             CreateWorkItem(3, "Product Backlog Item", "New", 2, "", null) // Empty desc and effort
         };
 
@@ -115,7 +115,7 @@ public class HierarchicalWorkItemValidatorTests
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "Done", null, "", null), // Done but empty desc
-            CreateWorkItem(2, "Feature", "New", 1, "Feature desc", null) // Child is New (SI-1 violation)
+            CreateWorkItem(2, "Feature", "New", 1, "Feature description", null) // Child is New (SI-1 violation)
         };
 
         // Act
@@ -135,9 +135,9 @@ public class HierarchicalWorkItemValidatorTests
         // Arrange: Valid tree with all descriptions and effort
         var items = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Epic", "In Progress", null, "Epic desc", null),
-            CreateWorkItem(2, "Feature", "In Progress", 1, "Feature desc", null),
-            CreateWorkItem(3, "Product Backlog Item", "In Progress", 2, "PBI desc", 8)
+            CreateWorkItem(1, "Epic", "In Progress", null, "Epic description", null),
+            CreateWorkItem(2, "Feature", "In Progress", 1, "Feature description", null),
+            CreateWorkItem(3, "Product Backlog Item", "In Progress", 2, "PBI description", 8)
         };
 
         // Act
@@ -184,7 +184,7 @@ public class HierarchicalWorkItemValidatorTests
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "New", null, "", null), // Empty description (RR-1)
-            CreateWorkItem(2, "Feature", "In Progress", 1, "Feature desc", null) // In Progress under New (SI-3)
+            CreateWorkItem(2, "Feature", "In Progress", 1, "Feature description", null) // In Progress under New (SI-3)
         };
 
         // Act
@@ -291,7 +291,7 @@ public class HierarchicalWorkItemValidatorTests
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Epic", "New", null, "", null), // RR-1
-            CreateWorkItem(2, "Feature", "In Progress", 1, "Feature desc", null) // SI-3
+            CreateWorkItem(2, "Feature", "In Progress", 1, "Feature description", null) // SI-3
         };
 
         // Act
@@ -310,8 +310,8 @@ public class HierarchicalWorkItemValidatorTests
         // Arrange: Clean Epic and Feature, PBI with issues
         var items = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Epic", "New", null, "Epic desc", null),
-            CreateWorkItem(2, "Feature", "New", 1, "Feature desc", null),
+            CreateWorkItem(1, "Epic", "New", null, "Epic description", null),
+            CreateWorkItem(2, "Feature", "New", 1, "Feature description", null),
             CreateWorkItem(3, "Product Backlog Item", "New", 2, "", null)
         };
 
@@ -329,9 +329,9 @@ public class HierarchicalWorkItemValidatorTests
         // Arrange: Fully complete tree
         var items = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Epic", "In Progress", null, "Epic desc", null),
-            CreateWorkItem(2, "Feature", "In Progress", 1, "Feature desc", null),
-            CreateWorkItem(3, "Product Backlog Item", "In Progress", 2, "PBI desc", 8)
+            CreateWorkItem(1, "Epic", "In Progress", null, "Epic description", null),
+            CreateWorkItem(2, "Feature", "In Progress", 1, "Feature description", null),
+            CreateWorkItem(3, "Product Backlog Item", "In Progress", 2, "PBI description", 8)
         };
 
         // Act
