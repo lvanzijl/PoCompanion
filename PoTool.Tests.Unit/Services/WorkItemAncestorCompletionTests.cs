@@ -45,12 +45,9 @@ public class WorkItemAncestorCompletionTests
         _dbContext = new PoToolDbContext(options);
 
         var configLogger = new Mock<ILogger<TfsConfigurationService>>();
-        var gateMock = new Mock<IEfConcurrencyGate>();
-        gateMock.Setup(g => g.ExecuteAsync(It.IsAny<Func<Task>>(), It.IsAny<CancellationToken>()))
-            .Returns<Func<Task>, CancellationToken>((func, ct) => func());
-        gateMock.Setup(g => g.ExecuteAsync<It.IsAnyType>(It.IsAny<Func<Task<It.IsAnyType>>>(), It.IsAny<CancellationToken>()))
-            .Returns<Func<Task<It.IsAnyType>>, CancellationToken>((func, ct) => func());
-        _configService = new TfsConfigurationService(_dbContext, configLogger.Object, gateMock.Object);
+        var gateLogger = new Mock<ILogger<EfConcurrencyGate>>();
+        var gate = new EfConcurrencyGate(gateLogger.Object); // Use real implementation instead of mock
+        _configService = new TfsConfigurationService(_dbContext, configLogger.Object, gate);
 
         _loggerMock = new Mock<ILogger<RealTfsClient>>();
 
