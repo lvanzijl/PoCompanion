@@ -96,11 +96,11 @@ public static class ApiServiceCollectionExtensions
                             warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning);
                         }
                         
-                        // Suppress SQLite PRAGMA foreign_keys transaction warnings
+                        // Suppress SQLite PRAGMA foreign_keys transaction warnings (Event ID: 20410)
                         // SQLite migrations that alter tables require temporarily disabling foreign keys,
                         // which cannot be done inside a transaction. This is expected SQLite behavior
                         // and does not indicate an issue with the migrations.
-                        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.AmbientTransactionWarning);
+                        warnings.Ignore(new Microsoft.Extensions.Logging.EventId(20410, "MigrationsNotAppliedInTransaction"));
                     });
                 });
             }
