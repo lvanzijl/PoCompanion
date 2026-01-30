@@ -43,7 +43,7 @@
                 </MudTooltip>
                 <CompactIconButton Icon="@Icons.Material.Filled.Settings" 
                               Color="Color.Inherit" 
-                              OnClick="OpenSettings" 
+                              OnClick="NavigateToSettings" 
                               Title="Settings" 
                               AriaLabel="Open settings" />
             </div>
@@ -57,10 +57,7 @@
     </main>
 </div>
 
-<SettingsModal @bind-Visible="_settingsVisible" />
-
 @code {
-    private bool _settingsVisible = false;
     private bool _hasCheckedOnboarding = false;
     private bool _onboardingCompleted = false;
     private ProfileSelector? _profileSelector;
@@ -190,9 +187,9 @@
         }
     }
 
-    private void OpenSettings()
+    private void NavigateToSettings()
     {
-        _settingsVisible = true;
+        NavigationManager.NavigateTo("/settings");
     }
 
     private void NavigateToLanding()

@@ -1,0 +1,158 @@
+@page "/settings"
+@page "/settings/{SelectedTopic}"
+@using PoTool.Client.Services
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Components.Settings
+@inject IProfileService ProfileService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Settings</PageTitle>
+
+<div class="settings-page">
+    <div class="settings-sidebar">
+        <MudText Typo="Typo.h5" Class="mb-4 px-3">
+            <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" />
+            Settings
+        </MudText>
+        
+        <MudNavMenu>
+            @if (_profileId.HasValue)
+            {
+                <MudNavLink OnClick="@(() => SelectTopic("cache"))" 
+                           Icon="@Icons.Material.Filled.Cached"
+                           IconColor="@GetTopicColor("cache")"
+                           Class="@GetTopicClass("cache")">
+                    Cache Status
+                </MudNavLink>
+            }
+            
+            <MudNavLink OnClick="@(() => SelectTopic("tfs"))" 
+                       Icon="@Icons.Material.Filled.Cloud"
+                       IconColor="@GetTopicColor("tfs")"
+                       Class="@GetTopicClass("tfs")">
+                TFS / Azure DevOps
+            </MudNavLink>
+            
+            <MudNavLink OnClick="@(() => SelectTopic("workitem-states"))" 
+                       Icon="@Icons.Material.Filled.Category"
+                       IconColor="@GetTopicColor("workitem-states")"
+                       Class="@GetTopicClass("workitem-states")">
+                Work Item States
+            </MudNavLink>
+            
+            <MudNavLink OnClick="@(() => SelectTopic("getting-started"))" 
+                       Icon="@Icons.Material.Filled.Help"
+                       IconColor="@GetTopicColor("getting-started")"
+                       Class="@GetTopicClass("getting-started")">
+                Getting Started
+            </MudNavLink>
+        </MudNavMenu>
+    </div>
+    
+    <div class="settings-content-panel">
+        @if (_currentTopic == "cache")
+        {
+            @if (_profileId.HasValue)
+            {
+                <div class="settings-section">
+                    <MudText Typo="Typo.h4" Class="mb-3">Cache Status</MudText>
+                    <CacheStatusSection ProductOwnerId="@_profileId.Value" AutoSync="false" />
+                </div>
+            }
+            else
+            {
+                <div class="settings-section">
+                    <MudText Typo="Typo.h4" Class="mb-3">Cache Status</MudText>
+                    <MudAlert Severity="Severity.Info">
+                        No active profile selected. Please select or create a profile to view cache status.
+                    </MudAlert>
+                </div>
+            }
+        }
+        else if (_currentTopic == "tfs")
+        {
+            <TfsConfigSection />
+        }
+        else if (_currentTopic == "workitem-states")
+        {
+            <WorkItemStateMappingSection />
+        }
+        else if (_currentTopic == "getting-started")
+        {
+            <GettingStartedSection />
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? SelectedTopic { get; set; }
+    
+    private string _currentTopic = "tfs";
+    private int? _profileId;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadActiveProfile();
+        
+        // Set initial topic based on route parameter or default
+        if (!string.IsNullOrEmpty(SelectedTopic))
+        {
+            _currentTopic = SelectedTopic.ToLowerInvariant();
+        }
+        else if (_profileId.HasValue)
+        {
+            // Default to cache if profile exists
+            _currentTopic = "cache";
+        }
+        else
+        {
+            // Default to tfs if no profile
+            _currentTopic = "tfs";
+        }
+    }
+    
+    protected override void OnParametersSet()
+    {
+        // Update current topic from route parameter if present
+        if (!string.IsNullOrEmpty(SelectedTopic))
+        {
+            var newTopic = SelectedTopic.ToLowerInvariant();
+            // Only update if different (avoid redundant assignment from SelectTopic navigation)
+            if (_currentTopic != newTopic)
+            {
+                _currentTopic = newTopic;
+            }
+        }
+    }
+    
+    private async Task LoadActiveProfile()
+    {
+        try
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            _profileId = activeProfile?.Id;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading active profile: {ex.Message}");
+            _profileId = null;
+        }
+    }
+    
+    private void SelectTopic(string topic)
+    {
+        // Navigate to the topic URL (OnParametersSet will update _currentTopic)
+        NavigationManager.NavigateTo($"/settings/{topic}");
+    }
+    
+    private Color GetTopicColor(string topic)
+    {
+        return _currentTopic == topic ? Color.Primary : Color.Default;
+    }
+    
+    private string GetTopicClass(string topic)
+    {
+        return _currentTopic == topic ? "settings-nav-selected" : "";
+    }
+}

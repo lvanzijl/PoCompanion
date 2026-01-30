@@ -1,0 +1,22 @@
+@using PoTool.Client.Services
+@inject NavigationManager NavigationManager
+
+<div class="settings-section">
+    <MudText Typo="Typo.h4" Class="mb-3">Work Item State Mapping</MudText>
+    <MudText Typo="Typo.body2" Class="mb-3">
+        Configure how TFS work item states map to the system's canonical lifecycle states (New, In Progress, Done, Removed).
+    </MudText>
+    <MudButton OnClick="OpenWorkItemStates"
+               Variant="Variant.Outlined"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Settings">
+        Configure State Mapping
+    </MudButton>
+</div>
+
+@code {
+    private void OpenWorkItemStates()
+    {
+        NavigationManager.NavigateTo("/settings/workitem-states");
+    }
+}

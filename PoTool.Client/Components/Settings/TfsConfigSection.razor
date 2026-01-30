@@ -1,0 +1,164 @@
+@using PoTool.Client.Services
+@inject TfsConfigService TfsConfigService
+@inject ISnackbar Snackbar
+
+<div class="settings-section">
+    <MudText Typo="Typo.h4" Class="mb-3">TFS / Azure DevOps Configuration</MudText>
+    
+    @* Current Configuration Summary *@
+    @if (!string.IsNullOrEmpty(_model.Url))
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.body2"><strong>URL:</strong> @_model.Url</MudText>
+                <MudText Typo="Typo.body2"><strong>Project:</strong> @_model.Project</MudText>
+                <MudText Typo="Typo.body2"><strong>Default Area Path:</strong> @_model.DefaultAreaPath</MudText>
+            </MudStack>
+        </MudAlert>
+    }
+
+    <EditForm Model="_model" OnValidSubmit="SaveConfig">
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="_model.Url"
+                          Label="TFS / Azure DevOps URL"
+                          Placeholder="https://dev.azure.com/yourorg"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+
+            <MudTextField @bind-Value="_model.Project"
+                          Label="Project"
+                          Placeholder="Project name"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+
+            <MudTextField @bind-Value="_model.DefaultAreaPath"
+                          Label="Default Area Path"
+                          Placeholder="e.g., ProjectName\Team A"
+                          HelperText="The area path used for work item queries"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+
+            <MudAlert Severity="Severity.Info" Dense="true">
+                <strong>Authentication:</strong> Uses Windows credentials (NTLM) of the current user.
+            </MudAlert>
+
+            <MudStack Row="true" Spacing="2">
+                <MudButton ButtonType="ButtonType.Submit"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Save">
+                    Save
+                </MudButton>
+                <MudButton OnClick="TestConnection"
+                           Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.CheckCircle">
+                    Test Connection
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </EditForm>
+
+    @if (!string.IsNullOrEmpty(_statusMessage))
+    {
+        <MudAlert Severity="@GetStatusSeverity()" Class="mt-3" Dense="true">
+            @_statusMessage
+        </MudAlert>
+    }
+</div>
+
+@code {
+    private TfsModel _model = new();
+    private string _statusMessage = string.Empty;
+    private string _statusClass = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExisting();
+    }
+
+    private async Task LoadExisting()
+    {
+        _statusMessage = string.Empty;
+        try
+        {
+            var config = await TfsConfigService.GetConfigAsync();
+            if (config != null)
+            {
+                _model.Url = config.Url ?? string.Empty;
+                _model.Project = config.Project ?? string.Empty;
+                _model.DefaultAreaPath = config.DefaultAreaPath ?? string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = "Could not load existing configuration: " + ex.Message;
+            _statusClass = "status-error";
+        }
+    }
+
+    private async Task SaveConfig()
+    {
+        _statusMessage = "Saving...";
+        _statusClass = "status-info";
+        try
+        {
+            await TfsConfigService.SaveConfigAsync(_model.Url, _model.Project, _model.DefaultAreaPath);
+            _statusMessage = "Saved successfully";
+            _statusClass = "status-success";
+            Snackbar.Add("Configuration saved successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = "Save failed: " + ex.Message;
+            _statusClass = "status-error";
+            Snackbar.Add($"Failed to save configuration: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task TestConnection()
+    {
+        _statusMessage = "Testing...";
+        _statusClass = "status-info";
+        try
+        {
+            var isValid = await TfsConfigService.ValidateConnectionAsync();
+            if (isValid)
+            {
+                _statusMessage = "Connection OK";
+                _statusClass = "status-success";
+                Snackbar.Add("Connection test successful", Severity.Success);
+            }
+            else
+            {
+                _statusMessage = "Connection failed";
+                _statusClass = "status-error";
+                Snackbar.Add("Connection test failed", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = "Test failed: " + ex.Message;
+            _statusClass = "status-error";
+            Snackbar.Add($"Connection test failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Severity GetStatusSeverity()
+    {
+        return _statusClass switch
+        {
+            "status-success" => Severity.Success,
+            "status-error" => Severity.Error,
+            "status-info" => Severity.Info,
+            _ => Severity.Normal
+        };
+    }
+
+    private class TfsModel
+    {
+        public string Url { get; set; } = string.Empty;
+        public string Project { get; set; } = string.Empty;
+        public string DefaultAreaPath { get; set; } = string.Empty;
+    }
+}
