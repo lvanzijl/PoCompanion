@@ -45,4 +45,18 @@ public class StartupController : ControllerBase
         var teams = await _tfsClient.GetTfsTeamsAsync(cancellationToken);
         return Ok(teams);
     }
+
+    /// <summary>
+    /// Gets all Git repositories for the configured project (live from TFS).
+    /// </summary>
+    [HttpGet("git-repositories")]
+    [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<IEnumerable<object>>> GetGitRepositories(CancellationToken cancellationToken)
+    {
+        var repositories = await _tfsClient.GetGitRepositoriesAsync(cancellationToken);
+        // Convert tuple to anonymous object for JSON serialization
+        var result = repositories.Select(r => new { Name = r.Name, Id = r.Id });
+        return Ok(result);
+    }
 }

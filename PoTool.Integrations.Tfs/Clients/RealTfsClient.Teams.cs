@@ -104,6 +104,33 @@ public partial class RealTfsClient
         }, cancellationToken);
     }
 
+    /// <inheritdoc />
+    public async Task<IEnumerable<(string Name, string Id)>> GetGitRepositoriesAsync(CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+
+        // Null assertion after validation - entity is guaranteed non-null here
+        var config = entity!;
+
+        // Get auth-mode-specific HttpClient to avoid credential conflicts
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync<IEnumerable<(string Name, string Id)>>(async () =>
+        {
+            _logger.LogInformation("Retrieving Git repositories for Project='{Project}'", config.Project);
+
+            // Reuse existing internal method that fetches all repositories
+            var repositories = await GetRepositoriesInternalAsync(config, httpClient, null, cancellationToken);
+
+            _logger.LogInformation(
+                "Retrieved {Count} Git repositories for Project='{Project}'",
+                repositories.Count, config.Project);
+
+            return repositories;
+        }, cancellationToken);
+    }
+
     /// <summary>
     /// Retrieves the default area path for a team by querying team field values.
     /// </summary>

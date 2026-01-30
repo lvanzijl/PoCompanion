@@ -665,6 +665,22 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult<IEnumerable<TfsTeamDto>>(teams);
     }
 
+    public Task<IEnumerable<(string Name, string Id)>> GetGitRepositoriesAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: GetGitRepositoriesAsync called");
+
+        // Return mock Git repositories for the configured project
+        var repositories = new List<(string Name, string Id)>
+        {
+            ("PoCompanion", "repo-1-guid"),
+            ("PoCompanion.Web", "repo-2-guid"),
+            ("PoCompanion.Mobile", "repo-3-guid"),
+            ("PoCompanion.Infrastructure", "repo-4-guid")
+        };
+
+        return Task.FromResult<IEnumerable<(string Name, string Id)>>(repositories);
+    }
+
     // ============================================
     // TEAM ITERATIONS (SPRINTS)
     // ============================================

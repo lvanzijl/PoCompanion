@@ -1281,6 +1281,24 @@ public class BattleshipMockDataFacade : ITfsClient
         return Task.FromResult<IEnumerable<TfsTeamDto>>(teams);
     }
 
+    public Task<IEnumerable<(string Name, string Id)>> GetGitRepositoriesAsync(CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client (BattleshipMockDataFacade): GetGitRepositoriesAsync called");
+
+        // Return mock Git repositories for the Battleship project
+        var repositories = new List<(string Name, string Id)>
+        {
+            ("Battleship.Game", "repo-game-guid"),
+            ("Battleship.API", "repo-api-guid"),
+            ("Battleship.UI", "repo-ui-guid"),
+            ("Battleship.Infrastructure", "repo-infra-guid"),
+            ("Battleship.Tests", "repo-tests-guid")
+        };
+
+        return Task.FromResult<IEnumerable<(string Name, string Id)>>(repositories);
+    }
+
     // ============================================
     // TEAM ITERATIONS (SPRINTS)
     // ============================================
