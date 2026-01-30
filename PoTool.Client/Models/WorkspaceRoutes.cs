@@ -7,9 +7,14 @@ namespace PoTool.Client.Models;
 public static class WorkspaceRoutes
 {
     /// <summary>
-    /// Landing page route for intent selection.
+    /// Home page route - main workspace navigation entry point.
     /// </summary>
-    public const string Landing = "/landing";
+    public const string Home = "/home";
+    
+    /// <summary>
+    /// Legacy landing page route for classic intent-based navigation.
+    /// </summary>
+    public const string Legacy = "/legacy";
 
     /// <summary>
     /// Profile selection route.
@@ -41,57 +46,78 @@ public static class WorkspaceRoutes
     /// </summary>
     public const string CommunicationWorkspace = "/workspace/communication";
 
-    #region Beta Navigation Routes
+    #region Workspace Navigation Routes
 
     /// <summary>
-    /// Beta Home route - entry point for new workspace-based navigation.
+    /// Health (Now) workspace route.
     /// </summary>
-    public const string BetaHome = "/beta";
+    public const string HealthWorkspace = "/home/health";
 
     /// <summary>
-    /// Beta Health (Now) workspace route.
+    /// Overview/Trends (Past) workspace route.
     /// </summary>
-    public const string BetaHealthWorkspace = "/beta/health";
+    public const string TrendsWorkspace = "/home/trends";
 
     /// <summary>
-    /// Beta Overview/Trends (Past) workspace route.
+    /// Planning (Future) workspace route.
     /// </summary>
-    public const string BetaTrendsWorkspace = "/beta/trends";
+    public const string PlanningWorkspace2 = "/home/planning";
 
     /// <summary>
-    /// Beta Planning (Future) workspace route.
+    /// Bug Overview route.
     /// </summary>
-    public const string BetaPlanningWorkspace = "/beta/planning";
+    public const string BugOverview = "/home/bugs";
 
     /// <summary>
-    /// Beta Bug Overview route.
+    /// Bug Detail route.
     /// </summary>
-    public const string BetaBugOverview = "/beta/bugs";
+    public const string BugDetail = "/home/bugs/detail";
 
     /// <summary>
-    /// Beta Bug Detail route.
+    /// PR Insights route - shows metrics dashboard with Team/Product selectors.
     /// </summary>
-    public const string BetaBugDetail = "/beta/bugs/detail";
+    public const string PrOverview = "/home/pull-requests";
 
     /// <summary>
-    /// Beta PR Insights route - shows metrics dashboard with Team/Product selectors.
+    /// Pipeline Overview route (read-only).
     /// </summary>
-    public const string BetaPrOverview = "/beta/pull-requests";
+    public const string PipelineOverview = "/home/pipelines";
 
     /// <summary>
-    /// Beta Pipeline Overview route (read-only).
+    /// Plan Board route.
     /// </summary>
-    public const string BetaPipelineOverview = "/beta/pipelines";
+    public const string PlanBoard = "/home/plan-board";
 
     /// <summary>
-    /// Beta Plan Board route.
+    /// Dependency Overview route (read-only).
     /// </summary>
-    public const string BetaPlanBoard = "/beta/plan-board";
-
-    /// <summary>
-    /// Beta Dependency Overview route (read-only).
-    /// </summary>
-    public const string BetaDependencyOverview = "/beta/dependencies";
+    public const string DependencyOverview = "/home/dependencies";
+    
+    // Legacy Beta route constants for backward compatibility
+    [Obsolete("Use Home constant instead")]
+    public const string BetaHome = Home;
+    [Obsolete("Use HealthWorkspace constant instead")]
+    public const string BetaHealthWorkspace = HealthWorkspace;
+    [Obsolete("Use TrendsWorkspace constant instead")]
+    public const string BetaTrendsWorkspace = TrendsWorkspace;
+    [Obsolete("Use PlanningWorkspace2 constant instead")]
+    public const string BetaPlanningWorkspace = PlanningWorkspace2;
+    [Obsolete("Use BugOverview constant instead")]
+    public const string BetaBugOverview = BugOverview;
+    [Obsolete("Use BugDetail constant instead")]
+    public const string BetaBugDetail = BugDetail;
+    [Obsolete("Use PrOverview constant instead")]
+    public const string BetaPrOverview = PrOverview;
+    [Obsolete("Use PipelineOverview constant instead")]
+    public const string BetaPipelineOverview = PipelineOverview;
+    [Obsolete("Use PlanBoard constant instead")]
+    public const string BetaPlanBoard = PlanBoard;
+    [Obsolete("Use DependencyOverview constant instead")]
+    public const string BetaDependencyOverview = DependencyOverview;
+    
+    // Legacy Landing route constant for backward compatibility
+    [Obsolete("Use Legacy constant instead for the classic intent navigation")]
+    public const string Landing = Legacy;
 
     #endregion
 
@@ -115,7 +141,7 @@ public static class WorkspaceRoutes
             Intent.Begrijpen => AnalysisWorkspace,
             Intent.Plannen => PlanningWorkspace,
             Intent.Delen => CommunicationWorkspace,
-            _ => Landing
+            _ => Legacy
         };
     }
 }

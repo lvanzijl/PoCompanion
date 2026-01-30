@@ -1,4 +1,4 @@
-@page "/beta"
+@page "/home"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @inject INavigationContextService NavigationContextService
@@ -8,17 +8,14 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
-<PageTitle>Beta Home - PO Companion</PageTitle>
+<PageTitle>Home - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8 mb-8">
     <MudStack AlignItems="AlignItems.Center" Spacing="6">
-        @* Beta Header *@
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
-            <MudText Typo="Typo.h3" Align="Align.Center">
-                Workspace Navigation
-            </MudText>
-        </MudStack>
+        @* Header *@
+        <MudText Typo="Typo.h3" Align="Align.Center">
+            Workspace Navigation
+        </MudText>
         
         <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mb-4" Style="color: var(--mud-palette-text-secondary);">
             Situation overview — no editing, no filtering, no forced workflow
@@ -222,15 +219,12 @@
                 </MudButton>
             </MudStack>
 
-            @* Navigation Actions *@
-            <MudStack Row="true" Spacing="2" Class="mt-8">
-                <MudButton Variant="Variant.Text" 
-                           Color="Color.Default"
-                           StartIcon="@Icons.Material.Filled.ArrowBack"
-                           OnClick="NavigateToLegacyLanding">
-                    Back to Classic Navigation
-                </MudButton>
-            </MudStack>
+            @* Legacy UI Link - Subtle footer link *@
+            <MudText Typo="Typo.caption" Class="mt-8" Style="color: var(--mud-palette-text-disabled);">
+                <MudLink Href="/legacy" Color="Color.Inherit" Underline="Underline.Hover" Style="cursor: pointer;">
+                    Classic Intent Navigation
+                </MudLink>
+            </MudText>
         }
     </MudStack>
 </MudContainer>
@@ -344,11 +338,6 @@
         NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPlanBoard}?allProducts=true");
     }
 
-    private void NavigateToLegacyLanding()
-    {
-        NavigationManager.NavigateTo(WorkspaceRoutes.Landing);
-    }
-    
     private async Task LoadHealthSignalsAsync()
     {
         try

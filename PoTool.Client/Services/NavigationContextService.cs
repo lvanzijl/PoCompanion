@@ -73,8 +73,8 @@ public class NavigationContextService : INavigationContextService
     {
         if (_contextStack.Count == 0 || _current?.Parent == null)
         {
-            // Navigate to landing if no parent context
-            _navigationManager.NavigateTo("/landing");
+            // Navigate to home if no parent context
+            _navigationManager.NavigateTo("/home");
             return;
         }
 

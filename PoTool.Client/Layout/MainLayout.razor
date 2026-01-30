@@ -19,12 +19,12 @@
     <main class="workspace-main">
         <div class="top-row px-4 d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
-                <MudTooltip Text="Return to Landing">
+                <MudTooltip Text="Return to Home">
                     <CompactIconButton Icon="@Icons.Material.Filled.Home" 
                                   Color="Color.Inherit" 
-                                  OnClick="NavigateToLanding" 
-                                  Title="Landing" 
-                                  AriaLabel="Return to landing page" />
+                                  OnClick="NavigateToHome" 
+                                  Title="Home" 
+                                  AriaLabel="Return to home page" />
                 </MudTooltip>
                 <ProfileSelector @ref="_profileSelector" OnProfileChanged="HandleProfileChanged" />
             </div>
@@ -106,9 +106,9 @@
         NavigationManager.NavigateTo("/settings");
     }
 
-    private void NavigateToLanding()
+    private void NavigateToHome()
     {
-        NavigationManager.NavigateTo("/landing");
+        NavigationManager.NavigateTo("/home");
     }
 
     private async Task OpenOnboardingWizard()
