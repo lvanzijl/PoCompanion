@@ -93,30 +93,19 @@ public static class WorkspaceRoutes
     /// </summary>
     public const string DependencyOverview = "/home/dependencies";
     
-    // Legacy Beta route constants for backward compatibility
-    [Obsolete("Use Home constant instead")]
+    // Legacy Beta route constants for backward compatibility - these are aliases to the new constants
     public const string BetaHome = Home;
-    [Obsolete("Use HealthWorkspace constant instead")]
     public const string BetaHealthWorkspace = HealthWorkspace;
-    [Obsolete("Use TrendsWorkspace constant instead")]
     public const string BetaTrendsWorkspace = TrendsWorkspace;
-    [Obsolete("Use PlanningWorkspace2 constant instead")]
     public const string BetaPlanningWorkspace = PlanningWorkspace2;
-    [Obsolete("Use BugOverview constant instead")]
     public const string BetaBugOverview = BugOverview;
-    [Obsolete("Use BugDetail constant instead")]
     public const string BetaBugDetail = BugDetail;
-    [Obsolete("Use PrOverview constant instead")]
     public const string BetaPrOverview = PrOverview;
-    [Obsolete("Use PipelineOverview constant instead")]
     public const string BetaPipelineOverview = PipelineOverview;
-    [Obsolete("Use PlanBoard constant instead")]
     public const string BetaPlanBoard = PlanBoard;
-    [Obsolete("Use DependencyOverview constant instead")]
     public const string BetaDependencyOverview = DependencyOverview;
     
-    // Legacy Landing route constant for backward compatibility
-    [Obsolete("Use Legacy constant instead for the classic intent navigation")]
+    // Legacy Landing route constant for backward compatibility - alias to the new Legacy constant
     public const string Landing = Legacy;
 
     #endregion
