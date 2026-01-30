@@ -1,6 +1,8 @@
 .settings-page {
     display: flex;
+    /* Height calculation: 100vh minus top-row (approx 56px) and padding (64px) */
     height: calc(100vh - 120px);
+    /* Negative margin to extend to edges of content area, counteracting px-4 padding from MainLayout */
     margin: -16px;
     overflow: hidden;
 }
@@ -19,7 +21,7 @@
 }
 
 .settings-sidebar .settings-nav-selected {
-    background: rgba(0, 120, 212, 0.12);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
     border-left: 3px solid var(--color-primary);
 }
 

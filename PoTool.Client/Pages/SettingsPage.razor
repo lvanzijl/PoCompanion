@@ -50,12 +50,24 @@
     </div>
     
     <div class="settings-content-panel">
-        @if (_currentTopic == "cache" && _profileId.HasValue)
+        @if (_currentTopic == "cache")
         {
-            <div class="settings-section">
-                <MudText Typo="Typo.h4" Class="mb-3">Cache Status</MudText>
-                <CacheStatusSection ProductOwnerId="@_profileId.Value" AutoSync="false" />
-            </div>
+            @if (_profileId.HasValue)
+            {
+                <div class="settings-section">
+                    <MudText Typo="Typo.h4" Class="mb-3">Cache Status</MudText>
+                    <CacheStatusSection ProductOwnerId="@_profileId.Value" AutoSync="false" />
+                </div>
+            }
+            else
+            {
+                <div class="settings-section">
+                    <MudText Typo="Typo.h4" Class="mb-3">Cache Status</MudText>
+                    <MudAlert Severity="Severity.Info">
+                        No active profile selected. Please select or create a profile to view cache status.
+                    </MudAlert>
+                </div>
+            }
         }
         else if (_currentTopic == "tfs")
         {
@@ -102,9 +114,15 @@
     
     protected override void OnParametersSet()
     {
+        // Update current topic from route parameter if present
         if (!string.IsNullOrEmpty(SelectedTopic))
         {
-            _currentTopic = SelectedTopic.ToLowerInvariant();
+            var newTopic = SelectedTopic.ToLowerInvariant();
+            // Only update if different (avoid redundant assignment from SelectTopic navigation)
+            if (_currentTopic != newTopic)
+            {
+                _currentTopic = newTopic;
+            }
         }
     }
     
@@ -124,7 +142,7 @@
     
     private void SelectTopic(string topic)
     {
-        _currentTopic = topic;
+        // Navigate to the topic URL (OnParametersSet will update _currentTopic)
         NavigationManager.NavigateTo($"/settings/{topic}");
     }
     
