@@ -59,9 +59,7 @@
 
 @code {
     private bool _hasCheckedOnboarding = false;
-    private bool _onboardingCompleted = false;
     private ProfileSelector? _profileSelector;
-    private StartupReadinessDto? _cachedReadiness;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -71,42 +69,8 @@
         {
             _hasCheckedOnboarding = true;
             
-            // Check backend readiness first to detect clean start (database removed)
-            // Cache result to avoid duplicate call in PerformStartupRoutingAsync
-            _cachedReadiness = await StartupOrchestrator.GetStartupReadinessAsync();
-            
-            // If backend has no TFS configuration, reset onboarding state
-            // This ensures users see the onboarding wizard on clean start (e.g., after database removal)
-            if (_cachedReadiness != null && !_cachedReadiness.HasSavedTfsConfig)
-            {
-                await OnboardingService.ResetOnboardingAsync();
-                _onboardingCompleted = false;
-            }
-            else
-            {
-                // Check if user needs onboarding (cache result for reuse)
-                _onboardingCompleted = await OnboardingService.HasCompletedOnboardingAsync();
-            }
-            
-            if (!_onboardingCompleted)
-            {
-                // Redirect to onboarding page instead of showing dialog
-                var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).Trim('/');
-                // Exact match to avoid matching paths like 'onboardingtest'
-                if (!currentPath.Equals("onboarding", StringComparison.OrdinalIgnoreCase) && 
-                    !currentPath.StartsWith("onboarding/", StringComparison.OrdinalIgnoreCase))
-                {
-                    NavigationManager.NavigateTo("/onboarding");
-                    return;
-                }
-            }
-            
             // Subscribe to navigation changes to refresh profile selector when needed
             NavigationManager.LocationChanged += OnLocationChanged;
-            
-            // Only perform startup routing after onboarding check is complete
-            // This ensures we don't redirect to /tfsconfig when onboarding hasn't been done yet
-            await PerformStartupRoutingAsync();
         }
     }
     
@@ -137,56 +101,6 @@
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
     
-    private async Task PerformStartupRoutingAsync()
-    {
-        // Only perform startup routing when on the root path
-        var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        // Normalize: trim leading/trailing slashes and check if empty (root path)
-        var normalizedPath = currentPath.Trim('/');
-        if (!string.IsNullOrEmpty(normalizedPath))
-        {
-            return;
-        }
-        
-        // Skip startup routing if onboarding is not yet completed
-        // The onboarding redirect is handled earlier in this component's OnAfterRenderAsync
-        // Use cached result to avoid duplicate async call
-        if (!_onboardingCompleted)
-        {
-            return;
-        }
-        
-        try
-        {
-            // Use cached readiness if available, otherwise fetch it
-            var readiness = _cachedReadiness ?? await StartupOrchestrator.GetStartupReadinessAsync();
-            if (readiness == null)
-            {
-                return; // Graceful degradation
-            }
-            
-            var routingResult = StartupOrchestrator.DetermineRoute(readiness);
-            
-            // Route based on startup readiness
-            switch (routingResult.Route)
-            {
-                case StartupRoute.Configuration:
-                    NavigationManager.NavigateTo("/tfsconfig");
-                    break;
-                case StartupRoute.CreateFirstProfile:
-                case StartupRoute.ProfilesHome:
-                    // Always navigate to /profiles on startup (root path)
-                    // User can select a profile to continue to ProductHome
-                    NavigationManager.NavigateTo("/profiles");
-                    break;
-            }
-        }
-        catch (Exception)
-        {
-            // Graceful degradation - don't block the app
-        }
-    }
-
     private void NavigateToSettings()
     {
         NavigationManager.NavigateTo("/settings");

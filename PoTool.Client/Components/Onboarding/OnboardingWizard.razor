@@ -84,7 +84,7 @@
                         {
                             <MudPaper Elevation="2" Class="pa-3 mt-2">
                                 <MudStack Spacing="2">
-                                    @foreach (var update in _progressUpdates)
+                                    @foreach (var update in GetFilteredProgressUpdates())
                                     {
                                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                             @if (update.State == ProgressState.Running)
@@ -149,10 +149,12 @@
                         </MudText>
 
                         <MudForm @ref="_profileForm" @bind-IsValid="_profileFormValid">
-                            <CompactTextField @bind-Value="_profileName" 
+                            <CompactTextField Value="@_profileName"
+                                         ValueChanged="@(async (string value) => await OnProfileNameChanged(value))"
                                          Label="Profile Name" 
                                          Placeholder="e.g., John Doe"
                                          Required="true"
+                                         Immediate="true"
                                          HelperText="Your name as Product Owner" />
 
                             <MudStack Row="true" Spacing="2" Class="mt-2">
@@ -815,6 +817,70 @@
     private void ClearConfigError()
     {
         _configErrorResponse = null;
+    }
+
+    private List<TfsConfigProgressUpdate> GetFilteredProgressUpdates()
+    {
+        var filtered = new List<TfsConfigProgressUpdate>();
+        var phaseGroups = _progressUpdates.GroupBy(u => u.Phase);
+        
+        foreach (var group in phaseGroups)
+        {
+            var phase = group.Key;
+            var updates = group.ToList();
+            
+            // For "Verifying API - {capabilityId}" sub-phases (individual API checks)
+            if (phase.StartsWith("Verifying API - "))
+            {
+                // Check if all API checks passed by looking for the summary message
+                var allChecksPassed = _progressUpdates.Any(u => 
+                    u.Phase == "Verifying API" && 
+                    u.State == ProgressState.Succeeded && 
+                    u.Message.Contains("All"));
+                
+                // Only show failed checks when all checks passed
+                if (allChecksPassed)
+                {
+                    // Skip this individual check (don't show it)
+                    continue;
+                }
+                else
+                {
+                    // Show all individual checks (including successes) when some failed
+                    filtered.AddRange(updates);
+                }
+            }
+            else
+            {
+                // For main phases, if there's a succeeded/failed state, remove the running state
+                var hasCompletedState = updates.Any(u => u.State == ProgressState.Succeeded || u.State == ProgressState.Failed);
+                
+                if (hasCompletedState)
+                {
+                    // Only keep succeeded/failed states, skip running states
+                    filtered.AddRange(updates.Where(u => u.State != ProgressState.Running));
+                }
+                else
+                {
+                    // No completed state yet, keep all (including running)
+                    filtered.AddRange(updates);
+                }
+            }
+        }
+        
+        return filtered;
+    }
+
+    private async Task OnProfileNameChanged(string value)
+    {
+        _profileName = value;
+        
+        // Trigger form validation to update button state while typing
+        if (_profileForm != null)
+        {
+            await _profileForm.Validate();
+        }
+        StateHasChanged();
     }
 
     private async Task SaveProfile()
