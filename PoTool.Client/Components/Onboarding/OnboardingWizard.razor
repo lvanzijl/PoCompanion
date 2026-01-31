@@ -411,7 +411,7 @@
                                 
                                 <MudAutocomplete T="GitRepositoryDto"
                                           Label="Select Repositories" 
-                                          @bind-Value="_currentRepository"
+                                          Value="_currentRepository"
                                           SearchFunc="@SearchRepositories"
                                           ToStringFunc="@(repo => repo?.Name ?? "")"
                                           ValueChanged="@OnRepositorySelected"
@@ -432,7 +432,7 @@
                                     <MudStack Spacing="1">
                                         @foreach (var repoName in _selectedRepositoryNames.ToList())
                                         {
-                                            <MudChip Color="Color.Primary" 
+                                            <MudChip T="string" Color="Color.Primary" 
                                                     OnClose="@(() => RemoveRepository(repoName))" 
                                                     CloseIcon="@Icons.Material.Filled.Cancel">
                                                 @repoName
@@ -1024,18 +1024,20 @@
         }
     }
 
-    private async Task<IEnumerable<TfsTeamDto>> SearchTeams(string? searchText)
+    private Task<IEnumerable<TfsTeamDto>> SearchTeams(string? searchText, CancellationToken cancellationToken)
     {
         if (_tfsTeams == null || !_tfsTeams.Any())
-            return Enumerable.Empty<TfsTeamDto>();
+            return Task.FromResult(Enumerable.Empty<TfsTeamDto>());
 
         if (string.IsNullOrWhiteSpace(searchText))
-            return _tfsTeams;
+            return Task.FromResult(_tfsTeams.AsEnumerable());
 
-        return _tfsTeams.Where(team => 
+        var filtered = _tfsTeams.Where(team => 
             team.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
             (!string.IsNullOrEmpty(team.Description) && team.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase))
         );
+
+        return Task.FromResult(filtered);
     }
 
     private async Task SaveTeam()
@@ -1155,20 +1157,22 @@
         }
     }
 
-    private async Task<IEnumerable<GitRepositoryDto>> SearchRepositories(string? searchText)
+    private Task<IEnumerable<GitRepositoryDto>> SearchRepositories(string? searchText, CancellationToken cancellationToken)
     {
         if (_gitRepositories == null || !_gitRepositories.Any())
-            return Enumerable.Empty<GitRepositoryDto>();
+            return Task.FromResult(Enumerable.Empty<GitRepositoryDto>());
 
         // Filter out already selected repositories
         var availableRepos = _gitRepositories.Where(repo => !_selectedRepositoryNames.Contains(repo.Name));
 
         if (string.IsNullOrWhiteSpace(searchText))
-            return availableRepos;
+            return Task.FromResult(availableRepos);
 
-        return availableRepos.Where(repo => 
+        var filtered = availableRepos.Where(repo => 
             repo.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)
         );
+
+        return Task.FromResult(filtered);
     }
 
     private void OnRepositorySelected(GitRepositoryDto? repository)
