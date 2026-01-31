@@ -1191,19 +1191,6 @@
         StateHasChanged();
     }
 
-    private void ToggleRepository(string repositoryName, bool selected)
-    {
-        if (selected)
-        {
-            _selectedRepositoryNames.Add(repositoryName);
-        }
-        else
-        {
-            _selectedRepositoryNames.Remove(repositoryName);
-        }
-        StateHasChanged();
-    }
-
     private async Task SaveRepositories()
     {
         if (!_createdProductId.HasValue)
