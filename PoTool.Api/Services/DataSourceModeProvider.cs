@@ -41,6 +41,8 @@ public sealed class DataSourceModeProvider : IDataSourceModeProvider
     /// <summary>
     /// Gets the data source mode for a product owner from the database.
     /// Falls back to Live mode if not set or no successful sync exists.
+    /// This method only determines the mode, it does not set _currentMode.
+    /// The caller must call SetCurrentMode() to apply the mode to the current request.
     /// </summary>
     public async Task<DataSourceMode> GetModeAsync(int productOwnerId, CancellationToken cancellationToken = default)
     {
@@ -51,8 +53,7 @@ public sealed class DataSourceModeProvider : IDataSourceModeProvider
 
         if (cacheState == null)
         {
-            _logger.LogDebug("No cache state found for ProductOwner {ProductOwnerId}, using Live mode", productOwnerId);
-            _currentMode = DataSourceMode.Live;
+            _logger.LogDebug("No cache state found for ProductOwner {ProductOwnerId}, returning Live mode", productOwnerId);
             return DataSourceMode.Live;
         }
 
@@ -60,15 +61,13 @@ public sealed class DataSourceModeProvider : IDataSourceModeProvider
         // This includes cases where a new sync is InProgress - we use the previous successful cache
         if (cacheState.LastSuccessfulSync.HasValue)
         {
-            _logger.LogDebug("Cache available for ProductOwner {ProductOwnerId} (last sync: {LastSync}, status: {Status}), using Cache mode", 
+            _logger.LogDebug("Cache available for ProductOwner {ProductOwnerId} (last sync: {LastSync}, status: {Status}), returning Cache mode", 
                 productOwnerId, cacheState.LastSuccessfulSync, cacheState.SyncStatus);
-            _currentMode = DataSourceMode.Cache;
             return DataSourceMode.Cache;
         }
 
-        _logger.LogDebug("No successful sync for ProductOwner {ProductOwnerId} (status: {Status}), using Live mode", 
+        _logger.LogDebug("No successful sync for ProductOwner {ProductOwnerId} (status: {Status}), returning Live mode", 
             productOwnerId, cacheState.SyncStatus);
-        _currentMode = DataSourceMode.Live;
         return DataSourceMode.Live;
     }
 
