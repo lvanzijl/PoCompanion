@@ -38,10 +38,11 @@
             var routingResult = StartupOrchestrator.DetermineRoute(readiness);
             
             // Route based on startup readiness
+            // Note: Configuration route now goes to settings page instead of standalone TFS config page
             switch (routingResult.Route)
             {
                 case StartupRoute.Configuration:
-                    NavigationManager.NavigateTo("/tfsconfig", replace: true);
+                    NavigationManager.NavigateTo("/settings/tfs", replace: true);
                     break;
                 case StartupRoute.CreateFirstProfile:
                 case StartupRoute.ProfilesHome:
