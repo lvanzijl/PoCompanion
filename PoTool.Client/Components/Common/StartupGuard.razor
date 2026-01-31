@@ -128,18 +128,20 @@ else
         {
             _readiness = await StartupOrchestrator.GetStartupReadinessAsync();
             
-            // Reset onboarding state if backend readiness check failed or database is empty
-            // This ensures onboarding is reset even when navigating directly to exempt pages
-            if (_readiness == null || !_readiness.HasSavedTfsConfig)
-            {
-                await OnboardingService.ResetOnboardingAsync();
-            }
-            
             if (_readiness == null)
             {
-                // Failed to get readiness - assume ready (graceful degradation)
+                // Backend readiness check failed - reset onboarding and assume ready (graceful degradation)
+                // This ensures user can retry setup from scratch
+                await OnboardingService.ResetOnboardingAsync();
                 _isReady = true;
                 return;
+            }
+            
+            // Reset onboarding if database is empty (no TFS config)
+            // Since TFS config and profiles are in same DB, this handles database deletion
+            if (!_readiness.HasSavedTfsConfig)
+            {
+                await OnboardingService.ResetOnboardingAsync();
             }
             
             // If no active profile, try to restore from localStorage
