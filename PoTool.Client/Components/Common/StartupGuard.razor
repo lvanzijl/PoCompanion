@@ -32,8 +32,8 @@ else if (!_isReady && _readiness != null)
             {
                 <MudButton Variant="Variant.Filled" 
                            Color="Color.Primary" 
-                           OnClick="@(() => NavigationManager.NavigateTo("/tfsconfig"))">
-                    Go to Configuration
+                           OnClick="@(() => NavigationManager.NavigateTo("/settings/tfs"))">
+                    Configure Now
                 </MudButton>
             }
             else if (!_readiness.HasAnyProfile)
@@ -78,10 +78,10 @@ else
     private StartupReadinessDto? _readiness;
     private string _lastCheckedLocation = string.Empty;
     
-    // Default exempt pages (configuration, profiles, help, profile management, onboarding)
+    // Default exempt pages (settings, profiles, help, profile management, onboarding)
     private static readonly string[] DefaultExemptPages = new[]
     {
-        "/tfsconfig",
+        "/settings",
         "/profiles",
         "/help",
         "/settings/productowner/edit",
