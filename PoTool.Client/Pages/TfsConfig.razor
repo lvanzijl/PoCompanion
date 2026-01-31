@@ -53,12 +53,14 @@
                          Label="Organization URL" 
                          Placeholder="https://dev.azure.com/yourorg"
                          Required="true"
+                         Immediate="true"
                          HelperText="The URL of your Azure DevOps organization" />
 
             <CompactTextField @bind-Value="_project" 
                          Label="Project Name" 
                          Placeholder="MyProject"
                          Required="true"
+                         Immediate="true"
                          HelperText="The name of your project" />
 
             <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">

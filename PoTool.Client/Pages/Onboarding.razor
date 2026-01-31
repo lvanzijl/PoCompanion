@@ -31,8 +31,7 @@
         var result = await dialogReference.Result;
         
         // Navigate based on dialog result
-        // DialogResult.Ok means completed, Cancel means skipped
-        // In either case, redirect to home (force reload to reset state)
-        NavigationManager.NavigateTo("/", forceLoad: true);
+        // After completing onboarding, go directly to home page (workspace selection)
+        NavigationManager.NavigateTo("/home", replace: true);
     }
 }

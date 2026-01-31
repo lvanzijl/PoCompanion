@@ -211,12 +211,14 @@
                                          Label="Product Name" 
                                          Placeholder="e.g., My Application"
                                          Required="true"
+                                         Immediate="true"
                                          HelperText="The name of your product" />
 
                             <CompactTextField @bind-Value="_backlogRootWorkItemId" 
                                          Label="Backlog Root Work Item ID" 
                                          Placeholder="e.g., 12345"
                                          Required="true"
+                                         Immediate="true"
                                          InputType="InputType.Number"
                                          HelperText="The ID of the root work item for this product's backlog" />
 
@@ -279,22 +281,23 @@
                         else if (_tfsTeams != null && _tfsTeams.Any())
                         {
                             <MudForm @ref="_teamForm" @bind-IsValid="_teamFormValid">
-                                <MudSelect T="TfsTeamDto" 
+                                <MudAutocomplete T="TfsTeamDto" 
                                           Label="Select Team" 
                                           @bind-Value="_selectedTfsTeam"
+                                          SearchFunc="@SearchTeams"
+                                          ToStringFunc="@(team => team?.Name ?? "")"
                                           Required="true"
-                                          HelperText="Choose your team from Azure DevOps">
-                                    @foreach (var team in _tfsTeams)
-                                    {
-                                        <MudSelectItem Value="@team">
-                                            @team.Name
-                                            @if (!string.IsNullOrEmpty(team.Description))
-                                            {
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary"> - @team.Description</MudText>
-                                            }
-                                        </MudSelectItem>
-                                    }
-                                </MudSelect>
+                                          ResetValueOnEmptyText="true"
+                                          CoerceText="true"
+                                          HelperText="Choose your team from Azure DevOps (type to filter)">
+                                    <ItemTemplate Context="team">
+                                        <MudText>@team.Name</MudText>
+                                        @if (!string.IsNullOrEmpty(team.Description))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@team.Description</MudText>
+                                        }
+                                    </ItemTemplate>
+                                </MudAutocomplete>
 
                                 @if (_selectedTfsTeam != null)
                                 {
@@ -406,14 +409,36 @@
                             <MudForm @ref="_repositoryForm" @bind-IsValid="_repositoryFormValid">
                                 <MudText Typo="Typo.subtitle2" Class="mb-2">Select Repositories (optional)</MudText>
                                 
-                                @foreach (var repo in _gitRepositories)
+                                <MudAutocomplete T="GitRepositoryDto"
+                                          Label="Select Repositories" 
+                                          @bind-Value="_currentRepository"
+                                          SearchFunc="@SearchRepositories"
+                                          ToStringFunc="@(repo => repo?.Name ?? "")"
+                                          ValueChanged="@OnRepositorySelected"
+                                          ResetValueOnEmptyText="true"
+                                          CoerceText="false"
+                                          Clearable="true"
+                                          HelperText="Type to filter and select repositories"
+                                          AdornmentIcon="@Icons.Material.Filled.Search"
+                                          AdornmentColor="Color.Primary">
+                                    <ItemTemplate Context="repo">
+                                        <MudText>@repo.Name</MudText>
+                                    </ItemTemplate>
+                                </MudAutocomplete>
+
+                                @if (_selectedRepositoryNames.Any())
                                 {
-                                    <MudCheckBox T="bool" 
-                                                Value="@_selectedRepositoryNames.Contains(repo.Name)"
-                                                ValueChanged="@((bool selected) => ToggleRepository(repo.Name, selected))"
-                                                Label="@repo.Name"
-                                                Color="Color.Primary"
-                                                Dense="true" />
+                                    <MudText Typo="Typo.subtitle2" Class="mt-3 mb-2">Selected Repositories:</MudText>
+                                    <MudStack Spacing="1">
+                                        @foreach (var repoName in _selectedRepositoryNames.ToList())
+                                        {
+                                            <MudChip Color="Color.Primary" 
+                                                    OnClose="@(() => RemoveRepository(repoName))" 
+                                                    CloseIcon="@Icons.Material.Filled.Cancel">
+                                                @repoName
+                                            </MudChip>
+                                        }
+                                    </MudStack>
                                 }
 
                                 @if (_selectedRepositoryNames.Any())
@@ -562,6 +587,7 @@
     private bool _isSavingRepositories;
     private List<GitRepositoryDto>? _gitRepositories;
     private HashSet<string> _selectedRepositoryNames = new();
+    private GitRepositoryDto? _currentRepository;
     private ConnectionTestResult? _repositorySaveResult;
     private ErrorResponse? _repositoryErrorResponse;
 
@@ -998,6 +1024,20 @@
         }
     }
 
+    private async Task<IEnumerable<TfsTeamDto>> SearchTeams(string? searchText)
+    {
+        if (_tfsTeams == null || !_tfsTeams.Any())
+            return Enumerable.Empty<TfsTeamDto>();
+
+        if (string.IsNullOrWhiteSpace(searchText))
+            return _tfsTeams;
+
+        return _tfsTeams.Where(team => 
+            team.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            (!string.IsNullOrEmpty(team.Description) && team.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+        );
+    }
+
     private async Task SaveTeam()
     {
         if (!_teamFormValid || _selectedTfsTeam == null) return;
@@ -1113,6 +1153,38 @@
             _isLoadingRepositories = false;
             StateHasChanged();
         }
+    }
+
+    private async Task<IEnumerable<GitRepositoryDto>> SearchRepositories(string? searchText)
+    {
+        if (_gitRepositories == null || !_gitRepositories.Any())
+            return Enumerable.Empty<GitRepositoryDto>();
+
+        // Filter out already selected repositories
+        var availableRepos = _gitRepositories.Where(repo => !_selectedRepositoryNames.Contains(repo.Name));
+
+        if (string.IsNullOrWhiteSpace(searchText))
+            return availableRepos;
+
+        return availableRepos.Where(repo => 
+            repo.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)
+        );
+    }
+
+    private void OnRepositorySelected(GitRepositoryDto? repository)
+    {
+        if (repository != null && !_selectedRepositoryNames.Contains(repository.Name))
+        {
+            _selectedRepositoryNames.Add(repository.Name);
+            _currentRepository = null; // Clear the autocomplete
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveRepository(string repositoryName)
+    {
+        _selectedRepositoryNames.Remove(repositoryName);
+        StateHasChanged();
     }
 
     private void ToggleRepository(string repositoryName, bool selected)
