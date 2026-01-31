@@ -3,6 +3,7 @@
 @inject NavigationManager NavigationManager
 @inject IPreferencesService PreferencesService
 @inject IProfileService ProfileService
+@inject IOnboardingService OnboardingService
 
 @* 
     StartupGuard component that checks startup readiness and routes appropriately.
@@ -129,9 +130,20 @@ else
             
             if (_readiness == null)
             {
-                // Failed to get readiness - assume ready (graceful degradation)
+                // Backend readiness check failed - reset onboarding and assume ready (graceful degradation)
+                // This ensures user can retry setup from scratch
+                await OnboardingService.ResetOnboardingAsync();
                 _isReady = true;
                 return;
+            }
+            
+            // Reset onboarding if database is empty (no TFS config)
+            // Since TFS config and profiles are in same DB, this handles database deletion
+            // Note: We continue execution (unlike null case above) because we have readiness info
+            // and want to use it for proper routing (e.g., to TFS config page)
+            if (!_readiness.HasSavedTfsConfig)
+            {
+                await OnboardingService.ResetOnboardingAsync();
             }
             
             // If no active profile, try to restore from localStorage
