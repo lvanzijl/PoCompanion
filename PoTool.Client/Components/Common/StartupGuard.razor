@@ -139,6 +139,8 @@ else
             
             // Reset onboarding if database is empty (no TFS config)
             // Since TFS config and profiles are in same DB, this handles database deletion
+            // Note: We continue execution (unlike null case above) because we have readiness info
+            // and want to use it for proper routing (e.g., to TFS config page)
             if (!_readiness.HasSavedTfsConfig)
             {
                 await OnboardingService.ResetOnboardingAsync();
