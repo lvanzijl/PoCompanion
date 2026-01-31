@@ -56,15 +56,18 @@ public sealed class DataSourceModeProvider : IDataSourceModeProvider
             return DataSourceMode.Live;
         }
 
-        // If we have a successful sync, use Cache mode
-        if (cacheState.SyncStatus == CacheSyncStatus.Success && cacheState.LastSuccessfulSync.HasValue)
+        // If we have ever had a successful sync, use Cache mode
+        // This includes cases where a new sync is InProgress - we use the previous successful cache
+        if (cacheState.LastSuccessfulSync.HasValue)
         {
-            _logger.LogDebug("Cache available for ProductOwner {ProductOwnerId}, using Cache mode", productOwnerId);
+            _logger.LogDebug("Cache available for ProductOwner {ProductOwnerId} (last sync: {LastSync}, status: {Status}), using Cache mode", 
+                productOwnerId, cacheState.LastSuccessfulSync, cacheState.SyncStatus);
             _currentMode = DataSourceMode.Cache;
             return DataSourceMode.Cache;
         }
 
-        _logger.LogDebug("No successful sync for ProductOwner {ProductOwnerId}, using Live mode", productOwnerId);
+        _logger.LogDebug("No successful sync for ProductOwner {ProductOwnerId} (status: {Status}), using Live mode", 
+            productOwnerId, cacheState.SyncStatus);
         _currentMode = DataSourceMode.Live;
         return DataSourceMode.Live;
     }
