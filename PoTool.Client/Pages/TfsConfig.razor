@@ -3,12 +3,16 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.Settings
 @using PoTool.Client.ApiClient
+@using PoTool.Shared.Settings
+@using Microsoft.Extensions.Logging
 @using static PoTool.Client.Components.Common.PageHelp
 @inject TfsConfigService TfsConfigService
 @inject IStartupOrchestratorService StartupOrchestrator
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject HttpClient HttpClient
+@inject ILogger<TfsConfig> _logger
 
 <PageTitle>TFS Configuration</PageTitle>
 
@@ -49,19 +53,51 @@
         else
         {
             <MudForm @ref="_form" @bind-IsValid="_formValid">
-            <CompactTextField @bind-Value="_url" 
+            <CompactTextField Value="@_url" 
+                         ValueChanged="@((string value) => OnUrlChanged(value))"
                          Label="Organization URL" 
                          Placeholder="https://dev.azure.com/yourorg"
                          Required="true"
                          Immediate="true"
                          HelperText="The URL of your Azure DevOps organization" />
 
-            <CompactTextField @bind-Value="_project" 
-                         Label="Project Name" 
-                         Placeholder="MyProject"
-                         Required="true"
-                         Immediate="true"
-                         HelperText="The name of your project" />
+            @if (_isLoadingProjects)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-2">
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    <MudText>Loading projects from TFS...</MudText>
+                </MudStack>
+            }
+            else if (_tfsProjects != null && _tfsProjects.Any())
+            {
+                <MudAutocomplete T="TfsProjectDto"
+                          Label="Project Name" 
+                          Value="_selectedProject"
+                          SearchFunc="@SearchProjects"
+                          ToStringFunc="@(project => project?.Name ?? "")"
+                          ValueChanged="@OnProjectSelected"
+                          Required="true"
+                          ResetValueOnEmptyText="true"
+                          CoerceText="true"
+                          HelperText="Choose your project from Azure DevOps (type to filter)">
+                    <ItemTemplate Context="project">
+                        <MudText>@project.Name</MudText>
+                        @if (!string.IsNullOrEmpty(project.Description))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@project.Description</MudText>
+                        }
+                    </ItemTemplate>
+                </MudAutocomplete>
+            }
+            else
+            {
+                <CompactTextField @bind-Value="_project" 
+                             Label="Project Name" 
+                             Placeholder="MyProject"
+                             Required="true"
+                             Immediate="true"
+                             HelperText="@(_url != string.Empty ? "Enter project name manually (could not load projects)" : "The name of your project")" />
+            }
 
             <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
                 <strong>Authentication:</strong> Uses Windows credentials (NTLM) of the current user. No additional configuration required.
@@ -185,6 +221,9 @@
 
     private string _url = string.Empty;
     private string _project = string.Empty;
+    private bool _isLoadingProjects;
+    private List<TfsProjectDto>? _tfsProjects;
+    private TfsProjectDto? _selectedProject;
     private bool _useDefaultCredentials = true;
     private int _timeoutSeconds = 30;
     private string _apiVersion = "7.0";
@@ -222,6 +261,89 @@
         {
             // Graceful degradation - don't block the page
         }
+    }
+
+    private async void OnUrlChanged(string value)
+    {
+        _url = value;
+        
+        // Trigger form validation
+        if (_form != null)
+        {
+            await _form.Validate();
+        }
+
+        // Load projects when URL is entered
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            await LoadTfsProjects(value);
+        }
+        else
+        {
+            _tfsProjects = null;
+            _selectedProject = null;
+            _project = string.Empty;
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnProjectSelected(TfsProjectDto? project)
+    {
+        _selectedProject = project;
+        _project = project?.Name ?? string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task LoadTfsProjects(string organizationUrl)
+    {
+        _isLoadingProjects = true;
+        StateHasChanged();
+
+        try
+        {
+            var encodedUrl = Uri.EscapeDataString(organizationUrl);
+            var response = await HttpClient.GetAsync($"/api/startup/tfs-projects?organizationUrl={encodedUrl}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                _tfsProjects = await response.Content.ReadFromJsonAsync<List<TfsProjectDto>>(new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            else
+            {
+                _logger.LogWarning("Failed to load TFS projects: {StatusCode}", response.StatusCode);
+                _tfsProjects = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error loading TFS projects");
+            _tfsProjects = null;
+        }
+        finally
+        {
+            _isLoadingProjects = false;
+            StateHasChanged();
+        }
+    }
+
+    private Task<IEnumerable<TfsProjectDto>> SearchProjects(string? searchText, CancellationToken cancellationToken)
+    {
+        if (_tfsProjects == null || !_tfsProjects.Any())
+            return Task.FromResult(Enumerable.Empty<TfsProjectDto>());
+
+        if (string.IsNullOrWhiteSpace(searchText))
+            return Task.FromResult(_tfsProjects.AsEnumerable());
+
+        var filtered = _tfsProjects.Where(project => 
+            project.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            (!string.IsNullOrEmpty(project.Description) && project.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+        );
+
+        return Task.FromResult(filtered);
     }
 
     private async Task LoadCurrentConfig()
