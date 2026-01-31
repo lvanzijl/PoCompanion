@@ -3,6 +3,7 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.Settings
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Shared.Settings
 @using Microsoft.Extensions.Logging
 @using static PoTool.Client.Components.Common.PageHelp
@@ -54,7 +55,7 @@
         {
             <MudForm @ref="_form" @bind-IsValid="_formValid">
             <CompactTextField Value="@_url" 
-                         ValueChanged="@((string value) => OnUrlChanged(value))"
+                         ValueChanged="@(async (string value) => await OnUrlChanged(value))"
                          Label="Organization URL" 
                          Placeholder="https://dev.azure.com/yourorg"
                          Required="true"
@@ -263,7 +264,7 @@
         }
     }
 
-    private async void OnUrlChanged(string value)
+    private async Task OnUrlChanged(string value)
     {
         _url = value;
         
@@ -307,10 +308,7 @@
             
             if (response.IsSuccessStatusCode)
             {
-                _tfsProjects = await response.Content.ReadFromJsonAsync<List<TfsProjectDto>>(new System.Text.Json.JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                _tfsProjects = await response.Content.ReadFromJsonAsync<List<TfsProjectDto>>(JsonHelper.CaseInsensitiveOptions);
             }
             else
             {

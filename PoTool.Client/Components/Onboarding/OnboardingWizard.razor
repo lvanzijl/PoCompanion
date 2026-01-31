@@ -82,7 +82,7 @@
                             else if (!string.IsNullOrWhiteSpace(_url))
                             {
                                 <CompactTextField Value="@_project"
-                                             ValueChanged="@((string value) => OnProjectNameChanged(value))"
+                                             ValueChanged="@(async (string value) => await OnProjectNameChanged(value))"
                                              Label="Project Name" 
                                              Placeholder="MyProject"
                                              Required="true"
@@ -92,7 +92,7 @@
                             else
                             {
                                 <CompactTextField Value="@_project"
-                                             ValueChanged="@((string value) => OnProjectNameChanged(value))"
+                                             ValueChanged="@(async (string value) => await OnProjectNameChanged(value))"
                                              Label="Project Name" 
                                              Placeholder="MyProject"
                                              Required="true"
@@ -769,10 +769,17 @@
         StateHasChanged();
     }
 
-    private void OnProjectNameChanged(string value)
+    private async Task OnProjectNameChanged(string value)
     {
         _project = value;
         WizardState.MarkTfsUnverified();
+        
+        // Trigger form validation to update button state while typing
+        if (_configForm != null)
+        {
+            await _configForm.Validate();
+        }
+        
         StateHasChanged();
     }
 
@@ -796,10 +803,7 @@
             
             if (response.IsSuccessStatusCode)
             {
-                _tfsProjects = await response.Content.ReadFromJsonAsync<List<TfsProjectDto>>(new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                _tfsProjects = await response.Content.ReadFromJsonAsync<List<TfsProjectDto>>(JsonHelper.CaseInsensitiveOptions);
             }
             else
             {
