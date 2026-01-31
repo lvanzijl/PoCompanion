@@ -14,8 +14,9 @@
         // Check if onboarding is needed
         var readiness = await StartupOrchestrator.GetStartupReadinessAsync();
         
-        // If backend has no TFS configuration, reset onboarding state
-        if (readiness != null && !readiness.HasSavedTfsConfig)
+        // If backend has no TFS configuration or no profiles, reset onboarding state
+        // This handles the case where the database was deleted
+        if (readiness != null && (!readiness.HasSavedTfsConfig || !readiness.HasAnyProfile))
         {
             await OnboardingService.ResetOnboardingAsync();
         }
