@@ -78,9 +78,10 @@ else
     private StartupReadinessDto? _readiness;
     private string _lastCheckedLocation = string.Empty;
     
-    // Default exempt pages (settings, profiles, help, profile management, onboarding)
+    // Default exempt pages (settings, profiles, help, profile management, onboarding, index)
     private static readonly string[] DefaultExemptPages = new[]
     {
+        "/",
         "/settings",
         "/profiles",
         "/help",
