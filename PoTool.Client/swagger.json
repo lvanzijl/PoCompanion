@@ -3888,6 +3888,32 @@
         }
       }
     },
+    "/api/Startup/git-repositories": {
+      "get": {
+        "tags": [
+          "Startup"
+        ],
+        "operationId": "Startup_GetGitRepositories",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GitRepositoryInfoDto"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/api/Teams": {
       "get": {
         "tags": [
@@ -5513,6 +5539,14 @@
             "items": {
               "$ref": "#/components/schemas/ValidationIssueSummary"
             }
+          },
+          "refinementBlockers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "refinementNeeded": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -8690,6 +8724,18 @@
             "nullable": true
           },
           "defaultAreaPath": {
+            "type": "string"
+          }
+        }
+      },
+      "GitRepositoryInfoDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "id": {
             "type": "string"
           }
         }
