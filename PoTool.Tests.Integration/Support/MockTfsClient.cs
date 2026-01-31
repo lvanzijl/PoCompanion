@@ -850,6 +850,26 @@ public class MockTfsClient : ITfsClient
     // TEAMS
     // ============================================
 
+    public Task<IEnumerable<TfsProjectDto>> GetTfsProjectsAsync(string organizationUrl, CancellationToken cancellationToken = default)
+    {
+        // Return mock projects for testing
+        var projects = new List<TfsProjectDto>
+        {
+            new TfsProjectDto(
+                "test-project-1",
+                "TestProject",
+                "Test project description"
+            ),
+            new TfsProjectDto(
+                "test-project-2",
+                "AnotherTestProject",
+                "Another test project"
+            )
+        };
+
+        return Task.FromResult<IEnumerable<TfsProjectDto>>(projects);
+    }
+
     public Task<IEnumerable<TfsTeamDto>> GetTfsTeamsAsync(CancellationToken cancellationToken = default)
     {
         // Return mock teams for testing

@@ -632,6 +632,33 @@ public class MockTfsClient : ITfsClient
     // TEAMS
     // ============================================
 
+    public Task<IEnumerable<TfsProjectDto>> GetTfsProjectsAsync(string organizationUrl, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: GetTfsProjectsAsync called for URL: {OrganizationUrl}", organizationUrl);
+
+        // Return mock projects accessible to the user
+        var projects = new List<TfsProjectDto>
+        {
+            new TfsProjectDto(
+                "project-1-guid",
+                "MockProject",
+                "Main project for PO Companion development"
+            ),
+            new TfsProjectDto(
+                "project-2-guid",
+                "TestProject",
+                "Testing and QA project"
+            ),
+            new TfsProjectDto(
+                "project-3-guid",
+                "InfraProject",
+                "Infrastructure and DevOps project"
+            )
+        };
+
+        return Task.FromResult<IEnumerable<TfsProjectDto>>(projects);
+    }
+
     public Task<IEnumerable<TfsTeamDto>> GetTfsTeamsAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Mock TFS client: GetTfsTeamsAsync called");

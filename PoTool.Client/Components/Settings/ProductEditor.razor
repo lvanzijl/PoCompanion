@@ -21,6 +21,7 @@
             <CompactTextField @bind-Value="_name" 
                           Label="Product Name" 
                           Required="true"
+                          Immediate="true"
                           HelperText="e.g., 'Customer Portal', 'Mobile App'"
                           @bind-Value:after="@(() => SaveDraftAsync())" />
 
@@ -28,6 +29,7 @@
                 <CompactTextField @bind-Value="_backlogRootWorkItemIdText" 
                               Label="Backlog Root Work Item ID" 
                               Required="true"
+                              Immediate="true"
                               HelperText="Enter the work item ID that defines the product backlog"
                               InputType="InputType.Number"
                               OnBlur="ValidateWorkItemId"

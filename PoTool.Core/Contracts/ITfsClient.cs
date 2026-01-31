@@ -327,8 +327,18 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     // ============================================
-    // TEAMS
+    // PROJECTS, TEAMS, REPOSITORIES
     // ============================================
+
+    /// <summary>
+    /// Retrieves all TFS/Azure DevOps projects accessible to the current user.
+    /// Used for project selection during onboarding and TFS configuration.
+    /// Returns only projects the authenticated user has access to.
+    /// </summary>
+    /// <param name="organizationUrl">The TFS/Azure DevOps organization URL.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of project DTOs with ID and name.</returns>
+    Task<IEnumerable<TfsProjectDto>> GetTfsProjectsAsync(string organizationUrl, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves all teams for the configured TFS project.

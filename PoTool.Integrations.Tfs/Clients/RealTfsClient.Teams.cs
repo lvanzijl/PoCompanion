@@ -9,10 +9,76 @@ using PoTool.Shared.WorkItems;
 namespace PoTool.Integrations.Tfs.Clients;
 
 /// <summary>
-/// Real Azure DevOps/TFS REST client implementation - Team Methods
+/// Real Azure DevOps/TFS REST client implementation - Projects, Teams, and Repositories
 /// </summary>
 public partial class RealTfsClient
 {
+    public async Task<IEnumerable<TfsProjectDto>> GetTfsProjectsAsync(string organizationUrl, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(organizationUrl))
+        {
+            throw new ArgumentException("Organization URL cannot be empty", nameof(organizationUrl));
+        }
+
+        // Get auth-mode-specific HttpClient to avoid credential conflicts
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync<IEnumerable<TfsProjectDto>>(async () =>
+        {
+            // Build URL: {ServerUri}/_apis/projects?api-version=7.0
+            var url = $"{organizationUrl.TrimEnd('/')}/_apis/projects?api-version=7.0";
+
+            _logger.LogInformation("Retrieving TFS projects from URL='{Url}'", url);
+
+            var response = await httpClient.GetAsync(url, cancellationToken);
+            await HandleHttpErrorsAsync(response, cancellationToken);
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("value", out var valueArray))
+            {
+                _logger.LogWarning("TFS projects response missing 'value' array");
+                return Array.Empty<TfsProjectDto>();
+            }
+
+            var projects = new List<TfsProjectDto>();
+
+            foreach (var project in valueArray.EnumerateArray())
+            {
+                // Extract id (required)
+                if (!project.TryGetProperty("id", out var idProp))
+                {
+                    _logger.LogWarning("TFS project missing 'id' field - skipping");
+                    continue;
+                }
+                var projectId = idProp.GetString() ?? string.Empty;
+
+                // Extract name (required)
+                if (!project.TryGetProperty("name", out var nameProp))
+                {
+                    _logger.LogWarning("TFS project '{Id}' missing 'name' field - skipping", projectId);
+                    continue;
+                }
+                var projectName = nameProp.GetString() ?? string.Empty;
+
+                // Extract description (optional)
+                string? description = null;
+                if (project.TryGetProperty("description", out var descProp))
+                {
+                    description = descProp.GetString();
+                }
+
+                projects.Add(new TfsProjectDto(projectId, projectName, description));
+            }
+
+            _logger.LogInformation("Retrieved {Count} TFS projects", projects.Count);
+
+            return projects;
+        }, cancellationToken);
+    }
+
     public async Task<IEnumerable<TfsTeamDto>> GetTfsTeamsAsync(CancellationToken cancellationToken = default)
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);

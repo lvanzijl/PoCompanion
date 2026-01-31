@@ -1247,6 +1247,34 @@ public class BattleshipMockDataFacade : ITfsClient
     // TEAMS
     // ============================================
 
+    public Task<IEnumerable<TfsProjectDto>> GetTfsProjectsAsync(string organizationUrl, CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client (BattleshipMockDataFacade): GetTfsProjectsAsync called for URL: {OrganizationUrl}", organizationUrl);
+
+        // Return mock projects accessible to the user
+        var projects = new List<TfsProjectDto>
+        {
+            new TfsProjectDto(
+                "battleship-project-guid",
+                "Battleship",
+                "Battleship game development project"
+            ),
+            new TfsProjectDto(
+                "game-platform-guid",
+                "GamePlatform",
+                "Shared game platform and services"
+            ),
+            new TfsProjectDto(
+                "infrastructure-guid",
+                "Infrastructure",
+                "DevOps and infrastructure automation"
+            )
+        };
+
+        return Task.FromResult<IEnumerable<TfsProjectDto>>(projects);
+    }
+
     public Task<IEnumerable<TfsTeamDto>> GetTfsTeamsAsync(CancellationToken cancellationToken = default)
     {
         IncrementAndGetApiCallCount();
