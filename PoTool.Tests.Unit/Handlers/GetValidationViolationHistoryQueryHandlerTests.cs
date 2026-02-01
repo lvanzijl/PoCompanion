@@ -76,9 +76,9 @@ public class GetValidationViolationHistoryQueryHandlerTests
 
         var validationResults = new Dictionary<int, List<ValidationIssue>>
         {
-            [2] = new List<ValidationIssue>
+            [1] = new List<ValidationIssue>
             {
-                new ValidationIssue("Error", "Parent 'Goal' is not in progress", "RR-3")
+                new ValidationIssue("Error", "Has children in progress but is not in progress (state: New). Children: #2 (Epic)", "RR-3")
             }
         };
 
@@ -96,8 +96,8 @@ public class GetValidationViolationHistoryQueryHandlerTests
         Assert.IsNotNull(result);
         var historyList = result.ToList();
         Assert.HasCount(1, historyList);
-        Assert.AreEqual(2, historyList[0].WorkItemId);
-        Assert.AreEqual("Epic", historyList[0].WorkItemType);
+        Assert.AreEqual(1, historyList[0].WorkItemId);
+        Assert.AreEqual("Goal", historyList[0].WorkItemType);
         Assert.AreEqual("Error", historyList[0].Severity);
         Assert.AreEqual("ParentProgress", historyList[0].ValidationType);
     }

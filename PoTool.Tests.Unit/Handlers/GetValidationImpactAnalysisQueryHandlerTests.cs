@@ -109,9 +109,9 @@ public class GetValidationImpactAnalysisQueryHandlerTests
 
         var validationResults = new Dictionary<int, List<ValidationIssue>>
         {
-            [2] = new List<ValidationIssue>
+            [1] = new List<ValidationIssue>
             {
-                new ValidationIssue("Error", "Parent 'Goal' is not in progress", "RR-3")
+                new ValidationIssue("Error", "Has children in progress but is not in progress (state: New). Children: #2 (Epic)", "RR-3")
             }
         };
 
@@ -128,10 +128,10 @@ public class GetValidationImpactAnalysisQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.HasCount(1, result.Violations);
-        Assert.AreEqual(2, result.Violations[0].WorkItemId);
-        Assert.AreEqual("Epic", result.Violations[0].WorkItemType);
+        Assert.AreEqual(1, result.Violations[0].WorkItemId);
+        Assert.AreEqual("Goal", result.Violations[0].WorkItemType);
         Assert.AreEqual("Error", result.Violations[0].Severity);
-        // Verify that blocked items are counted (should be > 0 since Epic has descendants)
+        // Verify that blocked items are counted (should be > 0 since Goal has descendants)
         Assert.IsGreaterThanOrEqualTo(0, result.TotalBlockedItems);
     }
 
@@ -149,9 +149,9 @@ public class GetValidationImpactAnalysisQueryHandlerTests
 
         var validationResults = new Dictionary<int, List<ValidationIssue>>
         {
-            [2] = new List<ValidationIssue>
+            [1] = new List<ValidationIssue>
             {
-                new ValidationIssue("Error", "Parent 'Goal' is not in progress", "RR-3")
+                new ValidationIssue("Error", "Has children in progress but is not in progress (state: New). Children: #2 (Epic)", "RR-3")
             }
         };
 
@@ -167,7 +167,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        // Should have blocked items (descendants of the violating Epic)
+        // Should have blocked items (descendants of the violating Goal)
         Assert.IsGreaterThan(0, result.TotalBlockedItems);
         Assert.HasCount(1, result.Violations);
 
@@ -189,9 +189,9 @@ public class GetValidationImpactAnalysisQueryHandlerTests
 
         var validationResults = new Dictionary<int, List<ValidationIssue>>
         {
-            [2] = new List<ValidationIssue>
+            [1] = new List<ValidationIssue>
             {
-                new ValidationIssue("Error", "Parent 'Goal' is not in progress", "RR-3")
+                new ValidationIssue("Error", "Has children in progress but is not in progress (state: New). Children: #2 (Epic)", "RR-3")
             }
         };
 
