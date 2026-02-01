@@ -8,7 +8,7 @@
 @inject WorkItemService WorkItemService
 @inject IMetricsClient MetricsClient
 
-<PageTitle>Planning (Future) - Beta - PO Companion</PageTitle>
+<PageTitle>Planning (Future) - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @* Workspace Header *@
@@ -16,7 +16,6 @@
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
                     <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Color="Color.Primary" Size="Size.Large" />
                     <MudText Typo="Typo.h4">
                         Planning (Future)
@@ -35,12 +34,12 @@
                     Current + 3 Iterations
                 </MudChip>
                 
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           StartIcon="@Icons.Material.Filled.Home"
-                           OnClick="NavigateToBetaHome">
-                    Beta Home
-                </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               StartIcon="@Icons.Material.Filled.Home"
+                               OnClick="NavigateToHome">
+                        Home
+                    </MudButton>
             </MudStack>
         </MudStack>
     </MudPaper>
@@ -332,7 +331,7 @@
             // Parse context from query string (inherited from base class)
             ParseContextQueryParameters();
             
-            if (!await EnsureProfileAsync(WorkspaceRoutes.BetaPlanningWorkspace))
+            if (!await EnsureProfileAsync(WorkspaceRoutes.PlanningWorkspace2))
             {
                 return;
             }
@@ -426,7 +425,7 @@
     {
         _breadcrumbs = new List<BreadcrumbItem>
         {
-            new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
             new("Planning (Future)", null, disabled: true, icon: Icons.Material.Filled.CalendarMonth)
         };
     }
@@ -439,7 +438,7 @@
     
     private void NavigateToVelocityTrend()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaTrendsWorkspace}{BuildContextQuery("metric=Velocity")}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.TrendsWorkspace}{BuildContextQuery("metric=Velocity")}");
     }
     
     private void NavigateToEpicInvalidItems(int? epicId)
@@ -458,18 +457,19 @@
     
     private void NavigateToDependencyOverview()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaDependencyOverview}{BuildContextQuery()}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.DependencyOverview}{BuildContextQuery()}");
     }
     
     private void NavigateToHealth()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaHealthWorkspace}{BuildContextQuery()}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.HealthWorkspace}{BuildContextQuery()}");
     }
     
     private void NavigateToTrends()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaTrendsWorkspace}{BuildContextQuery()}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.TrendsWorkspace}{BuildContextQuery()}");
     }
+
     
     /// <summary>
     /// Load velocity data and analyze epics that exceed historical velocity capacity.

@@ -62,6 +62,7 @@ public class BacklogHealthTests : BunitTestContext
         Services.AddSingleton<BacklogHealthCalculationService>();
         Services.AddSingleton(mockWorkItemsClient.Object);
         Services.AddSingleton(mockHttpClient);
+        Services.AddSingleton<CacheSyncService>();
         Services.AddSingleton<WorkItemService>();
         Services.AddSingleton<ErrorMessageService>();
         Services.AddSingleton(_mockSnackbar.Object);

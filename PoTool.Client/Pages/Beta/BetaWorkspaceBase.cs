@@ -98,10 +98,10 @@ public abstract class BetaWorkspaceBase : ComponentBase
     }
     
     /// <summary>
-    /// Navigates to the Beta Home page.
+    /// Navigates to the Home page.
     /// </summary>
-    protected void NavigateToBetaHome()
+    protected void NavigateToHome()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
+        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
     }
 }

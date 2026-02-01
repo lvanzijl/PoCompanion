@@ -6,7 +6,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
-<PageTitle>Bug Detail - Beta - PO Companion</PageTitle>
+<PageTitle>Bug Detail - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     @* Workspace Header *@
@@ -14,7 +14,6 @@
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
                     <MudIcon Icon="@Icons.Material.Filled.BugReport" Color="Color.Error" Size="Size.Large" />
                     <MudText Typo="Typo.h4">
                         Bug Detail
@@ -40,8 +39,8 @@
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
                            StartIcon="@Icons.Material.Filled.Home"
-                           OnClick="NavigateToBetaHome">
-                    Beta Home
+                           OnClick="NavigateToHome">
+                    Home
                 </MudButton>
             </MudStack>
         </MudStack>
@@ -54,7 +53,7 @@
     else if (!_bugId.HasValue)
     {
         <MudAlert Severity="Severity.Warning">
-            No bug ID specified. Please select a bug from the <MudLink Href="@WorkspaceRoutes.BetaBugOverview">Bug Overview</MudLink>.
+            No bug ID specified. Please select a bug from the <MudLink Href="@WorkspaceRoutes.BugOverview">Bug Overview</MudLink>.
         </MudAlert>
     }
     else
@@ -210,30 +209,30 @@
     {
         _breadcrumbs = new List<BreadcrumbItem>
         {
-            new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
-            new("Bug Overview", WorkspaceRoutes.BetaBugOverview, icon: Icons.Material.Filled.BugReport),
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
+            new("Bug Overview", WorkspaceRoutes.BugOverview, icon: Icons.Material.Filled.BugReport),
             new($"Bug #{_bugId}", null, disabled: true)
         };
     }
     
     private void NavigateBack()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaBugOverview);
+        NavigationManager.NavigateTo(WorkspaceRoutes.BugOverview);
     }
     
-    private void NavigateToBetaHome()
+    private void NavigateToHome()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
+        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
     }
     
     private void NavigateToBugOverview()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaBugOverview);
+        NavigationManager.NavigateTo(WorkspaceRoutes.BugOverview);
     }
     
     private void NavigateToHealth()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHealthWorkspace);
+        NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace);
     }
     
     private void CancelChanges()

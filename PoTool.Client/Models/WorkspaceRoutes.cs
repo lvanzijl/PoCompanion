@@ -93,18 +93,6 @@ public static class WorkspaceRoutes
     /// </summary>
     public const string DependencyOverview = "/home/dependencies";
     
-    // Legacy Beta route constants for backward compatibility - these are aliases to the new constants
-    public const string BetaHome = Home;
-    public const string BetaHealthWorkspace = HealthWorkspace;
-    public const string BetaTrendsWorkspace = TrendsWorkspace;
-    public const string BetaPlanningWorkspace = PlanningWorkspace2;
-    public const string BetaBugOverview = BugOverview;
-    public const string BetaBugDetail = BugDetail;
-    public const string BetaPrOverview = PrOverview;
-    public const string BetaPipelineOverview = PipelineOverview;
-    public const string BetaPlanBoard = PlanBoard;
-    public const string BetaDependencyOverview = DependencyOverview;
-    
     // Legacy Landing route constant for backward compatibility - alias to the new Legacy constant
     public const string Landing = Legacy;
 

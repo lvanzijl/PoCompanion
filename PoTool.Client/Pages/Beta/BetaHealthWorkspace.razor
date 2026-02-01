@@ -8,7 +8,7 @@
 @inject WorkItemService WorkItemService
 @inject ProductService ProductService
 
-<PageTitle>Health (Now) - Beta - PO Companion</PageTitle>
+<PageTitle>Health (Now) - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @* Workspace Header *@
@@ -16,7 +16,6 @@
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
                     <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Color="Color.Success" Size="Size.Large" />
                     <MudText Typo="Typo.h4">
                         Health (Now)
@@ -35,12 +34,12 @@
                     Current State
                 </MudChip>
                 
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           StartIcon="@Icons.Material.Filled.Home"
-                           OnClick="NavigateToBetaHome">
-                    Beta Home
-                </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               StartIcon="@Icons.Material.Filled.Home"
+                               OnClick="NavigateToHome">
+                        Home
+                    </MudButton>
             </MudStack>
         </MudStack>
     </MudPaper>
@@ -206,7 +205,7 @@
             // Parse context from query string (inherited from base class)
             ParseContextQueryParameters();
             
-            if (!await EnsureProfileAsync(WorkspaceRoutes.BetaHealthWorkspace))
+            if (!await EnsureProfileAsync(WorkspaceRoutes.HealthWorkspace))
             {
                 return;
             }
@@ -334,9 +333,9 @@
     
     private void UpdateBreadcrumbs()
     {
-        _breadcrumbs = new List<BreadcrumbItem>
+            _breadcrumbs = new List<BreadcrumbItem>
         {
-            new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
             new("Health (Now)", null, disabled: true, icon: Icons.Material.Filled.HealthAndSafety)
         };
     }
@@ -350,18 +349,19 @@
     
     private void NavigateToBugOverview()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaBugOverview}{BuildContextQuery()}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BugOverview}{BuildContextQuery()}");
     }
     
     private void NavigateToTrends()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaTrendsWorkspace}{BuildContextQuery()}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.TrendsWorkspace}{BuildContextQuery()}");
     }
     
     private void NavigateToPlanning()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPlanningWorkspace}{BuildContextQuery()}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanningWorkspace2}{BuildContextQuery()}");
     }
+
     
     /// <summary>
     /// Enum representing the severity level of a health signal.

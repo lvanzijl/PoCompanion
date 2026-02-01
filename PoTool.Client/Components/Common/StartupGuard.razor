@@ -1,16 +1,18 @@
 @using PoTool.Client.Services
+@using PoTool.Shared.Settings
 @inject IStartupOrchestratorService StartupOrchestrator
 @inject NavigationManager NavigationManager
 @inject IPreferencesService PreferencesService
 @inject IProfileService ProfileService
 @inject IOnboardingService OnboardingService
+@inject CacheSyncService CacheSyncService
 
 @* 
     StartupGuard component that checks startup readiness and routes appropriately.
     This component should be used in layouts to enforce startup gating.
 *@
 
-@if (_isChecking)
+@if (_isChecking || _isCacheChecking)
 {
     <MudContainer Class="d-flex justify-center align-center" Style="height: 100vh;">
         <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
@@ -55,6 +57,19 @@ else if (!_isReady && _readiness != null)
         </MudStack>
     </MudContainer>
 }
+else if (!_isCacheReady && _readiness?.ActiveProfileId != null)
+{
+    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            <MudText Typo="Typo.h6">Syncing cache</MudText>
+            <MudText Typo="Typo.body1" Class="mt-2">
+                Cache data is syncing for the selected profile. Workspace data will load once the sync completes.
+            </MudText>
+        </MudAlert>
+
+        <CacheStatusSection ProductOwnerId="@_readiness.ActiveProfileId.Value" AutoSync="true" />
+    </MudContainer>
+}
 else
 {
     @* App is ready - render child content *@
@@ -75,8 +90,12 @@ else
     
     private bool _isChecking = true;
     private bool _isReady = false;
-    private StartupReadinessDto? _readiness;
+    private bool _isCacheChecking = false;
+    private bool _isCacheReady = true;
+    private PoTool.Client.Services.StartupReadinessDto? _readiness;
+    private CacheStateDto? _cacheState;
     private string _lastCheckedLocation = string.Empty;
+    private CancellationTokenSource? _cachePollingTokenSource;
     
     // Default exempt pages (settings, profiles, help, profile management, onboarding, index)
     private static readonly string[] DefaultExemptPages = new[]
@@ -109,6 +128,7 @@ else
     {
         // Unsubscribe from location changes
         NavigationManager.LocationChanged -= HandleLocationChanged;
+        StopCachePolling();
     }
 
     private async Task CheckReadinessAsync()
@@ -124,6 +144,10 @@ else
         
         _lastCheckedLocation = currentLocation;
         _isChecking = true;
+        _isCacheReady = true;
+        _isCacheChecking = false;
+        _cacheState = null;
+        StopCachePolling();
         
         try
         {
@@ -184,6 +208,12 @@ else
             
             // Check if feature pages are accessible
             _isReady = _readiness != null && StartupOrchestrator.IsFeaturePageAccessible(_readiness);
+
+            if (_isReady && _readiness?.ActiveProfileId.HasValue == true)
+            {
+                var activeProfileId = _readiness.ActiveProfileId.Value;
+                await CheckCacheStateAsync(activeProfileId);
+            }
         }
         catch (Exception)
         {
@@ -194,5 +224,71 @@ else
         {
             _isChecking = false;
         }
+    }
+
+    private async Task CheckCacheStateAsync(int productOwnerId)
+    {
+        _isCacheChecking = true;
+        try
+        {
+            _cacheState = await CacheSyncService.GetCacheStatusAsync(productOwnerId);
+            _isCacheReady = _cacheState?.LastSuccessfulSync.HasValue == true;
+
+            if (!_isCacheReady)
+            {
+                StartCachePolling(productOwnerId);
+            }
+        }
+        finally
+        {
+            _isCacheChecking = false;
+        }
+    }
+
+    private void StartCachePolling(int productOwnerId)
+    {
+        StopCachePolling();
+        _cachePollingTokenSource = new CancellationTokenSource();
+        var token = _cachePollingTokenSource.Token;
+
+        _ = Task.Run(async () =>
+        {
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2), token);
+                    var cacheState = await CacheSyncService.GetCacheStatusAsync(productOwnerId, token);
+
+                    if (cacheState?.LastSuccessfulSync.HasValue == true)
+                    {
+                        _cacheState = cacheState;
+                        _isCacheReady = true;
+                        await InvokeAsync(StateHasChanged);
+                        StopCachePolling();
+                        return;
+                    }
+
+                    _cacheState = cacheState;
+                    await InvokeAsync(StateHasChanged);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+            }
+        }, token);
+    }
+
+    private void StopCachePolling()
+    {
+        if (_cachePollingTokenSource == null)
+        {
+            return;
+        }
+
+        _cachePollingTokenSource.Cancel();
+        _cachePollingTokenSource.Dispose();
+        _cachePollingTokenSource = null;
     }
 }

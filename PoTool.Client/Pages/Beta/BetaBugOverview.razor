@@ -11,7 +11,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
-<PageTitle>Bug Insights - Beta - PO Companion</PageTitle>
+<PageTitle>Bug Insights - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @* Workspace Header *@
@@ -19,7 +19,6 @@
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
                     <MudIcon Icon="@Icons.Material.Filled.Insights" Color="Color.Info" Size="Size.Large" />
                     <MudText Typo="Typo.h4">
                         Bug Insights
@@ -33,8 +32,8 @@
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Default"
                        StartIcon="@Icons.Material.Filled.Home"
-                       OnClick="NavigateToBetaHome">
-                Beta Home
+                       OnClick="NavigateToHome">
+                Home
             </MudButton>
         </MudStack>
     </MudPaper>
@@ -394,7 +393,7 @@
         }
         
         var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
-        var newUrl = $"{WorkspaceRoutes.BetaBugOverview}{queryString}";
+        var newUrl = $"{WorkspaceRoutes.BugOverview}{queryString}";
         
         NavigationManager.NavigateTo(newUrl, forceLoad: false);
     }
@@ -403,7 +402,7 @@
     {
         _breadcrumbs = new List<BreadcrumbItem>
         {
-            new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
             new("Bug Insights", null, disabled: true, icon: Icons.Material.Filled.Insights)
         };
     }
@@ -430,8 +429,8 @@
         return Color.Default; // Unknown
     }
     
-    private void NavigateToBetaHome()
+    private void NavigateToHome()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
+        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
     }
 }
