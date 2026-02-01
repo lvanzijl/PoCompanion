@@ -29,10 +29,10 @@ public class BugTreeBuilderService
     ///   - Bug 4
     /// </summary>
     public List<TreeNode> BuildBugTriageTree(
-        IEnumerable<WorkItemDto> bugs,
+        IEnumerable<WorkItemWithValidationDto> bugs,
         HashSet<int> untriagedBugIds,
         Dictionary<int, bool> expandedState,
-        Func<WorkItemDto, string> getCriticalityFunc)
+        Func<WorkItemWithValidationDto, string> getCriticalityFunc)
     {
         var roots = new List<TreeNode>();
         var bugNodes = new Dictionary<int, TreeNode>();
@@ -164,11 +164,11 @@ public class BugTreeBuilderService
     /// <summary>
     /// Applies tag filters to bugs.
     /// </summary>
-    public IEnumerable<WorkItemDto> ApplyTagFilters(
-        IEnumerable<WorkItemDto> bugs,
+    public IEnumerable<WorkItemWithValidationDto> ApplyTagFilters(
+        IEnumerable<WorkItemWithValidationDto> bugs,
         List<string> selectedTags,
         TagMatchMode matchMode,
-        Func<WorkItemDto, List<string>> getTagsFunc)
+        Func<WorkItemWithValidationDto, List<string>> getTagsFunc)
     {
         if (!selectedTags.Any())
         {
