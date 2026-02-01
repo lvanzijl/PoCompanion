@@ -72,6 +72,7 @@ public class WorkItemInProgressWithoutEffortValidatorTests
         Assert.HasCount(1, issues, "Should have one error");
         Assert.AreEqual("Error", issues[0].Severity);
         Assert.Contains("effort", issues[0].Message, "Message should mention effort");
+        Assert.AreEqual("RC-2", issues[0].RuleId, "RuleId should be RC-2");
     }
 
     [TestMethod]
@@ -91,6 +92,7 @@ public class WorkItemInProgressWithoutEffortValidatorTests
 
 #pragma warning disable MSTEST0037
         Assert.IsTrue(result.ContainsKey(1), "Item should have validation issues");
+        Assert.AreEqual("RC-2", result[1][0].RuleId, "RuleId should be RC-2");
     }
 
     [TestMethod]
