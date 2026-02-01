@@ -12,6 +12,11 @@ public static class WorkspaceRoutes
     public const string Home = "/home";
     
     /// <summary>
+    /// Sync gate route - ensures cache is ready before navigating to home.
+    /// </summary>
+    public const string SyncGate = "/sync-gate";
+    
+    /// <summary>
     /// Legacy landing page route for classic intent-based navigation.
     /// </summary>
     public const string Legacy = "/legacy";

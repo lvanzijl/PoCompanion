@@ -31,7 +31,7 @@
         var result = await dialogReference.Result;
         
         // Navigate based on dialog result
-        // After completing onboarding, go directly to home page (workspace selection)
-        NavigationManager.NavigateTo("/home", replace: true);
+        // After completing onboarding, go to sync-gate which ensures cache is ready before showing home
+        NavigationManager.NavigateTo("/sync-gate?returnUrl=%2Fhome", replace: true);
     }
 }

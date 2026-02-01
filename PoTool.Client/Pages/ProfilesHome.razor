@@ -146,15 +146,16 @@
             
             Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
             
-            // Navigate to return URL if provided, otherwise to Home page
-            // Validate return URL to prevent open redirects - must be a relative path
-            var targetUrl = "/home";
+            // Navigate to sync-gate which will ensure cache is ready before redirecting to home
+            // Pass the return URL so sync-gate can redirect there after cache is ready
+            var returnUrl = "/home";
             if (!string.IsNullOrEmpty(_returnUrl) && IsValidReturnUrl(_returnUrl))
             {
-                targetUrl = _returnUrl;
+                returnUrl = _returnUrl;
             }
-            Console.WriteLine($"[ProfilesHome] Navigating to {targetUrl} for profile: {profile.Name}");
-            NavigationManager.NavigateTo(targetUrl);
+            var syncGateUrl = $"/sync-gate?returnUrl={Uri.EscapeDataString(returnUrl)}";
+            Console.WriteLine($"[ProfilesHome] Navigating to {syncGateUrl} for profile: {profile.Name}");
+            NavigationManager.NavigateTo(syncGateUrl);
         }
         catch (Exception ex)
         {

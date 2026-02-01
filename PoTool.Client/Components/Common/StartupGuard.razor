@@ -97,7 +97,7 @@ else
     private string _lastCheckedLocation = string.Empty;
     private CancellationTokenSource? _cachePollingTokenSource;
     
-    // Default exempt pages (settings, profiles, help, profile management, onboarding, index)
+    // Default exempt pages (settings, profiles, help, profile management, onboarding, index, sync-gate)
     private static readonly string[] DefaultExemptPages = new[]
     {
         "/",
@@ -105,7 +105,8 @@ else
         "/profiles",
         "/help",
         "/settings/productowner/edit",
-        "/onboarding"
+        "/onboarding",
+        "/sync-gate"
     };
 
     protected override async Task OnInitializedAsync()
