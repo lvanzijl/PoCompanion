@@ -2,11 +2,9 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Metrics.SubComponents
-@using System.Net.Http.Json
 @inject IMetricsClient MetricsClient
 @inject BacklogHealthCalculationService HealthCalculationService
 @inject ErrorMessageService ErrorMessageService
-@inject HttpClient Http
 @inject ISnackbar Snackbar
 
 @* Backlog Health Panel - Reusable component for embedding backlog health data into workspaces *@
@@ -50,8 +48,6 @@ else if (!_isLoading && _healthData != null)
 }
 
 @code {
-    private const string ApiEndpoint_MultiIterationHealth = "api/Metrics/multi-iteration-health";
-
     /// <summary>
     /// Optional product IDs to filter health data. If null, shows data for all products.
     /// </summary>
@@ -124,30 +120,11 @@ else if (!_isLoading && _healthData != null)
         string? areaPath,
         int maxIterations)
     {
-        var queryParams = new List<string>();
-        
-        if (productIds != null && productIds.Length > 0)
-        {
-            foreach (var id in productIds)
-            {
-                queryParams.Add($"productIds={id}");
-            }
-        }
-        
-        if (!string.IsNullOrWhiteSpace(areaPath))
-        {
-            queryParams.Add($"areaPath={Uri.EscapeDataString(areaPath)}");
-        }
-        
-        queryParams.Add($"maxIterations={maxIterations}");
-        
-        var url = $"{ApiEndpoint_MultiIterationHealth}?{string.Join("&", queryParams)}";
-        
         try
         {
-            return await Http.GetFromJsonAsync<MultiIterationBacklogHealthDto>(url);
+            return await MetricsClient.GetMultiIterationBacklogHealthAsync(productIds, areaPath, maxIterations);
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex)
         {
             throw new Exception($"Failed to retrieve backlog health data: {ex.Message}", ex);
         }

@@ -262,7 +262,7 @@
             if (activeProfile == null)
             {
                 // No profile selected, redirect to profiles with return URL
-                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(WorkspaceRoutes.BetaHome)}");
+                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(WorkspaceRoutes.Home)}");
                 return;
             }
             
@@ -307,17 +307,17 @@
 
     private void NavigateToHealth()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaHealthWorkspace}{BuildContextQuery()}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.HealthWorkspace}{BuildContextQuery()}");
     }
 
     private void NavigateToTrends()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaTrendsWorkspace}{BuildContextQuery()}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.TrendsWorkspace}{BuildContextQuery()}");
     }
 
     private void NavigateToPlanning()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPlanningWorkspace}{BuildContextQuery()}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanningWorkspace2}{BuildContextQuery()}");
     }
 
     private void NavigateToWorkItemExplorer()
@@ -329,13 +329,13 @@
     private void NavigateToBugTriage()
     {
         // Task-driven entry always uses all products/teams
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaBugOverview}?allProducts=true&allTeams=true");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BugOverview}?allProducts=true&allTeams=true");
     }
 
     private void NavigateToPlanBoard()
     {
         // Task-driven entry always uses all products
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPlanBoard}?allProducts=true");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanBoard}?allProducts=true");
     }
 
     private async Task LoadHealthSignalsAsync()

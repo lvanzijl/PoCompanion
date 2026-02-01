@@ -17,7 +17,7 @@
     Decision #12: Trend Chart Interaction - Hover highlight, click to filter (Option D)
 *@
 
-<PageTitle>Trends (Past) - Beta - PO Companion</PageTitle>
+<PageTitle>Trends (Past) - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @* Workspace Header *@
@@ -25,7 +25,6 @@
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
                     <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Info" Size="Size.Large" />
                     <MudText Typo="Typo.h4">
                         Trends (Past)
@@ -112,8 +111,8 @@
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
                            StartIcon="@Icons.Material.Filled.Home"
-                           OnClick="NavigateToBetaHome">
-                    Beta Home
+                           OnClick="NavigateToHome">
+                    Home
                 </MudButton>
             </MudStack>
         </MudStack>
@@ -299,7 +298,7 @@
             // Parse context from query string (inherited from base class)
             ParseContextQueryParameters();
             
-            if (!await EnsureProfileAsync(WorkspaceRoutes.BetaTrendsWorkspace))
+            if (!await EnsureProfileAsync(WorkspaceRoutes.TrendsWorkspace))
             {
                 return;
             }
@@ -439,14 +438,14 @@
     private void OnBugTrendPeriodClick(string period)
     {
         // Navigate to bug overview filtered by the selected period
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaBugOverview}{BuildContextQuery($"period={period}")}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BugOverview}{BuildContextQuery($"period={period}")}");
     }
     
     private void UpdateBreadcrumbs()
     {
         _breadcrumbs = new List<BreadcrumbItem>
         {
-            new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
             new("Trends (Past)", null, disabled: true, icon: Icons.Material.Filled.Timeline)
         };
     }
@@ -460,27 +459,27 @@
     private void NavigateToBugTrend()
     {
         // Navigate to bug overview with period scoped
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaBugOverview}{BuildContextQuery()}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BugOverview}{BuildContextQuery()}");
     }
     
     private void NavigateToPrOverview()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPrOverview}{BuildContextQuery("insightOnly=true")}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.PrOverview}{BuildContextQuery("insightOnly=true")}");
     }
     
     private void NavigateToPipelineOverview()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPipelineOverview}{BuildContextQuery("insightOnly=true")}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.PipelineOverview}{BuildContextQuery("insightOnly=true")}");
     }
     
     private void NavigateToHealth()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaHealthWorkspace}{BuildContextQuery()}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.HealthWorkspace}{BuildContextQuery()}");
     }
     
     private void NavigateToPlanning()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BetaPlanningWorkspace}{BuildContextQuery()}");
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanningWorkspace2}{BuildContextQuery()}");
     }
     
     /// <summary>
@@ -576,10 +575,11 @@
         }
         
         var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
-        var newUrl = $"{WorkspaceRoutes.BetaTrendsWorkspace}{queryString}";
+        var newUrl = $"{WorkspaceRoutes.TrendsWorkspace}{queryString}";
         
         NavigationManager.NavigateTo(newUrl, forceLoad: false);
     }
+
     
     /// <summary>
     /// Handles team selection change.

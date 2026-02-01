@@ -8,7 +8,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
-<PageTitle>Plan Board - Beta - PO Companion</PageTitle>
+<PageTitle>Plan Board - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @* Workspace Header *@
@@ -16,7 +16,6 @@
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
                     <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Color="Color.Info" Size="Size.Large" />
                     <MudText Typo="Typo.h4">
                         Plan Board
@@ -41,8 +40,8 @@
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
                            StartIcon="@Icons.Material.Filled.Home"
-                           OnClick="NavigateToBetaHome">
-                    Beta Home
+                           OnClick="NavigateToHome">
+                    Home
                 </MudButton>
             </MudStack>
         </MudStack>
@@ -166,7 +165,7 @@
     {
         _breadcrumbs = new List<BreadcrumbItem>
         {
-            new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
             new("Plan Board", null, disabled: true, icon: Icons.Material.Filled.ViewColumn)
         };
     }
@@ -177,23 +176,23 @@
         return Task.CompletedTask;
     }
     
-    private void NavigateToBetaHome()
+    private void NavigateToHome()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
+        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
     }
     
     private void NavigateToPlanning()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaPlanningWorkspace);
+        NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace2);
     }
     
     private void NavigateToHealth()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHealthWorkspace);
+        NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace);
     }
     
     private void NavigateToTrends()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaTrendsWorkspace);
+        NavigationManager.NavigateTo(WorkspaceRoutes.TrendsWorkspace);
     }
 }

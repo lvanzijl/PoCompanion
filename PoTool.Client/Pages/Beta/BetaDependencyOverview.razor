@@ -5,7 +5,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
-<PageTitle>Dependency Overview - Beta - PO Companion</PageTitle>
+<PageTitle>Dependency Overview - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @* Workspace Header *@
@@ -13,7 +13,6 @@
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">BETA</MudChip>
                     <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Secondary" Size="Size.Large" />
                     <MudText Typo="Typo.h4">
                         Dependency Overview
@@ -29,8 +28,8 @@
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
                            StartIcon="@Icons.Material.Filled.Home"
-                           OnClick="NavigateToBetaHome">
-                    Beta Home
+                           OnClick="NavigateToHome">
+                    Home
                 </MudButton>
             </MudStack>
         </MudStack>
@@ -45,7 +44,7 @@
         @* Read-Only Notice *@
         <MudAlert Severity="Severity.Warning" Class="mb-4">
             <MudText Typo="Typo.body2">
-                <strong>Read-only view.</strong> Dependencies are insight-only in the Beta navigation. 
+                <strong>Read-only view.</strong> Dependencies are insight-only in this navigation. 
                 For full dependency management, use the <MudLink Href="/dependency-graph">Dependency Graph</MudLink>.
             </MudText>
         </MudAlert>
@@ -129,24 +128,24 @@
     {
         _breadcrumbs = new List<BreadcrumbItem>
         {
-            new("Beta Home", WorkspaceRoutes.BetaHome, icon: Icons.Material.Filled.Home),
-            new("Planning (Future)", WorkspaceRoutes.BetaPlanningWorkspace, icon: Icons.Material.Filled.CalendarMonth),
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
+            new("Planning (Future)", WorkspaceRoutes.PlanningWorkspace2, icon: Icons.Material.Filled.CalendarMonth),
             new("Dependencies", null, disabled: true, icon: Icons.Material.Filled.AccountTree)
         };
     }
     
-    private void NavigateToBetaHome()
+    private void NavigateToHome()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHome);
+        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
     }
     
     private void NavigateToPlanning()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaPlanningWorkspace);
+        NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace2);
     }
     
     private void NavigateToHealth()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BetaHealthWorkspace);
+        NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace);
     }
 }
