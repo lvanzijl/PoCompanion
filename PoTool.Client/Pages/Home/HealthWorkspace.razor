@@ -3,7 +3,7 @@
 @using PoTool.Client.Components.BacklogHealth
 @using PoTool.Client.ApiClient
 @using PoTool.Shared.WorkItems
-@inherits BetaWorkspaceBase
+@inherits WorkspaceBase
 @inject INavigationContextService NavigationContextService
 @inject WorkItemService WorkItemService
 @inject ProductService ProductService
@@ -243,23 +243,23 @@
             {
                 // Load products for the active profile (Product Owner)
                 profileProducts = (await ProductService.GetProductsByOwnerAsync(_activeProfile.Id)).ToList();
-                Console.WriteLine($"[BetaHealthWorkspace] Loaded {profileProducts.Count} products for active profile '{_activeProfile.Name}' (ID: {_activeProfile.Id})");
+                Console.WriteLine($"[HealthWorkspace] Loaded {profileProducts.Count} products for active profile '{_activeProfile.Name}' (ID: {_activeProfile.Id})");
             }
             else
             {
                 // No active profile - load all products as fallback
                 profileProducts = (await ProductService.GetAllProductsAsync()).ToList();
-                Console.WriteLine($"[BetaHealthWorkspace] No active profile, loaded all {profileProducts.Count} products");
+                Console.WriteLine($"[HealthWorkspace] No active profile, loaded all {profileProducts.Count} products");
             }
             
             // Extract product IDs to pass to the backend for efficient filtering
             var productIds = profileProducts.Select(p => p.Id).ToArray();
-            Console.WriteLine($"[BetaHealthWorkspace] Loading work items for {productIds.Length} products: {string.Join(", ", productIds)}");
+            Console.WriteLine($"[HealthWorkspace] Loading work items for {productIds.Length} products: {string.Join(", ", productIds)}");
             
             // Load work items with validation, filtered by product IDs (matching WorkItemExplorer)
             var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync(productIds);
             var workItemsList = workItemsWithValidation.ToList();
-            Console.WriteLine($"[BetaHealthWorkspace] Loaded {workItemsList.Count} total work items from product hierarchies");
+            Console.WriteLine($"[HealthWorkspace] Loaded {workItemsList.Count} total work items from product hierarchies");
             
             // Track which work items have issues in each validation category
             var workItemsByCategory = new Dictionary<ValidationCategory, HashSet<int>>
@@ -294,12 +294,12 @@
             _refinementReadinessCount = workItemsByCategory[ValidationCategory.RefinementReadiness].Count;
             _refinementCompletenessCount = workItemsByCategory[ValidationCategory.RefinementCompleteness].Count;
             
-            Console.WriteLine($"[BetaHealthWorkspace] Validation counts - SI: {_structuralIntegrityCount}, RR: {_refinementReadinessCount}, RC: {_refinementCompletenessCount}, Bugs: {_bugCount}");
+            Console.WriteLine($"[HealthWorkspace] Validation counts - SI: {_structuralIntegrityCount}, RR: {_refinementReadinessCount}, RC: {_refinementCompletenessCount}, Bugs: {_bugCount}");
         }
         catch (Exception ex)
         {
             // Log the error but keep counts at 0
-            Console.WriteLine($"[BetaHealthWorkspace] Failed to load validation counts: {ex.Message}");
+            Console.WriteLine($"[HealthWorkspace] Failed to load validation counts: {ex.Message}");
         }
     }
     

@@ -1,11 +1,11 @@
 @page "/home/trends"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.Velocity
-@using PoTool.Client.Pages.Beta.Components
+@using PoTool.Client.Pages.Home.Components
 @using PoTool.Shared.Settings
 @using System.Web
 @using PoTool.Client.ApiClient
-@inherits BetaWorkspaceBase
+@inherits WorkspaceBase
 @inject INavigationContextService NavigationContextService
 @inject WorkItemService WorkItemService
 @inject StateClassificationService StateClassificationService
@@ -207,7 +207,7 @@
 
         @* Bug Trend Chart with Interactive Click-to-Filter - 3 Series *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <BetaTrendMultiSeriesChart 
+            <TrendMultiSeriesChart 
                 Title="Bug Trend (Last 6 Months)"
                 Icon="@Icons.Material.Filled.BugReport"
                 SeriesTotal="@_bugTrendTotal"

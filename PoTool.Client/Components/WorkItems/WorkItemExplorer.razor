@@ -85,9 +85,9 @@
 </div>
 
 @code {
-    // Beta navigation parameters (query string)
+    // Home navigation parameters (query string)
     /// <summary>
-    /// Validation category filter ID for Beta navigation deep links.
+    /// Validation category filter ID for Home navigation deep links.
     /// When combined with filter=issues, pre-enables the specified validation category filter.
     /// Values: 1 = Structural Integrity, 2 = Refinement Readiness, 3 = Refinement Completeness
     /// </summary>
@@ -97,7 +97,7 @@
     
     /// <summary>
     /// When set, filters to show only descendants (and the root itself) of the specified work item ID.
-    /// Used by Beta Planning workspace for epic-centric navigation.
+    /// Used by Home Planning workspace for epic-centric navigation.
     /// </summary>
     [Parameter]
     [SupplyParameterFromQuery(Name = "rootWorkItemId")]
@@ -105,14 +105,14 @@
     
     /// <summary>
     /// When true, loads all products instead of just profile-scoped products.
-    /// Used by Beta task-driven entry points to provide full organizational visibility.
+    /// Used by Home task-driven entry points to provide full organizational visibility.
     /// </summary>
     [Parameter]
     [SupplyParameterFromQuery(Name = "allProducts")]
     public bool AllProducts { get; set; }
     
     /// <summary>
-    /// When true, indicates all teams scope for Beta navigation.
+    /// When true, indicates all teams scope for Home navigation.
     /// Note: Currently for display/context purposes only; team-based filtering not yet implemented.
     /// </summary>
     [Parameter]
@@ -275,7 +275,7 @@
             var allWorkItems = (await WorkItemService.GetAllWithValidationAsync(productIds)).ToList();
             Console.WriteLine($"[WorkItemExplorer] Loaded {allWorkItems.Count} total work items from product hierarchies");
 
-            // Apply Beta filters if provided
+            // Apply Home filters if provided
             if (RootWorkItemId.HasValue)
             {
                 allWorkItems = FilterByRootWorkItem(allWorkItems).ToList();
@@ -618,7 +618,7 @@
         }
     }
     
-    // Beta filter methods
+    // Home filter methods
     
     private IEnumerable<WorkItemWithValidationDto> FilterByRootWorkItem(IEnumerable<WorkItemWithValidationDto> workItems)
     {
