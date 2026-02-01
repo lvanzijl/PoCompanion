@@ -84,12 +84,12 @@ public class WorkItemParentProgressValidatorTests
         Assert.HasCount(1, result, "Should have one item with issues");
 
 #pragma warning disable MSTEST0037
-        Assert.IsTrue(result.ContainsKey(2), "Epic should have validation issues");
+        Assert.IsTrue(result.ContainsKey(1), "Goal should have validation issues (it's the parent not in progress)");
 
-        var issues = result[2];
+        var issues = result[1];
         Assert.HasCount(1, issues, "Should have one error");
         Assert.AreEqual("Error", issues[0].Severity);
-        Assert.Contains("Parent", issues[0].Message, "Message should mention parent");
+        Assert.Contains("children in progress", issues[0].Message.ToLower(), "Message should mention children in progress");
         Assert.AreEqual("RR-3", issues[0].RuleId, "RuleId should be RR-3");
     }
 
@@ -108,24 +108,25 @@ public class WorkItemParentProgressValidatorTests
         var result = _validator.ValidateWorkItems(items);
 
         // Assert
-        Assert.HasCount(2, result, "Both Epic and Feature should have issues");
+        Assert.HasCount(1, result, "Goal should have issues (it's not in progress but has descendants that are)");
 
-        // Epic has error for parent being New
-
-#pragma warning disable MSTEST0037
-        Assert.IsTrue(result.ContainsKey(2));
-        Assert.HasCount(1, result[2]);
-        Assert.AreEqual("Error", result[2][0].Severity);
-        Assert.AreEqual("RR-3", result[2][0].RuleId, "Epic error should have RuleId RR-3");
-
-        // Feature has warning for grandparent being New
+        // Goal has error for direct child Epic being In Progress
+        // and warning for grandchild Feature being In Progress
 
 #pragma warning disable MSTEST0037
-        Assert.IsTrue(result.ContainsKey(3));
-        Assert.HasCount(1, result[3]);
-        Assert.AreEqual("Warning", result[3][0].Severity);
-        Assert.Contains("Ancestor", result[3][0].Message, "Message should mention ancestor");
-        Assert.AreEqual("RR-3", result[3][0].RuleId, "Feature warning should have RuleId RR-3");
+        Assert.IsTrue(result.ContainsKey(1));
+        Assert.HasCount(2, result[1]); // One error for child, one warning for descendant
+        
+        var error = result[1].FirstOrDefault(i => i.Severity == "Error");
+        var warning = result[1].FirstOrDefault(i => i.Severity == "Warning");
+        
+        Assert.IsNotNull(error, "Should have error for direct child");
+        Assert.AreEqual("RR-3", error.RuleId, "Error should have RuleId RR-3");
+        Assert.Contains("children in progress", error.Message.ToLower());
+        
+        Assert.IsNotNull(warning, "Should have warning for descendants");
+        Assert.AreEqual("RR-3", warning.RuleId, "Warning should have RuleId RR-3");
+        Assert.Contains("descendants in progress", warning.Message.ToLower());
     }
 
     [TestMethod]
@@ -143,21 +144,23 @@ public class WorkItemParentProgressValidatorTests
         var result = _validator.ValidateWorkItems(items);
 
         // Assert
-        Assert.HasCount(1, result, "Only Feature should have issues");
+        // Both Epic (id=2) and Goal (id=1) should have issues
+        // Epic has direct child in progress, Goal has descendant in progress
+        Assert.HasCount(2, result, "Epic and Goal should have issues");
 
 #pragma warning disable MSTEST0037
-        Assert.IsTrue(result.ContainsKey(3));
+        Assert.IsTrue(result.ContainsKey(2), "Epic should have error for child in progress");
+        Assert.IsTrue(result.ContainsKey(1), "Goal should have warning for descendant in progress");
 
-        var issues = result[3];
-        Assert.HasCount(2, issues, "Should have error and warning");
-
-        var error = issues.FirstOrDefault(i => i.Severity == "Error");
-        var warning = issues.FirstOrDefault(i => i.Severity == "Warning");
-
-        Assert.IsNotNull(error, "Should have an error for immediate parent");
-        Assert.IsNotNull(warning, "Should have a warning for ancestor");
-        Assert.AreEqual("RR-3", error.RuleId, "Error should have RuleId RR-3");
-        Assert.AreEqual("RR-3", warning.RuleId, "Warning should have RuleId RR-3");
+        var epicIssues = result[2];
+        Assert.HasCount(1, epicIssues, "Epic should have one error");
+        Assert.AreEqual("Error", epicIssues[0].Severity);
+        Assert.AreEqual("RR-3", epicIssues[0].RuleId, "Error should have RuleId RR-3");
+        
+        var goalIssues = result[1];
+        Assert.HasCount(1, goalIssues, "Goal should have one warning");
+        Assert.AreEqual("Warning", goalIssues[0].Severity);
+        Assert.AreEqual("RR-3", goalIssues[0].RuleId, "Warning should have RuleId RR-3");
     }
 
     [TestMethod]
@@ -216,7 +219,7 @@ public class WorkItemParentProgressValidatorTests
         // Arrange: Parent has different case for state
         var items = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Goal", "in progress", null), // lowercase
+            CreateWorkItem(1, "Goal", "in progress", null), // lowercase - not classified as InProgress
             CreateWorkItem(2, "Epic", "In Progress", 1)
         };
 
@@ -227,7 +230,7 @@ public class WorkItemParentProgressValidatorTests
         Assert.HasCount(1, result, "Should detect issue with case-sensitive match");
 
 #pragma warning disable MSTEST0037
-        Assert.IsTrue(result.ContainsKey(2));
+        Assert.IsTrue(result.ContainsKey(1), "Goal should have the violation (not in proper InProgress state but has child that is)");
     }
 
     [TestMethod]
@@ -314,16 +317,15 @@ public class WorkItemParentProgressValidatorTests
         var result = _validator.ValidateWorkItems(items);
 
         // Assert
-        Assert.HasCount(3, result, "All three children should have issues");
+        Assert.HasCount(1, result, "Goal should have issues (parent not in progress with multiple children in progress)");
 
 #pragma warning disable MSTEST0037
-        Assert.IsTrue(result.ContainsKey(2));
-
-#pragma warning disable MSTEST0037
-        Assert.IsTrue(result.ContainsKey(3));
-
-#pragma warning disable MSTEST0037
-        Assert.IsTrue(result.ContainsKey(4));
+        Assert.IsTrue(result.ContainsKey(1), "Goal should have the violation");
+        
+        var issues = result[1];
+        // Should have one error (for direct children) and potentially one warning (for descendants if any)
+        Assert.IsGreaterThanOrEqualTo(1, issues.Count, "Should have at least one issue");
+        Assert.Contains("children in progress", issues[0].Message.ToLower(), "Message should mention children in progress");
     }
 
     private static WorkItemDto CreateWorkItem(int id, string type, string state, int? parentId)

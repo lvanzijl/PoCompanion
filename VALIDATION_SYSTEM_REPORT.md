@@ -319,6 +319,203 @@ Consider consolidating or clarifying the scope difference in documentation.
 
 ---
 
+## Legacy vs Hierarchical Validator Analysis: Overlaps and Contradictions
+
+### Overview
+The validation system has both **legacy validators** (simple, flat validation) and **new hierarchical validators** (rule-based with explicit consequences). This dual system creates potential overlaps and contradictions that need to be understood.
+
+### Critical Issue: SI-3 vs RR-3 Overlap
+
+#### The Contradiction
+
+**SI-3 (NewParentWithInProgressDescendantsRule)** and **RR-3 (WorkItemParentProgressValidator)** address similar but not identical scenarios:
+
+| Aspect | SI-3 (Hierarchical) | RR-3 (Legacy) |
+|--------|---------------------|---------------|
+| **Triggers When** | Parent is in "New" state | Parent is NOT in "InProgress" state |
+| **Checks** | Any descendant (recursive) in "InProgress" | Direct children and descendants in "InProgress" |
+| **Reports Violation On** | PARENT (the item in wrong state) | PARENT (after fix - was on CHILD before) |
+| **Severity** | Error (always) | Error (direct children), Warning (descendants) |
+| **Category** | Structural Integrity (SI) | Refinement Readiness (RR) |
+| **State Coverage** | Only "New" parents | ANY non-"InProgress" parent (New, Done, Removed, etc.) |
+
+#### Semantic Differences
+
+1. **SI-3 Semantic**: "A parent in 'New' state logically cannot have work actively in progress beneath it - this is a structural integrity violation"
+   - Focuses on the illogical state: new work hasn't started yet but children are already being worked on
+   - Limited to "New" state only
+   - Structural integrity concern
+
+2. **RR-3 Semantic**: "If you're actively working on something ('In Progress'), the parent context must also be active ('In Progress') for proper refinement"
+   - Focuses on work context: you need parent context to be active when working on children
+   - Applies to ALL non-"InProgress" states (broader scope)
+   - Refinement readiness concern
+
+#### Coverage Analysis
+
+```
+State Space Coverage:
+
+SI-3 catches:
+  Parent: New + Child: InProgress ✓
+
+RR-3 catches:
+  Parent: New + Child: InProgress ✓ (OVERLAP with SI-3)
+  Parent: Done + Child: InProgress ✓ (UNIQUE to RR-3)
+  Parent: Removed + Child: InProgress ✓ (UNIQUE to RR-3)
+  Parent: Any other non-InProgress + Child: InProgress ✓ (UNIQUE to RR-3)
+```
+
+**Conclusion**: RR-3 is a **superset** of SI-3's conditions. When parent is "New" with "InProgress" children, BOTH rules trigger.
+
+### Double Violation Problem
+
+For the scenario described in the issue:
+```
+Goal (id=1, "New")
+  └── Epic (id=2, "In Progress")
+      └── Feature (id=3, "In Progress")
+```
+
+**Both validators will fire:**
+- **SI-3**: Reports on Goal (id=1) with message "Parent in New state has In Progress descendants"
+- **RR-3**: Reports on Goal (id=1) with message "Has children in progress but is not in progress (state: New)"
+
+This creates **duplicate violations** for the same logical issue, just categorized differently (SI vs RR).
+
+### Other Overlaps
+
+#### RC-2: Effort Validation Overlap
+
+**RC-2 (PbiEffortEmptyRule)** and **RC-2 (WorkItemInProgressWithoutEffortValidator)** both check effort:
+
+| Aspect | RC-2 Hierarchical | RC-2 Legacy |
+|--------|-------------------|-------------|
+| **Scope** | PBI only | ALL work item types |
+| **When Checked** | Only if RR rules pass | Always (when in progress) |
+| **Suppression** | Yes (by parent RR violations) | No |
+
+**Potential Issue**: Same RuleId (RC-2) used for different scopes, but both serve same semantic purpose.
+
+### Architectural Implications
+
+#### 1. Reporting Perspective Changed
+
+**Before Fix**: RR-3 reported violations on the CHILD (wrong)
+- Issue: Child is doing its job correctly (being in progress)
+- Problem was actually with the PARENT not being in proper state
+
+**After Fix**: RR-3 reports violations on the PARENT (correct)
+- Aligns with SI-3's approach
+- Makes semantic sense: parent is the problem, not the child
+
+#### 2. Violation Ownership
+
+The fix changes **who owns the violation**:
+
+**Old Behavior** (incorrect):
+```
+Goal (New) → No violation
+Epic (In Progress) → Has violation "Parent not in progress"
+```
+User's perspective: "Why is Epic marked as having a problem? Epic is fine!"
+
+**New Behavior** (correct):
+```
+Goal (New) → Has violation "Has children in progress but not in progress itself"
+Epic (In Progress) → No violation
+```
+User's perspective: "Goal has the problem - it should be in progress if work has started"
+
+#### 3. Category Semantics
+
+The overlap reveals different semantic perspectives:
+
+- **SI-3** (Structural): "This tree structure doesn't make logical sense"
+- **RR-3** (Refinement): "You can't work on this effectively without parent context"
+
+Both are valid perspectives on the same problem, but from different angles.
+
+### Recommendations
+
+#### Option 1: Deprecate RR-3 in favor of SI-3
+**Pros**:
+- Eliminates duplicate violations
+- Simplifies system
+- SI-3 covers the most critical case (New parent)
+
+**Cons**:
+- Loses coverage of Done/Removed parents with InProgress children
+- These cases are also structural integrity issues but aren't caught by SI rules
+
+#### Option 2: Expand SI Rules to Cover RR-3's Scope
+Create additional SI rules:
+- **SI-4**: Done parent with InProgress descendants
+- **SI-5**: Removed parent with InProgress descendants (or merge with SI-2)
+
+**Pros**:
+- Complete structural integrity coverage
+- Can deprecate RR-3
+- All parent-child state contradictions caught by SI rules
+
+**Cons**:
+- More rules to maintain
+- SI-1 already handles Done parent with non-Done descendants (broader)
+
+#### Option 3: Keep Both, Different Purposes
+Accept the overlap but clarify distinction:
+- **SI-3**: Catches the most egregious case (New → InProgress)
+- **RR-3**: Catches broader refinement context issues
+
+**Pros**:
+- No breaking changes
+- Different semantic perspectives preserved
+- Both serve valid purposes
+
+**Cons**:
+- Duplicate violations for "New" parent case
+- Confusing for users
+- Maintenance overhead
+
+#### Option 4: Make RR-3 Skip Cases Covered by SI-3 (Recommended)
+
+Modify RR-3 to explicitly skip cases where SI-3 applies:
+
+```csharp
+// In WorkItemParentProgressValidator
+if (itemClassification == StateClassification.New)
+{
+    continue; // Let SI-3 handle New parents
+}
+```
+
+**Pros**:
+- Eliminates duplicate violations
+- Preserves broader coverage of RR-3
+- Clear separation of concerns
+- Both validators remain useful
+
+**Cons**:
+- Coupling between legacy and hierarchical systems
+- Need to maintain awareness of overlap
+
+### Current Status
+
+✅ **Fixed**: RR-3 now reports on parent (not child)
+✅ **Aligned**: Both SI-3 and RR-3 report on the parent
+⚠️ **Overlap**: SI-3 and RR-3 both trigger for "New" parent cases
+🔄 **Recommendation**: Implement Option 4 to eliminate duplicates while preserving coverage
+
+### Testing Implications
+
+The changed behavior requires updated tests:
+- ✅ `WorkItemParentProgressValidatorTests`: Updated to expect violations on parent
+- ✅ All 12 tests passing
+- ⚠️ Integration tests may need review for duplicate violation handling
+- ⚠️ UI tests should verify how duplicate violations are displayed
+
+---
+
 ## Summary Table
 
 | Rule ID | Name | Category | Applies To | Severity | System | Responsibility |
