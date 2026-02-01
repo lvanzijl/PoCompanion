@@ -328,8 +328,8 @@
 
     private void NavigateToBugTriage()
     {
-        // Task-driven entry always uses all products/teams
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BugOverview}?allProducts=true&allTeams=true");
+        // Navigate to Bug Triage page for triaging bugs
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BugTriage}");
     }
 
     private void NavigateToPlanBoard()

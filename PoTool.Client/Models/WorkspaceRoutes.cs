@@ -79,6 +79,11 @@ public static class WorkspaceRoutes
     public const string BugDetail = "/home/bugs/detail";
 
     /// <summary>
+    /// Bug Triage route - for triaging and categorizing bugs.
+    /// </summary>
+    public const string BugTriage = "/bugs-triage";
+
+    /// <summary>
     /// PR Insights route - shows metrics dashboard with Team/Product selectors.
     /// </summary>
     public const string PrOverview = "/home/pull-requests";

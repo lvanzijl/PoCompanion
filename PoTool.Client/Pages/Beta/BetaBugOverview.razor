@@ -29,12 +29,21 @@
                 <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
             </MudStack>
             
-            <MudButton Variant="Variant.Outlined"
-                       Color="Color.Default"
-                       StartIcon="@Icons.Material.Filled.Home"
-                       OnClick="NavigateToHome">
-                Home
-            </MudButton>
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.BugReport"
+                           OnClick="NavigateToBugTriage">
+                    Bug Triage
+                </MudButton>
+                
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           OnClick="NavigateToHome">
+                    Home
+                </MudButton>
+            </MudStack>
         </MudStack>
     </MudPaper>
 
@@ -432,5 +441,10 @@
     private void NavigateToHome()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+    }
+    
+    private void NavigateToBugTriage()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BugTriage);
     }
 }
