@@ -1,0 +1,269 @@
+@using PoTool.Client.Services
+@using PoTool.Shared.BugTriage
+@inject TriageTagService TriageTagService
+@inject ISnackbar Snackbar
+@inject ILogger<TriageTagsSection> Logger
+
+<div class="settings-section">
+    <MudText Typo="Typo.h4" Class="mb-3">Triage Tags</MudText>
+    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+        Configure which tags appear in the Bugs Triage UI. Tags can be created, enabled/disabled, or removed from the catalog.
+    </MudAlert>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" Class="mb-4" />
+        <MudText>Loading triage tags...</MudText>
+    }
+    else if (_errorMessage != null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4" CloseIcon="true" CloseIconClicked="ClearError">@_errorMessage</MudAlert>
+    }
+    else
+    {
+        <MudStack Spacing="3">
+            @* Add new tag section *@
+            <MudPaper Class="pa-3" Elevation="1">
+                <MudText Typo="Typo.h6" Class="mb-2">Add New Tag</MudText>
+                <MudStack Row="true" AlignItems="AlignItems.End" Spacing="2">
+                    <MudTextField @bind-Value="_newTagName"
+                                  Label="Tag Name"
+                                  Variant="Variant.Outlined"
+                                  Immediate="true"
+                                  Style="flex: 1;"
+                                  OnKeyDown="HandleNewTagKeyDown"
+                                  Disabled="@_isSaving" />
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               OnClick="CreateTag"
+                               Disabled="@(_isSaving || string.IsNullOrWhiteSpace(_newTagName))">
+                        @if (_isSaving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Adding...</span>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-1" Size="Size.Small" />
+                            <span>Add Tag</span>
+                        }
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+
+            @* Existing tags list *@
+            <MudPaper Class="pa-3" Elevation="1">
+                <MudText Typo="Typo.h6" Class="mb-3">Existing Tags (@_tags.Count)</MudText>
+                
+                @if (_tags.Any())
+                {
+                    <MudTable Items="_tags" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+                        <HeaderContent>
+                            <MudTh>Tag Name</MudTh>
+                            <MudTh>Status</MudTh>
+                            <MudTh Style="width: 120px;">Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Tag Name">
+                                <MudText>@context.Name</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Status">
+                                @if (context.IsEnabled)
+                                {
+                                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Text">
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                                        Enabled
+                                    </MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Text">
+                                        <MudIcon Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" Class="mr-1" />
+                                        Disabled
+                                    </MudChip>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Actions">
+                                <MudStack Row="true" Spacing="1">
+                                    <MudTooltip Text="@(context.IsEnabled ? "Disable tag" : "Enable tag")">
+                                        <MudIconButton Icon="@(context.IsEnabled ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                                       Size="Size.Small"
+                                                       Color="@(context.IsEnabled ? Color.Default : Color.Success)"
+                                                       OnClick="@(() => ToggleTagEnabled(context))"
+                                                       Disabled="@_isSaving" />
+                                    </MudTooltip>
+                                    <MudTooltip Text="Remove from catalog">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                       Size="Size.Small"
+                                                       Color="Color.Error"
+                                                       OnClick="@(() => DeleteTag(context))"
+                                                       Disabled="@_isSaving" />
+                                    </MudTooltip>
+                                </MudStack>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        No triage tags configured yet. Add your first tag above.
+                    </MudAlert>
+                }
+            </MudPaper>
+        </MudStack>
+    }
+</div>
+
+@code {
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private string? _errorMessage;
+    private string _newTagName = string.Empty;
+    private List<TriageTagDto> _tags = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTags();
+    }
+
+    private async Task LoadTags()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            _tags = await TriageTagService.GetAllTagsAsync();
+            Logger.LogInformation("Loaded {Count} triage tags", _tags.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load triage tags");
+            _errorMessage = $"Failed to load triage tags: {ex.Message}";
+            _tags = new List<TriageTagDto>();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task CreateTag()
+    {
+        if (string.IsNullOrWhiteSpace(_newTagName))
+        {
+            return;
+        }
+
+        _isSaving = true;
+        _errorMessage = null;
+
+        try
+        {
+            var response = await TriageTagService.CreateTagAsync(_newTagName.Trim());
+
+            if (response.Success)
+            {
+                Snackbar.Add($"Tag '{_newTagName.Trim()}' created successfully", Severity.Success);
+                _newTagName = string.Empty;
+                await LoadTags();
+            }
+            else
+            {
+                _errorMessage = response.Message ?? "Failed to create tag";
+                Snackbar.Add(_errorMessage, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to create triage tag");
+            _errorMessage = $"Failed to create tag: {ex.Message}";
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task ToggleTagEnabled(TriageTagDto tag)
+    {
+        _isSaving = true;
+        _errorMessage = null;
+
+        try
+        {
+            var response = await TriageTagService.UpdateTagAsync(
+                tag.Id,
+                isEnabled: !tag.IsEnabled);
+
+            if (response.Success)
+            {
+                var action = !tag.IsEnabled ? "enabled" : "disabled";
+                Snackbar.Add($"Tag '{tag.Name}' {action}", Severity.Success);
+                await LoadTags();
+            }
+            else
+            {
+                _errorMessage = response.Message ?? "Failed to update tag";
+                Snackbar.Add(_errorMessage, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to toggle tag enabled state");
+            _errorMessage = $"Failed to update tag: {ex.Message}";
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task DeleteTag(TriageTagDto tag)
+    {
+        _isSaving = true;
+        _errorMessage = null;
+
+        try
+        {
+            var response = await TriageTagService.DeleteTagAsync(tag.Id);
+
+            if (response.Success)
+            {
+                Snackbar.Add($"Tag '{tag.Name}' removed from catalog", Severity.Success);
+                await LoadTags();
+            }
+            else
+            {
+                _errorMessage = response.Message ?? "Failed to delete tag";
+                Snackbar.Add(_errorMessage, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete triage tag");
+            _errorMessage = $"Failed to delete tag: {ex.Message}";
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task HandleNewTagKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_newTagName))
+        {
+            await CreateTag();
+        }
+    }
+
+    private void ClearError()
+    {
+        _errorMessage = null;
+    }
+}
