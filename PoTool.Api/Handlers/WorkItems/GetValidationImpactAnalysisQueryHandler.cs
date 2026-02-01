@@ -18,6 +18,7 @@ public sealed class GetValidationImpactAnalysisQueryHandler
     private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly IProductRepository _productRepository;
     private readonly IWorkItemValidator _validator;
+    private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetValidationImpactAnalysisQueryHandler> _logger;
 
     public GetValidationImpactAnalysisQueryHandler(
@@ -25,12 +26,14 @@ public sealed class GetValidationImpactAnalysisQueryHandler
         IWorkItemReadProvider workItemReadProvider,
         IProductRepository productRepository,
         IWorkItemValidator validator,
+        IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetValidationImpactAnalysisQueryHandler> logger)
     {
         _repository = repository;
         _workItemReadProvider = workItemReadProvider;
         _productRepository = productRepository;
         _validator = validator;
+        _stateClassificationService = stateClassificationService;
         _logger = logger;
     }
 
@@ -174,7 +177,11 @@ public sealed class GetValidationImpactAnalysisQueryHandler
         {
             var child = workItemLookup[childId];
             // A child is blocked if it's in progress but parent is not
-            if (child.State == "In Progress" && parent.State != "In Progress")
+            // Use state classification service to properly determine state
+            var childIsInProgress = _stateClassificationService.IsInProgressStateAsync(child.Type, child.State).GetAwaiter().GetResult();
+            var parentIsInProgress = _stateClassificationService.IsInProgressStateAsync(parent.Type, parent.State).GetAwaiter().GetResult();
+            
+            if (childIsInProgress && !parentIsInProgress)
             {
                 blocked.Add(childId);
             }
