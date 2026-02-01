@@ -168,7 +168,7 @@
             else
             {
                 // Sync already in progress, start polling as backup
-                _ = StartPollingAsync();
+                _ = StartPollingWithExceptionHandlingAsync();
             }
         }
         catch (Exception ex)
@@ -202,7 +202,7 @@
         {
             Console.WriteLine($"[SyncGate] SignalR setup failed: {ex.Message}");
             // Fall back to polling
-            _ = StartPollingAsync();
+            _ = StartPollingWithExceptionHandlingAsync();
         }
     }
 
@@ -234,14 +234,34 @@
     {
         if (_profileId == null) return;
         
-        while (_cacheState?.SyncStatus == CacheSyncStatusDto.InProgress || 
-               (_cacheState?.SyncStatus == CacheSyncStatusDto.Idle && !_cacheState.LastSuccessfulSync.HasValue))
+        // Store the profile ID locally to avoid null issues if _profileId changes
+        var profileId = _profileId.Value;
+        
+        // Use a max iteration count to prevent infinite loops
+        const int maxPollingIterations = 300; // 10 minutes at 2 second intervals
+        var iterations = 0;
+        
+        while (iterations < maxPollingIterations)
         {
+            // Check current state - exit if we shouldn't continue polling
+            var currentStatus = _cacheState?.SyncStatus;
+            var hasSuccessfulSync = _cacheState?.LastSuccessfulSync.HasValue == true;
+            
+            // Exit conditions: success, failure, or no longer in a state that requires polling
+            if (hasSuccessfulSync || 
+                currentStatus == CacheSyncStatusDto.Success ||
+                currentStatus == CacheSyncStatusDto.Failed ||
+                (currentStatus != CacheSyncStatusDto.InProgress && currentStatus != CacheSyncStatusDto.Idle))
+            {
+                break;
+            }
+            
             await Task.Delay(2000);
+            iterations++;
             
             try
             {
-                var newState = await CacheSyncService.GetCacheStatusAsync(_profileId.Value);
+                var newState = await CacheSyncService.GetCacheStatusAsync(profileId);
                 if (newState != null)
                 {
                     _cacheState = newState;
@@ -261,6 +281,28 @@
             }
         }
     }
+    
+    /// <summary>
+    /// Wrapper for StartPollingAsync that handles exceptions to prevent silent failures
+    /// when used as fire-and-forget task.
+    /// </summary>
+    private async Task StartPollingWithExceptionHandlingAsync()
+    {
+        try
+        {
+            await StartPollingAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SyncGate] Polling task failed: {ex.Message}");
+            // Update UI to show error state if possible
+            await InvokeAsync(() =>
+            {
+                _errorMessage = "Failed to monitor sync progress. Please refresh the page.";
+                StateHasChanged();
+            });
+        }
+    }
 
     private async Task TriggerSyncAsync()
     {
@@ -278,8 +320,8 @@
                     _cacheState.CurrentSyncStage = "Starting...";
                 }
                 
-                // Start polling as backup
-                _ = StartPollingAsync();
+                // Start polling as backup with exception handling
+                _ = StartPollingWithExceptionHandlingAsync();
             }
             else
             {
@@ -316,7 +358,7 @@
     
     /// <summary>
     /// Validates return URL to prevent open redirect vulnerabilities.
-    /// Only allows relative paths starting with "/" that don't contain "//" (protocol).
+    /// Only allows relative paths starting with "/" that don't contain dangerous patterns.
     /// </summary>
     private static bool IsValidReturnUrl(string url)
     {
@@ -325,11 +367,20 @@
             return false;
         
         // Must not contain "//" after the first character (could be a protocol like "//evil.com")
-        if (url.Length > 1 && url.Contains("//"))
+        // Using IndexOf to specifically check for "//" after position 0
+        if (url.IndexOf("//", 1, StringComparison.Ordinal) >= 0)
+            return false;
+        
+        // Must not contain backslash which could be interpreted as "/\evil.com"
+        if (url.Contains('\\'))
             return false;
         
         // Must not contain a colon (could be a protocol like "/https://evil.com")
         if (url.Contains(':'))
+            return false;
+        
+        // Use Uri.TryCreate as additional validation
+        if (!Uri.TryCreate(url, UriKind.Relative, out _))
             return false;
         
         return true;
@@ -361,16 +412,19 @@
 
     public async ValueTask DisposeAsync()
     {
+        if (!_profileId.HasValue)
+            return;
+            
         try
         {
-            if (_profileId.HasValue && HubConnection.State == HubConnectionState.Connected)
-            {
-                await HubConnection.InvokeAsync("LeaveProductOwnerGroup", _profileId.Value);
-            }
+            // Attempt to leave the group - if connection is not connected, this will throw
+            // which is caught and ignored. This avoids the race condition of checking state
+            // then invoking, as the state could change between check and invoke.
+            await HubConnection.InvokeAsync("LeaveProductOwnerGroup", _profileId.Value);
         }
         catch
         {
-            // Ignore disposal errors
+            // Ignore disposal errors - connection may have already disconnected
         }
     }
 }
