@@ -9,6 +9,7 @@
 @inject BugTriageService BugTriageService
 @inject BugTreeBuilderService TreeBuilderService
 @inject TriageTagService TriageTagService
+@inject TfsFieldParserService TfsFieldParser
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject IJSRuntime JS
@@ -353,15 +354,12 @@
 
     private string GetBugCriticality(WorkItemWithValidationDto bug)
     {
-        // Parse criticality from bug fields (simplified - would need to check actual TFS field)
-        // For now, default to Medium
-        return BugCriticality.Medium;
+        return TfsFieldParser.GetBugCriticality(bug);
     }
 
     private List<string> GetBugTags(WorkItemWithValidationDto bug)
     {
-        // Parse tags from bug (simplified - would need to parse from TFS tags field)
-        return new List<string>();
+        return TfsFieldParser.GetTags(bug);
     }
 
     private async Task LoadExpandedStateAsync()

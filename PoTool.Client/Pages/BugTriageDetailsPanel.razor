@@ -1,7 +1,9 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Models
+@using PoTool.Client.Services
 @using PoTool.Shared.BugTriage
 @using MudBlazor
+@inject TfsFieldParserService TfsFieldParser
 
 <div class="bug-details-content pa-3">
     <MudStack Spacing="3">
@@ -137,15 +139,11 @@
 
     private string GetBugCriticality(WorkItemWithValidationDto bug)
     {
-        // Parse criticality from bug fields (simplified)
-        // TODO: Parse from actual TFS field
-        return BugCriticality.Medium;
+        return TfsFieldParser.GetBugCriticality(bug);
     }
 
     private List<string> GetBugTags(WorkItemWithValidationDto bug)
     {
-        // Parse tags from bug (simplified)
-        // TODO: Parse from actual TFS tags field
-        return new List<string>();
+        return TfsFieldParser.GetTags(bug);
     }
 }
