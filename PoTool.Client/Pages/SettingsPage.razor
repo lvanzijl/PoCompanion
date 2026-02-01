@@ -40,6 +40,13 @@
                 Work Item States
             </MudNavLink>
             
+            <MudNavLink OnClick="@(() => SelectTopic("triage-tags"))" 
+                       Icon="@Icons.Material.Filled.Label"
+                       IconColor="@GetTopicColor("triage-tags")"
+                       Class="@GetTopicClass("triage-tags")">
+                Triage Tags
+            </MudNavLink>
+            
             <MudNavLink OnClick="@(() => SelectTopic("getting-started"))" 
                        Icon="@Icons.Material.Filled.Help"
                        IconColor="@GetTopicColor("getting-started")"
@@ -76,6 +83,10 @@
         else if (_currentTopic == "workitem-states")
         {
             <WorkItemStateMappingSection />
+        }
+        else if (_currentTopic == "triage-tags")
+        {
+            <TriageTagsSection />
         }
         else if (_currentTopic == "getting-started")
         {

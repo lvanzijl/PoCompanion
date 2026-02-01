@@ -1,0 +1,411 @@
+@page "/bugs-triage"
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Services
+@using PoTool.Client.Models
+@using PoTool.Client.Components.Common
+@using PoTool.Shared.BugTriage
+@using MudBlazor
+@inject WorkItemService WorkItemService
+@inject BugTriageService BugTriageService
+@inject BugTreeBuilderService TreeBuilderService
+@inject TriageTagService TriageTagService
+@inject TfsFieldParserService TfsFieldParser
+@inject IProfileService ProfileService
+@inject ProductService ProductService
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@inject ILogger<BugsTriage> Logger
+@implements IAsyncDisposable
+
+<PageTitle>Bugs Triage</PageTitle>
+
+<div class="bugs-triage-page">
+    <div class="bugs-triage-toolbar">
+        <MudText Typo="Typo.h5">
+            <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" />
+            Bugs Triage
+        </MudText>
+        
+        @if (!_isLoading && _bugs.Any())
+        {
+            <MudText Typo="Typo.body2" Class="ml-3">
+                @_bugs.Count bugs total | @_untriagedCount untriaged
+            </MudText>
+        }
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="loading-state pa-4">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.body2" Class="mt-2">Loading bugs...</MudText>
+        </div>
+    }
+    else if (_errorMessage != null)
+    {
+        <MudAlert Severity="Severity.Error" Class="ma-4" CloseIcon="true" CloseIconClicked="ClearError">
+            @_errorMessage
+        </MudAlert>
+    }
+    else if (!_bugs.Any())
+    {
+        <div class="empty-state pa-4">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Class="mb-2" />
+            <MudText Typo="Typo.h6" Class="mb-2">No bugs found</MudText>
+            <MudText Typo="Typo.body2">There are no bug work items in your backlog, or they have all been resolved.</MudText>
+        </div>
+    }
+    else
+    {
+        <div class="content" tabindex="0">
+            <ResizableSplitter StorageKey="bugs-triage-splitter" 
+                              DefaultLeftWidth="60" 
+                              MinLeftWidth="30" 
+                              MaxLeftWidth="80">
+                <LeftContent>
+                    <div class="bugs-tree-panel">
+                        @* Tag Filters *@
+                        @if (_enabledTags.Any())
+                        {
+                            <div class="tag-filters-section pa-2">
+                                <MudText Typo="Typo.body2" Class="mb-1">Filter by Tags:</MudText>
+                                <MudStack Row="true" Spacing="1" Class="mb-2">
+                                    @foreach (var tag in _enabledTags)
+                                    {
+                                        <MudChip T="string"
+                                                 Size="Size.Small"
+                                                 Variant="@(IsTagSelected(tag.Name) ? Variant.Filled : Variant.Outlined)"
+                                                 Color="@(IsTagSelected(tag.Name) ? Color.Primary : Color.Default)"
+                                                 OnClick="@(() => ToggleTagFilter(tag.Name))">
+                                            @tag.Name
+                                        </MudChip>
+                                    }
+                                </MudStack>
+                                @if (_selectedTags.Any())
+                                {
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudText Typo="Typo.caption">Match:</MudText>
+                                        <MudButtonGroup Size="Size.Small" Variant="Variant.Outlined">
+                                            <MudButton Color="@(_tagMatchMode == TagMatchMode.Any ? Color.Primary : Color.Default)"
+                                                      OnClick="@(() => SetTagMatchMode(TagMatchMode.Any))">
+                                                Any
+                                            </MudButton>
+                                            <MudButton Color="@(_tagMatchMode == TagMatchMode.All ? Color.Primary : Color.Default)"
+                                                      OnClick="@(() => SetTagMatchMode(TagMatchMode.All))">
+                                                All
+                                            </MudButton>
+                                        </MudButtonGroup>
+                                        <MudButton Size="Size.Small" 
+                                                   Variant="Variant.Text" 
+                                                   OnClick="ClearTagFilters"
+                                                   StartIcon="@Icons.Material.Filled.Clear">
+                                            Clear
+                                        </MudButton>
+                                    </MudStack>
+                                }
+                            </div>
+                        }
+                        
+                        @* Bug Tree *@
+                        <div class="bugs-tree-list">
+                            @foreach (var root in _treeRoots)
+                            {
+                                <BugTriageTreeNode Node="@root" 
+                                                  SelectedId="@_selectedBugId"
+                                                  OnNodeToggled="HandleNodeToggled"
+                                                  OnNodeSelected="HandleNodeSelected" />
+                            }
+                        </div>
+                    </div>
+                </LeftContent>
+                <RightContent>
+                    <div class="bug-details-panel">
+                        @if (_selectedBug != null)
+                        {
+                            <BugTriageDetailsPanel Bug="@_selectedBug"
+                                                  EnabledTags="@_enabledTags"
+                                                  OnCriticalityChanged="@(async (args) => await HandleCriticalityChanged(args.BugId, args.NewCriticality))"
+                                                  OnTagToggled="@(async (args) => await HandleTagToggled(args.BugId, args.TagName, args.IsAdded))" />
+                        }
+                        else
+                        {
+                            <div class="empty-selection pa-4">
+                                <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                                <MudText Typo="Typo.body1">Select a bug to view details</MudText>
+                            </div>
+                        }
+                    </div>
+                </RightContent>
+            </ResizableSplitter>
+        </div>
+    }
+</div>
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private List<WorkItemWithValidationDto> _bugs = new();
+    private HashSet<int> _untriagedBugIds = new();
+    private int _untriagedCount => _untriagedBugIds.Count;
+    private List<TriageTagDto> _enabledTags = new();
+    private List<TreeNode> _treeRoots = new();
+    private Dictionary<int, bool> _expandedState = new();
+    
+    private int? _selectedBugId;
+    private WorkItemWithValidationDto? _selectedBug;
+    
+    private List<string> _selectedTags = new();
+    private TagMatchMode _tagMatchMode = TagMatchMode.Any;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExpandedStateAsync();
+        await LoadEnabledTagsAsync();
+        await LoadBugsAsync();
+    }
+
+    private async Task LoadBugsAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            // Get products for the active profile
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                _errorMessage = "No active profile selected. Please select a profile first.";
+                _bugs = new List<WorkItemWithValidationDto>();
+                _isLoading = false;
+                return;
+            }
+
+            var profileProducts = await ProductService.GetProductsByOwnerAsync(activeProfile.Id);
+            var productIds = profileProducts.Select(p => p.Id).ToArray();
+
+            Logger.LogInformation("Loading bugs for {Count} products", productIds.Length);
+
+            // Load all work items
+            var allWorkItems = (await WorkItemService.GetAllWithValidationAsync(productIds)).ToList();
+            
+            // Filter to bugs only
+            _bugs = allWorkItems
+                .Where(wi => wi.Type.Equals("Bug", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            Logger.LogInformation("Loaded {Count} bugs", _bugs.Count);
+
+            // Get untriaged bug IDs
+            var bugIds = _bugs.Select(b => b.TfsId).ToList();
+            _untriagedBugIds = await BugTriageService.GetUntriagedBugIdsAsync(bugIds);
+            
+            Logger.LogInformation("Found {Count} untriaged bugs", _untriagedBugIds.Count);
+
+            // Record first seen for untriaged bugs
+            foreach (var bug in _bugs.Where(b => _untriagedBugIds.Contains(b.TfsId)))
+            {
+                var criticality = GetBugCriticality(bug);
+                await BugTriageService.RecordFirstSeenAsync(bug.TfsId, criticality);
+            }
+
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load bugs");
+            _errorMessage = $"Failed to load bugs: {ex.Message}";
+            _bugs = new List<WorkItemWithValidationDto>();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadEnabledTagsAsync()
+    {
+        try
+        {
+            _enabledTags = await TriageTagService.GetEnabledTagsAsync();
+            Logger.LogInformation("Loaded {Count} enabled triage tags", _enabledTags.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load enabled tags");
+            _enabledTags = new List<TriageTagDto>();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var filteredBugs = _bugs.AsEnumerable();
+
+        // Apply tag filters if any are selected
+        if (_selectedTags.Any())
+        {
+            filteredBugs = TreeBuilderService.ApplyTagFilters(
+                filteredBugs,
+                _selectedTags,
+                _tagMatchMode,
+                GetBugTags);
+        }
+
+        // Build tree with grouping
+        _treeRoots = TreeBuilderService.BuildBugTriageTree(
+            filteredBugs,
+            _untriagedBugIds,
+            _expandedState,
+            GetBugCriticality);
+
+        StateHasChanged();
+    }
+
+    private async Task HandleNodeToggled(TreeNode node)
+    {
+        node.IsExpanded = !node.IsExpanded;
+        _expandedState[node.Id] = node.IsExpanded;
+        await SaveExpandedStateAsync();
+        StateHasChanged();
+    }
+
+    private void HandleNodeSelected(TreeNode node)
+    {
+        // Don't select group nodes
+        if (node.Type == "(group)")
+        {
+            return;
+        }
+
+        _selectedBugId = node.Id;
+        _selectedBug = _bugs.FirstOrDefault(b => b.TfsId == node.Id);
+        StateHasChanged();
+    }
+
+    private async Task HandleCriticalityChanged(int bugId, string newCriticality)
+    {
+        Logger.LogInformation("Criticality changed for bug {BugId}: {Criticality}", bugId, newCriticality);
+        
+        // Mark as triaged
+        var request = new Shared.BugTriage.UpdateBugTriageStateRequest(
+            bugId,
+            NewCriticality: newCriticality);
+        
+        await BugTriageService.MarkAsTriagedAsync(request);
+        
+        // Remove from untriaged set
+        _untriagedBugIds.Remove(bugId);
+        
+        // Rebuild tree
+        ApplyFilters();
+        
+        Snackbar.Add($"Criticality updated to {newCriticality}", Severity.Success);
+    }
+
+    private async Task HandleTagToggled(int bugId, string tagName, bool isAdded)
+    {
+        Logger.LogInformation("Tag {Action} for bug {BugId}: {Tag}", 
+            isAdded ? "added" : "removed", bugId, tagName);
+        
+        // Mark as triaged
+        var request = new Shared.BugTriage.UpdateBugTriageStateRequest(
+            bugId,
+            TagsAdded: isAdded ? new List<string> { tagName } : null,
+            TagsRemoved: !isAdded ? new List<string> { tagName } : null);
+        
+        await BugTriageService.MarkAsTriagedAsync(request);
+        
+        // Remove from untriaged set
+        _untriagedBugIds.Remove(bugId);
+        
+        // Rebuild tree
+        ApplyFilters();
+        
+        var action = isAdded ? "added" : "removed";
+        Snackbar.Add($"Tag '{tagName}' {action}", Severity.Success);
+    }
+
+    private void ToggleTagFilter(string tagName)
+    {
+        if (_selectedTags.Contains(tagName))
+        {
+            _selectedTags.Remove(tagName);
+        }
+        else
+        {
+            _selectedTags.Add(tagName);
+        }
+        ApplyFilters();
+    }
+
+    private void SetTagMatchMode(TagMatchMode mode)
+    {
+        _tagMatchMode = mode;
+        ApplyFilters();
+    }
+
+    private void ClearTagFilters()
+    {
+        _selectedTags.Clear();
+        ApplyFilters();
+    }
+
+    private bool IsTagSelected(string tagName) => _selectedTags.Contains(tagName);
+
+    private string GetBugCriticality(WorkItemWithValidationDto bug)
+    {
+        return TfsFieldParser.GetBugCriticality(bug);
+    }
+
+    private List<string> GetBugTags(WorkItemWithValidationDto bug)
+    {
+        return TfsFieldParser.GetTags(bug);
+    }
+
+    private async Task LoadExpandedStateAsync()
+    {
+        try
+        {
+            _expandedState.Clear();
+            var stateJson = await JS.InvokeAsync<string?>("localStorage.getItem", "bugs-triage-expanded-state");
+            if (!string.IsNullOrEmpty(stateJson))
+            {
+                var loadedState = System.Text.Json.JsonSerializer.Deserialize<Dictionary<int, bool>>(stateJson);
+                if (loadedState != null)
+                {
+                    foreach (var kv in loadedState)
+                    {
+                        _expandedState[kv.Key] = kv.Value;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading expanded state");
+        }
+    }
+
+    private async Task SaveExpandedStateAsync()
+    {
+        try
+        {
+            var stateJson = System.Text.Json.JsonSerializer.Serialize(_expandedState);
+            await JS.InvokeVoidAsync("localStorage.setItem", "bugs-triage-expanded-state", stateJson);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving expanded state");
+        }
+    }
+
+    private void ClearError()
+    {
+        _errorMessage = null;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await Task.CompletedTask;
+    }
+}

@@ -1,0 +1,149 @@
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Models
+@using PoTool.Client.Services
+@using PoTool.Shared.BugTriage
+@using MudBlazor
+@inject TfsFieldParserService TfsFieldParser
+
+<div class="bug-details-content pa-3">
+    <MudStack Spacing="3">
+        @* Bug Header *@
+        <div>
+            <MudText Typo="Typo.h6" Class="mb-1">
+                <MudIcon Icon="@Icons.Material.Filled.BugReport" Size="Size.Small" Class="mr-1" />
+                Bug #@Bug.TfsId
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mb-2">@Bug.Title</MudText>
+            <MudChip T="string" Size="Size.Small" Color="Color.Default">@Bug.State</MudChip>
+        </div>
+
+        @* Criticality Selector *@
+        <MudPaper Class="pa-3" Elevation="1">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Criticality</MudText>
+            <MudSelect T="string"
+                      Value="@_currentCriticality"
+                      ValueChanged="@HandleCriticalityChanged"
+                      Variant="Variant.Outlined"
+                      Dense="true">
+                @foreach (var crit in BugCriticality.AllValues)
+                {
+                    <MudSelectItem Value="@crit">@crit</MudSelectItem>
+                }
+            </MudSelect>
+        </MudPaper>
+
+        @* Triage Tags *@
+        @if (EnabledTags.Any())
+        {
+            <MudPaper Class="pa-3" Elevation="1">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Triage Tags</MudText>
+                <MudStack Spacing="1">
+                    @foreach (var tag in EnabledTags)
+                    {
+                        var isActive = _activeTags.Contains(tag.Name);
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Variant="@(isActive ? Variant.Filled : Variant.Outlined)"
+                                 Color="@(isActive ? Color.Primary : Color.Default)"
+                                 OnClick="@(() => ToggleTag(tag.Name))">
+                            @tag.Name
+                        </MudChip>
+                    }
+                </MudStack>
+            </MudPaper>
+        }
+
+        @* Bug Metadata *@
+        <MudPaper Class="pa-3" Elevation="1">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Details</MudText>
+            <MudStack Spacing="1">
+                <div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Area Path:</MudText>
+                    <MudText Typo="Typo.body2">@Bug.AreaPath</MudText>
+                </div>
+                <div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Iteration:</MudText>
+                    <MudText Typo="Typo.body2">@Bug.IterationPath</MudText>
+                </div>
+                @if (Bug.CreatedDate.HasValue)
+                {
+                    <div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Created:</MudText>
+                        <MudText Typo="Typo.body2">@Bug.CreatedDate.Value.ToString("yyyy-MM-dd")</MudText>
+                    </div>
+                }
+            </MudStack>
+        </MudPaper>
+
+        @* Description *@
+        @if (!string.IsNullOrWhiteSpace(Bug.Description))
+        {
+            <MudPaper Class="pa-3" Elevation="1">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Description</MudText>
+                <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@Bug.Description</MudText>
+            </MudPaper>
+        }
+    </MudStack>
+</div>
+
+@code {
+    [Parameter]
+    public WorkItemWithValidationDto Bug { get; set; } = null!;
+
+    [Parameter]
+    public List<TriageTagDto> EnabledTags { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<(int BugId, string NewCriticality)> OnCriticalityChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<(int BugId, string TagName, bool IsAdded)> OnTagToggled { get; set; }
+
+    private string _currentCriticality = BugCriticality.Medium;
+    private HashSet<string> _activeTags = new();
+
+    protected override void OnParametersSet()
+    {
+        if (Bug != null)
+        {
+            // Initialize criticality and tags from bug
+            _currentCriticality = GetBugCriticality(Bug);
+            _activeTags = new HashSet<string>(GetBugTags(Bug), StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private async Task HandleCriticalityChanged(string newCriticality)
+    {
+        if (_currentCriticality != newCriticality)
+        {
+            _currentCriticality = newCriticality;
+            await OnCriticalityChanged.InvokeAsync((Bug.TfsId, newCriticality));
+        }
+    }
+
+    private async Task ToggleTag(string tagName)
+    {
+        var isAdded = !_activeTags.Contains(tagName);
+        
+        if (isAdded)
+        {
+            _activeTags.Add(tagName);
+        }
+        else
+        {
+            _activeTags.Remove(tagName);
+        }
+        
+        await OnTagToggled.InvokeAsync((Bug.TfsId, tagName, isAdded));
+    }
+
+    private string GetBugCriticality(WorkItemWithValidationDto bug)
+    {
+        return TfsFieldParser.GetBugCriticality(bug);
+    }
+
+    private List<string> GetBugTags(WorkItemWithValidationDto bug)
+    {
+        return TfsFieldParser.GetTags(bug);
+    }
+}
