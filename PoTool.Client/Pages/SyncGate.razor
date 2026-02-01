@@ -1,0 +1,376 @@
+@page "/sync-gate"
+@using Microsoft.AspNetCore.SignalR.Client
+@using PoTool.Client.Services
+@using PoTool.Shared.Settings
+@using System.Web
+@inject IProfileService ProfileService
+@inject CacheSyncService CacheSyncService
+@inject NavigationManager NavigationManager
+@inject HubConnection HubConnection
+@inject ISnackbar Snackbar
+@implements IAsyncDisposable
+
+<PageTitle>Preparing Workspace - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="d-flex flex-column align-center justify-center" Style="height: 100vh;">
+    <MudStack AlignItems="AlignItems.Center" Spacing="4">
+        @if (_isLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h5">Loading profile...</MudText>
+        }
+        else if (_errorMessage != null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">
+                <MudText Typo="Typo.body1">@_errorMessage</MudText>
+            </MudAlert>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RetryAsync">
+                Retry
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="GoToProfiles">
+                Back to Profiles
+            </MudButton>
+        }
+        else if (_cacheState != null)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.Sync" Size="Size.Large" Color="Color.Primary" 
+                     Class="@(_cacheState.SyncStatus == CacheSyncStatusDto.InProgress ? "rotating-icon" : "")" />
+            
+            <MudText Typo="Typo.h4" Align="Align.Center">
+                @GetStatusTitle()
+            </MudText>
+            
+            <MudText Typo="Typo.body1" Align="Align.Center" Style="color: var(--mud-palette-text-secondary);">
+                @GetStatusDescription()
+            </MudText>
+
+            @if (_cacheState.SyncStatus == CacheSyncStatusDto.InProgress)
+            {
+                <MudPaper Elevation="2" Class="pa-4" Style="width: 100%; max-width: 400px;">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);">
+                            @(_cacheState.CurrentSyncStage ?? "Syncing...")
+                        </MudText>
+                        <MudProgressLinear Color="Color.Primary" Value="@_cacheState.StageProgressPercent" />
+                    </MudStack>
+                </MudPaper>
+            }
+            else if (_cacheState.SyncStatus == CacheSyncStatusDto.Failed)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
+                    @(_cacheState.LastErrorMessage ?? "Sync failed. Please try again.")
+                </MudAlert>
+                
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="TriggerSyncAsync">
+                        Retry Sync
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="GoToProfiles">
+                        Back to Profiles
+                    </MudButton>
+                </MudStack>
+            }
+        }
+        else
+        {
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h5">Initializing...</MudText>
+        }
+    </MudStack>
+</MudContainer>
+
+<style>
+    .rotating-icon {
+        animation: rotate 2s linear infinite;
+    }
+    
+    @@keyframes rotate {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private int? _profileId;
+    private string? _profileName;
+    private CacheStateDto? _cacheState;
+    private string? _returnUrl;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ParseQueryParameters();
+        await InitializeAsync();
+    }
+    
+    private void ParseQueryParameters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+        _returnUrl = queryParams["returnUrl"];
+    }
+
+    private async Task InitializeAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        
+        try
+        {
+            // Get the active profile
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                // No profile selected, redirect to profiles page
+                NavigationManager.NavigateTo("/profiles", replace: true);
+                return;
+            }
+            
+            _profileId = activeProfile.Id;
+            _profileName = activeProfile.Name;
+            ProfileService.SetCachedActiveProfileId(_profileId);
+            
+            // Check cache status
+            _cacheState = await CacheSyncService.GetCacheStatusAsync(_profileId.Value);
+            
+            if (_cacheState == null)
+            {
+                // Create a default state - cache doesn't exist yet
+                _cacheState = new CacheStateDto
+                {
+                    ProductOwnerId = _profileId.Value,
+                    SyncStatus = CacheSyncStatusDto.Idle,
+                    LastSuccessfulSync = null
+                };
+            }
+            
+            // Check if cache is already ready
+            if (_cacheState.LastSuccessfulSync.HasValue)
+            {
+                // Cache is ready, navigate to home
+                NavigateToTarget();
+                return;
+            }
+            
+            // Cache needs sync - setup SignalR and trigger sync
+            await SetupSignalRAsync();
+            
+            // Only trigger sync if not already in progress
+            if (_cacheState.SyncStatus != CacheSyncStatusDto.InProgress)
+            {
+                await TriggerSyncAsync();
+            }
+            else
+            {
+                // Sync already in progress, start polling as backup
+                _ = StartPollingAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to initialize: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SetupSignalRAsync()
+    {
+        if (_profileId == null) return;
+        
+        try
+        {
+            if (HubConnection.State == HubConnectionState.Disconnected)
+            {
+                await HubConnection.StartAsync();
+            }
+
+            // Join the ProductOwner group for updates
+            await HubConnection.InvokeAsync("JoinProductOwnerGroup", _profileId.Value);
+
+            // Handle progress updates
+            HubConnection.On<SyncProgressUpdateDto>("SyncProgress", OnSyncProgress);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SyncGate] SignalR setup failed: {ex.Message}");
+            // Fall back to polling
+            _ = StartPollingAsync();
+        }
+    }
+
+    private void OnSyncProgress(SyncProgressUpdateDto update)
+    {
+        if (_cacheState != null)
+        {
+            _cacheState.SyncStatus = update.HasFailed ? CacheSyncStatusDto.Failed :
+                         update.IsComplete ? CacheSyncStatusDto.Success :
+                         CacheSyncStatusDto.InProgress;
+            _cacheState.CurrentSyncStage = update.CurrentStage;
+            _cacheState.StageProgressPercent = update.StageProgressPercent;
+            _cacheState.LastErrorMessage = update.ErrorMessage;
+
+            InvokeAsync(() =>
+            {
+                StateHasChanged();
+
+                // Navigate when complete
+                if (update.IsComplete && !update.HasFailed)
+                {
+                    NavigateToTarget();
+                }
+            });
+        }
+    }
+
+    private async Task StartPollingAsync()
+    {
+        if (_profileId == null) return;
+        
+        while (_cacheState?.SyncStatus == CacheSyncStatusDto.InProgress || 
+               (_cacheState?.SyncStatus == CacheSyncStatusDto.Idle && !_cacheState.LastSuccessfulSync.HasValue))
+        {
+            await Task.Delay(2000);
+            
+            try
+            {
+                var newState = await CacheSyncService.GetCacheStatusAsync(_profileId.Value);
+                if (newState != null)
+                {
+                    _cacheState = newState;
+                    await InvokeAsync(StateHasChanged);
+                    
+                    // Navigate when complete
+                    if (_cacheState.LastSuccessfulSync.HasValue)
+                    {
+                        NavigateToTarget();
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[SyncGate] Polling error: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task TriggerSyncAsync()
+    {
+        if (_profileId == null) return;
+        
+        try
+        {
+            var result = await CacheSyncService.TriggerSyncAsync(_profileId.Value);
+            if (result.Success)
+            {
+                // Update local state to show syncing
+                if (_cacheState != null)
+                {
+                    _cacheState.SyncStatus = CacheSyncStatusDto.InProgress;
+                    _cacheState.CurrentSyncStage = "Starting...";
+                }
+                
+                // Start polling as backup
+                _ = StartPollingAsync();
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Failed to start sync", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to start sync: {ex.Message}";
+        }
+    }
+
+    private async Task RetryAsync()
+    {
+        _errorMessage = null;
+        await InitializeAsync();
+    }
+
+    private void GoToProfiles()
+    {
+        NavigationManager.NavigateTo("/profiles", replace: true);
+    }
+
+    private void NavigateToTarget()
+    {
+        // Navigate to return URL if valid, otherwise to home
+        var targetUrl = "/home";
+        if (!string.IsNullOrEmpty(_returnUrl) && IsValidReturnUrl(_returnUrl))
+        {
+            targetUrl = _returnUrl;
+        }
+        NavigationManager.NavigateTo(targetUrl, replace: true);
+    }
+    
+    /// <summary>
+    /// Validates return URL to prevent open redirect vulnerabilities.
+    /// Only allows relative paths starting with "/" that don't contain "//" (protocol).
+    /// </summary>
+    private static bool IsValidReturnUrl(string url)
+    {
+        // Must be a relative path starting with "/"
+        if (!url.StartsWith("/"))
+            return false;
+        
+        // Must not contain "//" after the first character (could be a protocol like "//evil.com")
+        if (url.Length > 1 && url.Contains("//"))
+            return false;
+        
+        // Must not contain a colon (could be a protocol like "/https://evil.com")
+        if (url.Contains(':'))
+            return false;
+        
+        return true;
+    }
+
+    private string GetStatusTitle()
+    {
+        return _cacheState?.SyncStatus switch
+        {
+            CacheSyncStatusDto.InProgress => "Preparing Your Workspace",
+            CacheSyncStatusDto.Success => "Workspace Ready",
+            CacheSyncStatusDto.Failed => "Sync Failed",
+            _ => "Initializing Workspace"
+        };
+    }
+
+    private string GetStatusDescription()
+    {
+        var profileText = !string.IsNullOrEmpty(_profileName) ? $" for {_profileName}" : "";
+        
+        return _cacheState?.SyncStatus switch
+        {
+            CacheSyncStatusDto.InProgress => $"Loading work items and data{profileText}. This may take a moment...",
+            CacheSyncStatusDto.Success => "Your data is ready. Redirecting...",
+            CacheSyncStatusDto.Failed => "There was a problem loading your data. You can try again or select a different profile.",
+            _ => $"Setting up your workspace{profileText}..."
+        };
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_profileId.HasValue && HubConnection.State == HubConnectionState.Connected)
+            {
+                await HubConnection.InvokeAsync("LeaveProductOwnerGroup", _profileId.Value);
+            }
+        }
+        catch
+        {
+            // Ignore disposal errors
+        }
+    }
+}

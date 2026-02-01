@@ -49,14 +49,15 @@
                     NavigationManager.NavigateTo("/profiles", replace: true);
                     break;
                 default:
-                    NavigationManager.NavigateTo("/home", replace: true);
+                    // Navigate to sync-gate which ensures cache is ready before showing home
+                    NavigationManager.NavigateTo("/sync-gate?returnUrl=%2Fhome", replace: true);
                     break;
             }
         }
         else
         {
-            // Fallback to home if readiness check fails
-            NavigationManager.NavigateTo("/home", replace: true);
+            // Fallback to sync-gate if readiness check fails
+            NavigationManager.NavigateTo("/sync-gate?returnUrl=%2Fhome", replace: true);
         }
     }
 }
