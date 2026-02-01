@@ -154,6 +154,16 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<CachedPipelineRunEntity> CachedPipelineRuns => Set<CachedPipelineRunEntity>();
 
+    /// <summary>
+    /// Bug triage state tracking (local, not persisted to TFS).
+    /// </summary>
+    public DbSet<BugTriageStateEntity> BugTriageStates => Set<BugTriageStateEntity>();
+
+    /// <summary>
+    /// Triage tag catalog (configurable list of tags for Bugs Triage).
+    /// </summary>
+    public DbSet<TriageTagEntity> TriageTags => Set<TriageTagEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -483,6 +493,22 @@ public class PoToolDbContext : DbContext
             // Existing configuration is in the base entity block above
             // Just adding the new field configurations here
             entity.Property(e => e.TfsETag).HasMaxLength(100);
+        });
+
+        // Bug triage state
+        modelBuilder.Entity<BugTriageStateEntity>(entity =>
+        {
+            entity.HasIndex(e => e.BugId)
+                .IsUnique();
+        });
+
+        // Triage tags
+        modelBuilder.Entity<TriageTagEntity>(entity =>
+        {
+            entity.HasIndex(e => e.Name)
+                .IsUnique();
+
+            entity.HasIndex(e => e.DisplayOrder);
         });
     }
 }

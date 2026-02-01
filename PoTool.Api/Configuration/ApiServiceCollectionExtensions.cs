@@ -236,6 +236,10 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<TfsAuthenticationProvider>();
         services.AddScoped<ProfileFilterService>();
 
+        // Register Bug Triage services
+        services.AddScoped<BugTriageStateService>();
+        services.AddScoped<TriageTagService>();
+
         // Register TFS throttling and request services (used by RealTfsClient)
         services.AddSingleton<TfsRequestThrottler>();
         services.AddScoped<TfsRequestSender>();
