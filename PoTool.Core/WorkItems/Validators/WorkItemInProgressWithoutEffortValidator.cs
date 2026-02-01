@@ -51,7 +51,8 @@ public class WorkItemInProgressWithoutEffortValidator : IWorkItemValidator
                 {
                     new ValidationIssue(
                         ErrorSeverity,
-                        "Work item in progress must have effort estimate"
+                        "Work item in progress must have effort estimate",
+                        "RC-2"
                     )
                 };
             }

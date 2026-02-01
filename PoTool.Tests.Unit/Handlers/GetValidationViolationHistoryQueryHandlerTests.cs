@@ -78,7 +78,7 @@ public class GetValidationViolationHistoryQueryHandlerTests
         {
             [2] = new List<ValidationIssue>
             {
-                new ValidationIssue("Error", "Parent 'Goal' is not in progress")
+                new ValidationIssue("Error", "Parent 'Goal' is not in progress", "RR-3")
             }
         };
 

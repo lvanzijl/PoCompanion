@@ -90,6 +90,7 @@ public class WorkItemParentProgressValidatorTests
         Assert.HasCount(1, issues, "Should have one error");
         Assert.AreEqual("Error", issues[0].Severity);
         Assert.Contains("Parent", issues[0].Message, "Message should mention parent");
+        Assert.AreEqual("RR-3", issues[0].RuleId, "RuleId should be RR-3");
     }
 
     [TestMethod]
@@ -115,6 +116,7 @@ public class WorkItemParentProgressValidatorTests
         Assert.IsTrue(result.ContainsKey(2));
         Assert.HasCount(1, result[2]);
         Assert.AreEqual("Error", result[2][0].Severity);
+        Assert.AreEqual("RR-3", result[2][0].RuleId, "Epic error should have RuleId RR-3");
 
         // Feature has warning for grandparent being New
 
@@ -123,6 +125,7 @@ public class WorkItemParentProgressValidatorTests
         Assert.HasCount(1, result[3]);
         Assert.AreEqual("Warning", result[3][0].Severity);
         Assert.Contains("Ancestor", result[3][0].Message, "Message should mention ancestor");
+        Assert.AreEqual("RR-3", result[3][0].RuleId, "Feature warning should have RuleId RR-3");
     }
 
     [TestMethod]
@@ -153,6 +156,8 @@ public class WorkItemParentProgressValidatorTests
 
         Assert.IsNotNull(error, "Should have an error for immediate parent");
         Assert.IsNotNull(warning, "Should have a warning for ancestor");
+        Assert.AreEqual("RR-3", error.RuleId, "Error should have RuleId RR-3");
+        Assert.AreEqual("RR-3", warning.RuleId, "Warning should have RuleId RR-3");
     }
 
     [TestMethod]

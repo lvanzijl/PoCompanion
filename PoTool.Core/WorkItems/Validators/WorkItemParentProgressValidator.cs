@@ -59,7 +59,8 @@ public class WorkItemParentProgressValidator : IWorkItemValidator
                     {
                         issues.Add(new ValidationIssue(
                             ErrorSeverity,
-                            $"Parent '{parent.Type}' is not in progress (state: {parent.State})"
+                            $"Parent '{parent.Type}' is not in progress (state: {parent.State})",
+                            "RR-3"
                         ));
                     }
                 }
@@ -81,7 +82,8 @@ public class WorkItemParentProgressValidator : IWorkItemValidator
                         {
                             issues.Add(new ValidationIssue(
                                 WarningSeverity,
-                                $"Ancestor '{ancestor.Type}' is not in progress (state: {ancestor.State})"
+                                $"Ancestor '{ancestor.Type}' is not in progress (state: {ancestor.State})",
+                                "RR-3"
                             ));
                         }
                     }
