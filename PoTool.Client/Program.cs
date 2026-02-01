@@ -160,6 +160,11 @@ builder.Services.AddScoped<IStartupOrchestratorService, StartupOrchestratorServi
 builder.Services.AddScoped<INavigationContextService, NavigationContextService>();
 builder.Services.AddScoped<CacheSyncService>();
 
+// Register bug triage services
+builder.Services.AddScoped<BugTriageService>();
+builder.Services.AddScoped<TriageTagService>();
+builder.Services.AddScoped<BugTreeBuilderService>();
+
 // Register browser-based storage services
 builder.Services.AddScoped<IPreferencesService, BrowserPreferencesService>();
 builder.Services.AddScoped<ISecureStorageService, BrowserSecureStorageService>();
