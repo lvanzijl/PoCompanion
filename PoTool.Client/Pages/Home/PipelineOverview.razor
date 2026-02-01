@@ -1,17 +1,17 @@
-@page "/home/pull-requests"
+@page "/home/pipelines"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Services
-@using PoTool.Client.Pages.Beta.Components
+@using PoTool.Client.Pages.Home.Components
 @using System.Web
 @inject IProfileService ProfileService
-@inject PullRequestService PullRequestService
+@inject PipelineService PipelineService
 @inject ProductService ProductService
 @inject TeamService TeamService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
-<PageTitle>Pull Request Insights - PO Companion</PageTitle>
+<PageTitle>Pipeline Insights - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @* Workspace Header *@
@@ -21,7 +21,7 @@
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudIcon Icon="@Icons.Material.Filled.Insights" Color="Color.Info" Size="Size.Large" />
                     <MudText Typo="Typo.h4">
-                        Pull Request Insights
+                        Pipeline Insights
                     </MudText>
                 </MudStack>
                 
@@ -44,8 +44,11 @@
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
-        <MudAlert Severity="Severity.Error" Class="mb-4">
+        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
             @_errorMessage
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadPipelineDataAsync" Class="ml-2">
+                Retry
+            </MudButton>
         </MudAlert>
     }
     else
@@ -94,94 +97,66 @@
 
         @* Metrics Grid *@
         <MudGrid Spacing="3">
-            @* Lead Time to Merge *@
+            @* Build Success Rate *@
             <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Lead Time to Merge"
-                           Result="_leadTimeToMerge"
+                <MetricCard Title="Build Success Rate"
+                           Result="_buildSuccessRate"
+                           ValueFormat="MetricValueFormat.Percentage"
+                           ItemLabel="builds"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+
+            @* Build Failure Rate *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="Build Failure Rate"
+                           Result="_buildFailureRate"
+                           ValueFormat="MetricValueFormat.Percentage"
+                           ItemLabel="builds"
+                           IsLoading="_metricsLoading" />
+            </MudItem>
+
+            @* Mean Time To Repair (MTTR) *@
+            <MudItem xs="12" sm="6" md="4">
+                <MetricCard Title="Mean Time To Repair (MTTR)"
+                           Result="_mttr"
                            ValueFormat="MetricValueFormat.Hours"
-                           ItemLabel="PRs"
+                           ItemLabel="builds"
                            IsLoading="_metricsLoading" />
             </MudItem>
 
-            @* Cycle Time *@
+            @* Pipeline Duration *@
             <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Cycle Time"
-                           Result="_cycleTime"
+                <MetricCard Title="Pipeline Duration"
+                           Result="_pipelineDuration"
                            ValueFormat="MetricValueFormat.Hours"
-                           ItemLabel="PRs"
+                           ItemLabel="builds"
                            IsLoading="_metricsLoading" />
             </MudItem>
 
-            @* Time to First Review *@
+            @* Time to First Failure Detection *@
             <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Time to First Review"
-                           Result="_timeToFirstReview"
+                <MetricCard Title="Time to First Failure Detection"
+                           Result="_timeToFirstFailure"
                            ValueFormat="MetricValueFormat.Hours"
-                           ItemLabel="PRs"
+                           ItemLabel="builds"
                            IsLoading="_metricsLoading" />
             </MudItem>
 
-            @* Review Duration *@
+            @* Flakiness Rate *@
             <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Review Duration"
-                           Result="_reviewDuration"
-                           ValueFormat="MetricValueFormat.Hours"
-                           ItemLabel="PRs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
-
-            @* PR Size - Lines Changed *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="PR Size (Lines Changed)"
-                           Result="_prSizeLines"
-                           ValueFormat="MetricValueFormat.Count"
-                           ItemLabel="PRs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
-
-            @* PR Size - Files Changed *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="PR Size (Files Changed)"
-                           Result="_prSizeFiles"
-                           ValueFormat="MetricValueFormat.Count"
-                           ItemLabel="PRs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
-
-            @* Rework Rate *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Rework Rate (Post-Review Commits)"
-                           Result="_reworkRate"
-                           ValueFormat="MetricValueFormat.Count"
-                           ItemLabel="PRs"
+                <MetricCard Title="Flakiness Rate"
+                           Result="_flakinessRate"
+                           ValueFormat="MetricValueFormat.Percentage"
+                           ItemLabel="builds"
                            IsLoading="_metricsLoading" />
             </MudItem>
         </MudGrid>
 
-        @if (_pullRequests.Count == 0 && !_metricsLoading)
+        @if (_pipelineRuns.Count == 0 && !_metricsLoading)
         {
             <MudPaper Elevation="2" Class="pa-6 mt-4">
                 <MudAlert Severity="Severity.Info">
-                    @if (_products.Count == 0)
-                    {
-                        <text>No products configured. Please configure products in your profile settings to view pull request data.</text>
-                    }
-                    else if (_selectedProductId.HasValue)
-                    {
-                        var selectedProduct = _products.FirstOrDefault(p => p.Id == _selectedProductId.Value);
-                        var productName = selectedProduct?.Name ?? "selected product";
-                        <text>No pull request data found for @productName and the selected time range.</text>
-                    }
-                    else if (_selectedTeamId.HasValue)
-                    {
-                        var selectedTeam = _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value);
-                        var teamName = selectedTeam?.Name ?? "selected team";
-                        <text>No pull request data found for @teamName and the selected time range. The team may not be linked to any products with pull request data.</text>
-                    }
-                    else
-                    {
-                        <text>No pull request data found for the selected filters and time range.</text>
-                    }
+                    No pipeline data found for the selected team/product and time range.
                 </MudAlert>
             </MudPaper>
         }
@@ -201,23 +176,19 @@
     private List<TeamDto> _teams = new();
     private List<ProductDto> _products = new();
     
-    // PR Data
-    private List<PullRequestDto> _pullRequests = new();
-    private List<PullRequestMetricsDto> _metrics = new();
-    private Dictionary<int, List<PullRequestCommentDto>> _prComments = new();
-    private Dictionary<int, List<PullRequestIterationDto>> _prIterations = new();
+    // Pipeline Data
+    private List<PipelineRunDto> _pipelineRuns = new();
     
     // Calculated Metrics
-    private MetricResult? _leadTimeToMerge;
-    private MetricResult? _cycleTime;
-    private MetricResult? _timeToFirstReview;
-    private MetricResult? _reviewDuration;
-    private MetricResult? _prSizeLines;
-    private MetricResult? _prSizeFiles;
-    private MetricResult? _reworkRate;
+    private MetricResult? _buildSuccessRate;
+    private MetricResult? _buildFailureRate;
+    private MetricResult? _mttr;
+    private MetricResult? _pipelineDuration;
+    private MetricResult? _timeToFirstFailure;
+    private MetricResult? _flakinessRate;
     
     // Calculator
-    private readonly PullRequestInsightsCalculator _calculator = new();
+    private readonly PipelineInsightsCalculator _calculator = new();
     
     protected override async Task OnInitializedAsync()
     {
@@ -240,15 +211,15 @@
             // Parse URL parameters
             ParseQueryParameters();
             
-            // Load PR data and calculate metrics
-            await LoadPullRequestDataAsync();
+            // Load pipeline data and calculate metrics
+            await LoadPipelineDataAsync();
             
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
         {
             _errorMessage = ex.Message;
-            Snackbar.Add($"Error loading pull request insights: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error loading pipeline insights: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -276,9 +247,10 @@
         }
     }
     
-    private async Task LoadPullRequestDataAsync()
+    private async Task LoadPipelineDataAsync()
     {
         _metricsLoading = true;
+        _errorMessage = null;
         StateHasChanged();
         
         try
@@ -288,99 +260,45 @@
             
             if (_selectedProductId.HasValue)
             {
-                // Specific product selected
                 productIds = new List<int> { _selectedProductId.Value };
             }
             else if (_selectedTeamId.HasValue)
             {
-                // Team selected: find all products linked to this team
-                var selectedTeam = _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value);
-                if (selectedTeam != null)
+                // TODO: Implement proper team-to-product relationship filtering
+                // Currently loads all products when a team is selected
+                // This requires querying ProductTeamLink entities to get products for selected team
+                var teamProducts = _products.Select(p => p.Id).ToList();
+                
+                if (teamProducts.Any())
                 {
-                    // Filter products that have this team in their TeamIds list
-                    productIds = _products
-                        .Where(p => p.TeamIds != null && p.TeamIds.Contains(_selectedTeamId.Value))
-                        .Select(p => p.Id)
-                        .ToList();
+                    productIds = teamProducts;
                 }
-                else
-                {
-                    // Team not found, show no PRs
-                    productIds = new List<int>();
-                }
-            }
-            else
-            {
-                // Default: Load PRs for all user's products when no specific filter is selected
-                // This ensures the cached read provider returns relevant data
-                productIds = _products.Select(p => p.Id).ToList();
             }
             
             // Build product IDs string
-            var productIdsStr = productIds != null && productIds.Any() ? string.Join(",", productIds) : null;
+            var productIdsStr = productIds != null ? string.Join(",", productIds) : null;
             
-            // Load PRs (filtered by product, last 6 months)
-            var fromDate = DateTimeOffset.UtcNow.AddMonths(-6);
-            _pullRequests = (await PullRequestService.GetFilteredAsync(
-                productIds: productIdsStr,
-                fromDate: fromDate
-            )).ToList();
+            // Load pipeline runs (will be empty until API client is regenerated)
+            // For now, we'll use metrics to simulate the data
+            _pipelineRuns = (await PipelineService.GetRunsForProductsAsync(productIdsStr)).ToList();
             
-            // Load metrics
-            _metrics = (await PullRequestService.GetMetricsAsync(
-                productIds: productIdsStr,
-                fromDate: fromDate
-            )).ToList();
-            
-            // Load comments and iterations for each PR in parallel
-            var prIds = _pullRequests.Select(pr => pr.Id).ToList();
-            var commentTasks = prIds.Select(async prId =>
+            // If we don't have runs yet (API not ready), use metrics as fallback
+            if (_pipelineRuns.Count == 0)
             {
-                try
-                {
-                    var comments = await PullRequestService.GetCommentsAsync(prId);
-                    return (prId, comments: comments.ToList());
-                }
-                catch (Exception)
-                {
-                    return (prId, comments: new List<PullRequestCommentDto>());
-                }
-            });
-            
-            var iterationTasks = prIds.Select(async prId =>
-            {
-                try
-                {
-                    var iterations = await PullRequestService.GetIterationsAsync(prId);
-                    return (prId, iterations: iterations.ToList());
-                }
-                catch (Exception)
-                {
-                    return (prId, iterations: new List<PullRequestIterationDto>());
-                }
-            });
-            
-            var commentResults = await Task.WhenAll(commentTasks);
-            var iterationResults = await Task.WhenAll(iterationTasks);
-            
-            _prComments.Clear();
-            foreach (var (prId, comments) in commentResults)
-            {
-                _prComments[prId] = comments;
+                var metrics = (await PipelineService.GetMetricsAsync(productIdsStr)).ToList();
+                
+                // Calculate metrics from aggregated data
+                CalculateMetricsFromAggregates(metrics);
             }
-            
-            _prIterations.Clear();
-            foreach (var (prId, iterations) in iterationResults)
+            else
             {
-                _prIterations[prId] = iterations;
+                // Calculate metrics from individual runs
+                CalculateMetrics();
             }
-            
-            // Calculate metrics
-            CalculateMetrics();
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to load pull request data: {ex.Message}";
+            _errorMessage = $"Failed to load pipeline data: {ex.Message}";
             Snackbar.Add(_errorMessage, Severity.Error);
         }
         finally
@@ -392,30 +310,106 @@
     
     private void CalculateMetrics()
     {
-        _leadTimeToMerge = _calculator.CalculateLeadTimeToMerge(_pullRequests);
-        _cycleTime = _calculator.CalculateCycleTime(_pullRequests);
-        _timeToFirstReview = _calculator.CalculateTimeToFirstReview(_pullRequests, _prComments);
-        _reviewDuration = _calculator.CalculateReviewDuration(_pullRequests, _prComments);
+        _buildSuccessRate = _calculator.CalculateBuildSuccessRate(_pipelineRuns);
+        _buildFailureRate = _calculator.CalculateBuildFailureRate(_pipelineRuns);
+        _mttr = _calculator.CalculateMTTR(_pipelineRuns);
+        _pipelineDuration = _calculator.CalculatePipelineDuration(_pipelineRuns);
+        _timeToFirstFailure = _calculator.CalculateTimeToFirstFailureDetection(_pipelineRuns);
+        _flakinessRate = _calculator.CalculateFlakinessRate(_pipelineRuns);
+    }
+    
+    private void CalculateMetricsFromAggregates(List<PipelineMetricsDto> metrics)
+    {
+        // Calculate success and failure rates from aggregated metrics
+        var totalRuns = metrics.Sum(m => m.TotalRuns);
+        var totalSuccessful = metrics.Sum(m => m.SuccessfulRuns);
+        var totalFailed = metrics.Sum(m => m.FailedRuns + m.PartiallySucceededRuns);
         
-        var prSize = _calculator.CalculatePRSize(_metrics);
-        _prSizeLines = prSize.LinesChanged;
-        _prSizeFiles = prSize.FilesChanged;
+        if (totalRuns > 0)
+        {
+            var successRate = (double)totalSuccessful / totalRuns * 100;
+            _buildSuccessRate = new MetricResult(successRate, null, totalRuns, null);
+            
+            var failureRate = (double)totalFailed / totalRuns * 100;
+            _buildFailureRate = new MetricResult(failureRate, null, totalRuns, null);
+        }
+        else
+        {
+            _buildSuccessRate = new MetricResult(null, null, 0, null);
+            _buildFailureRate = new MetricResult(null, null, 0, null);
+        }
         
-        _reworkRate = _calculator.CalculateReworkRate(_pullRequests, _prComments, _prIterations);
+        // Calculate duration from average durations
+        var durationsInHours = metrics
+            .Where(m => m.AverageDuration.HasValue)
+            .Select(m => m.AverageDuration!.Value.TotalHours)
+            .OrderBy(x => x)
+            .ToList();
+        
+        if (durationsInHours.Count > 0)
+        {
+            var medianDuration = CalculateMedian(durationsInHours);
+            var p75Duration = CalculatePercentile(durationsInHours, 75);
+            _pipelineDuration = new MetricResult(medianDuration, p75Duration, durationsInHours.Count, null);
+        }
+        else
+        {
+            _pipelineDuration = new MetricResult(null, null, 0, null);
+        }
+        
+        // MTTR, time to first failure, and flakiness require individual run data
+        // These will be null until we have access to detailed runs
+        _mttr = new MetricResult(null, null, 0, null);
+        _timeToFirstFailure = new MetricResult(null, null, 0, null);
+        _flakinessRate = new MetricResult(null, null, 0, null);
+    }
+    
+    private double? CalculateMedian(List<double> sortedValues)
+    {
+        if (sortedValues.Count == 0)
+            return null;
+
+        int mid = sortedValues.Count / 2;
+        if (sortedValues.Count % 2 == 0)
+        {
+            return (sortedValues[mid - 1] + sortedValues[mid]) / 2.0;
+        }
+        return sortedValues[mid];
+    }
+    
+    private double? CalculatePercentile(List<double> sortedValues, int percentile)
+    {
+        if (sortedValues.Count == 0)
+            return null;
+
+        double rank = (percentile / 100.0) * (sortedValues.Count - 1);
+        int lowerIndex = (int)Math.Floor(rank);
+        int upperIndex = (int)Math.Ceiling(rank);
+
+        if (lowerIndex == upperIndex)
+        {
+            return sortedValues[lowerIndex];
+        }
+
+        double lowerValue = sortedValues[lowerIndex];
+        double upperValue = sortedValues[upperIndex];
+        double fraction = rank - lowerIndex;
+
+        return lowerValue + (upperValue - lowerValue) * fraction;
     }
     
     private async Task OnTeamChanged(int? teamId)
     {
         _selectedTeamId = teamId;
         UpdateUrlParameters();
-        await LoadPullRequestDataAsync();
+        await LoadPipelineDataAsync();
     }
     
     private async Task OnProductChanged(int? productId)
     {
         _selectedProductId = productId;
         UpdateUrlParameters();
-        await LoadPullRequestDataAsync();
+        await LoadPipelineDataAsync();
     }
     
     private void UpdateUrlParameters()
@@ -433,7 +427,7 @@
         }
         
         var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
-        var newUrl = $"{WorkspaceRoutes.PrOverview}{queryString}";
+        var newUrl = $"{WorkspaceRoutes.PipelineOverview}{queryString}";
         
         NavigationManager.NavigateTo(newUrl, forceLoad: false);
     }
@@ -444,7 +438,7 @@
         {
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
             new("Trends (Past)", WorkspaceRoutes.TrendsWorkspace, icon: Icons.Material.Filled.Timeline),
-            new("PR Insights", null, disabled: true, icon: Icons.Material.Filled.Insights)
+            new("Pipeline Insights", null, disabled: true, icon: Icons.Material.Filled.Insights)
         };
     }
     

@@ -6,7 +6,7 @@ namespace PoTool.Client.Services;
 /// Service for persisting epic ordering in local storage.
 /// Decision #8: Epic ordering is stored as a view preference (local storage only).
 /// </summary>
-public interface IBetaEpicOrderingService
+public interface IEpicOrderingService
 {
     /// <summary>
     /// Gets the saved epic order for a given profile.
@@ -25,14 +25,14 @@ public interface IBetaEpicOrderingService
 }
 
 /// <summary>
-/// Implementation of IBetaEpicOrderingService using browser localStorage.
+/// Implementation of IEpicOrderingService using browser localStorage.
 /// </summary>
-public class BetaEpicOrderingService : IBetaEpicOrderingService
+public class EpicOrderingService : IEpicOrderingService
 {
     private readonly IJSRuntime _jsRuntime;
-    private const string StorageKeyPrefix = "beta-epic-ordering-";
+    private const string StorageKeyPrefix = "epic-ordering-";
 
-    public BetaEpicOrderingService(IJSRuntime jsRuntime)
+    public EpicOrderingService(IJSRuntime jsRuntime)
     {
         _jsRuntime = jsRuntime;
     }

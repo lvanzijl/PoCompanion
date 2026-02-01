@@ -4,13 +4,13 @@ using MudBlazor;
 using PoTool.Client.Models;
 using PoTool.Client.Services;
 
-namespace PoTool.Client.Pages.Beta;
+namespace PoTool.Client.Pages.Home;
 
 /// <summary>
-/// Base class for Beta workspace pages providing shared functionality
+/// Base class for Home workspace pages providing shared functionality
 /// for context propagation and navigation.
 /// </summary>
-public abstract class BetaWorkspaceBase : ComponentBase
+public abstract class WorkspaceBase : ComponentBase
 {
     [Inject]
     protected IProfileService ProfileService { get; set; } = default!;
