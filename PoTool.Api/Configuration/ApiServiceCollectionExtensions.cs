@@ -198,25 +198,31 @@ public static class ApiServiceCollectionExtensions
             services.AddSingleton<BattleshipMockDataFacade>();
         }
 
-        // Register legacy validators (existing validation)
+        // Legacy validators are being phased out in favor of hierarchical validation
+        // WorkItemInProgressWithoutEffortValidator is replaced by PbiEffortEmptyRule (RC-2)
         services.AddScoped<WorkItemParentProgressValidator>();
-        services.AddScoped<WorkItemInProgressWithoutEffortValidator>();
         services.AddScoped<IWorkItemValidator>(provider =>
         {
             var validators = new List<IWorkItemValidator>
             {
-                provider.GetRequiredService<WorkItemParentProgressValidator>(),
-                provider.GetRequiredService<WorkItemInProgressWithoutEffortValidator>()
+                provider.GetRequiredService<WorkItemParentProgressValidator>()
+                // WorkItemInProgressWithoutEffortValidator removed - replaced by RC-2 hierarchical rule
             };
             return new CompositeWorkItemValidator(validators);
         });
 
         // Register hierarchical validation rules (new validation system)
+        // Structural Integrity (SI) rules
         services.AddScoped<IHierarchicalValidationRule, DoneParentWithUnfinishedDescendantsRule>();
         services.AddScoped<IHierarchicalValidationRule, RemovedParentWithUnfinishedDescendantsRule>();
         services.AddScoped<IHierarchicalValidationRule, NewParentWithInProgressDescendantsRule>();
+        
+        // Refinement Readiness (RR) rules
         services.AddScoped<IHierarchicalValidationRule, EpicDescriptionEmptyRule>();
         services.AddScoped<IHierarchicalValidationRule, FeatureDescriptionEmptyRule>();
+        services.AddScoped<IHierarchicalValidationRule, EpicWithoutFeaturesRule>();
+        
+        // Refinement Completeness (RC) rules
         services.AddScoped<IHierarchicalValidationRule, PbiDescriptionEmptyRule>();
         services.AddScoped<IHierarchicalValidationRule, PbiEffortEmptyRule>();
         services.AddScoped<IHierarchicalValidationRule, FeatureWithoutChildrenRule>();

@@ -28,9 +28,11 @@ public class HierarchicalWorkItemValidatorTests
             // Refinement Readiness rules
             new EpicDescriptionEmptyRule(mockStateService),
             new FeatureDescriptionEmptyRule(mockStateService),
+            new EpicWithoutFeaturesRule(mockStateService),
             // Refinement Completeness rules
             new PbiDescriptionEmptyRule(mockStateService),
-            new PbiEffortEmptyRule(mockStateService)
+            new PbiEffortEmptyRule(mockStateService),
+            new FeatureWithoutChildrenRule(mockStateService)
         };
 
         _validator = new HierarchicalWorkItemValidator(rules);
@@ -135,8 +137,8 @@ public class HierarchicalWorkItemValidatorTests
         // Arrange: Valid tree with all descriptions and effort
         var items = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Epic", "In Progress", null, "Epic description", null),
-            CreateWorkItem(2, "Feature", "In Progress", 1, "Feature description", null),
+            CreateWorkItem(1, "Epic", "In Progress", null, "Epic description", 100),
+            CreateWorkItem(2, "Feature", "In Progress", 1, "Feature description", 40),
             CreateWorkItem(3, "Product Backlog Item", "In Progress", 2, "PBI description", 8)
         };
 
@@ -329,8 +331,8 @@ public class HierarchicalWorkItemValidatorTests
         // Arrange: Fully complete tree
         var items = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Epic", "In Progress", null, "Epic description", null),
-            CreateWorkItem(2, "Feature", "In Progress", 1, "Feature description", null),
+            CreateWorkItem(1, "Epic", "In Progress", null, "Epic description", 100),
+            CreateWorkItem(2, "Feature", "In Progress", 1, "Feature description", 40),
             CreateWorkItem(3, "Product Backlog Item", "In Progress", 2, "PBI description", 8)
         };
 

@@ -310,6 +310,123 @@ public class RefinementReadinessRulesTests
 
     #endregion
 
+    #region RR-3: Epic without Features
+
+    [TestMethod]
+    public void RR3_EpicWithFeatures_NoViolation()
+    {
+        // Arrange
+        var rule = new EpicWithoutFeaturesRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Epic description"),
+            CreateWorkItem(2, "Feature", "New", 1, "Feature description")
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results, "Epic with Features should not violate");
+    }
+
+    [TestMethod]
+    public void RR3_EpicWithoutFeatures_HasViolation()
+    {
+        // Arrange
+        var rule = new EpicWithoutFeaturesRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Epic description")
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.HasCount(1, results);
+        Assert.AreEqual(1, results[0].WorkItemId);
+        Assert.AreEqual("RR-3", results[0].Rule.RuleId);
+        Assert.AreEqual(ValidationCategory.RefinementReadiness, results[0].Rule.Category);
+        Assert.AreEqual(ValidationConsequence.RefinementBlocker, results[0].Rule.Consequence);
+        Assert.AreEqual(ResponsibleParty.ProductOwner, results[0].Rule.ResponsibleParty);
+    }
+
+    [TestMethod]
+    public void RR3_EpicWithPbisButNoFeatures_HasViolation()
+    {
+        // Arrange: Epic has PBIs but no Features (invalid hierarchy)
+        var rule = new EpicWithoutFeaturesRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Epic description"),
+            CreateWorkItem(2, "Product Backlog Item", "New", 1, "PBI description")
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.HasCount(1, results, "Epic should have Feature children, not PBI children");
+    }
+
+    [TestMethod]
+    public void RR3_DoneEpicWithoutFeatures_NoViolation()
+    {
+        // Arrange: Done items should be skipped
+        var rule = new EpicWithoutFeaturesRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "Done", null, "Epic description")
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results, "Done Epics should not be validated");
+    }
+
+    [TestMethod]
+    public void RR3_RemovedEpicWithoutFeatures_NoViolation()
+    {
+        // Arrange: Removed items should be skipped
+        var rule = new EpicWithoutFeaturesRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "Removed", null, "Epic description")
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results, "Removed Epics should not be validated");
+    }
+
+    [TestMethod]
+    public void RR3_MultipleEpics_ValidatesAll()
+    {
+        // Arrange
+        var rule = new EpicWithoutFeaturesRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Epic 1"),
+            CreateWorkItem(2, "Feature", "New", 1, "Feature of Epic 1"),
+            CreateWorkItem(3, "Epic", "New", null, "Epic 2"),
+            CreateWorkItem(4, "Epic", "Done", null, "Epic 3 - Done")
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.HasCount(1, results, "Only Epic 2 should violate (Epic 1 has Features, Epic 3 is Done)");
+        Assert.AreEqual(3, results[0].WorkItemId);
+    }
+
+    #endregion
+
     private static IWorkItemStateClassificationService CreateMockStateClassificationService()
     {
         return new TestStateClassificationService();
