@@ -5,8 +5,13 @@ using PoTool.Shared.Settings;
 namespace PoTool.Core.WorkItems.Validators;
 
 /// <summary>
-/// Validates that work items in "In Progress" state (based on state classification) have an effort estimate.
+/// [DEPRECATED] Legacy validator for work items in "In Progress" state without effort.
+/// This validator has been replaced by the hierarchical RC-2 rule (PbiEffortEmptyRule)
+/// which validates effort on Epic, Feature, and PBI work items.
+/// 
+/// This class is kept for backwards compatibility but is no longer registered in the DI container.
 /// </summary>
+[Obsolete("This validator has been replaced by the hierarchical RC-2 rule (PbiEffortEmptyRule). Use the hierarchical validation system instead.")]
 public class WorkItemInProgressWithoutEffortValidator : IWorkItemValidator
 {
     private const string ErrorSeverity = "Error";

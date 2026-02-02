@@ -8,6 +8,12 @@ using Moq;
 
 namespace PoTool.Tests.Unit;
 
+/// <summary>
+/// Tests for the legacy WorkItemInProgressWithoutEffortValidator.
+/// This validator is deprecated and replaced by RC-2 hierarchical rule.
+/// Tests kept for backwards compatibility.
+/// </summary>
+#pragma warning disable CS0618 // Type or member is obsolete
 [TestClass]
 public class WorkItemInProgressWithoutEffortValidatorTests
 {

@@ -4,7 +4,8 @@ using PoTool.Core.Contracts;
 namespace PoTool.Core.WorkItems.Validators.Rules;
 
 /// <summary>
-/// SI-2: A parent in Removed state with any descendant (recursive) not in Done or Removed is invalid.
+/// SI-2: A parent in Removed state with any descendant (recursive) not in Removed is invalid.
+/// Only descendants in Removed are allowed.
 /// </summary>
 public sealed class RemovedParentWithUnfinishedDescendantsRule : HierarchicalValidationRuleBase
 {
@@ -26,7 +27,7 @@ public sealed class RemovedParentWithUnfinishedDescendantsRule : HierarchicalVal
     public override ResponsibleParty ResponsibleParty => ResponsibleParty.Process;
 
     /// <inheritdoc />
-    protected override string MessageTemplate => "Parent in Removed state has unfinished descendants.";
+    protected override string MessageTemplate => "Parent in Removed state has non-Removed descendants.";
 
     /// <inheritdoc />
     public override IReadOnlyList<ValidationRuleResult> Evaluate(IEnumerable<WorkItemDto> workItems)
@@ -44,13 +45,17 @@ public sealed class RemovedParentWithUnfinishedDescendantsRule : HierarchicalVal
         foreach (var removedItem in removedItems)
         {
             var descendants = GetAllDescendants(removedItem.TfsId, itemsList);
-            var unfinishedDescendants = descendants
-                .Where(d => !IsFinishedState(d.Type, d.State))
+            var nonRemovedDescendants = descendants
+                .Where(d =>
+                {
+                    var classification = StateClassificationService!.GetClassificationAsync(d.Type, d.State).GetAwaiter().GetResult();
+                    return classification != Shared.Settings.StateClassification.Removed;
+                })
                 .ToList();
 
-            if (unfinishedDescendants.Count > 0)
+            if (nonRemovedDescendants.Count > 0)
             {
-                var context = $"Unfinished: {string.Join(", ", unfinishedDescendants.Select(d => $"#{d.TfsId} ({d.State})"))}";
+                var context = $"Non-Removed: {string.Join(", ", nonRemovedDescendants.Select(d => $"#{d.TfsId} ({d.State})"))}";
                 results.Add(CreateViolation(removedItem.TfsId, context));
             }
         }

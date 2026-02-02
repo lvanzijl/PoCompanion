@@ -105,7 +105,7 @@ public class RefinementCompletenessRulesTests
 
     #endregion
 
-    #region RC-2: PBI effort empty
+    #region RC-2: Effort empty (Epic, Feature, PBI)
 
     [TestMethod]
     public void RC2_PbiWithEffort_NoViolation()
@@ -115,6 +115,40 @@ public class RefinementCompletenessRulesTests
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Product Backlog Item", "New", null, "Description", 8)
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results);
+    }
+
+    [TestMethod]
+    public void RC2_EpicWithEffort_NoViolation()
+    {
+        // Arrange
+        var rule = new PbiEffortEmptyRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Valid epic description", 100)
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results);
+    }
+
+    [TestMethod]
+    public void RC2_FeatureWithEffort_NoViolation()
+    {
+        // Arrange
+        var rule = new PbiEffortEmptyRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "New", null, "Valid feature description", 40)
         };
 
         // Act
@@ -147,6 +181,44 @@ public class RefinementCompletenessRulesTests
     }
 
     [TestMethod]
+    public void RC2_EpicWithNullEffort_HasViolation()
+    {
+        // Arrange
+        var rule = new PbiEffortEmptyRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Valid description", null)
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.HasCount(1, results);
+        Assert.AreEqual(1, results[0].WorkItemId);
+        Assert.AreEqual("RC-2", results[0].Rule.RuleId);
+    }
+
+    [TestMethod]
+    public void RC2_FeatureWithNullEffort_HasViolation()
+    {
+        // Arrange
+        var rule = new PbiEffortEmptyRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Feature", "New", null, "Valid description", null)
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.HasCount(1, results);
+        Assert.AreEqual(1, results[0].WorkItemId);
+        Assert.AreEqual("RC-2", results[0].Rule.RuleId);
+    }
+
+    [TestMethod]
     public void RC2_PbiWithZeroEffort_HasViolation()
     {
         // Arrange
@@ -154,6 +226,23 @@ public class RefinementCompletenessRulesTests
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Product Backlog Item", "New", null, "Description", 0)
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.HasCount(1, results);
+    }
+
+    [TestMethod]
+    public void RC2_EpicWithZeroEffort_HasViolation()
+    {
+        // Arrange
+        var rule = new PbiEffortEmptyRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Valid description", 0)
         };
 
         // Act
@@ -198,32 +287,15 @@ public class RefinementCompletenessRulesTests
     }
 
     [TestMethod]
-    public void RC2_FeatureWithNoEffort_NoViolation()
+    public void RC2_MixedItemsWithoutEffort_ValidatesAll()
     {
-        // Arrange: This rule only applies to PBIs
+        // Arrange: Multiple work items of different types without effort
         var rule = new PbiEffortEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Feature", "New", null, "Description", null)
-        };
-
-        // Act
-        var results = rule.Evaluate(items);
-
-        // Assert
-        Assert.IsEmpty(results, "Rule only applies to PBIs");
-    }
-
-    [TestMethod]
-    public void RC2_MultiplePbis_ValidatesAll()
-    {
-        // Arrange
-        var rule = new PbiEffortEmptyRule(CreateMockStateClassificationService());
-        var items = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "Product Backlog Item", "New", null, "Description", 5),
-            CreateWorkItem(2, "Product Backlog Item", "In Progress", null, "Description", null),
-            CreateWorkItem(3, "Product Backlog Item", "New", null, "Description", 0),
+            CreateWorkItem(1, "Epic", "New", null, "Valid description", null),
+            CreateWorkItem(2, "Feature", "New", 1, "Valid description", 0),
+            CreateWorkItem(3, "Product Backlog Item", "New", 2, "Description", null),
             CreateWorkItem(4, "Product Backlog Item", "Done", null, "Description", null) // Should be skipped
         };
 
@@ -231,51 +303,33 @@ public class RefinementCompletenessRulesTests
         var results = rule.Evaluate(items);
 
         // Assert
-        Assert.HasCount(2, results);
+        Assert.HasCount(3, results, "Epic, Feature, and PBI (not Done) should all violate");
 
 #pragma warning disable MSTEST0037
-        Assert.IsTrue(results.Any(r => r.WorkItemId == 2));
+        Assert.IsTrue(results.Any(r => r.WorkItemId == 1), "Epic should violate");
 
 #pragma warning disable MSTEST0037
-        Assert.IsTrue(results.Any(r => r.WorkItemId == 3));
+        Assert.IsTrue(results.Any(r => r.WorkItemId == 2), "Feature should violate");
+
+#pragma warning disable MSTEST0037
+        Assert.IsTrue(results.Any(r => r.WorkItemId == 3), "PBI should violate");
     }
 
     [TestMethod]
-    public void RC2_PbiWithoutEffortButParentIsBlocker_Suppressed()
+    public void RC2_TaskWithoutEffort_NoViolation()
     {
-        // Arrange: PBI without effort but parent Feature has invalid description (refinement blocker)
-        // The PBI's validation should be suppressed
+        // Arrange: Rule only applies to Epic, Feature, and PBI
         var rule = new PbiEffortEmptyRule(CreateMockStateClassificationService());
         var items = new List<WorkItemDto>
         {
-            CreateWorkItem(1, "Feature", "New", null, "Short", null), // Invalid description (< 10 chars)
-            CreateWorkItem(2, "Product Backlog Item", "New", 1, "Description", null) // No effort, but suppressed
+            CreateWorkItem(1, "Task", "New", null, "Description", null)
         };
 
         // Act
         var results = rule.Evaluate(items);
 
         // Assert
-        Assert.IsEmpty(results, "PBI validation should be suppressed when parent Feature is a refinement blocker");
-    }
-
-    [TestMethod]
-    public void RC2_PbiWithoutEffortAndParentHasValidDescription_NotSuppressed()
-    {
-        // Arrange: PBI without effort and parent Feature has valid description
-        var rule = new PbiEffortEmptyRule(CreateMockStateClassificationService());
-        var items = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "Feature", "New", null, "Valid description with more than 10 characters", null),
-            CreateWorkItem(2, "Product Backlog Item", "New", 1, "Description", null) // No effort
-        };
-
-        // Act
-        var results = rule.Evaluate(items);
-
-        // Assert
-        Assert.HasCount(1, results);
-        Assert.AreEqual(2, results[0].WorkItemId);
+        Assert.IsEmpty(results, "Rule only applies to Epic, Feature, and PBI");
     }
 
     #endregion
