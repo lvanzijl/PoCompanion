@@ -1,0 +1,204 @@
+/* Bug Triage TreeGrid Styling - Based on WorkItemTreeGrid */
+
+.tree-grid-container {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.tree-grid {
+    --mud-palette-table-lines: rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--mud-palette-table-lines);
+    overflow-x: auto;
+}
+
+/* Compact row styling */
+.tree-grid .mud-table-row {
+    height: 30px !important;
+    min-height: 30px !important;
+}
+
+.tree-grid .mud-table-cell {
+    padding: 2px 8px !important;
+    height: 30px !important;
+}
+
+/* Title cell layout */
+.title-cell {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    position: relative;
+    width: 100%;
+}
+
+/* Expand button */
+.expand-button {
+    width: 20px !important;
+    height: 20px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-width: 20px !important;
+}
+
+.leaf-spacer {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+/* Group label for grouping nodes */
+.group-label {
+    font-weight: 600;
+    padding-left: 0.5rem;
+    flex: 1;
+}
+
+/* Type icon block - 20px square with rounded corners */
+.type-icon-block {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.type-icon-block .mud-icon-root {
+    font-size: 14px !important;
+    color: white !important;
+}
+
+/* Green checkmark overlay for Done state */
+.type-icon-block.done-state::after {
+    content: '\2713'; /* Unicode checkmark */
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    background-color: #4caf50;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: bold;
+    line-height: 12px;
+    text-align: center;
+    border: 1px solid var(--mud-palette-surface);
+}
+
+/* Title text */
+.title-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    font-size: 0.875rem;
+    line-height: 1.2;
+    min-width: 0;
+}
+
+.title-text:hover {
+    text-decoration: underline;
+}
+
+.title-text.selected {
+    font-weight: 600;
+    color: var(--mud-palette-primary);
+}
+
+/* Ensure MudTooltip wrapper doesn't prevent text truncation */
+.title-cell > .mud-tooltip-root {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.title-cell > .mud-tooltip-root > span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    font-size: 0.875rem;
+    line-height: 1.2;
+}
+
+.title-cell > .mud-tooltip-root > span:hover {
+    text-decoration: underline;
+}
+
+.title-cell > .mud-tooltip-root > span.selected {
+    font-weight: 600;
+    color: var(--mud-palette-primary);
+}
+
+/* Issue icons */
+.self-issue-icon,
+.descendant-issue-icon {
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
+.self-issue-icon {
+    font-size: 16px !important;
+}
+
+.descendant-issue-icon {
+    font-size: 16px !important;
+    opacity: 0.7;
+}
+
+/* Column styling */
+.state-column {
+    width: 120px;
+    text-align: left;
+}
+
+/* Hover state */
+.tree-grid .mud-table-row:hover {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Selected row state */
+.tree-grid .mud-table-row.mud-selected-row {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.15) !important;
+    border-left: 3px solid var(--mud-palette-primary);
+}
+
+/* Sticky header */
+.tree-grid .mud-table-head {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--mud-palette-surface);
+}
+
+/* Remove default MudBlazor spacing */
+.tree-grid .mud-table-container {
+    overflow: auto;
+}
+
+.tree-grid .mud-table {
+    border-spacing: 0;
+}
+
+/* Empty state */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+}
