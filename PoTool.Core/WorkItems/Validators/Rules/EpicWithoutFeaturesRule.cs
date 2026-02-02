@@ -27,7 +27,7 @@ public sealed class EpicWithoutFeaturesRule : HierarchicalValidationRuleBase
     public override ResponsibleParty ResponsibleParty => ResponsibleParty.ProductOwner;
 
     /// <inheritdoc />
-    protected override string MessageTemplate => "Epic has no children (Features).";
+    protected override string MessageTemplate => "Epic must have at least one Feature child.";
 
     /// <inheritdoc />
     public override IReadOnlyList<ValidationRuleResult> Evaluate(IEnumerable<WorkItemDto> workItems)

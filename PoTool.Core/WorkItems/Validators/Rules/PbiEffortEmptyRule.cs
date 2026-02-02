@@ -7,6 +7,9 @@ namespace PoTool.Core.WorkItems.Validators.Rules;
 /// RC-2: Epic, Feature, or PBI effort is empty → invalid.
 /// Assesses whether work items have effort estimates for planning.
 /// Only evaluated if all Refinement Readiness rules pass.
+/// 
+/// Note: Despite the class name "PbiEffortEmptyRule" (retained for backwards compatibility),
+/// this rule validates effort on Epic, Feature, and PBI work items.
 /// </summary>
 public sealed class PbiEffortEmptyRule : HierarchicalValidationRuleBase
 {
@@ -27,7 +30,7 @@ public sealed class PbiEffortEmptyRule : HierarchicalValidationRuleBase
     public override ResponsibleParty ResponsibleParty => ResponsibleParty.DevelopmentTeam;
 
     /// <inheritdoc />
-    protected override string MessageTemplate => "Work item effort is empty.";
+    protected override string MessageTemplate => "Work item must have effort estimate.";
 
     /// <inheritdoc />
     public override IReadOnlyList<ValidationRuleResult> Evaluate(IEnumerable<WorkItemDto> workItems)
