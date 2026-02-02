@@ -450,4 +450,58 @@ public class TfsFieldParserServiceTests
     }
 
     #endregion
+
+    #region MapCriticalityToPriority Tests
+
+    [TestMethod]
+    public void MapCriticalityToPriority_Critical_Returns1()
+    {
+        // Act
+        var result = _service.MapCriticalityToPriority(BugCriticality.Critical);
+
+        // Assert
+        Assert.AreEqual(1, result);
+    }
+
+    [TestMethod]
+    public void MapCriticalityToPriority_High_Returns2()
+    {
+        // Act
+        var result = _service.MapCriticalityToPriority(BugCriticality.High);
+
+        // Assert
+        Assert.AreEqual(2, result);
+    }
+
+    [TestMethod]
+    public void MapCriticalityToPriority_Medium_Returns3()
+    {
+        // Act
+        var result = _service.MapCriticalityToPriority(BugCriticality.Medium);
+
+        // Assert
+        Assert.AreEqual(3, result);
+    }
+
+    [TestMethod]
+    public void MapCriticalityToPriority_Low_Returns4()
+    {
+        // Act
+        var result = _service.MapCriticalityToPriority(BugCriticality.Low);
+
+        // Assert
+        Assert.AreEqual(4, result);
+    }
+
+    [TestMethod]
+    public void MapCriticalityToPriority_Unknown_Returns3()
+    {
+        // Act
+        var result = _service.MapCriticalityToPriority("Unknown");
+
+        // Assert
+        Assert.AreEqual(3, result); // Should default to Medium (3)
+    }
+
+    #endregion
 }
