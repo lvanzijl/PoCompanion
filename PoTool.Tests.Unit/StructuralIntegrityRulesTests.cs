@@ -135,10 +135,29 @@ public class StructuralIntegrityRulesTests
 
     #endregion
 
-    #region SI-2: Removed parent with unfinished descendants
+    #region SI-2: Removed parent with non-Removed descendants
 
     [TestMethod]
-    public void SI2_RemovedParentWithDoneDescendants_NoViolation()
+    public void SI2_RemovedParentWithRemovedDescendants_NoViolation()
+    {
+        // Arrange
+        var rule = new RemovedParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "Removed", null),
+            CreateWorkItem(2, "Feature", "Removed", 1),
+            CreateWorkItem(3, "Product Backlog Item", "Removed", 2)
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results, "No violations expected when all descendants are Removed");
+    }
+
+    [TestMethod]
+    public void SI2_RemovedParentWithDoneDescendant_HasViolation()
     {
         // Arrange
         var rule = new RemovedParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService());
@@ -152,7 +171,9 @@ public class StructuralIntegrityRulesTests
         var results = rule.Evaluate(items);
 
         // Assert
-        Assert.IsEmpty(results);
+        Assert.HasCount(1, results, "Violation expected when descendant is Done");
+        Assert.AreEqual(1, results[0].WorkItemId);
+        Assert.AreEqual("SI-2", results[0].Rule.RuleId);
     }
 
     [TestMethod]
@@ -175,9 +196,29 @@ public class StructuralIntegrityRulesTests
         Assert.AreEqual("SI-2", results[0].Rule.RuleId);
     }
 
+    [TestMethod]
+    public void SI2_RemovedParentWithInProgressDescendant_HasViolation()
+    {
+        // Arrange
+        var rule = new RemovedParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "Removed", null),
+            CreateWorkItem(2, "Feature", "In Progress", 1)
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.HasCount(1, results);
+        Assert.AreEqual(1, results[0].WorkItemId);
+        Assert.AreEqual("SI-2", results[0].Rule.RuleId);
+    }
+
     #endregion
 
-    #region SI-3: New parent with in-progress descendants
+    #region SI-3: New parent with InProgress or Done descendants
 
     [TestMethod]
     public void SI3_NewParentWithNewDescendants_NoViolation()
@@ -198,6 +239,24 @@ public class StructuralIntegrityRulesTests
     }
 
     [TestMethod]
+    public void SI3_NewParentWithRemovedDescendants_NoViolation()
+    {
+        // Arrange
+        var rule = new NewParentWithInProgressDescendantsRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null),
+            CreateWorkItem(2, "Feature", "Removed", 1)
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.IsEmpty(results, "Removed descendants are allowed for New parents");
+    }
+
+    [TestMethod]
     public void SI3_NewParentWithInProgressDescendant_HasViolation()
     {
         // Arrange
@@ -213,6 +272,26 @@ public class StructuralIntegrityRulesTests
 
         // Assert
         Assert.HasCount(1, results);
+        Assert.AreEqual(1, results[0].WorkItemId);
+        Assert.AreEqual("SI-3", results[0].Rule.RuleId);
+    }
+
+    [TestMethod]
+    public void SI3_NewParentWithDoneDescendant_HasViolation()
+    {
+        // Arrange
+        var rule = new NewParentWithInProgressDescendantsRule(CreateMockStateClassificationService());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null),
+            CreateWorkItem(2, "Feature", "Done", 1)
+        };
+
+        // Act
+        var results = rule.Evaluate(items);
+
+        // Assert
+        Assert.HasCount(1, results, "Done descendants should be invalid for New parents");
         Assert.AreEqual(1, results[0].WorkItemId);
         Assert.AreEqual("SI-3", results[0].Rule.RuleId);
     }
@@ -259,6 +338,106 @@ public class StructuralIntegrityRulesTests
 
         // Assert
         Assert.IsEmpty(results, "Rule only applies to New parents");
+    }
+
+    #endregion
+
+    #region InProgress parent validation - should allow all descendant states
+
+    [TestMethod]
+    public void InProgressParent_WithNewDescendant_NoViolation()
+    {
+        // Arrange: InProgress parent with New descendant should be valid
+        var allRules = new List<IHierarchicalValidationRule>
+        {
+            new DoneParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService()),
+            new RemovedParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService()),
+            new NewParentWithInProgressDescendantsRule(CreateMockStateClassificationService())
+        };
+
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "In Progress", null),
+            CreateWorkItem(2, "Feature", "New", 1)
+        };
+
+        // Act: Run all SI rules
+        var allResults = allRules.SelectMany(r => r.Evaluate(items)).ToList();
+
+        // Assert
+        Assert.IsEmpty(allResults, "InProgress parent should allow New descendants");
+    }
+
+    [TestMethod]
+    public void InProgressParent_WithInProgressDescendant_NoViolation()
+    {
+        // Arrange
+        var allRules = new List<IHierarchicalValidationRule>
+        {
+            new DoneParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService()),
+            new RemovedParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService()),
+            new NewParentWithInProgressDescendantsRule(CreateMockStateClassificationService())
+        };
+
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "In Progress", null),
+            CreateWorkItem(2, "Feature", "In Progress", 1)
+        };
+
+        // Act
+        var allResults = allRules.SelectMany(r => r.Evaluate(items)).ToList();
+
+        // Assert
+        Assert.IsEmpty(allResults, "InProgress parent should allow InProgress descendants");
+    }
+
+    [TestMethod]
+    public void InProgressParent_WithDoneDescendant_NoViolation()
+    {
+        // Arrange
+        var allRules = new List<IHierarchicalValidationRule>
+        {
+            new DoneParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService()),
+            new RemovedParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService()),
+            new NewParentWithInProgressDescendantsRule(CreateMockStateClassificationService())
+        };
+
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "In Progress", null),
+            CreateWorkItem(2, "Feature", "Done", 1)
+        };
+
+        // Act
+        var allResults = allRules.SelectMany(r => r.Evaluate(items)).ToList();
+
+        // Assert
+        Assert.IsEmpty(allResults, "InProgress parent should allow Done descendants");
+    }
+
+    [TestMethod]
+    public void InProgressParent_WithRemovedDescendant_NoViolation()
+    {
+        // Arrange
+        var allRules = new List<IHierarchicalValidationRule>
+        {
+            new DoneParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService()),
+            new RemovedParentWithUnfinishedDescendantsRule(CreateMockStateClassificationService()),
+            new NewParentWithInProgressDescendantsRule(CreateMockStateClassificationService())
+        };
+
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "In Progress", null),
+            CreateWorkItem(2, "Feature", "Removed", 1)
+        };
+
+        // Act
+        var allResults = allRules.SelectMany(r => r.Evaluate(items)).ToList();
+
+        // Assert
+        Assert.IsEmpty(allResults, "InProgress parent should allow Removed descendants");
     }
 
     #endregion

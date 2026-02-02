@@ -4,7 +4,8 @@ using PoTool.Core.Contracts;
 namespace PoTool.Core.WorkItems.Validators.Rules;
 
 /// <summary>
-/// SI-3: A parent in New state with any descendant in In Progress is invalid.
+/// SI-3: A parent in New state with any descendant in InProgress or Done is invalid.
+/// Only descendants in New or Removed are allowed.
 /// </summary>
 public sealed class NewParentWithInProgressDescendantsRule : HierarchicalValidationRuleBase
 {
@@ -26,7 +27,7 @@ public sealed class NewParentWithInProgressDescendantsRule : HierarchicalValidat
     public override ResponsibleParty ResponsibleParty => ResponsibleParty.Process;
 
     /// <inheritdoc />
-    protected override string MessageTemplate => "Parent in New state has In Progress descendants.";
+    protected override string MessageTemplate => "Parent in New state has InProgress or Done descendants.";
 
     /// <inheritdoc />
     public override IReadOnlyList<ValidationRuleResult> Evaluate(IEnumerable<WorkItemDto> workItems)
@@ -44,17 +45,18 @@ public sealed class NewParentWithInProgressDescendantsRule : HierarchicalValidat
         foreach (var newItem in newItems)
         {
             var descendants = GetAllDescendants(newItem.TfsId, itemsList);
-            var inProgressDescendants = descendants
+            var invalidDescendants = descendants
                 .Where(d =>
                 {
                     var classification = StateClassificationService!.GetClassificationAsync(d.Type, d.State).GetAwaiter().GetResult();
-                    return classification == Shared.Settings.StateClassification.InProgress;
+                    return classification == Shared.Settings.StateClassification.InProgress ||
+                           classification == Shared.Settings.StateClassification.Done;
                 })
                 .ToList();
 
-            if (inProgressDescendants.Count > 0)
+            if (invalidDescendants.Count > 0)
             {
-                var context = $"In Progress: {string.Join(", ", inProgressDescendants.Select(d => $"#{d.TfsId}"))}";
+                var context = $"InProgress/Done: {string.Join(", ", invalidDescendants.Select(d => $"#{d.TfsId} ({d.State})"))}";
                 results.Add(CreateViolation(newItem.TfsId, context));
             }
         }
