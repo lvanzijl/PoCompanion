@@ -108,6 +108,75 @@ public class HierarchicalWorkItemValidatorTests
 
     #endregion
 
+    #region Suppression with RR-3 Tests
+
+    [TestMethod]
+    public void Suppression_EpicWithoutFeatures_SuppressesRCValidation()
+    {
+        // Arrange: Epic has no Features (RR-3), Epic has no effort (RC-2)
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Valid epic description", null) // No Features, No effort
+        };
+
+        // Act
+        var result = _validator.ValidateTree(1, items);
+
+        // Assert: RR-3 blocker present, RC validation suppressed
+        Assert.IsTrue(result.HasRefinementBlockers, "Should have RR-3 blocker");
+        Assert.IsFalse(result.HasIncompleteRefinement, "RC validation should be suppressed");
+        Assert.IsTrue(result.WasSuppressed, "WasSuppressed flag should be true");
+        Assert.IsTrue(result.RefinementBlockers.Any(r => r.Rule.RuleId == "RR-3"));
+    }
+
+    [TestMethod]
+    public void Suppression_EpicWithoutFeaturesAndFeatureWithoutPBIs_SuppressesRC()
+    {
+        // Arrange: Epic has no Features (RR-3) even though it has a valid Feature tree
+        // This tests that RR-3 triggers properly
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Valid epic description", 100), // No Features child
+            CreateWorkItem(2, "Feature", "New", null, "Valid feature description", 40) // Not a child of Epic 1
+        };
+
+        // Act
+        var result1 = _validator.ValidateTree(1, items);
+        var result2 = _validator.ValidateTree(2, items);
+
+        // Assert: Epic 1 has RR-3 violation
+        Assert.IsTrue(result1.HasRefinementBlockers, "Epic without Features should have RR-3 blocker");
+        Assert.IsTrue(result1.RefinementBlockers.Any(r => r.Rule.RuleId == "RR-3"));
+        Assert.IsTrue(result1.WasSuppressed);
+
+        // Feature 2 (as root) has RC-3 violation (no PBIs)
+        Assert.IsFalse(result2.HasRefinementBlockers, "Feature has valid description");
+        Assert.IsTrue(result2.HasIncompleteRefinement, "Feature without PBIs should have RC-3 issue");
+        Assert.IsTrue(result2.IncompleteRefinementIssues.Any(r => r.Rule.RuleId == "RC-3"));
+    }
+
+    [TestMethod]
+    public void Suppression_MultipleRRViolations_SuppressesRC()
+    {
+        // Arrange: Epic has multiple RR violations (RR-1, RR-3)
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Short", null) // Short description (RR-1), no Features (RR-3), no effort
+        };
+
+        // Act
+        var result = _validator.ValidateTree(1, items);
+
+        // Assert: Multiple RR blockers, RC suppressed
+        Assert.IsTrue(result.HasRefinementBlockers);
+        Assert.IsTrue(result.RefinementBlockers.Any(r => r.Rule.RuleId == "RR-1"));
+        Assert.IsTrue(result.RefinementBlockers.Any(r => r.Rule.RuleId == "RR-3"));
+        Assert.IsFalse(result.HasIncompleteRefinement, "RC validation should be suppressed");
+        Assert.IsTrue(result.WasSuppressed);
+    }
+
+    #endregion
+
     #region Mixed Scenario Tests
 
     [TestMethod]
