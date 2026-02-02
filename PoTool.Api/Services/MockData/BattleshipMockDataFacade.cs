@@ -691,6 +691,22 @@ public class BattleshipMockDataFacade : ITfsClient
         return Task.FromResult(true);
     }
 
+    public Task<bool> UpdateWorkItemPriorityAsync(int workItemId, int priority, CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemPriorityAsync called for workItemId={WorkItemId}, priority={Priority}",
+            workItemId, priority);
+
+        if (priority < 1 || priority > 4)
+        {
+            _logger.LogWarning("Mock TFS client: Invalid priority value {Priority} provided (must be 1-4)", priority);
+            return Task.FromResult(false);
+        }
+
+        _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} priority to {Priority}", workItemId, priority);
+        return Task.FromResult(true);
+    }
+
     public Task<TfsVerificationReport> VerifyCapabilitiesAsync(
         bool includeWriteChecks = false,
         int? workItemIdForWriteCheck = null,

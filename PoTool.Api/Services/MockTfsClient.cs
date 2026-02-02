@@ -380,6 +380,23 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult(true);
     }
 
+    public Task<bool> UpdateWorkItemPriorityAsync(int workItemId, int priority, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemPriorityAsync called for workItemId={WorkItemId}, priority={Priority}",
+            workItemId, priority);
+
+        // Mock implementation always succeeds for valid priority values (1-4)
+        if (priority < 1 || priority > 4)
+        {
+            _logger.LogWarning("Mock TFS client: Invalid priority value {Priority} provided (must be 1-4)", priority);
+            return Task.FromResult(false);
+        }
+
+        _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} priority to {Priority}",
+            workItemId, priority);
+        return Task.FromResult(true);
+    }
+
     public Task<TfsVerificationReport> VerifyCapabilitiesAsync(
         bool includeWriteChecks = false,
         int? workItemIdForWriteCheck = null,
