@@ -147,6 +147,74 @@ public partial class RealTfsClient
         }
     }
 
+    public async Task<bool> UpdateWorkItemPriorityAsync(int workItemId, int priority, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Updating work item {WorkItemId} priority to {Priority}", workItemId, priority);
+
+            var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+            if (entity == null)
+            {
+                _logger.LogWarning("No TFS configuration found for updating work item priority");
+                return false;
+            }
+
+            // Use auth-mode-specific HttpClient (requirement #2)
+            var httpClient = GetAuthenticatedHttpClient();
+
+            // Create per-request timeout token for write operation
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(entity.TimeoutSeconds));
+
+            // Build JSON Patch document for priority (Microsoft.VSTS.Common.Priority)
+            var patchDocument = new[]
+            {
+                new
+                {
+                    op = "add",
+                    path = $"/fields/{TfsFieldPriority}",
+                    value = priority
+                }
+            };
+
+            // Work item PATCH is collection-scoped (work item IDs are unique across collection)
+            var updateUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}");
+            using var content = new StringContent(
+                JsonSerializer.Serialize(patchDocument),
+                System.Text.Encoding.UTF8,
+                "application/json-patch+json");
+
+            _logger.LogDebug("Sending PATCH request to update work item {WorkItemId} priority", workItemId);
+
+            // PATCH operations are NOT retried - they are non-idempotent
+            var response = await httpClient.PatchAsync(updateUrl, content, timeoutCts.Token);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully updated work item {WorkItemId} priority to {Priority}", workItemId, priority);
+                return true;
+            }
+            else
+            {
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Failed to update work item {WorkItemId} priority. Status: {StatusCode}, Response: {Response}",
+                    workItemId, response.StatusCode, responseBody);
+                return false;
+            }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError("Update work item {WorkItemId} priority timed out", workItemId);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating work item {WorkItemId} priority to {Priority}", workItemId, priority);
+            return false;
+        }
+    }
+
     /// <summary>
     /// Updates effort for multiple work items in a batch. 
     /// Azure DevOps doesn't have a true bulk update API, but we can batch the requests

@@ -169,6 +169,24 @@ public class TfsFieldParserService
     }
 
     /// <summary>
+    /// Maps Bug Criticality levels back to TFS Priority values (1-4).
+    /// Critical = 1, High = 2, Medium = 3, Low = 4.
+    /// </summary>
+    /// <param name="criticality">Criticality string from BugCriticality constants.</param>
+    /// <returns>Priority value as int (1-4).</returns>
+    public int MapCriticalityToPriority(string criticality)
+    {
+        return criticality switch
+        {
+            Models.BugCriticality.Critical => 1,
+            Models.BugCriticality.High => 2,
+            Models.BugCriticality.Medium => 3,
+            Models.BugCriticality.Low => 4,
+            _ => 3 // Default to Medium (3) if unknown
+        };
+    }
+
+    /// <summary>
     /// Gets criticality for a bug by checking both Priority and Severity fields.
     /// Priority takes precedence over Severity if both are present.
     /// </summary>

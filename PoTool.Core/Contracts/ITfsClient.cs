@@ -174,6 +174,19 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Updates the priority of a work item in TFS (Microsoft.VSTS.Common.Priority).
+    /// Priority typically ranges from 1 (highest) to 4 (lowest).
+    /// </summary>
+    /// <param name="workItemId">The work item ID.</param>
+    /// <param name="priority">The new priority value (1-4).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if the update was successful, false otherwise.</returns>
+    Task<bool> UpdateWorkItemPriorityAsync(
+        int workItemId,
+        int priority,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Verifies TFS API capabilities by running diagnostic checks.
     /// </summary>
     /// <param name="includeWriteChecks">Whether to include write capability checks.</param>

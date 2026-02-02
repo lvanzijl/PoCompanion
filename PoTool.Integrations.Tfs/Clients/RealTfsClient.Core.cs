@@ -26,6 +26,7 @@ public partial class RealTfsClient
     private const string TfsFieldEffort = "Microsoft.VSTS.Scheduling.Effort";
     private const string TfsFieldStoryPoints = "Microsoft.VSTS.Scheduling.StoryPoints";
     private const string TfsFieldState = "System.State";
+    private const string TfsFieldPriority = "Microsoft.VSTS.Common.Priority";
 
     // Required work item fields for queries
     private static readonly string[] RequiredWorkItemFields = new[]

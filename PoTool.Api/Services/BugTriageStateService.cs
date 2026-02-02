@@ -2,24 +2,32 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Client.Services;
+using PoTool.Core.Contracts;
 using PoTool.Shared.BugTriage;
 
 namespace PoTool.Api.Services;
 
 /// <summary>
-/// Service for managing bug triage state locally.
+/// Service for managing bug triage state and updating TFS.
 /// Tracks whether bugs have been triaged based on user actions in the Bugs Triage UI.
 /// </summary>
 public class BugTriageStateService
 {
     private readonly PoToolDbContext _db;
+    private readonly ITfsClient _tfsClient;
+    private readonly TfsFieldParserService _fieldParser;
     private readonly ILogger<BugTriageStateService> _logger;
 
     public BugTriageStateService(
         PoToolDbContext db,
+        ITfsClient tfsClient,
+        TfsFieldParserService fieldParser,
         ILogger<BugTriageStateService> logger)
     {
         _db = db;
+        _tfsClient = tfsClient;
+        _fieldParser = fieldParser;
         _logger = logger;
     }
 
@@ -100,41 +108,131 @@ public class BugTriageStateService
 
     /// <summary>
     /// Marks a bug as triaged due to a user action (criticality change or tag toggle).
-    /// Logs an Info message describing what would be saved to TFS.
+    /// Updates TFS with the new criticality value and refreshes the work item from TFS.
     /// </summary>
     public async Task<UpdateBugTriageStateResponse> MarkAsTriagedAsync(
         UpdateBugTriageStateRequest request,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _db.BugTriageStates
-            .FirstOrDefaultAsync(s => s.BugId == request.BugId, cancellationToken);
-
-        if (entity == null)
+        try
         {
-            // Bug not yet seen - create initial record
-            entity = new BugTriageStateEntity
+            // If criticality changed, update TFS
+            if (request.NewCriticality != null)
             {
-                BugId = request.BugId,
-                FirstSeenAt = DateTimeOffset.UtcNow,
-                FirstObservedCriticality = request.NewCriticality ?? "Unknown",
-                IsTriaged = true,
-                LastTriageActionAt = DateTimeOffset.UtcNow
-            };
-            _db.BugTriageStates.Add(entity);
+                _logger.LogInformation("Updating TFS bug {BugId}: Criticality to {NewCriticality}", 
+                    request.BugId, request.NewCriticality);
+                
+                // Convert criticality to TFS priority value (1-4)
+                var priority = _fieldParser.MapCriticalityToPriority(request.NewCriticality);
+                
+                // Update TFS
+                var updateSuccess = await _tfsClient.UpdateWorkItemPriorityAsync(
+                    request.BugId, 
+                    priority, 
+                    cancellationToken);
+                
+                if (!updateSuccess)
+                {
+                    _logger.LogError("Failed to update TFS bug {BugId} priority", request.BugId);
+                    return new UpdateBugTriageStateResponse(
+                        false, 
+                        $"Failed to update bug {request.BugId} in TFS. Please try again.");
+                }
+                
+                _logger.LogInformation("Successfully updated TFS bug {BugId} priority to {Priority}", 
+                    request.BugId, priority);
+                
+                // Refresh work item from TFS and update cache
+                var refreshedWorkItem = await _tfsClient.GetWorkItemByIdAsync(request.BugId, cancellationToken);
+                if (refreshedWorkItem != null)
+                {
+                    // Update the work item in cache
+                    var cachedEntity = await _db.WorkItems
+                        .FirstOrDefaultAsync(wi => wi.TfsId == request.BugId, cancellationToken);
+                    
+                    if (cachedEntity != null)
+                    {
+                        // Update cached work item with fresh data from TFS
+                        cachedEntity.JsonPayload = refreshedWorkItem.JsonPayload;
+                        cachedEntity.State = refreshedWorkItem.State;
+                        cachedEntity.Title = refreshedWorkItem.Title;
+                        cachedEntity.AreaPath = refreshedWorkItem.AreaPath;
+                        cachedEntity.IterationPath = refreshedWorkItem.IterationPath;
+                        cachedEntity.Effort = refreshedWorkItem.Effort;
+                        cachedEntity.Description = refreshedWorkItem.Description;
+                        cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
+                        
+                        _logger.LogInformation("Updated cache for bug {BugId} with refreshed data from TFS", 
+                            request.BugId);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Bug {BugId} not found in cache, cannot refresh", request.BugId);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to retrieve refreshed work item {BugId} from TFS after update", 
+                        request.BugId);
+                }
+            }
+            
+            // Handle tags (currently just logged - future enhancement for TFS tags update)
+            if (request.TagsAdded != null && request.TagsAdded.Count > 0)
+            {
+                foreach (var tag in request.TagsAdded)
+                {
+                    _logger.LogInformation("Tag {Tag} added to bug {BugId} (not persisted to TFS yet)", 
+                        tag, request.BugId);
+                }
+            }
+            
+            if (request.TagsRemoved != null && request.TagsRemoved.Count > 0)
+            {
+                foreach (var tag in request.TagsRemoved)
+                {
+                    _logger.LogInformation("Tag {Tag} removed from bug {BugId} (not persisted to TFS yet)", 
+                        tag, request.BugId);
+                }
+            }
+            
+            // Update or create triage state entity
+            var entity = await _db.BugTriageStates
+                .FirstOrDefaultAsync(s => s.BugId == request.BugId, cancellationToken);
+            
+            if (entity == null)
+            {
+                // Bug not yet seen - create initial record
+                entity = new BugTriageStateEntity
+                {
+                    BugId = request.BugId,
+                    FirstSeenAt = DateTimeOffset.UtcNow,
+                    FirstObservedCriticality = request.NewCriticality ?? "Unknown",
+                    IsTriaged = true,
+                    LastTriageActionAt = DateTimeOffset.UtcNow
+                };
+                _db.BugTriageStates.Add(entity);
+            }
+            else
+            {
+                // Update existing record
+                entity.IsTriaged = true;
+                entity.LastTriageActionAt = DateTimeOffset.UtcNow;
+            }
+            
+            await _db.SaveChangesAsync(cancellationToken);
+            
+            return new UpdateBugTriageStateResponse(
+                true, 
+                $"Bug {request.BugId} updated successfully in TFS and marked as triaged");
         }
-        else
+        catch (Exception ex)
         {
-            // Update existing record
-            entity.IsTriaged = true;
-            entity.LastTriageActionAt = DateTimeOffset.UtcNow;
+            _logger.LogError(ex, "Error updating bug {BugId} triage state", request.BugId);
+            return new UpdateBugTriageStateResponse(
+                false, 
+                $"Error updating bug {request.BugId}: {ex.Message}");
         }
-
-        await _db.SaveChangesAsync(cancellationToken);
-
-        // Log what would be saved to TFS
-        LogTriageAction(request);
-
-        return new UpdateBugTriageStateResponse(true, "Bug marked as triaged (local state only)");
     }
 
     private void LogTriageAction(UpdateBugTriageStateRequest request)

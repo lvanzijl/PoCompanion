@@ -283,20 +283,38 @@
     {
         Logger.LogInformation("Criticality changed for bug {BugId}: {Criticality}", bugId, newCriticality);
         
-        // Mark as triaged
-        var request = new Shared.BugTriage.UpdateBugTriageStateRequest(
-            bugId,
-            NewCriticality: newCriticality);
-        
-        await BugTriageService.MarkAsTriagedAsync(request);
-        
-        // Remove from untriaged set
-        _untriagedBugIds.Remove(bugId);
-        
-        // Rebuild tree
-        ApplyFilters();
-        
-        Snackbar.Add($"Criticality updated to {newCriticality}", Severity.Success);
+        try
+        {
+            // Mark as triaged and update TFS
+            var request = new Shared.BugTriage.UpdateBugTriageStateRequest(
+                bugId,
+                NewCriticality: newCriticality);
+            
+            var response = await BugTriageService.MarkAsTriagedAsync(request);
+            
+            if (response.Success)
+            {
+                // Remove from untriaged set
+                _untriagedBugIds.Remove(bugId);
+                
+                // Rebuild tree
+                ApplyFilters();
+                
+                Snackbar.Add($"Criticality updated to {newCriticality}", Severity.Success);
+            }
+            else
+            {
+                // Show error message
+                var errorMsg = response.Message ?? "Failed to update criticality";
+                Logger.LogError("Failed to update criticality for bug {BugId}: {Error}", bugId, errorMsg);
+                Snackbar.Add(errorMsg, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating criticality for bug {BugId}", bugId);
+            Snackbar.Add($"Error updating bug {bugId}: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task HandleTagToggled(int bugId, string tagName, bool isAdded)
@@ -304,22 +322,40 @@
         Logger.LogInformation("Tag {Action} for bug {BugId}: {Tag}", 
             isAdded ? "added" : "removed", bugId, tagName);
         
-        // Mark as triaged
-        var request = new Shared.BugTriage.UpdateBugTriageStateRequest(
-            bugId,
-            TagsAdded: isAdded ? new List<string> { tagName } : null,
-            TagsRemoved: !isAdded ? new List<string> { tagName } : null);
-        
-        await BugTriageService.MarkAsTriagedAsync(request);
-        
-        // Remove from untriaged set
-        _untriagedBugIds.Remove(bugId);
-        
-        // Rebuild tree
-        ApplyFilters();
-        
-        var action = isAdded ? "added" : "removed";
-        Snackbar.Add($"Tag '{tagName}' {action}", Severity.Success);
+        try
+        {
+            // Mark as triaged
+            var request = new Shared.BugTriage.UpdateBugTriageStateRequest(
+                bugId,
+                TagsAdded: isAdded ? new List<string> { tagName } : null,
+                TagsRemoved: !isAdded ? new List<string> { tagName } : null);
+            
+            var response = await BugTriageService.MarkAsTriagedAsync(request);
+            
+            if (response.Success)
+            {
+                // Remove from untriaged set
+                _untriagedBugIds.Remove(bugId);
+                
+                // Rebuild tree
+                ApplyFilters();
+                
+                var action = isAdded ? "added" : "removed";
+                Snackbar.Add($"Tag '{tagName}' {action}", Severity.Success);
+            }
+            else
+            {
+                // Show error message
+                var errorMsg = response.Message ?? "Failed to update tag";
+                Logger.LogError("Failed to update tag for bug {BugId}: {Error}", bugId, errorMsg);
+                Snackbar.Add(errorMsg, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating tag for bug {BugId}", bugId);
+            Snackbar.Add($"Error updating bug {bugId}: {ex.Message}", Severity.Error);
+        }
     }
 
     private void ToggleTagFilter(string tagName)
