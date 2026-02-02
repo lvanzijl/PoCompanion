@@ -117,8 +117,8 @@
    [Parameter]
    public bool IsLoading { get; set; }
 
-   [Parameter]
-   public List<TreeNode> TreeRoots { get; set; } = new();
+   [Parameter, EditorRequired]
+   public List<TreeNode> TreeRoots { get; set; } = null!;
 
    [Parameter]
    public int? SelectedId { get; set; }
@@ -273,7 +273,7 @@
    }
 
    // Column configuration
-   private List<ColumnConfig> _columnConfigs = new();
+   private List<ColumnConfig> _columnConfigs = null!;
 
    protected override void OnInitialized()
    {
