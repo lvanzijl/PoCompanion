@@ -31,7 +31,7 @@
             <span class="workitem-type">Bug</span>
             
             <div class="title-block">
-                <span class="@GetTitleClass()" @onclick="HandleClick" @onclick:stopPropagation="true">
+                <span class="@GetTitleClass()" @onclick="HandleClick">
                     @Node.Title
                 </span>
             </div>
@@ -112,7 +112,7 @@
 
     private string GetValidationTooltip()
     {
-        return string.Join("\n", Node.ValidationIssues);
+        return Node.ValidationIssues != null ? string.Join("\n", Node.ValidationIssues) : string.Empty;
     }
 
     private string GetValidationAriaLabel()

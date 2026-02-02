@@ -164,7 +164,7 @@
 }
 
 .workitem-title.selected {
-    background: var(--color-surface-hover, rgba(var(--mud-palette-primary-rgb, 33, 150, 243), 0.08));
+    background: var(--color-surface-hover, var(--mud-palette-action-default-hover));
     color: var(--color-primary, var(--mud-palette-primary));
     font-weight: 600;
     padding: 2px 4px;
