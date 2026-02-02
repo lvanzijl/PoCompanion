@@ -48,21 +48,24 @@
     overflow-x: hidden;
 }
 
-/* Tree Node */
+/* Tree Node - matching WorkItemExplorer patterns */
 .bug-tree-node {
     user-select: none;
+    margin-bottom: 0.25rem;
 }
 
 .node-row {
     display: flex;
     align-items: center;
+    gap: 0.5rem;
     padding: 0.25rem 0.5rem;
-    cursor: pointer;
+    border-radius: 4px;
     min-height: 32px;
+    transition: background-color 0.2s ease;
 }
 
 .node-row:hover {
-    background-color: var(--mud-palette-action-hover);
+    background-color: var(--color-surface-hover, var(--mud-palette-action-default-hover));
 }
 
 .group-node {
@@ -70,22 +73,40 @@
     background-color: var(--mud-palette-surface);
 }
 
-.bug-node.selected {
-    background-color: var(--mud-palette-primary);
-    color: var(--mud-palette-primary-text);
+/* Caret button - matching WorkItemTreeNode */
+.caret-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary, var(--mud-palette-text-secondary));
+    cursor: pointer;
+    transition: transform var(--transition-fast);
+    font-size: var(--font-size-sm);
 }
 
-.node-indent {
-    flex-shrink: 0;
+.caret-button:focus {
+    outline: 2px solid var(--color-primary, var(--mud-palette-primary));
+    border-radius: var(--radius-sm);
 }
 
-.expand-button {
-    margin-right: 0.25rem;
+.caret-button .chev {
+    display: inline-block;
+    transform-origin: center;
+    transition: transform .12s ease;
+}
+
+.caret-button.expanded .chev {
+    transform: rotate(90deg);
 }
 
 .leaf-spacer {
     display: inline-block;
-    width: 40px;
+    width: 1.25rem;
     flex-shrink: 0;
 }
 
@@ -94,21 +115,88 @@
     padding-left: 0.5rem;
 }
 
-.bug-icon {
-    margin-right: 0.5rem;
+/* Type indicator - matching WorkItemTreeNode */
+.type-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-sm, 2px);
+    margin-right: var(--spacing-sm, 0.5rem);
+    border: 1px solid var(--color-border, var(--mud-palette-divider));
+    flex-shrink: 0;
 }
 
-.bug-title {
+/* Work item type badge - matching WorkItemExplorer */
+.workitem-type {
+    display: inline-block;
+    min-width: 4.5rem;
+    text-transform: uppercase;
+    font-size: var(--font-size-xs, 0.75rem);
+    padding: 0.12rem 0.4rem;
+    border-radius: var(--radius-sm, 2px);
+    color: var(--color-text-primary, white);
+    background: var(--color-error, #f44336);
+    margin-right: var(--spacing-sm, 0.5rem);
+    flex-shrink: 0;
+}
+
+/* Title block - matching WorkItemExplorer */
+.title-block {
     flex: 1;
+    min-width: 0;
+    cursor: pointer;
+}
+
+.workitem-title {
+    cursor: pointer;
+    display: inline-block;
+    padding: 0.08rem 0.2rem;
+    border-radius: 3px;
+    font-size: 0.875rem;
+    line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.bug-id {
-    font-size: 0.75rem;
-    color: var(--mud-palette-text-secondary);
-    margin-left: 0.5rem;
+.workitem-title:hover {
+    text-decoration: underline;
+}
+
+.workitem-title.selected {
+    background: var(--color-surface-hover, rgba(var(--mud-palette-primary-rgb, 33, 150, 243), 0.08));
+    color: var(--color-primary, var(--mud-palette-primary));
+    font-weight: 600;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+/* Status column - matching WorkItemTreeNode */
+.status-column {
+    display: inline-block;
+    min-width: 80px;
+    padding: 0.12rem 0.4rem;
+    font-size: var(--font-size-xs, 0.75rem);
+    margin-left: auto;
+    color: var(--color-text-secondary, var(--mud-palette-text-secondary));
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Validation icon - matching WorkItemTreeNode */
+.validation-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    text-align: center;
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-warning, #ff9800);
+    cursor: help;
+    flex-shrink: 0;
+    margin-left: 4px;
 }
 
 /* Details Panel */

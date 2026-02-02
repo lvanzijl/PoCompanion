@@ -2,16 +2,15 @@
 @using MudBlazor
 
 <div class="bug-tree-node">
-    <div class="node-row @GetNodeClass()" @onclick="HandleClick">
-        <div class="node-indent" style="width: @(Node.Level * 20)px"></div>
-        
+    <div class="node-row @GetNodeClass()" style="padding-left:@(Node.Level * 1.25)rem">
         @* Expand/Collapse for group nodes or bugs with children *@
         @if (Node.Children.Any() || Node.Type == "(group)")
         {
-            <MudIconButton Icon="@(Node.IsExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
-                          Size="Size.Small"
-                          Class="expand-button"
-                          OnClick="HandleExpandClick" />
+            <button type="button" 
+                    class="@GetCaretClass()" 
+                    @onclick="HandleExpandClick">
+                <span class="chev">➤</span>
+            </button>
         }
         else
         {
@@ -26,13 +25,25 @@
         }
         else
         {
-            @* Bug node *@
-            <MudIcon Icon="@Icons.Material.Filled.BugReport" 
-                    Size="Size.Small" 
-                    Color="@GetBugColor()" 
-                    Class="bug-icon" />
-            <span class="bug-title">@Node.Title</span>
-            <span class="bug-id">#@Node.Id</span>
+            @* Bug node with type indicator *@
+            <span class="type-indicator" style="background-color: @Node.TypeColor" title="@Node.Type"></span>
+            
+            <span class="workitem-type">Bug</span>
+            
+            <div class="title-block">
+                <span class="@GetTitleClass()" @onclick="HandleClick" @onclick:stopPropagation="true">
+                    @Node.Title
+                </span>
+            </div>
+            
+            <span class="status-column">@Node.State</span>
+            
+            @if (Node.HasValidationIssues || Node.HasDescendantIssues)
+            {
+                <span class="validation-icon" title="@GetValidationTooltip()" role="img" aria-label="@GetValidationAriaLabel()">
+                    @Node.ValidationIcon
+                </span>
+            }
         }
     </div>
     
@@ -77,27 +88,45 @@
 
     private string GetNodeClass()
     {
-        var classes = new List<string>();
-        
         if (Node.Type == "(group)")
         {
-            classes.Add("group-node");
+            return "group-node";
         }
-        else
-        {
-            classes.Add("bug-node");
-            if (SelectedId == Node.Id)
-            {
-                classes.Add("selected");
-            }
-        }
-        
-        return string.Join(" ", classes);
+        return "bug-node";
     }
 
-    private Color GetBugColor()
+    private string GetCaretClass()
     {
-        // Simple color coding - could be enhanced based on criticality
-        return Color.Default;
+        return Node.IsExpanded ? "caret-button expanded" : "caret-button";
+    }
+
+    private string GetTitleClass()
+    {
+        var className = "workitem-title";
+        if (SelectedId.HasValue && SelectedId.Value == Node.Id)
+        {
+            className += " selected";
+        }
+        return className;
+    }
+
+    private string GetValidationTooltip()
+    {
+        return string.Join("\n", Node.ValidationIssues);
+    }
+
+    private string GetValidationAriaLabel()
+    {
+        if (Node.HasValidationIssues)
+        {
+            var issueCount = Node.ValidationIssues.Count;
+            var categoryName = Node.HighestCategory?.ToString() ?? "Unknown";
+            return $"{categoryName}: {issueCount} validation issue{(issueCount != 1 ? "s" : "")}";
+        }
+        else if (Node.HasDescendantIssues)
+        {
+            return $"Descendant has validation issues";
+        }
+        return "No validation issues";
     }
 }
