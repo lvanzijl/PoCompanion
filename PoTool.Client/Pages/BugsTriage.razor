@@ -3,6 +3,7 @@
 @using PoTool.Client.Services
 @using PoTool.Client.Models
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Components.BugTriage
 @using PoTool.Shared.BugTriage
 @using MudBlazor
 @inject WorkItemService WorkItemService
@@ -106,16 +107,12 @@
                             </div>
                         }
                         
-                        @* Bug Tree *@
-                        <div class="bugs-tree-list">
-                            @foreach (var root in _treeRoots)
-                            {
-                                <BugTriageTreeNode Node="@root" 
-                                                  SelectedId="@_selectedBugId"
-                                                  OnNodeToggled="HandleNodeToggled"
-                                                  OnNodeSelected="HandleNodeSelected" />
-                            }
-                        </div>
+                        @* Bug Tree Grid *@
+                        <BugTriageTreeGrid IsLoading="@_isLoading"
+                                          TreeRoots="@_treeRoots"
+                                          SelectedId="@_selectedBugId"
+                                          OnNodeToggled="HandleNodeToggled"
+                                          OnNodeSelected="HandleNodeSelected" />
                     </div>
                 </LeftContent>
                 <RightContent>
