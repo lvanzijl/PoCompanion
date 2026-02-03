@@ -600,4 +600,26 @@ public class WorkItemsController : ControllerBase
             return StatusCode(500, "Error retrieving work items by root IDs");
         }
     }
+
+    /// <summary>
+    /// Gets the available bug severity options in TFS format.
+    /// Returns severity values as they appear in TFS (e.g., "1 - Critical", "2 - High", etc.).
+    /// </summary>
+    [HttpGet("bug-severity-options")]
+    [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
+    public ActionResult<IEnumerable<string>> GetBugSeverityOptions()
+    {
+        // Return standard TFS severity values in the order they appear in TFS
+        // This matches the format used in Microsoft.VSTS.Common.Severity field
+        var severityOptions = new List<string>
+        {
+            "1 - Critical",
+            "2 - High",
+            "3 - Medium",
+            "4 - Low"
+        };
+
+        _logger.LogDebug("Returning {Count} bug severity options", severityOptions.Count);
+        return Ok(severityOptions);
+    }
 }

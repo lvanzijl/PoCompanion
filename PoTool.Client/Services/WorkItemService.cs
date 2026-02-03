@@ -240,5 +240,21 @@ public class WorkItemService
 
         return loadedItems;
     }
+
+    /// <summary>
+    /// Gets available bug severity options from the server.
+    /// Returns severity values in TFS format (e.g., "1 - Critical", "2 - High", "3 - Medium", "4 - Low").
+    /// </summary>
+    /// <returns>Collection of severity option strings.</returns>
+    public async Task<IEnumerable<string>> GetBugSeverityOptionsAsync()
+    {
+        var url = "/api/workitems/bug-severity-options";
+        
+        var response = await _httpClient.GetAsync(url);
+        response.EnsureSuccessStatusCode();
+
+        var severityOptions = await response.Content.ReadFromJsonAsync<IEnumerable<string>>(_jsonOptions);
+        return severityOptions ?? Enumerable.Empty<string>();
+    }
 }
 

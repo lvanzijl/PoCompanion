@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using PoTool.Client.ApiClient;
 
 namespace PoTool.Client.Services;
@@ -9,6 +10,12 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class TfsFieldParserService
 {
+    private readonly ILogger<TfsFieldParserService> _logger;
+
+    public TfsFieldParserService(ILogger<TfsFieldParserService> logger)
+    {
+        _logger = logger;
+    }
     /// <summary>
     /// Extracts the Priority field from a work item's JSON payload.
     /// Priority in TFS is typically: 1, 2, 3, 4 (where 1 is highest priority).
@@ -142,6 +149,7 @@ public class TfsFieldParserService
     {
         if (string.IsNullOrWhiteSpace(severity))
         {
+            _logger.LogWarning("Severity value is null or empty, defaulting to Medium");
             return Models.BugSeverity.Medium;
         }
 
@@ -165,6 +173,7 @@ public class TfsFieldParserService
             return Models.BugSeverity.Low;
         }
 
+        _logger.LogWarning("Unknown severity value '{Severity}', defaulting to Medium", severity);
         return Models.BugSeverity.Medium; // Default to Medium if unknown
     }
 
@@ -202,6 +211,7 @@ public class TfsFieldParserService
         }
 
         // Fallback to Priority if Severity not available
+        _logger.LogWarning("Work item {WorkItemId} has no Severity field, falling back to Priority field", workItem.TfsId);
         var priority = GetPriority(workItem);
         if (!string.IsNullOrEmpty(priority))
         {
@@ -209,6 +219,7 @@ public class TfsFieldParserService
         }
 
         // Default to Medium if neither field is available
+        _logger.LogWarning("Work item {WorkItemId} has neither Severity nor Priority field, defaulting to Medium", workItem.TfsId);
         return Models.BugSeverity.Medium;
     }
 }

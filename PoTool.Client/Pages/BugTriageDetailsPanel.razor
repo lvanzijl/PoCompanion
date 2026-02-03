@@ -4,6 +4,8 @@
 @using PoTool.Shared.BugTriage
 @using MudBlazor
 @inject TfsFieldParserService TfsFieldParser
+@inject WorkItemService WorkItemService
+@inject ILogger<BugTriageDetailsPanel> Logger
 
 <div class="bug-details-content pa-3">
     <MudStack Spacing="3">
@@ -20,16 +22,23 @@
         @* Severity Selector *@
         <MudPaper Class="pa-3" Elevation="1">
             <MudText Typo="Typo.subtitle2" Class="mb-2">Severity</MudText>
-            <MudSelect T="string"
-                      Value="@_currentSeverity"
-                      ValueChanged="@HandleSeverityChanged"
-                      Variant="Variant.Outlined"
-                      Dense="true">
-                @foreach (var severity in BugSeverity.AllValues)
-                {
-                    <MudSelectItem Value="@severity">@severity</MudSelectItem>
-                }
-            </MudSelect>
+            @if (_severityOptions.Any())
+            {
+                <MudSelect T="string"
+                          Value="@_currentSeverity"
+                          ValueChanged="@HandleSeverityChanged"
+                          Variant="Variant.Outlined"
+                          Dense="true">
+                    @foreach (var severity in _severityOptions)
+                    {
+                        <MudSelectItem Value="@severity">@severity</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Loading severity options...</MudText>
+            }
         </MudPaper>
 
         @* Triage Tags *@
@@ -99,16 +108,45 @@
     [Parameter]
     public EventCallback<(int BugId, string TagName, bool IsAdded)> OnTagToggled { get; set; }
 
-    private string _currentSeverity = BugSeverity.Medium;
+    private string _currentSeverity = "3 - Medium"; // Default to TFS format
     private HashSet<string> _activeTags = new();
+    private List<string> _severityOptions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSeverityOptionsAsync();
+    }
 
     protected override void OnParametersSet()
     {
         if (Bug != null)
         {
             // Initialize severity and tags from bug
-            _currentSeverity = GetBugSeverity(Bug);
+            // GetBugSeverity now returns TFS format (e.g., "1 - Critical")
+            _currentSeverity = GetBugSeverityTfsFormat(Bug);
             _activeTags = new HashSet<string>(GetBugTags(Bug), StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private async Task LoadSeverityOptionsAsync()
+    {
+        try
+        {
+            var options = await WorkItemService.GetBugSeverityOptionsAsync();
+            _severityOptions = options.ToList();
+            Logger.LogInformation("Loaded {Count} severity options from server", _severityOptions.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load severity options from server, using fallback");
+            // Fallback to standard TFS severity values
+            _severityOptions = new List<string>
+            {
+                "1 - Critical",
+                "2 - High",
+                "3 - Medium",
+                "4 - Low"
+            };
         }
     }
 
@@ -135,6 +173,35 @@
         }
         
         await OnTagToggled.InvokeAsync((Bug.TfsId, tagName, isAdded));
+    }
+
+    private string GetBugSeverityTfsFormat(WorkItemWithValidationDto bug)
+    {
+        // Get severity from JSON payload - this returns TFS format like "1 - Critical"
+        var severity = TfsFieldParser.GetSeverity(bug);
+        if (!string.IsNullOrEmpty(severity))
+        {
+            return severity;
+        }
+
+        // Fallback to Priority if Severity not available
+        Logger.LogWarning("Bug {BugId} has no Severity field, falling back to Priority", bug.TfsId);
+        var priority = TfsFieldParser.GetPriority(bug);
+        if (!string.IsNullOrEmpty(priority))
+        {
+            // Map priority to TFS severity format
+            return priority switch
+            {
+                "1" => "1 - Critical",
+                "2" => "2 - High",
+                "3" => "3 - Medium",
+                "4" => "4 - Low",
+                _ => "3 - Medium"
+            };
+        }
+
+        Logger.LogWarning("Bug {BugId} has neither Severity nor Priority, defaulting to Medium", bug.TfsId);
+        return "3 - Medium";
     }
 
     private string GetBugSeverity(WorkItemWithValidationDto bug)

@@ -296,24 +296,41 @@ public class BugTriageStateService
     }
 
     /// <summary>
-    /// Maps UI severity display names to TFS Severity field format.
+    /// Maps UI severity values to TFS Severity field format.
+    /// Handles both old format ("Critical") and new TFS format ("1 - Critical").
     /// TFS expects values like "1 - Critical", "2 - High", "3 - Medium", "4 - Low".
     /// </summary>
     private string MapSeverityToTfsFormat(string severity)
     {
-        // Map UI severity constants to TFS format
+        // If already in TFS format (contains " - "), return as-is
+        if (!string.IsNullOrWhiteSpace(severity) && severity.Contains(" - "))
+        {
+            // Validate it's a known TFS format
+            var validTfsFormats = new[] { "1 - Critical", "2 - High", "3 - Medium", "4 - Low" };
+            if (validTfsFormats.Contains(severity, StringComparer.OrdinalIgnoreCase))
+            {
+                return severity;
+            }
+        }
+
+        // Map old UI severity constants to TFS format (for backwards compatibility)
         var mapped = severity switch
         {
             "Critical" => "1 - Critical",
             "High" => "2 - High",
             "Medium" => "3 - Medium",
             "Low" => "4 - Low",
+            // Also handle TFS format without exact match (case-insensitive)
+            var s when s.Equals("1 - Critical", StringComparison.OrdinalIgnoreCase) => "1 - Critical",
+            var s when s.Equals("2 - High", StringComparison.OrdinalIgnoreCase) => "2 - High",
+            var s when s.Equals("3 - Medium", StringComparison.OrdinalIgnoreCase) => "3 - Medium",
+            var s when s.Equals("4 - Low", StringComparison.OrdinalIgnoreCase) => "4 - Low",
             _ => null
         };
 
         if (mapped == null)
         {
-            _logger.LogWarning("Unknown severity value '{Severity}' encountered. Expected values: Critical, High, Medium, or Low. Defaulting to '3 - Medium'", severity);
+            _logger.LogWarning("Unknown severity value '{Severity}' encountered. Expected values: '1 - Critical', '2 - High', '3 - Medium', '4 - Low' or 'Critical', 'High', 'Medium', 'Low'. Defaulting to '3 - Medium'", severity);
             return "3 - Medium";
         }
 

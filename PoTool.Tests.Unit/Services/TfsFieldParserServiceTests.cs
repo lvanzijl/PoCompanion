@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
 using PoTool.Client.Models;
@@ -10,11 +12,13 @@ namespace PoTool.Tests.Unit.Services;
 public class TfsFieldParserServiceTests
 {
     private TfsFieldParserService _service = null!;
+    private Mock<ILogger<TfsFieldParserService>> _mockLogger = null!;
 
     [TestInitialize]
     public void TestInitialize()
     {
-        _service = new TfsFieldParserService();
+        _mockLogger = new Mock<ILogger<TfsFieldParserService>>();
+        _service = new TfsFieldParserService(_mockLogger.Object);
     }
 
     private WorkItemWithValidationDto CreateBugWithJsonPayload(Dictionary<string, object> fields)
