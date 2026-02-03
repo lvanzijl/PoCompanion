@@ -13,6 +13,7 @@ using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Core.WorkItems.Filtering;
 using PoTool.Core.Health;
+using PoTool.Client.Services;
 
 namespace PoTool.Api.Configuration;
 
@@ -242,9 +243,12 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<TfsAuthenticationProvider>();
         services.AddScoped<ProfileFilterService>();
 
+        // Register TFS field parser service (used by Bug Triage services)
+        services.AddScoped<TfsFieldParserService>();
+
         // Register Bug Triage services
         services.AddScoped<BugTriageStateService>();
-        services.AddScoped<TriageTagService>();
+        services.AddScoped<Api.Services.TriageTagService>();
 
         // Register TFS throttling and request services (used by RealTfsClient)
         services.AddSingleton<TfsRequestThrottler>();
