@@ -3,11 +3,19 @@ bin/
 obj/
 out/
 
-# EF Core BuildHost files (Windows paths with backslashes)
-**/bin\Debug/
-**/bin\Release/
-**/obj\Debug/
-**/obj\Release/
+# IMPORTANT: Use forward slashes only when committing!
+# Git internally uses forward slashes even on Windows.
+# Files with literal backslashes in names will NOT be ignored properly.
+# Common patterns that should be ignored:
+**/bin/Debug/
+**/bin/Release/
+**/obj/Debug/
+**/obj/Release/
+# Lowercase variants to handle different directory naming conventions
+**/bin/debug/
+**/bin/release/
+**/obj/debug/
+**/obj/release/
 
 # User-specific files
 *.suo
