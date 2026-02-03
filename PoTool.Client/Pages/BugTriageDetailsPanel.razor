@@ -148,16 +148,14 @@
             // Reset error state
             _severityError = null;
             
-            // Get severity directly from TFS payload - NO FALLBACKS
-            _currentSeverity = TfsFieldParser.GetSeverity(Bug);
+            // Get severity directly from cached field - NO TFS field parsing
+            _currentSeverity = Bug.Severity;
             
             // Log and set error if severity is missing
             if (string.IsNullOrEmpty(_currentSeverity))
             {
-                var availableFields = GetAvailableFieldsSummary(Bug);
-                Logger.LogError("Bug {BugId} has NO Severity field (Microsoft.VSTS.Common.Severity). Available fields: {Fields}", 
-                    Bug.TfsId, availableFields);
-                _severityError = $"Severity field (Microsoft.VSTS.Common.Severity) is missing from bug {Bug.TfsId}";
+                Logger.LogError("Bug {BugId} has NO Severity field in cached data", Bug.TfsId);
+                _severityError = $"Severity field is missing from bug {Bug.TfsId}";
             }
             // Check if severity value is in allowed list
             else if (_severityOptions.Any() && !_severityOptions.Contains(_currentSeverity))
