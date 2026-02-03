@@ -119,7 +119,120 @@
 
 ## Phase 3 — Handler Usage Changes
 
-*To be populated in Phase 3*
+### Changes Applied: 4 items marked obsolete (complete handler chain)
+
+---
+
+### 4. DeleteTeamCommand — MARKED OBSOLETE
+
+**File:** `PoTool.Core/Settings/Commands/DeleteTeamCommand.cs`  
+**Type:** CQRS Command  
+**Obsolete Marking:**
+```csharp
+[Obsolete("UNUSED: Only sent by obsolete TeamsController.DeleteTeam endpoint. UI uses ArchiveTeamCommand (soft delete) instead. See docs/cleanup/phase3-handler-usage-report.md section 3.2", error: true)]
+```
+
+**Reason:**
+- Command only instantiated in obsolete `TeamsController.DeleteTeam` endpoint
+- No other controllers send this command
+- UI exclusively uses `ArchiveTeamCommand` for team deletion (soft delete)
+
+**Evidence:**
+- `grep -r "DeleteTeamCommand" PoTool.Api` found only 2 usages:
+  - TeamsController.cs:144 (obsolete endpoint)
+  - DeleteTeamCommandHandler.cs:10 (handler definition)
+- No other command creation sites found
+
+**Impact:**
+- ✅ Compilation succeeds (command only created in obsolete controller)
+- ✅ No runtime impact (endpoint never called)
+
+**Report Reference:** `docs/cleanup/phase3-handler-usage-report.md` section 3.2
+
+---
+
+### 5. DeleteTeamCommandHandler — MARKED OBSOLETE
+
+**File:** `PoTool.Api/Handlers/Settings/Teams/DeleteTeamCommandHandler.cs`  
+**Type:** MediatR Command Handler  
+**Obsolete Marking:**
+```csharp
+[Obsolete("UNUSED: Only handles obsolete DeleteTeamCommand. UI uses ArchiveTeamCommandHandler instead. See docs/cleanup/phase3-handler-usage-report.md section 3.3", error: true)]
+```
+
+**Reason:**
+- Handler only processes obsolete `DeleteTeamCommand`
+- Never invoked (command only sent by obsolete endpoint)
+- UI uses `ArchiveTeamCommandHandler` for soft-delete functionality
+
+**Evidence:**
+- Handler auto-registered by MediatR
+- Only triggered when DeleteTeamCommand is sent
+- DeleteTeamCommand only sent from obsolete endpoint (never called)
+
+**Impact:**
+- ✅ Compilation succeeds (handler only handles obsolete command)
+- ✅ MediatR will still register handler (obsolete doesn't prevent DI)
+- ✅ No runtime impact (handler never invoked)
+- ⚠️ Pragma added to suppress warning when handler uses obsolete DeleteTeamAsync
+
+**Report Reference:** `docs/cleanup/phase3-handler-usage-report.md` section 3.3
+
+---
+
+### 6. ITeamRepository.DeleteTeamAsync — MARKED OBSOLETE
+
+**File:** `PoTool.Core/Contracts/ITeamRepository.cs`  
+**Type:** Repository Interface Method  
+**Obsolete Marking:**
+```csharp
+[Obsolete("UNUSED: Only called by obsolete DeleteTeamCommandHandler. UI uses ArchiveTeamAsync (soft delete) instead. See docs/cleanup/phase3-handler-usage-report.md section 3.4", error: true)]
+Task<bool> DeleteTeamAsync(int id, CancellationToken cancellationToken = default);
+```
+
+**Reason:**
+- Interface method only called by obsolete `DeleteTeamCommandHandler`
+- Performs hard delete (permanent removal)
+- UI uses `ArchiveTeamAsync` (soft delete, reversible) instead
+
+**Evidence:**
+- `grep -r "DeleteTeamAsync" PoTool.Api` found only 1 caller:
+  - DeleteTeamCommandHandler.cs:21
+- No other handler or service calls this method
+
+**Impact:**
+- ✅ Compilation succeeds (method only called by obsolete handler)
+- ✅ No runtime impact (handler never invoked)
+
+**Report Reference:** `docs/cleanup/phase3-handler-usage-report.md` section 3.4
+
+---
+
+### 7. TeamRepository.DeleteTeamAsync — MARKED OBSOLETE
+
+**File:** `PoTool.Api/Repositories/TeamRepository.cs`  
+**Type:** Repository Implementation Method  
+**Obsolete Marking:**
+```csharp
+[Obsolete("UNUSED: Only called by obsolete DeleteTeamCommandHandler. UI uses ArchiveTeamAsync (soft delete) instead. See docs/cleanup/phase3-handler-usage-report.md section 3.4", error: true)]
+public async Task<bool> DeleteTeamAsync(int id, CancellationToken cancellationToken = default)
+```
+
+**Reason:**
+- Implementation only called by obsolete `DeleteTeamCommandHandler`
+- Removes team entity + ProductTeamLinks (hard delete)
+- UI uses `ArchiveTeamAsync` which sets IsArchived flag (soft delete)
+
+**Evidence:**
+- Same evidence as interface (only caller is obsolete handler)
+- Implementation performs permanent database deletion
+- Alternative `ArchiveTeamAsync` implementation is actively used
+
+**Impact:**
+- ✅ Compilation succeeds (method only called by obsolete handler)
+- ✅ No runtime impact (handler never invoked)
+
+**Report Reference:** `docs/cleanup/phase3-handler-usage-report.md` section 3.4
 
 ---
 
@@ -129,8 +242,8 @@
 |-------|----------------------|-------------------|---------|
 | Phase 1 — Client UI | 2 (1 helper, 1 page) | ✅ Success | ✅ Safe |
 | Phase 2 — Endpoints | 1 (1 endpoint) | ✅ Success | ✅ Safe |
-| Phase 3 — Handlers | TBD | TBD | TBD |
-| **TOTAL** | **3** | **✅ Success** | **✅ Safe** |
+| Phase 3 — Handlers | 4 (1 command, 1 handler, 2 repository methods) | ✅ Success | ✅ Safe |
+| **TOTAL** | **7** | **✅ Success** | **✅ Safe** |
 
 ---
 

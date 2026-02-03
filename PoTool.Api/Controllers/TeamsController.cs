@@ -141,7 +141,9 @@ public class TeamsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteTeam(int id, CancellationToken cancellationToken)
     {
+#pragma warning disable CS0618, CS0619 // Type or member is obsolete (entire chain is obsolete)
         var result = await _mediator.Send(new DeleteTeamCommand(id), cancellationToken);
+#pragma warning restore CS0618, CS0619
 
         if (!result)
         {
