@@ -329,11 +329,12 @@
                             {
                                 _selectedBug = refreshedBug;
                                 Logger.LogInformation("Updated _selectedBug reference for bug {BugId}", bugId);
-                                // Force Blazor to detect the change in the details panel
-                                StateHasChanged();
                             }
                             
                             Logger.LogInformation("Successfully refreshed bug {BugId} from cache with server state", bugId);
+                            
+                            // Force Blazor to detect the change in the details panel
+                            StateHasChanged();
                         }
                         else
                         {

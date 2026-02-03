@@ -156,17 +156,24 @@ public class BugTriageStateService
                     {
                         // Parse severity from the refreshed JsonPayload to log the actual value
                         string? newSeverityValue = null;
-                        try
+                        if (!string.IsNullOrWhiteSpace(refreshedWorkItem.JsonPayload))
                         {
-                            using var doc = JsonDocument.Parse(refreshedWorkItem.JsonPayload);
-                            if (doc.RootElement.TryGetProperty("Microsoft.VSTS.Common.Severity", out var severity))
+                            try
                             {
-                                newSeverityValue = severity.GetString();
+                                using var doc = JsonDocument.Parse(refreshedWorkItem.JsonPayload);
+                                if (doc.RootElement.TryGetProperty("Microsoft.VSTS.Common.Severity", out var severity))
+                                {
+                                    newSeverityValue = severity.GetString();
+                                }
+                            }
+                            catch (JsonException jsonEx)
+                            {
+                                _logger.LogWarning(jsonEx, "Failed to parse severity from refreshed work item {BugId} - invalid JSON", request.BugId);
                             }
                         }
-                        catch (Exception parseEx)
+                        else
                         {
-                            _logger.LogWarning(parseEx, "Failed to parse severity from refreshed work item {BugId}", request.BugId);
+                            _logger.LogWarning("Refreshed work item {BugId} has null or empty JsonPayload", request.BugId);
                         }
                         
                         // Update cached work item with fresh data from TFS
