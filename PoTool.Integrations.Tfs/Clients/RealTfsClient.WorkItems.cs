@@ -314,6 +314,9 @@ public partial class RealTfsClient
             // Extract closed date from TFS (Microsoft.VSTS.Common.ClosedDate)
             DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
 
+            // Extract severity from TFS (Microsoft.VSTS.Common.Severity)
+            string? severity = ParseSeverityField(fields);
+
             var workItem = new WorkItemDto(
                 TfsId: id,
                 Type: type,
@@ -327,7 +330,8 @@ public partial class RealTfsClient
                 Effort: effort,
                 Description: description,
                 CreatedDate: createdDate,
-                ClosedDate: closedDate
+                ClosedDate: closedDate,
+                Severity: severity
             );
 
             _logger.LogInformation("Retrieved work item {WorkItemId} from TFS: {Title}", id, title);
@@ -555,6 +559,9 @@ public partial class RealTfsClient
                     // Extract closed date from TFS (Microsoft.VSTS.Common.ClosedDate)
                     DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
 
+                    // Extract severity from TFS (Microsoft.VSTS.Common.Severity)
+                    string? severity = ParseSeverityField(fields);
+
                     results.Add(new WorkItemDto(
                         TfsId: id,
                         Type: type,
@@ -568,7 +575,8 @@ public partial class RealTfsClient
                         Effort: effort,
                         Description: description,
                         CreatedDate: createdDate,
-                        ClosedDate: closedDate
+                        ClosedDate: closedDate,
+                        Severity: severity
                     ));
                 }
 

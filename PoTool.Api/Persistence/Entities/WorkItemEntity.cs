@@ -111,4 +111,12 @@ public class WorkItemEntity
     /// Used for tracking when bugs were fixed/completed.
     /// </summary>
     public DateTimeOffset? ClosedDate { get; set; }
+
+    /// <summary>
+    /// Work item severity from TFS (Microsoft.VSTS.Common.Severity).
+    /// Used for bugs: "1 - Critical", "2 - High", "3 - Medium", "4 - Low".
+    /// Nullable - only applicable to work items that support severity (e.g., Bugs).
+    /// </summary>
+    [MaxLength(50)]
+    public string? Severity { get; set; }
 }

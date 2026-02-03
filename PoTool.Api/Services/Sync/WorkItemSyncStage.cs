@@ -175,6 +175,7 @@ public class WorkItemSyncStage : ISyncStage
         entity.Description = dto.Description;
         entity.CreatedDate = dto.CreatedDate;
         entity.ClosedDate = dto.ClosedDate;
+        entity.Severity = dto.Severity;
         // Write-back fields (TfsRevision, TfsChangedDate, TfsETag) are populated during 
         // future write-back operations, not during sync. See TFS_CACHE_IMPLEMENTATION_PLAN.md Section 10.
     }
@@ -195,7 +196,8 @@ public class WorkItemSyncStage : ISyncStage
             Effort = dto.Effort,
             Description = dto.Description,
             CreatedDate = dto.CreatedDate,
-            ClosedDate = dto.ClosedDate
+            ClosedDate = dto.ClosedDate,
+            Severity = dto.Severity
         };
     }
 }

@@ -35,5 +35,6 @@ public sealed record WorkItemDto(
     int? Effort,
     string? Description,
     DateTimeOffset? CreatedDate = null,
-    DateTimeOffset? ClosedDate = null
+    DateTimeOffset? ClosedDate = null,
+    string? Severity = null
 );
