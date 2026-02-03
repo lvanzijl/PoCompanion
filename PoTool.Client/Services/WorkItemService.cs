@@ -66,6 +66,20 @@ public class WorkItemService
     }
 
     /// <summary>
+    /// Gets a specific work item with validation by TFS ID from cache.
+    /// This retrieves a single work item from the cached data.
+    /// Note: This fetches all work items and filters to the specific ID.
+    /// While this seems inefficient, the backend already filters by productIds,
+    /// and this approach reuses existing infrastructure without requiring a new endpoint.
+    /// </summary>
+    public async Task<WorkItemWithValidationDto?> GetByTfsIdWithValidationAsync(int tfsId, int[]? productIds = null)
+    {
+        // Get all work items with validation and filter to the specific ID
+        var allWorkItems = await GetAllWithValidationAsync(productIds);
+        return allWorkItems.FirstOrDefault(wi => wi.TfsId == tfsId);
+    }
+
+    /// <summary>
     /// Validates a work item by ID directly from TFS (bypasses cache).
     /// Used specifically for validating backlog root work item IDs in product creation/editing.
     /// </summary>
