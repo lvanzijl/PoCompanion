@@ -27,9 +27,9 @@ public enum TagMatchMode
 }
 
 /// <summary>
-/// Client model for criticality options.
+/// Client model for severity options.
 /// </summary>
-public static class BugCriticality
+public static class BugSeverity
 {
     public const string Critical = "Critical";
     public const string High = "High";
@@ -45,11 +45,11 @@ public static class BugCriticality
     };
 
     /// <summary>
-    /// Gets the display order for a criticality (lower number = higher priority).
+    /// Gets the display order for a severity (lower number = higher priority).
     /// </summary>
-    public static int GetOrder(string criticality)
+    public static int GetOrder(string severity)
     {
-        return criticality switch
+        return severity switch
         {
             Critical => 1,
             High => 2,

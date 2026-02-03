@@ -58,7 +58,7 @@ namespace PoTool.Api.Migrations
                     b.Property<int>("BugId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("FirstObservedCriticality")
+                    b.Property<string>("FirstObservedSeverity")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");

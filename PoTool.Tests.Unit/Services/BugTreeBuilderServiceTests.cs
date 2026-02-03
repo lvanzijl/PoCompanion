@@ -54,10 +54,10 @@ public class BugTreeBuilderServiceTests
         };
         var untriagedIds = new HashSet<int> { 1, 2 };
         var expandedState = new Dictionary<int, bool>();
-        string GetCriticality(WorkItemWithValidationDto bug) => BugCriticality.Medium;
+        string GetSeverity(WorkItemWithValidationDto bug) => BugSeverity.Medium;
 
         // Act
-        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetCriticality);
+        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);
 
         // Assert
         Assert.HasCount(1, roots); // Only "New / Untriaged" group
@@ -76,10 +76,10 @@ public class BugTreeBuilderServiceTests
         };
         var untriagedIds = new HashSet<int>(); // All triaged
         var expandedState = new Dictionary<int, bool>();
-        string GetCriticality(WorkItemWithValidationDto bug) => BugCriticality.Critical;
+        string GetSeverity(WorkItemWithValidationDto bug) => BugSeverity.Critical;
 
         // Act
-        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetCriticality);
+        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);
 
         // Assert
         Assert.HasCount(1, roots);
@@ -89,7 +89,7 @@ public class BugTreeBuilderServiceTests
     }
 
     [TestMethod]
-    public void BuildBugTriageTree_WithMixedCriticality_CreatesMultipleGroups()
+    public void BuildBugTriageTree_WithMixedSeverity_CreatesMultipleGroups()
     {
         // Arrange
         var bugs = new List<WorkItemWithValidationDto>
@@ -101,17 +101,17 @@ public class BugTreeBuilderServiceTests
         };
         var untriagedIds = new HashSet<int>(); // All triaged
         var expandedState = new Dictionary<int, bool>();
-        var criticalityMap = new Dictionary<int, string>
+        var severityMap = new Dictionary<int, string>
         {
-            { 1, BugCriticality.Critical },
-            { 2, BugCriticality.High },
-            { 3, BugCriticality.Medium },
-            { 4, BugCriticality.Low }
+            { 1, BugSeverity.Critical },
+            { 2, BugSeverity.High },
+            { 3, BugSeverity.Medium },
+            { 4, BugSeverity.Low }
         };
-        string GetCriticality(WorkItemWithValidationDto bug) => criticalityMap[bug.TfsId];
+        string GetSeverity(WorkItemWithValidationDto bug) => severityMap[bug.TfsId];
 
         // Act
-        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetCriticality);
+        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);
 
         // Assert
         Assert.HasCount(4, roots); // Critical, High, Medium, Low groups
@@ -122,7 +122,7 @@ public class BugTreeBuilderServiceTests
     }
 
     [TestMethod]
-    public void BuildBugTriageTree_UntriagedFirst_ThenCriticality()
+    public void BuildBugTriageTree_UntriagedFirst_ThenSeverity()
     {
         // Arrange
         var bugs = new List<WorkItemWithValidationDto>
@@ -132,15 +132,15 @@ public class BugTreeBuilderServiceTests
         };
         var untriagedIds = new HashSet<int> { 1 };
         var expandedState = new Dictionary<int, bool>();
-        var criticalityMap = new Dictionary<int, string>
+        var severityMap = new Dictionary<int, string>
         {
-            { 1, BugCriticality.Medium },
-            { 2, BugCriticality.Critical }
+            { 1, BugSeverity.Medium },
+            { 2, BugSeverity.Critical }
         };
-        string GetCriticality(WorkItemWithValidationDto bug) => criticalityMap[bug.TfsId];
+        string GetSeverity(WorkItemWithValidationDto bug) => severityMap[bug.TfsId];
 
         // Act
-        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetCriticality);
+        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);
 
         // Assert
         Assert.HasCount(2, roots);
@@ -161,10 +161,10 @@ public class BugTreeBuilderServiceTests
         {
             { -1000, false } // New/Untriaged group collapsed
         };
-        string GetCriticality(WorkItemWithValidationDto bug) => BugCriticality.Medium;
+        string GetSeverity(WorkItemWithValidationDto bug) => BugSeverity.Medium;
 
         // Act
-        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetCriticality);
+        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);
 
         // Assert
         Assert.IsFalse(roots[0].IsExpanded);
@@ -180,10 +180,10 @@ public class BugTreeBuilderServiceTests
         };
         var untriagedIds = new HashSet<int> { 1 };
         var expandedState = new Dictionary<int, bool>();
-        string GetCriticality(WorkItemWithValidationDto bug) => BugCriticality.Medium;
+        string GetSeverity(WorkItemWithValidationDto bug) => BugSeverity.Medium;
 
         // Act
-        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetCriticality);
+        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);
 
         // Assert
         Assert.IsTrue(roots[0].IsExpanded); // Default is expanded
@@ -201,10 +201,10 @@ public class BugTreeBuilderServiceTests
         };
         var untriagedIds = new HashSet<int> { 1, 2, 3 };
         var expandedState = new Dictionary<int, bool>();
-        string GetCriticality(WorkItemWithValidationDto bug) => BugCriticality.Medium;
+        string GetSeverity(WorkItemWithValidationDto bug) => BugSeverity.Medium;
 
         // Act
-        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetCriticality);
+        var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);
 
         // Assert
         var children = roots[0].Children;

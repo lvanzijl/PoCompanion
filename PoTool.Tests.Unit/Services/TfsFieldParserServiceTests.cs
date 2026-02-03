@@ -257,183 +257,183 @@ public class TfsFieldParserServiceTests
 
     #endregion
 
-    #region MapPriorityToCriticality Tests
+    #region MapPriorityToSeverity Tests
 
     [TestMethod]
-    public void MapPriorityToCriticality_Priority1_ReturnsCritical()
+    public void MapPriorityToSeverity_Priority1_ReturnsCritical()
     {
         // Act
-        var result = _service.MapPriorityToCriticality("1");
+        var result = _service.MapPriorityToSeverity("1");
 
         // Assert
-        Assert.AreEqual(BugCriticality.Critical, result);
+        Assert.AreEqual(BugSeverity.Critical, result);
     }
 
     [TestMethod]
-    public void MapPriorityToCriticality_Priority2_ReturnsHigh()
+    public void MapPriorityToSeverity_Priority2_ReturnsHigh()
     {
         // Act
-        var result = _service.MapPriorityToCriticality("2");
+        var result = _service.MapPriorityToSeverity("2");
 
         // Assert
-        Assert.AreEqual(BugCriticality.High, result);
+        Assert.AreEqual(BugSeverity.High, result);
     }
 
     [TestMethod]
-    public void MapPriorityToCriticality_Priority3_ReturnsMedium()
+    public void MapPriorityToSeverity_Priority3_ReturnsMedium()
     {
         // Act
-        var result = _service.MapPriorityToCriticality("3");
+        var result = _service.MapPriorityToSeverity("3");
 
         // Assert
-        Assert.AreEqual(BugCriticality.Medium, result);
+        Assert.AreEqual(BugSeverity.Medium, result);
     }
 
     [TestMethod]
-    public void MapPriorityToCriticality_Priority4_ReturnsLow()
+    public void MapPriorityToSeverity_Priority4_ReturnsLow()
     {
         // Act
-        var result = _service.MapPriorityToCriticality("4");
+        var result = _service.MapPriorityToSeverity("4");
 
         // Assert
-        Assert.AreEqual(BugCriticality.Low, result);
+        Assert.AreEqual(BugSeverity.Low, result);
     }
 
     [TestMethod]
-    public void MapPriorityToCriticality_NullPriority_ReturnsMedium()
+    public void MapPriorityToSeverity_NullPriority_ReturnsMedium()
     {
         // Act
-        var result = _service.MapPriorityToCriticality(null);
+        var result = _service.MapPriorityToSeverity(null);
 
         // Assert
-        Assert.AreEqual(BugCriticality.Medium, result);
+        Assert.AreEqual(BugSeverity.Medium, result);
     }
 
     [TestMethod]
-    public void MapPriorityToCriticality_UnknownPriority_ReturnsMedium()
+    public void MapPriorityToSeverity_UnknownPriority_ReturnsMedium()
     {
         // Act
-        var result = _service.MapPriorityToCriticality("5");
+        var result = _service.MapPriorityToSeverity("5");
 
         // Assert
-        Assert.AreEqual(BugCriticality.Medium, result);
-    }
-
-    #endregion
-
-    #region MapSeverityToCriticality Tests
-
-    [TestMethod]
-    public void MapSeverityToCriticality_CriticalWithNumber_ReturnsCritical()
-    {
-        // Act
-        var result = _service.MapSeverityToCriticality("1 - Critical");
-
-        // Assert
-        Assert.AreEqual(BugCriticality.Critical, result);
-    }
-
-    [TestMethod]
-    public void MapSeverityToCriticality_CriticalPlain_ReturnsCritical()
-    {
-        // Act
-        var result = _service.MapSeverityToCriticality("Critical");
-
-        // Assert
-        Assert.AreEqual(BugCriticality.Critical, result);
-    }
-
-    [TestMethod]
-    public void MapSeverityToCriticality_HighWithNumber_ReturnsHigh()
-    {
-        // Act
-        var result = _service.MapSeverityToCriticality("2 - High");
-
-        // Assert
-        Assert.AreEqual(BugCriticality.High, result);
-    }
-
-    [TestMethod]
-    public void MapSeverityToCriticality_MediumWithNumber_ReturnsMedium()
-    {
-        // Act
-        var result = _service.MapSeverityToCriticality("3 - Medium");
-
-        // Assert
-        Assert.AreEqual(BugCriticality.Medium, result);
-    }
-
-    [TestMethod]
-    public void MapSeverityToCriticality_LowWithNumber_ReturnsLow()
-    {
-        // Act
-        var result = _service.MapSeverityToCriticality("4 - Low");
-
-        // Assert
-        Assert.AreEqual(BugCriticality.Low, result);
-    }
-
-    [TestMethod]
-    public void MapSeverityToCriticality_NullSeverity_ReturnsMedium()
-    {
-        // Act
-        var result = _service.MapSeverityToCriticality(null);
-
-        // Assert
-        Assert.AreEqual(BugCriticality.Medium, result);
-    }
-
-    [TestMethod]
-    public void MapSeverityToCriticality_UnknownSeverity_ReturnsMedium()
-    {
-        // Act
-        var result = _service.MapSeverityToCriticality("Unknown");
-
-        // Assert
-        Assert.AreEqual(BugCriticality.Medium, result);
+        Assert.AreEqual(BugSeverity.Medium, result);
     }
 
     #endregion
 
-    #region GetBugCriticality Tests
+    #region NormalizeSeverity Tests
 
     [TestMethod]
-    public void GetBugCriticality_WithPriority_UsesPriority()
+    public void NormalizeSeverity_CriticalWithNumber_ReturnsCritical()
+    {
+        // Act
+        var result = _service.NormalizeSeverity("1 - Critical");
+
+        // Assert
+        Assert.AreEqual(BugSeverity.Critical, result);
+    }
+
+    [TestMethod]
+    public void NormalizeSeverity_CriticalPlain_ReturnsCritical()
+    {
+        // Act
+        var result = _service.NormalizeSeverity("Critical");
+
+        // Assert
+        Assert.AreEqual(BugSeverity.Critical, result);
+    }
+
+    [TestMethod]
+    public void NormalizeSeverity_HighWithNumber_ReturnsHigh()
+    {
+        // Act
+        var result = _service.NormalizeSeverity("2 - High");
+
+        // Assert
+        Assert.AreEqual(BugSeverity.High, result);
+    }
+
+    [TestMethod]
+    public void NormalizeSeverity_MediumWithNumber_ReturnsMedium()
+    {
+        // Act
+        var result = _service.NormalizeSeverity("3 - Medium");
+
+        // Assert
+        Assert.AreEqual(BugSeverity.Medium, result);
+    }
+
+    [TestMethod]
+    public void NormalizeSeverity_LowWithNumber_ReturnsLow()
+    {
+        // Act
+        var result = _service.NormalizeSeverity("4 - Low");
+
+        // Assert
+        Assert.AreEqual(BugSeverity.Low, result);
+    }
+
+    [TestMethod]
+    public void NormalizeSeverity_NullSeverity_ReturnsMedium()
+    {
+        // Act
+        var result = _service.NormalizeSeverity(null);
+
+        // Assert
+        Assert.AreEqual(BugSeverity.Medium, result);
+    }
+
+    [TestMethod]
+    public void NormalizeSeverity_UnknownSeverity_ReturnsMedium()
+    {
+        // Act
+        var result = _service.NormalizeSeverity("Unknown");
+
+        // Assert
+        Assert.AreEqual(BugSeverity.Medium, result);
+    }
+
+    #endregion
+
+    #region GetBugSeverity Tests
+
+    [TestMethod]
+    public void GetBugSeverity_WithSeverity_UsesSeverity()
     {
         // Arrange
         var fields = new Dictionary<string, object>
         {
-            { "Microsoft.VSTS.Common.Priority", 1 },
-            { "Microsoft.VSTS.Common.Severity", "4 - Low" } // Should be ignored
+            { "Microsoft.VSTS.Common.Severity", "1 - Critical" },
+            { "Microsoft.VSTS.Common.Priority", 4 } // Should be ignored (fallback only)
         };
         var bug = CreateBugWithJsonPayload(fields);
 
         // Act
-        var result = _service.GetBugCriticality(bug);
+        var result = _service.GetBugSeverity(bug);
 
         // Assert
-        Assert.AreEqual(BugCriticality.Critical, result); // From Priority 1, not Severity
+        Assert.AreEqual(BugSeverity.Critical, result); // From Severity, not Priority
     }
 
     [TestMethod]
-    public void GetBugCriticality_WithOnlySeverity_UsesSeverity()
+    public void GetBugSeverity_WithOnlyPriority_FallsToPriority()
     {
         // Arrange
         var fields = new Dictionary<string, object>
         {
-            { "Microsoft.VSTS.Common.Severity", "2 - High" }
+            { "Microsoft.VSTS.Common.Priority", 2 }
         };
         var bug = CreateBugWithJsonPayload(fields);
 
         // Act
-        var result = _service.GetBugCriticality(bug);
+        var result = _service.GetBugSeverity(bug);
 
         // Assert
-        Assert.AreEqual(BugCriticality.High, result);
+        Assert.AreEqual(BugSeverity.High, result); // Falls back to Priority
     }
 
     [TestMethod]
-    public void GetBugCriticality_WithNoFields_ReturnsDefaultMedium()
+    public void GetBugSeverity_WithNoFields_ReturnsDefaultMedium()
     {
         // Arrange
         var fields = new Dictionary<string, object>
@@ -443,61 +443,61 @@ public class TfsFieldParserServiceTests
         var bug = CreateBugWithJsonPayload(fields);
 
         // Act
-        var result = _service.GetBugCriticality(bug);
+        var result = _service.GetBugSeverity(bug);
 
         // Assert
-        Assert.AreEqual(BugCriticality.Medium, result);
+        Assert.AreEqual(BugSeverity.Medium, result);
     }
 
     #endregion
 
-    #region MapCriticalityToPriority Tests
+    #region MapSeverityToPriority Tests
 
     [TestMethod]
-    public void MapCriticalityToPriority_Critical_Returns1()
+    public void MapSeverityToPriority_Critical_Returns1()
     {
         // Act
-        var result = _service.MapCriticalityToPriority(BugCriticality.Critical);
+        var result = _service.MapSeverityToPriority(BugSeverity.Critical);
 
         // Assert
         Assert.AreEqual(1, result);
     }
 
     [TestMethod]
-    public void MapCriticalityToPriority_High_Returns2()
+    public void MapSeverityToPriority_High_Returns2()
     {
         // Act
-        var result = _service.MapCriticalityToPriority(BugCriticality.High);
+        var result = _service.MapSeverityToPriority(BugSeverity.High);
 
         // Assert
         Assert.AreEqual(2, result);
     }
 
     [TestMethod]
-    public void MapCriticalityToPriority_Medium_Returns3()
+    public void MapSeverityToPriority_Medium_Returns3()
     {
         // Act
-        var result = _service.MapCriticalityToPriority(BugCriticality.Medium);
+        var result = _service.MapSeverityToPriority(BugSeverity.Medium);
 
         // Assert
         Assert.AreEqual(3, result);
     }
 
     [TestMethod]
-    public void MapCriticalityToPriority_Low_Returns4()
+    public void MapSeverityToPriority_Low_Returns4()
     {
         // Act
-        var result = _service.MapCriticalityToPriority(BugCriticality.Low);
+        var result = _service.MapSeverityToPriority(BugSeverity.Low);
 
         // Assert
         Assert.AreEqual(4, result);
     }
 
     [TestMethod]
-    public void MapCriticalityToPriority_Unknown_Returns3()
+    public void MapSeverityToPriority_Unknown_Returns3()
     {
         // Act
-        var result = _service.MapCriticalityToPriority("Unknown");
+        var result = _service.MapSeverityToPriority("Unknown");
 
         // Assert
         Assert.AreEqual(3, result); // Should default to Medium (3)

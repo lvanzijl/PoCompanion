@@ -17,17 +17,17 @@
             <MudChip T="string" Size="Size.Small" Color="Color.Default">@Bug.State</MudChip>
         </div>
 
-        @* Criticality Selector *@
+        @* Severity Selector *@
         <MudPaper Class="pa-3" Elevation="1">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">Criticality</MudText>
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Severity</MudText>
             <MudSelect T="string"
-                      Value="@_currentCriticality"
-                      ValueChanged="@HandleCriticalityChanged"
+                      Value="@_currentSeverity"
+                      ValueChanged="@HandleSeverityChanged"
                       Variant="Variant.Outlined"
                       Dense="true">
-                @foreach (var crit in BugCriticality.AllValues)
+                @foreach (var severity in BugSeverity.AllValues)
                 {
-                    <MudSelectItem Value="@crit">@crit</MudSelectItem>
+                    <MudSelectItem Value="@severity">@severity</MudSelectItem>
                 }
             </MudSelect>
         </MudPaper>
@@ -94,30 +94,30 @@
     public List<TriageTagDto> EnabledTags { get; set; } = new();
 
     [Parameter]
-    public EventCallback<(int BugId, string NewCriticality)> OnCriticalityChanged { get; set; }
+    public EventCallback<(int BugId, string NewSeverity)> OnSeverityChanged { get; set; }
 
     [Parameter]
     public EventCallback<(int BugId, string TagName, bool IsAdded)> OnTagToggled { get; set; }
 
-    private string _currentCriticality = BugCriticality.Medium;
+    private string _currentSeverity = BugSeverity.Medium;
     private HashSet<string> _activeTags = new();
 
     protected override void OnParametersSet()
     {
         if (Bug != null)
         {
-            // Initialize criticality and tags from bug
-            _currentCriticality = GetBugCriticality(Bug);
+            // Initialize severity and tags from bug
+            _currentSeverity = GetBugSeverity(Bug);
             _activeTags = new HashSet<string>(GetBugTags(Bug), StringComparer.OrdinalIgnoreCase);
         }
     }
 
-    private async Task HandleCriticalityChanged(string newCriticality)
+    private async Task HandleSeverityChanged(string newSeverity)
     {
-        if (_currentCriticality != newCriticality)
+        if (_currentSeverity != newSeverity)
         {
-            _currentCriticality = newCriticality;
-            await OnCriticalityChanged.InvokeAsync((Bug.TfsId, newCriticality));
+            _currentSeverity = newSeverity;
+            await OnSeverityChanged.InvokeAsync((Bug.TfsId, newSeverity));
         }
     }
 
@@ -137,9 +137,9 @@
         await OnTagToggled.InvokeAsync((Bug.TfsId, tagName, isAdded));
     }
 
-    private string GetBugCriticality(WorkItemWithValidationDto bug)
+    private string GetBugSeverity(WorkItemWithValidationDto bug)
     {
-        return TfsFieldParser.GetBugCriticality(bug);
+        return TfsFieldParser.GetBugSeverity(bug);
     }
 
     private List<string> GetBugTags(WorkItemWithValidationDto bug)

@@ -32,7 +32,7 @@ public class BugTreeBuilderService
         IEnumerable<WorkItemWithValidationDto> bugs,
         HashSet<int> untriagedBugIds,
         Dictionary<int, bool> expandedState,
-        Func<WorkItemWithValidationDto, string> getCriticalityFunc)
+        Func<WorkItemWithValidationDto, string> getSeverityFunc)
     {
         var roots = new List<TreeNode>();
         var bugNodes = new Dictionary<int, TreeNode>();
@@ -53,18 +53,18 @@ public class BugTreeBuilderService
             bugNodes[bug.TfsId] = node;
         }
 
-        // Group bugs by triage status and criticality
+        // Group bugs by triage status and severity
         var newUntriaged = bugs.Where(b => untriagedBugIds.Contains(b.TfsId)).ToList();
         var triaged = bugs.Where(b => !untriagedBugIds.Contains(b.TfsId)).ToList();
 
         // Sort bugs by ID descending (newest first) for consistent ordering
         newUntriaged = newUntriaged.OrderByDescending(b => b.TfsId).ToList();
         
-        // Group triaged bugs by criticality
-        var critical = triaged.Where(b => getCriticalityFunc(b) == BugCriticality.Critical).OrderByDescending(b => b.TfsId).ToList();
-        var high = triaged.Where(b => getCriticalityFunc(b) == BugCriticality.High).OrderByDescending(b => b.TfsId).ToList();
-        var medium = triaged.Where(b => getCriticalityFunc(b) == BugCriticality.Medium).OrderByDescending(b => b.TfsId).ToList();
-        var low = triaged.Where(b => getCriticalityFunc(b) == BugCriticality.Low).OrderByDescending(b => b.TfsId).ToList();
+        // Group triaged bugs by severity
+        var critical = triaged.Where(b => getSeverityFunc(b) == BugSeverity.Critical).OrderByDescending(b => b.TfsId).ToList();
+        var high = triaged.Where(b => getSeverityFunc(b) == BugSeverity.High).OrderByDescending(b => b.TfsId).ToList();
+        var medium = triaged.Where(b => getSeverityFunc(b) == BugSeverity.Medium).OrderByDescending(b => b.TfsId).ToList();
+        var low = triaged.Where(b => getSeverityFunc(b) == BugSeverity.Low).OrderByDescending(b => b.TfsId).ToList();
 
         // Create "New / Untriaged" root group if there are untriaged bugs
         if (newUntriaged.Any())
@@ -85,7 +85,7 @@ public class BugTreeBuilderService
             roots.Add(newUntriagedNode);
         }
 
-        // Create criticality group nodes
+        // Create severity group nodes
         if (critical.Any())
         {
             var criticalNode = CreateGroupNode(

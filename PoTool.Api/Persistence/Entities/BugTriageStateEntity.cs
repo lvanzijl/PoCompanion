@@ -27,22 +27,22 @@ public class BugTriageStateEntity
     public DateTimeOffset FirstSeenAt { get; set; }
 
     /// <summary>
-    /// The criticality value observed when the bug was first loaded.
-    /// Used to detect if the user has changed criticality from the initial value.
+    /// The severity value observed when the bug was first loaded.
+    /// Used to detect if the user has changed severity from the initial value.
     /// </summary>
     [Required]
     [MaxLength(50)]
-    public string FirstObservedCriticality { get; set; } = string.Empty;
+    public string FirstObservedSeverity { get; set; } = string.Empty;
 
     /// <summary>
     /// Indicates whether this bug has been triaged by the user.
-    /// Set to true when the user changes criticality or toggles any triage tag.
+    /// Set to true when the user changes severity or toggles any triage tag.
     /// </summary>
     [Required]
     public bool IsTriaged { get; set; }
 
     /// <summary>
-    /// Timestamp of the last triage action (criticality change or tag toggle).
+    /// Timestamp of the last triage action (severity change or tag toggle).
     /// Nullable if the bug has never been triaged.
     /// </summary>
     public DateTimeOffset? LastTriageActionAt { get; set; }

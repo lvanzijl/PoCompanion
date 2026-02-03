@@ -121,7 +121,7 @@
                         {
                             <BugTriageDetailsPanel Bug="@_selectedBug"
                                                   EnabledTags="@_enabledTags"
-                                                  OnCriticalityChanged="@(async (args) => await HandleCriticalityChanged(args.BugId, args.NewCriticality))"
+                                                  OnSeverityChanged="@(async (args) => await HandleSeverityChanged(args.BugId, args.NewSeverity))"
                                                   OnTagToggled="@(async (args) => await HandleTagToggled(args.BugId, args.TagName, args.IsAdded))" />
                         }
                         else
@@ -202,8 +202,8 @@
             // Record first seen for untriaged bugs
             foreach (var bug in _bugs.Where(b => _untriagedBugIds.Contains(b.TfsId)))
             {
-                var criticality = GetBugCriticality(bug);
-                await BugTriageService.RecordFirstSeenAsync(bug.TfsId, criticality);
+                var severity = GetBugSeverity(bug);
+                await BugTriageService.RecordFirstSeenAsync(bug.TfsId, severity);
             }
 
             ApplyFilters();
@@ -253,7 +253,7 @@
             filteredBugs,
             _untriagedBugIds,
             _expandedState,
-            GetBugCriticality);
+            GetBugSeverity);
 
         StateHasChanged();
     }
@@ -279,16 +279,16 @@
         StateHasChanged();
     }
 
-    private async Task HandleCriticalityChanged(int bugId, string newCriticality)
+    private async Task HandleSeverityChanged(int bugId, string newSeverity)
     {
-        Logger.LogInformation("Criticality changed for bug {BugId}: {Criticality}", bugId, newCriticality);
+        Logger.LogInformation("Severity changed for bug {BugId}: {Severity}", bugId, newSeverity);
         
         try
         {
             // Mark as triaged and update TFS
             var request = new Shared.BugTriage.UpdateBugTriageStateRequest(
                 bugId,
-                NewCriticality: newCriticality);
+                NewSeverity: newSeverity);
             
             var response = await BugTriageService.MarkAsTriagedAsync(request);
             
@@ -300,19 +300,19 @@
                 // Rebuild tree
                 ApplyFilters();
                 
-                Snackbar.Add($"Criticality updated to {newCriticality}", Severity.Success);
+                Snackbar.Add($"Severity updated to {newSeverity}", Severity.Success);
             }
             else
             {
                 // Show error message
-                var errorMsg = response.Message ?? "Failed to update criticality";
-                Logger.LogError("Failed to update criticality for bug {BugId}: {Error}", bugId, errorMsg);
+                var errorMsg = response.Message ?? "Failed to update severity";
+                Logger.LogError("Failed to update severity for bug {BugId}: {Error}", bugId, errorMsg);
                 Snackbar.Add(errorMsg, Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error updating criticality for bug {BugId}", bugId);
+            Logger.LogError(ex, "Error updating severity for bug {BugId}", bugId);
             Snackbar.Add($"Error updating bug {bugId}: {ex.Message}", Severity.Error);
         }
     }
@@ -385,9 +385,9 @@
 
     private bool IsTagSelected(string tagName) => _selectedTags.Contains(tagName);
 
-    private string GetBugCriticality(WorkItemWithValidationDto bug)
+    private string GetBugSeverity(WorkItemWithValidationDto bug)
     {
-        return TfsFieldParser.GetBugCriticality(bug);
+        return TfsFieldParser.GetBugSeverity(bug);
     }
 
     private List<string> GetBugTags(WorkItemWithValidationDto bug)
