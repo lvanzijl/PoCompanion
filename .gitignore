@@ -11,7 +11,7 @@ out/
 **/bin/Release/
 **/obj/Debug/
 **/obj/Release/
-# Case-insensitive variants for cross-platform compatibility
+# Lowercase variants to handle different directory naming conventions
 **/bin/debug/
 **/bin/release/
 **/obj/debug/
