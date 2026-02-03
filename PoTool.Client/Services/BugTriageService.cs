@@ -72,11 +72,11 @@ public class BugTriageService
     /// </summary>
     public async Task RecordFirstSeenAsync(
         int bugId,
-        string currentCriticality,
+        string currentSeverity,
         CancellationToken cancellationToken = default)
     {
         var response = await _httpClient.PostAsync(
-            $"{_baseUrl}/first-seen?bugId={bugId}&currentCriticality={Uri.EscapeDataString(currentCriticality)}",
+            $"{_baseUrl}/first-seen?bugId={bugId}&currentSeverity={Uri.EscapeDataString(currentSeverity)}",
             null,
             cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -84,7 +84,7 @@ public class BugTriageService
 
     /// <summary>
     /// Marks a bug as triaged due to a user action.
-    /// Logs what would be saved to TFS (criticality and/or tags).
+    /// Logs what would be saved to TFS (severity and/or tags).
     /// </summary>
     public async Task<UpdateBugTriageStateResponse> MarkAsTriagedAsync(
         UpdateBugTriageStateRequest request,

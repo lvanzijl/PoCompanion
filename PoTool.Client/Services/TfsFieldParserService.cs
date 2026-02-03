@@ -115,34 +115,34 @@ public class TfsFieldParserService
     }
 
     /// <summary>
-    /// Maps TFS Priority (1-4) to Bug Criticality levels.
+    /// Maps TFS Priority (1-4) to Bug Severity levels.
     /// Priority 1 = Critical, Priority 2 = High, Priority 3 = Medium, Priority 4 = Low.
     /// </summary>
     /// <param name="priority">Priority string from TFS (e.g., "1", "2", "3", "4").</param>
-    /// <returns>Criticality string matching BugCriticality constants.</returns>
-    public string MapPriorityToCriticality(string? priority)
+    /// <returns>Severity string matching BugSeverity constants.</returns>
+    public string MapPriorityToSeverity(string? priority)
     {
         return priority switch
         {
-            "1" => Models.BugCriticality.Critical,
-            "2" => Models.BugCriticality.High,
-            "3" => Models.BugCriticality.Medium,
-            "4" => Models.BugCriticality.Low,
-            _ => Models.BugCriticality.Medium // Default to Medium if unknown
+            "1" => Models.BugSeverity.Critical,
+            "2" => Models.BugSeverity.High,
+            "3" => Models.BugSeverity.Medium,
+            "4" => Models.BugSeverity.Low,
+            _ => Models.BugSeverity.Medium // Default to Medium if unknown
         };
     }
 
     /// <summary>
-    /// Maps TFS Severity strings to Bug Criticality levels.
+    /// Normalizes TFS Severity strings to standard Bug Severity levels.
     /// Severity format: "1 - Critical", "2 - High", "3 - Medium", "4 - Low" or just "Critical", "High", etc.
     /// </summary>
     /// <param name="severity">Severity string from TFS.</param>
-    /// <returns>Criticality string matching BugCriticality constants.</returns>
-    public string MapSeverityToCriticality(string? severity)
+    /// <returns>Severity string matching BugSeverity constants.</returns>
+    public string NormalizeSeverity(string? severity)
     {
         if (string.IsNullOrWhiteSpace(severity))
         {
-            return Models.BugCriticality.Medium;
+            return Models.BugSeverity.Medium;
         }
 
         // Handle both "1 - Critical" format and simple "Critical" format
@@ -150,65 +150,65 @@ public class TfsFieldParserService
         
         if (severityLower.Contains("critical") || severityLower.StartsWith("1"))
         {
-            return Models.BugCriticality.Critical;
+            return Models.BugSeverity.Critical;
         }
         if (severityLower.Contains("high") || severityLower.StartsWith("2"))
         {
-            return Models.BugCriticality.High;
+            return Models.BugSeverity.High;
         }
         if (severityLower.Contains("medium") || severityLower.StartsWith("3"))
         {
-            return Models.BugCriticality.Medium;
+            return Models.BugSeverity.Medium;
         }
         if (severityLower.Contains("low") || severityLower.StartsWith("4"))
         {
-            return Models.BugCriticality.Low;
+            return Models.BugSeverity.Low;
         }
 
-        return Models.BugCriticality.Medium; // Default to Medium if unknown
+        return Models.BugSeverity.Medium; // Default to Medium if unknown
     }
 
     /// <summary>
-    /// Maps Bug Criticality levels back to TFS Priority values (1-4).
+    /// Maps Bug Severity levels back to TFS Priority values (1-4).
     /// Critical = 1, High = 2, Medium = 3, Low = 4.
     /// </summary>
-    /// <param name="criticality">Criticality string from BugCriticality constants.</param>
+    /// <param name="severity">Severity string from BugSeverity constants.</param>
     /// <returns>Priority value as int (1-4).</returns>
-    public int MapCriticalityToPriority(string criticality)
+    public int MapSeverityToPriority(string severity)
     {
-        return criticality switch
+        return severity switch
         {
-            Models.BugCriticality.Critical => 1,
-            Models.BugCriticality.High => 2,
-            Models.BugCriticality.Medium => 3,
-            Models.BugCriticality.Low => 4,
+            Models.BugSeverity.Critical => 1,
+            Models.BugSeverity.High => 2,
+            Models.BugSeverity.Medium => 3,
+            Models.BugSeverity.Low => 4,
             _ => 3 // Default to Medium (3) if unknown
         };
     }
 
     /// <summary>
-    /// Gets criticality for a bug by checking both Priority and Severity fields.
-    /// Priority takes precedence over Severity if both are present.
+    /// Gets severity for a bug by checking the Severity field.
+    /// Falls back to Priority field if Severity is not available.
     /// </summary>
     /// <param name="workItem">The bug work item.</param>
-    /// <returns>Criticality string matching BugCriticality constants.</returns>
-    public string GetBugCriticality(WorkItemWithValidationDto workItem)
+    /// <returns>Severity string matching BugSeverity constants.</returns>
+    public string GetBugSeverity(WorkItemWithValidationDto workItem)
     {
-        // Try Priority first (more commonly used for bug prioritization)
-        var priority = GetPriority(workItem);
-        if (!string.IsNullOrEmpty(priority))
-        {
-            return MapPriorityToCriticality(priority);
-        }
-
-        // Fallback to Severity
+        // Try Severity first (this is what we should be using for bugs)
         var severity = GetSeverity(workItem);
         if (!string.IsNullOrEmpty(severity))
         {
-            return MapSeverityToCriticality(severity);
+            return NormalizeSeverity(severity);
+        }
+
+        // Fallback to Priority if Severity not available
+        var priority = GetPriority(workItem);
+        if (!string.IsNullOrEmpty(priority))
+        {
+            return MapPriorityToSeverity(priority);
         }
 
         // Default to Medium if neither field is available
-        return Models.BugCriticality.Medium;
+        return Models.BugSeverity.Medium;
     }
 }

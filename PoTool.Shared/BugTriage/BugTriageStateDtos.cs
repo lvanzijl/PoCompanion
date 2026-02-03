@@ -7,7 +7,7 @@ namespace PoTool.Shared.BugTriage;
 public sealed record BugTriageStateDto(
     int BugId,
     DateTimeOffset FirstSeenAt,
-    string FirstObservedCriticality,
+    string FirstObservedSeverity,
     bool IsTriaged,
     DateTimeOffset? LastTriageActionAt
 );
@@ -17,7 +17,7 @@ public sealed record BugTriageStateDto(
 /// </summary>
 public sealed record UpdateBugTriageStateRequest(
     int BugId,
-    string? NewCriticality = null,
+    string? NewSeverity = null,
     List<string>? TagsAdded = null,
     List<string>? TagsRemoved = null
 );

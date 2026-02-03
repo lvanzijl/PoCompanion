@@ -79,7 +79,7 @@ public class BugTriageStateService
     /// </summary>
     public async Task RecordFirstSeenAsync(
         int bugId,
-        string currentCriticality,
+        string currentSeverity,
         CancellationToken cancellationToken = default)
     {
         var existing = await _db.BugTriageStates
@@ -95,7 +95,7 @@ public class BugTriageStateService
         {
             BugId = bugId,
             FirstSeenAt = DateTimeOffset.UtcNow,
-            FirstObservedCriticality = currentCriticality,
+            FirstObservedSeverity = currentSeverity,
             IsTriaged = false,
             LastTriageActionAt = null
         };
@@ -103,12 +103,12 @@ public class BugTriageStateService
         _db.BugTriageStates.Add(entity);
         await _db.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Recorded first seen for bug {BugId} with criticality {Criticality}", bugId, currentCriticality);
+        _logger.LogInformation("Recorded first seen for bug {BugId} with severity {Severity}", bugId, currentSeverity);
     }
 
     /// <summary>
-    /// Marks a bug as triaged due to a user action (criticality change or tag toggle).
-    /// Updates TFS with the new criticality value and refreshes the work item from TFS.
+    /// Marks a bug as triaged due to a user action (severity change or tag toggle).
+    /// Updates TFS with the new severity value and refreshes the work item from TFS.
     /// </summary>
     public async Task<UpdateBugTriageStateResponse> MarkAsTriagedAsync(
         UpdateBugTriageStateRequest request,
@@ -116,14 +116,14 @@ public class BugTriageStateService
     {
         try
         {
-            // If criticality changed, update TFS
-            if (request.NewCriticality != null)
+            // If severity changed, update TFS
+            if (request.NewSeverity != null)
             {
-                _logger.LogInformation("Updating TFS bug {BugId}: Criticality to {NewCriticality}", 
-                    request.BugId, request.NewCriticality);
+                _logger.LogInformation("Updating TFS bug {BugId}: Severity to {NewSeverity}", 
+                    request.BugId, request.NewSeverity);
                 
-                // Convert criticality to TFS priority value (1-4)
-                var priority = _fieldParser.MapCriticalityToPriority(request.NewCriticality);
+                // Convert severity to TFS priority value (1-4)
+                var priority = _fieldParser.MapSeverityToPriority(request.NewSeverity);
                 
                 // Update TFS
                 var updateSuccess = await _tfsClient.UpdateWorkItemPriorityAsync(
@@ -207,7 +207,7 @@ public class BugTriageStateService
                 {
                     BugId = request.BugId,
                     FirstSeenAt = DateTimeOffset.UtcNow,
-                    FirstObservedCriticality = request.NewCriticality ?? "Unknown",
+                    FirstObservedSeverity = request.NewSeverity ?? "Unknown",
                     IsTriaged = true,
                     LastTriageActionAt = DateTimeOffset.UtcNow
                 };
@@ -237,12 +237,12 @@ public class BugTriageStateService
 
     private void LogTriageAction(UpdateBugTriageStateRequest request)
     {
-        if (request.NewCriticality != null)
+        if (request.NewSeverity != null)
         {
             _logger.LogInformation(
-                "Would update TFS bug {BugId}: Criticality changed to {NewCriticality}",
+                "Would update TFS bug {BugId}: Severity changed to {NewSeverity}",
                 request.BugId,
-                request.NewCriticality);
+                request.NewSeverity);
         }
 
         if (request.TagsAdded != null && request.TagsAdded.Count > 0)
@@ -273,7 +273,7 @@ public class BugTriageStateService
         return new BugTriageStateDto(
             entity.BugId,
             entity.FirstSeenAt,
-            entity.FirstObservedCriticality,
+            entity.FirstObservedSeverity,
             entity.IsTriaged,
             entity.LastTriageActionAt
         );

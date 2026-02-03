@@ -76,16 +76,16 @@ public class BugTriageController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> RecordFirstSeen(
         [FromQuery] int bugId,
-        [FromQuery] string currentCriticality,
+        [FromQuery] string currentSeverity,
         CancellationToken cancellationToken)
     {
-        await _triageStateService.RecordFirstSeenAsync(bugId, currentCriticality, cancellationToken);
+        await _triageStateService.RecordFirstSeenAsync(bugId, currentSeverity, cancellationToken);
         return Ok();
     }
 
     /// <summary>
     /// Marks a bug as triaged due to a user action.
-    /// Logs what would be saved to TFS (criticality and/or tags).
+    /// Logs what would be saved to TFS (severity and/or tags).
     /// </summary>
     [HttpPost("mark-triaged")]
     [ProducesResponseType(typeof(UpdateBugTriageStateResponse), StatusCodes.Status200OK)]
