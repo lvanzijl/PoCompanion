@@ -6,6 +6,7 @@ using PoTool.Client.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.BugTriage;
 using PoTool.Shared.WorkItems;
+using System.Text.Json;
 
 namespace PoTool.Api.Services;
 
@@ -157,7 +158,7 @@ public class BugTriageStateService
                         string? newSeverityValue = null;
                         try
                         {
-                            using var doc = System.Text.Json.JsonDocument.Parse(refreshedWorkItem.JsonPayload);
+                            using var doc = JsonDocument.Parse(refreshedWorkItem.JsonPayload);
                             if (doc.RootElement.TryGetProperty("Microsoft.VSTS.Common.Severity", out var severity))
                             {
                                 newSeverityValue = severity.GetString();
