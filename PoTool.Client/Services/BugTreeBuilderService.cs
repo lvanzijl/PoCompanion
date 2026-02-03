@@ -1,21 +1,30 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
 using PoTool.Shared.BugTriage;
+using Microsoft.Extensions.Logging;
 
 namespace PoTool.Client.Services;
 
 /// <summary>
 /// Service for building bug-specific tree structures with triage groupings.
-/// Extends TreeBuilderService patterns to create synthetic "New/Untriaged" and criticality group nodes.
+/// Extends TreeBuilderService patterns to create synthetic "New/Untriaged" and severity group nodes.
+/// Groups are created dynamically based on actual severity values from TFS.
 /// </summary>
 public class BugTreeBuilderService
 {
+    private readonly ILogger<BugTreeBuilderService> _logger;
+    
     // Special node IDs for synthetic grouping nodes
     private const int NewUntriagedNodeId = -1000;
-    private const int CriticalGroupNodeId = -1001;
-    private const int HighGroupNodeId = -1002;
-    private const int MediumGroupNodeId = -1003;
-    private const int LowGroupNodeId = -1004;
+    private const int MissingSeverityNodeId = -1;
+    
+    // Base ID for dynamic severity group nodes
+    private const int SeverityGroupBaseId = -2000;
+
+    public BugTreeBuilderService(ILogger<BugTreeBuilderService> logger)
+    {
+        _logger = logger;
+    }
 
     /// <summary>
     /// Builds a bug tree with synthetic grouping nodes for triage.
@@ -23,16 +32,16 @@ public class BugTreeBuilderService
     /// - New / Untriaged (root group)
     ///   - Bug 1
     ///   - Bug 2
-    /// - Critical (root group)
+    /// - [Dynamic Severity Groups based on actual values]
     ///   - Bug 3
-    /// - High (root group)
+    /// - Missing/Invalid Severity (for bugs with issues)
     ///   - Bug 4
     /// </summary>
     public List<TreeNode> BuildBugTriageTree(
         IEnumerable<WorkItemWithValidationDto> bugs,
         HashSet<int> untriagedBugIds,
         Dictionary<int, bool> expandedState,
-        Func<WorkItemWithValidationDto, string> getSeverityFunc)
+        Func<WorkItemWithValidationDto, string?> getSeverityFunc)
     {
         var roots = new List<TreeNode>();
         var bugNodes = new Dictionary<int, TreeNode>();
@@ -53,19 +62,13 @@ public class BugTreeBuilderService
             bugNodes[bug.TfsId] = node;
         }
 
-        // Group bugs by triage status and severity
+        // Group bugs by triage status
         var newUntriaged = bugs.Where(b => untriagedBugIds.Contains(b.TfsId)).ToList();
         var triaged = bugs.Where(b => !untriagedBugIds.Contains(b.TfsId)).ToList();
 
         // Sort bugs by ID descending (newest first) for consistent ordering
         newUntriaged = newUntriaged.OrderByDescending(b => b.TfsId).ToList();
         
-        // Group triaged bugs by severity
-        var critical = triaged.Where(b => getSeverityFunc(b) == BugSeverity.Critical).OrderByDescending(b => b.TfsId).ToList();
-        var high = triaged.Where(b => getSeverityFunc(b) == BugSeverity.High).OrderByDescending(b => b.TfsId).ToList();
-        var medium = triaged.Where(b => getSeverityFunc(b) == BugSeverity.Medium).OrderByDescending(b => b.TfsId).ToList();
-        var low = triaged.Where(b => getSeverityFunc(b) == BugSeverity.Low).OrderByDescending(b => b.TfsId).ToList();
-
         // Create "New / Untriaged" root group if there are untriaged bugs
         if (newUntriaged.Any())
         {
@@ -85,77 +88,73 @@ public class BugTreeBuilderService
             roots.Add(newUntriagedNode);
         }
 
-        // Create severity group nodes
-        if (critical.Any())
+        // Group triaged bugs by severity DYNAMICALLY
+        var severityGroups = new Dictionary<string, List<WorkItemWithValidationDto>>();
+        var bugsWithMissingSeverity = new List<WorkItemWithValidationDto>();
+        
+        foreach (var bug in triaged)
         {
-            var criticalNode = CreateGroupNode(
-                CriticalGroupNodeId,
-                $"Critical ({critical.Count})",
-                expandedState);
+            var severity = getSeverityFunc(bug);
             
-            foreach (var bug in critical)
+            if (string.IsNullOrEmpty(severity))
             {
-                var bugNode = bugNodes[bug.TfsId];
-                bugNode.ParentId = CriticalGroupNodeId;
-                bugNode.Level = 1;
-                criticalNode.Children.Add(bugNode);
+                // Track bugs with missing/invalid severity
+                bugsWithMissingSeverity.Add(bug);
+                _logger.LogWarning("Bug {BugId} has missing or invalid severity - will be grouped separately", bug.TfsId);
             }
-            
-            roots.Add(criticalNode);
+            else
+            {
+                if (!severityGroups.ContainsKey(severity))
+                {
+                    severityGroups[severity] = new List<WorkItemWithValidationDto>();
+                }
+                severityGroups[severity].Add(bug);
+            }
         }
 
-        if (high.Any())
+        // Create severity group nodes dynamically based on actual values
+        // Sort by severity value to maintain consistent ordering (1-Critical, 2-High, etc.)
+        var orderedSeverities = severityGroups.Keys.OrderBy(s => s).ToList();
+        
+        int groupIdCounter = SeverityGroupBaseId;
+        foreach (var severity in orderedSeverities)
         {
-            var highNode = CreateGroupNode(
-                HighGroupNodeId,
-                $"High ({high.Count})",
+            var bugsInGroup = severityGroups[severity].OrderByDescending(b => b.TfsId).ToList();
+            
+            var severityNode = CreateGroupNode(
+                groupIdCounter--,
+                $"{severity} ({bugsInGroup.Count})",
                 expandedState);
             
-            foreach (var bug in high)
+            foreach (var bug in bugsInGroup)
             {
                 var bugNode = bugNodes[bug.TfsId];
-                bugNode.ParentId = HighGroupNodeId;
+                bugNode.ParentId = severityNode.Id;
                 bugNode.Level = 1;
-                highNode.Children.Add(bugNode);
+                severityNode.Children.Add(bugNode);
             }
             
-            roots.Add(highNode);
+            roots.Add(severityNode);
         }
 
-        if (medium.Any())
+        // Create "Missing/Invalid Severity" group if there are bugs with issues
+        if (bugsWithMissingSeverity.Any())
         {
-            var mediumNode = CreateGroupNode(
-                MediumGroupNodeId,
-                $"Medium ({medium.Count})",
+            var missingSeverityNode = CreateGroupNode(
+                MissingSeverityNodeId,
+                $"⚠️ Missing/Invalid Severity ({bugsWithMissingSeverity.Count})",
                 expandedState);
             
-            foreach (var bug in medium)
+            var sortedMissingBugs = bugsWithMissingSeverity.OrderByDescending(b => b.TfsId).ToList();
+            foreach (var bug in sortedMissingBugs)
             {
                 var bugNode = bugNodes[bug.TfsId];
-                bugNode.ParentId = MediumGroupNodeId;
+                bugNode.ParentId = MissingSeverityNodeId;
                 bugNode.Level = 1;
-                mediumNode.Children.Add(bugNode);
+                missingSeverityNode.Children.Add(bugNode);
             }
             
-            roots.Add(mediumNode);
-        }
-
-        if (low.Any())
-        {
-            var lowNode = CreateGroupNode(
-                LowGroupNodeId,
-                $"Low ({low.Count})",
-                expandedState);
-            
-            foreach (var bug in low)
-            {
-                var bugNode = bugNodes[bug.TfsId];
-                bugNode.ParentId = LowGroupNodeId;
-                bugNode.Level = 1;
-                lowNode.Children.Add(bugNode);
-            }
-            
-            roots.Add(lowNode);
+            roots.Add(missingSeverityNode);
         }
 
         return roots;

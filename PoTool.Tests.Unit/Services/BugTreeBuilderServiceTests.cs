@@ -1,8 +1,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.Extensions.Logging;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
 using PoTool.Client.Models;
 using System.Text.Json;
+using Moq;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -10,11 +12,13 @@ namespace PoTool.Tests.Unit.Services;
 public class BugTreeBuilderServiceTests
 {
     private BugTreeBuilderService _service = null!;
+    private Mock<ILogger<BugTreeBuilderService>> _mockLogger = null!;
 
     [TestInitialize]
     public void TestInitialize()
     {
-        _service = new BugTreeBuilderService();
+        _mockLogger = new Mock<ILogger<BugTreeBuilderService>>();
+        _service = new BugTreeBuilderService(_mockLogger.Object);
     }
 
     private WorkItemWithValidationDto CreateBug(int id, string title, Dictionary<string, object>? fields = null)
@@ -54,7 +58,7 @@ public class BugTreeBuilderServiceTests
         };
         var untriagedIds = new HashSet<int> { 1, 2 };
         var expandedState = new Dictionary<int, bool>();
-        string GetSeverity(WorkItemWithValidationDto bug) => BugSeverity.Medium;
+        string? GetSeverity(WorkItemWithValidationDto bug) => "3 - Medium";
 
         // Act
         var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);
@@ -76,14 +80,14 @@ public class BugTreeBuilderServiceTests
         };
         var untriagedIds = new HashSet<int>(); // All triaged
         var expandedState = new Dictionary<int, bool>();
-        string GetSeverity(WorkItemWithValidationDto bug) => BugSeverity.Critical;
+        string? GetSeverity(WorkItemWithValidationDto bug) => "1 - Critical";
 
         // Act
         var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);
 
         // Assert
         Assert.HasCount(1, roots);
-        Assert.AreEqual("Critical (1)", roots[0].Title);
+        Assert.AreEqual("1 - Critical (1)", roots[0].Title);
         Assert.AreEqual("(group)", roots[0].Type);
         Assert.HasCount(1, roots[0].Children);
     }
@@ -101,24 +105,26 @@ public class BugTreeBuilderServiceTests
         };
         var untriagedIds = new HashSet<int>(); // All triaged
         var expandedState = new Dictionary<int, bool>();
+        // Use TFS-format severity values (what TFS actually returns)
         var severityMap = new Dictionary<int, string>
         {
-            { 1, BugSeverity.Critical },
-            { 2, BugSeverity.High },
-            { 3, BugSeverity.Medium },
-            { 4, BugSeverity.Low }
+            { 1, "1 - Critical" },
+            { 2, "2 - High" },
+            { 3, "3 - Medium" },
+            { 4, "4 - Low" }
         };
-        string GetSeverity(WorkItemWithValidationDto bug) => severityMap[bug.TfsId];
+        string? GetSeverity(WorkItemWithValidationDto bug) => severityMap[bug.TfsId];
 
         // Act
         var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);
 
         // Assert
         Assert.HasCount(4, roots); // Critical, High, Medium, Low groups
-        Assert.AreEqual("Critical (1)", roots[0].Title);
-        Assert.AreEqual("High (1)", roots[1].Title);
-        Assert.AreEqual("Medium (1)", roots[2].Title);
-        Assert.AreEqual("Low (1)", roots[3].Title);
+        // Groups are sorted by severity string value alphabetically
+        Assert.AreEqual("1 - Critical (1)", roots[0].Title);
+        Assert.AreEqual("2 - High (1)", roots[1].Title);
+        Assert.AreEqual("3 - Medium (1)", roots[2].Title);
+        Assert.AreEqual("4 - Low (1)", roots[3].Title);
     }
 
     [TestMethod]
@@ -134,10 +140,10 @@ public class BugTreeBuilderServiceTests
         var expandedState = new Dictionary<int, bool>();
         var severityMap = new Dictionary<int, string>
         {
-            { 1, BugSeverity.Medium },
-            { 2, BugSeverity.Critical }
+            { 1, "3 - Medium" },
+            { 2, "1 - Critical" }
         };
-        string GetSeverity(WorkItemWithValidationDto bug) => severityMap[bug.TfsId];
+        string? GetSeverity(WorkItemWithValidationDto bug) => severityMap[bug.TfsId];
 
         // Act
         var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);
@@ -145,7 +151,7 @@ public class BugTreeBuilderServiceTests
         // Assert
         Assert.HasCount(2, roots);
         Assert.AreEqual("New / Untriaged (1)", roots[0].Title); // First
-        Assert.AreEqual("Critical (1)", roots[1].Title); // Second
+        Assert.AreEqual("1 - Critical (1)", roots[1].Title); // Second
     }
 
     [TestMethod]
@@ -161,7 +167,7 @@ public class BugTreeBuilderServiceTests
         {
             { -1000, false } // New/Untriaged group collapsed
         };
-        string GetSeverity(WorkItemWithValidationDto bug) => BugSeverity.Medium;
+        string? GetSeverity(WorkItemWithValidationDto bug) => "3 - Medium";
 
         // Act
         var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);
@@ -180,7 +186,7 @@ public class BugTreeBuilderServiceTests
         };
         var untriagedIds = new HashSet<int> { 1 };
         var expandedState = new Dictionary<int, bool>();
-        string GetSeverity(WorkItemWithValidationDto bug) => BugSeverity.Medium;
+        string? GetSeverity(WorkItemWithValidationDto bug) => "3 - Medium";
 
         // Act
         var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);
@@ -201,7 +207,7 @@ public class BugTreeBuilderServiceTests
         };
         var untriagedIds = new HashSet<int> { 1, 2, 3 };
         var expandedState = new Dictionary<int, bool>();
-        string GetSeverity(WorkItemWithValidationDto bug) => BugSeverity.Medium;
+        string? GetSeverity(WorkItemWithValidationDto bug) => "3 - Medium";
 
         // Act
         var roots = _service.BuildBugTriageTree(bugs, untriagedIds, expandedState, GetSeverity);

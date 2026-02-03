@@ -122,104 +122,52 @@ public class TfsFieldParserService
     }
 
     /// <summary>
-    /// Maps TFS Priority (1-4) to Bug Severity levels.
-    /// Priority 1 = Critical, Priority 2 = High, Priority 3 = Medium, Priority 4 = Low.
-    /// </summary>
-    /// <param name="priority">Priority string from TFS (e.g., "1", "2", "3", "4").</param>
-    /// <returns>Severity string matching BugSeverity constants.</returns>
-    public string MapPriorityToSeverity(string? priority)
-    {
-        return priority switch
-        {
-            "1" => Models.BugSeverity.Critical,
-            "2" => Models.BugSeverity.High,
-            "3" => Models.BugSeverity.Medium,
-            "4" => Models.BugSeverity.Low,
-            _ => Models.BugSeverity.Medium // Default to Medium if unknown
-        };
-    }
-
-    /// <summary>
-    /// Normalizes TFS Severity strings to standard Bug Severity levels.
-    /// Severity format: "1 - Critical", "2 - High", "3 - Medium", "4 - Low" or just "Critical", "High", etc.
-    /// </summary>
-    /// <param name="severity">Severity string from TFS.</param>
-    /// <returns>Severity string matching BugSeverity constants.</returns>
-    public string NormalizeSeverity(string? severity)
-    {
-        if (string.IsNullOrWhiteSpace(severity))
-        {
-            _logger.LogWarning("Severity value is null or empty, defaulting to Medium");
-            return Models.BugSeverity.Medium;
-        }
-
-        // Handle both "1 - Critical" format and simple "Critical" format
-        var severityLower = severity.ToLowerInvariant();
-        
-        if (severityLower.Contains("critical") || severityLower.StartsWith("1"))
-        {
-            return Models.BugSeverity.Critical;
-        }
-        if (severityLower.Contains("high") || severityLower.StartsWith("2"))
-        {
-            return Models.BugSeverity.High;
-        }
-        if (severityLower.Contains("medium") || severityLower.StartsWith("3"))
-        {
-            return Models.BugSeverity.Medium;
-        }
-        if (severityLower.Contains("low") || severityLower.StartsWith("4"))
-        {
-            return Models.BugSeverity.Low;
-        }
-
-        _logger.LogWarning("Unknown severity value '{Severity}', defaulting to Medium", severity);
-        return Models.BugSeverity.Medium; // Default to Medium if unknown
-    }
-
-    /// <summary>
-    /// Maps Bug Severity levels back to TFS Priority values (1-4).
-    /// Critical = 1, High = 2, Medium = 3, Low = 4.
-    /// </summary>
-    /// <param name="severity">Severity string from BugSeverity constants.</param>
-    /// <returns>Priority value as int (1-4).</returns>
-    public int MapSeverityToPriority(string severity)
-    {
-        return severity switch
-        {
-            Models.BugSeverity.Critical => 1,
-            Models.BugSeverity.High => 2,
-            Models.BugSeverity.Medium => 3,
-            Models.BugSeverity.Low => 4,
-            _ => 3 // Default to Medium (3) if unknown
-        };
-    }
-
-    /// <summary>
-    /// Gets severity for a bug by checking the Severity field.
-    /// Falls back to Priority field if Severity is not available.
+    /// Gets severity for a bug by checking ONLY the Severity field.
+    /// NO FALLBACKS - returns null if Severity is not present or is invalid.
+    /// Logs errors when data is missing or invalid.
     /// </summary>
     /// <param name="workItem">The bug work item.</param>
-    /// <returns>Severity string matching BugSeverity constants.</returns>
-    public string GetBugSeverity(WorkItemWithValidationDto workItem)
+    /// <returns>Raw severity string from TFS, or null if not found.</returns>
+    public string? GetBugSeverity(WorkItemWithValidationDto workItem)
     {
-        // Try Severity first (this is what we should be using for bugs)
+        // Get severity - NO FALLBACKS
         var severity = GetSeverity(workItem);
-        if (!string.IsNullOrEmpty(severity))
+        
+        if (string.IsNullOrEmpty(severity))
         {
-            return NormalizeSeverity(severity);
+            // Log error with available field information
+            var availableFields = GetAvailableFieldNames(workItem);
+            _logger.LogError(
+                "Work item {WorkItemId} is MISSING Severity field (Microsoft.VSTS.Common.Severity). " +
+                "Available fields: {AvailableFields}",
+                workItem.TfsId,
+                string.Join(", ", availableFields.Take(20)));
+            return null;
+        }
+        
+        // Return raw severity value from TFS - no normalization
+        return severity;
+    }
+    
+    /// <summary>
+    /// Gets list of available field names from work item JSON payload.
+    /// Used for error reporting when expected fields are missing.
+    /// </summary>
+    private List<string> GetAvailableFieldNames(WorkItemWithValidationDto workItem)
+    {
+        if (string.IsNullOrEmpty(workItem.JsonPayload))
+        {
+            return new List<string> { "(JsonPayload is empty)" };
         }
 
-        // Fallback to Priority if Severity not available
-        _logger.LogWarning("Work item {WorkItemId} has no Severity field, falling back to Priority field", workItem.TfsId);
-        var priority = GetPriority(workItem);
-        if (!string.IsNullOrEmpty(priority))
+        try
         {
-            return MapPriorityToSeverity(priority);
+            using var doc = JsonDocument.Parse(workItem.JsonPayload);
+            return doc.RootElement.EnumerateObject().Select(p => p.Name).ToList();
         }
-
-        // Default to Medium if neither field is available
-        _logger.LogWarning("Work item {WorkItemId} has neither Severity nor Priority field, defaulting to Medium", workItem.TfsId);
-        return Models.BugSeverity.Medium;
+        catch (JsonException)
+        {
+            return new List<string> { "(Failed to parse JsonPayload)" };
+        }
     }
 }
