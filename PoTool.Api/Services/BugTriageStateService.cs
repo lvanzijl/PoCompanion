@@ -5,6 +5,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Client.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.BugTriage;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Services;
 
@@ -156,21 +157,11 @@ public class BugTriageStateService
                         string? newSeverityValue = null;
                         try
                         {
-                            var parsedWorkItem = new WorkItemDto
+                            using var doc = System.Text.Json.JsonDocument.Parse(refreshedWorkItem.JsonPayload);
+                            if (doc.RootElement.TryGetProperty("Microsoft.VSTS.Common.Severity", out var severity))
                             {
-                                TfsId = refreshedWorkItem.TfsId,
-                                Type = refreshedWorkItem.Type,
-                                Title = refreshedWorkItem.Title,
-                                ParentTfsId = refreshedWorkItem.ParentTfsId,
-                                AreaPath = refreshedWorkItem.AreaPath,
-                                IterationPath = refreshedWorkItem.IterationPath,
-                                State = refreshedWorkItem.State,
-                                JsonPayload = refreshedWorkItem.JsonPayload,
-                                RetrievedAt = refreshedWorkItem.RetrievedAt,
-                                Effort = refreshedWorkItem.Effort,
-                                Description = refreshedWorkItem.Description
-                            };
-                            newSeverityValue = _fieldParser.GetSeverity(parsedWorkItem);
+                                newSeverityValue = severity.GetString();
+                            }
                         }
                         catch (Exception parseEx)
                         {
@@ -186,6 +177,9 @@ public class BugTriageStateService
                         cachedEntity.Effort = refreshedWorkItem.Effort;
                         cachedEntity.Description = refreshedWorkItem.Description;
                         cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
+                        
+                        // Explicitly mark entity as modified to ensure EF Core tracks the change
+                        _db.Entry(cachedEntity).State = EntityState.Modified;
                         
                         _logger.LogInformation("Updated cache for bug {BugId} with refreshed data from TFS. New severity in JsonPayload: {Severity}", 
                             request.BugId, newSeverityValue ?? "null");
