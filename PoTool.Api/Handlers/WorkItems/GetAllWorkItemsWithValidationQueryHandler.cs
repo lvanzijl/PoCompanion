@@ -130,7 +130,8 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
                 ? issues
                 : new List<ValidationIssue>(),
             wi.CreatedDate,
-            wi.ClosedDate
+            wi.ClosedDate,
+            wi.Severity
         )).ToList();
     }
 }

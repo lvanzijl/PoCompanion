@@ -439,7 +439,8 @@
 
     private string? GetBugSeverity(WorkItemWithValidationDto bug)
     {
-        return TfsFieldParser.GetBugSeverity(bug);
+        // Get severity directly from cached field - no TFS field parsing needed
+        return bug.Severity;
     }
 
     private List<string> GetBugTags(WorkItemWithValidationDto bug)

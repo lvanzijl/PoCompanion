@@ -8995,6 +8995,10 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "severity": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
