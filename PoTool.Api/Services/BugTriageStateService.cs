@@ -152,6 +152,31 @@ public class BugTriageStateService
                     
                     if (cachedEntity != null)
                     {
+                        // Parse severity from the refreshed JsonPayload to log the actual value
+                        string? newSeverityValue = null;
+                        try
+                        {
+                            var parsedWorkItem = new WorkItemDto
+                            {
+                                TfsId = refreshedWorkItem.TfsId,
+                                Type = refreshedWorkItem.Type,
+                                Title = refreshedWorkItem.Title,
+                                ParentTfsId = refreshedWorkItem.ParentTfsId,
+                                AreaPath = refreshedWorkItem.AreaPath,
+                                IterationPath = refreshedWorkItem.IterationPath,
+                                State = refreshedWorkItem.State,
+                                JsonPayload = refreshedWorkItem.JsonPayload,
+                                RetrievedAt = refreshedWorkItem.RetrievedAt,
+                                Effort = refreshedWorkItem.Effort,
+                                Description = refreshedWorkItem.Description
+                            };
+                            newSeverityValue = _fieldParser.GetSeverity(parsedWorkItem);
+                        }
+                        catch (Exception parseEx)
+                        {
+                            _logger.LogWarning(parseEx, "Failed to parse severity from refreshed work item {BugId}", request.BugId);
+                        }
+                        
                         // Update cached work item with fresh data from TFS
                         cachedEntity.JsonPayload = refreshedWorkItem.JsonPayload;
                         cachedEntity.State = refreshedWorkItem.State;
@@ -162,8 +187,8 @@ public class BugTriageStateService
                         cachedEntity.Description = refreshedWorkItem.Description;
                         cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
                         
-                        _logger.LogInformation("Updated cache for bug {BugId} with refreshed data from TFS", 
-                            request.BugId);
+                        _logger.LogInformation("Updated cache for bug {BugId} with refreshed data from TFS. New severity in JsonPayload: {Severity}", 
+                            request.BugId, newSeverityValue ?? "null");
                     }
                     else
                     {

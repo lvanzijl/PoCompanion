@@ -281,7 +281,9 @@
 
     private async Task HandleSeverityChanged(int bugId, string newSeverity)
     {
-        Logger.LogInformation("Severity changed for bug {BugId}: {Severity}", bugId, newSeverity);
+        var oldSeverity = _selectedBug != null ? GetBugSeverity(_selectedBug) : "Unknown";
+        Logger.LogInformation("Severity change requested for bug {BugId}: {OldSeverity} -> {NewSeverity}", 
+            bugId, oldSeverity, newSeverity);
         
         try
         {
@@ -310,20 +312,28 @@
                         
                         if (refreshedBug != null)
                         {
+                            var refreshedSeverity = GetBugSeverity(refreshedBug);
+                            Logger.LogInformation("Retrieved refreshed bug {BugId} from API: severity = {Severity}", 
+                                bugId, refreshedSeverity);
+                            
                             // Update the bug in local list
                             var existingBugIndex = _bugs.FindIndex(b => b.TfsId == bugId);
                             if (existingBugIndex >= 0)
                             {
                                 _bugs[existingBugIndex] = refreshedBug;
+                                Logger.LogInformation("Updated bug {BugId} in _bugs list at index {Index}", bugId, existingBugIndex);
                             }
                             
                             // Update selected bug if it's the one being edited
                             if (_selectedBug?.TfsId == bugId)
                             {
                                 _selectedBug = refreshedBug;
+                                Logger.LogInformation("Updated _selectedBug reference for bug {BugId}", bugId);
+                                // Force Blazor to detect the change in the details panel
+                                StateHasChanged();
                             }
                             
-                            Logger.LogInformation("Refreshed bug {BugId} from cache with server state", bugId);
+                            Logger.LogInformation("Successfully refreshed bug {BugId} from cache with server state", bugId);
                         }
                         else
                         {
@@ -337,6 +347,7 @@
                 }
                 
                 // Rebuild tree with updated data
+                Logger.LogInformation("Rebuilding tree for bug {BugId} after severity change", bugId);
                 ApplyFilters();
                 
                 Snackbar.Add($"Severity updated to {newSeverity}", Severity.Success);
