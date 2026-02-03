@@ -287,6 +287,7 @@ public partial class RealTfsClient
             int? effort = ParseEffortField(fields);
             DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
             DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
+            string? severity = ParseSeverityField(fields);
 
             results.Add(new WorkItemDto(
                 TfsId: id,
@@ -301,7 +302,8 @@ public partial class RealTfsClient
                 Effort: effort,
                 Description: description,
                 CreatedDate: createdDate,
-                ClosedDate: closedDate
+                ClosedDate: closedDate,
+                Severity: severity
             ));
          }
 
@@ -453,6 +455,19 @@ public partial class RealTfsClient
                 break;
         }
 
+        return null;
+    }
+
+    /// <summary>
+    /// Parses the severity field from work item fields.
+    /// Returns the severity string value if present, null otherwise.
+    /// </summary>
+    private static string? ParseSeverityField(JsonElement fields)
+    {
+        if (fields.TryGetProperty(TfsFieldSeverity, out var severityField))
+        {
+            return severityField.ValueKind == JsonValueKind.String ? severityField.GetString() : null;
+        }
         return null;
     }
 
