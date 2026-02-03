@@ -380,20 +380,21 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult(true);
     }
 
-    public Task<bool> UpdateWorkItemPriorityAsync(int workItemId, int priority, CancellationToken cancellationToken = default)
+    public Task<bool> UpdateWorkItemSeverityAsync(int workItemId, string severity, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Mock TFS client: UpdateWorkItemPriorityAsync called for workItemId={WorkItemId}, priority={Priority}",
-            workItemId, priority);
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemSeverityAsync called for workItemId={WorkItemId}, severity='{Severity}'",
+            workItemId, severity);
 
-        // Mock implementation always succeeds for valid priority values (1-4)
-        if (priority < 1 || priority > 4)
+        // Mock implementation always succeeds for valid severity values
+        var validSeverities = new[] { "1 - Critical", "2 - High", "3 - Medium", "4 - Low", "Critical", "High", "Medium", "Low" };
+        if (string.IsNullOrEmpty(severity) || !validSeverities.Any(s => s.Equals(severity, StringComparison.OrdinalIgnoreCase)))
         {
-            _logger.LogWarning("Mock TFS client: Invalid priority value {Priority} provided (must be 1-4)", priority);
+            _logger.LogWarning("Mock TFS client: Invalid severity value '{Severity}' provided", severity);
             return Task.FromResult(false);
         }
 
-        _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} priority to {Priority}",
-            workItemId, priority);
+        _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} severity to '{Severity}'",
+            workItemId, severity);
         return Task.FromResult(true);
     }
 

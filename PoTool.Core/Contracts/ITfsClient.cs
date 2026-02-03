@@ -174,16 +174,16 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Updates the priority of a work item in TFS (Microsoft.VSTS.Common.Priority).
-    /// Priority typically ranges from 1 (highest) to 4 (lowest).
+    /// Updates the severity of a work item in TFS (Microsoft.VSTS.Common.Severity).
+    /// Severity is used for bugs and typically has values like "1 - Critical", "2 - High", "3 - Medium", "4 - Low".
     /// </summary>
     /// <param name="workItemId">The work item ID.</param>
-    /// <param name="priority">The new priority value (1-4).</param>
+    /// <param name="severity">The new severity value (e.g., "1 - Critical", "2 - High", "3 - Medium", "4 - Low").</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if the update was successful, false otherwise.</returns>
-    Task<bool> UpdateWorkItemPriorityAsync(
+    Task<bool> UpdateWorkItemSeverityAsync(
         int workItemId,
-        int priority,
+        string severity,
         CancellationToken cancellationToken = default);
 
     /// <summary>

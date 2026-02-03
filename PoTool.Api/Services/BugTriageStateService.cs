@@ -119,28 +119,28 @@ public class BugTriageStateService
             // If severity changed, update TFS
             if (request.NewSeverity != null)
             {
-                _logger.LogInformation("Updating TFS bug {BugId}: Severity to {NewSeverity}", 
+                _logger.LogInformation("Updating TFS bug {BugId}: Severity to '{NewSeverity}'", 
                     request.BugId, request.NewSeverity);
                 
-                // Convert severity to TFS priority value (1-4)
-                var priority = _fieldParser.MapSeverityToPriority(request.NewSeverity);
+                // Map severity display name to TFS Severity format (e.g., "Critical" -> "1 - Critical")
+                var tfsSeverity = MapSeverityToTfsFormat(request.NewSeverity);
                 
-                // Update TFS
-                var updateSuccess = await _tfsClient.UpdateWorkItemPriorityAsync(
+                // Update TFS with Severity field
+                var updateSuccess = await _tfsClient.UpdateWorkItemSeverityAsync(
                     request.BugId, 
-                    priority, 
+                    tfsSeverity, 
                     cancellationToken);
                 
                 if (!updateSuccess)
                 {
-                    _logger.LogError("Failed to update TFS bug {BugId} priority", request.BugId);
+                    _logger.LogError("Failed to update TFS bug {BugId} severity", request.BugId);
                     return new UpdateBugTriageStateResponse(
                         false, 
                         $"Failed to update bug {request.BugId} in TFS. Please try again.");
                 }
                 
-                _logger.LogInformation("Successfully updated TFS bug {BugId} priority to {Priority}", 
-                    request.BugId, priority);
+                _logger.LogInformation("Successfully updated TFS bug {BugId} severity to '{Severity}'", 
+                    request.BugId, tfsSeverity);
                 
                 // Refresh work item from TFS and update cache
                 var refreshedWorkItem = await _tfsClient.GetWorkItemByIdAsync(request.BugId, cancellationToken);
@@ -266,6 +266,31 @@ public class BugTriageStateService
                     tag);
             }
         }
+    }
+
+    /// <summary>
+    /// Maps UI severity display names to TFS Severity field format.
+    /// TFS expects values like "1 - Critical", "2 - High", "3 - Medium", "4 - Low".
+    /// </summary>
+    private string MapSeverityToTfsFormat(string severity)
+    {
+        // Map UI severity constants to TFS format
+        var mapped = severity switch
+        {
+            "Critical" => "1 - Critical",
+            "High" => "2 - High",
+            "Medium" => "3 - Medium",
+            "Low" => "4 - Low",
+            _ => null
+        };
+
+        if (mapped == null)
+        {
+            _logger.LogWarning("Unknown severity value '{Severity}' encountered. Expected values: Critical, High, Medium, or Low. Defaulting to '3 - Medium'", severity);
+            return "3 - Medium";
+        }
+
+        return mapped;
     }
 
     private static BugTriageStateDto MapToDto(BugTriageStateEntity entity)
