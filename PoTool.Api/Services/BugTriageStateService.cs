@@ -286,7 +286,7 @@ public class BugTriageStateService
 
         if (mapped == null)
         {
-            _logger.LogWarning("Unknown severity value '{Severity}' encountered, defaulting to '3 - Medium'", severity);
+            _logger.LogWarning("Unknown severity value '{Severity}' encountered. Expected values: Critical, High, Medium, or Low. Defaulting to '3 - Medium'", severity);
             return "3 - Medium";
         }
 
