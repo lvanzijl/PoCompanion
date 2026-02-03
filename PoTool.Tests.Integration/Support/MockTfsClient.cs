@@ -416,17 +416,18 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult(true);
     }
 
-    public Task<bool> UpdateWorkItemPriorityAsync(int workItemId, int priority, CancellationToken cancellationToken = default)
+    public Task<bool> UpdateWorkItemSeverityAsync(int workItemId, string severity, CancellationToken cancellationToken = default)
     {
         // Mock implementation for integration tests
-        // Always return true for valid priority values (1-4) to simulate successful TFS update
-        if (priority < 1 || priority > 4)
+        // Always return true for valid severity values to simulate successful TFS update
+        var validSeverities = new[] { "1 - Critical", "2 - High", "3 - Medium", "4 - Low", "Critical", "High", "Medium", "Low" };
+        if (string.IsNullOrEmpty(severity) || !validSeverities.Any(s => s.Equals(severity, StringComparison.OrdinalIgnoreCase)))
         {
             return Task.FromResult(false);
         }
 
-        // Note: Since WorkItemDto doesn't have a Priority field (only in JsonPayload),
-        // we don't update our mock list. In a real scenario, the priority would be
+        // Note: Since WorkItemDto doesn't have a Severity field (only in JsonPayload),
+        // we don't update our mock list. In a real scenario, the severity would be
         // reflected in the JsonPayload after fetching from TFS.
         
         // Return true to simulate successful TFS update

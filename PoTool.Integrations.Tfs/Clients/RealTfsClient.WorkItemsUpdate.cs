@@ -147,16 +147,16 @@ public partial class RealTfsClient
         }
     }
 
-    public async Task<bool> UpdateWorkItemPriorityAsync(int workItemId, int priority, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateWorkItemSeverityAsync(int workItemId, string severity, CancellationToken cancellationToken = default)
     {
         try
         {
-            _logger.LogInformation("Updating work item {WorkItemId} priority to {Priority}", workItemId, priority);
+            _logger.LogInformation("Updating work item {WorkItemId} severity to '{Severity}'", workItemId, severity);
 
             var entity = await _configService.GetConfigEntityAsync(cancellationToken);
             if (entity == null)
             {
-                _logger.LogWarning("No TFS configuration found for updating work item priority");
+                _logger.LogWarning("No TFS configuration found for updating work item severity");
                 return false;
             }
 
@@ -167,14 +167,14 @@ public partial class RealTfsClient
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(entity.TimeoutSeconds));
 
-            // Build JSON Patch document for priority (Microsoft.VSTS.Common.Priority)
+            // Build JSON Patch document for severity (Microsoft.VSTS.Common.Severity)
             var patchDocument = new[]
             {
                 new
                 {
                     op = "add",
-                    path = $"/fields/{TfsFieldPriority}",
-                    value = priority
+                    path = $"/fields/{TfsFieldSeverity}",
+                    value = severity
                 }
             };
 
@@ -185,32 +185,33 @@ public partial class RealTfsClient
                 System.Text.Encoding.UTF8,
                 "application/json-patch+json");
 
-            _logger.LogDebug("Sending PATCH request to update work item {WorkItemId} priority", workItemId);
+            _logger.LogInformation("Sending PATCH request to update work item {WorkItemId}: Field={FieldReferenceName}, Value={Value}",
+                workItemId, TfsFieldSeverity, severity);
 
             // PATCH operations are NOT retried - they are non-idempotent
             var response = await httpClient.PatchAsync(updateUrl, content, timeoutCts.Token);
 
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Successfully updated work item {WorkItemId} priority to {Priority}", workItemId, priority);
+                _logger.LogInformation("Successfully updated work item {WorkItemId} severity to '{Severity}'", workItemId, severity);
                 return true;
             }
             else
             {
                 var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogWarning("Failed to update work item {WorkItemId} priority. Status: {StatusCode}, Response: {Response}",
+                _logger.LogWarning("Failed to update work item {WorkItemId} severity. Status: {StatusCode}, Response: {Response}",
                     workItemId, response.StatusCode, responseBody);
                 return false;
             }
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogError("Update work item {WorkItemId} priority timed out", workItemId);
+            _logger.LogError("Update work item {WorkItemId} severity timed out", workItemId);
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating work item {WorkItemId} priority to {Priority}", workItemId, priority);
+            _logger.LogError(ex, "Error updating work item {WorkItemId} severity to '{Severity}'", workItemId, severity);
             return false;
         }
     }
