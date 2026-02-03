@@ -77,7 +77,43 @@
 
 ## Phase 2 — Endpoint Usage Mapping Changes
 
-*To be populated in Phase 2*
+### Changes Applied: 1 endpoint marked obsolete
+
+---
+
+### 3. TeamsController.DeleteTeam — MARKED OBSOLETE
+
+**File:** `PoTool.Api/Controllers/TeamsController.cs`  
+**Type:** HTTP DELETE endpoint  
+**Obsolete Marking:**
+```csharp
+[Obsolete("UNUSED: No client-side calls found. UI uses ArchiveTeam (soft delete) instead. See docs/cleanup/phase2-endpoint-usage-report.md section 4.1", error: true)]
+```
+
+**Reason:**
+- Endpoint defined but never called by client code
+- Alternative `ArchiveTeam` endpoint provides soft-delete functionality (IS USED)
+- UI exclusively uses ArchiveTeam for team deletion (reversible)
+- Hard-delete (DeleteTeam) is not exposed in UI
+
+**Evidence:**
+- API client method generated: `Task DeleteTeamAsync(int id)` in ApiClient.g.cs
+- Search performed: `grep -r "DeleteTeam" PoTool.Client/Services --include="*.cs"`
+  - Result: ZERO usage (not called by TeamService)
+- Search performed: `grep -r "DeleteTeam" PoTool.Client/Pages --include="*.razor"`
+  - Result: ZERO usage (not called by any page)
+- Search performed: `grep -r "DeleteTeam" PoTool.Client/Components --include="*.razor"`
+  - Result: ZERO usage (not called by any component)
+- Comparison: `ArchiveTeamAsync` IS used by TeamService.cs and TeamEditor.razor
+
+**Impact:**
+- ✅ Compilation succeeds (no usage exists)
+- ✅ No runtime impact (dead code)
+- ✅ No client breakage (endpoint never called)
+
+**Report Reference:** `docs/cleanup/phase2-endpoint-usage-report.md` section 4.1
+
+**Related Handler:** `DeleteTeamCommandHandler` — Will be evaluated in Phase 3
 
 ---
 
@@ -92,9 +128,9 @@
 | Phase | Items Marked Obsolete | Compilation Status | Safety |
 |-------|----------------------|-------------------|---------|
 | Phase 1 — Client UI | 2 (1 helper, 1 page) | ✅ Success | ✅ Safe |
-| Phase 2 — Endpoints | TBD | TBD | TBD |
+| Phase 2 — Endpoints | 1 (1 endpoint) | ✅ Success | ✅ Safe |
 | Phase 3 — Handlers | TBD | TBD | TBD |
-| **TOTAL** | **2** | **✅ Success** | **✅ Safe** |
+| **TOTAL** | **3** | **✅ Success** | **✅ Safe** |
 
 ---
 
