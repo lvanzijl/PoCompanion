@@ -311,10 +311,10 @@
                         if (refreshedBug != null)
                         {
                             // Update the bug in local list
-                            var bugIndex = _bugs.FindIndex(b => b.TfsId == bugId);
-                            if (bugIndex >= 0)
+                            var existingBugIndex = _bugs.FindIndex(b => b.TfsId == bugId);
+                            if (existingBugIndex >= 0)
                             {
-                                _bugs[bugIndex] = refreshedBug;
+                                _bugs[existingBugIndex] = refreshedBug;
                             }
                             
                             // Update selected bug if it's the one being edited
