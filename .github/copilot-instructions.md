@@ -122,3 +122,35 @@ All output MUST be:
 - Free of speculative additions
 
 Correctness and long-term maintainability outweigh speed.
+
+---
+
+## 9. Repository hygiene (critical)
+
+**NEVER commit binary files or build artifacts:**
+
+- Before any `git add` or commit operation, you MUST verify NO build artifacts are staged
+- Binary files (DLLs, EXEs, etc.) MUST NEVER be added to the repository
+- Build output directories (`bin/`, `obj/`, etc.) MUST NEVER be committed
+- After building or running tests, ALWAYS check `git status` before committing
+- If binary files appear in `git status`, investigate WHY gitignore failed and fix the root cause
+
+**Path handling:**
+
+- ALWAYS use forward slashes (`/`) in file paths, even on Windows
+- Git internally uses forward slashes; backslashes create literal characters that bypass gitignore
+- When programmatically generating file paths, ensure forward slashes are used
+- NEVER stage or commit files with backslashes in their paths
+
+**Pre-commit verification:**
+
+1. Run `git status` to see what will be committed
+2. Verify NO files from `bin/`, `obj/`, or build directories are listed
+3. If build artifacts appear, run `git reset` and investigate the cause
+4. Update `.gitignore` if needed before retrying the commit
+
+**If binary files are accidentally committed:**
+
+1. Remove them immediately with `git rm --cached <path>`
+2. Ensure `.gitignore` has proper rules
+3. Document the root cause to prevent recurrence
