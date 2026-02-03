@@ -203,7 +203,8 @@
             foreach (var bug in _bugs.Where(b => _untriagedBugIds.Contains(b.TfsId)))
             {
                 var severity = GetBugSeverity(bug);
-                await BugTriageService.RecordFirstSeenAsync(bug.TfsId, severity);
+                // Use null-coalescing to provide "Unknown" if severity is null
+                await BugTriageService.RecordFirstSeenAsync(bug.TfsId, severity ?? "Unknown");
             }
 
             ApplyFilters();
@@ -281,9 +282,9 @@
 
     private async Task HandleSeverityChanged(int bugId, string newSeverity)
     {
-        var oldSeverity = _selectedBug != null ? GetBugSeverity(_selectedBug) : "Unknown";
+        var oldSeverity = _selectedBug != null ? GetBugSeverity(_selectedBug) : null;
         Logger.LogInformation("Severity change requested for bug {BugId}: {OldSeverity} -> {NewSeverity}", 
-            bugId, oldSeverity, newSeverity);
+            bugId, oldSeverity ?? "(null)", newSeverity);
         
         try
         {
@@ -436,7 +437,7 @@
 
     private bool IsTagSelected(string tagName) => _selectedTags.Contains(tagName);
 
-    private string GetBugSeverity(WorkItemWithValidationDto bug)
+    private string? GetBugSeverity(WorkItemWithValidationDto bug)
     {
         return TfsFieldParser.GetBugSeverity(bug);
     }

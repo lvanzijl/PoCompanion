@@ -261,154 +261,16 @@ public class TfsFieldParserServiceTests
 
     #endregion
 
-    #region MapPriorityToSeverity Tests
-
-    [TestMethod]
-    public void MapPriorityToSeverity_Priority1_ReturnsCritical()
-    {
-        // Act
-        var result = _service.MapPriorityToSeverity("1");
-
-        // Assert
-        Assert.AreEqual(BugSeverity.Critical, result);
-    }
-
-    [TestMethod]
-    public void MapPriorityToSeverity_Priority2_ReturnsHigh()
-    {
-        // Act
-        var result = _service.MapPriorityToSeverity("2");
-
-        // Assert
-        Assert.AreEqual(BugSeverity.High, result);
-    }
-
-    [TestMethod]
-    public void MapPriorityToSeverity_Priority3_ReturnsMedium()
-    {
-        // Act
-        var result = _service.MapPriorityToSeverity("3");
-
-        // Assert
-        Assert.AreEqual(BugSeverity.Medium, result);
-    }
-
-    [TestMethod]
-    public void MapPriorityToSeverity_Priority4_ReturnsLow()
-    {
-        // Act
-        var result = _service.MapPriorityToSeverity("4");
-
-        // Assert
-        Assert.AreEqual(BugSeverity.Low, result);
-    }
-
-    [TestMethod]
-    public void MapPriorityToSeverity_NullPriority_ReturnsMedium()
-    {
-        // Act
-        var result = _service.MapPriorityToSeverity(null);
-
-        // Assert
-        Assert.AreEqual(BugSeverity.Medium, result);
-    }
-
-    [TestMethod]
-    public void MapPriorityToSeverity_UnknownPriority_ReturnsMedium()
-    {
-        // Act
-        var result = _service.MapPriorityToSeverity("5");
-
-        // Assert
-        Assert.AreEqual(BugSeverity.Medium, result);
-    }
-
-    #endregion
-
-    #region NormalizeSeverity Tests
-
-    [TestMethod]
-    public void NormalizeSeverity_CriticalWithNumber_ReturnsCritical()
-    {
-        // Act
-        var result = _service.NormalizeSeverity("1 - Critical");
-
-        // Assert
-        Assert.AreEqual(BugSeverity.Critical, result);
-    }
-
-    [TestMethod]
-    public void NormalizeSeverity_CriticalPlain_ReturnsCritical()
-    {
-        // Act
-        var result = _service.NormalizeSeverity("Critical");
-
-        // Assert
-        Assert.AreEqual(BugSeverity.Critical, result);
-    }
-
-    [TestMethod]
-    public void NormalizeSeverity_HighWithNumber_ReturnsHigh()
-    {
-        // Act
-        var result = _service.NormalizeSeverity("2 - High");
-
-        // Assert
-        Assert.AreEqual(BugSeverity.High, result);
-    }
-
-    [TestMethod]
-    public void NormalizeSeverity_MediumWithNumber_ReturnsMedium()
-    {
-        // Act
-        var result = _service.NormalizeSeverity("3 - Medium");
-
-        // Assert
-        Assert.AreEqual(BugSeverity.Medium, result);
-    }
-
-    [TestMethod]
-    public void NormalizeSeverity_LowWithNumber_ReturnsLow()
-    {
-        // Act
-        var result = _service.NormalizeSeverity("4 - Low");
-
-        // Assert
-        Assert.AreEqual(BugSeverity.Low, result);
-    }
-
-    [TestMethod]
-    public void NormalizeSeverity_NullSeverity_ReturnsMedium()
-    {
-        // Act
-        var result = _service.NormalizeSeverity(null);
-
-        // Assert
-        Assert.AreEqual(BugSeverity.Medium, result);
-    }
-
-    [TestMethod]
-    public void NormalizeSeverity_UnknownSeverity_ReturnsMedium()
-    {
-        // Act
-        var result = _service.NormalizeSeverity("Unknown");
-
-        // Assert
-        Assert.AreEqual(BugSeverity.Medium, result);
-    }
-
-    #endregion
-
     #region GetBugSeverity Tests
 
     [TestMethod]
-    public void GetBugSeverity_WithSeverity_UsesSeverity()
+    public void GetBugSeverity_WithSeverity_ReturnsSeverity()
     {
         // Arrange
         var fields = new Dictionary<string, object>
         {
             { "Microsoft.VSTS.Common.Severity", "1 - Critical" },
-            { "Microsoft.VSTS.Common.Priority", 4 } // Should be ignored (fallback only)
+            { "Microsoft.VSTS.Common.Priority", 4 } // Should be ignored
         };
         var bug = CreateBugWithJsonPayload(fields);
 
@@ -416,11 +278,11 @@ public class TfsFieldParserServiceTests
         var result = _service.GetBugSeverity(bug);
 
         // Assert
-        Assert.AreEqual(BugSeverity.Critical, result); // From Severity, not Priority
+        Assert.AreEqual("1 - Critical", result); // Raw TFS value, no normalization
     }
 
     [TestMethod]
-    public void GetBugSeverity_WithOnlyPriority_FallsToPriority()
+    public void GetBugSeverity_WithOnlyPriority_ReturnsNull()
     {
         // Arrange
         var fields = new Dictionary<string, object>
@@ -433,11 +295,11 @@ public class TfsFieldParserServiceTests
         var result = _service.GetBugSeverity(bug);
 
         // Assert
-        Assert.AreEqual(BugSeverity.High, result); // Falls back to Priority
+        Assert.IsNull(result); // No fallback to Priority
     }
 
     [TestMethod]
-    public void GetBugSeverity_WithNoFields_ReturnsDefaultMedium()
+    public void GetBugSeverity_WithNoFields_ReturnsNull()
     {
         // Arrange
         var fields = new Dictionary<string, object>
@@ -450,61 +312,35 @@ public class TfsFieldParserServiceTests
         var result = _service.GetBugSeverity(bug);
 
         // Assert
-        Assert.AreEqual(BugSeverity.Medium, result);
+        Assert.IsNull(result); // No default to Medium
     }
-
-    #endregion
-
-    #region MapSeverityToPriority Tests
-
+    
     [TestMethod]
-    public void MapSeverityToPriority_Critical_Returns1()
+    public void GetBugSeverity_WithDifferentSeverityFormats_ReturnsRawValue()
     {
-        // Act
-        var result = _service.MapSeverityToPriority(BugSeverity.Critical);
+        // Arrange - test different TFS severity formats
+        var testCases = new[]
+        {
+            ("1 - Critical", "1 - Critical"),
+            ("2 - High", "2 - High"),
+            ("3 - Medium", "3 - Medium"),
+            ("4 - Low", "4 - Low")
+        };
 
-        // Assert
-        Assert.AreEqual(1, result);
-    }
+        foreach (var (input, expected) in testCases)
+        {
+            var fields = new Dictionary<string, object>
+            {
+                { "Microsoft.VSTS.Common.Severity", input }
+            };
+            var bug = CreateBugWithJsonPayload(fields);
 
-    [TestMethod]
-    public void MapSeverityToPriority_High_Returns2()
-    {
-        // Act
-        var result = _service.MapSeverityToPriority(BugSeverity.High);
+            // Act
+            var result = _service.GetBugSeverity(bug);
 
-        // Assert
-        Assert.AreEqual(2, result);
-    }
-
-    [TestMethod]
-    public void MapSeverityToPriority_Medium_Returns3()
-    {
-        // Act
-        var result = _service.MapSeverityToPriority(BugSeverity.Medium);
-
-        // Assert
-        Assert.AreEqual(3, result);
-    }
-
-    [TestMethod]
-    public void MapSeverityToPriority_Low_Returns4()
-    {
-        // Act
-        var result = _service.MapSeverityToPriority(BugSeverity.Low);
-
-        // Assert
-        Assert.AreEqual(4, result);
-    }
-
-    [TestMethod]
-    public void MapSeverityToPriority_Unknown_Returns3()
-    {
-        // Act
-        var result = _service.MapSeverityToPriority("Unknown");
-
-        // Assert
-        Assert.AreEqual(3, result); // Should default to Medium (3)
+            // Assert
+            Assert.AreEqual(expected, result, $"Failed for input: {input}");
+        }
     }
 
     #endregion

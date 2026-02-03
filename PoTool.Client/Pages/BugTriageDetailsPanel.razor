@@ -22,13 +22,36 @@
         @* Severity Selector *@
         <MudPaper Class="pa-3" Elevation="1">
             <MudText Typo="Typo.subtitle2" Class="mb-2">Severity</MudText>
+            
+            @* Show error if severity is missing or invalid *@
+            @if (!string.IsNullOrEmpty(_severityError))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-2" Dense="true">
+                    @_severityError
+                </MudAlert>
+            }
+            
             @if (_severityOptions.Any())
             {
+                @if (string.IsNullOrEmpty(_currentSeverity))
+                {
+                    <MudAlert Severity="Severity.Warning" Class="mb-2" Dense="true">
+                        No severity value found for this bug.
+                    </MudAlert>
+                }
+                else if (!_severityOptions.Contains(_currentSeverity))
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-2" Dense="true">
+                        Invalid severity: "@_currentSeverity" (not in allowed values: @string.Join(", ", _severityOptions))
+                    </MudAlert>
+                }
+                
                 <MudSelect T="string"
                           Value="@_currentSeverity"
                           ValueChanged="@HandleSeverityChanged"
                           Variant="Variant.Outlined"
-                          Dense="true">
+                          Dense="true"
+                          Disabled="@(string.IsNullOrEmpty(_currentSeverity))">
                     @foreach (var severity in _severityOptions)
                     {
                         <MudSelectItem Value="@severity">@severity</MudSelectItem>
@@ -108,9 +131,10 @@
     [Parameter]
     public EventCallback<(int BugId, string TagName, bool IsAdded)> OnTagToggled { get; set; }
 
-    private string _currentSeverity = "3 - Medium"; // Default to TFS format
+    private string? _currentSeverity = null; // No default - must come from TFS
     private HashSet<string> _activeTags = new();
     private List<string> _severityOptions = new();
+    private string? _severityError = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -121,9 +145,28 @@
     {
         if (Bug != null)
         {
-            // Initialize severity and tags from bug
-            // GetBugSeverity now returns TFS format (e.g., "1 - Critical")
-            _currentSeverity = GetBugSeverityTfsFormat(Bug);
+            // Reset error state
+            _severityError = null;
+            
+            // Get severity directly from TFS payload - NO FALLBACKS
+            _currentSeverity = TfsFieldParser.GetSeverity(Bug);
+            
+            // Log and set error if severity is missing
+            if (string.IsNullOrEmpty(_currentSeverity))
+            {
+                var availableFields = GetAvailableFieldsSummary(Bug);
+                Logger.LogError("Bug {BugId} has NO Severity field (Microsoft.VSTS.Common.Severity). Available fields: {Fields}", 
+                    Bug.TfsId, availableFields);
+                _severityError = $"Severity field (Microsoft.VSTS.Common.Severity) is missing from bug {Bug.TfsId}";
+            }
+            // Check if severity value is in allowed list
+            else if (_severityOptions.Any() && !_severityOptions.Contains(_currentSeverity))
+            {
+                Logger.LogError("Bug {BugId} has INVALID Severity value: '{Severity}'. Allowed values: {AllowedValues}", 
+                    Bug.TfsId, _currentSeverity, string.Join(", ", _severityOptions));
+                _severityError = $"Invalid severity value: '{_currentSeverity}'";
+            }
+            
             _activeTags = new HashSet<string>(GetBugTags(Bug), StringComparer.OrdinalIgnoreCase);
         }
     }
@@ -134,19 +177,17 @@
         {
             var options = await WorkItemService.GetBugSeverityOptionsAsync();
             _severityOptions = options.ToList();
-            Logger.LogInformation("Loaded {Count} severity options from server", _severityOptions.Count);
+            Logger.LogInformation("Loaded {Count} severity options from TFS", _severityOptions.Count);
+            
+            if (!_severityOptions.Any())
+            {
+                Logger.LogError("NO severity options returned from TFS - this is a critical configuration error");
+            }
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to load severity options from server, using fallback");
-            // Fallback to standard TFS severity values
-            _severityOptions = new List<string>
-            {
-                "1 - Critical",
-                "2 - High",
-                "3 - Medium",
-                "4 - Low"
-            };
+            Logger.LogError(ex, "CRITICAL: Failed to load severity options from TFS");
+            _severityOptions = new List<string>(); // Empty list - no fallback
         }
     }
 
@@ -175,42 +216,27 @@
         await OnTagToggled.InvokeAsync((Bug.TfsId, tagName, isAdded));
     }
 
-    private string GetBugSeverityTfsFormat(WorkItemWithValidationDto bug)
-    {
-        // Get severity from JSON payload - this returns TFS format like "1 - Critical"
-        var severity = TfsFieldParser.GetSeverity(bug);
-        if (!string.IsNullOrEmpty(severity))
-        {
-            return severity;
-        }
-
-        // Fallback to Priority if Severity not available
-        Logger.LogWarning("Bug {BugId} has no Severity field, falling back to Priority", bug.TfsId);
-        var priority = TfsFieldParser.GetPriority(bug);
-        if (!string.IsNullOrEmpty(priority))
-        {
-            // Map priority to TFS severity format
-            return priority switch
-            {
-                "1" => "1 - Critical",
-                "2" => "2 - High",
-                "3" => "3 - Medium",
-                "4" => "4 - Low",
-                _ => "3 - Medium"
-            };
-        }
-
-        Logger.LogWarning("Bug {BugId} has neither Severity nor Priority, defaulting to Medium", bug.TfsId);
-        return "3 - Medium";
-    }
-
-    private string GetBugSeverity(WorkItemWithValidationDto bug)
-    {
-        return TfsFieldParser.GetBugSeverity(bug);
-    }
-
     private List<string> GetBugTags(WorkItemWithValidationDto bug)
     {
         return TfsFieldParser.GetTags(bug);
+    }
+    
+    private string GetAvailableFieldsSummary(WorkItemWithValidationDto bug)
+    {
+        if (string.IsNullOrEmpty(bug.JsonPayload))
+        {
+            return "JsonPayload is empty";
+        }
+        
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(bug.JsonPayload);
+            var fieldNames = doc.RootElement.EnumerateObject().Select(p => p.Name).ToList();
+            return string.Join(", ", fieldNames.Take(10)) + (fieldNames.Count > 10 ? $" ... ({fieldNames.Count} total)" : "");
+        }
+        catch
+        {
+            return "Unable to parse JSON payload";
+        }
     }
 }
