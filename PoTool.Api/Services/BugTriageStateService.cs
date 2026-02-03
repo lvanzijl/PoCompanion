@@ -275,14 +275,22 @@ public class BugTriageStateService
     private string MapSeverityToTfsFormat(string severity)
     {
         // Map UI severity constants to TFS format
-        return severity switch
+        var mapped = severity switch
         {
             "Critical" => "1 - Critical",
             "High" => "2 - High",
             "Medium" => "3 - Medium",
             "Low" => "4 - Low",
-            _ => "3 - Medium" // Default to Medium if unknown
+            _ => null
         };
+
+        if (mapped == null)
+        {
+            _logger.LogWarning("Unknown severity value '{Severity}' encountered, defaulting to '3 - Medium'", severity);
+            return "3 - Medium";
+        }
+
+        return mapped;
     }
 
     private static BugTriageStateDto MapToDto(BugTriageStateEntity entity)
