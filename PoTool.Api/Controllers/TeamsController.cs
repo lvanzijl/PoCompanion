@@ -133,13 +133,17 @@ public class TeamsController : ControllerBase
 
     /// <summary>
     /// Permanently deletes a team and all its product links.
+    /// OBSOLETE: This endpoint is unused. Client uses ArchiveTeam (soft delete) instead.
     /// </summary>
+    [Obsolete("UNUSED: No client-side calls found. UI uses ArchiveTeam (soft delete) instead. See docs/cleanup/phase2-endpoint-usage-report.md section 4.1", error: true)]
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteTeam(int id, CancellationToken cancellationToken)
     {
+#pragma warning disable CS0618, CS0619 // Type or member is obsolete (entire chain is obsolete)
         var result = await _mediator.Send(new DeleteTeamCommand(id), cancellationToken);
+#pragma warning restore CS0618, CS0619
 
         if (!result)
         {
