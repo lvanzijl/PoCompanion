@@ -297,7 +297,46 @@
                 // Remove from untriaged set
                 _untriagedBugIds.Remove(bugId);
                 
-                // Rebuild tree
+                // Refresh the work item from cache to get the true server state
+                try
+                {
+                    var activeProfile = await ProfileService.GetActiveProfileAsync();
+                    if (activeProfile != null)
+                    {
+                        var profileProducts = await ProductService.GetProductsByOwnerAsync(activeProfile.Id);
+                        var productIds = profileProducts.Select(p => p.Id).ToArray();
+                        
+                        var refreshedBug = await WorkItemService.GetByTfsIdWithValidationAsync(bugId, productIds);
+                        
+                        if (refreshedBug != null)
+                        {
+                            // Update the bug in local list
+                            var bugIndex = _bugs.FindIndex(b => b.TfsId == bugId);
+                            if (bugIndex >= 0)
+                            {
+                                _bugs[bugIndex] = refreshedBug;
+                            }
+                            
+                            // Update selected bug if it's the one being edited
+                            if (_selectedBug?.TfsId == bugId)
+                            {
+                                _selectedBug = refreshedBug;
+                            }
+                            
+                            Logger.LogInformation("Refreshed bug {BugId} from cache with server state", bugId);
+                        }
+                        else
+                        {
+                            Logger.LogWarning("Failed to refresh bug {BugId} - not found in cache", bugId);
+                        }
+                    }
+                }
+                catch (Exception refreshEx)
+                {
+                    Logger.LogWarning(refreshEx, "Failed to refresh bug {BugId} after severity update - keeping optimistic value", bugId);
+                }
+                
+                // Rebuild tree with updated data
                 ApplyFilters();
                 
                 Snackbar.Add($"Severity updated to {newSeverity}", Severity.Success);

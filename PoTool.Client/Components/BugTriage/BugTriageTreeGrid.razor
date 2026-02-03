@@ -30,6 +30,16 @@
                      FixedHeader="true"
                      Height="var(--tree-grid-height, calc(100vh - 300px))">
             <Columns>
+                @* Id Column *@
+                <TemplateColumn Title="Id" Class="id-column" Sortable="false">
+                    <CellTemplate>
+                        @if (context.Item.Node.Type != "(group)")
+                        {
+                            <span>@context.Item.Node.Id</span>
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+
                 @* Title Column with tree structure *@
                 <TemplateColumn Title="Title" Class="title-column" Sortable="false">
                     <CellTemplate>

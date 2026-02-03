@@ -160,6 +160,12 @@
 }
 
 /* Column styling */
+.id-column {
+    width: 80px;
+    text-align: left;
+    white-space: nowrap;
+}
+
 .state-column {
     width: 120px;
     text-align: left;
