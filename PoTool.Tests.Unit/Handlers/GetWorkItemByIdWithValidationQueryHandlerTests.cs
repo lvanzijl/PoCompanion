@@ -15,7 +15,6 @@ public class GetWorkItemByIdWithValidationQueryHandlerTests
 {
     private Mock<IWorkItemReadProvider> _mockReadProvider = null!;
     private Mock<IWorkItemValidator> _mockValidator = null!;
-    private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<ILogger<GetWorkItemByIdWithValidationQueryHandler>> _mockLogger = null!;
     private GetWorkItemByIdWithValidationQueryHandler _handler = null!;
 
@@ -24,13 +23,11 @@ public class GetWorkItemByIdWithValidationQueryHandlerTests
     {
         _mockReadProvider = new Mock<IWorkItemReadProvider>();
         _mockValidator = new Mock<IWorkItemValidator>();
-        _mockProductRepository = new Mock<IProductRepository>();
         _mockLogger = new Mock<ILogger<GetWorkItemByIdWithValidationQueryHandler>>();
         
         _handler = new GetWorkItemByIdWithValidationQueryHandler(
             _mockReadProvider.Object,
             _mockValidator.Object,
-            _mockProductRepository.Object,
             _mockLogger.Object);
     }
 
@@ -136,7 +133,7 @@ public class GetWorkItemByIdWithValidationQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_WithProductIds_CallsProductRepository()
+    public async Task Handle_WithProductIds_StillReturnsWorkItem()
     {
         // Arrange
         var workItem = new WorkItemDto(
@@ -153,52 +150,15 @@ public class GetWorkItemByIdWithValidationQueryHandlerTests
             Description: null
         );
 
-        var products = new List<ProductDto>
-        {
-            new ProductDto(
-                Id: 1,
-                ProductOwnerId: 1,
-                Name: "Product 1",
-                BacklogRootWorkItemId: 100,
-                Order: 1,
-                PictureType: ProductPictureType.Default,
-                DefaultPictureId: 0,
-                CustomPicturePath: null,
-                CreatedAt: DateTimeOffset.UtcNow,
-                LastModified: DateTimeOffset.UtcNow,
-                LastSyncedAt: null,
-                TeamIds: new List<int>(),
-                Repositories: new List<RepositoryDto>()
-            ),
-            new ProductDto(
-                Id: 2,
-                ProductOwnerId: 1,
-                Name: "Product 2",
-                BacklogRootWorkItemId: 200,
-                Order: 2,
-                PictureType: ProductPictureType.Default,
-                DefaultPictureId: 0,
-                CustomPicturePath: null,
-                CreatedAt: DateTimeOffset.UtcNow,
-                LastModified: DateTimeOffset.UtcNow,
-                LastSyncedAt: null,
-                TeamIds: new List<int>(),
-                Repositories: new List<RepositoryDto>()
-            )
-        };
-
         _mockReadProvider
             .Setup(x => x.GetByTfsIdAsync(789, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItem);
-
-        _mockProductRepository
-            .Setup(x => x.GetAllProductsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(products);
 
         _mockValidator
             .Setup(x => x.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
 
+        // Note: productIds parameter is currently not enforced, just accepted for future use
         var query = new GetWorkItemByIdWithValidationQuery(789, new[] { 1, 2 });
 
         // Act
@@ -207,6 +167,5 @@ public class GetWorkItemByIdWithValidationQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(789, result.TfsId);
-        _mockProductRepository.Verify(x => x.GetAllProductsAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

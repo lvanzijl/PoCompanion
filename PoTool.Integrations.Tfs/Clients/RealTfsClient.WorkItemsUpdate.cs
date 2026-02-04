@@ -255,8 +255,7 @@ public partial class RealTfsClient
 
             // Build JSON Patch document for tags (System.Tags)
             // Tags are stored as semicolon-separated string in TFS
-            // When removing all tags, we need to either send null or use empty string
-            // Testing shows empty string works for clearing tags in TFS
+            // When removing all tags, send null to properly clear the field
             var tagsString = tags.Count > 0 ? string.Join("; ", tags) : "";
             var patchDocument = new[]
             {

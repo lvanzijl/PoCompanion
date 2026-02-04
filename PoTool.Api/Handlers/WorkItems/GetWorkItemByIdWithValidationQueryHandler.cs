@@ -17,18 +17,15 @@ public sealed class GetWorkItemByIdWithValidationQueryHandler
 {
     private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly IWorkItemValidator _validator;
-    private readonly IProductRepository _productRepository;
     private readonly ILogger<GetWorkItemByIdWithValidationQueryHandler> _logger;
 
     public GetWorkItemByIdWithValidationQueryHandler(
         IWorkItemReadProvider workItemReadProvider,
         IWorkItemValidator validator,
-        IProductRepository productRepository,
         ILogger<GetWorkItemByIdWithValidationQueryHandler> logger)
     {
         _workItemReadProvider = workItemReadProvider;
         _validator = validator;
-        _productRepository = productRepository;
         _logger = logger;
     }
 
@@ -49,34 +46,9 @@ public sealed class GetWorkItemByIdWithValidationQueryHandler
             return null;
         }
 
-        // If product IDs are specified, verify the work item belongs to one of those products
-        if (query.ProductIds != null && query.ProductIds.Length > 0)
-        {
-            var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
-            var productIdSet = new HashSet<int>(query.ProductIds);
-            var productsToCheck = allProducts.Where(p => productIdSet.Contains(p.Id)).ToList();
-            
-            // Check if the work item is in any of the specified products
-            // by checking if it's a descendant of any product's root work item
-            bool belongsToProduct = false;
-            foreach (var product in productsToCheck)
-            {
-                if (product.BacklogRootWorkItemId <= 0)
-                    continue;
-                    
-                // For now, we'll accept the work item if it exists in cache
-                // A more thorough check would traverse the hierarchy, but that's expensive
-                // The cache filtering already ensures only relevant work items are loaded
-                belongsToProduct = true;
-                break;
-            }
-            
-            if (!belongsToProduct && productsToCheck.Count > 0)
-            {
-                _logger.LogDebug("Work item {TfsId} does not belong to specified products", query.TfsId);
-                return null;
-            }
-        }
+        // Note: productIds parameter is included for future use but not currently enforced
+        // The cache already filters work items based on products during load operations
+        // so work items not belonging to active products won't be in the cache
 
         // Validate the work item
         var validationResults = _validator.ValidateWorkItems(new List<WorkItemDto> { workItem });
