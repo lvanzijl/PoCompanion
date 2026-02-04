@@ -6,7 +6,7 @@ namespace PoTool.Client.Services;
 
 /// <summary>
 /// Service for parsing TFS work item fields from JSON payload.
-/// Provides helper methods to extract specific fields like Priority, Severity, Tags, etc.
+/// Provides helper methods to extract specific fields like Severity, Tags, etc.
 /// </summary>
 public class TfsFieldParserService
 {
@@ -15,43 +15,6 @@ public class TfsFieldParserService
     public TfsFieldParserService(ILogger<TfsFieldParserService> logger)
     {
         _logger = logger;
-    }
-    /// <summary>
-    /// Extracts the Priority field from a work item's JSON payload.
-    /// Priority in TFS is typically: 1, 2, 3, 4 (where 1 is highest priority).
-    /// </summary>
-    /// <param name="workItem">The work item to parse.</param>
-    /// <returns>Priority value as string, or null if not found.</returns>
-    public string? GetPriority(WorkItemWithValidationDto workItem)
-    {
-        if (string.IsNullOrEmpty(workItem.JsonPayload))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var doc = JsonDocument.Parse(workItem.JsonPayload);
-            var root = doc.RootElement;
-
-            // Try Microsoft.VSTS.Common.Priority first (standard for bugs)
-            if (root.TryGetProperty("Microsoft.VSTS.Common.Priority", out var priority))
-            {
-                return priority.GetInt32().ToString();
-            }
-
-            // Fallback: try System.Priority (some TFS configurations)
-            if (root.TryGetProperty("System.Priority", out var sysPriority))
-            {
-                return sysPriority.GetInt32().ToString();
-            }
-        }
-        catch (JsonException)
-        {
-            // Ignore JSON parsing errors
-        }
-
-        return null;
     }
 
     /// <summary>

@@ -77,7 +77,7 @@ public class BugTreeBuilderServiceTests
         // Arrange
         var bugs = new List<WorkItemWithValidationDto>
         {
-            CreateBug(1, "Critical Bug", new Dictionary<string, object> { { "Microsoft.VSTS.Common.Priority", 1 } })
+            CreateBug(1, "Critical Bug", new Dictionary<string, object>())
         };
         var untriagedIds = new HashSet<int>(); // All triaged
         var expandedState = new Dictionary<int, bool>();

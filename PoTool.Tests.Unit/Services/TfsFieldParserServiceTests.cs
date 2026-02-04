@@ -53,92 +53,6 @@ public class TfsFieldParserServiceTests
         };
     }
 
-    #region GetPriority Tests
-
-    [TestMethod]
-    public void GetPriority_WithValidPriority_ReturnsPriorityValue()
-    {
-        // Arrange
-        var fields = new Dictionary<string, object>
-        {
-            { "Microsoft.VSTS.Common.Priority", 1 }
-        };
-        var bug = CreateBugWithJsonPayload(fields);
-
-        // Act
-        var result = _service.GetPriority(bug);
-
-        // Assert
-        Assert.AreEqual("1", result);
-    }
-
-    [TestMethod]
-    public void GetPriority_WithSystemPriority_ReturnsPriorityValue()
-    {
-        // Arrange
-        var fields = new Dictionary<string, object>
-        {
-            { "System.Priority", 2 }
-        };
-        var bug = CreateBugWithJsonPayload(fields);
-
-        // Act
-        var result = _service.GetPriority(bug);
-
-        // Assert
-        Assert.AreEqual("2", result);
-    }
-
-    [TestMethod]
-    public void GetPriority_WithMissingField_ReturnsNull()
-    {
-        // Arrange
-        var fields = new Dictionary<string, object>
-        {
-            { "System.Title", "Test Bug" }
-        };
-        var bug = CreateBugWithJsonPayload(fields);
-
-        // Act
-        var result = _service.GetPriority(bug);
-
-        // Assert
-        Assert.IsNull(result);
-    }
-
-    [TestMethod]
-    public void GetPriority_WithEmptyJsonPayload_ReturnsNull()
-    {
-        // Arrange
-        var bug = new WorkItemWithValidationDto
-        {
-            TfsId = 1,
-            Type = "Bug",
-            Title = "Test Bug",
-            ParentTfsId = null,
-            AreaPath = "Project\\Team",
-            IterationPath = "Project\\Sprint 1",
-            State = "Active",
-            JsonPayload = "",
-            RetrievedAt = DateTimeOffset.UtcNow,
-            Effort = null,
-            Description = null,
-            ValidationIssues = new List<ValidationIssue>(),
-            CreatedDate = null,
-            ClosedDate = null,
-            Severity = null,
-            Tags = null
-        };
-
-        // Act
-        var result = _service.GetPriority(bug);
-
-        // Assert
-        Assert.IsNull(result);
-    }
-
-    #endregion
-
     #region GetSeverity Tests
 
     [TestMethod]
@@ -341,8 +255,7 @@ public class TfsFieldParserServiceTests
         // Arrange
         var fields = new Dictionary<string, object>
         {
-            { "Microsoft.VSTS.Common.Severity", "1 - Critical" },
-            { "Microsoft.VSTS.Common.Priority", 4 } // Should be ignored
+            { "Microsoft.VSTS.Common.Severity", "1 - Critical" }
         };
         var bug = CreateBugWithJsonPayload(fields);
 
@@ -351,23 +264,6 @@ public class TfsFieldParserServiceTests
 
         // Assert
         Assert.AreEqual("1 - Critical", result); // Raw TFS value, no normalization
-    }
-
-    [TestMethod]
-    public void GetBugSeverity_WithOnlyPriority_ReturnsNull()
-    {
-        // Arrange
-        var fields = new Dictionary<string, object>
-        {
-            { "Microsoft.VSTS.Common.Priority", 2 }
-        };
-        var bug = CreateBugWithJsonPayload(fields);
-
-        // Act
-        var result = _service.GetBugSeverity(bug);
-
-        // Assert
-        Assert.IsNull(result); // No fallback to Priority
     }
 
     [TestMethod]
