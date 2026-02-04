@@ -41,7 +41,7 @@ public sealed class GetWorkItemByIdWithValidationQueryHandler
             query.ProductIds != null ? string.Join(", ", query.ProductIds) : "null");
 
         // Get the work item by ID
-        var workItem = await _workItemReadProvider.GetByIdAsync(query.TfsId, cancellationToken);
+        var workItem = await _workItemReadProvider.GetByTfsIdAsync(query.TfsId, cancellationToken);
         
         if (workItem == null)
         {
@@ -79,7 +79,7 @@ public sealed class GetWorkItemByIdWithValidationQueryHandler
         }
 
         // Validate the work item
-        var validationResults = _validator.ValidateWorkItems(new[] { workItem });
+        var validationResults = _validator.ValidateWorkItems(new List<WorkItemDto> { workItem });
         var issues = validationResults.TryGetValue(workItem.TfsId, out var foundIssues)
             ? foundIssues
             : new List<ValidationIssue>();
