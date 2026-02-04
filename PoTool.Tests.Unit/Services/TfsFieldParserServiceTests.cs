@@ -24,6 +24,14 @@ public class TfsFieldParserServiceTests
     private WorkItemWithValidationDto CreateBugWithJsonPayload(Dictionary<string, object> fields, string? tags = null)
     {
         var jsonPayload = JsonSerializer.Serialize(fields);
+        
+        // Extract Severity from fields if present
+        string? severity = null;
+        if (fields.TryGetValue("Microsoft.VSTS.Common.Severity", out var severityObj))
+        {
+            severity = severityObj?.ToString();
+        }
+        
         return new WorkItemWithValidationDto
         {
             TfsId = 1,
@@ -40,7 +48,7 @@ public class TfsFieldParserServiceTests
             ValidationIssues = new List<ValidationIssue>(),
             CreatedDate = DateTimeOffset.UtcNow,
             ClosedDate = null,
-            Severity = null,
+            Severity = severity,
             Tags = tags
         };
     }

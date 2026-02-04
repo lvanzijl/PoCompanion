@@ -1,5 +1,4 @@
 using PoTool.Client.ApiClient;
-using System.Text.Json;
 
 namespace PoTool.Client.Services;
 
@@ -189,29 +188,15 @@ public class BugInsightsCalculator
     }
 
     /// <summary>
-    /// Extracts severity from bug work item JSON payload.
+    /// Extracts severity from bug work item.
+    /// Uses the typed Severity property instead of parsing JsonPayload.
     /// </summary>
     private string ExtractSeverity(WorkItemDto bug)
     {
-        if (!string.IsNullOrEmpty(bug.JsonPayload))
+        // Use the typed Severity property directly
+        if (!string.IsNullOrEmpty(bug.Severity))
         {
-            try
-            {
-                using var doc = JsonDocument.Parse(bug.JsonPayload);
-                if (doc.RootElement.TryGetProperty("Microsoft.VSTS.Common.Severity", out var severity))
-                {
-                    var severityValue = severity.GetString();
-                    if (!string.IsNullOrEmpty(severityValue))
-                    {
-                        return severityValue;
-                    }
-                }
-            }
-            catch (JsonException)
-            {
-                // Ignore JSON parsing errors - JsonPayload may be malformed or empty
-                // This is expected for work items without proper severity fields
-            }
+            return bug.Severity;
         }
         return "Unknown";
     }

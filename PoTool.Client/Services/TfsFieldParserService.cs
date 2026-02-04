@@ -135,7 +135,7 @@ public class TfsFieldParserService
     }
 
     /// <summary>
-    /// Gets severity for a bug by checking ONLY the Severity field.
+    /// Gets severity for a bug using the typed Severity property.
     /// NO FALLBACKS - returns null if Severity is not present or is invalid.
     /// Logs errors when data is missing or invalid.
     /// </summary>
@@ -143,44 +143,18 @@ public class TfsFieldParserService
     /// <returns>Raw severity string from TFS, or null if not found.</returns>
     public string? GetBugSeverity(WorkItemWithValidationDto workItem)
     {
-        // Get severity - NO FALLBACKS
-        var severity = GetSeverity(workItem);
+        // Use typed Severity property directly instead of parsing JsonPayload
+        var severity = workItem.Severity;
         
         if (string.IsNullOrEmpty(severity))
         {
-            // Log error with available field information
-            var availableFields = GetAvailableFieldNames(workItem);
             _logger.LogError(
-                "Work item {WorkItemId} is MISSING Severity field (Microsoft.VSTS.Common.Severity). " +
-                "Available fields: {AvailableFields}",
-                workItem.TfsId,
-                string.Join(", ", availableFields.Take(20)));
+                "Work item {WorkItemId} is MISSING Severity field.",
+                workItem.TfsId);
             return null;
         }
         
         // Return raw severity value from TFS - no normalization
         return severity;
-    }
-    
-    /// <summary>
-    /// Gets list of available field names from work item JSON payload.
-    /// Used for error reporting when expected fields are missing.
-    /// </summary>
-    private List<string> GetAvailableFieldNames(WorkItemWithValidationDto workItem)
-    {
-        if (string.IsNullOrEmpty(workItem.JsonPayload))
-        {
-            return new List<string> { "(JsonPayload is empty)" };
-        }
-
-        try
-        {
-            using var doc = JsonDocument.Parse(workItem.JsonPayload);
-            return doc.RootElement.EnumerateObject().Select(p => p.Name).ToList();
-        }
-        catch (JsonException)
-        {
-            return new List<string> { "(Failed to parse JsonPayload)" };
-        }
     }
 }

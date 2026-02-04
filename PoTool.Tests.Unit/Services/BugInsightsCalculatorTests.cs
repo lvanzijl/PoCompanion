@@ -42,6 +42,7 @@ public class BugInsightsCalculatorTests
             Description = null,
             CreatedDate = created,
             ClosedDate = closedDate,
+            Severity = severity, // Populate typed Severity property
             Tags = null
         };
     }
