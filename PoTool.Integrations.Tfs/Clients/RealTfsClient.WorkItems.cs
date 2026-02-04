@@ -250,9 +250,10 @@ public partial class RealTfsClient
                 return null;
             }
 
-            // Extract parent ID from relations immediately (before document disposal)
+            // Extract parent ID and all relations from relations immediately (before document disposal)
             var relationsItem = relationsItems[0];
             var parentId = ExtractParentIdFromRelations(relationsItem);
+            var relations = ExtractAllRelations(relationsItem);
 
             // Phase 2: Fetch fields to get work item data
             _logger.LogDebug("Phase 2: Fetching fields for work item {WorkItemId}", workItemId);
@@ -339,7 +340,8 @@ public partial class RealTfsClient
                 ClosedDate: closedDate,
                 Severity: severity,
                 Tags: tags,
-                IsBlocked: isBlocked
+                IsBlocked: isBlocked,
+                Relations: relations // Use relations from Phase 1
             );
 
             _logger.LogInformation("Retrieved work item {WorkItemId} from TFS: {Title}", id, title);

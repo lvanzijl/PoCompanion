@@ -134,4 +134,11 @@ public class WorkItemEntity
     /// Nullable - not all work items have blocking status.
     /// </summary>
     public bool? IsBlocked { get; set; }
+
+    /// <summary>
+    /// Work item relations (links to other work items).
+    /// Stored as JSON array: [{"LinkType": "...", "TargetWorkItemId": 123, "Url": "..."}]
+    /// Nullable - work items may not have any relations.
+    /// </summary>
+    public string? Relations { get; set; }
 }

@@ -197,6 +197,19 @@ public class WorkItemRepository : IWorkItemRepository
 
     private static WorkItemDto MapToDto(WorkItemEntity entity)
     {
+        List<WorkItemRelation>? relations = null;
+        if (!string.IsNullOrEmpty(entity.Relations))
+        {
+            try
+            {
+                relations = System.Text.Json.JsonSerializer.Deserialize<List<WorkItemRelation>>(entity.Relations);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                // Ignore deserialization errors - return null relations
+            }
+        }
+
         return new WorkItemDto(
             TfsId: entity.TfsId,
             Type: entity.Type,
@@ -213,7 +226,8 @@ public class WorkItemRepository : IWorkItemRepository
             ClosedDate: entity.ClosedDate,
             Severity: entity.Severity,
             Tags: entity.Tags,
-            IsBlocked: entity.IsBlocked
+            IsBlocked: entity.IsBlocked,
+            Relations: relations
         );
     }
 
@@ -236,7 +250,8 @@ public class WorkItemRepository : IWorkItemRepository
             ClosedDate = dto.ClosedDate,
             Severity = dto.Severity,
             Tags = dto.Tags,
-            IsBlocked = dto.IsBlocked
+            IsBlocked = dto.IsBlocked,
+            Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null
         };
     }
 }

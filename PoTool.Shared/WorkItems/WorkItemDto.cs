@@ -38,5 +38,6 @@ public sealed record WorkItemDto(
     DateTimeOffset? ClosedDate = null,
     string? Severity = null,
     string? Tags = null,
-    bool? IsBlocked = null
+    bool? IsBlocked = null,
+    List<WorkItemRelation>? Relations = null
 );

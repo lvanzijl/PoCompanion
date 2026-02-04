@@ -384,6 +384,55 @@ public partial class RealTfsClient
     }
 
     /// <summary>
+    /// Extracts all relations from a work item JSON element.
+    /// Returns a list of WorkItemRelation objects.
+    /// </summary>
+    private static List<WorkItemRelation> ExtractAllRelations(JsonElement item)
+    {
+        var relationsList = new List<WorkItemRelation>();
+        
+        if (!item.TryGetProperty("relations", out var relations) || relations.ValueKind != JsonValueKind.Array)
+        {
+            return relationsList;
+        }
+
+        foreach (var relation in relations.EnumerateArray())
+        {
+            string? linkType = null;
+            int? targetId = null;
+            string? url = null;
+
+            if (relation.TryGetProperty("rel", out var rel))
+            {
+                linkType = rel.GetString();
+            }
+
+            if (relation.TryGetProperty("url", out var urlProp))
+            {
+                url = urlProp.GetString();
+                if (!string.IsNullOrEmpty(url))
+                {
+                    // Extract work item ID from URL
+                    var queryIndex = url.IndexOf('?');
+                    var urlWithoutQuery = queryIndex >= 0 ? url.Substring(0, queryIndex).TrimEnd('/') : url.TrimEnd('/');
+                    var segments = urlWithoutQuery.Split('/');
+                    if (segments.Length > 0 && int.TryParse(segments[^1], out var parsedId))
+                    {
+                        targetId = parsedId;
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(linkType))
+            {
+                relationsList.Add(new WorkItemRelation(linkType, targetId, url));
+            }
+        }
+
+        return relationsList;
+    }
+
+    /// <summary>
     /// Parses effort from work item fields with robust type handling.
     /// Handles int, double, and string values safely (requirement #5).
     /// </summary>
