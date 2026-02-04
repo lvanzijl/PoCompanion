@@ -460,32 +460,6 @@ public partial class RealTfsClient
         return null;
     }
 
-    /// <summary>
-    /// Parses the tags field from work item fields.
-    /// Returns the semicolon-separated tags string if present, null otherwise.
-    /// </summary>
-    private static string? ParseTagsField(JsonElement fields)
-    {
-        if (fields.TryGetProperty("System.Tags", out var tagsField))
-        {
-            return tagsField.ValueKind == JsonValueKind.String ? tagsField.GetString() : null;
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Parses the severity field from work item fields.
-    /// Returns the severity string value if present, null otherwise.
-    /// </summary>
-    private static string? ParseSeverityField(JsonElement fields)
-    {
-        if (fields.TryGetProperty(TfsFieldSeverity, out var severityField))
-        {
-            return severityField.ValueKind == JsonValueKind.String ? severityField.GetString() : null;
-        }
-        return null;
-    }
-
     private async Task<int> CompleteAncestorsAsync(
         TfsConfigEntity config,
         HttpClient httpClient,
