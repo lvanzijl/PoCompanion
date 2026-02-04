@@ -163,7 +163,8 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
             Effort: entity.Effort,
             Description: entity.Description,
             CreatedDate: entity.CreatedDate,
-            ClosedDate: entity.ClosedDate
+            ClosedDate: entity.ClosedDate,
+            Severity: entity.Severity
         );
     }
 }

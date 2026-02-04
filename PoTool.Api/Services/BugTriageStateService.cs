@@ -185,12 +185,13 @@ public class BugTriageStateService
                         cachedEntity.Effort = refreshedWorkItem.Effort;
                         cachedEntity.Description = refreshedWorkItem.Description;
                         cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
+                        cachedEntity.Severity = refreshedWorkItem.Severity;
                         
                         // Explicitly mark entity as modified to ensure EF Core tracks the change
                         _db.Entry(cachedEntity).State = EntityState.Modified;
                         
                         _logger.LogInformation("Updated cache for bug {BugId} with refreshed data from TFS. New severity in JsonPayload: {Severity}", 
-                            request.BugId, newSeverityValue ?? "null");
+                            request.BugId, cachedEntity.Severity ?? "null");
                     }
                     else
                     {
