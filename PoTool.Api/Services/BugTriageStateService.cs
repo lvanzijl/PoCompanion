@@ -215,23 +215,7 @@ public class BugTriageStateService
                 
                 if (currentWorkItem != null)
                 {
-                    var currentTags = _fieldParser.GetTags(new WorkItemWithValidationDto
-                    {
-                        TfsId = currentWorkItem.TfsId,
-                        WorkItemType = currentWorkItem.WorkItemType,
-                        Title = currentWorkItem.Title,
-                        State = currentWorkItem.State,
-                        AreaPath = currentWorkItem.AreaPath,
-                        IterationPath = currentWorkItem.IterationPath,
-                        Description = currentWorkItem.Description,
-                        CreatedDate = currentWorkItem.CreatedDate,
-                        ClosedDate = currentWorkItem.ClosedDate,
-                        Effort = currentWorkItem.Effort,
-                        ParentId = currentWorkItem.ParentId,
-                        RetrievedAt = currentWorkItem.RetrievedAt,
-                        JsonPayload = currentWorkItem.JsonPayload ?? string.Empty,
-                        Severity = currentWorkItem.Severity
-                    });
+                    var currentTags = ExtractTagsFromJson(currentWorkItem.JsonPayload ?? string.Empty);
                     
                     var tagSet = new HashSet<string>(currentTags, StringComparer.OrdinalIgnoreCase);
                     
@@ -434,6 +418,42 @@ public class BugTriageStateService
         }
 
         return mapped;
+    }
+
+    /// <summary>
+    /// Extracts tags from a work item's JSON payload.
+    /// Tags in TFS are stored in the System.Tags field as a semicolon-separated string.
+    /// </summary>
+    private List<string> ExtractTagsFromJson(string jsonPayload)
+    {
+        if (string.IsNullOrEmpty(jsonPayload))
+        {
+            return new List<string>();
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(jsonPayload);
+            if (doc.RootElement.TryGetProperty("System.Tags", out var tags))
+            {
+                var tagsString = tags.GetString();
+                if (!string.IsNullOrWhiteSpace(tagsString))
+                {
+                    // TFS tags are semicolon-separated
+                    return tagsString
+                        .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(t => t.Trim())
+                        .Where(t => !string.IsNullOrEmpty(t))
+                        .ToList();
+                }
+            }
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse tags from JSON payload");
+        }
+
+        return new List<string>();
     }
 
     private static BugTriageStateDto MapToDto(BugTriageStateEntity entity)

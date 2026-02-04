@@ -5,6 +5,7 @@ using PoTool.Shared.Settings;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Contracts.TfsVerification;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 using PoTool.Core.PullRequests;
 
@@ -714,60 +715,18 @@ public class BattleshipMockDataFacade : ITfsClient
         _logger.LogInformation("Mock TFS client: UpdateWorkItemTagsAsync called for workItemId={WorkItemId}, tags='{Tags}'",
             workItemId, string.Join("; ", tags));
 
-        // Update in-memory database
-        var workItem = _inMemoryDb.WorkItems.FirstOrDefault(w => w.TfsId == workItemId);
+        // Verify the work item exists in mock data
+        var mockHierarchy = GetMockHierarchy();
+        var workItem = mockHierarchy.FirstOrDefault(w => w.TfsId == workItemId);
         if (workItem != null)
         {
-            // Update the JsonPayload to reflect the new tags
-            if (!string.IsNullOrWhiteSpace(workItem.JsonPayload))
-            {
-                try
-                {
-                    var doc = JsonDocument.Parse(workItem.JsonPayload);
-                    var root = doc.RootElement;
-                    var updatedFields = new Dictionary<string, object>();
-
-                    // Copy all existing fields
-                    foreach (var prop in root.EnumerateObject())
-                    {
-                        updatedFields[prop.Name] = JsonSerializer.Deserialize<object>(prop.Value.GetRawText());
-                    }
-
-                    // Update System.Tags field
-                    var tagsString = string.Join("; ", tags);
-                    updatedFields["System.Tags"] = tagsString;
-
-                    // Serialize back to JSON
-                    workItem.JsonPayload = JsonSerializer.Serialize(updatedFields);
-                    
-                    _logger.LogInformation("Updated work item {WorkItemId} tags to '{Tags}' in mock database",
-                        workItemId, tagsString);
-                }
-                catch (JsonException ex)
-                {
-                    _logger.LogError(ex, "Failed to parse/update JsonPayload for work item {WorkItemId}", workItemId);
-                    return Task.FromResult(false);
-                }
-            }
-            else
-            {
-                // If JsonPayload is empty, create a minimal one with just the tags
-                var tagsString = string.Join("; ", tags);
-                var fields = new Dictionary<string, object>
-                {
-                    ["System.Tags"] = tagsString
-                };
-                workItem.JsonPayload = JsonSerializer.Serialize(fields);
-                
-                _logger.LogInformation("Created new JsonPayload with tags '{Tags}' for work item {WorkItemId}",
-                    tagsString, workItemId);
-            }
-            
+            _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} tags to '{Tags}'", 
+                workItemId, string.Join("; ", tags));
             return Task.FromResult(true);
         }
         else
         {
-            _logger.LogWarning("Work item {WorkItemId} not found in mock database", workItemId);
+            _logger.LogWarning("Mock TFS client: Work item {WorkItemId} not found in mock data", workItemId);
             return Task.FromResult(false);
         }
     }
