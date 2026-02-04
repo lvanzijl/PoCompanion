@@ -389,6 +389,53 @@
                 // Remove from untriaged set
                 _untriagedBugIds.Remove(bugId);
                 
+                // Refresh the work item from cache to get the updated tags
+                try
+                {
+                    var activeProfile = await ProfileService.GetActiveProfileAsync();
+                    if (activeProfile != null)
+                    {
+                        var profileProducts = await ProductService.GetProductsByOwnerAsync(activeProfile.Id);
+                        var productIds = profileProducts.Select(p => p.Id).ToArray();
+                        
+                        var refreshedBug = await WorkItemService.GetByTfsIdWithValidationAsync(bugId, productIds);
+                        
+                        if (refreshedBug != null)
+                        {
+                            Logger.LogInformation("Retrieved refreshed bug {BugId} from API: tags = {Tags}", 
+                                bugId, string.Join("; ", GetBugTags(refreshedBug)));
+                            
+                            // Update the bug in local list
+                            var existingBugIndex = _bugs.FindIndex(b => b.TfsId == bugId);
+                            if (existingBugIndex >= 0)
+                            {
+                                _bugs[existingBugIndex] = refreshedBug;
+                                Logger.LogInformation("Updated bug {BugId} in _bugs list at index {Index}", bugId, existingBugIndex);
+                            }
+                            
+                            // Update selected bug if it's the one being edited
+                            if (_selectedBug?.TfsId == bugId)
+                            {
+                                _selectedBug = refreshedBug;
+                                Logger.LogInformation("Updated _selectedBug reference for bug {BugId}", bugId);
+                            }
+                            
+                            Logger.LogInformation("Successfully refreshed bug {BugId} from cache with server state", bugId);
+                            
+                            // Force Blazor to detect the change in the details panel
+                            StateHasChanged();
+                        }
+                        else
+                        {
+                            Logger.LogWarning("Failed to refresh bug {BugId} - not found in cache", bugId);
+                        }
+                    }
+                }
+                catch (Exception refreshEx)
+                {
+                    Logger.LogWarning(refreshEx, "Failed to refresh bug {BugId} after tag update - keeping optimistic value", bugId);
+                }
+                
                 // Rebuild tree
                 ApplyFilters();
                 
