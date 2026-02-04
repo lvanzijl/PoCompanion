@@ -186,6 +186,7 @@ public class BugTriageStateService
                         cachedEntity.Description = refreshedWorkItem.Description;
                         cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
                         cachedEntity.Severity = refreshedWorkItem.Severity;
+                        cachedEntity.Tags = refreshedWorkItem.Tags;
                         
                         // Explicitly mark entity as modified to ensure EF Core tracks the change
                         _db.Entry(cachedEntity).State = EntityState.Modified;
@@ -281,6 +282,7 @@ public class BugTriageStateService
                             cachedEntity.Description = refreshedWorkItem.Description;
                             cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
                             cachedEntity.Severity = refreshedWorkItem.Severity;
+                           cachedEntity.Tags = refreshedWorkItem.Tags;
                             
                             // Explicitly mark entity as modified to ensure EF Core tracks the change
                             _db.Entry(cachedEntity).State = EntityState.Modified;
