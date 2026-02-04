@@ -669,6 +669,7 @@ public partial class RealTfsClient
     /// PATCH responses have the same structure as GET responses: { id, fields: { ... }, relations: [...] }
     /// However, PATCH responses may not include relations, so we extract parent ID as null.
     /// </summary>
+    /// <returns>A WorkItemDto constructed from the PATCH response data.</returns>
     private WorkItemDto ParseWorkItemFromPatchResponse(JsonElement workItemElement)
     {
         var id = workItemElement.GetProperty("id").GetInt32();
