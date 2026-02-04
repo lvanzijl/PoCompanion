@@ -217,6 +217,8 @@ public class BugTriageStateService
                 {
                     var currentTags = ExtractTagsFromJson(currentWorkItem.JsonPayload ?? string.Empty);
                     
+                    // Use case-insensitive comparison to match TFS behavior where tags are case-insensitive
+                    // This ensures that 'Bug' and 'bug' are treated as the same tag, preventing duplicates
                     var tagSet = new HashSet<string>(currentTags, StringComparer.OrdinalIgnoreCase);
                     
                     // Apply tag additions
