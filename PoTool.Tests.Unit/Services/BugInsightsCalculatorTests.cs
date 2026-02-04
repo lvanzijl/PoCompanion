@@ -41,7 +41,8 @@ public class BugInsightsCalculatorTests
             Effort = null,
             Description = null,
             CreatedDate = created,
-            ClosedDate = closedDate
+            ClosedDate = closedDate,
+            Tags = null
         };
     }
 

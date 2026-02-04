@@ -26,7 +26,8 @@ public class WorkItemSelectionServiceTests
             TfsId = id,
             Title = title,
             Type = "Feature",
-            State = "New"
+            State = "New",
+            Tags = null
         };
 
         var node = new TreeNode
@@ -132,9 +133,9 @@ public class WorkItemSelectionServiceTests
             SelectedIds = new HashSet<int> { 1 },
             SelectedWorkItems = new List<WorkItemDto>
             {
-                new() { TfsId = 1, Title = "Item 1", Type = "Feature", State = "New" }
+                new() { TfsId = 1, Title = "Item 1", Type = "Feature", State = "New", Tags = null }
             },
-            PrimarySelectedWorkItem = new WorkItemDto { TfsId = 1, Title = "Item 1", Type = "Feature", State = "New" }
+            PrimarySelectedWorkItem = new WorkItemDto { TfsId = 1, Title = "Item 1", Type = "Feature", State = "New", Tags = null }
         };
 
         // Act
@@ -159,9 +160,9 @@ public class WorkItemSelectionServiceTests
             SelectedIds = new HashSet<int> { 2 },
             SelectedWorkItems = new List<WorkItemDto>
             {
-                new() { TfsId = 2, Title = "Item 2", Type = "Feature", State = "New" }
+                new() { TfsId = 2, Title = "Item 2", Type = "Feature", State = "New", Tags = null }
             },
-            PrimarySelectedWorkItem = new WorkItemDto { TfsId = 2, Title = "Item 2", Type = "Feature", State = "New" }
+            PrimarySelectedWorkItem = new WorkItemDto { TfsId = 2, Title = "Item 2", Type = "Feature", State = "New", Tags = null }
         };
 
         // Act
@@ -180,7 +181,7 @@ public class WorkItemSelectionServiceTests
         var flatNodeList = new List<TreeNode> { node };
         var currentState = new WorkItemSelectionService.SelectionState
         {
-            PrimarySelectedWorkItem = new WorkItemDto { TfsId = 1, Title = "Parent", Type = "Feature", State = "New" }
+            PrimarySelectedWorkItem = new WorkItemDto { TfsId = 1, Title = "Parent", Type = "Feature", State = "New", Tags = null }
         };
 
         // Act
@@ -201,7 +202,7 @@ public class WorkItemSelectionServiceTests
         var flatNodeList = new List<TreeNode> { node };
         var currentState = new WorkItemSelectionService.SelectionState
         {
-            PrimarySelectedWorkItem = new WorkItemDto { TfsId = 1, Title = "Parent", Type = "Feature", State = "New" }
+            PrimarySelectedWorkItem = new WorkItemDto { TfsId = 1, Title = "Parent", Type = "Feature", State = "New", Tags = null }
         };
 
         // Act

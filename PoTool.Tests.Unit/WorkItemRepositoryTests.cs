@@ -54,7 +54,8 @@ public sealed class WorkItemRepositoryTests
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: null,
-                    Description: null
+                    Description: null,
+                    Tags: null
             ),
             new WorkItemDto(
                 TfsId: 2,
@@ -67,7 +68,8 @@ public sealed class WorkItemRepositoryTests
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: null,
-                    Description: null
+                    Description: null,
+                    Tags: null
             )
         };
 
@@ -99,7 +101,8 @@ public sealed class WorkItemRepositoryTests
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: null,
-                    Description: null
+                    Description: null,
+                    Tags: null
             )
         };
 
@@ -116,7 +119,8 @@ public sealed class WorkItemRepositoryTests
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: null,
-                    Description: null
+                    Description: null,
+                    Tags: null
             )
         };
 
@@ -151,7 +155,8 @@ public sealed class WorkItemRepositoryTests
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: null,
-                    Description: null
+                    Description: null,
+                    Tags: null
             ),
             new WorkItemDto(
                 TfsId: 2,
@@ -164,7 +169,8 @@ public sealed class WorkItemRepositoryTests
                 JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: null,
-                    Description: null
+                    Description: null,
+                    Tags: null
             )
         };
 
@@ -196,7 +202,8 @@ public sealed class WorkItemRepositoryTests
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: null,
-                    Description: null
+                    Description: null,
+                    Tags: null
         );
 
         await repository.ReplaceAllAsync(new[] { workItem });

@@ -41,7 +41,8 @@ public class BugTreeBuilderServiceTests
             Description = null,
             CreatedDate = DateTimeOffset.UtcNow,
             ClosedDate = null,
-            ValidationIssues = new List<ValidationIssue>()
+            ValidationIssues = new List<ValidationIssue>(),
+            Tags = null
         };
     }
 

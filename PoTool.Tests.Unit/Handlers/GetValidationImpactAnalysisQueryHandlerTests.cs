@@ -270,7 +270,8 @@ public class GetValidationImpactAnalysisQueryHandlerTests
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: null,
-                    Description: null
+                    Description: null,
+                    Tags: null
         );
     }
 
@@ -287,7 +288,8 @@ public class GetValidationImpactAnalysisQueryHandlerTests
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: null,
-                    Description: null
+                    Description: null,
+                    Tags: null
         );
     }
 }

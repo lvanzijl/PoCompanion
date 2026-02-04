@@ -243,7 +243,8 @@ public class GetAllWorkItemsWithValidationQueryHandlerTests
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: null,
-            Description: null
+            Description: null,
+            Tags: null
         );
     }
 }

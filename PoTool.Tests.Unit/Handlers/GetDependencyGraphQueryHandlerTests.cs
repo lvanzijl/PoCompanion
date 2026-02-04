@@ -344,7 +344,8 @@ public class GetDependencyGraphQueryHandlerTests
             JsonPayload: jsonPayload,
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
-                    Description: null
+                    Description: null,
+                    Tags: null
         );
     }
 }

@@ -341,7 +341,8 @@ public class WorkItemParentProgressValidatorTests
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: null,
-                    Description: null
+                    Description: null,
+                    Tags: null
         );
     }
 }
