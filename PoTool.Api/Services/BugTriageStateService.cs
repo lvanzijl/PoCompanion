@@ -205,22 +205,120 @@ public class BugTriageStateService
                 }
             }
             
-            // Handle tags (currently just logged - future enhancement for TFS tags update)
-            if (request.TagsAdded != null && request.TagsAdded.Count > 0)
+            // Handle tags - now persist to TFS
+            if ((request.TagsAdded != null && request.TagsAdded.Count > 0) ||
+                (request.TagsRemoved != null && request.TagsRemoved.Count > 0))
             {
-                foreach (var tag in request.TagsAdded)
+                // Get current tags from the work item
+                var currentWorkItem = await _db.WorkItems
+                    .FirstOrDefaultAsync(wi => wi.TfsId == request.BugId, cancellationToken);
+                
+                if (currentWorkItem != null)
                 {
-                    _logger.LogInformation("Tag {Tag} added to bug {BugId} (not persisted to TFS yet)", 
-                        tag, request.BugId);
+                    var currentTags = _fieldParser.GetTags(new WorkItemWithValidationDto
+                    {
+                        TfsId = currentWorkItem.TfsId,
+                        WorkItemType = currentWorkItem.WorkItemType,
+                        Title = currentWorkItem.Title,
+                        State = currentWorkItem.State,
+                        AreaPath = currentWorkItem.AreaPath,
+                        IterationPath = currentWorkItem.IterationPath,
+                        Description = currentWorkItem.Description,
+                        CreatedDate = currentWorkItem.CreatedDate,
+                        ClosedDate = currentWorkItem.ClosedDate,
+                        Effort = currentWorkItem.Effort,
+                        ParentId = currentWorkItem.ParentId,
+                        RetrievedAt = currentWorkItem.RetrievedAt,
+                        JsonPayload = currentWorkItem.JsonPayload ?? string.Empty,
+                        Severity = currentWorkItem.Severity
+                    });
+                    
+                    var tagSet = new HashSet<string>(currentTags, StringComparer.OrdinalIgnoreCase);
+                    
+                    // Apply tag additions
+                    if (request.TagsAdded != null)
+                    {
+                        foreach (var tag in request.TagsAdded)
+                        {
+                            tagSet.Add(tag);
+                            _logger.LogInformation("Adding tag '{Tag}' to bug {BugId}", tag, request.BugId);
+                        }
+                    }
+                    
+                    // Apply tag removals
+                    if (request.TagsRemoved != null)
+                    {
+                        foreach (var tag in request.TagsRemoved)
+                        {
+                            tagSet.Remove(tag);
+                            _logger.LogInformation("Removing tag '{Tag}' from bug {BugId}", tag, request.BugId);
+                        }
+                    }
+                    
+                    // Update TFS with new tag list
+                    var newTagsList = tagSet.ToList();
+                    _logger.LogInformation("Updating TFS bug {BugId} with tags: {Tags}", 
+                        request.BugId, string.Join("; ", newTagsList));
+                    
+                    var tagsUpdateSuccess = await _tfsClient.UpdateWorkItemTagsAsync(
+                        request.BugId,
+                        newTagsList,
+                        cancellationToken);
+                    
+                    if (!tagsUpdateSuccess)
+                    {
+                        _logger.LogError("Failed to update TFS bug {BugId} tags", request.BugId);
+                        return new UpdateBugTriageStateResponse(
+                            false,
+                            $"Failed to update tags for bug {request.BugId} in TFS. Please try again.");
+                    }
+                    
+                    _logger.LogInformation("Successfully updated TFS bug {BugId} tags", request.BugId);
+                    
+                    // Refresh work item from TFS and update cache
+                    var refreshedWorkItem = await _tfsClient.GetWorkItemByIdAsync(request.BugId, cancellationToken);
+                    if (refreshedWorkItem != null)
+                    {
+                        // Update the work item in cache
+                        var cachedEntity = await _db.WorkItems
+                            .FirstOrDefaultAsync(wi => wi.TfsId == request.BugId, cancellationToken);
+                        
+                        if (cachedEntity != null)
+                        {
+                            // Update cached work item with fresh data from TFS
+                            cachedEntity.JsonPayload = refreshedWorkItem.JsonPayload;
+                            cachedEntity.State = refreshedWorkItem.State;
+                            cachedEntity.Title = refreshedWorkItem.Title;
+                            cachedEntity.AreaPath = refreshedWorkItem.AreaPath;
+                            cachedEntity.IterationPath = refreshedWorkItem.IterationPath;
+                            cachedEntity.Effort = refreshedWorkItem.Effort;
+                            cachedEntity.Description = refreshedWorkItem.Description;
+                            cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
+                            cachedEntity.Severity = refreshedWorkItem.Severity;
+                            
+                            // Explicitly mark entity as modified to ensure EF Core tracks the change
+                            _db.Entry(cachedEntity).State = EntityState.Modified;
+                            
+                            _logger.LogInformation("Updated cache for bug {BugId} with refreshed data from TFS after tag update", 
+                                request.BugId);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Bug {BugId} not found in cache after tag update, cannot refresh", request.BugId);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to retrieve refreshed work item {BugId} from TFS after tag update", 
+                            request.BugId);
+                    }
                 }
-            }
-            
-            if (request.TagsRemoved != null && request.TagsRemoved.Count > 0)
-            {
-                foreach (var tag in request.TagsRemoved)
+                else
                 {
-                    _logger.LogInformation("Tag {Tag} removed from bug {BugId} (not persisted to TFS yet)", 
-                        tag, request.BugId);
+                    _logger.LogWarning("Bug {BugId} not found in cache for tag update", request.BugId);
+                    return new UpdateBugTriageStateResponse(
+                        false,
+                        $"Bug {request.BugId} not found in cache. Please try again.");
                 }
             }
             

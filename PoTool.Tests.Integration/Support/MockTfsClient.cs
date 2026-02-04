@@ -434,6 +434,17 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult(true);
     }
 
+    public Task<bool> UpdateWorkItemTagsAsync(int workItemId, List<string> tags, CancellationToken cancellationToken = default)
+    {
+        // Mock implementation for integration tests
+        // Always return true to simulate successful TFS update
+        
+        // Note: Tags are stored in JsonPayload, so we don't update our mock list
+        // In a real scenario, the tags would be reflected in the JsonPayload after fetching from TFS
+        
+        return Task.FromResult(true);
+    }
+
     public Task<TfsVerificationReport> VerifyCapabilitiesAsync(
         bool includeWriteChecks = false,
         int? workItemIdForWriteCheck = null,

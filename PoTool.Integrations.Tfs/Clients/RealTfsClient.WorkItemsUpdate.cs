@@ -216,6 +216,77 @@ public partial class RealTfsClient
         }
     }
 
+    public async Task<bool> UpdateWorkItemTagsAsync(int workItemId, List<string> tags, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Updating work item {WorkItemId} tags to: {Tags}", workItemId, string.Join("; ", tags));
+
+            var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+            if (entity == null)
+            {
+                _logger.LogWarning("No TFS configuration found for updating work item tags");
+                return false;
+            }
+
+            // Use auth-mode-specific HttpClient (requirement #2)
+            var httpClient = GetAuthenticatedHttpClient();
+
+            // Create per-request timeout token for write operation
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(entity.TimeoutSeconds));
+
+            // Build JSON Patch document for tags (System.Tags)
+            // Tags are stored as semicolon-separated string in TFS
+            var tagsString = string.Join("; ", tags);
+            var patchDocument = new[]
+            {
+                new
+                {
+                    op = "add",
+                    path = "/fields/System.Tags",
+                    value = tagsString
+                }
+            };
+
+            // Work item PATCH is collection-scoped (work item IDs are unique across collection)
+            var updateUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}");
+            using var content = new StringContent(
+                JsonSerializer.Serialize(patchDocument),
+                System.Text.Encoding.UTF8,
+                "application/json-patch+json");
+
+            _logger.LogInformation("Sending PATCH request to update work item {WorkItemId}: Field=System.Tags, Value={Value}",
+                workItemId, tagsString);
+
+            // PATCH operations are NOT retried - they are non-idempotent
+            var response = await httpClient.PatchAsync(updateUrl, content, timeoutCts.Token);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully updated work item {WorkItemId} tags", workItemId);
+                return true;
+            }
+            else
+            {
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Failed to update work item {WorkItemId} tags. Status: {StatusCode}, Response: {Response}",
+                    workItemId, response.StatusCode, responseBody);
+                return false;
+            }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError("Update work item {WorkItemId} tags timed out", workItemId);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating work item {WorkItemId} tags", workItemId);
+            return false;
+        }
+    }
+
     /// <summary>
     /// Updates effort for multiple work items in a batch. 
     /// Azure DevOps doesn't have a true bulk update API, but we can batch the requests
