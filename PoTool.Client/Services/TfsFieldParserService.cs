@@ -84,13 +84,26 @@ public class TfsFieldParserService
     }
 
     /// <summary>
-    /// Extracts tags from a work item's JSON payload.
+    /// Extracts tags from a work item.
+    /// Prefers the cached Tags field for better performance, falls back to JSON payload if needed.
     /// Tags in TFS are stored as a semicolon-separated string in System.Tags.
     /// </summary>
     /// <param name="workItem">The work item to parse.</param>
     /// <returns>List of tag strings, empty list if none found.</returns>
     public List<string> GetTags(WorkItemWithValidationDto workItem)
     {
+        // First, try to use the cached Tags field (faster and more reliable)
+        if (!string.IsNullOrWhiteSpace(workItem.Tags))
+        {
+            // TFS tags are semicolon-separated
+            return workItem.Tags
+                .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => t.Trim())
+                .Where(t => !string.IsNullOrEmpty(t))
+                .ToList();
+        }
+
+        // Fallback: Parse from JSON payload if cached field is not available
         if (string.IsNullOrEmpty(workItem.JsonPayload))
         {
             return new List<string>();
