@@ -37,5 +37,6 @@ public sealed record WorkItemDto(
     DateTimeOffset? CreatedDate = null,
     DateTimeOffset? ClosedDate = null,
     string? Severity = null,
-    string? Tags = null
+    string? Tags = null,
+    bool? IsBlocked = null
 );

@@ -16,5 +16,6 @@ public sealed record WorkItemWithValidation(
     string JsonPayload,
     DateTimeOffset RetrievedAt,
     int? Effort,
-    IReadOnlyList<ValidationIssue> ValidationIssues
+    IReadOnlyList<ValidationIssue> ValidationIssues,
+    bool? IsBlocked = null
 );

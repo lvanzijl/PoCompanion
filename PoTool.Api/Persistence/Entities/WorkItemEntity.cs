@@ -127,4 +127,11 @@ public class WorkItemEntity
     /// </summary>
     [MaxLength(1000)]
     public string? Tags { get; set; }
+
+    /// <summary>
+    /// Indicates if the work item is blocked.
+    /// Extracted from TFS custom field (e.g., "Microsoft.VSTS.CMMI.Blocked" = "Yes").
+    /// Nullable - not all work items have blocking status.
+    /// </summary>
+    public bool? IsBlocked { get; set; }
 }

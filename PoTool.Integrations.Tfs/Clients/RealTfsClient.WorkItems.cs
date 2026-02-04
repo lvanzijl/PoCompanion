@@ -320,6 +320,9 @@ public partial class RealTfsClient
             // Extract tags from TFS (System.Tags)
             string? tags = ParseTagsField(fields);
 
+            // Extract blocked status from TFS (Microsoft.VSTS.CMMI.Blocked)
+            bool? isBlocked = ParseBlockedField(fields);
+
             var workItem = new WorkItemDto(
                 TfsId: id,
                 Type: type,
@@ -335,7 +338,8 @@ public partial class RealTfsClient
                 CreatedDate: createdDate,
                 ClosedDate: closedDate,
                 Severity: severity,
-                Tags: tags
+                Tags: tags,
+                IsBlocked: isBlocked
             );
 
             _logger.LogInformation("Retrieved work item {WorkItemId} from TFS: {Title}", id, title);
@@ -628,6 +632,23 @@ public partial class RealTfsClient
         if (fields.TryGetProperty(TfsFieldSeverity, out var severityField))
         {
             return severityField.ValueKind == JsonValueKind.String ? severityField.GetString() : null;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Parses the blocked field from work item fields.
+    /// Returns true if blocked = "Yes", false if "No", null if not present.
+    /// </summary>
+    private static bool? ParseBlockedField(JsonElement fields)
+    {
+        if (fields.TryGetProperty(TfsFieldBlocked, out var blockedField))
+        {
+            var value = blockedField.ValueKind == JsonValueKind.String ? blockedField.GetString() : null;
+            if (!string.IsNullOrEmpty(value))
+            {
+                return value.Equals("Yes", StringComparison.OrdinalIgnoreCase);
+            }
         }
         return null;
     }

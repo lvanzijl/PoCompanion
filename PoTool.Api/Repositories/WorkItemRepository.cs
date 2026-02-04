@@ -212,7 +212,8 @@ public class WorkItemRepository : IWorkItemRepository
             CreatedDate: entity.CreatedDate,
             ClosedDate: entity.ClosedDate,
             Severity: entity.Severity,
-            Tags: entity.Tags
+            Tags: entity.Tags,
+            IsBlocked: entity.IsBlocked
         );
     }
 
@@ -234,7 +235,8 @@ public class WorkItemRepository : IWorkItemRepository
             CreatedDate = dto.CreatedDate,
             ClosedDate = dto.ClosedDate,
             Severity = dto.Severity,
-            Tags = dto.Tags
+            Tags = dto.Tags,
+            IsBlocked = dto.IsBlocked
         };
     }
 }
