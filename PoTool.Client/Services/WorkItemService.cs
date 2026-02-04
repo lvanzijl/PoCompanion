@@ -67,16 +67,39 @@ public class WorkItemService
 
     /// <summary>
     /// Gets a specific work item with validation by TFS ID from cache.
-    /// This retrieves a single work item from the cached data.
-    /// Note: This fetches all work items and filters to the specific ID.
-    /// While this seems inefficient, the backend already filters by productIds,
-    /// and this approach reuses existing infrastructure without requiring a new endpoint.
+    /// This retrieves a single work item from the cached data efficiently via a dedicated endpoint.
+    /// Much more efficient than fetching all work items and filtering client-side.
     /// </summary>
     public async Task<WorkItemWithValidationDto?> GetByTfsIdWithValidationAsync(int tfsId, int[]? productIds = null)
     {
-        // Get all work items with validation and filter to the specific ID
-        var allWorkItems = await GetAllWithValidationAsync(productIds);
-        return allWorkItems.FirstOrDefault(wi => wi.TfsId == tfsId);
+        try
+        {
+            // Build the URL with optional product IDs
+            var url = $"/api/workitems/validated/{tfsId}";
+            if (productIds != null && productIds.Length > 0)
+            {
+                var productIdsParam = string.Join(",", productIds);
+                url += $"?productIds={productIdsParam}";
+            }
+
+            // Make the HTTP request to get a single work item with validation
+            var response = await _httpClient.GetAsync(url);
+            
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+            
+            response.EnsureSuccessStatusCode();
+            
+            var workItem = await response.Content.ReadFromJsonAsync<WorkItemWithValidationDto>(_jsonOptions);
+            return workItem;
+        }
+        catch (Exception ex)
+        {
+            // Log and rethrow - let caller handle the error
+            throw new InvalidOperationException($"Failed to retrieve work item {tfsId} with validation", ex);
+        }
     }
 
     /// <summary>

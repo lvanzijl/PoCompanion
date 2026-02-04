@@ -100,6 +100,52 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets a specific work item with validation by TFS ID.
+    /// More efficient than fetching all work items and filtering on the client.
+    /// </summary>
+    /// <param name="tfsId">The TFS ID of the work item to retrieve</param>
+    /// <param name="productIds">Optional comma-separated list of product IDs to filter by</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    [HttpGet("validated/{tfsId:int}")]
+    public async Task<ActionResult<WorkItemWithValidationDto>> GetByIdWithValidation(
+        int tfsId,
+        [FromQuery] string? productIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            int[]? productIdArray = null;
+            if (!string.IsNullOrWhiteSpace(productIds))
+            {
+                try
+                {
+                    productIdArray = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(int.Parse)
+                        .ToArray();
+                }
+                catch (FormatException)
+                {
+                    return BadRequest("Invalid product ID format. Must be comma-separated integers.");
+                }
+            }
+
+            var workItem = await _mediator.Send(new GetWorkItemByIdWithValidationQuery(tfsId, productIdArray), cancellationToken);
+            
+            if (workItem == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(workItem);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving work item {TfsId} with validation", tfsId);
+            return StatusCode(500, "Error retrieving work item with validation");
+        }
+    }
+
+    /// <summary>
     /// Gets work items matching a filter.
     /// </summary>
     [HttpGet("filter/{filter}")]

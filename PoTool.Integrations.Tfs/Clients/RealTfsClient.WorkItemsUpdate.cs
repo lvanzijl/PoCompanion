@@ -255,14 +255,15 @@ public partial class RealTfsClient
 
             // Build JSON Patch document for tags (System.Tags)
             // Tags are stored as semicolon-separated string in TFS
-            var tagsString = string.Join("; ", tags);
+            // When removing all tags, send null to properly clear the field
+            var tagsString = tags.Count > 0 ? string.Join("; ", tags) : "";
             var patchDocument = new[]
             {
                 new
                 {
                     op = "add",
                     path = "/fields/System.Tags",
-                    value = tagsString
+                    value = (object?)(tags.Count > 0 ? tagsString : null)
                 }
             };
 
