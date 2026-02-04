@@ -402,9 +402,8 @@
                         
                         if (refreshedBug != null)
                         {
-                            var refreshedTags = GetBugTags(refreshedBug);
                             Logger.LogInformation("Retrieved refreshed bug {BugId} from API: tags = {Tags}", 
-                                bugId, string.Join("; ", refreshedTags));
+                                bugId, string.Join("; ", GetBugTags(refreshedBug)));
                             
                             // Update the bug in local list
                             var existingBugIndex = _bugs.FindIndex(b => b.TfsId == bugId);
