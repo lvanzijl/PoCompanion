@@ -21,7 +21,7 @@ public class TfsFieldParserServiceTests
         _service = new TfsFieldParserService(_mockLogger.Object);
     }
 
-    private WorkItemWithValidationDto CreateBugWithJsonPayload(Dictionary<string, object> fields)
+    private WorkItemWithValidationDto CreateBugWithJsonPayload(Dictionary<string, object> fields, string? tags = null)
     {
         var jsonPayload = JsonSerializer.Serialize(fields);
         return new WorkItemWithValidationDto
@@ -37,10 +37,11 @@ public class TfsFieldParserServiceTests
             RetrievedAt = DateTimeOffset.UtcNow,
             Effort = null,
             Description = "Test Description",
+            ValidationIssues = new List<ValidationIssue>(),
             CreatedDate = DateTimeOffset.UtcNow,
             ClosedDate = null,
-            ValidationIssues = new List<ValidationIssue>(),
-            Tags = null
+            Severity = null,
+            Tags = tags
         };
     }
 
@@ -114,9 +115,10 @@ public class TfsFieldParserServiceTests
             RetrievedAt = DateTimeOffset.UtcNow,
             Effort = null,
             Description = null,
+            ValidationIssues = new List<ValidationIssue>(),
             CreatedDate = null,
             ClosedDate = null,
-            ValidationIssues = new List<ValidationIssue>(),
+            Severity = null,
             Tags = null
         };
 
@@ -259,6 +261,66 @@ public class TfsFieldParserServiceTests
         // Assert
         Assert.HasCount(1, result);
         Assert.AreEqual("SingleTag", result[0]);
+    }
+
+    [TestMethod]
+    public void GetTags_WithCachedTagsField_PrefersCachedField()
+    {
+        // Arrange - cached Tags field should be preferred over JsonPayload
+        var fields = new Dictionary<string, object>
+        {
+            { "System.Tags", "JsonTag1; JsonTag2" }
+        };
+        var bug = CreateBugWithJsonPayload(fields, tags: "CachedTag1; CachedTag2");
+
+        // Act
+        var result = _service.GetTags(bug);
+
+        // Assert
+        Assert.HasCount(2, result);
+        Assert.Contains("CachedTag1", result);
+        Assert.Contains("CachedTag2", result);
+        // Should NOT contain JsonPayload tags
+        Assert.DoesNotContain("JsonTag1", result);
+        Assert.DoesNotContain("JsonTag2", result);
+    }
+
+    [TestMethod]
+    public void GetTags_WithEmptyCachedField_FallsBackToJsonPayload()
+    {
+        // Arrange - empty cached field should fallback to JsonPayload
+        var fields = new Dictionary<string, object>
+        {
+            { "System.Tags", "JsonTag1; JsonTag2" }
+        };
+        var bug = CreateBugWithJsonPayload(fields, tags: "");
+
+        // Act
+        var result = _service.GetTags(bug);
+
+        // Assert
+        Assert.HasCount(2, result);
+        Assert.Contains("JsonTag1", result);
+        Assert.Contains("JsonTag2", result);
+    }
+
+    [TestMethod]
+    public void GetTags_WithNullCachedField_FallsBackToJsonPayload()
+    {
+        // Arrange - null cached field should fallback to JsonPayload
+        var fields = new Dictionary<string, object>
+        {
+            { "System.Tags", "JsonTag1; JsonTag2" }
+        };
+        var bug = CreateBugWithJsonPayload(fields, tags: null);
+
+        // Act
+        var result = _service.GetTags(bug);
+
+        // Assert
+        Assert.HasCount(2, result);
+        Assert.Contains("JsonTag1", result);
+        Assert.Contains("JsonTag2", result);
     }
 
     #endregion
