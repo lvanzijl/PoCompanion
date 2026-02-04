@@ -158,7 +158,9 @@ public class BugTriageStateService
                 
                 if (currentWorkItem != null)
                 {
-                    var currentTags = ExtractTagsFromJson(currentWorkItem.JsonPayload ?? string.Empty);
+                    // Extract current tags from the denormalized Tags field
+                    // Tags are stored as semicolon-separated string (e.g., "Tag1; Tag2; Tag3")
+                    var currentTags = ExtractTagsFromString(currentWorkItem.Tags);
                     
                     // Use case-insensitive comparison to match TFS behavior where tags are case-insensitive
                     // This ensures that 'Bug' and 'bug' are treated as the same tag, preventing duplicates
@@ -328,6 +330,26 @@ public class BugTriageStateService
         }
 
         return mapped;
+    }
+
+    /// <summary>
+    /// Extracts tags from a semicolon-separated string.
+    /// Tags in TFS are stored as a semicolon-separated string (e.g., "Tag1; Tag2; Tag3").
+    /// Returns an empty list if the input is null or empty.
+    /// </summary>
+    private List<string> ExtractTagsFromString(string? tagsString)
+    {
+        if (string.IsNullOrWhiteSpace(tagsString))
+        {
+            return new List<string>();
+        }
+
+        // TFS tags are semicolon-separated
+        return tagsString
+            .Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(t => t.Trim())
+            .Where(t => !string.IsNullOrEmpty(t))
+            .ToList();
     }
 
     /// <summary>
