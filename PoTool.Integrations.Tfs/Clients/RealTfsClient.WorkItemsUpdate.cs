@@ -683,11 +683,8 @@ public partial class RealTfsClient
         var description = fields.TryGetProperty("System.Description", out var d) ? d.GetString() : null;
         
         // Extract parent ID from relations if present (may not be in PATCH response)
-        int? parentId = null;
-        if (workItemElement.TryGetProperty("relations", out var relations))
-        {
-            parentId = ExtractParentIdFromRelations(workItemElement);
-        }
+        // Note: ExtractParentIdFromRelations handles missing relations gracefully
+        int? parentId = ExtractParentIdFromRelations(workItemElement);
         
         // Extract effort, dates, severity, and tags
         int? effort = ParseEffortField(fields);
