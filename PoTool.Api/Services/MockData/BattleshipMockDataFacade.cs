@@ -5,6 +5,7 @@ using PoTool.Shared.Settings;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Contracts.TfsVerification;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 using PoTool.Core.PullRequests;
 
@@ -706,6 +707,28 @@ public class BattleshipMockDataFacade : ITfsClient
 
         _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} severity to '{Severity}'", workItemId, severity);
         return Task.FromResult(true);
+    }
+
+    public Task<bool> UpdateWorkItemTagsAsync(int workItemId, List<string> tags, CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemTagsAsync called for workItemId={WorkItemId}, tags='{Tags}'",
+            workItemId, string.Join("; ", tags));
+
+        // Verify the work item exists in mock data
+        var mockHierarchy = GetMockHierarchy();
+        var workItem = mockHierarchy.FirstOrDefault(w => w.TfsId == workItemId);
+        if (workItem != null)
+        {
+            _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} tags to '{Tags}'", 
+                workItemId, string.Join("; ", tags));
+            return Task.FromResult(true);
+        }
+        else
+        {
+            _logger.LogWarning("Mock TFS client: Work item {WorkItemId} not found in mock data", workItemId);
+            return Task.FromResult(false);
+        }
     }
 
     public Task<TfsVerificationReport> VerifyCapabilitiesAsync(

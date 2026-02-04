@@ -187,6 +187,19 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Updates the tags of a work item in TFS (System.Tags).
+    /// Tags in TFS are stored as a semicolon-separated string.
+    /// </summary>
+    /// <param name="workItemId">The work item ID.</param>
+    /// <param name="tags">The list of tags to set on the work item.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if the update was successful, false otherwise.</returns>
+    Task<bool> UpdateWorkItemTagsAsync(
+        int workItemId,
+        List<string> tags,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Verifies TFS API capabilities by running diagnostic checks.
     /// </summary>
     /// <param name="includeWriteChecks">Whether to include write capability checks.</param>
