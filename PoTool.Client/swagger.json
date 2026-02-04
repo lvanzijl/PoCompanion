@@ -8933,6 +8933,14 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "severity": {
+            "type": "string",
+            "nullable": true
+          },
+          "tags": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
@@ -8997,6 +9005,10 @@
             "nullable": true
           },
           "severity": {
+            "type": "string",
+            "nullable": true
+          },
+          "tags": {
             "type": "string",
             "nullable": true
           }
