@@ -209,7 +209,10 @@ public class WorkItemRepository : IWorkItemRepository
             RetrievedAt: entity.RetrievedAt,
             Effort: entity.Effort,
             Description: entity.Description,
-            CreatedDate: entity.CreatedDate
+            CreatedDate: entity.CreatedDate,
+            ClosedDate: entity.ClosedDate,
+            Severity: entity.Severity,
+            Tags: entity.Tags
         );
     }
 
@@ -228,7 +231,10 @@ public class WorkItemRepository : IWorkItemRepository
             RetrievedAt = dto.RetrievedAt,
             Effort = dto.Effort,
             Description = dto.Description,
-            CreatedDate = dto.CreatedDate
+            CreatedDate = dto.CreatedDate,
+            ClosedDate = dto.ClosedDate,
+            Severity = dto.Severity,
+            Tags = dto.Tags
         };
     }
 }

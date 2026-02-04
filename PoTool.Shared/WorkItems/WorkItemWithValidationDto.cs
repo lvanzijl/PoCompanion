@@ -18,5 +18,6 @@ public sealed record WorkItemWithValidationDto(
     List<ValidationIssue> ValidationIssues,
     DateTimeOffset? CreatedDate = null,
     DateTimeOffset? ClosedDate = null,
-    string? Severity = null
+    string? Severity = null,
+    string? Tags = null
 );

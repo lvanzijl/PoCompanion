@@ -288,6 +288,7 @@ public partial class RealTfsClient
             DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
             DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
             string? severity = ParseSeverityField(fields);
+            string? tags = ParseTagsField(fields);
 
             results.Add(new WorkItemDto(
                 TfsId: id,
@@ -303,7 +304,8 @@ public partial class RealTfsClient
                 Description: description,
                 CreatedDate: createdDate,
                 ClosedDate: closedDate,
-                Severity: severity
+                Severity: severity,
+                Tags: tags
             ));
          }
 
@@ -455,6 +457,19 @@ public partial class RealTfsClient
                 break;
         }
 
+        return null;
+    }
+
+    /// <summary>
+    /// Parses the tags field from work item fields.
+    /// Returns the semicolon-separated tags string if present, null otherwise.
+    /// </summary>
+    private static string? ParseTagsField(JsonElement fields)
+    {
+        if (fields.TryGetProperty("System.Tags", out var tagsField))
+        {
+            return tagsField.ValueKind == JsonValueKind.String ? tagsField.GetString() : null;
+        }
         return null;
     }
 

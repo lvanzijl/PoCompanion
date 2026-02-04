@@ -64,7 +64,8 @@ public class BattleshipWorkItemGenerator
                 JsonPayload: "{}",
                 RetrievedAt: now,
                 Effort: null,
-                Description: $"This goal focuses on {goalTitles[g].ToLower()} for the Battleship Incident Handling System."
+                Description: $"This goal focuses on {goalTitles[g].ToLower()} for the Battleship Incident Handling System.",
+                Tags: null
             ));
 
             // Each goal has 2-4 objectives (average 3, total ~30)
@@ -89,7 +90,8 @@ public class BattleshipWorkItemGenerator
                     JsonPayload: "{}",
                     RetrievedAt: now,
                     Effort: null,
-                    Description: $"Objective to implement {objectiveTitle.ToLower()} as part of the overall system strategy."
+                    Description: $"Objective to implement {objectiveTitle.ToLower()} as part of the overall system strategy.",
+                    Tags: null
                 ));
 
                 // Each objective has 2-5 epics (average ~3.3, total ~100)
@@ -112,7 +114,8 @@ public class BattleshipWorkItemGenerator
                         JsonPayload: "{}",
                         RetrievedAt: now,
                         Effort: null,
-                        Description: $"Epic to deliver {epicTitle.ToLower()} capabilities for the system."
+                        Description: $"Epic to deliver {epicTitle.ToLower()} capabilities for the system.",
+                        Tags: null
                     ));
 
                     // Each epic has 3-7 features (average 5, total ~500)
@@ -135,7 +138,8 @@ public class BattleshipWorkItemGenerator
                             JsonPayload: "{}",
                             RetrievedAt: now,
                             Effort: null,
-                            Description: $"Feature to implement {featureTitle.ToLower()} functionality."
+                            Description: $"Feature to implement {featureTitle.ToLower()} functionality.",
+                            Tags: null
                         ));
 
                         // Each feature has 5-10 PBIs (average ~6, total ~3,000)
@@ -159,7 +163,8 @@ public class BattleshipWorkItemGenerator
                                 JsonPayload: "{}",
                                 RetrievedAt: now,
                                 Effort: effort,
-                                Description: pbiTitle
+                                Description: pbiTitle,
+                                Tags: null
                             ));
 
                             // Each PBI has 2-5 tasks (average ~3.75, targeting ~15,000 total)
@@ -181,7 +186,8 @@ public class BattleshipWorkItemGenerator
                                     JsonPayload: "{}",
                                     RetrievedAt: now,
                                     Effort: _random.Next(1, 17), // 0-16 hours
-                                    Description: $"Task to {taskTitle.ToLower()}."
+                                    Description: $"Task to {taskTitle.ToLower()}.",
+                                    Tags: null
                                 ));
                             }
                         }
@@ -207,7 +213,8 @@ public class BattleshipWorkItemGenerator
                                 JsonPayload: "{}",
                                 RetrievedAt: now,
                                 Effort: bugEffort,
-                                Description: $"Bug fix: {bugTitle.ToLower()}."
+                                Description: $"Bug fix: {bugTitle.ToLower()}.",
+                                Tags: null
                             ));
 
                             // Each bug has 2-5 tasks
@@ -229,7 +236,8 @@ public class BattleshipWorkItemGenerator
                                     JsonPayload: "{}",
                                     RetrievedAt: now,
                                     Effort: _random.Next(1, 17),
-                                    Description: $"Task to {taskTitle.ToLower()}."
+                                    Description: $"Task to {taskTitle.ToLower()}.",
+                                    Tags: null
                                 ));
                             }
                         }
