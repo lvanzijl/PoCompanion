@@ -731,6 +731,57 @@ public class BattleshipMockDataFacade : ITfsClient
         }
     }
 
+    public Task<WorkItemDto?> UpdateWorkItemTagsAndReturnAsync(int workItemId, List<string> tags, CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemTagsAndReturnAsync called for workItemId={WorkItemId}, tags='{Tags}'",
+            workItemId, string.Join("; ", tags));
+
+        // Verify the work item exists in mock data
+        var mockHierarchy = GetMockHierarchy();
+        var workItem = mockHierarchy.FirstOrDefault(w => w.TfsId == workItemId);
+        if (workItem != null)
+        {
+            // Update tags and return the updated work item
+            var tagsString = string.Join("; ", tags);
+            var updatedWorkItem = workItem with { Tags = tagsString };
+            
+            _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} tags to '{Tags}' and returning updated item", 
+                workItemId, tagsString);
+            return Task.FromResult<WorkItemDto?>(updatedWorkItem);
+        }
+        else
+        {
+            _logger.LogWarning("Mock TFS client: Work item {WorkItemId} not found in mock data", workItemId);
+            return Task.FromResult<WorkItemDto?>(null);
+        }
+    }
+
+    public Task<WorkItemDto?> UpdateWorkItemSeverityAndReturnAsync(int workItemId, string severity, CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemSeverityAndReturnAsync called for workItemId={WorkItemId}, severity='{Severity}'",
+            workItemId, severity);
+
+        // Verify the work item exists in mock data
+        var mockHierarchy = GetMockHierarchy();
+        var workItem = mockHierarchy.FirstOrDefault(w => w.TfsId == workItemId);
+        if (workItem != null)
+        {
+            // Update severity and return the updated work item
+            var updatedWorkItem = workItem with { Severity = severity };
+            
+            _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} severity to '{Severity}' and returning updated item", 
+                workItemId, severity);
+            return Task.FromResult<WorkItemDto?>(updatedWorkItem);
+        }
+        else
+        {
+            _logger.LogWarning("Mock TFS client: Work item {WorkItemId} not found in mock data", workItemId);
+            return Task.FromResult<WorkItemDto?>(null);
+        }
+    }
+
     public Task<TfsVerificationReport> VerifyCapabilitiesAsync(
         bool includeWriteChecks = false,
         int? workItemIdForWriteCheck = null,

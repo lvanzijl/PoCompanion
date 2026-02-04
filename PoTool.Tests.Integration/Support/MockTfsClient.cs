@@ -448,6 +448,18 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult(true);
     }
 
+    public Task<WorkItemDto?> UpdateWorkItemTagsAndReturnAsync(int workItemId, List<string> tags, CancellationToken cancellationToken = default)
+    {
+        // Mock implementation - return null to indicate update not implemented in mock
+        return Task.FromResult<WorkItemDto?>(null);
+    }
+
+    public Task<WorkItemDto?> UpdateWorkItemSeverityAndReturnAsync(int workItemId, string severity, CancellationToken cancellationToken = default)
+    {
+        // Mock implementation - return null to indicate update not implemented in mock
+        return Task.FromResult<WorkItemDto?>(null);
+    }
+
     public Task<TfsVerificationReport> VerifyCapabilitiesAsync(
         bool includeWriteChecks = false,
         int? workItemIdForWriteCheck = null,

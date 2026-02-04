@@ -407,6 +407,24 @@ public class MockTfsClient : ITfsClient
         return _mockDataFacade.UpdateWorkItemTagsAsync(workItemId, tags, cancellationToken);
     }
 
+    public Task<WorkItemDto?> UpdateWorkItemTagsAndReturnAsync(int workItemId, List<string> tags, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemTagsAndReturnAsync called for workItemId={WorkItemId}, tags='{Tags}'",
+            workItemId, string.Join("; ", tags));
+
+        // Delegate to BattleshipMockDataFacade which properly updates the in-memory database
+        return _mockDataFacade.UpdateWorkItemTagsAndReturnAsync(workItemId, tags, cancellationToken);
+    }
+
+    public Task<WorkItemDto?> UpdateWorkItemSeverityAndReturnAsync(int workItemId, string severity, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemSeverityAndReturnAsync called for workItemId={WorkItemId}, severity='{Severity}'",
+            workItemId, severity);
+
+        // Delegate to BattleshipMockDataFacade which properly updates the in-memory database
+        return _mockDataFacade.UpdateWorkItemSeverityAndReturnAsync(workItemId, severity, cancellationToken);
+    }
+
     public Task<TfsVerificationReport> VerifyCapabilitiesAsync(
         bool includeWriteChecks = false,
         int? workItemIdForWriteCheck = null,
