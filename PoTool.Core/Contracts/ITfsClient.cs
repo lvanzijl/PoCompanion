@@ -187,6 +187,15 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Updates severity for a work item and returns the updated work item from the PATCH response.
+    /// This is more efficient than a separate GET call and avoids race conditions.
+    /// </summary>
+    Task<WorkItemDto?> UpdateWorkItemSeverityAndReturnAsync(
+        int workItemId,
+        string severity,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Updates the tags of a work item in TFS (System.Tags).
     /// Tags in TFS are stored as a semicolon-separated string.
     /// </summary>
@@ -195,6 +204,15 @@ public interface ITfsClient
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if the update was successful, false otherwise.</returns>
     Task<bool> UpdateWorkItemTagsAsync(
+        int workItemId,
+        List<string> tags,
+        CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Updates tags for a work item and returns the updated work item from the PATCH response.
+    /// This is more efficient than a separate GET call and avoids race conditions.
+    /// </summary>
+    Task<WorkItemDto?> UpdateWorkItemTagsAndReturnAsync(
         int workItemId,
         List<string> tags,
         CancellationToken cancellationToken = default);

@@ -149,6 +149,12 @@ public partial class RealTfsClient
 
     public async Task<bool> UpdateWorkItemSeverityAsync(int workItemId, string severity, CancellationToken cancellationToken = default)
     {
+        var result = await UpdateWorkItemSeverityAndReturnAsync(workItemId, severity, cancellationToken);
+        return result != null;
+    }
+
+    public async Task<WorkItemDto?> UpdateWorkItemSeverityAndReturnAsync(int workItemId, string severity, CancellationToken cancellationToken = default)
+    {
         try
         {
             _logger.LogInformation("Updating work item {WorkItemId} severity to '{Severity}'", workItemId, severity);
@@ -157,7 +163,7 @@ public partial class RealTfsClient
             if (entity == null)
             {
                 _logger.LogWarning("No TFS configuration found for updating work item severity");
-                return false;
+                return null;
             }
 
             // Use auth-mode-specific HttpClient (requirement #2)
@@ -194,29 +200,40 @@ public partial class RealTfsClient
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Successfully updated work item {WorkItemId} severity to '{Severity}'", workItemId, severity);
-                return true;
+                
+                // Parse the response to get the updated work item
+                using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var responseDoc = await JsonDocument.ParseAsync(responseStream, cancellationToken: cancellationToken);
+                
+                return ParseWorkItemFromPatchResponse(responseDoc.RootElement);
             }
             else
             {
                 var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogWarning("Failed to update work item {WorkItemId} severity. Status: {StatusCode}, Response: {Response}",
                     workItemId, response.StatusCode, responseBody);
-                return false;
+                return null;
             }
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError("Update work item {WorkItemId} severity timed out", workItemId);
-            return false;
+            return null;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating work item {WorkItemId} severity to '{Severity}'", workItemId, severity);
-            return false;
+            return null;
         }
     }
 
     public async Task<bool> UpdateWorkItemTagsAsync(int workItemId, List<string> tags, CancellationToken cancellationToken = default)
+    {
+        var result = await UpdateWorkItemTagsAndReturnAsync(workItemId, tags, cancellationToken);
+        return result != null;
+    }
+
+    public async Task<WorkItemDto?> UpdateWorkItemTagsAndReturnAsync(int workItemId, List<string> tags, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -226,7 +243,7 @@ public partial class RealTfsClient
             if (entity == null)
             {
                 _logger.LogWarning("No TFS configuration found for updating work item tags");
-                return false;
+                return null;
             }
 
             // Use auth-mode-specific HttpClient (requirement #2)
@@ -265,25 +282,30 @@ public partial class RealTfsClient
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Successfully updated work item {WorkItemId} tags", workItemId);
-                return true;
+                
+                // Parse the response to get the updated work item
+                using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var responseDoc = await JsonDocument.ParseAsync(responseStream, cancellationToken: cancellationToken);
+                
+                return ParseWorkItemFromPatchResponse(responseDoc.RootElement);
             }
             else
             {
                 var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogWarning("Failed to update work item {WorkItemId} tags. Status: {StatusCode}, Response: {Response}",
                     workItemId, response.StatusCode, responseBody);
-                return false;
+                return null;
             }
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError("Update work item {WorkItemId} tags timed out", workItemId);
-            return false;
+            return null;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating work item {WorkItemId} tags", workItemId);
-            return false;
+            return null;
         }
     }
 
@@ -640,5 +662,55 @@ public partial class RealTfsClient
                 workItemId, newParentId);
             return false;
         }
+    }
+    
+    /// <summary>
+    /// Parses a WorkItemDto from a PATCH response JSON element.
+    /// PATCH responses have the same structure as GET responses: { id, fields: { ... }, relations: [...] }
+    /// However, PATCH responses may not include relations, so we extract parent ID as null.
+    /// </summary>
+    private WorkItemDto ParseWorkItemFromPatchResponse(JsonElement workItemElement)
+    {
+        var id = workItemElement.GetProperty("id").GetInt32();
+        var fields = workItemElement.GetProperty("fields");
+        
+        var type = fields.TryGetProperty("System.WorkItemType", out var t) ? t.GetString() ?? "" : "";
+        var title = fields.TryGetProperty("System.Title", out var ti) ? ti.GetString() ?? "" : "";
+        var state = fields.TryGetProperty("System.State", out var s) ? s.GetString() ?? "" : "";
+        var area = fields.TryGetProperty("System.AreaPath", out var a) ? a.GetString() ?? "" : "";
+        var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
+        var description = fields.TryGetProperty("System.Description", out var d) ? d.GetString() : null;
+        
+        // Extract parent ID from relations if present (may not be in PATCH response)
+        int? parentId = null;
+        if (workItemElement.TryGetProperty("relations", out var relations))
+        {
+            parentId = ExtractParentIdFromRelations(workItemElement);
+        }
+        
+        // Extract effort, dates, severity, and tags
+        int? effort = ParseEffortField(fields);
+        DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
+        DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
+        string? severity = ParseSeverityField(fields);
+        string? tags = ParseTagsField(fields);
+        
+        return new WorkItemDto(
+            TfsId: id,
+            Type: type,
+            Title: title,
+            ParentTfsId: parentId,
+            AreaPath: area,
+            IterationPath: iteration,
+            State: state,
+            JsonPayload: workItemElement.GetRawText(),
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: effort,
+            Description: description,
+            CreatedDate: createdDate,
+            ClosedDate: closedDate,
+            Severity: severity,
+            Tags: tags
+        );
     }
 }

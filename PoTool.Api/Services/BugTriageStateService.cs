@@ -127,13 +127,13 @@ public class BugTriageStateService
                 // Map severity display name to TFS Severity format (e.g., "Critical" -> "1 - Critical")
                 var tfsSeverity = MapSeverityToTfsFormat(request.NewSeverity);
                 
-                // Update TFS with Severity field
-                var updateSuccess = await _tfsClient.UpdateWorkItemSeverityAsync(
+                // Update TFS with Severity field and get the updated work item from the response
+                var refreshedWorkItem = await _tfsClient.UpdateWorkItemSeverityAndReturnAsync(
                     request.BugId, 
                     tfsSeverity, 
                     cancellationToken);
                 
-                if (!updateSuccess)
+                if (refreshedWorkItem == null)
                 {
                     _logger.LogError("Failed to update TFS bug {BugId} severity", request.BugId);
                     return new UpdateBugTriageStateResponse(
@@ -144,65 +144,33 @@ public class BugTriageStateService
                 _logger.LogInformation("Successfully updated TFS bug {BugId} severity to '{Severity}'", 
                     request.BugId, tfsSeverity);
                 
-                // Refresh work item from TFS and update cache
-                var refreshedWorkItem = await _tfsClient.GetWorkItemByIdAsync(request.BugId, cancellationToken);
-                if (refreshedWorkItem != null)
+                // Update the work item in cache with the response from TFS
+                var cachedEntity = await _db.WorkItems
+                    .FirstOrDefaultAsync(wi => wi.TfsId == request.BugId, cancellationToken);
+                
+                if (cachedEntity != null)
                 {
-                    // Update the work item in cache
-                    var cachedEntity = await _db.WorkItems
-                        .FirstOrDefaultAsync(wi => wi.TfsId == request.BugId, cancellationToken);
+                    // Update cached work item with fresh data from TFS PATCH response
+                    cachedEntity.JsonPayload = refreshedWorkItem.JsonPayload;
+                    cachedEntity.State = refreshedWorkItem.State;
+                    cachedEntity.Title = refreshedWorkItem.Title;
+                    cachedEntity.AreaPath = refreshedWorkItem.AreaPath;
+                    cachedEntity.IterationPath = refreshedWorkItem.IterationPath;
+                    cachedEntity.Effort = refreshedWorkItem.Effort;
+                    cachedEntity.Description = refreshedWorkItem.Description;
+                    cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
+                    cachedEntity.Severity = refreshedWorkItem.Severity;
+                    cachedEntity.Tags = refreshedWorkItem.Tags;
                     
-                    if (cachedEntity != null)
-                    {
-                        // Parse severity from the refreshed JsonPayload to log the actual value
-                        string? newSeverityValue = null;
-                        if (!string.IsNullOrWhiteSpace(refreshedWorkItem.JsonPayload))
-                        {
-                            try
-                            {
-                                using var doc = JsonDocument.Parse(refreshedWorkItem.JsonPayload);
-                                if (doc.RootElement.TryGetProperty("Microsoft.VSTS.Common.Severity", out var severity))
-                                {
-                                    newSeverityValue = severity.GetString();
-                                }
-                            }
-                            catch (JsonException jsonEx)
-                            {
-                                _logger.LogWarning(jsonEx, "Failed to parse severity from refreshed work item {BugId} - invalid JSON", request.BugId);
-                            }
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Refreshed work item {BugId} has null or empty JsonPayload", request.BugId);
-                        }
-                        
-                        // Update cached work item with fresh data from TFS
-                        cachedEntity.JsonPayload = refreshedWorkItem.JsonPayload;
-                        cachedEntity.State = refreshedWorkItem.State;
-                        cachedEntity.Title = refreshedWorkItem.Title;
-                        cachedEntity.AreaPath = refreshedWorkItem.AreaPath;
-                        cachedEntity.IterationPath = refreshedWorkItem.IterationPath;
-                        cachedEntity.Effort = refreshedWorkItem.Effort;
-                        cachedEntity.Description = refreshedWorkItem.Description;
-                        cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
-                        cachedEntity.Severity = refreshedWorkItem.Severity;
-                        cachedEntity.Tags = refreshedWorkItem.Tags;
-                        
-                        // Explicitly mark entity as modified to ensure EF Core tracks the change
-                        _db.Entry(cachedEntity).State = EntityState.Modified;
-                        
-                        _logger.LogInformation("Updated cache for bug {BugId} with refreshed data from TFS. New severity in JsonPayload: {Severity}", 
-                            request.BugId, cachedEntity.Severity ?? "null");
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Bug {BugId} not found in cache, cannot refresh", request.BugId);
-                    }
+                    // Explicitly mark entity as modified to ensure EF Core tracks the change
+                    _db.Entry(cachedEntity).State = EntityState.Modified;
+                    
+                    _logger.LogInformation("Updated cache for bug {BugId} with data from TFS PATCH response. New severity: {Severity}", 
+                        request.BugId, cachedEntity.Severity ?? "null");
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to retrieve refreshed work item {BugId} from TFS after update", 
-                        request.BugId);
+                    _logger.LogWarning("Bug {BugId} not found in cache, cannot refresh", request.BugId);
                 }
             }
             
@@ -242,17 +210,17 @@ public class BugTriageStateService
                         }
                     }
                     
-                    // Update TFS with new tag list
+                    // Update TFS with new tag list and get the updated work item from the response
                     var newTagsList = tagSet.ToList();
                     _logger.LogInformation("Updating TFS bug {BugId} with tags: {Tags}", 
                         request.BugId, string.Join("; ", newTagsList));
                     
-                    var tagsUpdateSuccess = await _tfsClient.UpdateWorkItemTagsAsync(
+                    var refreshedWorkItem = await _tfsClient.UpdateWorkItemTagsAndReturnAsync(
                         request.BugId,
                         newTagsList,
                         cancellationToken);
                     
-                    if (!tagsUpdateSuccess)
+                    if (refreshedWorkItem == null)
                     {
                         _logger.LogError("Failed to update TFS bug {BugId} tags", request.BugId);
                         return new UpdateBugTriageStateResponse(
@@ -262,43 +230,33 @@ public class BugTriageStateService
                     
                     _logger.LogInformation("Successfully updated TFS bug {BugId} tags", request.BugId);
                     
-                    // Refresh work item from TFS and update cache
-                    var refreshedWorkItem = await _tfsClient.GetWorkItemByIdAsync(request.BugId, cancellationToken);
-                    if (refreshedWorkItem != null)
+                    // Update the work item in cache with the response from TFS
+                    var cachedEntity = await _db.WorkItems
+                        .FirstOrDefaultAsync(wi => wi.TfsId == request.BugId, cancellationToken);
+                    
+                    if (cachedEntity != null)
                     {
-                        // Update the work item in cache
-                        var cachedEntity = await _db.WorkItems
-                            .FirstOrDefaultAsync(wi => wi.TfsId == request.BugId, cancellationToken);
+                        // Update cached work item with fresh data from TFS PATCH response
+                        cachedEntity.JsonPayload = refreshedWorkItem.JsonPayload;
+                        cachedEntity.State = refreshedWorkItem.State;
+                        cachedEntity.Title = refreshedWorkItem.Title;
+                        cachedEntity.AreaPath = refreshedWorkItem.AreaPath;
+                        cachedEntity.IterationPath = refreshedWorkItem.IterationPath;
+                        cachedEntity.Effort = refreshedWorkItem.Effort;
+                        cachedEntity.Description = refreshedWorkItem.Description;
+                        cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
+                        cachedEntity.Severity = refreshedWorkItem.Severity;
+                        cachedEntity.Tags = refreshedWorkItem.Tags;
                         
-                        if (cachedEntity != null)
-                        {
-                            // Update cached work item with fresh data from TFS
-                            cachedEntity.JsonPayload = refreshedWorkItem.JsonPayload;
-                            cachedEntity.State = refreshedWorkItem.State;
-                            cachedEntity.Title = refreshedWorkItem.Title;
-                            cachedEntity.AreaPath = refreshedWorkItem.AreaPath;
-                            cachedEntity.IterationPath = refreshedWorkItem.IterationPath;
-                            cachedEntity.Effort = refreshedWorkItem.Effort;
-                            cachedEntity.Description = refreshedWorkItem.Description;
-                            cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
-                            cachedEntity.Severity = refreshedWorkItem.Severity;
-                           cachedEntity.Tags = refreshedWorkItem.Tags;
-                            
-                            // Explicitly mark entity as modified to ensure EF Core tracks the change
-                            _db.Entry(cachedEntity).State = EntityState.Modified;
-                            
-                            _logger.LogInformation("Updated cache for bug {BugId} with refreshed data from TFS after tag update", 
-                                request.BugId);
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Bug {BugId} not found in cache after tag update, cannot refresh", request.BugId);
-                        }
+                        // Explicitly mark entity as modified to ensure EF Core tracks the change
+                        _db.Entry(cachedEntity).State = EntityState.Modified;
+                        
+                        _logger.LogInformation("Updated cache for bug {BugId} with data from TFS PATCH response after tag update. Tags: {Tags}", 
+                            request.BugId, cachedEntity.Tags ?? "null");
                     }
                     else
                     {
-                        _logger.LogWarning("Failed to retrieve refreshed work item {BugId} from TFS after tag update", 
-                            request.BugId);
+                        _logger.LogWarning("Bug {BugId} not found in cache after tag update, cannot refresh", request.BugId);
                     }
                 }
                 else
