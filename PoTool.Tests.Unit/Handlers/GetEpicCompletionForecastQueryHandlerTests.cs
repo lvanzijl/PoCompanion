@@ -380,7 +380,8 @@ public class GetEpicCompletionForecastQueryHandlerTests
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
-                    Description: null
+                    Description: null,
+                    Tags: null
         );
     }
 

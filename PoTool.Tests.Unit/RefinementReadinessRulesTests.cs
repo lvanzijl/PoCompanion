@@ -500,7 +500,8 @@ public class RefinementReadinessRulesTests
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: null,
-            Description: description
+            Description: description,
+            Tags: null
         );
     }
 }

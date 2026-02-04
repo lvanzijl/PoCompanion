@@ -39,7 +39,8 @@ public class TfsFieldParserServiceTests
             Description = "Test Description",
             CreatedDate = DateTimeOffset.UtcNow,
             ClosedDate = null,
-            ValidationIssues = new List<ValidationIssue>()
+            ValidationIssues = new List<ValidationIssue>(),
+            Tags = null
         };
     }
 
@@ -115,7 +116,8 @@ public class TfsFieldParserServiceTests
             Description = null,
             CreatedDate = null,
             ClosedDate = null,
-            ValidationIssues = new List<ValidationIssue>()
+            ValidationIssues = new List<ValidationIssue>(),
+            Tags = null
         };
 
         // Act

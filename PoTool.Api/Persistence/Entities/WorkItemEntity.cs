@@ -119,4 +119,12 @@ public class WorkItemEntity
     /// </summary>
     [MaxLength(50)]
     public string? Severity { get; set; }
+
+    /// <summary>
+    /// Work item tags from TFS (System.Tags).
+    /// Tags are stored as a semicolon-separated string (e.g., "Tag1; Tag2; Tag3").
+    /// Nullable - work items may not have any tags.
+    /// </summary>
+    [MaxLength(1000)]
+    public string? Tags { get; set; }
 }

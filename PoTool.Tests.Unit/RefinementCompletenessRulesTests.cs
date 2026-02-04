@@ -504,7 +504,8 @@ public class RefinementCompletenessRulesTests
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
-            Description: description
+            Description: description,
+            Tags: null
         );
     }
 }

@@ -287,7 +287,8 @@ public class GetEffortDistributionTrendQueryHandlerTests
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
-                    Description: null
+                    Description: null,
+                    Tags: null
         );
     }
 }

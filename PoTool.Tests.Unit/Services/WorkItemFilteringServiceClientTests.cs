@@ -161,13 +161,14 @@ public class WorkItemFilteringServiceClientTests
             TfsId = 3,
             Title = "Story",
             ParentTfsId = 2,
-            ValidationIssues = new List<ValidationIssue>()
+            ValidationIssues = new List<ValidationIssue>(),
+            Tags = null
         };
         var goalIds = new List<int> { 1 };
         var allWorkItems = new List<WorkItemWithValidationDto>
         {
-            new() { TfsId = 1, Title = "Goal", ParentTfsId = null, ValidationIssues = new List<ValidationIssue>() },
-            new() { TfsId = 2, Title = "Feature", ParentTfsId = 1, ValidationIssues = new List<ValidationIssue>() },
+            new() { TfsId = 1, Title = "Goal", ParentTfsId = null, ValidationIssues = new List<ValidationIssue>(), Tags = null },
+            new() { TfsId = 2, Title = "Feature", ParentTfsId = 1, ValidationIssues = new List<ValidationIssue>(), Tags = null },
             item
         };
 

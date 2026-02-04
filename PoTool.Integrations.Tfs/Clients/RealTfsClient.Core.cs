@@ -42,6 +42,7 @@ public partial class RealTfsClient
         "System.CreatedDate",
         "Microsoft.VSTS.Common.ClosedDate",
         "Microsoft.VSTS.Common.Severity",
+        "System.Tags",
         TfsFieldEffort,
         TfsFieldStoryPoints
     };

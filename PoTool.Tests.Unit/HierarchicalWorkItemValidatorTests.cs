@@ -491,7 +491,8 @@ public class HierarchicalWorkItemValidatorTests
             JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
-            Description: description
+            Description: description,
+            Tags: null
         );
     }
 }

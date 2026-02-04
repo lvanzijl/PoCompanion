@@ -56,7 +56,8 @@ public sealed class ReportServiceTests
                 ParentTfsId = null,
                 Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}"
+                JsonPayload = "{}",
+                Tags = null
             }
         };
 
@@ -94,7 +95,8 @@ public sealed class ReportServiceTests
                 ParentTfsId = null,
                 Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}"
+                JsonPayload = "{}",
+                Tags = null
             },
             new WorkItemDto
             {
@@ -107,7 +109,8 @@ public sealed class ReportServiceTests
                 ParentTfsId = 123,
                 Effort = 3,
                 RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}"
+                JsonPayload = "{}",
+                Tags = null
             },
             new WorkItemDto
             {
@@ -120,7 +123,8 @@ public sealed class ReportServiceTests
                 ParentTfsId = 456,
                 Effort = 2,
                 RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}"
+                JsonPayload = "{}",
+                Tags = null
             }
         };
 
@@ -155,7 +159,8 @@ public sealed class ReportServiceTests
                 ParentTfsId = null,
                 Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}"
+                JsonPayload = "{}",
+                Tags = null
             },
             new WorkItemDto
             {
@@ -168,7 +173,8 @@ public sealed class ReportServiceTests
                 ParentTfsId = 123,
                 Effort = null,
                 RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}"
+                JsonPayload = "{}",
+                Tags = null
             }
         };
 
@@ -197,7 +203,8 @@ public sealed class ReportServiceTests
                 ParentTfsId = null,
                 Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}"
+                JsonPayload = "{}",
+                Tags = null
             }
         };
 
