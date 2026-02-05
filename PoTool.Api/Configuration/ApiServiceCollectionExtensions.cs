@@ -288,6 +288,12 @@ public static class ApiServiceCollectionExtensions
         // Register Revision Ingestion Service (for Sprint Trend feature)
         services.AddSingleton<RevisionIngestionService>();
 
+        // Register Work Item Resolution Service (for Sprint Trend hierarchical resolution)
+        services.AddSingleton<WorkItemResolutionService>();
+
+        // Register Sprint Trend Projection Service (for sprint metrics computation)
+        services.AddSingleton<SprintTrendProjectionService>();
+
         // Register background services
         services.AddHostedService<EffortEstimationNotificationService>();
 

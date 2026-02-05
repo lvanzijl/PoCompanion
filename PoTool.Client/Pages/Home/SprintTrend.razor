@@ -3,11 +3,13 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Home.Components
+@using PoTool.Shared.Metrics
 @using System.Web
 @inject IProfileService ProfileService
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject ProductService ProductService
+@inject SprintTrendService SprintTrendService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -424,42 +426,96 @@
         _productMetrics.Clear();
         _featureProgress.Clear();
         
-        // TODO: Replace placeholder data with actual API calls when projections are implemented
-        // See Phase 5 of Sprint Trend implementation plan
-        if (_selectedFromSprintId.HasValue && _selectedToSprintId.HasValue)
+        if (!_profileId.HasValue || !_selectedFromSprintId.HasValue || !_selectedToSprintId.HasValue)
         {
-            // PLACEHOLDER_DATA_START - Remove when API integration is complete
-            const int PlaceholderPlannedCount = 15;
-            const int PlaceholderPlannedEffort = 42;
-            const int PlaceholderWorkedCount = 12;
-            const int PlaceholderWorkedEffort = 35;
-            const int PlaceholderBugsPlanned = 5;
-            const int PlaceholderBugsWorked = 3;
-            const int PlaceholderProductPlanned = 5;
-            const int PlaceholderProductWorked = 4;
-            
-            _plannedCount = PlaceholderPlannedCount;
-            _plannedEffort = PlaceholderPlannedEffort;
-            _workedCount = PlaceholderWorkedCount;
-            _workedEffort = PlaceholderWorkedEffort;
-            _bugsPlannedCount = PlaceholderBugsPlanned;
-            _bugsWorkedCount = PlaceholderBugsWorked;
-            
-            foreach (var product in _products)
+            return;
+        }
+
+        try
+        {
+            // Determine sprint range
+            var fromId = Math.Min(_selectedFromSprintId.Value, _selectedToSprintId.Value);
+            var toId = Math.Max(_selectedFromSprintId.Value, _selectedToSprintId.Value);
+            var sprintIds = _sprints
+                .Where(s => s.Id >= fromId && s.Id <= toId)
+                .Select(s => s.Id)
+                .ToList();
+
+            if (sprintIds.Count == 0)
             {
-                _productMetrics[product.Id] = (PlaceholderProductPlanned, PlaceholderProductWorked);
+                return;
             }
-            
+
+            // Call API to get sprint trend metrics
+            var response = await SprintTrendService.GetSprintTrendMetricsAsync(
+                _profileId.Value,
+                sprintIds,
+                recompute: false);
+
+            if (response == null || !response.Success || response.Metrics == null)
+            {
+                // Fall back to placeholder data if API call fails or returns no data
+                await LoadPlaceholderMetricsAsync();
+                return;
+            }
+
+            // Aggregate metrics across all sprints in the range
+            foreach (var sprintMetrics in response.Metrics)
+            {
+                _plannedCount += sprintMetrics.TotalPlannedCount;
+                _plannedEffort += sprintMetrics.TotalPlannedEffort;
+                _workedCount += sprintMetrics.TotalWorkedCount;
+                _workedEffort += sprintMetrics.TotalWorkedEffort;
+                _bugsPlannedCount += sprintMetrics.TotalBugsPlannedCount;
+                _bugsWorkedCount += sprintMetrics.TotalBugsWorkedCount;
+
+                // Aggregate product metrics
+                foreach (var productMetric in sprintMetrics.ProductMetrics)
+                {
+                    if (_productMetrics.TryGetValue(productMetric.ProductId, out var existing))
+                    {
+                        _productMetrics[productMetric.ProductId] = (
+                            existing.Planned + productMetric.PlannedCount,
+                            existing.Worked + productMetric.WorkedCount);
+                    }
+                    else
+                    {
+                        _productMetrics[productMetric.ProductId] = (
+                            productMetric.PlannedCount,
+                            productMetric.WorkedCount);
+                    }
+                }
+            }
+
+            // Feature progress would come from a separate API endpoint - for now show placeholder
             _featureProgress = new List<FeatureProgressItem>
             {
-                new() { EpicTitle = "Epic 1", FeatureTitle = "Feature A", ProgressPercent = 75 },
-                new() { EpicTitle = "Epic 1", FeatureTitle = "Feature B", ProgressPercent = 50 },
-                new() { EpicTitle = "Epic 2", FeatureTitle = "Feature C", ProgressPercent = 90 },
+                new() { EpicTitle = "No data", FeatureTitle = "Feature progress requires revision data", ProgressPercent = 0 },
             };
-            // PLACEHOLDER_DATA_END
         }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading sprint trend metrics: {ex.Message}", Severity.Warning);
+            await LoadPlaceholderMetricsAsync();
+        }
+    }
+
+    private Task LoadPlaceholderMetricsAsync()
+    {
+        // Placeholder data when no real metrics available
+        _plannedCount = 0;
+        _plannedEffort = 0;
+        _workedCount = 0;
+        _workedEffort = 0;
+        _bugsPlannedCount = 0;
+        _bugsWorkedCount = 0;
         
-        await Task.CompletedTask;
+        _featureProgress = new List<FeatureProgressItem>
+        {
+            new() { EpicTitle = "No data", FeatureTitle = "Select sprint range to view metrics", ProgressPercent = 0 },
+        };
+        
+        return Task.CompletedTask;
     }
 
     private void UpdateBreadcrumbs()
