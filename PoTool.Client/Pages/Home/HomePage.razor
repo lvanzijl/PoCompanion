@@ -1,10 +1,13 @@
 @page "/home"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Services
+@using PoTool.Shared.Settings
 @inject INavigationContextService NavigationContextService
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject WorkItemService WorkItemService
+@inject CacheSyncService CacheSyncService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -29,13 +32,24 @@
         {
             @* High-level Overview Section *@
             <MudPaper Elevation="2" Class="pa-4 mb-4" Style="width: 100%;">
-                <MudText Typo="Typo.h6" Class="mb-3">
-                    <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
-                    Overview — All Products, All Teams
-                </MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-                    High-level signals: health, trends, sync state
-                </MudText>
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                    <div>
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
+                            Overview — All Products, All Teams
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            High-level signals: health, trends, sync state
+                        </MudText>
+                    </div>
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Sync"
+                               OnClick="TriggerManualSyncAsync"
+                               Disabled="@_isSyncing">
+                        @(_isSyncing ? "Syncing..." : "Sync Now")
+                    </MudButton>
+                </MudStack>
                 
                 @* Real health signals from data *@
                 <MudGrid>
@@ -239,6 +253,7 @@
 
 @code {
     private bool _isLoading = true;
+    private bool _isSyncing = false;
     private int? _profileId;
     
     // Health signal data
@@ -249,7 +264,7 @@
     
     // Context propagation - product/team filter
     private int? _selectedProductId;
-    private List<ProductDto> _products = new();
+    private List<PoTool.Client.ApiClient.ProductDto> _products = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -402,5 +417,58 @@
             2 => Color.Warning,
             _ => Color.Error
         };
+    }
+    
+    /// <summary>
+    /// Triggers a manual cache sync for the current profile.
+    /// </summary>
+    private async Task TriggerManualSyncAsync()
+    {
+        if (_profileId == null || _isSyncing)
+            return;
+            
+        try
+        {
+            _isSyncing = true;
+            StateHasChanged();
+            
+            var result = await CacheSyncService.TriggerSyncAsync(_profileId.Value);
+            
+            if (result.Success)
+            {
+                Snackbar.Add("Cache sync started. Your data will be refreshed shortly.", Severity.Info);
+                
+                // Wait a bit for sync to complete, then reload health signals
+                await Task.Delay(3000);
+                
+                // Check sync status
+                var cacheState = await CacheSyncService.GetCacheStatusAsync(_profileId.Value);
+                if (cacheState != null && 
+                    (cacheState.SyncStatus == PoTool.Shared.Settings.CacheSyncStatusDto.Success || 
+                     cacheState.LastSuccessfulSync.HasValue))
+                {
+                    // Reload health signals after successful sync
+                    await LoadHealthSignalsAsync();
+                    Snackbar.Add("Cache sync completed successfully!", Severity.Success);
+                }
+                else if (cacheState != null && cacheState.SyncStatus == PoTool.Shared.Settings.CacheSyncStatusDto.InProgress)
+                {
+                    Snackbar.Add("Sync is still in progress. Data will be updated when complete.", Severity.Info);
+                }
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Failed to start cache sync.", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error triggering sync: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSyncing = false;
+            StateHasChanged();
+        }
     }
 }
