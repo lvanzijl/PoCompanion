@@ -64,7 +64,6 @@ public sealed class GetWorkItemByIdWithValidationQueryHandler
             workItem.AreaPath,
             workItem.IterationPath,
             workItem.State,
-            workItem.JsonPayload,
             workItem.RetrievedAt,
             workItem.Effort,
             workItem.Description,
@@ -72,7 +71,8 @@ public sealed class GetWorkItemByIdWithValidationQueryHandler
             workItem.CreatedDate,
             workItem.ClosedDate,
             workItem.Severity,
-            workItem.Tags
+            workItem.Tags,
+            workItem.IsBlocked
         );
     }
 }

@@ -122,7 +122,6 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
             wi.AreaPath,
             wi.IterationPath,
             wi.State,
-            wi.JsonPayload,
             wi.RetrievedAt,
             wi.Effort,
             wi.Description,
@@ -132,7 +131,8 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
             wi.CreatedDate,
             wi.ClosedDate,
             wi.Severity,
-            wi.Tags
+            wi.Tags,
+            wi.IsBlocked
         )).ToList();
     }
 }

@@ -298,7 +298,6 @@ public partial class RealTfsClient
                 AreaPath: area,
                 IterationPath: iteration,
                 State: state,
-                JsonPayload: item.GetRawText(),
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: effort,
                 Description: description,

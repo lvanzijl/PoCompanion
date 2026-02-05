@@ -169,13 +169,15 @@ public class WorkItemSyncStage : ISyncStage
         entity.AreaPath = dto.AreaPath;
         entity.IterationPath = dto.IterationPath;
         entity.State = dto.State;
-        entity.JsonPayload = dto.JsonPayload;
         entity.RetrievedAt = dto.RetrievedAt;
         entity.Effort = dto.Effort;
         entity.Description = dto.Description;
         entity.CreatedDate = dto.CreatedDate;
         entity.ClosedDate = dto.ClosedDate;
         entity.Severity = dto.Severity;
+        entity.Tags = dto.Tags;
+        entity.IsBlocked = dto.IsBlocked;
+        entity.Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null;
         // Write-back fields (TfsRevision, TfsChangedDate, TfsETag) are populated during 
         // future write-back operations, not during sync. See TFS_CACHE_IMPLEMENTATION_PLAN.md Section 10.
     }
@@ -191,13 +193,15 @@ public class WorkItemSyncStage : ISyncStage
             AreaPath = dto.AreaPath,
             IterationPath = dto.IterationPath,
             State = dto.State,
-            JsonPayload = dto.JsonPayload,
             RetrievedAt = dto.RetrievedAt,
             Effort = dto.Effort,
             Description = dto.Description,
             CreatedDate = dto.CreatedDate,
             ClosedDate = dto.ClosedDate,
-            Severity = dto.Severity
+            Severity = dto.Severity,
+            Tags = dto.Tags,
+            IsBlocked = dto.IsBlocked,
+            Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null
         };
     }
 }

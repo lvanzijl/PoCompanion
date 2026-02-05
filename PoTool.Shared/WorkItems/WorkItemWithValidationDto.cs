@@ -11,7 +11,6 @@ public sealed record WorkItemWithValidationDto(
     string AreaPath,
     string IterationPath,
     string State,
-    string JsonPayload,
     DateTimeOffset RetrievedAt,
     int? Effort,
     string? Description,

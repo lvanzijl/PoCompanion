@@ -60,12 +60,6 @@ public class WorkItemEntity
     public string State { get; set; } = string.Empty;
 
     /// <summary>
-    /// Full JSON payload from TFS for detail view.
-    /// </summary>
-    [Required]
-    public string JsonPayload { get; set; } = string.Empty;
-
-    /// <summary>
     /// Timestamp when this work item was retrieved from TFS.
     /// </summary>
     [Required]
