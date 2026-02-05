@@ -16,6 +16,14 @@ public class SprintTrendProjectionService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<SprintTrendProjectionService> _logger;
 
+    // Work item type constants to avoid magic strings
+    private const string WorkItemTypeTask = "Task";
+    private const string WorkItemTypePbi = "Product Backlog Item";
+    private const string WorkItemTypePbiShort = "PBI";
+    private const string WorkItemTypeBug = "Bug";
+    private const string WorkItemTypeEpic = "Epic";
+    private const string WorkItemTypeFeature = "Feature";
+
     public SprintTrendProjectionService(
         IServiceScopeFactory scopeFactory,
         ILogger<SprintTrendProjectionService> logger)
@@ -187,7 +195,7 @@ public class SprintTrendProjectionService
 
             maxRevisionId = Math.Max(maxRevisionId, revision.Id);
 
-            if (revision.WorkItemType.Equals("Bug", StringComparison.OrdinalIgnoreCase))
+            if (revision.WorkItemType.Equals(WorkItemTypeBug, StringComparison.OrdinalIgnoreCase))
             {
                 bugsPlannedCount++;
             }
@@ -205,7 +213,7 @@ public class SprintTrendProjectionService
                 continue;
             }
 
-            if (revision.WorkItemType.Equals("Bug", StringComparison.OrdinalIgnoreCase))
+            if (revision.WorkItemType.Equals(WorkItemTypeBug, StringComparison.OrdinalIgnoreCase))
             {
                 bugsWorkedCount++;
             }
@@ -328,14 +336,14 @@ public class SprintTrendProjectionService
         // - PBIs: New->InProgress does NOT count (commit), but InProgress->Done does
         // - Bugs: InProgress->Done counts, Done->InProgress (reopened) counts
 
-        if (workItemType.Equals("Task", StringComparison.OrdinalIgnoreCase))
+        if (workItemType.Equals(WorkItemTypeTask, StringComparison.OrdinalIgnoreCase))
         {
             // Any state change counts
             return true;
         }
 
-        if (workItemType.Equals("Product Backlog Item", StringComparison.OrdinalIgnoreCase) ||
-            workItemType.Equals("PBI", StringComparison.OrdinalIgnoreCase))
+        if (workItemType.Equals(WorkItemTypePbi, StringComparison.OrdinalIgnoreCase) ||
+            workItemType.Equals(WorkItemTypePbiShort, StringComparison.OrdinalIgnoreCase))
         {
             // New -> InProgress does NOT count (commit without activity)
             if (oldClass == StateClassification.New && newClass == StateClassification.InProgress)
@@ -353,7 +361,7 @@ public class SprintTrendProjectionService
             return false;
         }
 
-        if (workItemType.Equals("Bug", StringComparison.OrdinalIgnoreCase))
+        if (workItemType.Equals(WorkItemTypeBug, StringComparison.OrdinalIgnoreCase))
         {
             // InProgress -> Done counts
             if (oldClass == StateClassification.InProgress && newClass == StateClassification.Done)
@@ -397,15 +405,26 @@ public class SprintTrendProjectionService
             return classification;
         }
 
-        // Default mapping based on common state names
-        return state.ToLowerInvariant() switch
+        // Default mapping based on common Azure DevOps state names
+        // These are fallbacks used when state classification data is not synced
+        // Log a debug message to help identify missing database entries
+        var fallback = state.ToLowerInvariant() switch
         {
             "new" or "proposed" => StateClassification.New,
             "active" or "committed" or "in progress" => StateClassification.InProgress,
             "done" or "closed" or "resolved" => StateClassification.Done,
             "removed" or "cancelled" => StateClassification.Removed,
-            _ => null
+            _ => (StateClassification?)null
         };
+
+        if (fallback.HasValue)
+        {
+            _logger.LogDebug(
+                "Using fallback state classification for '{State}' on type '{WorkItemType}' -> {Classification}. Consider syncing state classifications.",
+                state, workItemType, fallback.Value);
+        }
+
+        return fallback;
     }
 
     private async Task<Dictionary<string, StateClassification>> GetStateClassificationsAsync(

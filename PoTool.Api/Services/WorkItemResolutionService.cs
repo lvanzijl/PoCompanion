@@ -294,9 +294,29 @@ public class WorkItemResolutionService
 /// </summary>
 public record ResolutionResult
 {
+    /// <summary>
+    /// Whether the operation completed without errors.
+    /// </summary>
     public bool Success { get; init; }
+
+    /// <summary>
+    /// Number of work items successfully resolved to a product.
+    /// </summary>
     public int ResolvedCount { get; init; }
+
+    /// <summary>
+    /// Number of work items that could not be resolved to a product (orphans).
+    /// </summary>
     public int OrphanCount { get; init; }
+
+    /// <summary>
+    /// Number of work items that encountered errors during resolution.
+    /// </summary>
     public int ErrorCount { get; init; }
+
+    /// <summary>
+    /// Human-readable summary of the resolution operation.
+    /// Format: "Resolved {count} items, {orphan} orphans, {error} errors"
+    /// </summary>
     public required string Message { get; init; }
 }

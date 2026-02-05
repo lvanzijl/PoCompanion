@@ -29,8 +29,9 @@ public class SprintTrendService
         bool recompute = false,
         CancellationToken cancellationToken = default)
     {
-        var sprintIdsQuery = string.Join("&sprintIds=", sprintIds);
-        var url = $"api/Metrics/sprint-trend?productOwnerId={productOwnerId}&sprintIds={sprintIdsQuery}&recompute={recompute.ToString().ToLower()}";
+        // Build query string with proper parameter formatting
+        var sprintIdParams = string.Join("&", sprintIds.Select(id => $"sprintIds={id}"));
+        var url = $"api/Metrics/sprint-trend?productOwnerId={productOwnerId}&{sprintIdParams}&recompute={recompute.ToString().ToLower()}";
 
         var response = await _httpClient.GetAsync(url, cancellationToken);
 
