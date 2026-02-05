@@ -253,17 +253,29 @@ public partial class RealTfsClient
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(entity.TimeoutSeconds));
 
+            // Normalize tags before sending (requirement #1):
+            // - Trim whitespace
+            // - Remove empty entries
+            // - De-duplicate (case-insensitive)
+            // - Join with "; " exactly
+            var normalizedTags = tags
+                .Select(t => t.Trim())
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
             // Build JSON Patch document for tags (System.Tags)
             // Tags are stored as semicolon-separated string in TFS
-            // When removing all tags, send null to properly clear the field
-            var tagsString = tags.Count > 0 ? string.Join("; ", tags) : "";
+            // Use 'replace' operation (requirement #2) instead of 'add'
+            // When removing all tags, send empty string (requirement #3) instead of null
+            var tagsString = normalizedTags.Count > 0 ? string.Join("; ", normalizedTags) : "";
             var patchDocument = new[]
             {
                 new
                 {
-                    op = "add",
+                    op = "replace",
                     path = "/fields/System.Tags",
-                    value = (object?)(tags.Count > 0 ? tagsString : null)
+                    value = tagsString
                 }
             };
 
