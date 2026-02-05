@@ -217,6 +217,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         queryParams.Add($"fields={string.Join(",", FieldWhitelist)}");
 
         // Add startDateTime for incremental sync
+        // Uses ISO 8601 round-trip format ("O") which Azure DevOps/TFS reporting API accepts
+        // Format example: "2024-01-15T10:30:00.0000000+00:00"
         if (startDateTime.HasValue)
         {
             queryParams.Add($"startDateTime={startDateTime.Value:O}");
@@ -265,9 +267,18 @@ public class RealRevisionTfsClient : IRevisionTfsClient
             var severity = GetStringField(fields, "Microsoft.VSTS.Common.Severity");
 
             var createdDate = GetDateTimeField(fields, "System.CreatedDate");
-            var changedDate = GetDateTimeField(fields, "System.ChangedDate") ?? DateTimeOffset.UtcNow;
+            var changedDate = GetDateTimeField(fields, "System.ChangedDate");
             var closedDate = GetDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
             var effort = GetIntField(fields, "Microsoft.VSTS.Scheduling.Effort");
+
+            // If ChangedDate is missing, log warning and skip this revision - timestamp is critical for ordering
+            if (!changedDate.HasValue)
+            {
+                _logger.LogWarning(
+                    "Skipping work item {WorkItemId} revision {RevisionNumber}: Missing System.ChangedDate field",
+                    workItemId, revisionNumber);
+                return null;
+            }
 
             var changedBy = GetStringField(fields, "System.ChangedBy");
 
@@ -285,7 +296,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
                 IterationPath = iterationPath,
                 AreaPath = areaPath,
                 CreatedDate = createdDate,
-                ChangedDate = changedDate,
+                ChangedDate = changedDate.Value,
                 ClosedDate = closedDate,
                 Effort = effort,
                 Tags = tags,

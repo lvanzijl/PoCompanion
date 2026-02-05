@@ -308,7 +308,9 @@ public class RevisionIngestionService
             };
 
             context.RevisionHeaders.Add(header);
-            await context.SaveChangesAsync(cancellationToken); // Save to get header ID
+            
+            // Save immediately to get header ID needed for related entities
+            await context.SaveChangesAsync(cancellationToken);
 
             // Add field deltas
             if (revision.FieldDeltas != null)
@@ -340,12 +342,29 @@ public class RevisionIngestionService
                 }
             }
 
-            await context.SaveChangesAsync(cancellationToken);
             persistedCount++;
+            
+            // Batch save: commit every BatchSaveSize revisions to reduce database round-trips
+            // while maintaining checkpoint progress during large backfills
+            if (persistedCount % BatchSaveSize == 0)
+            {
+                await context.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        // Final save for any remaining changes
+        if (context.ChangeTracker.HasChanges())
+        {
+            await context.SaveChangesAsync(cancellationToken);
         }
 
         return persistedCount;
     }
+    
+    /// <summary>
+    /// Number of revisions to persist before committing a batch save.
+    /// </summary>
+    private const int BatchSaveSize = 50;
 }
 
 /// <summary>

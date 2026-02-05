@@ -424,31 +424,39 @@
         _productMetrics.Clear();
         _featureProgress.Clear();
         
-        // For now, display placeholder metrics
-        // TODO: Implement actual metrics retrieval from API once projections are built
+        // TODO: Replace placeholder data with actual API calls when projections are implemented
+        // See Phase 5 of Sprint Trend implementation plan
         if (_selectedFromSprintId.HasValue && _selectedToSprintId.HasValue)
         {
-            // Placeholder data - will be replaced with actual API calls
-            _plannedCount = 15;
-            _plannedEffort = 42;
-            _workedCount = 12;
-            _workedEffort = 35;
-            _bugsPlannedCount = 5;
-            _bugsWorkedCount = 3;
+            // PLACEHOLDER_DATA_START - Remove when API integration is complete
+            const int PlaceholderPlannedCount = 15;
+            const int PlaceholderPlannedEffort = 42;
+            const int PlaceholderWorkedCount = 12;
+            const int PlaceholderWorkedEffort = 35;
+            const int PlaceholderBugsPlanned = 5;
+            const int PlaceholderBugsWorked = 3;
+            const int PlaceholderProductPlanned = 5;
+            const int PlaceholderProductWorked = 4;
             
-            // Initialize product metrics
+            _plannedCount = PlaceholderPlannedCount;
+            _plannedEffort = PlaceholderPlannedEffort;
+            _workedCount = PlaceholderWorkedCount;
+            _workedEffort = PlaceholderWorkedEffort;
+            _bugsPlannedCount = PlaceholderBugsPlanned;
+            _bugsWorkedCount = PlaceholderBugsWorked;
+            
             foreach (var product in _products)
             {
-                _productMetrics[product.Id] = (5, 4); // Placeholder
+                _productMetrics[product.Id] = (PlaceholderProductPlanned, PlaceholderProductWorked);
             }
             
-            // Placeholder feature progress
             _featureProgress = new List<FeatureProgressItem>
             {
                 new() { EpicTitle = "Epic 1", FeatureTitle = "Feature A", ProgressPercent = 75 },
                 new() { EpicTitle = "Epic 1", FeatureTitle = "Feature B", ProgressPercent = 50 },
                 new() { EpicTitle = "Epic 2", FeatureTitle = "Feature C", ProgressPercent = 90 },
             };
+            // PLACEHOLDER_DATA_END
         }
         
         await Task.CompletedTask;
