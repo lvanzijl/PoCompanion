@@ -19,7 +19,7 @@
         </div>
 
         @* Mark as Triaged Button *@
-        @if (!_isTriaged)
+        @if (!IsTriaged)
         {
             <MudPaper Class="pa-3" Elevation="1">
                 <MudStack Spacing="2">
@@ -173,7 +173,6 @@
     private HashSet<string> _activeTags = new();
     private List<string> _severityOptions = new();
     private string? _severityError = null;
-    private bool _isTriaged = false;
     private bool _isMarkingTriaged = false;
     private string? _markTriagedMessage = null;
     private bool _markTriagedSuccess = false;
@@ -189,9 +188,6 @@
         {
             // Reset error state
             _severityError = null;
-            
-            // Update triaged state from parameter
-            _isTriaged = IsTriaged;
             
             // Get severity directly from cached field - NO TFS field parsing
             _currentSeverity = Bug.Severity;
@@ -243,7 +239,6 @@
         try
         {
             await OnMarkedAsTriaged.InvokeAsync(Bug.TfsId);
-            _isTriaged = true;
             _markTriagedSuccess = true;
             _markTriagedMessage = "Bug marked as triaged successfully!";
         }
