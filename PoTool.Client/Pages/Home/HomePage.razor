@@ -427,6 +427,8 @@
         if (_profileId == null || _isSyncing)
             return;
             
+        const int syncCheckDelayMs = 3000; // Allow time for sync to start and potentially complete quickly
+            
         try
         {
             _isSyncing = true;
@@ -438,8 +440,8 @@
             {
                 Snackbar.Add("Cache sync started. Your data will be refreshed shortly.", Severity.Info);
                 
-                // Wait a bit for sync to complete, then reload health signals
-                await Task.Delay(3000);
+                // Wait for sync to potentially complete, then check status
+                await Task.Delay(syncCheckDelayMs);
                 
                 // Check sync status
                 var cacheState = await CacheSyncService.GetCacheStatusAsync(_profileId.Value);
