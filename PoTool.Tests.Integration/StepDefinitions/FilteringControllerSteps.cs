@@ -58,7 +58,6 @@ public class FilteringControllerSteps
                 AreaPath = "\\TestArea",
                 IterationPath = "\\TestIteration",
                 State = row["State"],
-                JsonPayload = "{}",
                 RetrievedAt = DateTimeOffset.UtcNow,
                 Effort = hasEffort ? 5 : null
             };

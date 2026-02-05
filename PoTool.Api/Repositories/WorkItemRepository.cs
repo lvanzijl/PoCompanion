@@ -137,8 +137,15 @@ public class WorkItemRepository : IWorkItemRepository
                     existing.AreaPath = dto.AreaPath;
                     existing.IterationPath = dto.IterationPath;
                     existing.State = dto.State;
-                    existing.JsonPayload = dto.JsonPayload;
                     existing.RetrievedAt = dto.RetrievedAt;
+                    existing.Effort = dto.Effort;
+                    existing.Description = dto.Description;
+                    existing.CreatedDate = dto.CreatedDate;
+                    existing.ClosedDate = dto.ClosedDate;
+                    existing.Severity = dto.Severity;
+                    existing.Tags = dto.Tags;
+                    existing.IsBlocked = dto.IsBlocked;
+                    existing.Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null;
                 }
                 else
                 {
@@ -174,8 +181,15 @@ public class WorkItemRepository : IWorkItemRepository
                     entity.AreaPath = dto.AreaPath;
                     entity.IterationPath = dto.IterationPath;
                     entity.State = dto.State;
-                    entity.JsonPayload = dto.JsonPayload;
                     entity.RetrievedAt = dto.RetrievedAt;
+                    entity.Effort = dto.Effort;
+                    entity.Description = dto.Description;
+                    entity.CreatedDate = dto.CreatedDate;
+                    entity.ClosedDate = dto.ClosedDate;
+                    entity.Severity = dto.Severity;
+                    entity.Tags = dto.Tags;
+                    entity.IsBlocked = dto.IsBlocked;
+                    entity.Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null;
                 }
 
                 // Insert new items

@@ -343,7 +343,6 @@ public class BulkAssignEffortCommandHandlerTests
             AreaPath: "TestArea",
             IterationPath: "TestIteration",
             State: state,
-            JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
                     Description: null,

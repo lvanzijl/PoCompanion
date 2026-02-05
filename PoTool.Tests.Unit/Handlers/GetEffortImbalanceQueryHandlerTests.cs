@@ -228,7 +228,6 @@ public class GetEffortImbalanceQueryHandlerTests
             AreaPath: areaPath,
             IterationPath: iterationPath,
             State: "New",
-            JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
                     Description: null,

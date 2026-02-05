@@ -240,7 +240,6 @@ public class GetAllWorkItemsWithValidationQueryHandlerTests
             AreaPath: "Test",
             IterationPath: "Sprint 1",
             State: "New",
-            JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: null,
             Description: null,

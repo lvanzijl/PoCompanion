@@ -51,7 +51,6 @@ public class MetricsControllerSteps
                 State = row["State"],
                 AreaPath = "\\TestArea",
                 IterationPath = row["IterationPath"],
-                JsonPayload = "{}",
                 RetrievedAt = DateTimeOffset.UtcNow
             };
 
@@ -61,7 +60,6 @@ public class MetricsControllerSteps
             }
 
             // Note: WorkItemEntity doesn't have an AssignedTo field as a direct property.
-            // In the real system, AssignedTo data is stored in the JsonPayload field.
             // For these tests, the AssignedTo information is not critical to the metrics calculations
             // being tested, so we omit it to keep tests focused and simple.
 
@@ -86,7 +84,6 @@ public class MetricsControllerSteps
                 Title = row["Title"],
                 State = row["State"],
                 IterationPath = row["IterationPath"],
-                JsonPayload = "{}",
                 RetrievedAt = DateTimeOffset.UtcNow
             };
 

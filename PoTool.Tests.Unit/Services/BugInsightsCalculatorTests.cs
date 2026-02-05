@@ -36,7 +36,6 @@ public class BugInsightsCalculatorTests
             AreaPath = "TestArea",
             IterationPath = "TestIteration",
             State = state,
-            JsonPayload = jsonPayload,
             RetrievedAt = DateTimeOffset.UtcNow,
             Effort = null,
             Description = null,

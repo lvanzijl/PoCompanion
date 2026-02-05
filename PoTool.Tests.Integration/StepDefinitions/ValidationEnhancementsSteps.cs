@@ -57,7 +57,6 @@ public class ValidationEnhancementsSteps
                 AreaPath = row["AreaPath"],
                 IterationPath = row["IterationPath"],
                 State = row["State"],
-                JsonPayload = "{}",
                 RetrievedAt = DateTimeOffset.UtcNow
             };
 

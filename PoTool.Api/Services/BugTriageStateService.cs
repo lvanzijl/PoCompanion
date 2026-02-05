@@ -360,7 +360,6 @@ public class BugTriageStateService
         if (cachedEntity != null)
         {
             // Update cached work item with fresh data from TFS PATCH response
-            cachedEntity.JsonPayload = refreshedWorkItem.JsonPayload;
             cachedEntity.State = refreshedWorkItem.State;
             cachedEntity.Title = refreshedWorkItem.Title;
             cachedEntity.AreaPath = refreshedWorkItem.AreaPath;
@@ -370,6 +369,10 @@ public class BugTriageStateService
             cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
             cachedEntity.Severity = refreshedWorkItem.Severity;
             cachedEntity.Tags = refreshedWorkItem.Tags;
+            cachedEntity.IsBlocked = refreshedWorkItem.IsBlocked;
+            cachedEntity.Relations = refreshedWorkItem.Relations != null 
+                ? System.Text.Json.JsonSerializer.Serialize(refreshedWorkItem.Relations) 
+                : null;
             
             // Explicitly mark entity as modified to ensure EF Core tracks the change
             _db.Entry(cachedEntity).State = EntityState.Modified;

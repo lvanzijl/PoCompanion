@@ -515,7 +515,6 @@ public class StructuralIntegrityRulesTests
             AreaPath: "Test",
             IterationPath: "Test",
             State: state,
-            JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: null,
             Description: null,

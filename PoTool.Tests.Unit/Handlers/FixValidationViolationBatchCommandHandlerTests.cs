@@ -302,7 +302,6 @@ public class FixValidationViolationBatchCommandHandlerTests
             AreaPath: "TestArea",
             IterationPath: "TestIteration",
             State: state,
-            JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: null,
                     Description: null,
