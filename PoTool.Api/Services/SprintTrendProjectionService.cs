@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -323,8 +324,9 @@ public class SprintTrendProjectionService
 
     /// <summary>
     /// Determines if a state change qualifies as work activity for sprint trend metrics.
-    /// Made internal for testability.
+    /// Made internal for testability. Hidden from IntelliSense in production code.
     /// </summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
     internal bool IsQualifyingActivity(
         string workItemType,
         StateClassification? oldClass,
