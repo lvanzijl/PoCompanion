@@ -105,8 +105,9 @@ public class BugTriageStateService
     }
 
     /// <summary>
-    /// Marks a bug as triaged due to a user action (severity change or tag toggle).
-    /// Updates TFS with the new severity value and refreshes the work item from TFS.
+    /// Marks a bug as triaged due to a user action (severity change, tag toggle, or explicit mark).
+    /// Updates TFS with the new severity value and refreshes the work item from TFS if changes are made.
+    /// If no changes are specified, simply marks the bug as triaged in the local state.
     /// </summary>
     public async Task<UpdateBugTriageStateResponse> MarkAsTriagedAsync(
         UpdateBugTriageStateRequest request,
@@ -114,6 +115,10 @@ public class BugTriageStateService
     {
         try
         {
+            var hasChanges = request.NewSeverity != null ||
+                           (request.TagsAdded != null && request.TagsAdded.Count > 0) ||
+                           (request.TagsRemoved != null && request.TagsRemoved.Count > 0);
+
             // If severity changed, update TFS
             if (request.NewSeverity != null)
             {
@@ -240,9 +245,11 @@ public class BugTriageStateService
             
             await _db.SaveChangesAsync(cancellationToken);
             
-            return new UpdateBugTriageStateResponse(
-                true, 
-                $"Bug {request.BugId} updated successfully in TFS and marked as triaged");
+            var message = hasChanges 
+                ? $"Bug {request.BugId} updated successfully in TFS and marked as triaged"
+                : $"Bug {request.BugId} marked as triaged";
+            
+            return new UpdateBugTriageStateResponse(true, message);
         }
         catch (Exception ex)
         {

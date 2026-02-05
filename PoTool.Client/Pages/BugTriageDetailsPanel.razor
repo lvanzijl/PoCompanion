@@ -18,6 +18,39 @@
             <MudChip T="string" Size="Size.Small" Color="Color.Default">@Bug.State</MudChip>
         </div>
 
+        @* Mark as Triaged Button *@
+        @if (!IsTriaged)
+        {
+            <MudPaper Class="pa-3" Elevation="1">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.subtitle2">Quick Actions</MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.CheckCircle"
+                               OnClick="HandleMarkAsTriaged"
+                               Disabled="@_isMarkingTriaged"
+                               FullWidth="true">
+                        @if (_isMarkingTriaged)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Marking as triaged...</span>
+                        }
+                        else
+                        {
+                            <span>Mark as Triaged</span>
+                        }
+                    </MudButton>
+                    @if (!string.IsNullOrEmpty(_markTriagedMessage))
+                    {
+                        <MudAlert Severity="@(_markTriagedSuccess ? Severity.Success : Severity.Error)" 
+                                  Dense="true">
+                            @_markTriagedMessage
+                        </MudAlert>
+                    }
+                </MudStack>
+            </MudPaper>
+        }
+
         @* Severity Selector *@
         <MudPaper Class="pa-3" Elevation="1">
             <MudText Typo="Typo.subtitle2" Class="mb-2">Severity</MudText>
@@ -130,10 +163,19 @@
     [Parameter]
     public EventCallback<(int BugId, string TagName, bool IsAdded)> OnTagToggled { get; set; }
 
+    [Parameter]
+    public EventCallback<int> OnMarkedAsTriaged { get; set; }
+
+    [Parameter]
+    public bool IsTriaged { get; set; }
+
     private string? _currentSeverity = null; // No default - must come from TFS
     private HashSet<string> _activeTags = new();
     private List<string> _severityOptions = new();
     private string? _severityError = null;
+    private bool _isMarkingTriaged = false;
+    private string? _markTriagedMessage = null;
+    private bool _markTriagedSuccess = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -185,6 +227,31 @@
         {
             Logger.LogError(ex, "CRITICAL: Failed to load severity options from TFS");
             _severityOptions = new List<string>(); // Empty list - no fallback
+        }
+    }
+
+    private async Task HandleMarkAsTriaged()
+    {
+        _isMarkingTriaged = true;
+        _markTriagedMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            await OnMarkedAsTriaged.InvokeAsync(Bug.TfsId);
+            _markTriagedSuccess = true;
+            _markTriagedMessage = "Bug marked as triaged successfully!";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to mark bug {BugId} as triaged", Bug.TfsId);
+            _markTriagedSuccess = false;
+            _markTriagedMessage = $"Failed to mark bug as triaged: {ex.Message}";
+        }
+        finally
+        {
+            _isMarkingTriaged = false;
+            StateHasChanged();
         }
     }
 
