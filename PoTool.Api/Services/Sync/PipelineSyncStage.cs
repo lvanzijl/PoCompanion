@@ -17,7 +17,7 @@ public class PipelineSyncStage : ISyncStage
     private readonly ILogger<PipelineSyncStage> _logger;
 
     public string StageName => "SyncPipelines";
-    public int StageNumber => 4;
+    public int StageNumber => 5;
 
     public PipelineSyncStage(
         ITfsClient tfsClient,
