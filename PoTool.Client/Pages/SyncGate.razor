@@ -149,15 +149,8 @@
                 };
             }
             
-            // Check if cache is already ready
-            if (_cacheState.LastSuccessfulSync.HasValue)
-            {
-                // Cache is ready, navigate to home
-                NavigateToTarget();
-                return;
-            }
-            
-            // Cache needs sync - setup SignalR and trigger sync
+            // Always setup SignalR and trigger sync on login
+            // This ensures fresh data is loaded from TFS every time a Product Owner is selected
             await SetupSignalRAsync();
             
             // Only trigger sync if not already in progress
