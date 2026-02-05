@@ -17,7 +17,7 @@ public class PullRequestSyncStage : ISyncStage
     private readonly ILogger<PullRequestSyncStage> _logger;
 
     public string StageName => "SyncPullRequests";
-    public int StageNumber => 3;
+    public int StageNumber => 4;
 
     public PullRequestSyncStage(
         ITfsClient tfsClient,

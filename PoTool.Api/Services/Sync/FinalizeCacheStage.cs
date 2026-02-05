@@ -13,7 +13,7 @@ public class FinalizeCacheStage : ISyncStage
     private readonly ILogger<FinalizeCacheStage> _logger;
 
     public string StageName => "FinalizeCache";
-    public int StageNumber => 7;
+    public int StageNumber => 8;
 
     // These are set by the pipeline runner before execution
     public int WorkItemCount { get; set; }
