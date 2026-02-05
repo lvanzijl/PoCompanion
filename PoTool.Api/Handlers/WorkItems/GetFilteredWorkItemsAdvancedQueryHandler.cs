@@ -123,7 +123,7 @@ public sealed class GetFilteredWorkItemsAdvancedQueryHandler
         {
             filtered = filtered.Where(wi =>
                 wi.State.Equals("Blocked", StringComparison.OrdinalIgnoreCase) ||
-                (wi.JsonPayload != null && wi.JsonPayload.Contains("\"Blocked\":\"Yes\"", StringComparison.OrdinalIgnoreCase)));
+                (wi.IsBlocked.HasValue && wi.IsBlocked.Value));
         }
 
         // Apply Title search

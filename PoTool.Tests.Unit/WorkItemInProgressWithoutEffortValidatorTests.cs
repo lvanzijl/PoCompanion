@@ -163,7 +163,6 @@ public class WorkItemInProgressWithoutEffortValidatorTests
             AreaPath: "Test",
             IterationPath: "Test",
             State: state,
-            JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
                     Description: null,

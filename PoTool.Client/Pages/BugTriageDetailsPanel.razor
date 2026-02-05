@@ -3,7 +3,6 @@
 @using PoTool.Client.Services
 @using PoTool.Shared.BugTriage
 @using MudBlazor
-@inject TfsFieldParserService TfsFieldParser
 @inject WorkItemService WorkItemService
 @inject ILogger<BugTriageDetailsPanel> Logger
 
@@ -216,7 +215,18 @@
 
     private List<string> GetBugTags(WorkItemWithValidationDto bug)
     {
-        return TfsFieldParser.GetTags(bug);
+        // Parse tags directly from the typed Tags property
+        if (string.IsNullOrWhiteSpace(bug.Tags))
+        {
+            return new List<string>();
+        }
+
+        // TFS tags are semicolon-separated
+        return bug.Tags
+            .Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(t => t.Trim())
+            .Where(t => !string.IsNullOrEmpty(t))
+            .ToList();
     }
     
     private string GetAvailableFieldsSummary(WorkItemWithValidationDto bug)

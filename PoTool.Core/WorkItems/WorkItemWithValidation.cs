@@ -13,8 +13,8 @@ public sealed record WorkItemWithValidation(
     string AreaPath,
     string IterationPath,
     string State,
-    string JsonPayload,
     DateTimeOffset RetrievedAt,
     int? Effort,
-    IReadOnlyList<ValidationIssue> ValidationIssues
+    IReadOnlyList<ValidationIssue> ValidationIssues,
+    bool? IsBlocked = null
 );

@@ -146,7 +146,6 @@ public sealed class GetGoalsFromTfsQueryHandler : IQueryHandler<GetGoalsFromTfsQ
                     AreaPath: string.Empty,  // Not needed for Goals selector
                     IterationPath: string.Empty,  // Not needed for Goals selector
                     State: string.Empty,  // Not needed for Goals selector
-                    JsonPayload: string.Empty,  // Not needed for Goals selector
                     RetrievedAt: DateTimeOffset.UtcNow,
                     Effort: null,  // Not needed for Goals selector
                     Description: null  // Not needed for Goals selector

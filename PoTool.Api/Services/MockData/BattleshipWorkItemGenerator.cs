@@ -61,7 +61,6 @@ public class BattleshipWorkItemGenerator
                 AreaPath: "\\Battleship Systems",
                 IterationPath: "\\Battleship Systems\\2025",
                 State: goalState,
-                JsonPayload: "{}",
                 RetrievedAt: now,
                 Effort: null,
                 Description: $"This goal focuses on {goalTitles[g].ToLower()} for the Battleship Incident Handling System.",
@@ -87,7 +86,6 @@ public class BattleshipWorkItemGenerator
                     AreaPath: $"\\Battleship Systems\\{program}",
                     IterationPath: $"\\Battleship Systems\\2025\\{quarter}",
                     State: GetObjectiveState(),
-                    JsonPayload: "{}",
                     RetrievedAt: now,
                     Effort: null,
                     Description: $"Objective to implement {objectiveTitle.ToLower()} as part of the overall system strategy.",
@@ -111,7 +109,6 @@ public class BattleshipWorkItemGenerator
                         AreaPath: $"\\Battleship Systems\\{program}\\{team}",
                         IterationPath: $"\\Battleship Systems\\2025\\{quarter}",
                         State: GetEpicState(),
-                        JsonPayload: "{}",
                         RetrievedAt: now,
                         Effort: null,
                         Description: $"Epic to deliver {epicTitle.ToLower()} capabilities for the system.",
@@ -135,7 +132,6 @@ public class BattleshipWorkItemGenerator
                             AreaPath: $"\\Battleship Systems\\{program}\\{team}", // Inherit from Epic
                             IterationPath: sprint,
                             State: GetFeatureState(),
-                            JsonPayload: "{}",
                             RetrievedAt: now,
                             Effort: null,
                             Description: $"Feature to implement {featureTitle.ToLower()} functionality.",
@@ -160,7 +156,6 @@ public class BattleshipWorkItemGenerator
                                 AreaPath: $"\\Battleship Systems\\{program}\\{team}", // Inherit from Epic
                                 IterationPath: pbiSprint,
                                 State: GetPbiState(),
-                                JsonPayload: "{}",
                                 RetrievedAt: now,
                                 Effort: effort,
                                 Description: pbiTitle,
@@ -183,7 +178,6 @@ public class BattleshipWorkItemGenerator
                                     AreaPath: $"\\Battleship Systems\\{program}\\{team}", // Inherit from Epic
                                     IterationPath: pbiSprint,
                                     State: GetTaskState(),
-                                    JsonPayload: "{}",
                                     RetrievedAt: now,
                                     Effort: _random.Next(1, 17), // 0-16 hours
                                     Description: $"Task to {taskTitle.ToLower()}.",
@@ -210,7 +204,6 @@ public class BattleshipWorkItemGenerator
                                 AreaPath: $"\\Battleship Systems\\{program}\\{team}", // Inherit from Epic
                                 IterationPath: bugSprint,
                                 State: GetBugState(),
-                                JsonPayload: "{}",
                                 RetrievedAt: now,
                                 Effort: bugEffort,
                                 Description: $"Bug fix: {bugTitle.ToLower()}.",
@@ -233,7 +226,6 @@ public class BattleshipWorkItemGenerator
                                     AreaPath: $"\\Battleship Systems\\{program}\\{team}", // Inherit from Epic
                                     IterationPath: bugSprint,
                                     State: GetTaskState(),
-                                    JsonPayload: "{}",
                                     RetrievedAt: now,
                                     Effort: _random.Next(1, 17),
                                     Description: $"Task to {taskTitle.ToLower()}.",

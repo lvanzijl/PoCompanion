@@ -36,12 +36,12 @@ public class BugInsightsCalculatorTests
             AreaPath = "TestArea",
             IterationPath = "TestIteration",
             State = state,
-            JsonPayload = jsonPayload,
             RetrievedAt = DateTimeOffset.UtcNow,
             Effort = null,
             Description = null,
             CreatedDate = created,
             ClosedDate = closedDate,
+            Severity = severity, // Populate typed Severity property
             Tags = null
         };
     }

@@ -702,7 +702,6 @@ public partial class RealTfsClient
             AreaPath: area,
             IterationPath: iteration,
             State: state,
-            JsonPayload: workItemElement.GetRawText(),
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
             Description: description,

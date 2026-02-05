@@ -243,9 +243,6 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<TfsAuthenticationProvider>();
         services.AddScoped<ProfileFilterService>();
 
-        // Register TFS field parser service (used by Bug Triage services)
-        services.AddScoped<TfsFieldParserService>();
-
         // Register Bug Triage services
         services.AddScoped<BugTriageStateService>();
         services.AddScoped<Api.Services.TriageTagService>();

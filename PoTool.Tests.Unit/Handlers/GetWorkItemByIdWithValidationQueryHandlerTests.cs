@@ -43,7 +43,6 @@ public class GetWorkItemByIdWithValidationQueryHandlerTests
             AreaPath: "Area1",
             IterationPath: "Iteration1",
             State: "Active",
-            JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: null,
             Description: null
@@ -104,7 +103,6 @@ public class GetWorkItemByIdWithValidationQueryHandlerTests
             AreaPath: "Area2",
             IterationPath: "Iteration2",
             State: "Done",
-            JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: 5,
             Description: null
@@ -144,7 +142,6 @@ public class GetWorkItemByIdWithValidationQueryHandlerTests
             AreaPath: "Area3",
             IterationPath: "Iteration3",
             State: "New",
-            JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: null,
             Description: null

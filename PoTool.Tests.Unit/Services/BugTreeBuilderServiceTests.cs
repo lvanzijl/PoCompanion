@@ -24,7 +24,13 @@ public class BugTreeBuilderServiceTests
     private WorkItemWithValidationDto CreateBug(int id, string title, Dictionary<string, object>? fields = null)
     {
         var jsonFields = fields ?? new Dictionary<string, object>();
-        var jsonPayload = JsonSerializer.Serialize(jsonFields);
+        
+        // Extract tags from fields if present
+        string? tags = null;
+        if (jsonFields.TryGetValue("System.Tags", out var tagsObj) && tagsObj != null)
+        {
+            tags = tagsObj.ToString();
+        }
 
         return new WorkItemWithValidationDto
         {
@@ -35,14 +41,13 @@ public class BugTreeBuilderServiceTests
             AreaPath = "Project\\Team",
             IterationPath = "Project\\Sprint 1",
             State = "Active",
-            JsonPayload = jsonPayload,
             RetrievedAt = DateTimeOffset.UtcNow,
             Effort = null,
             Description = null,
             CreatedDate = DateTimeOffset.UtcNow,
             ClosedDate = null,
             ValidationIssues = new List<ValidationIssue>(),
-            Tags = null
+            Tags = tags
         };
     }
 
@@ -77,7 +82,7 @@ public class BugTreeBuilderServiceTests
         // Arrange
         var bugs = new List<WorkItemWithValidationDto>
         {
-            CreateBug(1, "Critical Bug", new Dictionary<string, object> { { "Microsoft.VSTS.Common.Priority", 1 } })
+            CreateBug(1, "Critical Bug", new Dictionary<string, object>())
         };
         var untriagedIds = new HashSet<int>(); // All triaged
         var expandedState = new Dictionary<int, bool>();
@@ -238,10 +243,10 @@ public class BugTreeBuilderServiceTests
         var matchMode = TagMatchMode.Any;
         List<string> GetTags(WorkItemWithValidationDto bug)
         {
-            var fields = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(bug.JsonPayload);
-            if (fields != null && fields.TryGetValue("System.Tags", out var tagsElement))
+            // Use Tags property directly
+            if (!string.IsNullOrEmpty(bug.Tags))
             {
-                return tagsElement.GetString()!.Split(';').Select(t => t.Trim()).ToList();
+                return bug.Tags!.Split(';').Select(t => t.Trim()).ToList();
             }
             return new List<string>();
         }
@@ -269,10 +274,10 @@ public class BugTreeBuilderServiceTests
         var matchMode = TagMatchMode.All;
         List<string> GetTags(WorkItemWithValidationDto bug)
         {
-            var fields = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(bug.JsonPayload);
-            if (fields != null && fields.TryGetValue("System.Tags", out var tagsElement))
+            // Use Tags property directly
+            if (!string.IsNullOrEmpty(bug.Tags))
             {
-                return tagsElement.GetString()!.Split(';').Select(t => t.Trim()).ToList();
+                return bug.Tags!.Split(';').Select(t => t.Trim()).ToList();
             }
             return new List<string>();
         }
@@ -319,10 +324,10 @@ public class BugTreeBuilderServiceTests
         var matchMode = TagMatchMode.Any;
         List<string> GetTags(WorkItemWithValidationDto bug)
         {
-            var fields = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(bug.JsonPayload);
-            if (fields != null && fields.TryGetValue("System.Tags", out var tagsElement))
+            // Use Tags property directly
+            if (!string.IsNullOrEmpty(bug.Tags))
             {
-                return tagsElement.GetString()!.Split(';').Select(t => t.Trim()).ToList();
+                return bug.Tags!.Split(';').Select(t => t.Trim()).ToList();
             }
             return new List<string>();
         }
@@ -346,10 +351,10 @@ public class BugTreeBuilderServiceTests
         var matchMode = TagMatchMode.Any;
         List<string> GetTags(WorkItemWithValidationDto bug)
         {
-            var fields = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(bug.JsonPayload);
-            if (fields != null && fields.TryGetValue("System.Tags", out var tagsElement))
+            // Use Tags property directly
+            if (!string.IsNullOrEmpty(bug.Tags))
             {
-                return tagsElement.GetString()!.Split(';').Select(t => t.Trim()).ToList();
+                return bug.Tags!.Split(';').Select(t => t.Trim()).ToList();
             }
             return new List<string>();
         }

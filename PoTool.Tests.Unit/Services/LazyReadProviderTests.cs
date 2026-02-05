@@ -26,14 +26,14 @@ public class LazyReadProviderTests
         mockLiveProvider.Setup(p => p.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto> 
             { 
-                new WorkItemDto(1, "Task", "Test", null, "Area", "Iteration", "New", "{}", DateTimeOffset.UtcNow, null, null, null) 
+                new WorkItemDto(TfsId: 1, Type: "Task", Title: "Test", ParentTfsId: null, AreaPath: "Area", IterationPath: "Iteration", State: "New", RetrievedAt: DateTimeOffset.UtcNow, Effort: null, Description: null) 
             });
         
         var mockCachedProvider = new Mock<IWorkItemReadProvider>();
         mockCachedProvider.Setup(p => p.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto> 
             { 
-                new WorkItemDto(2, "Task", "Test", null, "Area", "Iteration", "New", "{}", DateTimeOffset.UtcNow, null, null, null) 
+                new WorkItemDto(TfsId: 2, Type: "Task", Title: "Test", ParentTfsId: null, AreaPath: "Area", IterationPath: "Iteration", State: "New", RetrievedAt: DateTimeOffset.UtcNow, Effort: null, Description: null) 
             });
 
         services.AddKeyedScoped<IWorkItemReadProvider>("Live", (sp, key) => mockLiveProvider.Object);
@@ -72,14 +72,14 @@ public class LazyReadProviderTests
         mockLiveProvider.Setup(p => p.GetFilteredAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto> 
             { 
-                new WorkItemDto(100, "Task", "Test", null, "Area", "Iteration", "New", "{}", DateTimeOffset.UtcNow, null, null, null) 
+                new WorkItemDto(TfsId: 100, Type: "Task", Title: "Test", ParentTfsId: null, AreaPath: "Area", IterationPath: "Iteration", State: "New", RetrievedAt: DateTimeOffset.UtcNow, Effort: null, Description: null) 
             });
         
         var mockCachedProvider = new Mock<IWorkItemReadProvider>();
         mockCachedProvider.Setup(p => p.GetFilteredAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto> 
             { 
-                new WorkItemDto(200, "Task", "Test", null, "Area", "Iteration", "New", "{}", DateTimeOffset.UtcNow, null, null, null) 
+                new WorkItemDto(TfsId: 200, Type: "Task", Title: "Test", ParentTfsId: null, AreaPath: "Area", IterationPath: "Iteration", State: "New", RetrievedAt: DateTimeOffset.UtcNow, Effort: null, Description: null) 
             });
 
         services.AddKeyedScoped<IWorkItemReadProvider>("Live", (sp, key) => mockLiveProvider.Object);

@@ -164,7 +164,6 @@ builder.Services.AddScoped<CacheSyncService>();
 builder.Services.AddScoped<BugTriageService>();
 builder.Services.AddScoped<TriageTagService>();
 builder.Services.AddScoped<BugTreeBuilderService>();
-builder.Services.AddScoped<TfsFieldParserService>();
 
 // Register browser-based storage services
 builder.Services.AddScoped<IPreferencesService, BrowserPreferencesService>();

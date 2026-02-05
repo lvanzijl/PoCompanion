@@ -283,7 +283,7 @@ public class GetDependencyGraphQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_WithInvalidJsonPayload_HandlesGracefully()
+    public async Task Handle_WithNoRelations_HandlesGracefully()
     {
         // Arrange
         var workItems = new List<WorkItemDto>
@@ -341,7 +341,6 @@ public class GetDependencyGraphQueryHandlerTests
             AreaPath: areaPath,
             IterationPath: "Project\\2024\\Sprint1",
             State: state,
-            JsonPayload: jsonPayload,
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
                     Description: null,

@@ -17,7 +17,6 @@ public sealed class WorkItemDtoTests
         var areaPath = "Project\\Team";
         var iterationPath = "Sprint 1";
         var state = "Active";
-        var jsonPayload = "{}";
         var retrievedAt = DateTimeOffset.UtcNow;
 
         // Act
@@ -29,7 +28,6 @@ public sealed class WorkItemDtoTests
             AreaPath: areaPath,
             IterationPath: iterationPath,
             State: state,
-            JsonPayload: jsonPayload,
             RetrievedAt: retrievedAt,
                     Effort: null,
                     Description: null,
@@ -43,7 +41,6 @@ public sealed class WorkItemDtoTests
         Assert.AreEqual(areaPath, dto.AreaPath);
         Assert.AreEqual(iterationPath, dto.IterationPath);
         Assert.AreEqual(state, dto.State);
-        Assert.AreEqual(jsonPayload, dto.JsonPayload);
         Assert.AreEqual(retrievedAt, dto.RetrievedAt);
     }
 
@@ -59,7 +56,6 @@ public sealed class WorkItemDtoTests
             AreaPath: "Project\\Team",
             IterationPath: "Sprint 1",
             State: "Active",
-            JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
                     Effort: null,
                     Description: null,
@@ -87,7 +83,6 @@ public sealed class WorkItemDtoTests
             AreaPath: "Project\\Team",
             IterationPath: "Sprint 1",
             State: "Active",
-            JsonPayload: "{}",
             RetrievedAt: now,
                     Effort: null,
                     Description: null,
@@ -102,7 +97,6 @@ public sealed class WorkItemDtoTests
             AreaPath: "Project\\Team",
             IterationPath: "Sprint 1",
             State: "Active",
-            JsonPayload: "{}",
             RetrievedAt: now,
                     Effort: null,
                     Description: null,

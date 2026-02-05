@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
-using PoTool.Client.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.BugTriage;
 using PoTool.Shared.WorkItems;
@@ -18,18 +17,15 @@ public class BugTriageStateService
 {
     private readonly PoToolDbContext _db;
     private readonly ITfsClient _tfsClient;
-    private readonly TfsFieldParserService _fieldParser;
     private readonly ILogger<BugTriageStateService> _logger;
 
     public BugTriageStateService(
         PoToolDbContext db,
         ITfsClient tfsClient,
-        TfsFieldParserService fieldParser,
         ILogger<BugTriageStateService> logger)
     {
         _db = db;
         _tfsClient = tfsClient;
-        _fieldParser = fieldParser;
         _logger = logger;
     }
 
@@ -353,42 +349,6 @@ public class BugTriageStateService
     }
 
     /// <summary>
-    /// Extracts tags from a work item's JSON payload.
-    /// Tags in TFS are stored in the System.Tags field as a semicolon-separated string.
-    /// </summary>
-    private List<string> ExtractTagsFromJson(string jsonPayload)
-    {
-        if (string.IsNullOrEmpty(jsonPayload))
-        {
-            return new List<string>();
-        }
-
-        try
-        {
-            using var doc = JsonDocument.Parse(jsonPayload);
-            if (doc.RootElement.TryGetProperty("System.Tags", out var tags))
-            {
-                var tagsString = tags.GetString();
-                if (!string.IsNullOrWhiteSpace(tagsString))
-                {
-                    // TFS tags are semicolon-separated
-                    return tagsString
-                        .Split(';', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(t => t.Trim())
-                        .Where(t => !string.IsNullOrEmpty(t))
-                        .ToList();
-                }
-            }
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "Failed to parse tags from JSON payload");
-        }
-
-        return new List<string>();
-    }
-
-    /// <summary>
     /// Updates the cached work item entity with fresh data from TFS.
     /// This helper method reduces duplication in severity and tag update flows.
     /// </summary>
@@ -400,7 +360,6 @@ public class BugTriageStateService
         if (cachedEntity != null)
         {
             // Update cached work item with fresh data from TFS PATCH response
-            cachedEntity.JsonPayload = refreshedWorkItem.JsonPayload;
             cachedEntity.State = refreshedWorkItem.State;
             cachedEntity.Title = refreshedWorkItem.Title;
             cachedEntity.AreaPath = refreshedWorkItem.AreaPath;
@@ -410,6 +369,10 @@ public class BugTriageStateService
             cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
             cachedEntity.Severity = refreshedWorkItem.Severity;
             cachedEntity.Tags = refreshedWorkItem.Tags;
+            cachedEntity.IsBlocked = refreshedWorkItem.IsBlocked;
+            cachedEntity.Relations = refreshedWorkItem.Relations != null 
+                ? System.Text.Json.JsonSerializer.Serialize(refreshedWorkItem.Relations) 
+                : null;
             
             // Explicitly mark entity as modified to ensure EF Core tracks the change
             _db.Entry(cachedEntity).State = EntityState.Modified;

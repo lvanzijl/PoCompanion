@@ -36,7 +36,6 @@ public class WorkItemSelectionServiceTests
             Title = title,
             Type = "Feature",
             State = "New",
-            JsonPayload = JsonSerializer.Serialize(workItem),
             Children = new List<TreeNode>()
         };
 

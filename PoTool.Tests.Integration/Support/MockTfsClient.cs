@@ -37,7 +37,6 @@ public class MockTfsClient : ITfsClient
                 AreaPath: "\\TestArea",
                 IterationPath: "\\TestIteration",
                 State: "Active",
-                JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: null,
                 Description: null,
@@ -51,7 +50,6 @@ public class MockTfsClient : ITfsClient
                 AreaPath: "\\TestArea",
                 IterationPath: "\\TestIteration",
                 State: "Active",
-                JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: null,
                 Description: null,
@@ -65,7 +63,6 @@ public class MockTfsClient : ITfsClient
                 AreaPath: "\\TestArea",
                 IterationPath: "\\TestIteration",
                 State: "New",
-                JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: null,
                 Description: null,
@@ -429,9 +426,7 @@ public class MockTfsClient : ITfsClient
             return Task.FromResult(false);
         }
 
-        // Note: Since WorkItemDto doesn't have a Severity field (only in JsonPayload),
         // we don't update our mock list. In a real scenario, the severity would be
-        // reflected in the JsonPayload after fetching from TFS.
         
         // Return true to simulate successful TFS update
         return Task.FromResult(true);
@@ -442,8 +437,6 @@ public class MockTfsClient : ITfsClient
         // Mock implementation for integration tests
         // Always return true to simulate successful TFS update
         
-        // Note: Tags are stored in JsonPayload, so we don't update our mock list
-        // In a real scenario, the tags would be reflected in the JsonPayload after fetching from TFS
         
         return Task.FromResult(true);
     }

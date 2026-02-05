@@ -501,7 +501,6 @@ public class RefinementCompletenessRulesTests
             AreaPath: "Test",
             IterationPath: "Test",
             State: state,
-            JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
             Description: description,

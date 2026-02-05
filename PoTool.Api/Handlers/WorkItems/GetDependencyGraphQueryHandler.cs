@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Mediator;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
@@ -95,8 +94,8 @@ public sealed class GetDependencyGraphQueryHandler
 
         foreach (var workItem in relevantWorkItems)
         {
-            // Parse relations from JsonPayload
-            var relations = ParseRelations(workItem.JsonPayload);
+            // Use Relations property directly instead of parsing JsonPayload
+            var relations = workItem.Relations ?? new List<WorkItemRelation>();
 
             var dependencyCount = relations.Count(r => r.LinkType == "System.LinkTypes.Dependency-Forward");
             var dependentCount = relations.Count(r => r.LinkType == "System.LinkTypes.Dependency-Reverse");
@@ -117,7 +116,7 @@ public sealed class GetDependencyGraphQueryHandler
             foreach (var relation in relations)
             {
                 var linkType = MapLinkType(relation.LinkType);
-                var targetId = relation.TargetId;
+                var targetId = relation.TargetWorkItemId;
 
                 if (targetId.HasValue && workItemMap.ContainsKey(targetId.Value))
                 {
@@ -151,57 +150,6 @@ public sealed class GetDependencyGraphQueryHandler
             CircularDependencies: circularDependencies,
             AnalysisTimestamp: DateTimeOffset.UtcNow
         );
-    }
-
-    private static List<(string LinkType, int? TargetId)> ParseRelations(string? jsonPayload)
-    {
-        var relations = new List<(string LinkType, int? TargetId)>();
-
-        if (string.IsNullOrWhiteSpace(jsonPayload))
-            return relations;
-
-        try
-        {
-            using var doc = JsonDocument.Parse(jsonPayload);
-            if (doc.RootElement.TryGetProperty("relations", out var relationsArray))
-            {
-                foreach (var relation in relationsArray.EnumerateArray())
-                {
-                    string? linkType = null;
-                    int? targetId = null;
-
-                    if (relation.TryGetProperty("rel", out var relProp))
-                    {
-                        linkType = relProp.GetString();
-                    }
-
-                    if (relation.TryGetProperty("url", out var urlProp))
-                    {
-                        var url = urlProp.GetString();
-                        if (!string.IsNullOrEmpty(url))
-                        {
-                            // Extract work item ID from URL (e.g., ".../workItems/12345")
-                            var lastSlash = url.LastIndexOf('/');
-                            if (lastSlash >= 0 && int.TryParse(url.Substring(lastSlash + 1), out var id))
-                            {
-                                targetId = id;
-                            }
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(linkType))
-                    {
-                        relations.Add((linkType, targetId));
-                    }
-                }
-            }
-        }
-        catch (JsonException)
-        {
-            // Silently ignore JSON parsing errors - just return empty relations
-        }
-
-        return relations;
     }
 
     private static DependencyLinkType MapLinkType(string linkType)

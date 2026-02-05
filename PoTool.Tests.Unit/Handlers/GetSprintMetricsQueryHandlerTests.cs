@@ -342,7 +342,6 @@ public class GetSprintMetricsQueryHandlerTests
             AreaPath: "TestArea",
             IterationPath: iterationPath,
             State: state,
-            JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
                     Description: null,

@@ -48,7 +48,6 @@ public class WorkItemsControllerSteps
                 AreaPath: "\\TestArea",
                 IterationPath: "\\TestIteration",
                 State: row["State"],
-                JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
                     Effort: null,
                     Description: null
@@ -63,7 +62,6 @@ public class WorkItemsControllerSteps
                 AreaPath = workItem.AreaPath,
                 IterationPath = workItem.IterationPath,
                 State = workItem.State,
-                JsonPayload = workItem.JsonPayload,
                 RetrievedAt = workItem.RetrievedAt
             });
         }
@@ -99,7 +97,6 @@ public class WorkItemsControllerSteps
                 AreaPath: "\\TestArea",
                 IterationPath: "\\TestIteration",
                 State: row["State"],
-                JsonPayload: "{}",
                 RetrievedAt: DateTimeOffset.UtcNow,
                     Effort: effort,
                     Description: null
@@ -114,7 +111,6 @@ public class WorkItemsControllerSteps
                 AreaPath = workItem.AreaPath,
                 IterationPath = workItem.IterationPath,
                 State = workItem.State,
-                JsonPayload = workItem.JsonPayload,
                 RetrievedAt = workItem.RetrievedAt,
                 Effort = workItem.Effort
             });
@@ -292,7 +288,6 @@ public class WorkItemsControllerSteps
                     State = row["State"],
                     AreaPath = "\\TestArea",
                     IterationPath = "\\TestIteration",
-                    JsonPayload = "{}",
                     RetrievedAt = DateTimeOffset.UtcNow
                 });
             }
@@ -362,7 +357,6 @@ public class WorkItemsControllerSteps
                 State = row["State"],
                 AreaPath = "\\TestArea",
                 IterationPath = row["IterationPath"],
-                JsonPayload = "{}",
                 RetrievedAt = DateTimeOffset.UtcNow
             };
 

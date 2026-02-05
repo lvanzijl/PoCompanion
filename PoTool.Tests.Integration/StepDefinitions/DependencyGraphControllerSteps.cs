@@ -48,7 +48,6 @@ public class DependencyGraphControllerSteps
                 Title = row["Title"],
                 State = row["State"],
                 AreaPath = row["AreaPath"],
-                JsonPayload = row["JsonPayload"],
                 RetrievedAt = DateTimeOffset.UtcNow
             };
 

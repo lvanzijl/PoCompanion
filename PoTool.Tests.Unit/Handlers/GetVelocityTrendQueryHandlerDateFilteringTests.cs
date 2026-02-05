@@ -270,7 +270,6 @@ public class GetVelocityTrendQueryHandlerDateFilteringTests
             AreaPath: "MyProject",
             IterationPath: iterationPath,
             State: state,
-            JsonPayload: "{}",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
             Description: null,

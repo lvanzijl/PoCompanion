@@ -250,9 +250,10 @@ public partial class RealTfsClient
                 return null;
             }
 
-            // Extract parent ID from relations immediately (before document disposal)
+            // Extract parent ID and all relations from relations immediately (before document disposal)
             var relationsItem = relationsItems[0];
             var parentId = ExtractParentIdFromRelations(relationsItem);
+            var relations = ExtractAllRelations(relationsItem);
 
             // Phase 2: Fetch fields to get work item data
             _logger.LogDebug("Phase 2: Fetching fields for work item {WorkItemId}", workItemId);
@@ -320,6 +321,9 @@ public partial class RealTfsClient
             // Extract tags from TFS (System.Tags)
             string? tags = ParseTagsField(fields);
 
+            // Extract blocked status from TFS (Microsoft.VSTS.CMMI.Blocked)
+            bool? isBlocked = ParseBlockedField(fields);
+
             var workItem = new WorkItemDto(
                 TfsId: id,
                 Type: type,
@@ -328,14 +332,15 @@ public partial class RealTfsClient
                 AreaPath: area,
                 IterationPath: iteration,
                 State: state,
-                JsonPayload: item.GetRawText(), // Note: Contains fields only, not relations (TFS Server 2022 limitation)
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: effort,
                 Description: description,
                 CreatedDate: createdDate,
                 ClosedDate: closedDate,
                 Severity: severity,
-                Tags: tags
+                Tags: tags,
+                IsBlocked: isBlocked,
+                Relations: relations // Use relations from Phase 1
             );
 
             _logger.LogInformation("Retrieved work item {WorkItemId} from TFS: {Title}", id, title);
@@ -577,7 +582,6 @@ public partial class RealTfsClient
                         AreaPath: area,
                         IterationPath: iteration,
                         State: state,
-                        JsonPayload: item.GetRawText(),
                         RetrievedAt: DateTimeOffset.UtcNow,
                         Effort: effort,
                         Description: description,
@@ -628,6 +632,23 @@ public partial class RealTfsClient
         if (fields.TryGetProperty(TfsFieldSeverity, out var severityField))
         {
             return severityField.ValueKind == JsonValueKind.String ? severityField.GetString() : null;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Parses the blocked field from work item fields.
+    /// Returns true if blocked = "Yes", false if "No", null if not present.
+    /// </summary>
+    private static bool? ParseBlockedField(JsonElement fields)
+    {
+        if (fields.TryGetProperty(TfsFieldBlocked, out var blockedField))
+        {
+            var value = blockedField.ValueKind == JsonValueKind.String ? blockedField.GetString() : null;
+            if (!string.IsNullOrEmpty(value))
+            {
+                return value.Equals("Yes", StringComparison.OrdinalIgnoreCase);
+            }
         }
         return null;
     }

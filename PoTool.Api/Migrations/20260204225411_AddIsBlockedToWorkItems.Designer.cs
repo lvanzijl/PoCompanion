@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PoTool.Api.Persistence;
 
@@ -10,9 +11,11 @@ using PoTool.Api.Persistence;
 namespace PoTool.Api.Migrations
 {
     [DbContext(typeof(PoToolDbContext))]
-    partial class PoToolDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260204225411_AddIsBlockedToWorkItems")]
+    partial class AddIsBlockedToWorkItems
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.1");
@@ -995,11 +998,12 @@ namespace PoTool.Api.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("JsonPayload")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("ParentTfsId")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("Relations")
-                        .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("RetrievedAt")
                         .HasColumnType("TEXT");

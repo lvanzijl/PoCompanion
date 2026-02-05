@@ -150,6 +150,19 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
 
     private static WorkItemDto MapToDto(Persistence.Entities.WorkItemEntity entity)
     {
+        List<WorkItemRelation>? relations = null;
+        if (!string.IsNullOrEmpty(entity.Relations))
+        {
+            try
+            {
+                relations = System.Text.Json.JsonSerializer.Deserialize<List<WorkItemRelation>>(entity.Relations);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                // Ignore deserialization errors
+            }
+        }
+
         return new WorkItemDto(
             TfsId: entity.TfsId,
             Type: entity.Type,
@@ -158,14 +171,15 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
             AreaPath: entity.AreaPath,
             IterationPath: entity.IterationPath,
             State: entity.State,
-            JsonPayload: entity.JsonPayload,
             RetrievedAt: entity.RetrievedAt,
             Effort: entity.Effort,
             Description: entity.Description,
             CreatedDate: entity.CreatedDate,
             ClosedDate: entity.ClosedDate,
             Severity: entity.Severity,
-            Tags: entity.Tags
+            Tags: entity.Tags,
+            IsBlocked: entity.IsBlocked,
+            Relations: relations
         );
     }
 }

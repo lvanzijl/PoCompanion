@@ -56,7 +56,6 @@ public sealed class ExportServiceTests
                 ParentTfsId = null,
                 Effort = 5,
                 RetrievedAt = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero),
-                JsonPayload = "{}",
                 Tags = null
             }
         };
@@ -89,7 +88,6 @@ public sealed class ExportServiceTests
                 ParentTfsId = null,
                 Effort = null,
                 RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}",
                 Tags = null
             }
         };
@@ -118,7 +116,6 @@ public sealed class ExportServiceTests
                 ParentTfsId = null,
                 Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}",
                 Tags = null
             },
             new WorkItemDto
@@ -132,7 +129,6 @@ public sealed class ExportServiceTests
                 ParentTfsId = 123,
                 Effort = 3,
                 RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}",
                 Tags = null
             }
         };
@@ -187,7 +183,6 @@ public sealed class ExportServiceTests
                 ParentTfsId = null,
                 Effort = 5,
                 RetrievedAt = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero),
-                JsonPayload = "{}",
                 Tags = null
             }
         };
@@ -218,7 +213,6 @@ public sealed class ExportServiceTests
                 ParentTfsId = null,
                 Effort = 5,
                 RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}"
             },
             new WorkItemDto
             {
@@ -231,7 +225,6 @@ public sealed class ExportServiceTests
                 ParentTfsId = 123,
                 Effort = 3,
                 RetrievedAt = DateTimeOffset.UtcNow,
-                JsonPayload = "{}"
             }
         };
 

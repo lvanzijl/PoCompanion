@@ -60,12 +60,6 @@ public class WorkItemEntity
     public string State { get; set; } = string.Empty;
 
     /// <summary>
-    /// Full JSON payload from TFS for detail view.
-    /// </summary>
-    [Required]
-    public string JsonPayload { get; set; } = string.Empty;
-
-    /// <summary>
     /// Timestamp when this work item was retrieved from TFS.
     /// </summary>
     [Required]
@@ -127,4 +121,18 @@ public class WorkItemEntity
     /// </summary>
     [MaxLength(1000)]
     public string? Tags { get; set; }
+
+    /// <summary>
+    /// Indicates if the work item is blocked.
+    /// Extracted from TFS custom field (e.g., "Microsoft.VSTS.CMMI.Blocked" = "Yes").
+    /// Nullable - not all work items have blocking status.
+    /// </summary>
+    public bool? IsBlocked { get; set; }
+
+    /// <summary>
+    /// Work item relations (links to other work items).
+    /// Stored as JSON array: [{"LinkType": "...", "TargetWorkItemId": 123, "Url": "..."}]
+    /// Nullable - work items may not have any relations.
+    /// </summary>
+    public string? Relations { get; set; }
 }

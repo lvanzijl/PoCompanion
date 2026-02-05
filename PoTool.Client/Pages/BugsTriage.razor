@@ -10,7 +10,6 @@
 @inject BugTriageService BugTriageService
 @inject BugTreeBuilderService TreeBuilderService
 @inject TriageTagService TriageTagService
-@inject TfsFieldParserService TfsFieldParser
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject IJSRuntime JS
@@ -492,7 +491,18 @@
 
     private List<string> GetBugTags(WorkItemWithValidationDto bug)
     {
-        return TfsFieldParser.GetTags(bug);
+        // Parse tags directly from the typed Tags property
+        if (string.IsNullOrWhiteSpace(bug.Tags))
+        {
+            return new List<string>();
+        }
+
+        // TFS tags are semicolon-separated
+        return bug.Tags
+            .Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(t => t.Trim())
+            .Where(t => !string.IsNullOrEmpty(t))
+            .ToList();
     }
 
     private async Task LoadExpandedStateAsync()
