@@ -279,7 +279,20 @@ public static class ApiServiceCollectionExtensions
             // RealTfsClient uses IHttpClientFactory internally (via GetAuthenticatedHttpClient)
             // and has multiple constructor dependencies, so it doesn't follow the typed HttpClient pattern
             services.AddScoped<ITfsClient, RealTfsClient>();
+
+            // Register RealRevisionTfsClient for revision-based reporting
+            // Separate from RealTfsClient per architecture requirements
+            services.AddScoped<IRevisionTfsClient, RealRevisionTfsClient>();
         }
+
+        // Register Revision Ingestion Service (for Sprint Trend feature)
+        services.AddSingleton<RevisionIngestionService>();
+
+        // Register Work Item Resolution Service (for Sprint Trend hierarchical resolution)
+        services.AddSingleton<WorkItemResolutionService>();
+
+        // Register Sprint Trend Projection Service (for sprint metrics computation)
+        services.AddSingleton<SprintTrendProjectionService>();
 
         // Register background services
         services.AddHostedService<EffortEstimationNotificationService>();

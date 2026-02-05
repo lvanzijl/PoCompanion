@@ -486,4 +486,45 @@ public class MetricsController : ControllerBase
             return StatusCode(500, "Error retrieving effort estimation quality");
         }
     }
+
+    /// <summary>
+    /// Gets sprint trend metrics showing planned vs worked items.
+    /// Uses revision-based data for accurate historical tracking.
+    /// </summary>
+    /// <param name="productOwnerId">Product Owner ID</param>
+    /// <param name="sprintIds">Sprint IDs to get metrics for</param>
+    /// <param name="recompute">Whether to recompute metrics from revision data</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Sprint trend metrics</returns>
+    [HttpGet("sprint-trend")]
+    public async Task<ActionResult<GetSprintTrendMetricsResponse>> GetSprintTrendMetrics(
+        [FromQuery][Required] int productOwnerId,
+        [FromQuery][Required] int[] sprintIds,
+        [FromQuery] bool recompute = false,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (sprintIds.Length == 0)
+            {
+                return BadRequest("At least one sprint ID is required");
+            }
+
+            var response = await _mediator.Send(
+                new GetSprintTrendMetricsQuery(productOwnerId, sprintIds, recompute),
+                cancellationToken);
+
+            if (!response.Success)
+            {
+                return BadRequest(response.ErrorMessage);
+            }
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving sprint trend metrics for ProductOwner: {ProductOwnerId}", productOwnerId);
+            return StatusCode(500, "Error retrieving sprint trend metrics");
+        }
+    }
 }

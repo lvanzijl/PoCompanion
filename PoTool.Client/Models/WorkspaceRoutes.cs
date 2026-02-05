@@ -102,6 +102,11 @@ public static class WorkspaceRoutes
     /// Dependency Overview route (read-only).
     /// </summary>
     public const string DependencyOverview = "/home/dependencies";
+
+    /// <summary>
+    /// Sprint Trend route - shows sprint-based revision metrics.
+    /// </summary>
+    public const string SprintTrend = "/home/sprint-trend";
     
     // Legacy Landing route constant for backward compatibility - alias to the new Legacy constant
     public const string Landing = Legacy;

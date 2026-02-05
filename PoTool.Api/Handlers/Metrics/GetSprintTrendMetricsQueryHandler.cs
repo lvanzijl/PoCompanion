@@ -1,0 +1,121 @@
+using Mediator;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using PoTool.Api.Persistence;
+using PoTool.Api.Services;
+using PoTool.Core.Metrics.Queries;
+using PoTool.Shared.Metrics;
+
+namespace PoTool.Api.Handlers.Metrics;
+
+/// <summary>
+/// Handler for GetSprintTrendMetricsQuery.
+/// Returns planned vs worked metrics for sprints using revision-based data.
+/// </summary>
+public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintTrendMetricsQuery, GetSprintTrendMetricsResponse>
+{
+    private readonly PoToolDbContext _context;
+    private readonly SprintTrendProjectionService _projectionService;
+    private readonly ILogger<GetSprintTrendMetricsQueryHandler> _logger;
+
+    public GetSprintTrendMetricsQueryHandler(
+        PoToolDbContext context,
+        SprintTrendProjectionService projectionService,
+        ILogger<GetSprintTrendMetricsQueryHandler> logger)
+    {
+        _context = context;
+        _projectionService = projectionService;
+        _logger = logger;
+    }
+
+    public async ValueTask<GetSprintTrendMetricsResponse> Handle(
+        GetSprintTrendMetricsQuery query,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogDebug(
+            "Handling GetSprintTrendMetricsQuery for ProductOwner {ProductOwnerId}, {SprintCount} sprints",
+            query.ProductOwnerId, query.SprintIds.Count);
+
+        try
+        {
+            // If recompute requested, compute projections first
+            if (query.Recompute)
+            {
+                await _projectionService.ComputeProjectionsAsync(
+                    query.ProductOwnerId,
+                    query.SprintIds,
+                    cancellationToken);
+            }
+
+            // Get projections
+            var projections = await _projectionService.GetProjectionsAsync(
+                query.ProductOwnerId,
+                query.SprintIds,
+                cancellationToken);
+
+            // Get sprints for additional info
+            var sprints = await _context.Sprints
+                .Where(s => query.SprintIds.Contains(s.Id))
+                .ToDictionaryAsync(s => s.Id, s => s, cancellationToken);
+
+            // Get products for names
+            var productIds = projections.Select(p => p.ProductId).Distinct().ToList();
+            var products = await _context.Products
+                .Where(p => productIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p, cancellationToken);
+
+            // Group by sprint
+            var metricsBySprint = projections
+                .GroupBy(p => p.SprintId)
+                .Select(g =>
+                {
+                    var sprintId = g.Key;
+                    var sprint = sprints.GetValueOrDefault(sprintId);
+
+                    var productMetrics = g.Select(p => new ProductSprintMetricsDto
+                    {
+                        ProductId = p.ProductId,
+                        ProductName = products.GetValueOrDefault(p.ProductId)?.Name ?? "Unknown",
+                        PlannedCount = p.PlannedCount,
+                        PlannedEffort = p.PlannedEffort,
+                        WorkedCount = p.WorkedCount,
+                        WorkedEffort = p.WorkedEffort,
+                        BugsPlannedCount = p.BugsPlannedCount,
+                        BugsWorkedCount = p.BugsWorkedCount
+                    }).ToList();
+
+                    return new SprintTrendMetricsDto
+                    {
+                        SprintId = sprintId,
+                        SprintName = sprint?.Name ?? "Unknown",
+                        StartUtc = sprint?.StartUtc,
+                        EndUtc = sprint?.EndUtc,
+                        ProductMetrics = productMetrics,
+                        TotalPlannedCount = g.Sum(p => p.PlannedCount),
+                        TotalPlannedEffort = g.Sum(p => p.PlannedEffort),
+                        TotalWorkedCount = g.Sum(p => p.WorkedCount),
+                        TotalWorkedEffort = g.Sum(p => p.WorkedEffort),
+                        TotalBugsPlannedCount = g.Sum(p => p.BugsPlannedCount),
+                        TotalBugsWorkedCount = g.Sum(p => p.BugsWorkedCount)
+                    };
+                })
+                .OrderBy(m => m.StartUtc ?? DateTimeOffset.MaxValue)
+                .ToList();
+
+            return new GetSprintTrendMetricsResponse
+            {
+                Success = true,
+                Metrics = metricsBySprint
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get sprint trend metrics for ProductOwner {ProductOwnerId}", query.ProductOwnerId);
+            return new GetSprintTrendMetricsResponse
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
+    }
+}

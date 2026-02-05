@@ -165,6 +165,9 @@ builder.Services.AddScoped<BugTriageService>();
 builder.Services.AddScoped<TriageTagService>();
 builder.Services.AddScoped<BugTreeBuilderService>();
 
+// Register Sprint Trend service
+builder.Services.AddScoped<SprintTrendService>();
+
 // Register browser-based storage services
 builder.Services.AddScoped<IPreferencesService, BrowserPreferencesService>();
 builder.Services.AddScoped<ISecureStorageService, BrowserSecureStorageService>();
