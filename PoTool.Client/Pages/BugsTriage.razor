@@ -120,8 +120,10 @@
                         {
                             <BugTriageDetailsPanel Bug="@_selectedBug"
                                                   EnabledTags="@_enabledTags"
+                                                  IsTriaged="@(!_untriagedBugIds.Contains(_selectedBug.TfsId))"
                                                   OnSeverityChanged="@(async (args) => await HandleSeverityChanged(args.BugId, args.NewSeverity))"
-                                                  OnTagToggled="@(async (args) => await HandleTagToggled(args.BugId, args.TagName, args.IsAdded))" />
+                                                  OnTagToggled="@(async (args) => await HandleTagToggled(args.BugId, args.TagName, args.IsAdded))"
+                                                  OnMarkedAsTriaged="@(async (bugId) => await HandleMarkAsTriaged(bugId))" />
                         }
                         else
                         {
@@ -453,6 +455,44 @@
         {
             Logger.LogError(ex, "Error updating tag for bug {BugId}", bugId);
             Snackbar.Add($"Error updating bug {bugId}: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task HandleMarkAsTriaged(int bugId)
+    {
+        Logger.LogInformation("Marking bug {BugId} as triaged without changes", bugId);
+        
+        try
+        {
+            // Mark as triaged without any changes
+            var request = new Shared.BugTriage.UpdateBugTriageStateRequest(bugId);
+            
+            var response = await BugTriageService.MarkAsTriagedAsync(request);
+            
+            if (response.Success)
+            {
+                // Remove from untriaged set
+                _untriagedBugIds.Remove(bugId);
+                
+                // Rebuild tree
+                ApplyFilters();
+                
+                Snackbar.Add("Bug marked as triaged", Severity.Success);
+            }
+            else
+            {
+                // Show error message
+                var errorMsg = response.Message ?? "Failed to mark bug as triaged";
+                Logger.LogError("Failed to mark bug {BugId} as triaged: {Error}", bugId, errorMsg);
+                Snackbar.Add(errorMsg, Severity.Error);
+                throw new Exception(errorMsg);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error marking bug {BugId} as triaged", bugId);
+            Snackbar.Add($"Error marking bug {bugId} as triaged: {ex.Message}", Severity.Error);
+            throw; // Re-throw to let the details panel show the error
         }
     }
 
