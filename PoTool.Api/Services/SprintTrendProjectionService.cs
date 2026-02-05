@@ -39,7 +39,7 @@ public class SprintTrendProjectionService
     /// <param name="sprintIds">The sprint IDs to compute metrics for.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The computed projections.</returns>
-    public async Task<IReadOnlyList<SprintMetricsProjectionEntity>> ComputeProjectionsAsync(
+    public virtual async Task<IReadOnlyList<SprintMetricsProjectionEntity>> ComputeProjectionsAsync(
         int productOwnerId,
         IEnumerable<int> sprintIds,
         CancellationToken cancellationToken = default)
@@ -142,7 +142,7 @@ public class SprintTrendProjectionService
     /// <summary>
     /// Gets pre-computed sprint metrics projections for a sprint range.
     /// </summary>
-    public async Task<IReadOnlyList<SprintMetricsProjectionEntity>> GetProjectionsAsync(
+    public virtual async Task<IReadOnlyList<SprintMetricsProjectionEntity>> GetProjectionsAsync(
         int productOwnerId,
         IEnumerable<int> sprintIds,
         CancellationToken cancellationToken = default)
@@ -321,7 +321,11 @@ public class SprintTrendProjectionService
         return workedItems;
     }
 
-    private bool IsQualifyingActivity(
+    /// <summary>
+    /// Determines if a state change qualifies as work activity for sprint trend metrics.
+    /// Made internal for testability.
+    /// </summary>
+    internal bool IsQualifyingActivity(
         string workItemType,
         StateClassification? oldClass,
         StateClassification? newClass)
