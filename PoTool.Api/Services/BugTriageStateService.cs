@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
-using PoTool.Client.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.BugTriage;
 using PoTool.Shared.WorkItems;
@@ -18,18 +17,15 @@ public class BugTriageStateService
 {
     private readonly PoToolDbContext _db;
     private readonly ITfsClient _tfsClient;
-    private readonly TfsFieldParserService _fieldParser;
     private readonly ILogger<BugTriageStateService> _logger;
 
     public BugTriageStateService(
         PoToolDbContext db,
         ITfsClient tfsClient,
-        TfsFieldParserService fieldParser,
         ILogger<BugTriageStateService> logger)
     {
         _db = db;
         _tfsClient = tfsClient;
-        _fieldParser = fieldParser;
         _logger = logger;
     }
 
@@ -350,42 +346,6 @@ public class BugTriageStateService
             .Select(t => t.Trim())
             .Where(t => !string.IsNullOrEmpty(t))
             .ToList();
-    }
-
-    /// <summary>
-    /// Extracts tags from a work item's JSON payload.
-    /// Tags in TFS are stored in the System.Tags field as a semicolon-separated string.
-    /// </summary>
-    private List<string> ExtractTagsFromJson(string jsonPayload)
-    {
-        if (string.IsNullOrEmpty(jsonPayload))
-        {
-            return new List<string>();
-        }
-
-        try
-        {
-            using var doc = JsonDocument.Parse(jsonPayload);
-            if (doc.RootElement.TryGetProperty("System.Tags", out var tags))
-            {
-                var tagsString = tags.GetString();
-                if (!string.IsNullOrWhiteSpace(tagsString))
-                {
-                    // TFS tags are semicolon-separated
-                    return tagsString
-                        .Split(';', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(t => t.Trim())
-                        .Where(t => !string.IsNullOrEmpty(t))
-                        .ToList();
-                }
-            }
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "Failed to parse tags from JSON payload");
-        }
-
-        return new List<string>();
     }
 
     /// <summary>
