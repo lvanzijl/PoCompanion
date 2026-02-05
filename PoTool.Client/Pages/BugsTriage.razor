@@ -484,13 +484,12 @@
                 // Show error message
                 var errorMsg = response.Message ?? "Failed to mark bug as triaged";
                 Logger.LogError("Failed to mark bug {BugId} as triaged: {Error}", bugId, errorMsg);
-                Snackbar.Add(errorMsg, Severity.Error);
+                throw new Exception(errorMsg);
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error marking bug {BugId} as triaged", bugId);
-            Snackbar.Add($"Error marking bug {bugId} as triaged: {ex.Message}", Severity.Error);
             throw; // Re-throw to let the details panel show the error
         }
     }
