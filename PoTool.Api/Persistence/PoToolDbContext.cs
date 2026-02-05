@@ -164,6 +164,36 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<TriageTagEntity> TriageTags => Set<TriageTagEntity>();
 
+    /// <summary>
+    /// Work item revision headers for revision-based reporting.
+    /// </summary>
+    public DbSet<RevisionHeaderEntity> RevisionHeaders => Set<RevisionHeaderEntity>();
+
+    /// <summary>
+    /// Field changes within work item revisions.
+    /// </summary>
+    public DbSet<RevisionFieldDeltaEntity> RevisionFieldDeltas => Set<RevisionFieldDeltaEntity>();
+
+    /// <summary>
+    /// Relation changes within work item revisions.
+    /// </summary>
+    public DbSet<RevisionRelationDeltaEntity> RevisionRelationDeltas => Set<RevisionRelationDeltaEntity>();
+
+    /// <summary>
+    /// Watermarks for revision ingestion progress.
+    /// </summary>
+    public DbSet<RevisionIngestionWatermarkEntity> RevisionIngestionWatermarks => Set<RevisionIngestionWatermarkEntity>();
+
+    /// <summary>
+    /// Resolved hierarchical identifiers for work items.
+    /// </summary>
+    public DbSet<ResolvedWorkItemEntity> ResolvedWorkItems => Set<ResolvedWorkItemEntity>();
+
+    /// <summary>
+    /// Pre-computed sprint metrics projections.
+    /// </summary>
+    public DbSet<SprintMetricsProjectionEntity> SprintMetricsProjections => Set<SprintMetricsProjectionEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -509,6 +539,109 @@ public class PoToolDbContext : DbContext
                 .IsUnique();
 
             entity.HasIndex(e => e.DisplayOrder);
+        });
+
+        // Revision headers for revision-based reporting
+        modelBuilder.Entity<RevisionHeaderEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.WorkItemId, e.RevisionNumber })
+                .IsUnique();
+
+            entity.HasIndex(e => e.WorkItemId);
+            entity.HasIndex(e => e.ChangedDate);
+            entity.HasIndex(e => e.IterationPath);
+            entity.HasIndex(e => e.WorkItemType);
+            entity.HasIndex(e => e.State);
+
+            entity.Property(e => e.WorkItemType).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Title).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.State).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Reason).HasMaxLength(200);
+            entity.Property(e => e.IterationPath).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.AreaPath).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Tags).HasMaxLength(2000);
+            entity.Property(e => e.Severity).HasMaxLength(100);
+            entity.Property(e => e.ChangedBy).HasMaxLength(256);
+
+            entity.HasMany(e => e.FieldDeltas)
+                .WithOne(d => d.RevisionHeader)
+                .HasForeignKey(d => d.RevisionHeaderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(e => e.RelationDeltas)
+                .WithOne(d => d.RevisionHeader)
+                .HasForeignKey(d => d.RevisionHeaderId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Revision field deltas
+        modelBuilder.Entity<RevisionFieldDeltaEntity>(entity =>
+        {
+            entity.HasIndex(e => e.RevisionHeaderId);
+            entity.HasIndex(e => e.FieldName);
+
+            entity.Property(e => e.FieldName).HasMaxLength(256).IsRequired();
+            entity.Property(e => e.OldValue).HasMaxLength(4000);
+            entity.Property(e => e.NewValue).HasMaxLength(4000);
+        });
+
+        // Revision relation deltas
+        modelBuilder.Entity<RevisionRelationDeltaEntity>(entity =>
+        {
+            entity.HasIndex(e => e.RevisionHeaderId);
+            entity.HasIndex(e => e.TargetWorkItemId);
+
+            entity.Property(e => e.RelationType).HasMaxLength(256).IsRequired();
+        });
+
+        // Revision ingestion watermarks
+        modelBuilder.Entity<RevisionIngestionWatermarkEntity>(entity =>
+        {
+            entity.HasIndex(e => e.ProductOwnerId)
+                .IsUnique();
+
+            entity.Property(e => e.ContinuationToken).HasMaxLength(2000);
+            entity.Property(e => e.LastErrorMessage).HasMaxLength(2000);
+
+            entity.HasOne(e => e.ProductOwner)
+                .WithOne()
+                .HasForeignKey<RevisionIngestionWatermarkEntity>(e => e.ProductOwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Resolved work items
+        modelBuilder.Entity<ResolvedWorkItemEntity>(entity =>
+        {
+            entity.HasIndex(e => e.WorkItemId)
+                .IsUnique();
+
+            entity.HasIndex(e => e.ResolvedProductId);
+            entity.HasIndex(e => e.ResolvedEpicId);
+            entity.HasIndex(e => e.ResolvedFeatureId);
+            entity.HasIndex(e => e.ResolvedSprintId);
+            entity.HasIndex(e => e.ResolutionStatus);
+
+            entity.Property(e => e.WorkItemType).HasMaxLength(100).IsRequired();
+        });
+
+        // Sprint metrics projections
+        modelBuilder.Entity<SprintMetricsProjectionEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.SprintId, e.ProductId })
+                .IsUnique();
+
+            entity.HasIndex(e => e.SprintId);
+            entity.HasIndex(e => e.ProductId);
+
+            entity.HasOne(e => e.Sprint)
+                .WithMany()
+                .HasForeignKey(e => e.SprintId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
