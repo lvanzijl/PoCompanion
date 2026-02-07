@@ -1,5 +1,4 @@
 using System.Net;
-using System.Linq;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PoTool.Core.Contracts;
