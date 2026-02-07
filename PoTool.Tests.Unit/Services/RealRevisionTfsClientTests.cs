@@ -110,7 +110,7 @@ public sealed class RealRevisionTfsClientTests
             expandMode: ReportingExpandMode.None);
 
         // Assert
-        Assert.Contains("System.ChangedBy", url, "URL should request System.ChangedBy to avoid field omissions");
+        StringAssert.Contains(url, "System.ChangedBy", "URL should include System.ChangedBy in the fields list");
     }
 
     [TestMethod]

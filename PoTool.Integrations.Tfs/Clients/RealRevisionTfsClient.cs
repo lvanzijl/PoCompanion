@@ -19,6 +19,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient
     private readonly TfsRequestThrottler _throttler;
 
     private const int MaxRetries = 3;
+    private const int MaxPayloadLogLength = 2000; // Limit error logs to a readable size without losing essential context.
+    private const string TruncationSuffix = "... (truncated)";
 
     /// <summary>
     /// Field whitelist for revision API.
@@ -78,8 +80,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient
             var response = await httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
-            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            using var doc = JsonDocument.Parse(responseContent);
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
             var revisions = new List<WorkItemRevision>();
             string? nextContinuationToken = null;
@@ -96,7 +98,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
                 nextContinuationToken = headerTokens.FirstOrDefault() ?? nextContinuationToken;
             }
 
-            // Parse revisions from response
+            // Parse revisions from response (some API versions return "value" vs legacy "values")
             if (doc.RootElement.TryGetProperty("value", out var valuesArray) ||
                 doc.RootElement.TryGetProperty("values", out valuesArray))
             {
@@ -111,16 +113,16 @@ public class RealRevisionTfsClient : IRevisionTfsClient
             }
             else
             {
-                var truncatedPayload = responseContent.Length > 2000
-                    ? responseContent[..2000]
-                    : responseContent;
+                // Error-only path: capture the raw payload for diagnostics.
+                var rawPayload = doc.RootElement.GetRawText();
+                var truncatedPayload = TruncatePayloadForLogging(rawPayload);
 
                 _logger.LogError(
-                    "Reporting revisions response missing expected 'value' array. Payload (truncated): {Payload}",
+                    "Reporting revisions response missing expected 'value' or 'values' array. Payload (truncated): {Payload}",
                     truncatedPayload);
 
                 throw new TfsException(
-                    "Reporting revisions response missing expected 'value' array.",
+                    "Reporting revisions response missing expected 'value' or 'values' array.",
                     truncatedPayload);
             }
 
@@ -458,13 +460,14 @@ public class RealRevisionTfsClient : IRevisionTfsClient
 
             return (workItemRevision, currentFields, currentRelations);
         }
-        catch (TfsException)
+        catch (JsonException ex)
         {
-            throw;
+            _logger.LogWarning(ex, "Failed to parse work item revision JSON for work item {WorkItemId}", workItemId);
+            return null;
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "Failed to parse work item revision for work item {WorkItemId}", workItemId);
+            _logger.LogWarning(ex, "Invalid JSON operation while parsing work item revision for work item {WorkItemId}", workItemId);
             return null;
         }
     }
@@ -519,17 +522,20 @@ public class RealRevisionTfsClient : IRevisionTfsClient
     {
         var relations = new List<RelationInfo>();
 
-        if (!revision.TryGetProperty("relations", out var relationsArray) ||
-            relationsArray.ValueKind != JsonValueKind.Array)
+        if (!revision.TryGetProperty("relations", out var relationsArray))
         {
-            _logger.LogError(
-                "Per-item revisions response missing relations for work item {WorkItemId} revision {RevisionNumber}",
-                workItemId,
-                revisionNumber);
+            var message = $"Per-item revisions response missing required relations field (expected due to $expand=relations) for work item {workItemId} revision {revisionNumber}.";
+            _logger.LogError(message);
 
-            throw new TfsException(
-                $"Per-item revisions response missing relations for work item {workItemId} revision {revisionNumber}.",
-                revision.GetRawText());
+            throw new TfsException(message, TruncatePayloadForLogging(revision.GetRawText()));
+        }
+
+        if (relationsArray.ValueKind != JsonValueKind.Array)
+        {
+            var message = $"Per-item revisions response relations field is not an array for work item {workItemId} revision {revisionNumber}.";
+            _logger.LogError(message);
+
+            throw new TfsException(message, TruncatePayloadForLogging(revision.GetRawText()));
         }
 
         foreach (var relation in relationsArray.EnumerateArray())
@@ -573,6 +579,17 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         }
 
         return 0;
+    }
+
+    private static string TruncatePayloadForLogging(string payload)
+    {
+        if (payload.Length <= MaxPayloadLogLength)
+        {
+            return payload;
+        }
+
+        var maxLength = Math.Max(0, MaxPayloadLogLength - TruncationSuffix.Length);
+        return $"{payload[..maxLength]}{TruncationSuffix}";
     }
 
     private static string? GetStringField(JsonElement fields, string fieldName)
