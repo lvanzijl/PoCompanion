@@ -57,8 +57,12 @@ public sealed class RealRevisionTfsClientTests
             expandMode: ReportingExpandMode.None);
 
         // Assert
-        Assert.DoesNotContain("$expand=", url, "URL must not contain $expand parameter when mode is None");
-        Assert.DoesNotContain("relations", url, "URL must never contain 'relations' for reporting endpoint");
+        Assert.IsFalse(
+            url.Contains("$expand=", StringComparison.Ordinal),
+            "URL must not contain $expand parameter when mode is None");
+        Assert.IsFalse(
+            url.Contains("relations", StringComparison.OrdinalIgnoreCase),
+            "URL must never contain 'relations' for reporting endpoint");
     }
 
     [TestMethod]
@@ -85,8 +89,12 @@ public sealed class RealRevisionTfsClientTests
             expandMode: ReportingExpandMode.Fields);
 
         // Assert
-        Assert.Contains("$expand=fields", url, "URL should contain $expand=fields when mode is Fields");
-        Assert.DoesNotContain("relations", url, "URL should never contain 'relations' for reporting endpoint");
+        Assert.IsTrue(
+            url.Contains("$expand=fields", StringComparison.Ordinal),
+            "URL should contain $expand=fields when mode is Fields");
+        Assert.IsFalse(
+            url.Contains("relations", StringComparison.OrdinalIgnoreCase),
+            "URL should never contain 'relations' for reporting endpoint");
     }
 
     [TestMethod]
@@ -186,8 +194,12 @@ public sealed class RealRevisionTfsClientTests
             expandMode: ReportingExpandMode.Fields);
 
         // Assert
-        Assert.DoesNotContain("$expand=relations", urlNone, "URL should never contain $expand=relations (None mode)");
-        Assert.DoesNotContain("$expand=relations", urlFields, "URL should never contain $expand=relations (Fields mode)");
+        Assert.IsFalse(
+            urlNone.Contains("$expand=relations", StringComparison.Ordinal),
+            "URL should never contain $expand=relations (None mode)");
+        Assert.IsFalse(
+            urlFields.Contains("$expand=relations", StringComparison.Ordinal),
+            "URL should never contain $expand=relations (Fields mode)");
     }
 
     [TestMethod]
@@ -217,8 +229,12 @@ public sealed class RealRevisionTfsClientTests
             expandMode: ReportingExpandMode.None);
 
         // Assert
-        Assert.Contains("continuationToken=", url, "URL should contain continuation token");
-        Assert.DoesNotContain("startDateTime=", url, "URL should NOT contain startDateTime when continuation token is present");
+        Assert.IsTrue(
+            url.Contains("continuationToken=", StringComparison.Ordinal),
+            "URL should contain continuation token");
+        Assert.IsFalse(
+            url.Contains("startDateTime=", StringComparison.Ordinal),
+            "URL should NOT contain startDateTime when continuation token is present");
     }
 
     [TestMethod]
@@ -247,8 +263,12 @@ public sealed class RealRevisionTfsClientTests
             expandMode: ReportingExpandMode.None);
 
         // Assert
-        Assert.Contains("startDateTime=", url, "URL should contain startDateTime when no continuation token");
-        Assert.DoesNotContain("continuationToken=", url, "URL should NOT contain continuation token when none provided");
+        Assert.IsTrue(
+            url.Contains("startDateTime=", StringComparison.Ordinal),
+            "URL should contain startDateTime when no continuation token");
+        Assert.IsFalse(
+            url.Contains("continuationToken=", StringComparison.Ordinal),
+            "URL should NOT contain continuation token when none provided");
     }
 
     [TestMethod]
@@ -275,9 +295,15 @@ public sealed class RealRevisionTfsClientTests
             expandMode: ReportingExpandMode.None);
 
         // Assert
-        Assert.DoesNotContain("startDateTime=", url, "URL should NOT contain startDateTime when not provided");
-        Assert.DoesNotContain("continuationToken=", url, "URL should NOT contain continuation token when not provided");
-        Assert.Contains("api-version=", url, "URL should always contain api-version");
+        Assert.IsFalse(
+            url.Contains("startDateTime=", StringComparison.Ordinal),
+            "URL should NOT contain startDateTime when not provided");
+        Assert.IsFalse(
+            url.Contains("continuationToken=", StringComparison.Ordinal),
+            "URL should NOT contain continuation token when not provided");
+        Assert.IsTrue(
+            url.Contains("api-version=", StringComparison.Ordinal),
+            "URL should always contain api-version");
     }
 
     [TestMethod]
@@ -333,7 +359,7 @@ public sealed class RealRevisionTfsClientTests
 
         var url = client.TestBuildWorkItemRevisionsUrl(config, 123);
 
-        Assert.Contains("$expand=relations", url);
+        Assert.IsTrue(url.Contains("$expand=relations", StringComparison.Ordinal));
     }
 
     [TestMethod]
@@ -366,7 +392,7 @@ public sealed class RealRevisionTfsClientTests
 
         var revisions = client.TestParseReportingRevisionsPayload(json);
 
-        Assert.IsNotEmpty(revisions);
+        Assert.AreNotEqual(0, revisions.Count);
         Assert.AreEqual(1, revisions[0].WorkItemId);
         Assert.AreEqual(2, revisions[0].RevisionNumber);
         Assert.AreEqual("Task", revisions[0].WorkItemType);
@@ -402,7 +428,7 @@ public sealed class RealRevisionTfsClientTests
 
         var revisions = client.TestParseReportingRevisionsPayload(json);
 
-        Assert.IsNotEmpty(revisions);
+        Assert.AreNotEqual(0, revisions.Count);
         Assert.AreEqual(1, revisions[0].WorkItemId);
         Assert.AreEqual(2, revisions[0].RevisionNumber);
         Assert.AreEqual("Task", revisions[0].WorkItemType);
