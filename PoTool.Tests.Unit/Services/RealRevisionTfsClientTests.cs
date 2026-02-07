@@ -475,7 +475,6 @@ public sealed class RealRevisionTfsClientTests
 
         Assert.IsTrue(tfsException.Message.Contains("relations", StringComparison.OrdinalIgnoreCase));
         Assert.IsTrue(tfsException.Message.Contains("$expand=relations", StringComparison.OrdinalIgnoreCase));
-
     }
 
     private static TException ExpectInnerException<TException>(Action action)
@@ -491,7 +490,7 @@ public sealed class RealRevisionTfsClientTests
             return innerException;
         }
 
-        return null!;
+        throw new InvalidOperationException($"Expected {typeof(TException).Name} was not thrown");
     }
 
     /// <summary>
