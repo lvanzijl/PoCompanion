@@ -134,7 +134,7 @@ public class RevisionIngestionService
                 progressCallback?.Invoke(new RevisionIngestionProgress
                 {
                     Stage = watermark.IsInitialBackfillComplete ? "Incremental Sync" : "Initial Backfill",
-                    PercentComplete = result.IsComplete ? 100 : 50, // Can't know exact % without total
+                    PercentComplete = result.IsComplete ? 100 : 0, // Keep at 0% until the final page completes because total pages are unknown
                     RevisionsProcessed = totalRevisions,
                     CurrentPage = pageCount
                 });
