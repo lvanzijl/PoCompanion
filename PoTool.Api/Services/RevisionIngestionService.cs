@@ -16,6 +16,7 @@ public class RevisionIngestionService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RevisionIngestionService> _logger;
+    private readonly IRelationRevisionHydrator _relationHydrator;
 
     // Concurrency control: one ingestion per ProductOwner
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _ingestionLocks = new();
@@ -23,10 +24,12 @@ public class RevisionIngestionService
 
     public RevisionIngestionService(
         IServiceScopeFactory scopeFactory,
-        ILogger<RevisionIngestionService> logger)
+        ILogger<RevisionIngestionService> logger,
+        IRelationRevisionHydrator relationHydrator)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _relationHydrator = relationHydrator;
     }
 
     /// <summary>
@@ -97,6 +100,7 @@ public class RevisionIngestionService
             // Ingest revisions in batches
             bool hasMore = true;
             int pageCount = 0;
+            var impactedWorkItemIds = new HashSet<int>();
 
             while (hasMore && !cts.Token.IsCancellationRequested)
             {
@@ -108,12 +112,18 @@ public class RevisionIngestionService
                 var result = await revisionClient.GetReportingRevisionsAsync(
                     startDateTime,
                     continuationToken,
-                    expand: true,
+                    expandMode: ReportingExpandMode.None,
                     cts.Token);
 
                 // Process and persist revisions
                 var persistedCount = await PersistRevisionsAsync(context, result.Revisions, cts.Token);
                 totalRevisions += persistedCount;
+
+                // Track impacted work item IDs for relation hydration
+                foreach (var revision in result.Revisions)
+                {
+                    impactedWorkItemIds.Add(revision.WorkItemId);
+                }
 
                 _logger.LogInformation(
                     "Persisted {Count} revisions (page {Page}) for ProductOwner {ProductOwnerId}",
@@ -133,6 +143,39 @@ public class RevisionIngestionService
                 });
 
                 hasMore = !result.IsComplete;
+            }
+
+            // Hydrate relations for impacted work items
+            if (impactedWorkItemIds.Count > 0)
+            {
+                _logger.LogInformation(
+                    "Hydrating relations for {Count} impacted work items",
+                    impactedWorkItemIds.Count);
+
+                progressCallback?.Invoke(new RevisionIngestionProgress
+                {
+                    Stage = "Hydrating Relations",
+                    PercentComplete = 90,
+                    RevisionsProcessed = totalRevisions
+                });
+
+                var hydrationResult = await _relationHydrator.HydrateAsync(
+                    impactedWorkItemIds,
+                    cts.Token);
+
+                if (!hydrationResult.Success)
+                {
+                    _logger.LogWarning(
+                        "Relation hydration completed with errors: {ErrorMessage}",
+                        hydrationResult.ErrorMessage);
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "Successfully hydrated relations for {WorkItems} work items ({Revisions} revisions)",
+                        hydrationResult.WorkItemsProcessed,
+                        hydrationResult.RevisionsHydrated);
+                }
             }
 
             // Mark ingestion complete
