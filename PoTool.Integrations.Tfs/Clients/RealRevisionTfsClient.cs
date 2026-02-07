@@ -83,7 +83,6 @@ public class RealRevisionTfsClient : IRevisionTfsClient
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
-            var revisions = new List<WorkItemRevision>();
             string? nextContinuationToken = null;
 
             // Parse continuation token from response headers or body
@@ -98,33 +97,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
                 nextContinuationToken = headerTokens.FirstOrDefault() ?? nextContinuationToken;
             }
 
-            // Parse revisions from response (some API versions return "value" vs legacy "values")
-            if (doc.RootElement.TryGetProperty("value", out var valuesArray) ||
-                doc.RootElement.TryGetProperty("values", out valuesArray))
-            {
-                foreach (var revision in valuesArray.EnumerateArray())
-                {
-                    var workItemRevision = ParseWorkItemRevision(revision);
-                    if (workItemRevision != null)
-                    {
-                        revisions.Add(workItemRevision);
-                    }
-                }
-            }
-            else
-            {
-                // Error-only path: capture the raw payload for diagnostics.
-                var rawPayload = doc.RootElement.GetRawText();
-                var truncatedPayload = TruncatePayloadForLogging(rawPayload);
-
-                _logger.LogError(
-                    "Reporting revisions response missing expected 'value' or 'values' array. Payload (truncated): {Payload}",
-                    truncatedPayload);
-
-                throw new TfsException(
-                    "Reporting revisions response missing expected 'value' or 'values' array.",
-                    truncatedPayload);
-            }
+            var revisions = ParseReportingRevisionsPayload(doc);
 
             _logger.LogInformation(
                 "Retrieved {Count} revisions from reporting API. HasMoreResults: {HasMore}",
@@ -153,7 +126,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         return await ExecuteWithRetryAsync(async () =>
         {
             // Per-item revisions endpoint: /_apis/wit/workItems/{id}/revisions
-            var url = $"{config.Url.TrimEnd('/')}/_apis/wit/workItems/{workItemId}/revisions?api-version={config.ApiVersion}&$expand=relations";
+            var url = BuildWorkItemRevisionsUrl(config, workItemId);
 
             _logger.LogDebug("Calling per-item revisions API for work item {WorkItemId}", workItemId);
 
@@ -223,8 +196,21 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         string? continuationToken,
         ReportingExpandMode expandMode)
     {
+        const string reportingEndpointPath = "/_apis/wit/reporting/workitemrevisions";
+
+        if (expandMode != ReportingExpandMode.None && expandMode != ReportingExpandMode.Fields)
+        {
+            _logger.LogError(
+                "Invalid reporting revisions expand mode {ExpandMode} for endpoint {EndpointPath}. Only None/Fields are allowed. relations is not supported.",
+                expandMode,
+                reportingEndpointPath);
+
+            throw new InvalidOperationException(
+                $"Reporting endpoint workitemrevisions does not support expand mode 'relations'. Requested: {expandMode}. Only None/Fields are allowed.");
+        }
+
         // Build URL: {collection}/_apis/wit/reporting/workitemrevisions
-        var baseUrl = $"{config.Url.TrimEnd('/')}/_apis/wit/reporting/workitemrevisions";
+        var baseUrl = $"{config.Url.TrimEnd('/')}{reportingEndpointPath}";
 
         var queryParams = new List<string>
         {
@@ -259,6 +245,46 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         }
 
         return $"{baseUrl}?{string.Join("&", queryParams)}";
+    }
+
+    private string BuildWorkItemRevisionsUrl(TfsConfigEntity config, int workItemId)
+    {
+        return $"{config.Url.TrimEnd('/')}/_apis/wit/workItems/{workItemId}/revisions?api-version={config.ApiVersion}&$expand=relations";
+    }
+
+    private IReadOnlyList<WorkItemRevision> ParseReportingRevisionsPayload(JsonDocument doc)
+    {
+        var revisions = new List<WorkItemRevision>();
+
+        // Parse revisions from response (some API versions return "value" vs legacy "values")
+        if (doc.RootElement.TryGetProperty("value", out var valuesArray) ||
+            doc.RootElement.TryGetProperty("values", out valuesArray))
+        {
+            foreach (var revision in valuesArray.EnumerateArray())
+            {
+                var workItemRevision = ParseWorkItemRevision(revision);
+                if (workItemRevision != null)
+                {
+                    revisions.Add(workItemRevision);
+                }
+            }
+        }
+        else
+        {
+            // Error-only path: capture the raw payload for diagnostics.
+            var rawPayload = doc.RootElement.GetRawText();
+            var truncatedPayload = TruncatePayloadForLogging(rawPayload);
+
+            _logger.LogError(
+                "Reporting revisions response missing expected 'value' or 'values' array. Payload (truncated): {Payload}",
+                truncatedPayload);
+
+            throw new TfsException(
+                "Reporting revisions response missing expected 'value' or 'values' array.",
+                truncatedPayload);
+        }
+
+        return revisions;
     }
 
     private WorkItemRevision? ParseWorkItemRevision(JsonElement revision)
