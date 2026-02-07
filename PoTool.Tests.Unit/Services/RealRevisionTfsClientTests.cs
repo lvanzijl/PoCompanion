@@ -365,6 +365,9 @@ public sealed class RealRevisionTfsClientTests
         var revisions = client.TestParseReportingRevisionsPayload(json);
 
         Assert.IsNotEmpty(revisions);
+        Assert.AreEqual(1, revisions[0].WorkItemId);
+        Assert.AreEqual(2, revisions[0].RevisionNumber);
+        Assert.AreEqual("Task", revisions[0].WorkItemType);
     }
 
     [TestMethod]
@@ -398,6 +401,9 @@ public sealed class RealRevisionTfsClientTests
         var revisions = client.TestParseReportingRevisionsPayload(json);
 
         Assert.IsNotEmpty(revisions);
+        Assert.AreEqual(1, revisions[0].WorkItemId);
+        Assert.AreEqual(2, revisions[0].RevisionNumber);
+        Assert.AreEqual("Task", revisions[0].WorkItemType);
     }
 
     [TestMethod]
@@ -452,8 +458,10 @@ public sealed class RealRevisionTfsClientTests
             client.TestParseWorkItemRevisionFromPerItem(json, 1);
             Assert.Fail("Expected TfsException was not thrown");
         }
-        catch (TargetInvocationException ex) when (ex.InnerException is TfsException)
+        catch (TargetInvocationException ex) when (ex.InnerException is TfsException tfsException)
         {
+            Assert.IsTrue(tfsException.Message.Contains("relations", StringComparison.OrdinalIgnoreCase));
+            Assert.IsTrue(tfsException.Message.Contains("$expand=relations", StringComparison.OrdinalIgnoreCase));
         }
     }
 
