@@ -206,7 +206,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
                 reportingEndpointPath);
 
             throw new InvalidOperationException(
-                $"Reporting endpoint workitemrevisions does not support expand mode 'relations'. Requested: {expandMode}. Only None/Fields are allowed.");
+                $"Reporting endpoint {reportingEndpointPath} does not support expand mode 'relations'. Requested: {expandMode}. Only None/Fields are allowed.");
         }
 
         // Build URL: {collection}/_apis/wit/reporting/workitemrevisions

@@ -116,25 +116,19 @@ public sealed class RealRevisionTfsClientTests
             _throttler);
 
         // Act
-        try
-        {
-            _ = client.TestBuildReportingRevisionsUrl(
+        var exception = ExpectInnerException<InvalidOperationException>(() =>
+            client.TestBuildReportingRevisionsUrl(
                 config,
                 startDateTime: null,
                 continuationToken: null,
-                expandMode: InvalidExpandMode);
+                expandMode: InvalidExpandMode));
 
-            Assert.Fail("Expected InvalidOperationException was not thrown");
-        }
-        catch (TargetInvocationException ex) when (ex.InnerException is InvalidOperationException)
-        {
-            var message = ex.InnerException?.Message ?? ex.Message;
+        var message = exception.Message;
 
-            // Assert
-            Assert.IsTrue(message.Contains("workitemrevisions", StringComparison.OrdinalIgnoreCase));
-            Assert.IsTrue(message.Contains("relations", StringComparison.OrdinalIgnoreCase));
-            Assert.IsTrue(message.Contains("only None/Fields", StringComparison.OrdinalIgnoreCase));
-        }
+        // Assert
+        Assert.IsTrue(message.Contains("workitemrevisions", StringComparison.OrdinalIgnoreCase));
+        Assert.IsTrue(message.Contains("relations", StringComparison.OrdinalIgnoreCase));
+        Assert.IsTrue(message.Contains("only None/Fields", StringComparison.OrdinalIgnoreCase));
     }
 
     [TestMethod]
@@ -446,15 +440,10 @@ public sealed class RealRevisionTfsClientTests
             _mockLogger.Object,
             _throttler);
 
-        try
-        {
-            _ = client.TestParseReportingRevisionsPayload(json);
-            Assert.Fail("Expected TfsException was not thrown");
-        }
-        catch (TargetInvocationException ex) when (ex.InnerException is TfsException tfsException)
-        {
-            Assert.IsTrue(tfsException.ErrorContent?.Contains("... (truncated)", StringComparison.OrdinalIgnoreCase) ?? false);
-        }
+        var tfsException = ExpectInnerException<TfsException>(() =>
+            _ = client.TestParseReportingRevisionsPayload(json));
+
+        Assert.IsTrue(tfsException.ErrorContent?.Contains("... (truncated)", StringComparison.OrdinalIgnoreCase) ?? false);
     }
 
     [TestMethod]
@@ -481,16 +470,28 @@ public sealed class RealRevisionTfsClientTests
             _mockLogger.Object,
             _throttler);
 
+        var tfsException = ExpectInnerException<TfsException>(() =>
+            client.TestParseWorkItemRevisionFromPerItem(json, 1));
+
+        Assert.IsTrue(tfsException.Message.Contains("relations", StringComparison.OrdinalIgnoreCase));
+        Assert.IsTrue(tfsException.Message.Contains("$expand=relations", StringComparison.OrdinalIgnoreCase));
+
+    }
+
+    private static TException ExpectInnerException<TException>(Action action)
+        where TException : Exception
+    {
         try
         {
-            client.TestParseWorkItemRevisionFromPerItem(json, 1);
-            Assert.Fail("Expected TfsException was not thrown");
+            action();
+            Assert.Fail($"Expected {typeof(TException).Name} was not thrown");
         }
-        catch (TargetInvocationException ex) when (ex.InnerException is TfsException tfsException)
+        catch (TargetInvocationException ex) when (ex.InnerException is TException innerException)
         {
-            Assert.IsTrue(tfsException.Message.Contains("relations", StringComparison.OrdinalIgnoreCase));
-            Assert.IsTrue(tfsException.Message.Contains("$expand=relations", StringComparison.OrdinalIgnoreCase));
+            return innerException;
         }
+
+        return null!;
     }
 
     /// <summary>
