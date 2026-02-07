@@ -2,10 +2,10 @@
 
 ## 1. Executive Summary
 - **TFS-001 (S1):** Transient HTTP failures and rate limits never trigger retries because `HandleHttpErrorsAsync` does not surface status codes or `TfsRateLimitException`, causing whole syncs to fail on a single 429/5xx response.
-- **TFS-002 (S1):** List endpoints for projects, teams, repositories, pull requests, pipelines, iterations, and comments ignore continuation tokens, silently truncating data once the default page size is exceeded.
+- **TFS-002 (S1):** List endpoints for projects, teams, repositories, pull requests, pipelines, iterations, and comments ignore continuation tokens, silently truncating data once the default page size is reached.
 - **TFS-003 (S1):** Configured `TimeoutSeconds` is not enforced on read calls, so stalled TFS requests can block sync stages for unbounded durations relative to configuration.
-- **TFS-005 (S1):** Work item sync watermarks use `RetrievedAt` instead of actual `System.ChangedDate`, allowing updates between query execution and retrieval timestamps to be skipped.
-- **TFS-004 (S1):** Date filters for WIQL work item sync and pull request queries stamp local times as UTC (`Z`), which shifts filter windows and causes missing or duplicate data in incremental syncs.
+- **TFS-004 (S1):** Work item sync watermarks use `RetrievedAt` instead of actual `System.ChangedDate`, allowing updates between query execution and retrieval timestamps to be skipped.
+- **TFS-005 (S1):** Date filters for WIQL work item sync and pull request queries apply a `Z` suffix without converting to UTC, so local timestamps are interpreted as UTC and shift filter windows.
 
 ## 2. Scope Inventory
 
@@ -79,7 +79,7 @@ Root cause:
 - `HandleHttpErrorsAsync` uses `new TfsException(message)` instead of `new TfsException(message, statusCode, body)` and never creates `TfsRateLimitException` for 429.
 
 Fix (Copilot-actionable):
-- In `RealTfsClient.Infrastructure.HandleHttpErrorsAsync`, capture `(int)response.StatusCode`, body, and retry-after header.
+- In `RealTfsClient.Infrastructure.HandleHttpErrorsAsync`, capture `(int)response.StatusCode`, body, and the `Retry-After` header (e.g., `var retryAfter = response.Headers.RetryAfter?.Delta;` and pass it into `TfsRateLimitException`).
 - If status is 429, throw `new TfsRateLimitException(message, body, retryAfter)`.
 - Otherwise throw `new TfsException(message, statusCode, body)` so `StatusCode` is populated.
 - Update `IsTransient` to treat `StatusCode >= 500` and `408` as transient; leave auth/403 as non-transient.
@@ -132,7 +132,7 @@ Root cause:
 Fix (Copilot-actionable):
 - Add a shared paging helper in `RealTfsClient.Infrastructure` (e.g., `FetchPagedAsync`) that:
   - Executes the initial request.
-  - Reads `x-ms-continuationtoken` (header) or `continuationToken` (body).
+  - Reads `x-ms-continuationtoken` (header) first; if absent, fall back to `continuationToken` in the body.
   - Repeats until token is empty, appending `continuationToken` to the query string.
 - Update each affected method to use the helper and aggregate results across pages.
 - Preserve existing DTO mapping; do **not** change returned shapes or order unless required for paging.
@@ -183,7 +183,7 @@ Risk if left unfixed:
 
 ---
 
-TFS-005 — Work item watermarks use retrieval time instead of ChangedDate
+TFS-004 — Work item watermarks use retrieval time instead of ChangedDate
 
 Severity: S1  
 Fix Complexity: M  
@@ -228,7 +228,7 @@ Risk if left unfixed:
 
 ---
 
-TFS-004 — Incremental time filters encode non-UTC timestamps as UTC
+TFS-005 — Incremental time filters encode non-UTC timestamps as UTC
 
 Severity: S1  
 Fix Complexity: XS  
@@ -241,7 +241,7 @@ Affected code:
   - `GetPullRequestsAsync` (`searchCriteria.minTime`, `searchCriteria.maxTime`)
 
 What is wrong:
-- Date filters are formatted as `yyyy-MM-ddTHH:mm:ssZ` directly from `DateTimeOffset`, which preserves local time but labels it as UTC (`Z`).
+- Date filters are formatted as `yyyy-MM-ddTHH:mm:ssZ` directly from `DateTimeOffset`, adding a `Z` suffix without converting to UTC. This causes local timestamps to be interpreted as UTC by TFS.
 
 Failure mode:
 - Incremental sync windows shift by the local UTC offset, causing missing or duplicated work items and PRs.
@@ -253,7 +253,7 @@ Root cause:
 - The code formats `DateTimeOffset` without converting to UTC or preserving the offset.
 
 Fix (Copilot-actionable):
-- Convert to UTC and format using round-trip UTC (`since.Value.UtcDateTime.ToString("O")`) or `since.Value.ToUniversalTime()`.
+- Convert to UTC and format using round-trip ISO 8601 (`var utc = since.Value.ToUniversalTime(); var formatted = utc.ToString("O");`). This yields a `Z` suffix and matches the format already used in pipeline filters.
 - Apply the same helper for `minTime`/`maxTime` in pull requests.
 - URL-encode the formatted value.
 
@@ -283,5 +283,5 @@ Risk if left unfixed:
 | 1 | TFS-001 | S1 | High | S | Restores basic resilience; without it, any transient failure breaks sync. |
 | 2 | TFS-002 | S1 | High | M | Prevents systemic data truncation across multiple sync stages. |
 | 3 | TFS-003 | S1 | High | S | Ensures sync stages respect configured timeouts and avoid hangs. |
-| 4 | TFS-005 | S1 | Medium | M | Fixes incremental work item accuracy and restores changed-date correctness. |
-| 5 | TFS-004 | S1 | Medium | XS | Eliminates UTC offset drift in incremental filters with a small change. |
+| 4 | TFS-004 | S1 | Medium | M | Fixes incremental work item accuracy and restores changed-date correctness. |
+| 5 | TFS-005 | S1 | Medium | XS | Eliminates UTC offset drift in incremental filters with a small change. |
