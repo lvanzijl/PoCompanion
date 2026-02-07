@@ -201,7 +201,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         if (expandMode != ReportingExpandMode.None && expandMode != ReportingExpandMode.Fields)
         {
             _logger.LogError(
-                "Invalid reporting revisions expand mode {ExpandMode} for endpoint {EndpointPath}. Only None/Fields are allowed. relations is not supported.",
+                "Invalid reporting revisions expand mode {ExpandMode} for endpoint {EndpointPath}. Only None/Fields are allowed. Relations is not supported.",
                 expandMode,
                 reportingEndpointPath);
 

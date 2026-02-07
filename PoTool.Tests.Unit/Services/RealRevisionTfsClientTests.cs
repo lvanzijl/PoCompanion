@@ -99,6 +99,8 @@ public sealed class RealRevisionTfsClientTests
             ApiVersion = "6.0"
         };
 
+        const ReportingExpandMode InvalidExpandMode = (ReportingExpandMode)99;
+
         var client = new TestableRealRevisionTfsClient(
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
@@ -112,7 +114,7 @@ public sealed class RealRevisionTfsClientTests
                 config,
                 startDateTime: null,
                 continuationToken: null,
-                expandMode: (ReportingExpandMode)99);
+                expandMode: InvalidExpandMode);
 
             Assert.Fail("Expected InvalidOperationException was not thrown");
         }
@@ -151,6 +153,7 @@ public sealed class RealRevisionTfsClientTests
             expandMode: ReportingExpandMode.None);
 
         // Assert
+        StringAssert.Contains(url, "fields=", "URL should include the fields parameter.");
         StringAssert.Contains(url, "System.ChangedBy", "URL should include System.ChangedBy in the fields list");
     }
 
