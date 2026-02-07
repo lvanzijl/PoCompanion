@@ -16,7 +16,6 @@ public class RevisionIngestionService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RevisionIngestionService> _logger;
-    private readonly IRelationRevisionHydrator _relationHydrator;
 
     // Concurrency control: one ingestion per ProductOwner
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _ingestionLocks = new();
@@ -24,12 +23,10 @@ public class RevisionIngestionService
 
     public RevisionIngestionService(
         IServiceScopeFactory scopeFactory,
-        ILogger<RevisionIngestionService> logger,
-        IRelationRevisionHydrator relationHydrator)
+        ILogger<RevisionIngestionService> logger)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
-        _relationHydrator = relationHydrator;
     }
 
     /// <summary>
@@ -159,7 +156,11 @@ public class RevisionIngestionService
                     RevisionsProcessed = totalRevisions
                 });
 
-                var hydrationResult = await _relationHydrator.HydrateAsync(
+                // Resolve IRelationRevisionHydrator from scope
+                using var hydrationScope = _scopeFactory.CreateScope();
+                var relationHydrator = hydrationScope.ServiceProvider.GetRequiredService<IRelationRevisionHydrator>();
+
+                var hydrationResult = await relationHydrator.HydrateAsync(
                     impactedWorkItemIds,
                     cts.Token);
 
