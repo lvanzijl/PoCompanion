@@ -35,6 +35,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         "System.AreaPath",
         "System.CreatedDate",
         "System.ChangedDate",
+        "System.ChangedBy",
         "Microsoft.VSTS.Common.ClosedDate",
         "Microsoft.VSTS.Scheduling.Effort",
         "System.Tags",
@@ -77,8 +78,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient
             var response = await httpClient.GetAsync(url, cancellationToken);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var doc = JsonDocument.Parse(responseContent);
 
             var revisions = new List<WorkItemRevision>();
             string? nextContinuationToken = null;
@@ -96,7 +97,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient
             }
 
             // Parse revisions from response
-            if (doc.RootElement.TryGetProperty("values", out var valuesArray))
+            if (doc.RootElement.TryGetProperty("value", out var valuesArray) ||
+                doc.RootElement.TryGetProperty("values", out valuesArray))
             {
                 foreach (var revision in valuesArray.EnumerateArray())
                 {
@@ -106,6 +108,20 @@ public class RealRevisionTfsClient : IRevisionTfsClient
                         revisions.Add(workItemRevision);
                     }
                 }
+            }
+            else
+            {
+                var truncatedPayload = responseContent.Length > 2000
+                    ? responseContent[..2000]
+                    : responseContent;
+
+                _logger.LogError(
+                    "Reporting revisions response missing expected 'value' array. Payload (truncated): {Payload}",
+                    truncatedPayload);
+
+                throw new TfsException(
+                    "Reporting revisions response missing expected 'value' array.",
+                    truncatedPayload);
             }
 
             _logger.LogInformation(
@@ -135,7 +151,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         return await ExecuteWithRetryAsync(async () =>
         {
             // Per-item revisions endpoint: /_apis/wit/workItems/{id}/revisions
-            var url = $"{config.Url.TrimEnd('/')}/_apis/wit/workItems/{workItemId}/revisions?api-version={config.ApiVersion}";
+            var url = $"{config.Url.TrimEnd('/')}/_apis/wit/workItems/{workItemId}/revisions?api-version={config.ApiVersion}&$expand=relations";
 
             _logger.LogDebug("Calling per-item revisions API for work item {WorkItemId}", workItemId);
 
@@ -357,8 +373,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient
                 }
             }
 
-            // Parse current relations
-            var currentRelations = ParseRelations(revision);
+            // Parse current relations (required when $expand=relations is requested)
+            var currentRelations = ParseRelations(revision, workItemId, revisionNumber);
 
             // Calculate relation deltas
             var relationDeltas = new List<RelationDelta>();
@@ -442,6 +458,10 @@ public class RealRevisionTfsClient : IRevisionTfsClient
 
             return (workItemRevision, currentFields, currentRelations);
         }
+        catch (TfsException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to parse work item revision for work item {WorkItemId}", workItemId);
@@ -495,13 +515,21 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         return deltas;
     }
 
-    private List<RelationInfo> ParseRelations(JsonElement revision)
+    private List<RelationInfo> ParseRelations(JsonElement revision, int workItemId, int revisionNumber)
     {
         var relations = new List<RelationInfo>();
 
-        if (!revision.TryGetProperty("relations", out var relationsArray))
+        if (!revision.TryGetProperty("relations", out var relationsArray) ||
+            relationsArray.ValueKind != JsonValueKind.Array)
         {
-            return relations;
+            _logger.LogError(
+                "Per-item revisions response missing relations for work item {WorkItemId} revision {RevisionNumber}",
+                workItemId,
+                revisionNumber);
+
+            throw new TfsException(
+                $"Per-item revisions response missing relations for work item {workItemId} revision {revisionNumber}.",
+                revision.GetRawText());
         }
 
         foreach (var relation in relationsArray.EnumerateArray())
