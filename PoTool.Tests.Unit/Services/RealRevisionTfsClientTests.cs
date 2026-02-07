@@ -90,7 +90,7 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
-    public void BuildReportingRevisionsUrl_WithExpandModeRelations_Throws()
+    public void BuildReportingRevisionsUrl_WithInvalidExpandMode_Throws()
     {
         // Arrange
         var config = new TfsConfigEntity
