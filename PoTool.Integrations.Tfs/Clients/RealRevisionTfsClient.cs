@@ -57,7 +57,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
     public async Task<ReportingRevisionsResult> GetReportingRevisionsAsync(
         DateTimeOffset? startDateTime = null,
         string? continuationToken = null,
-        bool expand = true,
+        ReportingExpandMode expandMode = ReportingExpandMode.None,
         CancellationToken cancellationToken = default)
     {
         var entity = await _configService.GetConfigEntityAsync(cancellationToken);
@@ -70,7 +70,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         {
             // Build URL for reporting work item revisions API
             // /_apis/wit/reporting/workitemrevisions
-            var url = BuildReportingRevisionsUrl(config, startDateTime, continuationToken, expand);
+            var url = BuildReportingRevisionsUrl(config, startDateTime, continuationToken, expandMode);
 
             _logger.LogDebug("Calling reporting revisions API: {Url}", url);
 
@@ -203,7 +203,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         TfsConfigEntity config,
         DateTimeOffset? startDateTime,
         string? continuationToken,
-        bool expand)
+        ReportingExpandMode expandMode)
     {
         // Build URL: {collection}/_apis/wit/reporting/workitemrevisions
         var baseUrl = $"{config.Url.TrimEnd('/')}/_apis/wit/reporting/workitemrevisions";
@@ -216,24 +216,28 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         // Add field whitelist
         queryParams.Add($"fields={string.Join(",", FieldWhitelist)}");
 
-        // Add startDateTime for incremental sync
-        // Uses ISO 8601 round-trip format ("O") which Azure DevOps/TFS reporting API accepts
-        // Format example: "2024-01-15T10:30:00.0000000+00:00"
-        if (startDateTime.HasValue)
+        // Parameter conflict validation: prefer continuation token over startDateTime
+        // When a continuation token is present, the API ignores startDateTime
+        if (!string.IsNullOrEmpty(continuationToken))
         {
+            // Add continuation token for paging
+            queryParams.Add($"continuationToken={Uri.EscapeDataString(continuationToken)}");
+            // Do NOT add startDateTime when continuation token is present
+        }
+        else if (startDateTime.HasValue)
+        {
+            // Add startDateTime for incremental sync (only when no continuation token)
+            // Uses ISO 8601 round-trip format ("O") which Azure DevOps/TFS reporting API accepts
+            // Format example: "2024-01-15T10:30:00.0000000+00:00"
             queryParams.Add($"startDateTime={startDateTime.Value:O}");
         }
 
-        // Add continuation token for paging
-        if (!string.IsNullOrEmpty(continuationToken))
+        // Add expand parameter if requested
+        // IMPORTANT: The reporting endpoint does NOT support $expand=relations
+        // Only $expand=fields is allowed (for long text fields)
+        if (expandMode == ReportingExpandMode.Fields)
         {
-            queryParams.Add($"continuationToken={Uri.EscapeDataString(continuationToken)}");
-        }
-
-        // Expand relations if requested
-        if (expand)
-        {
-            queryParams.Add("$expand=relations");
+            queryParams.Add("$expand=fields");
         }
 
         return $"{baseUrl}?{string.Join("&", queryParams)}";

@@ -1,6 +1,24 @@
 namespace PoTool.Core.Contracts;
 
 /// <summary>
+/// Expand mode for the reporting revisions API.
+/// The reporting endpoint does NOT support $expand=relations.
+/// </summary>
+public enum ReportingExpandMode
+{
+    /// <summary>
+    /// No expansion. Returns only basic fields.
+    /// </summary>
+    None = 0,
+
+    /// <summary>
+    /// Expand fields to include long text fields.
+    /// This is the only expand mode supported by the reporting endpoint.
+    /// </summary>
+    Fields = 1
+}
+
+/// <summary>
 /// Interface for TFS revision-specific operations.
 /// All revision communication must use this client.
 /// This is separate from ITfsClient to maintain strict separation of concerns.
@@ -13,13 +31,13 @@ public interface IRevisionTfsClient
     /// </summary>
     /// <param name="startDateTime">Optional date to retrieve revisions changed since. Used for incremental sync.</param>
     /// <param name="continuationToken">Optional continuation token for paging.</param>
-    /// <param name="expand">Whether to expand relations in the response.</param>
+    /// <param name="expandMode">Expand mode for the response. Use None or Fields (relations NOT supported by reporting endpoint).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result containing revisions and optional continuation token.</returns>
     Task<ReportingRevisionsResult> GetReportingRevisionsAsync(
         DateTimeOffset? startDateTime = null,
         string? continuationToken = null,
-        bool expand = true,
+        ReportingExpandMode expandMode = ReportingExpandMode.None,
         CancellationToken cancellationToken = default);
 
     /// <summary>
