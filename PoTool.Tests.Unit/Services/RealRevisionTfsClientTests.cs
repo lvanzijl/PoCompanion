@@ -483,14 +483,13 @@ public sealed class RealRevisionTfsClientTests
         try
         {
             action();
-            Assert.Fail($"Expected {typeof(TException).Name} was not thrown");
         }
         catch (TargetInvocationException ex) when (ex.InnerException is TException innerException)
         {
             return innerException;
         }
 
-        throw new InvalidOperationException($"Expected {typeof(TException).Name} was not thrown");
+        throw new AssertFailedException($"Expected {typeof(TException).Name} was not thrown");
     }
 
     /// <summary>
