@@ -386,7 +386,7 @@ public sealed class RealRevisionTfsClientTests
 
         var revisions = client.TestParseReportingRevisionsPayload(json);
 
-        Assert.AreNotEqual(0, revisions.Count);
+        Assert.HasCount(1, revisions);
         Assert.AreEqual(1, revisions[0].WorkItemId);
         Assert.AreEqual(2, revisions[0].RevisionNumber);
         Assert.AreEqual("Task", revisions[0].WorkItemType);
@@ -422,7 +422,7 @@ public sealed class RealRevisionTfsClientTests
 
         var revisions = client.TestParseReportingRevisionsPayload(json);
 
-        Assert.AreNotEqual(0, revisions.Count);
+        Assert.HasCount(1, revisions);
         Assert.AreEqual(1, revisions[0].WorkItemId);
         Assert.AreEqual(2, revisions[0].RevisionNumber);
         Assert.AreEqual("Task", revisions[0].WorkItemType);
