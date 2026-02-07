@@ -87,6 +87,33 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
+    public void BuildReportingRevisionsUrl_IncludesChangedByField()
+    {
+        // Arrange
+        var config = new TfsConfigEntity
+        {
+            Url = "https://tfs.example.com/DefaultCollection",
+            ApiVersion = "6.0"
+        };
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler);
+
+        // Act
+        var url = client.TestBuildReportingRevisionsUrl(
+            config,
+            startDateTime: null,
+            continuationToken: null,
+            expandMode: ReportingExpandMode.None);
+
+        // Assert
+        StringAssert.Contains(url, "System.ChangedBy", "URL should include System.ChangedBy in the fields list");
+    }
+
+    [TestMethod]
     public void BuildReportingRevisionsUrl_NeverIncludesExpandRelations()
     {
         // Arrange
