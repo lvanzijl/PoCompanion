@@ -148,7 +148,7 @@ public partial class RealTfsClient
             || ex is HttpRequestException
             || (ex is TfsException tfsEx &&
                 tfsEx.StatusCode.HasValue &&
-                (tfsEx.StatusCode.Value >= 500 || tfsEx.StatusCode.Value == 408));
+                IsRetryableStatusCode(tfsEx.StatusCode.Value));
     }
 
     private TimeSpan CalculateBackoffDelay(int attempt)
@@ -157,6 +157,11 @@ public partial class RealTfsClient
         var baseDelay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
         var jitter = TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000));
         return baseDelay + jitter;
+    }
+
+    private static bool IsRetryableStatusCode(int statusCode)
+    {
+        return statusCode >= 500 || statusCode == 408;
     }
 
    private async Task HandleHttpErrorsAsync(HttpResponseMessage response, CancellationToken ct)

@@ -659,7 +659,13 @@ public partial class RealTfsClient
         return await ExecuteWithRetryAsync(async () =>
         {
             var repositories = await GetRepositoriesInternalAsync(config, httpClient, repositoryName, cancellationToken);
-            var repository = repositories.FirstOrDefault();
+            if (repositories.Count == 0)
+            {
+                _logger.LogWarning("Repository '{RepoName}' not found in project '{Project}'", repositoryName, config.Project);
+                return null;
+            }
+
+            var repository = repositories[0];
             if (!string.IsNullOrEmpty(repository.Id))
             {
                 _logger.LogInformation("Found repository '{RepoName}' with ID: {RepoId}", repository.Name, repository.Id);
