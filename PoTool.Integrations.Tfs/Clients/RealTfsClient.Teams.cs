@@ -22,6 +22,7 @@ public partial class RealTfsClient
 
         // Get auth-mode-specific HttpClient to avoid credential conflicts
         var httpClient = GetAuthenticatedHttpClient();
+        var timeoutConfig = await _configService.GetConfigEntityAsync(cancellationToken) ?? new TfsConfigEntity();
 
         return await ExecuteWithRetryAsync<IEnumerable<TfsProjectDto>>(async () =>
         {
@@ -30,48 +31,56 @@ public partial class RealTfsClient
 
             _logger.LogInformation("Retrieving TFS projects from URL='{Url}'", url);
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
-            await HandleHttpErrorsAsync(response, cancellationToken);
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-            var root = doc.RootElement;
-
-            if (!root.TryGetProperty("value", out var valueArray))
-            {
-                _logger.LogWarning("TFS projects response missing 'value' array");
-                return Array.Empty<TfsProjectDto>();
-            }
-
             var projects = new List<TfsProjectDto>();
+            string? continuationToken = null;
+            var pageUrl = url;
 
-            foreach (var project in valueArray.EnumerateArray())
+            do
             {
-                // Extract id (required)
-                if (!project.TryGetProperty("id", out var idProp))
-                {
-                    _logger.LogWarning("TFS project missing 'id' field - skipping");
-                    continue;
-                }
-                var projectId = idProp.GetString() ?? string.Empty;
+                var response = await SendGetAsync(httpClient, timeoutConfig, pageUrl, cancellationToken, handleErrors: false);
+                await HandleHttpErrorsAsync(response, cancellationToken);
 
-                // Extract name (required)
-                if (!project.TryGetProperty("name", out var nameProp))
-                {
-                    _logger.LogWarning("TFS project '{Id}' missing 'name' field - skipping", projectId);
-                    continue;
-                }
-                var projectName = nameProp.GetString() ?? string.Empty;
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                var root = doc.RootElement;
 
-                // Extract description (optional)
-                string? description = null;
-                if (project.TryGetProperty("description", out var descProp))
+                if (!root.TryGetProperty("value", out var valueArray))
                 {
-                    description = descProp.GetString();
+                    _logger.LogWarning("TFS projects response missing 'value' array");
+                    break;
                 }
 
-                projects.Add(new TfsProjectDto(projectId, projectName, description));
-            }
+                foreach (var project in valueArray.EnumerateArray())
+                {
+                    // Extract id (required)
+                    if (!project.TryGetProperty("id", out var idProp))
+                    {
+                        _logger.LogWarning("TFS project missing 'id' field - skipping");
+                        continue;
+                    }
+                    var projectId = idProp.GetString() ?? string.Empty;
+
+                    // Extract name (required)
+                    if (!project.TryGetProperty("name", out var nameProp))
+                    {
+                        _logger.LogWarning("TFS project '{Id}' missing 'name' field - skipping", projectId);
+                        continue;
+                    }
+                    var projectName = nameProp.GetString() ?? string.Empty;
+
+                    // Extract description (optional)
+                    string? description = null;
+                    if (project.TryGetProperty("description", out var descProp))
+                    {
+                        description = descProp.GetString();
+                    }
+
+                    projects.Add(new TfsProjectDto(projectId, projectName, description));
+                }
+
+                continuationToken = GetContinuationToken(response, doc);
+                pageUrl = AddContinuationToken(url, continuationToken);
+            } while (!string.IsNullOrWhiteSpace(continuationToken));
 
             _logger.LogInformation("Retrieved {Count} TFS projects", projects.Count);
 
@@ -98,69 +107,77 @@ public partial class RealTfsClient
 
             _logger.LogInformation("Retrieving TFS teams for Project='{Project}'", config.Project);
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
-            await HandleHttpErrorsAsync(response, cancellationToken);
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-            var root = doc.RootElement;
-
-            if (!root.TryGetProperty("value", out var valueArray))
-            {
-                _logger.LogWarning("TFS teams response missing 'value' array for Project='{Project}'", config.Project);
-                return Array.Empty<TfsTeamDto>();
-            }
-
             var teams = new List<TfsTeamDto>();
+            string? continuationToken = null;
+            var pageUrl = url;
 
-            foreach (var team in valueArray.EnumerateArray())
+            do
             {
-                // Extract id (required)
-                if (!team.TryGetProperty("id", out var idProp))
-                {
-                    _logger.LogWarning("TFS team missing 'id' field - skipping");
-                    continue;
-                }
-                var teamId = idProp.GetString() ?? string.Empty;
+                var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
+                await HandleHttpErrorsAsync(response, cancellationToken);
 
-                // Extract name (required)
-                if (!team.TryGetProperty("name", out var nameProp))
-                {
-                    _logger.LogWarning("TFS team '{Id}' missing 'name' field - skipping", teamId);
-                    continue;
-                }
-                var teamName = nameProp.GetString() ?? string.Empty;
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                var root = doc.RootElement;
 
-                // Extract description (optional)
-                string? description = null;
-                if (team.TryGetProperty("description", out var descProp))
+                if (!root.TryGetProperty("value", out var valueArray))
                 {
-                    description = descProp.GetString();
+                    _logger.LogWarning("TFS teams response missing 'value' array for Project='{Project}'", config.Project);
+                    break;
                 }
 
-                // Get team's default area path from team field values
-                // This requires a separate API call per team
-                var defaultAreaPath = await GetTeamDefaultAreaPathAsync(
-                    httpClient,
-                    config,
-                    config.Project,
-                    teamName,
-                    cancellationToken);
+                foreach (var team in valueArray.EnumerateArray())
+                {
+                    // Extract id (required)
+                    if (!team.TryGetProperty("id", out var idProp))
+                    {
+                        _logger.LogWarning("TFS team missing 'id' field - skipping");
+                        continue;
+                    }
+                    var teamId = idProp.GetString() ?? string.Empty;
 
-                var dto = new TfsTeamDto(
-                    teamId,
-                    teamName,
-                    config.Project,
-                    description,
-                    defaultAreaPath
-                );
+                    // Extract name (required)
+                    if (!team.TryGetProperty("name", out var nameProp))
+                    {
+                        _logger.LogWarning("TFS team '{Id}' missing 'name' field - skipping", teamId);
+                        continue;
+                    }
+                    var teamName = nameProp.GetString() ?? string.Empty;
 
-                teams.Add(dto);
+                    // Extract description (optional)
+                    string? description = null;
+                    if (team.TryGetProperty("description", out var descProp))
+                    {
+                        description = descProp.GetString();
+                    }
 
-                _logger.LogDebug(
-                    "Mapped TFS team: Id={Id}, Name={Name}, DefaultAreaPath={AreaPath}",
-                    teamId, teamName, defaultAreaPath);
-            }
+                    // Get team's default area path from team field values
+                    // This requires a separate API call per team
+                    var defaultAreaPath = await GetTeamDefaultAreaPathAsync(
+                        httpClient,
+                        config,
+                        config.Project,
+                        teamName,
+                        cancellationToken);
+
+                    var dto = new TfsTeamDto(
+                        teamId,
+                        teamName,
+                        config.Project,
+                        description,
+                        defaultAreaPath
+                    );
+
+                    teams.Add(dto);
+
+                    _logger.LogDebug(
+                        "Mapped TFS team: Id={Id}, Name={Name}, DefaultAreaPath={AreaPath}",
+                        teamId, teamName, defaultAreaPath);
+                }
+
+                continuationToken = GetContinuationToken(response, doc);
+                pageUrl = AddContinuationToken(url, continuationToken);
+            } while (!string.IsNullOrWhiteSpace(continuationToken));
 
             _logger.LogInformation(
                 "Retrieved {Count} TFS teams for Project='{Project}'",
@@ -214,7 +231,7 @@ public partial class RealTfsClient
             var encodedTeam = Uri.EscapeDataString(teamName);
             var url = $"{config.Url.TrimEnd('/')}/{encodedProject}/{encodedTeam}/_apis/work/teamsettings/teamfieldvalues?api-version={config.ApiVersion}";
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
             
             // If team field values not available, fall back to project root area path
             if (!response.IsSuccessStatusCode)
@@ -299,94 +316,102 @@ public partial class RealTfsClient
                 "Retrieving team iterations for Project='{Project}', Team='{Team}'",
                 projectName, teamName);
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
-            await HandleHttpErrorsAsync(response, cancellationToken);
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-            var root = doc.RootElement;
-
-            if (!root.TryGetProperty("value", out var valueArray))
-            {
-                _logger.LogWarning(
-                    "Team iterations response missing 'value' array for Project='{Project}', Team='{Team}'",
-                    projectName, teamName);
-                return Array.Empty<TeamIterationDto>();
-            }
-
             var iterations = new List<TeamIterationDto>();
+            string? continuationToken = null;
+            var pageUrl = url;
 
-            foreach (var iteration in valueArray.EnumerateArray())
+            do
             {
-                // Extract id (may be null or missing)
-                string? iterationId = null;
-                if (iteration.TryGetProperty("id", out var idProp))
-                {
-                    iterationId = idProp.GetString();
-                }
+                var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
+                await HandleHttpErrorsAsync(response, cancellationToken);
 
-                // Extract name (required)
-                if (!iteration.TryGetProperty("name", out var nameProp))
-                {
-                    _logger.LogWarning("Team iteration missing 'name' field - skipping");
-                    continue;
-                }
-                var name = nameProp.GetString() ?? string.Empty;
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                var root = doc.RootElement;
 
-                // Extract path (required)
-                if (!iteration.TryGetProperty("path", out var pathProp))
+                if (!root.TryGetProperty("value", out var valueArray))
                 {
                     _logger.LogWarning(
-                        "Team iteration '{Name}' missing 'path' field - skipping",
-                        name);
-                    continue;
+                        "Team iterations response missing 'value' array for Project='{Project}', Team='{Team}'",
+                        projectName, teamName);
+                    break;
                 }
-                var path = pathProp.GetString() ?? string.Empty;
 
-                // Extract attributes (optional) - contains startDate and finishDate
-                DateTimeOffset? startDate = null;
-                DateTimeOffset? finishDate = null;
-                if (iteration.TryGetProperty("attributes", out var attributes))
+                foreach (var iteration in valueArray.EnumerateArray())
                 {
-                    if (attributes.TryGetProperty("startDate", out var startProp))
+                    // Extract id (may be null or missing)
+                    string? iterationId = null;
+                    if (iteration.TryGetProperty("id", out var idProp))
                     {
-                        if (DateTimeOffset.TryParse(startProp.GetString(), out var start))
+                        iterationId = idProp.GetString();
+                    }
+
+                    // Extract name (required)
+                    if (!iteration.TryGetProperty("name", out var nameProp))
+                    {
+                        _logger.LogWarning("Team iteration missing 'name' field - skipping");
+                        continue;
+                    }
+                    var name = nameProp.GetString() ?? string.Empty;
+
+                    // Extract path (required)
+                    if (!iteration.TryGetProperty("path", out var pathProp))
+                    {
+                        _logger.LogWarning(
+                            "Team iteration '{Name}' missing 'path' field - skipping",
+                            name);
+                        continue;
+                    }
+                    var path = pathProp.GetString() ?? string.Empty;
+
+                    // Extract attributes (optional) - contains startDate and finishDate
+                    DateTimeOffset? startDate = null;
+                    DateTimeOffset? finishDate = null;
+                    if (iteration.TryGetProperty("attributes", out var attributes))
+                    {
+                        if (attributes.TryGetProperty("startDate", out var startProp))
                         {
-                            startDate = start;
+                            if (DateTimeOffset.TryParse(startProp.GetString(), out var start))
+                            {
+                                startDate = start;
+                            }
+                        }
+
+                        if (attributes.TryGetProperty("finishDate", out var finishProp))
+                        {
+                            if (DateTimeOffset.TryParse(finishProp.GetString(), out var finish))
+                            {
+                                finishDate = finish;
+                            }
                         }
                     }
 
-                    if (attributes.TryGetProperty("finishDate", out var finishProp))
+                    // Extract timeFrame (optional) - "past", "current", or "future"
+                    string? timeFrame = null;
+                    if (iteration.TryGetProperty("timeFrame", out var timeFrameProp))
                     {
-                        if (DateTimeOffset.TryParse(finishProp.GetString(), out var finish))
-                        {
-                            finishDate = finish;
-                        }
+                        timeFrame = timeFrameProp.GetString();
                     }
+
+                    var dto = new TeamIterationDto(
+                        iterationId,
+                        name,
+                        path,
+                        startDate,
+                        finishDate,
+                        timeFrame
+                    );
+
+                    iterations.Add(dto);
+
+                    _logger.LogDebug(
+                        "Mapped team iteration: Path={Path}, Name={Name}, TimeFrame={TimeFrame}, Start={Start}, End={End}",
+                        path, name, timeFrame ?? "(none)", startDate?.ToString("yyyy-MM-dd") ?? "(none)", finishDate?.ToString("yyyy-MM-dd") ?? "(none)");
                 }
 
-                // Extract timeFrame (optional) - "past", "current", or "future"
-                string? timeFrame = null;
-                if (iteration.TryGetProperty("timeFrame", out var timeFrameProp))
-                {
-                    timeFrame = timeFrameProp.GetString();
-                }
-
-                var dto = new TeamIterationDto(
-                    iterationId,
-                    name,
-                    path,
-                    startDate,
-                    finishDate,
-                    timeFrame
-                );
-
-                iterations.Add(dto);
-
-                _logger.LogDebug(
-                    "Mapped team iteration: Path={Path}, Name={Name}, TimeFrame={TimeFrame}, Start={Start}, End={End}",
-                    path, name, timeFrame ?? "(none)", startDate?.ToString("yyyy-MM-dd") ?? "(none)", finishDate?.ToString("yyyy-MM-dd") ?? "(none)");
-            }
+                continuationToken = GetContinuationToken(response, doc);
+                pageUrl = AddContinuationToken(url, continuationToken);
+            } while (!string.IsNullOrWhiteSpace(continuationToken));
 
             _logger.LogInformation(
                 "Retrieved {Count} team iterations for Project='{Project}', Team='{Team}'",
@@ -418,87 +443,95 @@ public partial class RealTfsClient
             var url = ProjectUrl(config, "_apis/wit/workitemtypes");
             _logger.LogDebug("Fetching work item type definitions from: {Url}", url);
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogError(
-                    "Failed to get work item type definitions: {StatusCode}, Response: {Response}",
-                    response.StatusCode, errorContent);
-                throw new TfsException(
-                    $"Failed to retrieve work item type definitions: {response.StatusCode}");
-            }
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-            if (!doc.RootElement.TryGetProperty("value", out var valueArray))
-            {
-                _logger.LogWarning("Work item type definitions response missing 'value' array");
-                return Array.Empty<WorkItemTypeDefinitionDto>();
-            }
-
             var definitions = new List<WorkItemTypeDefinitionDto>();
+            string? continuationToken = null;
+            var pageUrl = url;
 
-            foreach (var witElement in valueArray.EnumerateArray())
+            do
             {
-                if (!witElement.TryGetProperty("name", out var nameProp))
+                var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
+
+                if (!response.IsSuccessStatusCode)
                 {
-                    continue;
+                    var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogError(
+                        "Failed to get work item type definitions: {StatusCode}, Response: {Response}",
+                        response.StatusCode, errorContent);
+                    throw new TfsException(
+                        $"Failed to retrieve work item type definitions: {response.StatusCode}");
                 }
 
-                var typeName = nameProp.GetString();
-                if (string.IsNullOrWhiteSpace(typeName))
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                if (!doc.RootElement.TryGetProperty("value", out var valueArray))
                 {
-                    continue;
+                    _logger.LogWarning("Work item type definitions response missing 'value' array");
+                    break;
                 }
 
-                var states = new List<string>();
-
-                // Extract states array
-                // Each state is an object with 'name' and 'category' properties
-                if (witElement.TryGetProperty("states", out var statesArray))
+                foreach (var witElement in valueArray.EnumerateArray())
                 {
-                    foreach (var stateElement in statesArray.EnumerateArray())
+                    if (!witElement.TryGetProperty("name", out var nameProp))
                     {
-                        // Extract state name
-                        if (stateElement.TryGetProperty("name", out var nameElement))
+                        continue;
+                    }
+
+                    var typeName = nameProp.GetString();
+                    if (string.IsNullOrWhiteSpace(typeName))
+                    {
+                        continue;
+                    }
+
+                    var states = new List<string>();
+
+                    // Extract states array
+                    // Each state is an object with 'name' and 'category' properties
+                    if (witElement.TryGetProperty("states", out var statesArray))
+                    {
+                        foreach (var stateElement in statesArray.EnumerateArray())
                         {
-                            var stateName = nameElement.GetString();
-                            if (!string.IsNullOrWhiteSpace(stateName))
+                            // Extract state name
+                            if (stateElement.TryGetProperty("name", out var nameElement))
                             {
-                                states.Add(stateName);
-                                
-                                // Extract category if present (e.g., "Completed" for "Done")
-                                // Category information is logged for future enhancement possibilities
-                                if (stateElement.TryGetProperty("category", out var categoryElement))
+                                var stateName = nameElement.GetString();
+                                if (!string.IsNullOrWhiteSpace(stateName))
                                 {
-                                    var category = categoryElement.GetString();
-                                    if (!string.IsNullOrWhiteSpace(category))
+                                    states.Add(stateName);
+                                    
+                                    // Extract category if present (e.g., "Completed" for "Done")
+                                    // Category information is logged for future enhancement possibilities
+                                    if (stateElement.TryGetProperty("category", out var categoryElement))
                                     {
-                                        _logger.LogDebug(
-                                            "Work item type '{Type}': State '{State}' has category '{Category}'",
-                                            typeName, stateName, category);
+                                        var category = categoryElement.GetString();
+                                        if (!string.IsNullOrWhiteSpace(category))
+                                        {
+                                            _logger.LogDebug(
+                                                "Work item type '{Type}': State '{State}' has category '{Category}'",
+                                                typeName, stateName, category);
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+
+                    var dto = new WorkItemTypeDefinitionDto
+                    {
+                        TypeName = typeName,
+                        States = states.AsReadOnly()
+                    };
+
+                    definitions.Add(dto);
+
+                    _logger.LogDebug(
+                        "Mapped work item type definition: Type={Type}, States={StateCount}",
+                        typeName, states.Count);
                 }
 
-                var dto = new WorkItemTypeDefinitionDto
-                {
-                    TypeName = typeName,
-                    States = states.AsReadOnly()
-                };
-
-                definitions.Add(dto);
-
-                _logger.LogDebug(
-                    "Mapped work item type definition: Type={Type}, States={StateCount}",
-                    typeName, states.Count);
-            }
+                continuationToken = GetContinuationToken(response, doc);
+                pageUrl = AddContinuationToken(url, continuationToken);
+            } while (!string.IsNullOrWhiteSpace(continuationToken));
 
             _logger.LogInformation(
                 "Retrieved {Count} work item type definitions from project '{Project}'",

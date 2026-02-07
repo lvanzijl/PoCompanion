@@ -88,7 +88,7 @@ public partial class RealTfsClient
 
             // Collection-scoped endpoint for server reachability
             var url = CollectionUrl(config, "_apis/projects");
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -134,7 +134,7 @@ public partial class RealTfsClient
             // Project access check is collection-scoped with project name in path
             var encodedProject = Uri.EscapeDataString(config.Project);
             var url = CollectionUrl(config, $"_apis/projects/{encodedProject}");
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -190,7 +190,7 @@ public partial class RealTfsClient
             var url = ProjectUrl(config, "_apis/wit/wiql");
             using var content = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
 
-            var response = await httpClient.PostAsync(url, content, cancellationToken);
+            var response = await SendPostAsync(httpClient, config, url, content, cancellationToken, handleErrors: false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -242,7 +242,7 @@ public partial class RealTfsClient
             var wiqlUrl = ProjectUrl(config, "_apis/wit/wiql");
             using var wiqlContent = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
 
-            var wiqlResponse = await httpClient.PostAsync(wiqlUrl, wiqlContent, cancellationToken);
+            var wiqlResponse = await SendPostAsync(httpClient, config, wiqlUrl, wiqlContent, cancellationToken, handleErrors: false);
 
             if (!wiqlResponse.IsSuccessStatusCode)
             {
@@ -291,7 +291,7 @@ public partial class RealTfsClient
                 System.Text.Encoding.UTF8,
                 "application/json");
 
-            var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
+            var relationsResponse = await SendPostAsync(httpClient, config, batchUrl, relationsContent, cancellationToken, handleErrors: false);
 
             if (!relationsResponse.IsSuccessStatusCode)
             {
@@ -384,7 +384,7 @@ public partial class RealTfsClient
 
             // Work item fields are collection-scoped (requirement #1)
             var url = CollectionUrl(config, "_apis/wit/fields");
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -462,7 +462,7 @@ public partial class RealTfsClient
                 System.Text.Encoding.UTF8,
                 "application/json");
 
-            var response = await httpClient.PostAsync(url, content, cancellationToken);
+            var response = await SendPostAsync(httpClient, config, url, content, cancellationToken, handleErrors: false);
 
             // We expect 200 (with items) or 404 (no items found), both are acceptable
             if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound)
@@ -508,7 +508,7 @@ public partial class RealTfsClient
 
             // Work item revisions are collection-scoped (work item IDs are unique across collection)
             var url = CollectionUrl(config, "_apis/wit/workitems/1/revisions");
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
 
             // We expect either 200 (work item exists with revisions) or 404 (work item doesn't exist)
             // Both indicate the API endpoint is available
@@ -555,7 +555,7 @@ public partial class RealTfsClient
 
             // Git repositories are project-scoped (requirement #1)
             var url = ProjectUrl(config, "_apis/git/repositories");
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -615,7 +615,7 @@ public partial class RealTfsClient
 
             // Step 1: Verify build definitions API
             var buildDefsUrl = ProjectUrl(config, "_apis/build/definitions");
-            var buildDefsResponse = await httpClient.GetAsync(buildDefsUrl, cancellationToken);
+            var buildDefsResponse = await SendGetAsync(httpClient, config, buildDefsUrl, cancellationToken, handleErrors: false);
 
             if (buildDefsResponse.IsSuccessStatusCode)
             {
@@ -642,7 +642,7 @@ public partial class RealTfsClient
             if (buildDefinitionsFound > 0)
             {
                 var buildRunsUrl = ProjectUrl(config, "_apis/build/builds?$top=5");
-                var buildRunsResponse = await httpClient.GetAsync(buildRunsUrl, cancellationToken);
+                var buildRunsResponse = await SendGetAsync(httpClient, config, buildRunsUrl, cancellationToken, handleErrors: false);
 
                 if (buildRunsResponse.IsSuccessStatusCode)
                 {
@@ -660,7 +660,7 @@ public partial class RealTfsClient
             try
             {
                 var releaseDefsUrl = ProjectUrl(config, "_apis/release/definitions");
-                var releaseDefsResponse = await httpClient.GetAsync(releaseDefsUrl, cancellationToken);
+                var releaseDefsResponse = await SendGetAsync(httpClient, config, releaseDefsUrl, cancellationToken, handleErrors: false);
 
                 if (releaseDefsResponse.IsSuccessStatusCode)
                 {
@@ -736,7 +736,7 @@ public partial class RealTfsClient
 
             // Work item GET is collection-scoped (work item IDs are unique across collection)
             var getUrl = CollectionUrl(config, $"_apis/wit/workitems/{workItemId}");
-            var getResponse = await httpClient.GetAsync(getUrl, cancellationToken);
+            var getResponse = await SendGetAsync(httpClient, config, getUrl, cancellationToken, handleErrors: false);
 
             if (!getResponse.IsSuccessStatusCode)
             {

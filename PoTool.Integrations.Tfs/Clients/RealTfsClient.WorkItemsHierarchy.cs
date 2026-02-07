@@ -109,7 +109,7 @@ public partial class RealTfsClient
              Encoding.UTF8,
              "application/json");
 
-         var wiqlResponse = await httpClient.PostAsync(wiqlUrl, content, cancellationToken);
+         var wiqlResponse = await SendPostAsync(httpClient, config, wiqlUrl, content, cancellationToken, handleErrors: false);
          UpdateHeartbeat();
          await HandleHttpErrorsAsync(wiqlResponse, cancellationToken);
 
@@ -264,7 +264,7 @@ public partial class RealTfsClient
              Encoding.UTF8,
              "application/json");
 
-         var fieldsResponse = await httpClient.PostAsync(batchUrl, fieldsContent, cancellationToken);
+         var fieldsResponse = await SendPostAsync(httpClient, config, batchUrl, fieldsContent, cancellationToken, handleErrors: false);
          UpdateHeartbeat();
          await HandleHttpErrorsAsync(fieldsResponse, cancellationToken);
 
@@ -286,6 +286,7 @@ public partial class RealTfsClient
             var parentId = relationsMap.TryGetValue(id, out var pid) ? pid : null;
             int? effort = ParseEffortField(fields);
             DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
+            DateTimeOffset? changedDate = ParseDateTimeField(fields, "System.ChangedDate");
             DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
             string? severity = ParseSeverityField(fields);
             string? tags = ParseTagsField(fields);
@@ -304,7 +305,8 @@ public partial class RealTfsClient
                 CreatedDate: createdDate,
                 ClosedDate: closedDate,
                 Severity: severity,
-                Tags: tags
+                Tags: tags,
+                ChangedDate: changedDate
             ));
          }
 
@@ -588,7 +590,7 @@ public partial class RealTfsClient
 
             try
             {
-                var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
+                var relationsResponse = await SendPostAsync(httpClient, config, batchUrl, relationsContent, cancellationToken, handleErrors: false);
                 updateHeartbeat();
                 await HandleHttpErrorsAsync(relationsResponse, cancellationToken);
 

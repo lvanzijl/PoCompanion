@@ -24,7 +24,7 @@ public partial class RealTfsClient
             // Work item revisions are collection-scoped (work item IDs are unique across collection)
             var url = CollectionUrl(config, $"_apis/wit/workitems/{workItemId}/revisions");
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);

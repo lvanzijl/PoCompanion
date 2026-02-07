@@ -1,4 +1,6 @@
+using System.Net;
 using System.Net.Http.Headers;
+using System.Linq;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PoTool.Shared.Settings;
@@ -21,7 +23,7 @@ public partial class RealTfsClient
 
             // Call _apis/git/repositories/{repositoryName} to resolve canonical repo id/name
             var repoUrl = ProjectUrl(config, $"_apis/git/repositories/{Uri.EscapeDataString(repositoryName)}");
-            var repoResponse = await httpClient.GetAsync(repoUrl, cancellationToken);
+            var repoResponse = await SendGetAsync(httpClient, config, repoUrl, cancellationToken, handleErrors: false);
 
             if (repoResponse.IsSuccessStatusCode)
             {
@@ -43,27 +45,35 @@ public partial class RealTfsClient
 
         // Git repositories are project-scoped (requirement #1)
         var url = ProjectUrl(config, "_apis/git/repositories");
-        var response = await httpClient.GetAsync(url, cancellationToken);
-        await HandleHttpErrorsAsync(response, cancellationToken);
-
-        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
         var repositories = new List<(string Name, string Id)>();
+        string? continuationToken = null;
+        var pageUrl = url;
 
-        if (doc.RootElement.TryGetProperty("value", out var valueArray))
+        do
         {
-            foreach (var repo in valueArray.EnumerateArray())
-            {
-                var name = repo.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
-                var id = repo.TryGetProperty("id", out var i) ? i.GetString() ?? "" : "";
+            var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
+            await HandleHttpErrorsAsync(response, cancellationToken);
 
-                if (!string.IsNullOrEmpty(name))
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            if (doc.RootElement.TryGetProperty("value", out var valueArray))
+            {
+                foreach (var repo in valueArray.EnumerateArray())
                 {
-                    repositories.Add((name, id));
+                    var name = repo.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                    var id = repo.TryGetProperty("id", out var i) ? i.GetString() ?? "" : "";
+
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        repositories.Add((name, id));
+                    }
                 }
             }
-        }
+
+            continuationToken = GetContinuationToken(response, doc);
+            pageUrl = AddContinuationToken(url, continuationToken);
+        } while (!string.IsNullOrWhiteSpace(continuationToken));
 
         _logger.LogInformation("Found {Count} repositories in project {Project}", repositories.Count, config.Project);
         return repositories;
@@ -136,7 +146,9 @@ public partial class RealTfsClient
     {
         return ex is TfsRateLimitException
             || ex is HttpRequestException
-            || (ex is TfsException tfsEx && tfsEx.StatusCode >= 500);
+            || (ex is TfsException tfsEx &&
+                tfsEx.StatusCode.HasValue &&
+                (tfsEx.StatusCode.Value >= 500 || tfsEx.StatusCode.Value == 408));
     }
 
     private TimeSpan CalculateBackoffDelay(int attempt)
@@ -165,15 +177,24 @@ public partial class RealTfsClient
           response.Headers.TryGetValues("X-TFS-Session", out var vals2) ? string.Join(",", vals2) :
           "<none>";
 
-      _logger.LogError(
-          "TFS request failed. {Method} {Url} => {(int)Status} {Reason}. ActivityId={ActivityId}. Body={Body}",
-          method, url, (int)response.StatusCode, response.ReasonPhrase, activityId, body);
+      var statusCode = (int)response.StatusCode;
+      var retryAfter = GetRetryAfter(response);
 
-      throw new TfsException(
-          $"TFS request failed: {(int)response.StatusCode} {response.ReasonPhrase}. ActivityId={activityId}. Url={url}. Body={body}");
+      _logger.LogError(
+          "TFS request failed. {Method} {Url} => {Status} {Reason}. ActivityId={ActivityId}. Body={Body}",
+          method, url, statusCode, response.ReasonPhrase, activityId, body);
+
+      var message = $"TFS request failed: {statusCode} {response.ReasonPhrase}. ActivityId={activityId}. Url={url}. Body={body}";
+
+      if (response.StatusCode == HttpStatusCode.TooManyRequests)
+      {
+          throw new TfsRateLimitException(message, body, retryAfter);
+      }
+
+      throw new TfsException(message, statusCode, body);
    }
 
-   private TimeSpan? GetRetryAfter(HttpResponseMessage response)
+    private TimeSpan? GetRetryAfter(HttpResponseMessage response)
     {
         if (response.Headers.RetryAfter?.Delta.HasValue == true)
         {
@@ -185,5 +206,78 @@ public partial class RealTfsClient
     private string EscapeWiql(string value)
     {
         return value.Replace("'", "''");
+    }
+
+    private async Task<HttpResponseMessage> SendAsync(
+        HttpClient httpClient,
+        TfsConfigEntity config,
+        HttpRequestMessage request,
+        CancellationToken cancellationToken,
+        bool handleErrors = true)
+    {
+        return await _requestSender.SendAsync(
+            httpClient,
+            request,
+            config.TimeoutSeconds,
+            cancellationToken,
+            handleErrors ? HandleHttpErrorsAsync : null);
+    }
+
+    private async Task<HttpResponseMessage> SendGetAsync(
+        HttpClient httpClient,
+        TfsConfigEntity config,
+        string url,
+        CancellationToken cancellationToken,
+        bool handleErrors = true)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        return await SendAsync(httpClient, config, request, cancellationToken, handleErrors);
+    }
+
+    private async Task<HttpResponseMessage> SendPostAsync(
+        HttpClient httpClient,
+        TfsConfigEntity config,
+        string url,
+        HttpContent content,
+        CancellationToken cancellationToken,
+        bool handleErrors = true)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = content
+        };
+        return await SendAsync(httpClient, config, request, cancellationToken, handleErrors);
+    }
+
+    private static string? GetContinuationToken(HttpResponseMessage response, JsonDocument doc)
+    {
+        if (response.Headers.TryGetValues("x-ms-continuationtoken", out var headerTokens))
+        {
+            return headerTokens.FirstOrDefault();
+        }
+
+        if (doc.RootElement.TryGetProperty("continuationToken", out var tokenElement) &&
+            tokenElement.ValueKind == JsonValueKind.String)
+        {
+            return tokenElement.GetString();
+        }
+
+        return null;
+    }
+
+    private static string AddContinuationToken(string baseUrl, string? continuationToken)
+    {
+        if (string.IsNullOrWhiteSpace(continuationToken))
+        {
+            return baseUrl;
+        }
+
+        var separator = baseUrl.Contains('?') ? "&" : "?";
+        return $"{baseUrl}{separator}continuationToken={Uri.EscapeDataString(continuationToken)}";
+    }
+
+    private static string FormatUtcTimestamp(DateTimeOffset value)
+    {
+        return value.ToUniversalTime().ToString("O");
     }
 }

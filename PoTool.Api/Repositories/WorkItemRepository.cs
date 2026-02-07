@@ -146,6 +146,7 @@ public class WorkItemRepository : IWorkItemRepository
                     existing.Tags = dto.Tags;
                     existing.IsBlocked = dto.IsBlocked;
                     existing.Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null;
+                    existing.TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt;
                 }
                 else
                 {
@@ -190,6 +191,7 @@ public class WorkItemRepository : IWorkItemRepository
                     entity.Tags = dto.Tags;
                     entity.IsBlocked = dto.IsBlocked;
                     entity.Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null;
+                    entity.TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt;
                 }
 
                 // Insert new items
@@ -224,24 +226,25 @@ public class WorkItemRepository : IWorkItemRepository
             }
         }
 
-        return new WorkItemDto(
-            TfsId: entity.TfsId,
-            Type: entity.Type,
-            Title: entity.Title,
-            ParentTfsId: entity.ParentTfsId,
-            AreaPath: entity.AreaPath,
-            IterationPath: entity.IterationPath,
-            State: entity.State,
-            RetrievedAt: entity.RetrievedAt,
-            Effort: entity.Effort,
-            Description: entity.Description,
-            CreatedDate: entity.CreatedDate,
-            ClosedDate: entity.ClosedDate,
-            Severity: entity.Severity,
-            Tags: entity.Tags,
-            IsBlocked: entity.IsBlocked,
-            Relations: relations
-        );
+            return new WorkItemDto(
+                TfsId: entity.TfsId,
+                Type: entity.Type,
+                Title: entity.Title,
+                ParentTfsId: entity.ParentTfsId,
+                AreaPath: entity.AreaPath,
+                IterationPath: entity.IterationPath,
+                State: entity.State,
+                RetrievedAt: entity.RetrievedAt,
+                Effort: entity.Effort,
+                Description: entity.Description,
+                CreatedDate: entity.CreatedDate,
+                ClosedDate: entity.ClosedDate,
+                Severity: entity.Severity,
+                Tags: entity.Tags,
+                IsBlocked: entity.IsBlocked,
+                Relations: relations,
+                ChangedDate: entity.TfsChangedDate
+            );
     }
 
     private static WorkItemEntity MapToEntity(WorkItemDto dto)
@@ -263,7 +266,8 @@ public class WorkItemRepository : IWorkItemRepository
             Severity = dto.Severity,
             Tags = dto.Tags,
             IsBlocked = dto.IsBlocked,
-            Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null
+            Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null,
+            TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt
         };
     }
 }

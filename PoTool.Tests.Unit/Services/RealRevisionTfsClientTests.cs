@@ -22,6 +22,8 @@ public sealed class RealRevisionTfsClientTests
     private Mock<ILogger<RealRevisionTfsClient>> _mockLogger = null!;
     private Mock<ILogger<TfsRequestThrottler>> _mockThrottlerLogger = null!;
     private TfsRequestThrottler _throttler = null!;
+    private Mock<ILogger<TfsRequestSender>> _mockRequestSenderLogger = null!;
+    private TfsRequestSender _requestSender = null!;
 
     [TestInitialize]
     public void Setup()
@@ -31,6 +33,8 @@ public sealed class RealRevisionTfsClientTests
         _mockLogger = new Mock<ILogger<RealRevisionTfsClient>>();
         _mockThrottlerLogger = new Mock<ILogger<TfsRequestThrottler>>();
         _throttler = new TfsRequestThrottler(_mockThrottlerLogger.Object);
+        _mockRequestSenderLogger = new Mock<ILogger<TfsRequestSender>>();
+        _requestSender = new TfsRequestSender(_mockRequestSenderLogger.Object);
     }
 
     [TestMethod]
@@ -47,7 +51,8 @@ public sealed class RealRevisionTfsClientTests
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
             _mockLogger.Object,
-            _throttler);
+            _throttler,
+            _requestSender);
 
         // Act
         var url = client.TestBuildReportingRevisionsUrl(
@@ -79,7 +84,8 @@ public sealed class RealRevisionTfsClientTests
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
             _mockLogger.Object,
-            _throttler);
+            _throttler,
+            _requestSender);
 
         // Act
         var url = client.TestBuildReportingRevisionsUrl(
@@ -113,7 +119,8 @@ public sealed class RealRevisionTfsClientTests
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
             _mockLogger.Object,
-            _throttler);
+            _throttler,
+            _requestSender);
 
         // Act
         var exception = ExpectInnerException<InvalidOperationException>(() =>
@@ -145,7 +152,8 @@ public sealed class RealRevisionTfsClientTests
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
             _mockLogger.Object,
-            _throttler);
+            _throttler,
+            _requestSender);
 
         // Act
         var url = client.TestBuildReportingRevisionsUrl(
@@ -172,7 +180,8 @@ public sealed class RealRevisionTfsClientTests
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
             _mockLogger.Object,
-            _throttler);
+            _throttler,
+            _requestSender);
 
         // Act - Test all expand modes
         var urlNone = client.TestBuildReportingRevisionsUrl(
@@ -210,7 +219,8 @@ public sealed class RealRevisionTfsClientTests
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
             _mockLogger.Object,
-            _throttler);
+            _throttler,
+            _requestSender);
 
         var startDateTime = DateTimeOffset.Parse("2024-01-01T00:00:00Z");
         var continuationToken = "some-token-123";
@@ -245,7 +255,8 @@ public sealed class RealRevisionTfsClientTests
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
             _mockLogger.Object,
-            _throttler);
+            _throttler,
+            _requestSender);
 
         var startDateTime = DateTimeOffset.Parse("2024-01-01T00:00:00Z");
 
@@ -279,7 +290,8 @@ public sealed class RealRevisionTfsClientTests
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
             _mockLogger.Object,
-            _throttler);
+            _throttler,
+            _requestSender);
 
         // Act
         var url = client.TestBuildReportingRevisionsUrl(
@@ -349,7 +361,8 @@ public sealed class RealRevisionTfsClientTests
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
             _mockLogger.Object,
-            _throttler);
+            _throttler,
+            _requestSender);
 
         var url = client.TestBuildWorkItemRevisionsUrl(config, 123);
 
@@ -382,7 +395,8 @@ public sealed class RealRevisionTfsClientTests
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
             _mockLogger.Object,
-            _throttler);
+            _throttler,
+            _requestSender);
 
         var revisions = client.TestParseReportingRevisionsPayload(json);
 
@@ -418,7 +432,8 @@ public sealed class RealRevisionTfsClientTests
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
             _mockLogger.Object,
-            _throttler);
+            _throttler,
+            _requestSender);
 
         var revisions = client.TestParseReportingRevisionsPayload(json);
 
@@ -438,7 +453,8 @@ public sealed class RealRevisionTfsClientTests
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
             _mockLogger.Object,
-            _throttler);
+            _throttler,
+            _requestSender);
 
         var tfsException = ExpectInnerException<TfsException>(() =>
             _ = client.TestParseReportingRevisionsPayload(json));
@@ -468,7 +484,8 @@ public sealed class RealRevisionTfsClientTests
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
             _mockLogger.Object,
-            _throttler);
+            _throttler,
+            _requestSender);
 
         var tfsException = ExpectInnerException<TfsException>(() =>
             client.TestParseWorkItemRevisionFromPerItem(json, 1));
@@ -501,8 +518,9 @@ public sealed class RealRevisionTfsClientTests
             IHttpClientFactory httpClientFactory,
             ITfsConfigurationService configService,
             ILogger<RealRevisionTfsClient> logger,
-            TfsRequestThrottler throttler)
-            : base(httpClientFactory, configService, logger, throttler)
+            TfsRequestThrottler throttler,
+            TfsRequestSender requestSender)
+            : base(httpClientFactory, configService, logger, throttler, requestSender)
         {
         }
 
