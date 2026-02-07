@@ -167,6 +167,9 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
                 }
 
                 // Only update if we don't already have relation deltas
+                // Note: This check provides idempotent hydration - if a revision already has
+                // relation deltas, we skip it to avoid duplicate entries.
+                // The hydration process is designed to be safely re-runnable.
                 if (existingHeader.RelationDeltas.Count > 0)
                 {
                     continue;
@@ -180,7 +183,7 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
                         context.RevisionRelationDeltas.Add(new RevisionRelationDeltaEntity
                         {
                             RevisionHeaderId = existingHeader.Id,
-                            ChangeType = (PoTool.Api.Persistence.Entities.RelationChangeType)(int)delta.ChangeType,
+                            ChangeType = MapRelationChangeType(delta.ChangeType),
                             RelationType = delta.RelationType,
                             TargetWorkItemId = delta.TargetWorkItemId
                         });
@@ -210,5 +213,20 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
             _logger.LogError(ex, "Failed to hydrate relations for work item {WorkItemId}", workItemId);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Maps RelationChangeType from Core.Contracts to Persistence.Entities.
+    /// This ensures explicit, safe conversion between enum types.
+    /// </summary>
+    private static PoTool.Api.Persistence.Entities.RelationChangeType MapRelationChangeType(
+        Core.Contracts.RelationChangeType changeType)
+    {
+        return changeType switch
+        {
+            Core.Contracts.RelationChangeType.Added => PoTool.Api.Persistence.Entities.RelationChangeType.Added,
+            Core.Contracts.RelationChangeType.Removed => PoTool.Api.Persistence.Entities.RelationChangeType.Removed,
+            _ => throw new ArgumentOutOfRangeException(nameof(changeType), changeType, "Unknown RelationChangeType")
+        };
     }
 }

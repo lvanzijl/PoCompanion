@@ -54,8 +54,8 @@ public sealed class RealRevisionTfsClientTests
             expandMode: ReportingExpandMode.None);
 
         // Assert
-        Assert.DoesNotContain("$expand=", url, "URL should not contain $expand parameter when mode is None");
-        Assert.DoesNotContain("relations", url, "URL should never contain 'relations' for reporting endpoint");
+        Assert.DoesNotContain("$expand=", url, "URL must not contain $expand parameter when mode is None");
+        Assert.DoesNotContain("relations", url, "URL must never contain 'relations' for reporting endpoint");
     }
 
     [TestMethod]
