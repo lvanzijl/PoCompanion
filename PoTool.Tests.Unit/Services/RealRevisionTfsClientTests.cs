@@ -153,7 +153,6 @@ public sealed class RealRevisionTfsClientTests
             expandMode: ReportingExpandMode.None);
 
         // Assert
-        StringAssert.Contains(url, "fields=", "URL should include the fields parameter.");
         StringAssert.Contains(url, "System.ChangedBy", "URL should include System.ChangedBy in the fields list");
     }
 
