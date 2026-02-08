@@ -262,8 +262,6 @@ public class RevisionIngestionService
 
                 hasMore = !result.IsComplete;
 
-                result = result with { Revisions = Array.Empty<WorkItemRevision>() };
-
                 pageWorkItemIds?.Clear();
             }
 

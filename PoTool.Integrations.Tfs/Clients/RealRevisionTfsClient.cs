@@ -335,8 +335,18 @@ public class RealRevisionTfsClient : IRevisionTfsClient
     {
         try
         {
-            var hasWorkItemId = TryGetIntProperty(revision, "id", out var idElement, out var workItemId, out var idFailureReason);
-            var hasRevisionNumber = TryGetIntProperty(revision, "rev", out var revElement, out var revisionNumber, out var revFailureReason);
+            var hasWorkItemId = TryGetIntProperty(
+                revision,
+                "id",
+                out var idElement,
+                out var workItemId,
+                out var idFailureReason);
+            var hasRevisionNumber = TryGetIntProperty(
+                revision,
+                "rev",
+                out var revElement,
+                out var revisionNumber,
+                out var revFailureReason);
             var warningContext = new ParseWarningContext(hasWorkItemId ? workItemId : null, hasRevisionNumber ? revisionNumber : null);
 
             if (!hasWorkItemId)
