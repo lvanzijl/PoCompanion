@@ -31,7 +31,7 @@ public sealed class RevisionIngestionPersistenceOptimizationOptions
     public bool SqliteTempStoreMemory { get; init; } = true;
 
     /// <summary>
-    /// Number of pages to include per transaction (default 1). Currently processed one page per transaction.
+    /// Number of pages to include per transaction (default 1). Currently reserved; ingestion persists one page per transaction.
     /// </summary>
     public int BatchPagesPerTransaction { get; init; } = 1;
 

@@ -493,23 +493,10 @@ public class RevisionIngestionService
                 {
                     foreach (var (fieldName, delta) in revision.FieldDeltas)
                     {
-                        if (string.IsNullOrWhiteSpace(delta.FieldName))
-                        {
-                            _logger.LogWarning(
-                                "Revision field delta missing FieldName for WorkItemId {WorkItemId} Revision {RevisionNumber}. Using dictionary key {FieldName}.",
-                                revision.WorkItemId,
-                                revision.RevisionNumber,
-                                fieldName);
-                        }
-
-                        var resolvedFieldName = string.IsNullOrWhiteSpace(delta.FieldName)
-                            ? fieldName
-                            : delta.FieldName;
-
                         fieldDeltas.Add(new RevisionFieldDeltaEntity
                         {
                             RevisionHeader = header,
-                            FieldName = resolvedFieldName,
+                            FieldName = delta.FieldName,
                             OldValue = delta.OldValue,
                             NewValue = delta.NewValue
                         });
