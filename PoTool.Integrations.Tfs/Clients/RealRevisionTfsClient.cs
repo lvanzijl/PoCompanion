@@ -937,7 +937,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         return $"{rawValue[..MaxValuePreviewLength]}...";
     }
 
-    private readonly record struct ParseWarningContext(int? WorkItemId, int? RevisionNumber);
+    private record struct ParseWarningContext(int? WorkItemId, int? RevisionNumber);
 
     private sealed class ParseWarningLimiter
     {

@@ -266,11 +266,9 @@ public class RevisionIngestionService
                 if (revisionList != null)
                 {
                     revisionList.Clear();
-                    revisionList = null;
                 }
 
                 pageWorkItemIds?.Clear();
-                pageWorkItemIds = null;
             }
 
             // Hydrate relations for impacted work items
@@ -642,11 +640,6 @@ public class RevisionIngestionService
             relationDeltas?.Clear();
             workItemIds?.Clear();
             existingKeys?.Clear();
-            headers = null;
-            fieldDeltas = null;
-            relationDeltas = null;
-            workItemIds = null;
-            existingKeys = null;
         }
 
         return persistedCount;
