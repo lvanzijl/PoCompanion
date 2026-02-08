@@ -58,6 +58,10 @@ public static class ApiServiceCollectionExtensions
         // Configure revision ingestion diagnostics options (runtime reloadable)
         services.AddOptions<RevisionIngestionDiagnosticsOptions>()
             .Bind(configuration.GetSection("RevisionIngestionDiagnostics"));
+        services.AddOptions<RevisionIngestionPersistenceOptimizationOptions>()
+            .Bind(configuration.GetSection("RevisionIngestionPersistenceOptimization"));
+
+        services.AddSingleton<SqlitePragmaConnectionInterceptor>();
 
         // Configure database - allow override for testing
         if (configureDatabase != null)
@@ -71,7 +75,7 @@ public static class ApiServiceCollectionExtensions
             var sqlServerConn = configuration.GetConnectionString("SqlServerConnection");
             if (!string.IsNullOrWhiteSpace(sqlServerConn))
             {
-                services.AddDbContext<PoToolDbContext>(options =>
+                services.AddDbContext<PoToolDbContext>((provider, options) =>
                 {
                     options.UseSqlServer(sqlServerConn, sqlOptions =>
                     {
@@ -79,11 +83,12 @@ public static class ApiServiceCollectionExtensions
                         // This is the recommended approach for queries with multiple Include statements
                         sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
                     });
+                    options.AddInterceptors(provider.GetRequiredService<SqlitePragmaConnectionInterceptor>());
                 });
             }
             else
             {
-                services.AddDbContext<PoToolDbContext>(options =>
+                services.AddDbContext<PoToolDbContext>((provider, options) =>
                 {
                     options.UseSqlite(configuration.GetConnectionString("DefaultConnection")
                         ?? "Data Source=potool.db", sqliteOptions =>
@@ -92,6 +97,7 @@ public static class ApiServiceCollectionExtensions
                         // This is the recommended approach for queries with multiple Include statements
                         sqliteOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
                     });
+                    options.AddInterceptors(provider.GetRequiredService<SqlitePragmaConnectionInterceptor>());
 
                     // Configure warnings
                     options.ConfigureWarnings(warnings =>

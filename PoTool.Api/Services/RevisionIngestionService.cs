@@ -2,11 +2,14 @@ using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
+using PoTool.Core.Configuration;
 using PoTool.Integrations.Tfs.Clients;
 using PoTool.Integrations.Tfs.Diagnostics;
 
@@ -22,6 +25,7 @@ public class RevisionIngestionService
     private readonly ILogger<RevisionIngestionService> _logger;
     private readonly RevisionIngestionDiagnostics _diagnostics;
     private readonly TfsRequestThrottler _throttler;
+    private readonly IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions> _persistenceOptions;
 
     // Concurrency control: one ingestion per ProductOwner
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _ingestionLocks = new();
@@ -31,12 +35,14 @@ public class RevisionIngestionService
         IServiceScopeFactory scopeFactory,
         ILogger<RevisionIngestionService> logger,
         RevisionIngestionDiagnostics diagnostics,
-        TfsRequestThrottler throttler)
+        TfsRequestThrottler throttler,
+        IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions> persistenceOptions)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
         _diagnostics = diagnostics;
         _throttler = throttler;
+        _persistenceOptions = persistenceOptions;
     }
 
     /// <summary>
@@ -145,18 +151,13 @@ public class RevisionIngestionService
                     expandMode: ReportingExpandMode.None,
                     cts.Token);
 
-                var persistMetrics = runContext.IsEnabled && (runContext.LogEfSaveChangesDetails || logPerPageSummary)
-                    ? new PersistMetrics()
-                    : null;
-                var persistStartTimestamp = logPerPageSummary ? Stopwatch.GetTimestamp() : 0;
+                var persistMetrics = new PersistMetrics();
 
                 // Process and persist revisions
                 var persistedCount = await PersistRevisionsAsync(context, result.Revisions, persistMetrics, cts.Token);
                 totalRevisions += persistedCount;
 
-                var persistDurationMs = logPerPageSummary
-                    ? RevisionIngestionDiagnostics.GetElapsedMilliseconds(persistStartTimestamp)
-                    : 0;
+                var persistDurationMs = logPerPageSummary ? persistMetrics.PersistDurationMs : 0;
 
                 // Track impacted work item IDs for relation hydration
                 foreach (var revision in result.Revisions)
@@ -169,7 +170,17 @@ public class RevisionIngestionService
                     "Persisted {Count} revisions (page {Page}) for ProductOwner {ProductOwnerId}",
                     persistedCount, pageCount, productOwnerId);
 
-                if (persistMetrics != null && runContext.LogEfSaveChangesDetails)
+                _logger.LogInformation(
+                    "Revision ingestion page persist. TransactionUsed={TransactionUsed} PersistDurationMs={PersistDurationMs} SaveChangesDurationMs={SaveChangesDurationMs} CommitDurationMs={CommitDurationMs} RevisionHeaderCount={RevisionHeaderCount} FieldDeltaCount={FieldDeltaCount} RelationDeltaCount={RelationDeltaCount}",
+                    persistMetrics.TransactionUsed,
+                    persistMetrics.PersistDurationMs,
+                    persistMetrics.SaveChangesDurationMs,
+                    persistMetrics.CommitDurationMs,
+                    persistMetrics.RevisionHeaderCount,
+                    persistMetrics.FieldDeltaCount,
+                    persistMetrics.RelationDeltaCount);
+
+                if (runContext.LogEfSaveChangesDetails)
                 {
                     _diagnostics.LogSaveChangesDetails(
                         runContext,
@@ -407,111 +418,189 @@ public class RevisionIngestionService
         }
 
         var persistedCount = 0;
+        var persistStart = Stopwatch.GetTimestamp();
+        var options = _persistenceOptions.CurrentValue;
+        var autoDetectChangesEnabled = context.ChangeTracker.AutoDetectChangesEnabled;
+        IDbContextTransaction? transaction = null;
+        var transactionUsed = false;
 
-        Task SaveChangesMaybeRecordTimingAsync()
+        try
         {
-            if (metrics == null)
+            if (context.Database.IsRelational())
             {
-                return context.SaveChangesAsync(cancellationToken);
+                transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+                transactionUsed = true;
+            }
+
+            if (options.Enabled)
+            {
+                context.ChangeTracker.AutoDetectChangesEnabled = false;
+            }
+
+            var workItemIds = revisions.Select(revision => revision.WorkItemId).Distinct().ToList();
+            var existingKeys = new HashSet<(int WorkItemId, int RevisionNumber)>();
+
+            if (workItemIds.Count > 0)
+            {
+                var existingRevisions = await context.RevisionHeaders.AsNoTracking()
+                    .Where(header => workItemIds.Contains(header.WorkItemId))
+                    .Select(header => new { header.WorkItemId, header.RevisionNumber })
+                    .ToListAsync(cancellationToken);
+
+                foreach (var existing in existingRevisions)
+                {
+                    existingKeys.Add((existing.WorkItemId, existing.RevisionNumber));
+                }
+            }
+
+            var headers = new List<RevisionHeaderEntity>(revisions.Count);
+            var fieldDeltas = new List<RevisionFieldDeltaEntity>();
+            var relationDeltas = new List<RevisionRelationDeltaEntity>();
+
+            foreach (var revision in revisions)
+            {
+                if (existingKeys.Contains((revision.WorkItemId, revision.RevisionNumber)))
+                {
+                    continue;
+                }
+
+                var header = new RevisionHeaderEntity
+                {
+                    WorkItemId = revision.WorkItemId,
+                    RevisionNumber = revision.RevisionNumber,
+                    WorkItemType = revision.WorkItemType,
+                    Title = revision.Title,
+                    State = revision.State,
+                    Reason = revision.Reason,
+                    IterationPath = revision.IterationPath,
+                    AreaPath = revision.AreaPath,
+                    CreatedDate = revision.CreatedDate,
+                    ChangedDate = revision.ChangedDate,
+                    ClosedDate = revision.ClosedDate,
+                    Effort = revision.Effort,
+                    Tags = revision.Tags,
+                    Severity = revision.Severity,
+                    ChangedBy = revision.ChangedBy,
+                    IngestedAt = DateTimeOffset.UtcNow
+                };
+
+                headers.Add(header);
+                metrics?.IncrementRevisionHeader();
+
+                if (revision.FieldDeltas != null)
+                {
+                    foreach (var (_, delta) in revision.FieldDeltas)
+                    {
+                        fieldDeltas.Add(new RevisionFieldDeltaEntity
+                        {
+                            RevisionHeader = header,
+                            FieldName = delta.FieldName,
+                            OldValue = delta.OldValue,
+                            NewValue = delta.NewValue
+                        });
+                        metrics?.IncrementFieldDelta();
+                    }
+                }
+
+                if (revision.RelationDeltas != null)
+                {
+                    foreach (var delta in revision.RelationDeltas)
+                    {
+                        relationDeltas.Add(new RevisionRelationDeltaEntity
+                        {
+                            RevisionHeader = header,
+                            ChangeType = (PoTool.Api.Persistence.Entities.RelationChangeType)(int)delta.ChangeType,
+                            RelationType = delta.RelationType,
+                            TargetWorkItemId = delta.TargetWorkItemId
+                        });
+                        metrics?.IncrementRelationDelta();
+                    }
+                }
+
+                persistedCount++;
+            }
+
+            if (headers.Count > 0)
+            {
+                context.RevisionHeaders.AddRange(headers);
+            }
+
+            if (fieldDeltas.Count > 0)
+            {
+                context.RevisionFieldDeltas.AddRange(fieldDeltas);
+            }
+
+            if (relationDeltas.Count > 0)
+            {
+                context.RevisionRelationDeltas.AddRange(relationDeltas);
+            }
+
+            if (options.Enabled)
+            {
+                context.ChangeTracker.DetectChanges();
             }
 
             var saveStart = Stopwatch.GetTimestamp();
-            return SaveChangesAndRecordTimingAsync(saveStart);
-        }
-
-        async Task SaveChangesAndRecordTimingAsync(long saveStart)
-        {
             await context.SaveChangesAsync(cancellationToken);
-            metrics.SaveChangesDurationMs += RevisionIngestionDiagnostics.GetElapsedMilliseconds(saveStart);
-        }
 
-        foreach (var revision in revisions)
-        {
-            // Check if revision already exists (idempotency)
-            var existing = await context.RevisionHeaders
-                .FirstOrDefaultAsync(
-                    h => h.WorkItemId == revision.WorkItemId && h.RevisionNumber == revision.RevisionNumber,
-                    cancellationToken);
-
-            if (existing != null)
+            if (metrics != null)
             {
-                // Already ingested, skip
-                continue;
+                metrics.SaveChangesDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(saveStart);
             }
 
-            // Create revision header
-            var header = new RevisionHeaderEntity
+            if (transaction != null)
             {
-                WorkItemId = revision.WorkItemId,
-                RevisionNumber = revision.RevisionNumber,
-                WorkItemType = revision.WorkItemType,
-                Title = revision.Title,
-                State = revision.State,
-                Reason = revision.Reason,
-                IterationPath = revision.IterationPath,
-                AreaPath = revision.AreaPath,
-                CreatedDate = revision.CreatedDate,
-                ChangedDate = revision.ChangedDate,
-                ClosedDate = revision.ClosedDate,
-                Effort = revision.Effort,
-                Tags = revision.Tags,
-                Severity = revision.Severity,
-                ChangedBy = revision.ChangedBy,
-                IngestedAt = DateTimeOffset.UtcNow
-            };
-
-            context.RevisionHeaders.Add(header);
-            metrics?.IncrementRevisionHeader();
-            
-            // Save immediately to get header ID needed for related entities
-            await SaveChangesMaybeRecordTimingAsync();
-
-            // Add field deltas
-            if (revision.FieldDeltas != null)
-            {
-                foreach (var (fieldName, delta) in revision.FieldDeltas)
+                var commitStart = Stopwatch.GetTimestamp();
+                await transaction.CommitAsync(cancellationToken);
+                if (metrics != null)
                 {
-                    context.RevisionFieldDeltas.Add(new RevisionFieldDeltaEntity
-                    {
-                        RevisionHeaderId = header.Id,
-                        FieldName = delta.FieldName,
-                        OldValue = delta.OldValue,
-                        NewValue = delta.NewValue
-                    });
-                    metrics?.IncrementFieldDelta();
+                    metrics.CommitDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(commitStart);
                 }
             }
-
-            // Add relation deltas
-            if (revision.RelationDeltas != null)
+            else if (metrics != null)
             {
-                foreach (var delta in revision.RelationDeltas)
-                {
-                    context.RevisionRelationDeltas.Add(new RevisionRelationDeltaEntity
-                    {
-                        RevisionHeaderId = header.Id,
-                        ChangeType = (PoTool.Api.Persistence.Entities.RelationChangeType)(int)delta.ChangeType,
-                        RelationType = delta.RelationType,
-                        TargetWorkItemId = delta.TargetWorkItemId
-                    });
-                    metrics?.IncrementRelationDelta();
-                }
-            }
-
-            persistedCount++;
-            
-            // Batch save: commit every BatchSaveSize revisions to reduce database round-trips
-            // while maintaining checkpoint progress during large backfills
-            if (persistedCount % BatchSaveSize == 0)
-            {
-                await SaveChangesMaybeRecordTimingAsync();
+                metrics.CommitDurationMs = -1;
             }
         }
-
-        // Final save for any remaining changes
-        if (context.ChangeTracker.HasChanges())
+        catch (OperationCanceledException)
         {
-            await SaveChangesMaybeRecordTimingAsync();
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+            }
+
+            throw;
+        }
+        catch
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+            }
+
+            throw;
+        }
+        finally
+        {
+            if (options.Enabled)
+            {
+                context.ChangeTracker.AutoDetectChangesEnabled = autoDetectChangesEnabled;
+            }
+
+            if (transaction != null)
+            {
+                await transaction.DisposeAsync();
+            }
+
+            if (metrics != null)
+            {
+                metrics.PersistDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(persistStart);
+                metrics.TransactionUsed = transactionUsed;
+                if (!transactionUsed && metrics.CommitDurationMs == 0)
+                {
+                    metrics.CommitDurationMs = -1;
+                }
+            }
         }
 
         return persistedCount;
@@ -550,17 +639,15 @@ public class RevisionIngestionService
         return null;
     }
     
-    /// <summary>
-    /// Number of revisions to persist before committing a batch save.
-    /// </summary>
-    private const int BatchSaveSize = 50;
-
     private sealed class PersistMetrics
     {
         public int RevisionHeaderCount { get; private set; }
         public int FieldDeltaCount { get; private set; }
         public int RelationDeltaCount { get; private set; }
         public long SaveChangesDurationMs { get; set; }
+        public long CommitDurationMs { get; set; }
+        public long PersistDurationMs { get; set; }
+        public bool TransactionUsed { get; set; }
 
         public void IncrementRevisionHeader() => RevisionHeaderCount++;
         public void IncrementFieldDelta() => FieldDeltaCount++;
