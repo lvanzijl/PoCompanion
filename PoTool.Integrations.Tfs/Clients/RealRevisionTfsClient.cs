@@ -289,7 +289,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
     private IReadOnlyList<WorkItemRevision> ParseReportingRevisionsPayload(JsonDocument doc)
     {
         var revisions = new List<WorkItemRevision>();
-        var maxParseWarnings = Math.Max(0, _diagnostics?.GetMaxParseWarningsPerPage() ?? DefaultMaxParseWarningsPerPage);
+        var maxParseWarnings = _diagnostics?.GetMaxParseWarningsPerPage() ?? DefaultMaxParseWarningsPerPage;
         var warningLimiter = new ParseWarningLimiter(maxParseWarnings);
 
         // Parse revisions from response (some API versions return "value" vs legacy "values")
@@ -954,7 +954,13 @@ public class RealRevisionTfsClient : IRevisionTfsClient
 
         public bool TryLog(Action logAction)
         {
-            if (_limit <= 0)
+            if (_limit < 0)
+            {
+                logAction();
+                return true;
+            }
+
+            if (_limit == 0)
             {
                 _suppressed++;
                 return false;

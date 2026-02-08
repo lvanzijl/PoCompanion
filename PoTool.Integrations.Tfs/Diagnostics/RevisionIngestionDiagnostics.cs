@@ -324,7 +324,7 @@ public sealed class RevisionIngestionDiagnostics
 
     public int GetMaxParseWarningsPerPage()
     {
-        return Math.Max(0, _optionsMonitor.CurrentValue.MaxParseWarningsPerPage);
+        return _optionsMonitor.CurrentValue.MaxParseWarningsPerPage;
     }
 
     public static long GetElapsedMilliseconds(long startTimestamp)

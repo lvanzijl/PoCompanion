@@ -207,16 +207,12 @@ public class RevisionIngestionService
                 }
 
                 context.ChangeTracker.Clear();
-                if (context.Entry(watermark).State == EntityState.Detached)
-                {
-                    context.RevisionIngestionWatermarks.Attach(watermark);
-                }
+                context.RevisionIngestionWatermarks.Attach(watermark);
 
                 // Update continuation token
                 continuationToken = result.ContinuationToken;
                 watermark.ContinuationToken = continuationToken;
                 await context.SaveChangesAsync(cts.Token);
-                context.ChangeTracker.Clear();
 
                 progressCallback?.Invoke(new RevisionIngestionProgress
                 {
@@ -266,9 +262,11 @@ public class RevisionIngestionService
 
                 hasMore = !result.IsComplete;
 
-                if (result.Revisions is List<WorkItemRevision> revisionList)
+                List<WorkItemRevision>? revisionList = result.Revisions as List<WorkItemRevision>;
+                if (revisionList != null)
                 {
                     revisionList.Clear();
+                    revisionList = null;
                 }
 
                 pageWorkItemIds?.Clear();
@@ -313,10 +311,8 @@ public class RevisionIngestionService
             }
 
             // Mark ingestion complete
-            if (context.Entry(watermark).State == EntityState.Detached)
-            {
-                context.RevisionIngestionWatermarks.Attach(watermark);
-            }
+            context.ChangeTracker.Clear();
+            context.RevisionIngestionWatermarks.Attach(watermark);
             watermark.LastIngestionCompletedAt = DateTimeOffset.UtcNow;
             watermark.LastIngestionRevisionCount = totalRevisions;
             watermark.ContinuationToken = null; // Clear token on successful completion
