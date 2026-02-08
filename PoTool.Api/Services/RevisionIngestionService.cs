@@ -491,12 +491,12 @@ public class RevisionIngestionService
 
                 if (revision.FieldDeltas != null)
                 {
-                    foreach (var (_, delta) in revision.FieldDeltas)
+                    foreach (var (fieldName, delta) in revision.FieldDeltas)
                     {
                         fieldDeltas.Add(new RevisionFieldDeltaEntity
                         {
                             RevisionHeader = header,
-                            FieldName = delta.FieldName,
+                            FieldName = fieldName,
                             OldValue = delta.OldValue,
                             NewValue = delta.NewValue
                         });

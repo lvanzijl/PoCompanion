@@ -36,7 +36,7 @@ public sealed class RevisionIngestionPersistenceOptimizationOptions
     public int BatchPagesPerTransaction { get; init; } = 1;
 
     /// <summary>
-    /// Safeguard for maximum entities per flush.
+    /// Safeguard for maximum entities per flush (reserved for future enforcement).
     /// </summary>
     public int MaxEntitiesPerFlush { get; init; } = 5000;
 }
