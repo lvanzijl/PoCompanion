@@ -145,7 +145,7 @@ public class RevisionIngestionService
                 var logPerPageSummary = runContext.IsEnabled && runContext.LogPerPageSummary;
                 var pageStartTimestamp = logPerPageSummary ? Stopwatch.GetTimestamp() : 0;
                 using var pageScope = _diagnostics.BeginPageScope(runContext, pageCount);
-                HashSet<int>? pageWorkItemIds = logPerPageSummary ? new HashSet<int>() : null;
+                var pageWorkItemIds = logPerPageSummary ? new HashSet<int>() : null;
 
                 var result = await revisionClient.GetReportingRevisionsAsync(
                     startDateTime,
@@ -551,17 +551,17 @@ public class RevisionIngestionService
                 persistedCount++;
             }
 
-            if (headers is { Count: > 0 })
+            if (headers != null && headers.Count > 0)
             {
                 context.RevisionHeaders.AddRange(headers);
             }
 
-            if (fieldDeltas is { Count: > 0 })
+            if (fieldDeltas != null && fieldDeltas.Count > 0)
             {
                 context.RevisionFieldDeltas.AddRange(fieldDeltas);
             }
 
-            if (relationDeltas is { Count: > 0 })
+            if (relationDeltas != null && relationDeltas.Count > 0)
             {
                 context.RevisionRelationDeltas.AddRange(relationDeltas);
             }

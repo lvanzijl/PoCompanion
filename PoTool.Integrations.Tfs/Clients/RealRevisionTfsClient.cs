@@ -965,13 +965,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
 
         public bool TryLog(Action logAction)
         {
-            if (_limit < 0)
-            {
-                logAction();
-                return true;
-            }
-
-            if (_limit == 0)
+            if (_limit <= 0)
             {
                 Interlocked.Increment(ref _suppressed);
                 return false;
