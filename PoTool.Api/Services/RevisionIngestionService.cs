@@ -212,6 +212,7 @@ public class RevisionIngestionService
                 // Update continuation token
                 continuationToken = result.ContinuationToken;
                 watermark.ContinuationToken = continuationToken;
+                context.Entry(watermark).State = EntityState.Modified;
                 await context.SaveChangesAsync(cts.Token);
 
                 progressCallback?.Invoke(new RevisionIngestionProgress
@@ -317,6 +318,7 @@ public class RevisionIngestionService
 
             // Update watermark for next incremental sync
             watermark.LastSyncStartDateTime = syncStartTime;
+            context.Entry(watermark).State = EntityState.Modified;
             await context.SaveChangesAsync(cts.Token);
             context.ChangeTracker.Clear();
 

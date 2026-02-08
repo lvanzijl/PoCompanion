@@ -962,7 +962,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
             _limit = limit;
         }
 
-        public int SuppressedCount => _suppressed;
+        public int SuppressedCount => Volatile.Read(ref _suppressed);
 
         public bool TryLog(Action logAction)
         {
