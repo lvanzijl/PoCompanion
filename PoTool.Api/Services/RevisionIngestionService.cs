@@ -12,7 +12,6 @@ using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
 using PoTool.Integrations.Tfs.Clients;
 using PoTool.Integrations.Tfs.Diagnostics;
-using CoreRelationChangeType = PoTool.Core.Contracts.RelationChangeType;
 
 namespace PoTool.Api.Services;
 
@@ -176,7 +175,7 @@ public class RevisionIngestionService
                     persistMetrics.TransactionUsed,
                     persistMetrics.PersistDurationMs,
                     persistMetrics.SaveChangesDurationMs,
-                    persistMetrics.CommitDurationMs,
+                    persistMetrics.CommitDurationMs ?? -1,
                     persistMetrics.RevisionHeaderCount,
                     persistMetrics.FieldDeltaCount,
                     persistMetrics.RelationDeltaCount);
@@ -507,15 +506,15 @@ public class RevisionIngestionService
                 {
                     foreach (var delta in revision.RelationDeltas)
                     {
-                        var changeType = delta.ChangeType switch
+                        if (!Enum.IsDefined(typeof(PoTool.Api.Persistence.Entities.RelationChangeType), (int)delta.ChangeType))
                         {
-                            CoreRelationChangeType.Added => PoTool.Api.Persistence.Entities.RelationChangeType.Added,
-                            CoreRelationChangeType.Removed => PoTool.Api.Persistence.Entities.RelationChangeType.Removed,
-                            _ => throw new ArgumentOutOfRangeException(
+                            throw new ArgumentOutOfRangeException(
                                 nameof(delta.ChangeType),
                                 delta.ChangeType,
-                                $"Unsupported relation change type: {delta.ChangeType}.")
-                        };
+                                $"Unsupported relation change type: {delta.ChangeType}.");
+                        }
+
+                        var changeType = (PoTool.Api.Persistence.Entities.RelationChangeType)(int)delta.ChangeType;
 
                         relationDeltas.Add(new RevisionRelationDeltaEntity
                         {
@@ -570,7 +569,7 @@ public class RevisionIngestionService
             }
             else if (metrics != null)
             {
-                metrics.CommitDurationMs = -1;
+                metrics.CommitDurationMs = null;
             }
         }
         catch (OperationCanceledException)
@@ -652,7 +651,7 @@ public class RevisionIngestionService
         public int FieldDeltaCount { get; private set; }
         public int RelationDeltaCount { get; private set; }
         public long SaveChangesDurationMs { get; set; }
-        public long CommitDurationMs { get; set; }
+        public long? CommitDurationMs { get; set; }
         public long PersistDurationMs { get; set; }
         public bool TransactionUsed { get; set; }
 
