@@ -192,9 +192,27 @@ public class RevisionIngestionService
                         persistMetrics.RelationDeltaCount);
                 }
 
+                if (runContext.IsEnabled &&
+                    runContext.LogGcStatsEveryNPages > 0 &&
+                    pageCount % runContext.LogGcStatsEveryNPages == 0)
+                {
+                    var trackedEntries = context.ChangeTracker.Entries().Count();
+                    _diagnostics.LogGcStats(
+                        runContext,
+                        GC.GetTotalMemory(false),
+                        GC.CollectionCount(0),
+                        GC.CollectionCount(1),
+                        GC.CollectionCount(2),
+                        trackedEntries);
+                }
+
+                context.ChangeTracker.Clear();
+                context.RevisionIngestionWatermarks.Attach(watermark);
+
                 // Update continuation token
                 continuationToken = result.ContinuationToken;
                 watermark.ContinuationToken = continuationToken;
+                context.Entry(watermark).State = EntityState.Modified;
                 await context.SaveChangesAsync(cts.Token);
 
                 progressCallback?.Invoke(new RevisionIngestionProgress
@@ -244,6 +262,8 @@ public class RevisionIngestionService
                 }
 
                 hasMore = !result.IsComplete;
+
+                pageWorkItemIds?.Clear();
             }
 
             // Hydrate relations for impacted work items
@@ -284,6 +304,8 @@ public class RevisionIngestionService
             }
 
             // Mark ingestion complete
+            context.ChangeTracker.Clear();
+            context.RevisionIngestionWatermarks.Attach(watermark);
             watermark.LastIngestionCompletedAt = DateTimeOffset.UtcNow;
             watermark.LastIngestionRevisionCount = totalRevisions;
             watermark.ContinuationToken = null; // Clear token on successful completion
@@ -296,7 +318,9 @@ public class RevisionIngestionService
 
             // Update watermark for next incremental sync
             watermark.LastSyncStartDateTime = syncStartTime;
+            context.Entry(watermark).State = EntityState.Modified;
             await context.SaveChangesAsync(cts.Token);
+            context.ChangeTracker.Clear();
 
             progressCallback?.Invoke(new RevisionIngestionProgress
             {
@@ -425,6 +449,11 @@ public class RevisionIngestionService
         var autoDetectChangesEnabled = context.ChangeTracker.AutoDetectChangesEnabled;
         IDbContextTransaction? transaction = null;
         var transactionUsed = false;
+        List<int>? workItemIds = null;
+        HashSet<(int WorkItemId, int RevisionNumber)>? existingKeys = null;
+        List<RevisionHeaderEntity>? headers = null;
+        List<RevisionFieldDeltaEntity>? fieldDeltas = null;
+        List<RevisionRelationDeltaEntity>? relationDeltas = null;
 
         try
         {
@@ -439,8 +468,8 @@ public class RevisionIngestionService
                 context.ChangeTracker.AutoDetectChangesEnabled = false;
             }
 
-            var workItemIds = revisions.Select(revision => revision.WorkItemId).Distinct().ToList();
-            var existingKeys = new HashSet<(int WorkItemId, int RevisionNumber)>();
+            workItemIds = revisions.Select(revision => revision.WorkItemId).Distinct().ToList();
+            existingKeys = new HashSet<(int WorkItemId, int RevisionNumber)>();
 
             if (workItemIds.Count > 0)
             {
@@ -455,9 +484,9 @@ public class RevisionIngestionService
                 }
             }
 
-            var headers = new List<RevisionHeaderEntity>(revisions.Count);
-            var fieldDeltas = new List<RevisionFieldDeltaEntity>();
-            var relationDeltas = new List<RevisionRelationDeltaEntity>();
+            headers = new List<RevisionHeaderEntity>(revisions.Count);
+            fieldDeltas = new List<RevisionFieldDeltaEntity>();
+            relationDeltas = new List<RevisionRelationDeltaEntity>();
 
             foreach (var revision in revisions)
             {
@@ -524,17 +553,17 @@ public class RevisionIngestionService
                 persistedCount++;
             }
 
-            if (headers.Count > 0)
+            if (headers != null && headers.Count > 0)
             {
                 context.RevisionHeaders.AddRange(headers);
             }
 
-            if (fieldDeltas.Count > 0)
+            if (fieldDeltas != null && fieldDeltas.Count > 0)
             {
                 context.RevisionFieldDeltas.AddRange(fieldDeltas);
             }
 
-            if (relationDeltas.Count > 0)
+            if (relationDeltas != null && relationDeltas.Count > 0)
             {
                 context.RevisionRelationDeltas.AddRange(relationDeltas);
             }
@@ -601,6 +630,12 @@ public class RevisionIngestionService
                 metrics.PersistDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(persistStart);
                 metrics.TransactionUsed = transactionUsed;
             }
+
+            headers?.Clear();
+            fieldDeltas?.Clear();
+            relationDeltas?.Clear();
+            workItemIds?.Clear();
+            existingKeys?.Clear();
         }
 
         return persistedCount;

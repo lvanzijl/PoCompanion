@@ -53,6 +53,12 @@ public sealed class RevisionIngestionDiagnostics
             new EventId(6205, nameof(SaveChangesLog)),
             "Revision ingestion SaveChanges details. SaveChangesDurationMs={SaveChangesDurationMs} RevisionHeaderCount={RevisionHeaderCount} FieldDeltaCount={FieldDeltaCount} RelationDeltaCount={RelationDeltaCount}");
 
+    private static readonly Action<ILogger, long, int, int, int, int, Exception?> GcStatsLog =
+        LoggerMessage.Define<long, int, int, int, int>(
+            LogLevel.Information,
+            new EventId(6210, nameof(GcStatsLog)),
+            "Revision ingestion GC stats. MemoryBytes={MemoryBytes} Gen0Count={Gen0Count} Gen1Count={Gen1Count} Gen2Count={Gen2Count} TrackedEntries={TrackedEntries}");
+
     private static readonly Action<ILogger, int, int, long, double, int, int, Exception?> RelationHydrationSummaryLog =
         LoggerMessage.Define<int, int, long, double, int, int>(
             LogLevel.Information,
@@ -108,9 +114,11 @@ public sealed class RevisionIngestionDiagnostics
             options.LogPerPageSummary,
             options.LogPerWorkItemHydration,
             options.LogEfSaveChangesDetails,
+            options.LogGcStatsEveryNPages,
             options.SlowPageThresholdMs,
             options.SlowDbThresholdMs,
-            options.SlowHttpThresholdMs);
+            options.SlowHttpThresholdMs,
+            options.MaxParseWarningsPerPage);
 
         var previous = CurrentRun.Value;
         CurrentRun.Value = runContext;
@@ -226,6 +234,22 @@ public sealed class RevisionIngestionDiagnostics
         SaveChangesLog(_logger, saveChangesDurationMs, revisionHeaderCount, fieldDeltaCount, relationDeltaCount, null);
     }
 
+    public void LogGcStats(
+        RevisionIngestionRunContext runContext,
+        long memoryBytes,
+        int gen0Count,
+        int gen1Count,
+        int gen2Count,
+        int trackedEntries)
+    {
+        if (!runContext.IsEnabled || runContext.LogGcStatsEveryNPages <= 0)
+        {
+            return;
+        }
+
+        GcStatsLog(_logger, memoryBytes, gen0Count, gen1Count, gen2Count, trackedEntries, null);
+    }
+
     public void LogRelationHydrationSummary(
         RevisionIngestionRunContext runContext,
         int workItemCount,
@@ -298,6 +322,11 @@ public sealed class RevisionIngestionDiagnostics
         ThrottleWaitLog(_logger, operation, waitMs, null);
     }
 
+    public int GetMaxParseWarningsPerPage()
+    {
+        return Math.Max(0, _optionsMonitor.CurrentValue.MaxParseWarningsPerPage);
+    }
+
     public static long GetElapsedMilliseconds(long startTimestamp)
     {
         var elapsedTicks = Stopwatch.GetTimestamp() - startTimestamp;
@@ -367,18 +396,22 @@ public readonly record struct RevisionIngestionRunContext
         bool logPerPageSummary,
         bool logPerWorkItemHydration,
         bool logEfSaveChangesDetails,
+        int logGcStatsEveryNPages,
         int slowPageThresholdMs,
         int slowDbThresholdMs,
-        int slowHttpThresholdMs)
+        int slowHttpThresholdMs,
+        int maxParseWarningsPerPage)
     {
         RunId = runId;
         ProductOwnerId = productOwnerId;
         LogPerPageSummary = logPerPageSummary;
         LogPerWorkItemHydration = logPerWorkItemHydration;
         LogEfSaveChangesDetails = logEfSaveChangesDetails;
+        LogGcStatsEveryNPages = logGcStatsEveryNPages;
         SlowPageThresholdMs = slowPageThresholdMs;
         SlowDbThresholdMs = slowDbThresholdMs;
         SlowHttpThresholdMs = slowHttpThresholdMs;
+        MaxParseWarningsPerPage = maxParseWarningsPerPage;
         IsEnabled = true;
     }
 
@@ -387,8 +420,10 @@ public readonly record struct RevisionIngestionRunContext
     public bool LogPerPageSummary { get; }
     public bool LogPerWorkItemHydration { get; }
     public bool LogEfSaveChangesDetails { get; }
+    public int LogGcStatsEveryNPages { get; }
     public int SlowPageThresholdMs { get; }
     public int SlowDbThresholdMs { get; }
     public int SlowHttpThresholdMs { get; }
+    public int MaxParseWarningsPerPage { get; }
     public bool IsEnabled { get; }
 }
