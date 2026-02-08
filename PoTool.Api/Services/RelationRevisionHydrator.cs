@@ -67,6 +67,7 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
                 var hydrationStart = collectMetrics ? Stopwatch.GetTimestamp() : 0;
                 var totalRelationDeltas = 0;
                 var totalCalls = 0;
+                long totalCallDurationMs = 0;
                 var totalSkipped = 0;
                 int totalRevisionsHydrated = 0;
                 int workItemsProcessed = 0;
@@ -84,6 +85,7 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
                             if (result.CallMade)
                             {
                                 Interlocked.Increment(ref totalCalls);
+                                Interlocked.Add(ref totalCallDurationMs, result.CallDurationMs);
                             }
 
                             if (result.SkippedDueToCache)
@@ -110,7 +112,7 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
             if (collectMetrics)
             {
                 var totalDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(hydrationStart);
-                var avgCallMs = totalCalls > 0 ? totalDurationMs / (double)totalCalls : 0;
+                var avgCallMs = totalCalls > 0 ? totalCallDurationMs / (double)totalCalls : 0;
                 _diagnostics.LogRelationHydrationSummary(
                     runContext,
                     distinctWorkItemIds.Count,
@@ -148,8 +150,14 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
         var revisionClient = scope.ServiceProvider.GetRequiredService<IRevisionTfsClient>();
         var logPerWorkItem = runContext.IsEnabled && runContext.LogPerWorkItemHydration;
+        var captureCallTiming = runContext.IsEnabled;
         var perItemStart = logPerWorkItem ? Stopwatch.GetTimestamp() : 0;
+        var callStart = captureCallTiming ? Stopwatch.GetTimestamp() : 0;
         var relationDeltaCount = 0;
+
+        long GetCallDurationMs() => captureCallTiming
+            ? RevisionIngestionDiagnostics.GetElapsedMilliseconds(callStart)
+            : 0;
 
         try
         {
@@ -167,7 +175,7 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
                     "Work item {WorkItemId} already hydrated up to revision {Revision}",
                     workItemId, lastHydrated);
                 LogPerWorkItem(runContext, logPerWorkItem, workItemId, 0, false, perItemStart, 0);
-                return new HydrationWorkItemResult(0, 0, 0, true, false);
+                return new HydrationWorkItemResult(0, 0, 0, GetCallDurationMs(), true, false);
             }
 
             if (lastRevisionInDb == 0)
@@ -177,7 +185,7 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
                     "No revisions found in database for work item {WorkItemId}, skipping hydration",
                     workItemId);
                 LogPerWorkItem(runContext, logPerWorkItem, workItemId, 0, false, perItemStart, 0);
-                return new HydrationWorkItemResult(0, 0, 0, false, false);
+                return new HydrationWorkItemResult(0, 0, 0, GetCallDurationMs(), false, false);
             }
 
             _logger.LogDebug(
@@ -257,7 +265,7 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
                 revisionsHydrated, workItemId);
 
             LogPerWorkItem(runContext, logPerWorkItem, workItemId, revisions.Count, relationsPresent, perItemStart, relationDeltaCount);
-            return new HydrationWorkItemResult(revisionsHydrated, revisions.Count, relationDeltaCount, false, true);
+            return new HydrationWorkItemResult(revisionsHydrated, revisions.Count, relationDeltaCount, GetCallDurationMs(), false, true);
         }
         catch (Exception ex)
         {
@@ -311,12 +319,14 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
     /// <param name="RevisionsHydrated">Number of revisions with relation deltas persisted.</param>
     /// <param name="RevisionsFetched">Total number of revisions fetched from the per-item API.</param>
     /// <param name="RelationDeltaCount">Total number of relation deltas written.</param>
+    /// <param name="CallDurationMs">Elapsed duration in milliseconds for the work item hydration attempt.</param>
     /// <param name="SkippedDueToCache">True when hydration was skipped due to cached completion.</param>
     /// <param name="CallMade">True when the per-item revisions API was called.</param>
     private readonly record struct HydrationWorkItemResult(
         int RevisionsHydrated,
         int RevisionsFetched,
         int RelationDeltaCount,
+        long CallDurationMs,
         bool SkippedDueToCache,
         bool CallMade);
 }

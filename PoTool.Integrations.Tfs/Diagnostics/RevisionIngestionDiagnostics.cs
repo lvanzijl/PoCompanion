@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PoTool.Core.Configuration;
@@ -321,7 +322,8 @@ public sealed class RevisionIngestionDiagnostics
             return true;
         }
 
-        return Random.Shared.NextDouble() <= normalized;
+        var threshold = (int)Math.Ceiling(normalized * int.MaxValue);
+        return RandomNumberGenerator.GetInt32(0, int.MaxValue) <= threshold;
     }
 
     private sealed class RunScope : IDisposable

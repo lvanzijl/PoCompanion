@@ -408,7 +408,7 @@ public class RevisionIngestionService
 
         var persistedCount = 0;
 
-        Task SaveChangesWithOptionalMetricsAsync()
+        Task SaveChangesMaybeRecordTimingAsync()
         {
             if (metrics == null)
             {
@@ -416,10 +416,10 @@ public class RevisionIngestionService
             }
 
             var saveStart = Stopwatch.GetTimestamp();
-            return SaveChangesWithMetricsAsync(saveStart);
+            return SaveChangesAndRecordTimingAsync(saveStart);
         }
 
-        async Task SaveChangesWithMetricsAsync(long saveStart)
+        async Task SaveChangesAndRecordTimingAsync(long saveStart)
         {
             await context.SaveChangesAsync(cancellationToken);
             metrics.SaveChangesDurationMs += RevisionIngestionDiagnostics.GetElapsedMilliseconds(saveStart);
@@ -464,7 +464,7 @@ public class RevisionIngestionService
             metrics?.IncrementRevisionHeader();
             
             // Save immediately to get header ID needed for related entities
-            await SaveChangesWithOptionalMetricsAsync();
+            await SaveChangesMaybeRecordTimingAsync();
 
             // Add field deltas
             if (revision.FieldDeltas != null)
@@ -504,14 +504,14 @@ public class RevisionIngestionService
             // while maintaining checkpoint progress during large backfills
             if (persistedCount % BatchSaveSize == 0)
             {
-                await SaveChangesWithOptionalMetricsAsync();
+                await SaveChangesMaybeRecordTimingAsync();
             }
         }
 
         // Final save for any remaining changes
         if (context.ChangeTracker.HasChanges())
         {
-            await SaveChangesWithOptionalMetricsAsync();
+            await SaveChangesMaybeRecordTimingAsync();
         }
 
         return persistedCount;
