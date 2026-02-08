@@ -12,6 +12,7 @@ using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
 using PoTool.Integrations.Tfs.Clients;
 using PoTool.Integrations.Tfs.Diagnostics;
+using CoreRelationChangeType = PoTool.Core.Contracts.RelationChangeType;
 
 namespace PoTool.Api.Services;
 
@@ -506,10 +507,20 @@ public class RevisionIngestionService
                 {
                     foreach (var delta in revision.RelationDeltas)
                     {
+                        var changeType = delta.ChangeType switch
+                        {
+                            CoreRelationChangeType.Added => PoTool.Api.Persistence.Entities.RelationChangeType.Added,
+                            CoreRelationChangeType.Removed => PoTool.Api.Persistence.Entities.RelationChangeType.Removed,
+                            _ => throw new ArgumentOutOfRangeException(
+                                nameof(delta.ChangeType),
+                                delta.ChangeType,
+                                "Unsupported relation change type.")
+                        };
+
                         relationDeltas.Add(new RevisionRelationDeltaEntity
                         {
                             RevisionHeader = header,
-                            ChangeType = (PoTool.Api.Persistence.Entities.RelationChangeType)(int)delta.ChangeType,
+                            ChangeType = changeType,
                             RelationType = delta.RelationType,
                             TargetWorkItemId = delta.TargetWorkItemId
                         });
@@ -596,10 +607,6 @@ public class RevisionIngestionService
             {
                 metrics.PersistDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(persistStart);
                 metrics.TransactionUsed = transactionUsed;
-                if (!transactionUsed && metrics.CommitDurationMs == 0)
-                {
-                    metrics.CommitDurationMs = -1;
-                }
             }
         }
 

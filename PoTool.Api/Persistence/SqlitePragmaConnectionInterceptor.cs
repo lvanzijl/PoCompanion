@@ -133,6 +133,11 @@ public sealed class SqlitePragmaConnectionInterceptor : DbConnectionInterceptor
 
     private string ResolveSynchronousMode(string? configuredMode)
     {
+        if (string.IsNullOrWhiteSpace(configuredMode))
+        {
+            return "NORMAL";
+        }
+
         if (string.Equals(configuredMode, "OFF", StringComparison.OrdinalIgnoreCase))
         {
             if (_isDevelopment)
