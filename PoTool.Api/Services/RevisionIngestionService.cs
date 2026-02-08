@@ -493,10 +493,14 @@ public class RevisionIngestionService
                 {
                     foreach (var (fieldName, delta) in revision.FieldDeltas)
                     {
+                        var resolvedFieldName = string.IsNullOrWhiteSpace(delta.FieldName)
+                            ? fieldName
+                            : delta.FieldName;
+
                         fieldDeltas.Add(new RevisionFieldDeltaEntity
                         {
                             RevisionHeader = header,
-                            FieldName = fieldName,
+                            FieldName = resolvedFieldName,
                             OldValue = delta.OldValue,
                             NewValue = delta.NewValue
                         });
@@ -639,6 +643,9 @@ public class RevisionIngestionService
         return null;
     }
 
+    /// <summary>
+    /// Maps core relation change types to persistence enum values with validation to catch drift.
+    /// </summary>
     private static PersistenceRelationChangeType MapRelationChangeType(CoreRelationChangeType changeType)
     {
         var changeTypeValue = (int)changeType;
