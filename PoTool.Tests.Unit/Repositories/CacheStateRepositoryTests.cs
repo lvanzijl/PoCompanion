@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PoTool.Api.Exceptions;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Repositories;
@@ -44,7 +45,7 @@ public class CacheStateRepositoryTests
     }
 
     /// <summary>
-    /// Verifies that GetOrCreateCacheStateAsync throws InvalidOperationException
+    /// Verifies that GetOrCreateCacheStateAsync throws ProductOwnerNotFoundException
     /// when ProductOwner does not exist.
     /// </summary>
     [TestMethod]
@@ -57,9 +58,9 @@ public class CacheStateRepositoryTests
         try
         {
             await _repository.GetOrCreateCacheStateAsync(nonExistentProductOwnerId);
-            Assert.Fail("Expected InvalidOperationException was not thrown");
+            Assert.Fail("Expected ProductOwnerNotFoundException was not thrown");
         }
-        catch (InvalidOperationException ex)
+        catch (ProductOwnerNotFoundException ex)
         {
             StringAssert.Contains(ex.Message, "ProductOwner does not exist");
             StringAssert.Contains(ex.Message, nonExistentProductOwnerId.ToString());
@@ -105,7 +106,7 @@ public class CacheStateRepositoryTests
     }
 
     /// <summary>
-    /// Verifies that UpdateSyncStatusAsync throws InvalidOperationException
+    /// Verifies that UpdateSyncStatusAsync throws ProductOwnerNotFoundException
     /// when ProductOwner does not exist.
     /// </summary>
     [TestMethod]
@@ -122,16 +123,16 @@ public class CacheStateRepositoryTests
                 Shared.Settings.CacheSyncStatusDto.InProgress,
                 "Test Stage",
                 50);
-            Assert.Fail("Expected InvalidOperationException was not thrown");
+            Assert.Fail("Expected ProductOwnerNotFoundException was not thrown");
         }
-        catch (InvalidOperationException ex)
+        catch (ProductOwnerNotFoundException ex)
         {
             StringAssert.Contains(ex.Message, "ProductOwner does not exist");
         }
     }
 
     /// <summary>
-    /// Verifies that MarkSyncSuccessAsync throws InvalidOperationException
+    /// Verifies that MarkSyncSuccessAsync throws ProductOwnerNotFoundException
     /// when ProductOwner does not exist.
     /// </summary>
     [TestMethod]
@@ -149,16 +150,16 @@ public class CacheStateRepositoryTests
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow);
-            Assert.Fail("Expected InvalidOperationException was not thrown");
+            Assert.Fail("Expected ProductOwnerNotFoundException was not thrown");
         }
-        catch (InvalidOperationException ex)
+        catch (ProductOwnerNotFoundException ex)
         {
             StringAssert.Contains(ex.Message, "ProductOwner does not exist");
         }
     }
 
     /// <summary>
-    /// Verifies that MarkSyncFailedAsync throws InvalidOperationException
+    /// Verifies that MarkSyncFailedAsync throws ProductOwnerNotFoundException
     /// when ProductOwner does not exist.
     /// </summary>
     [TestMethod]
@@ -174,16 +175,16 @@ public class CacheStateRepositoryTests
                 nonExistentProductOwnerId,
                 "Test error message",
                 "Test stage");
-            Assert.Fail("Expected InvalidOperationException was not thrown");
+            Assert.Fail("Expected ProductOwnerNotFoundException was not thrown");
         }
-        catch (InvalidOperationException ex)
+        catch (ProductOwnerNotFoundException ex)
         {
             StringAssert.Contains(ex.Message, "ProductOwner does not exist");
         }
     }
 
     /// <summary>
-    /// Verifies that ResetCacheStateAsync throws InvalidOperationException
+    /// Verifies that ResetCacheStateAsync throws ProductOwnerNotFoundException
     /// when ProductOwner does not exist.
     /// </summary>
     [TestMethod]
@@ -196,9 +197,9 @@ public class CacheStateRepositoryTests
         try
         {
             await _repository.ResetCacheStateAsync(nonExistentProductOwnerId);
-            Assert.Fail("Expected InvalidOperationException was not thrown");
+            Assert.Fail("Expected ProductOwnerNotFoundException was not thrown");
         }
-        catch (InvalidOperationException ex)
+        catch (ProductOwnerNotFoundException ex)
         {
             StringAssert.Contains(ex.Message, "ProductOwner does not exist");
         }

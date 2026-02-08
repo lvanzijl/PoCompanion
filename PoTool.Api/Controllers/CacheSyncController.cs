@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Api.Exceptions;
 using PoTool.Api.Hubs;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
@@ -43,9 +44,9 @@ public class CacheSyncController : ControllerBase
             var cacheState = await _cacheStateRepository.GetOrCreateCacheStateAsync(productOwnerId, cancellationToken);
             return Ok(cacheState);
         }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("ProductOwner does not exist"))
+        catch (ProductOwnerNotFoundException ex)
         {
-            return NotFound(new { message = $"Product Owner with ID {productOwnerId} does not exist" });
+            return NotFound(new { message = ex.Message });
         }
     }
 
@@ -139,9 +140,9 @@ public class CacheSyncController : ControllerBase
             
             return Ok(new { message = "Cache reset successfully" });
         }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("ProductOwner does not exist"))
+        catch (ProductOwnerNotFoundException ex)
         {
-            return NotFound(new { message = $"Product Owner with ID {productOwnerId} does not exist" });
+            return NotFound(new { message = ex.Message });
         }
     }
 

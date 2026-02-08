@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PoTool.Api.Exceptions;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
@@ -27,14 +28,7 @@ public class CacheStateRepository : ICacheStateRepository
         if (entity == null)
         {
             // Validate that the ProductOwner exists before creating cache state
-            var productOwnerExists = await _context.Profiles
-                .AnyAsync(p => p.Id == productOwnerId, cancellationToken);
-
-            if (!productOwnerExists)
-            {
-                throw new InvalidOperationException(
-                    $"Cannot create cache state for ProductOwner {productOwnerId} because the ProductOwner does not exist.");
-            }
+            await ValidateProductOwnerExistsAsync(productOwnerId, cancellationToken);
 
             entity = new ProductOwnerCacheStateEntity
             {
@@ -171,14 +165,7 @@ public class CacheStateRepository : ICacheStateRepository
         if (entity == null)
         {
             // Validate that the ProductOwner exists before creating cache state
-            var productOwnerExists = await _context.Profiles
-                .AnyAsync(p => p.Id == productOwnerId, cancellationToken);
-
-            if (!productOwnerExists)
-            {
-                throw new InvalidOperationException(
-                    $"Cannot create cache state for ProductOwner {productOwnerId} because the ProductOwner does not exist.");
-            }
+            await ValidateProductOwnerExistsAsync(productOwnerId, cancellationToken);
 
             entity = new ProductOwnerCacheStateEntity
             {
@@ -189,6 +176,21 @@ public class CacheStateRepository : ICacheStateRepository
         }
 
         return entity;
+    }
+
+    /// <summary>
+    /// Validates that a ProductOwner exists in the database.
+    /// </summary>
+    /// <exception cref="ProductOwnerNotFoundException">Thrown when the ProductOwner does not exist.</exception>
+    private async Task ValidateProductOwnerExistsAsync(int productOwnerId, CancellationToken cancellationToken)
+    {
+        var exists = await _context.Profiles
+            .AnyAsync(p => p.Id == productOwnerId, cancellationToken);
+
+        if (!exists)
+        {
+            throw new ProductOwnerNotFoundException(productOwnerId);
+        }
     }
 
     private static CacheStateDto MapToDto(ProductOwnerCacheStateEntity entity)
