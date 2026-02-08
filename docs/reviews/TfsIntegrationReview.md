@@ -83,6 +83,7 @@ Fix (Copilot-actionable):
 - If status is 429, throw `new TfsRateLimitException(message, body, retryAfter)`.
 - Otherwise throw `new TfsException(message, statusCode, body)` so `StatusCode` is populated.
 - Update `IsTransient` to treat `StatusCode >= 500` and `408` as transient; leave auth/403 as non-transient.
+- Note: `TfsException.StatusCode` is nullable; retry logic must handle nulls (or consider making it non-nullable if always set).
 - Do **not** change method signatures or external behavior beyond retry classification.
 
 Offline proof / test:

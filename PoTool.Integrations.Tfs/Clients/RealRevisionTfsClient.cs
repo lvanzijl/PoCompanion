@@ -1,3 +1,4 @@
+using System.Net.Http;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PoTool.Core.Contracts;
@@ -17,6 +18,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
     private readonly ITfsConfigurationService _configService;
     private readonly ILogger<RealRevisionTfsClient> _logger;
     private readonly TfsRequestThrottler _throttler;
+    private readonly TfsRequestSender _requestSender;
 
     private const int MaxRetries = 3;
     private const int MaxPayloadLogLength = 2000; // Limit error logs to a readable size without losing essential context.
@@ -48,12 +50,14 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         IHttpClientFactory httpClientFactory,
         ITfsConfigurationService configService,
         ILogger<RealRevisionTfsClient> logger,
-        TfsRequestThrottler throttler)
+        TfsRequestThrottler throttler,
+        TfsRequestSender requestSender)
     {
         _httpClientFactory = httpClientFactory;
         _configService = configService;
         _logger = logger;
         _throttler = throttler;
+        _requestSender = requestSender;
     }
 
     /// <inheritdoc />
@@ -77,7 +81,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
 
             _logger.LogDebug("Calling reporting revisions API: {Url}", url);
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -130,7 +134,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
 
             _logger.LogDebug("Calling per-item revisions API for work item {WorkItemId}", workItemId);
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -180,7 +184,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
             var httpClient = GetAuthenticatedHttpClient();
             var url = $"{entity.Url.TrimEnd('/')}/_apis/projects?api-version={entity.ApiVersion}&$top=1";
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            var response = await SendGetAsync(httpClient, entity, url, cancellationToken, handleErrors: false);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
@@ -769,6 +773,22 @@ public class RealRevisionTfsClient : IRevisionTfsClient
                 await Task.Delay(delay, cancellationToken);
             }
         }
+    }
+
+    private async Task<HttpResponseMessage> SendGetAsync(
+        HttpClient httpClient,
+        TfsConfigEntity config,
+        string url,
+        CancellationToken cancellationToken,
+        bool handleErrors = true)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        return await _requestSender.SendAsync(
+            httpClient,
+            request,
+            config.TimeoutSeconds,
+            cancellationToken,
+            handleErrors ? HandleHttpErrorsAsync : null);
     }
 
     private record RelationInfo(string RelationType, int TargetId);

@@ -42,12 +42,12 @@ public partial class RealTfsClient
                 if (fromDate.HasValue)
                 {
                     // Azure DevOps API uses minTime for filtering
-                    queryParams.Add($"searchCriteria.minTime={fromDate.Value:yyyy-MM-ddTHH:mm:ssZ}");
+                    queryParams.Add($"searchCriteria.minTime={Uri.EscapeDataString(FormatUtcTimestamp(fromDate.Value))}");
                 }
 
                 if (toDate.HasValue)
                 {
-                    queryParams.Add($"searchCriteria.maxTime={toDate.Value:yyyy-MM-ddTHH:mm:ssZ}");
+                    queryParams.Add($"searchCriteria.maxTime={Uri.EscapeDataString(FormatUtcTimestamp(toDate.Value))}");
                 }
 
                 // Git PRs are project-scoped (requirement #1)
@@ -56,51 +56,60 @@ public partial class RealTfsClient
 
                 _logger.LogDebug("Fetching PRs from repository {Repository}", repo.Name);
 
-                var response = await httpClient.GetAsync(url, cancellationToken);
-                await HandleHttpErrorsAsync(response, cancellationToken);
+                string? continuationToken = null;
+                var pageUrl = url;
 
-                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-                if (!doc.RootElement.TryGetProperty("value", out var valueArray))
-                    continue;
-
-                foreach (var pr in valueArray.EnumerateArray())
+                do
                 {
-                    var prId = pr.GetProperty("pullRequestId").GetInt32();
-                    var title = pr.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
-                    var status = pr.TryGetProperty("status", out var s) ? s.GetString() ?? "" : "";
-                    var sourceBranch = pr.TryGetProperty("sourceRefName", out var src) ? src.GetString() ?? "" : "";
-                    var targetBranch = pr.TryGetProperty("targetRefName", out var tgt) ? tgt.GetString() ?? "" : "";
+                    var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
+                    await HandleHttpErrorsAsync(response, cancellationToken);
 
-                    var createdBy = "";
-                    if (pr.TryGetProperty("createdBy", out var creator))
+                    using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                    if (!doc.RootElement.TryGetProperty("value", out var valueArray))
+                        break;
+
+                    foreach (var pr in valueArray.EnumerateArray())
                     {
-                        createdBy = creator.TryGetProperty("displayName", out var name) ? name.GetString() ?? "" : "";
+                        var prId = pr.GetProperty("pullRequestId").GetInt32();
+                        var title = pr.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
+                        var status = pr.TryGetProperty("status", out var s) ? s.GetString() ?? "" : "";
+                        var sourceBranch = pr.TryGetProperty("sourceRefName", out var src) ? src.GetString() ?? "" : "";
+                        var targetBranch = pr.TryGetProperty("targetRefName", out var tgt) ? tgt.GetString() ?? "" : "";
+
+                        var createdBy = "";
+                        if (pr.TryGetProperty("createdBy", out var creator))
+                        {
+                            createdBy = creator.TryGetProperty("displayName", out var name) ? name.GetString() ?? "" : "";
+                        }
+
+                        var createdDate = pr.TryGetProperty("creationDate", out var cd) ? cd.GetDateTimeOffset() : DateTimeOffset.UtcNow;
+                        var completedDate = pr.TryGetProperty("closedDate", out var cld) && cld.ValueKind != JsonValueKind.Null
+                            ? (DateTimeOffset?)cld.GetDateTimeOffset()
+                            : null;
+
+                        // Determine iteration path from work items or use project root
+                        var iterationPath = config.Project; // Default to project root path
+
+                        allPRs.Add(new PullRequestDto(
+                            Id: prId,
+                            RepositoryName: repo.Name,
+                            Title: title,
+                            CreatedBy: createdBy,
+                            CreatedDate: createdDate,
+                            CompletedDate: completedDate,
+                            Status: status,
+                            IterationPath: iterationPath,
+                            SourceBranch: sourceBranch,
+                            TargetBranch: targetBranch,
+                            RetrievedAt: DateTimeOffset.UtcNow
+                        ));
                     }
 
-                    var createdDate = pr.TryGetProperty("creationDate", out var cd) ? cd.GetDateTimeOffset() : DateTimeOffset.UtcNow;
-                    var completedDate = pr.TryGetProperty("closedDate", out var cld) && cld.ValueKind != JsonValueKind.Null
-                        ? (DateTimeOffset?)cld.GetDateTimeOffset()
-                        : null;
-
-                    // Determine iteration path from work items or use project root
-                    var iterationPath = config.Project; // Default to project root path
-
-                    allPRs.Add(new PullRequestDto(
-                        Id: prId,
-                        RepositoryName: repo.Name,
-                        Title: title,
-                        CreatedBy: createdBy,
-                        CreatedDate: createdDate,
-                        CompletedDate: completedDate,
-                        Status: status,
-                        IterationPath: iterationPath,
-                        SourceBranch: sourceBranch,
-                        TargetBranch: targetBranch,
-                        RetrievedAt: DateTimeOffset.UtcNow
-                    ));
-                }
+                    continuationToken = GetContinuationToken(response, doc);
+                    pageUrl = AddContinuationToken(url, continuationToken);
+                } while (!string.IsNullOrWhiteSpace(continuationToken));
             }
 
             // Phase 4: Performance metrics
@@ -130,45 +139,54 @@ public partial class RealTfsClient
             var encodedRepoName = Uri.EscapeDataString(repositoryName);
             var url = ProjectUrl(config, $"_apis/git/repositories/{encodedRepoName}/pullrequests/{pullRequestId}/iterations");
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
-            await HandleHttpErrorsAsync(response, cancellationToken);
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
             var iterations = new List<PullRequestIterationDto>();
 
-            if (!doc.RootElement.TryGetProperty("value", out var valueArray))
-                return iterations;
+            string? continuationToken = null;
+            var pageUrl = url;
 
-            foreach (var iteration in valueArray.EnumerateArray())
+            do
             {
-                var iterationId = iteration.GetProperty("id").GetInt32();
-                var createdDate = iteration.TryGetProperty("createdDate", out var cd) ? cd.GetDateTimeOffset() : DateTimeOffset.UtcNow;
-                var updatedDate = iteration.TryGetProperty("updatedDate", out var ud) ? ud.GetDateTimeOffset() : createdDate;
+                var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
+                await HandleHttpErrorsAsync(response, cancellationToken);
 
-                // Count commits and changes
-                var commitCount = 0;
-                if (iteration.TryGetProperty("commits", out var commits) && commits.ValueKind == JsonValueKind.Array)
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                if (!doc.RootElement.TryGetProperty("value", out var valueArray))
+                    break;
+
+                foreach (var iteration in valueArray.EnumerateArray())
                 {
-                    commitCount = commits.GetArrayLength();
+                    var iterationId = iteration.GetProperty("id").GetInt32();
+                    var createdDate = iteration.TryGetProperty("createdDate", out var cd) ? cd.GetDateTimeOffset() : DateTimeOffset.UtcNow;
+                    var updatedDate = iteration.TryGetProperty("updatedDate", out var ud) ? ud.GetDateTimeOffset() : createdDate;
+
+                    // Count commits and changes
+                    var commitCount = 0;
+                    if (iteration.TryGetProperty("commits", out var commits) && commits.ValueKind == JsonValueKind.Array)
+                    {
+                        commitCount = commits.GetArrayLength();
+                    }
+
+                    var changeCount = 0;
+                    if (iteration.TryGetProperty("changeList", out var changes) && changes.ValueKind == JsonValueKind.Array)
+                    {
+                        changeCount = changes.GetArrayLength();
+                    }
+
+                    iterations.Add(new PullRequestIterationDto(
+                        PullRequestId: pullRequestId,
+                        IterationNumber: iterationId,
+                        CreatedDate: createdDate,
+                        UpdatedDate: updatedDate,
+                        CommitCount: commitCount,
+                        ChangeCount: changeCount
+                    ));
                 }
 
-                var changeCount = 0;
-                if (iteration.TryGetProperty("changeList", out var changes) && changes.ValueKind == JsonValueKind.Array)
-                {
-                    changeCount = changes.GetArrayLength();
-                }
-
-                iterations.Add(new PullRequestIterationDto(
-                    PullRequestId: pullRequestId,
-                    IterationNumber: iterationId,
-                    CreatedDate: createdDate,
-                    UpdatedDate: updatedDate,
-                    CommitCount: commitCount,
-                    ChangeCount: changeCount
-                ));
-            }
+                continuationToken = GetContinuationToken(response, doc);
+                pageUrl = AddContinuationToken(url, continuationToken);
+            } while (!string.IsNullOrWhiteSpace(continuationToken));
 
             _logger.LogInformation("Retrieved {Count} iterations for PR {PullRequestId}", iterations.Count, pullRequestId);
             return iterations;
@@ -193,66 +211,75 @@ public partial class RealTfsClient
             var encodedRepoName = Uri.EscapeDataString(repositoryName);
             var url = ProjectUrl(config, $"_apis/git/repositories/{encodedRepoName}/pullrequests/{pullRequestId}/threads");
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
-            await HandleHttpErrorsAsync(response, cancellationToken);
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
             var comments = new List<PullRequestCommentDto>();
 
-            if (!doc.RootElement.TryGetProperty("value", out var valueArray))
-                return comments;
+            string? continuationToken = null;
+            var pageUrl = url;
 
-            foreach (var thread in valueArray.EnumerateArray())
+            do
             {
-                var threadId = thread.GetProperty("id").GetInt32();
-                var threadStatus = thread.TryGetProperty("status", out var ts) ? ts.GetString() ?? "" : "";
-                var isResolved = threadStatus.Equals("fixed", StringComparison.OrdinalIgnoreCase) ||
-                                threadStatus.Equals("closed", StringComparison.OrdinalIgnoreCase);
+                var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
+                await HandleHttpErrorsAsync(response, cancellationToken);
 
-                if (!thread.TryGetProperty("comments", out var threadComments) || threadComments.ValueKind != JsonValueKind.Array)
-                    continue;
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
-                foreach (var comment in threadComments.EnumerateArray())
+                if (!doc.RootElement.TryGetProperty("value", out var valueArray))
+                    break;
+
+                foreach (var thread in valueArray.EnumerateArray())
                 {
-                    var commentId = comment.GetProperty("id").GetInt32();
-                    var content = comment.TryGetProperty("content", out var c) ? c.GetString() ?? "" : "";
-                    var createdDate = comment.TryGetProperty("publishedDate", out var cd) ? cd.GetDateTimeOffset() : DateTimeOffset.UtcNow;
-                    var updatedDate = comment.TryGetProperty("lastUpdatedDate", out var ud) && ud.ValueKind != JsonValueKind.Null
-                        ? (DateTimeOffset?)ud.GetDateTimeOffset()
-                        : null;
+                    var threadId = thread.GetProperty("id").GetInt32();
+                    var threadStatus = thread.TryGetProperty("status", out var ts) ? ts.GetString() ?? "" : "";
+                    var isResolved = threadStatus.Equals("fixed", StringComparison.OrdinalIgnoreCase) ||
+                                    threadStatus.Equals("closed", StringComparison.OrdinalIgnoreCase);
 
-                    var author = "";
-                    if (comment.TryGetProperty("author", out var auth))
+                    if (!thread.TryGetProperty("comments", out var threadComments) || threadComments.ValueKind != JsonValueKind.Array)
+                        continue;
+
+                    foreach (var comment in threadComments.EnumerateArray())
                     {
-                        author = auth.TryGetProperty("displayName", out var name) ? name.GetString() ?? "" : "";
-                    }
+                        var commentId = comment.GetProperty("id").GetInt32();
+                        var content = comment.TryGetProperty("content", out var c) ? c.GetString() ?? "" : "";
+                        var createdDate = comment.TryGetProperty("publishedDate", out var cd) ? cd.GetDateTimeOffset() : DateTimeOffset.UtcNow;
+                        var updatedDate = comment.TryGetProperty("lastUpdatedDate", out var ud) && ud.ValueKind != JsonValueKind.Null
+                            ? (DateTimeOffset?)ud.GetDateTimeOffset()
+                            : null;
 
-                    // Check if this comment resolved the thread
-                    string? resolvedBy = null;
-                    DateTimeOffset? resolvedDate = null;
-                    if (isResolved && thread.TryGetProperty("lastUpdatedDate", out var threadUpdated))
-                    {
-                        resolvedDate = threadUpdated.GetDateTimeOffset();
-                        // The author of the last comment in a resolved thread is typically the resolver
-                        resolvedBy = author;
-                    }
+                        var author = "";
+                        if (comment.TryGetProperty("author", out var auth))
+                        {
+                            author = auth.TryGetProperty("displayName", out var name) ? name.GetString() ?? "" : "";
+                        }
 
-                    comments.Add(new PullRequestCommentDto(
-                        Id: commentId,
-                        PullRequestId: pullRequestId,
-                        ThreadId: threadId,
-                        Author: author,
-                        Content: content,
-                        CreatedDate: createdDate,
-                        UpdatedDate: updatedDate,
-                        IsResolved: isResolved,
-                        ResolvedDate: resolvedDate,
-                        ResolvedBy: resolvedBy
-                    ));
+                        // Check if this comment resolved the thread
+                        string? resolvedBy = null;
+                        DateTimeOffset? resolvedDate = null;
+                        if (isResolved && thread.TryGetProperty("lastUpdatedDate", out var threadUpdated))
+                        {
+                            resolvedDate = threadUpdated.GetDateTimeOffset();
+                            // The author of the last comment in a resolved thread is typically the resolver
+                            resolvedBy = author;
+                        }
+
+                        comments.Add(new PullRequestCommentDto(
+                            Id: commentId,
+                            PullRequestId: pullRequestId,
+                            ThreadId: threadId,
+                            Author: author,
+                            Content: content,
+                            CreatedDate: createdDate,
+                            UpdatedDate: updatedDate,
+                            IsResolved: isResolved,
+                            ResolvedDate: resolvedDate,
+                            ResolvedBy: resolvedBy
+                        ));
+                    }
                 }
-            }
+
+                continuationToken = GetContinuationToken(response, doc);
+                pageUrl = AddContinuationToken(url, continuationToken);
+            } while (!string.IsNullOrWhiteSpace(continuationToken));
 
             _logger.LogInformation("Retrieved {Count} comments for PR {PullRequestId}", comments.Count, pullRequestId);
             return comments;
@@ -278,43 +305,52 @@ public partial class RealTfsClient
             var encodedRepoName = Uri.EscapeDataString(repositoryName);
             var url = ProjectUrl(config, $"_apis/git/repositories/{encodedRepoName}/pullrequests/{pullRequestId}/iterations/{iterationId}/changes");
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
-            await HandleHttpErrorsAsync(response, cancellationToken);
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
             var fileChanges = new List<PullRequestFileChangeDto>();
 
-            if (!doc.RootElement.TryGetProperty("changeEntries", out var changeEntries))
-                return fileChanges;
+            string? continuationToken = null;
+            var pageUrl = url;
 
-            foreach (var change in changeEntries.EnumerateArray())
+            do
             {
-                var filePath = "";
-                if (change.TryGetProperty("item", out var item))
+                var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
+                await HandleHttpErrorsAsync(response, cancellationToken);
+
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                if (!doc.RootElement.TryGetProperty("changeEntries", out var changeEntries))
+                    break;
+
+                foreach (var change in changeEntries.EnumerateArray())
                 {
-                    filePath = item.TryGetProperty("path", out var p) ? p.GetString() ?? "" : "";
+                    var filePath = "";
+                    if (change.TryGetProperty("item", out var item))
+                    {
+                        filePath = item.TryGetProperty("path", out var p) ? p.GetString() ?? "" : "";
+                    }
+
+                    var changeType = change.TryGetProperty("changeType", out var ct) ? ct.GetString() ?? "" : "";
+
+                    // Note: Line-level statistics require additional API call to get diff
+                    // For now, we'll set counts to 0 and can enhance later with diff API
+                    var linesAdded = 0;
+                    var linesDeleted = 0;
+                    var linesModified = 0;
+
+                    fileChanges.Add(new PullRequestFileChangeDto(
+                        PullRequestId: pullRequestId,
+                        IterationId: iterationId,
+                        FilePath: filePath,
+                        ChangeType: changeType,
+                        LinesAdded: linesAdded,
+                        LinesDeleted: linesDeleted,
+                        LinesModified: linesModified
+                    ));
                 }
 
-                var changeType = change.TryGetProperty("changeType", out var ct) ? ct.GetString() ?? "" : "";
-
-                // Note: Line-level statistics require additional API call to get diff
-                // For now, we'll set counts to 0 and can enhance later with diff API
-                var linesAdded = 0;
-                var linesDeleted = 0;
-                var linesModified = 0;
-
-                fileChanges.Add(new PullRequestFileChangeDto(
-                    PullRequestId: pullRequestId,
-                    IterationId: iterationId,
-                    FilePath: filePath,
-                    ChangeType: changeType,
-                    LinesAdded: linesAdded,
-                    LinesDeleted: linesDeleted,
-                    LinesModified: linesModified
-                ));
-            }
+                continuationToken = GetContinuationToken(response, doc);
+                pageUrl = AddContinuationToken(url, continuationToken);
+            } while (!string.IsNullOrWhiteSpace(continuationToken));
 
             _logger.LogInformation("Retrieved {Count} file changes for PR {PullRequestId} iteration {IterationId}",
                 fileChanges.Count, pullRequestId, iterationId);

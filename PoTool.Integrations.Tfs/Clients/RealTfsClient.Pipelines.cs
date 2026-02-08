@@ -22,49 +22,18 @@ public partial class RealTfsClient
         return await ExecuteWithRetryAsync(async () =>
         {
             // Build definitions are project-scoped (requirement #1)
-            var buildUrl = ProjectUrl(config, "_apis/build/definitions");
-            var buildResponse = await httpClient.GetAsync(buildUrl, cancellationToken);
-
             var pipelines = new List<PipelineDto>();
+            var buildUrl = ProjectUrl(config, "_apis/build/definitions");
+            string? continuationToken = null;
+            var pageUrl = buildUrl;
 
-            if (buildResponse.IsSuccessStatusCode)
+            do
             {
-                using var stream = await buildResponse.Content.ReadAsStreamAsync(cancellationToken);
-                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                var buildResponse = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
 
-                if (doc.RootElement.TryGetProperty("value", out var valueArray))
+                if (buildResponse.IsSuccessStatusCode)
                 {
-                    foreach (var def in valueArray.EnumerateArray())
-                    {
-                        var id = def.GetProperty("id").GetInt32();
-                        var name = def.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
-                        var path = def.TryGetProperty("path", out var p) ? p.GetString() : null;
-
-                        pipelines.Add(new PipelineDto(
-                            Id: id,
-                            Name: name,
-                            Type: PipelineType.Build,
-                            Path: path,
-                            RetrievedAt: DateTimeOffset.UtcNow
-                        ));
-                    }
-                }
-            }
-            else
-            {
-                _logger.LogWarning("Failed to get build definitions: {StatusCode}", buildResponse.StatusCode);
-            }
-
-            // Try to get release definitions (may not be available in all TFS versions)
-            // Release definitions are project-scoped (requirement #1)
-            try
-            {
-                var releaseUrl = ProjectUrl(config, "_apis/release/definitions");
-                var releaseResponse = await httpClient.GetAsync(releaseUrl, cancellationToken);
-
-                if (releaseResponse.IsSuccessStatusCode)
-                {
-                    using var stream = await releaseResponse.Content.ReadAsStreamAsync(cancellationToken);
+                    using var stream = await buildResponse.Content.ReadAsStreamAsync(cancellationToken);
                     using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
                     if (doc.RootElement.TryGetProperty("value", out var valueArray))
@@ -75,17 +44,70 @@ public partial class RealTfsClient
                             var name = def.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
                             var path = def.TryGetProperty("path", out var p) ? p.GetString() : null;
 
-                            // Offset release IDs to avoid collision with build IDs
                             pipelines.Add(new PipelineDto(
-                                Id: id + ReleaseIdOffset,
+                                Id: id,
                                 Name: name,
-                                Type: PipelineType.Release,
+                                Type: PipelineType.Build,
                                 Path: path,
                                 RetrievedAt: DateTimeOffset.UtcNow
                             ));
                         }
                     }
+
+                    continuationToken = GetContinuationToken(buildResponse, doc);
+                    pageUrl = AddContinuationToken(buildUrl, continuationToken);
                 }
+                else
+                {
+                    _logger.LogWarning("Failed to get build definitions: {StatusCode}", buildResponse.StatusCode);
+                    break;
+                }
+            } while (!string.IsNullOrWhiteSpace(continuationToken));
+
+            // Try to get release definitions (may not be available in all TFS versions)
+            // Release definitions are project-scoped (requirement #1)
+            try
+            {
+                var releaseUrl = ProjectUrl(config, "_apis/release/definitions");
+                string? releaseContinuationToken = null;
+                var releasePageUrl = releaseUrl;
+
+                do
+                {
+                    var releaseResponse = await SendGetAsync(httpClient, config, releasePageUrl, cancellationToken, handleErrors: false);
+
+                    if (releaseResponse.IsSuccessStatusCode)
+                    {
+                        using var stream = await releaseResponse.Content.ReadAsStreamAsync(cancellationToken);
+                        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                        if (doc.RootElement.TryGetProperty("value", out var valueArray))
+                        {
+                            foreach (var def in valueArray.EnumerateArray())
+                            {
+                                var id = def.GetProperty("id").GetInt32();
+                                var name = def.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                                var path = def.TryGetProperty("path", out var p) ? p.GetString() : null;
+
+                                // Offset release IDs to avoid collision with build IDs
+                                pipelines.Add(new PipelineDto(
+                                    Id: id + ReleaseIdOffset,
+                                    Name: name,
+                                    Type: PipelineType.Release,
+                                    Path: path,
+                                    RetrievedAt: DateTimeOffset.UtcNow
+                                ));
+                            }
+                        }
+
+                        releaseContinuationToken = GetContinuationToken(releaseResponse, doc);
+                        releasePageUrl = AddContinuationToken(releaseUrl, releaseContinuationToken);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                } while (!string.IsNullOrWhiteSpace(releaseContinuationToken));
             }
             catch (Exception ex)
             {
@@ -119,7 +141,7 @@ public partial class RealTfsClient
                 try
                 {
                     var releaseUrl = ProjectUrl(config, $"_apis/release/definitions/{actualId}");
-                    var releaseResponse = await httpClient.GetAsync(releaseUrl, cancellationToken);
+                    var releaseResponse = await SendGetAsync(httpClient, config, releaseUrl, cancellationToken, handleErrors: false);
 
                     if (releaseResponse.IsSuccessStatusCode)
                     {
@@ -165,7 +187,7 @@ public partial class RealTfsClient
             {
                 // Get build definition by ID
                 var buildUrl = ProjectUrl(config, $"_apis/build/definitions/{actualId}");
-                var buildResponse = await httpClient.GetAsync(buildUrl, cancellationToken);
+                var buildResponse = await SendGetAsync(httpClient, config, buildUrl, cancellationToken, handleErrors: false);
 
                 if (buildResponse.IsSuccessStatusCode)
                 {
@@ -221,10 +243,18 @@ public partial class RealTfsClient
             {
                 // Release runs are project-scoped (requirement #1)
                 var url = ProjectUrl(config, $"_apis/release/releases?definitionId={actualId}&$top={top}");
-                var response = await httpClient.GetAsync(url, cancellationToken);
+                string? continuationToken = null;
+                var pageUrl = url;
 
-                if (response.IsSuccessStatusCode)
+                do
                 {
+                    var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        break;
+                    }
+
                     using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                     using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
@@ -235,16 +265,27 @@ public partial class RealTfsClient
                             runs.Add(ParseReleaseRun(run, pipelineId));
                         }
                     }
-                }
+
+                    continuationToken = GetContinuationToken(response, doc);
+                    pageUrl = AddContinuationToken(url, continuationToken);
+                } while (!string.IsNullOrWhiteSpace(continuationToken));
             }
             else
             {
                 // Build runs are project-scoped (requirement #1)
                 var url = ProjectUrl(config, $"_apis/build/builds?definitions={pipelineId}&$top={top}");
-                var response = await httpClient.GetAsync(url, cancellationToken);
+                string? continuationToken = null;
+                var pageUrl = url;
 
-                if (response.IsSuccessStatusCode)
+                do
                 {
+                    var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        break;
+                    }
+
                     using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                     using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
@@ -255,7 +296,10 @@ public partial class RealTfsClient
                             runs.Add(ParseBuildRun(run, pipelineId));
                         }
                     }
-                }
+
+                    continuationToken = GetContinuationToken(response, doc);
+                    pageUrl = AddContinuationToken(url, continuationToken);
+                } while (!string.IsNullOrWhiteSpace(continuationToken));
             }
 
             _logger.LogInformation("Retrieved {Count} runs for pipeline {PipelineId}", runs.Count, pipelineId);
@@ -306,10 +350,18 @@ public partial class RealTfsClient
                 }
 
                 var url = ProjectUrl(config, $"_apis/build/builds?{string.Join("&", queryParams)}");
-                var response = await httpClient.GetAsync(url, cancellationToken);
+                string? continuationToken = null;
+                var pageUrl = url;
 
-                if (response.IsSuccessStatusCode)
+                do
                 {
+                    var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        break;
+                    }
+
                     using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                     using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
@@ -326,7 +378,10 @@ public partial class RealTfsClient
                             }
                         }
                     }
-                }
+
+                    continuationToken = GetContinuationToken(response, doc);
+                    pageUrl = AddContinuationToken(url, continuationToken);
+                } while (!string.IsNullOrWhiteSpace(continuationToken));
             }
 
             // Fetch release runs (branch filtering not supported for releases)
@@ -346,10 +401,18 @@ public partial class RealTfsClient
                     }
 
                     var url = ProjectUrl(config, $"_apis/release/releases?{string.Join("&", queryParams)}");
-                    var response = await httpClient.GetAsync(url, cancellationToken);
+                    string? continuationToken = null;
+                    var pageUrl = url;
 
-                    if (response.IsSuccessStatusCode)
+                    do
                     {
+                        var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
+
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            break;
+                        }
+
                         using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                         using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
@@ -360,7 +423,10 @@ public partial class RealTfsClient
                                 allRuns.Add(ParseReleaseRun(run, releaseId + ReleaseIdOffset));
                             }
                         }
-                    }
+
+                        continuationToken = GetContinuationToken(response, doc);
+                        pageUrl = AddContinuationToken(url, continuationToken);
+                    } while (!string.IsNullOrWhiteSpace(continuationToken));
                 }
             }
 
@@ -557,41 +623,18 @@ public partial class RealTfsClient
 
         return await ExecuteWithRetryAsync(async () =>
         {
-            // GET {ServerUri}/{Project}/_apis/git/repositories?api-version=7.0
-            var url = ProjectUrl(config, "_apis/git/repositories");
-            _logger.LogDebug("Fetching Git repositories from: {Url}", url);
-
-            var response = await httpClient.GetAsync(url, cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Failed to get Git repositories: {StatusCode}", response.StatusCode);
-                return new Dictionary<string, string>();
-            }
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-            if (!doc.RootElement.TryGetProperty("value", out var valueArray))
-            {
-                _logger.LogWarning("Git repositories response missing 'value' array");
-                return new Dictionary<string, string>();
-            }
-
+            var repositories = await GetRepositoriesInternalAsync(config, httpClient, null, cancellationToken);
             var repoNamesSet = new HashSet<string>(repositoryNames, StringComparer.OrdinalIgnoreCase);
             var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var repo in valueArray.EnumerateArray())
+            foreach (var repo in repositories)
             {
-                if (repo.TryGetProperty("name", out var nameElement) && repo.TryGetProperty("id", out var idElement))
-                {
-                    var name = nameElement.GetString();
-                    var id = idElement.GetString();
+                var name = repo.Name;
+                var id = repo.Id;
 
-                    if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(id) && repoNamesSet.Contains(name))
-                    {
-                        result[name] = id;
-                    }
+                if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(id) && repoNamesSet.Contains(name))
+                {
+                    result[name] = id;
                 }
             }
 
@@ -614,43 +657,18 @@ public partial class RealTfsClient
 
         return await ExecuteWithRetryAsync(async () =>
         {
-            // GET {ServerUri}/{Project}/_apis/git/repositories?api-version=7.0
-            var url = ProjectUrl(config, "_apis/git/repositories");
-            _logger.LogDebug("Fetching Git repositories from: {Url}", url);
-
-            var response = await httpClient.GetAsync(url, cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
+            var repositories = await GetRepositoriesInternalAsync(config, httpClient, repositoryName, cancellationToken);
+            if (repositories.Count == 0)
             {
-                _logger.LogWarning("Failed to get Git repositories: {StatusCode}", response.StatusCode);
+                _logger.LogWarning("Repository '{RepoName}' not found in project '{Project}'", repositoryName, config.Project);
                 return null;
             }
 
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-            if (!doc.RootElement.TryGetProperty("value", out var valueArray))
+            var repository = repositories[0];
+            if (!string.IsNullOrEmpty(repository.Id))
             {
-                _logger.LogWarning("Git repositories response missing 'value' array");
-                return null;
-            }
-
-            // Find repository by name (case-insensitive)
-            foreach (var repo in valueArray.EnumerateArray())
-            {
-                if (repo.TryGetProperty("name", out var nameElement))
-                {
-                    var name = nameElement.GetString();
-                    if (string.Equals(name, repositoryName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (repo.TryGetProperty("id", out var idElement))
-                        {
-                            var repoId = idElement.GetString();
-                            _logger.LogInformation("Found repository '{RepoName}' with ID: {RepoId}", repositoryName, repoId);
-                            return repoId;
-                        }
-                    }
-                }
+                _logger.LogInformation("Found repository '{RepoName}' with ID: {RepoId}", repository.Name, repository.Id);
+                return repository.Id;
             }
 
             _logger.LogWarning("Repository '{RepoName}' not found in project '{Project}'", repositoryName, config.Project);
@@ -685,120 +703,128 @@ public partial class RealTfsClient
             var url = ProjectUrl(config, "_apis/build/definitions?includeAllProperties=true");
             _logger.LogDebug("Fetching build definitions from: {Url}", url);
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Failed to get build definitions: {StatusCode}", response.StatusCode);
-                return definitions;
-            }
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-            if (!doc.RootElement.TryGetProperty("value", out var valueArray))
-            {
-                _logger.LogDebug("Build definitions response missing 'value' array");
-                return definitions;
-            }
-
             var syncTime = DateTimeOffset.UtcNow;
             int processedCount = 0;
             int filteredCount = 0;
+            string? continuationToken = null;
+            var pageUrl = url;
 
-            foreach (var def in valueArray.EnumerateArray())
+            do
             {
-                processedCount++;
+                var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
 
-                // Filter by repository: check definition.repository.id or definition.repository.name
-                if (!def.TryGetProperty("repository", out var repository))
+                if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogDebug("Build definition {DefId} has no 'repository' property, skipping", 
-                        def.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : -1);
-                    continue;
+                    _logger.LogWarning("Failed to get build definitions: {StatusCode}", response.StatusCode);
+                    return definitions;
                 }
 
-                // Preferred: match by repository.id (GUID)
-                bool matchesRepo = false;
-                if (repository.TryGetProperty("id", out var repoIdElement))
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                if (!doc.RootElement.TryGetProperty("value", out var valueArray))
                 {
-                    var defRepoId = repoIdElement.GetString();
-                    if (string.Equals(defRepoId, repoId, StringComparison.OrdinalIgnoreCase))
+                    _logger.LogDebug("Build definitions response missing 'value' array");
+                    return definitions;
+                }
+
+                foreach (var def in valueArray.EnumerateArray())
+                {
+                    processedCount++;
+
+                    // Filter by repository: check definition.repository.id or definition.repository.name
+                    if (!def.TryGetProperty("repository", out var repository))
                     {
-                        matchesRepo = true;
+                        _logger.LogDebug("Build definition {DefId} has no 'repository' property, skipping", 
+                            def.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : -1);
+                        continue;
                     }
-                }
 
-                // Fallback: match by repository.name
-                if (!matchesRepo && repository.TryGetProperty("name", out var repoNameElement))
-                {
-                    var defRepoName = repoNameElement.GetString();
-                    if (string.Equals(defRepoName, repositoryName, StringComparison.OrdinalIgnoreCase))
+                    // Preferred: match by repository.id (GUID)
+                    bool matchesRepo = false;
+                    if (repository.TryGetProperty("id", out var repoIdElement))
                     {
-                        matchesRepo = true;
-                    }
-                }
-
-                if (!matchesRepo)
-                {
-                    continue;
-                }
-
-                filteredCount++;
-
-                // Extract definition properties
-                var pipelineId = def.GetProperty("id").GetInt32();
-                var name = def.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
-                
-                // Extract YAML path from process.yamlFilename
-                string? yamlPath = null;
-                if (def.TryGetProperty("process", out var process))
-                {
-                    if (process.TryGetProperty("yamlFilename", out var yamlFileElement))
-                    {
-                        var rawPath = yamlFileElement.GetString();
-                        if (!string.IsNullOrEmpty(rawPath))
+                        var defRepoId = repoIdElement.GetString();
+                        if (string.Equals(defRepoId, repoId, StringComparison.OrdinalIgnoreCase))
                         {
-                            // Normalize: ensure leading /
-                            yamlPath = rawPath.StartsWith("/") ? rawPath : $"/{rawPath}";
+                            matchesRepo = true;
                         }
                     }
-                }
 
-                // Extract folder/path
-                var folder = def.TryGetProperty("path", out var p) ? p.GetString() : null;
-
-                // Extract web URL
-                string? webUrl = null;
-                if (def.TryGetProperty("_links", out var links))
-                {
-                    if (links.TryGetProperty("web", out var web))
+                    // Fallback: match by repository.name
+                    if (!matchesRepo && repository.TryGetProperty("name", out var repoNameElement))
                     {
-                        if (web.TryGetProperty("href", out var href))
+                        var defRepoName = repoNameElement.GetString();
+                        if (string.Equals(defRepoName, repositoryName, StringComparison.OrdinalIgnoreCase))
                         {
-                            webUrl = href.GetString();
+                            matchesRepo = true;
                         }
                     }
+
+                    if (!matchesRepo)
+                    {
+                        continue;
+                    }
+
+                    filteredCount++;
+
+                    // Extract definition properties
+                    var pipelineId = def.GetProperty("id").GetInt32();
+                    var name = def.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                    
+                    // Extract YAML path from process.yamlFilename
+                    string? yamlPath = null;
+                    if (def.TryGetProperty("process", out var process))
+                    {
+                        if (process.TryGetProperty("yamlFilename", out var yamlFileElement))
+                        {
+                            var rawPath = yamlFileElement.GetString();
+                            if (!string.IsNullOrEmpty(rawPath))
+                            {
+                                // Normalize: ensure leading /
+                                yamlPath = rawPath.StartsWith("/") ? rawPath : $"/{rawPath}";
+                            }
+                        }
+                    }
+
+                    // Extract folder/path
+                    var folder = def.TryGetProperty("path", out var p) ? p.GetString() : null;
+
+                    // Extract web URL
+                    string? webUrl = null;
+                    if (def.TryGetProperty("_links", out var links))
+                    {
+                        if (links.TryGetProperty("web", out var web))
+                        {
+                            if (web.TryGetProperty("href", out var href))
+                            {
+                                webUrl = href.GetString();
+                            }
+                        }
+                    }
+
+                    var dto = new PipelineDefinitionDto
+                    {
+                        PipelineDefinitionId = pipelineId,
+                        RepoId = repoId,
+                        RepoName = repositoryName,
+                        Name = name,
+                        YamlPath = yamlPath,
+                        Folder = folder,
+                        Url = webUrl,
+                        LastSyncedUtc = syncTime
+                    };
+
+                    definitions.Add(dto);
+
+                    _logger.LogDebug(
+                        "Mapped pipeline definition: ID={Id}, Name={Name}, YamlPath={YamlPath}",
+                        pipelineId, name, yamlPath ?? "(none)");
                 }
 
-                var dto = new PipelineDefinitionDto
-                {
-                    PipelineDefinitionId = pipelineId,
-                    RepoId = repoId,
-                    RepoName = repositoryName,
-                    Name = name,
-                    YamlPath = yamlPath,
-                    Folder = folder,
-                    Url = webUrl,
-                    LastSyncedUtc = syncTime
-                };
-
-                definitions.Add(dto);
-
-                _logger.LogDebug(
-                    "Mapped pipeline definition: ID={Id}, Name={Name}, YamlPath={YamlPath}",
-                    pipelineId, name, yamlPath ?? "(none)");
-            }
+                continuationToken = GetContinuationToken(response, doc);
+                pageUrl = AddContinuationToken(url, continuationToken);
+            } while (!string.IsNullOrWhiteSpace(continuationToken));
 
             _logger.LogInformation(
                 "Retrieved {Count} pipeline definitions for repository '{RepoName}' (processed {Processed}, filtered {Filtered})",

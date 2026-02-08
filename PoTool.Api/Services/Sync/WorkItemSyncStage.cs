@@ -125,13 +125,10 @@ public class WorkItemSyncStage : ISyncStage
         {
             foreach (var dto in batch)
             {
-                // Track max date for watermark. Using RetrievedAt as proxy for TFS ChangedDate.
-                // Note: The TFS client filters by ChangedDate on the server side using the 'since' parameter.
-                // This ensures we don't miss updates - the watermark marks when we last synced.
-                // TODO: Consider extracting System.ChangedDate from JsonPayload for more accurate watermarks.
-                if (maxChangedDate == null || dto.RetrievedAt > maxChangedDate)
+                var changedDate = dto.ChangedDate ?? dto.RetrievedAt;
+                if (maxChangedDate == null || changedDate > maxChangedDate)
                 {
-                    maxChangedDate = dto.RetrievedAt;
+                    maxChangedDate = changedDate;
                 }
 
                 if (existingSet.Contains(dto.TfsId))
@@ -178,8 +175,7 @@ public class WorkItemSyncStage : ISyncStage
         entity.Tags = dto.Tags;
         entity.IsBlocked = dto.IsBlocked;
         entity.Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null;
-        // Write-back fields (TfsRevision, TfsChangedDate, TfsETag) are populated during 
-        // future write-back operations, not during sync. See TFS_CACHE_IMPLEMENTATION_PLAN.md Section 10.
+        entity.TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt;
     }
 
     private static WorkItemEntity MapToEntity(WorkItemDto dto)
@@ -201,7 +197,8 @@ public class WorkItemSyncStage : ISyncStage
             Severity = dto.Severity,
             Tags = dto.Tags,
             IsBlocked = dto.IsBlocked,
-            Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null
+            Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null,
+            TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt
         };
     }
 }

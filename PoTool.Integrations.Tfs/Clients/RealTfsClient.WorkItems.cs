@@ -29,15 +29,11 @@ public partial class RealTfsClient
             // Use auth-mode-specific HttpClient to avoid credential conflicts
             var httpClient = GetAuthenticatedHttpClient();
 
-            // Create per-request timeout token
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutCts.CancelAfter(TimeSpan.FromSeconds(entity.TimeoutSeconds));
-
             // Step 1: Validate server connectivity using collection-scoped projects endpoint
             var projectsUrl = CollectionUrl(entity, "_apis/projects");
             _logger.LogInformation("Validating TFS connection: GET {Url} (using NTLM authentication)", projectsUrl);
 
-            var resp = await httpClient.GetAsync(projectsUrl, timeoutCts.Token);
+            var resp = await SendGetAsync(httpClient, entity, projectsUrl, cancellationToken, handleErrors: false);
 
             _logger.LogInformation("Validation GET {Url} returned {StatusCode}", projectsUrl, resp.StatusCode);
 
@@ -54,7 +50,7 @@ public partial class RealTfsClient
             var projectUrl = CollectionUrl(entity, $"_apis/projects/{encodedProject}");
             _logger.LogInformation("Validating project access: GET {Url}", projectUrl);
 
-            var projectResp = await httpClient.GetAsync(projectUrl, timeoutCts.Token);
+            var projectResp = await SendGetAsync(httpClient, entity, projectUrl, cancellationToken, handleErrors: false);
 
             if (!projectResp.IsSuccessStatusCode)
             {
@@ -83,7 +79,7 @@ public partial class RealTfsClient
             _logger.LogInformation("TFS connection validation successful");
             return true;
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (TimeoutException)
         {
             _logger.LogError("TFS connection validation timed out after {Timeout}s", entity.TimeoutSeconds);
             return false;
@@ -127,7 +123,7 @@ public partial class RealTfsClient
 
             _logger.LogDebug("Calling Classification Nodes API: {Url}", url);
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -222,7 +218,7 @@ public partial class RealTfsClient
                 System.Text.Encoding.UTF8,
                 "application/json");
 
-            var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
+            var relationsResponse = await SendPostAsync(httpClient, config, batchUrl, relationsContent, cancellationToken, handleErrors: false);
             
             // If work item not found, return null instead of throwing
             if (relationsResponse.StatusCode == HttpStatusCode.NotFound)
@@ -268,7 +264,7 @@ public partial class RealTfsClient
                 System.Text.Encoding.UTF8,
                 "application/json");
 
-            var fieldsResponse = await httpClient.PostAsync(batchUrl, fieldsContent, cancellationToken);
+            var fieldsResponse = await SendPostAsync(httpClient, config, batchUrl, fieldsContent, cancellationToken, handleErrors: false);
             
             // If work item not found in Phase 2, return null
             if (fieldsResponse.StatusCode == HttpStatusCode.NotFound)
@@ -312,6 +308,9 @@ public partial class RealTfsClient
             // Extract created date from TFS (System.CreatedDate)
             DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
 
+            // Extract changed date from TFS (System.ChangedDate)
+            DateTimeOffset? changedDate = ParseDateTimeField(fields, "System.ChangedDate");
+
             // Extract closed date from TFS (Microsoft.VSTS.Common.ClosedDate)
             DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
 
@@ -339,6 +338,7 @@ public partial class RealTfsClient
                 ClosedDate: closedDate,
                 Severity: severity,
                 Tags: tags,
+                ChangedDate: changedDate,
                 IsBlocked: isBlocked,
                 Relations: relations // Use relations from Phase 1
             );
@@ -381,7 +381,7 @@ public partial class RealTfsClient
             // Note: WIQL Select only needs System.Id since we fetch full work items in a separate batch call
             // with all RequiredWorkItemFields. The other fields here are for debugging/logging purposes.
             var dateFilter = since.HasValue
-                ? $" AND [System.ChangedDate] >= '{since.Value:yyyy-MM-ddTHH:mm:ssZ}'"
+                ? $" AND [System.ChangedDate] >= '{FormatUtcTimestamp(since.Value)}'"
                 : "";
 
             var wiql = new
@@ -396,7 +396,7 @@ public partial class RealTfsClient
             // Phase 4: Enhanced logging
             _logger.LogDebug("Executing WIQL query: {Query}", wiql.query);
 
-            var wiqlResponse = await httpClient.PostAsync(wiqlUrl, content, cancellationToken);
+            var wiqlResponse = await SendPostAsync(httpClient, config, wiqlUrl, content, cancellationToken, handleErrors: false);
             await HandleHttpErrorsAsync(wiqlResponse, cancellationToken);
 
             using var stream = await wiqlResponse.Content.ReadAsStreamAsync(cancellationToken);
@@ -465,7 +465,7 @@ public partial class RealTfsClient
                     System.Text.Encoding.UTF8,
                     "application/json");
 
-                var relationsResponse = await httpClient.PostAsync(batchUrl, relationsContent, cancellationToken);
+                var relationsResponse = await SendPostAsync(httpClient, config, batchUrl, relationsContent, cancellationToken, handleErrors: false);
                 await HandleHttpErrorsAsync(relationsResponse, cancellationToken);
 
                 using var relationsStream = await relationsResponse.Content.ReadAsStreamAsync(cancellationToken);
@@ -537,7 +537,7 @@ public partial class RealTfsClient
                     System.Text.Encoding.UTF8,
                     "application/json");
 
-                var fieldsResponse = await httpClient.PostAsync(batchUrl, fieldsContent, cancellationToken);
+                var fieldsResponse = await SendPostAsync(httpClient, config, batchUrl, fieldsContent, cancellationToken, handleErrors: false);
                 await HandleHttpErrorsAsync(fieldsResponse, cancellationToken);
 
                 using var fieldsStream = await fieldsResponse.Content.ReadAsStreamAsync(cancellationToken);
@@ -574,6 +574,8 @@ public partial class RealTfsClient
                     // Extract tags from TFS (System.Tags)
                     string? tags = ParseTagsField(fields);
 
+                    var changedDate = ParseDateTimeField(fields, "System.ChangedDate");
+
                     results.Add(new WorkItemDto(
                         TfsId: id,
                         Type: type,
@@ -588,7 +590,8 @@ public partial class RealTfsClient
                         CreatedDate: createdDate,
                         ClosedDate: closedDate,
                         Severity: severity,
-                        Tags: tags
+                        Tags: tags,
+                        ChangedDate: changedDate
                     ));
                 }
 

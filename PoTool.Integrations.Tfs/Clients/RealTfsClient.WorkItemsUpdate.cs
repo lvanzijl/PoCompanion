@@ -585,7 +585,7 @@ public partial class RealTfsClient
 
             // Step 1: GET the child work item with $expand=relations to find existing parent
             var getUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}?$expand=relations");
-            var getResponse = await httpClient.GetAsync(getUrl, timeoutCts.Token);
+            var getResponse = await SendGetAsync(httpClient, entity, getUrl, timeoutCts.Token, handleErrors: false);
 
             if (!getResponse.IsSuccessStatusCode)
             {
@@ -702,6 +702,7 @@ public partial class RealTfsClient
         // Extract effort, dates, severity, and tags
         int? effort = ParseEffortField(fields);
         DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
+        DateTimeOffset? changedDate = ParseDateTimeField(fields, "System.ChangedDate");
         DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
         string? severity = ParseSeverityField(fields);
         string? tags = ParseTagsField(fields);
@@ -720,7 +721,8 @@ public partial class RealTfsClient
             CreatedDate: createdDate,
             ClosedDate: closedDate,
             Severity: severity,
-            Tags: tags
+            Tags: tags,
+            ChangedDate: changedDate
         );
     }
 }

@@ -40,6 +40,7 @@ public partial class RealTfsClient
         "System.IterationPath",
         "System.Description",
         "System.CreatedDate",
+        "System.ChangedDate",
         "Microsoft.VSTS.Common.ClosedDate",
         "Microsoft.VSTS.Common.Severity",
         "System.Tags",
