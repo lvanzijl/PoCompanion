@@ -26,6 +26,16 @@ public sealed class RevisionIngestionDiagnosticsOptions
     public bool LogEfSaveChangesDetails { get; init; } = true;
 
     /// <summary>
+    /// Logs GC and change tracker stats every N pages. Set to 0 to disable.
+    /// </summary>
+    public int LogGcStatsEveryNPages { get; init; } = 50;
+
+    /// <summary>
+    /// Maximum number of parse warnings to log per page.
+    /// </summary>
+    public int MaxParseWarningsPerPage { get; init; } = 10;
+
+    /// <summary>
     /// Threshold in milliseconds for marking a page as slow.
     /// </summary>
     public int SlowPageThresholdMs { get; init; } = 2000;

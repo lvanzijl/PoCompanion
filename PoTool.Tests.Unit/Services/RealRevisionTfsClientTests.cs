@@ -444,6 +444,114 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
+    public void ParseReportingRevisionsPayload_WithStringIntegers_ParsesIntFields()
+    {
+        var json = """
+            {
+              "value": [
+                {
+                  "id": "42",
+                  "rev": "3",
+                  "fields": {
+                    "System.WorkItemType": "Task",
+                    "System.Title": "Sample",
+                    "System.State": "New",
+                    "System.IterationPath": "Project\\Sprint 1",
+                    "System.AreaPath": "Project",
+                    "System.ChangedDate": "2024-01-01T00:00:00Z",
+                    "Microsoft.VSTS.Scheduling.Effort": "5"
+                  }
+                }
+              ]
+            }
+            """;
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender);
+
+        var revisions = client.TestParseReportingRevisionsPayload(json);
+
+        Assert.HasCount(1, revisions);
+        Assert.AreEqual(42, revisions[0].WorkItemId);
+        Assert.AreEqual(3, revisions[0].RevisionNumber);
+        Assert.AreEqual(5, revisions[0].Effort);
+    }
+
+    [TestMethod]
+    public void ParseReportingRevisionsPayload_WithInvalidRequiredInt_SkipsRevision()
+    {
+        var json = """
+            {
+              "value": [
+                {
+                  "id": "not-a-number",
+                  "rev": 1,
+                  "fields": {
+                    "System.WorkItemType": "Task",
+                    "System.Title": "Sample",
+                    "System.State": "New",
+                    "System.IterationPath": "Project\\Sprint 1",
+                    "System.AreaPath": "Project",
+                    "System.ChangedDate": "2024-01-01T00:00:00Z"
+                  }
+                }
+              ]
+            }
+            """;
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender);
+
+        var revisions = client.TestParseReportingRevisionsPayload(json);
+
+        Assert.HasCount(0, revisions);
+    }
+
+    [TestMethod]
+    public void ParseReportingRevisionsPayload_WithInvalidOptionalInt_ReturnsNullEffort()
+    {
+        var json = """
+            {
+              "value": [
+                {
+                  "id": 1,
+                  "rev": 1,
+                  "fields": {
+                    "System.WorkItemType": "Task",
+                    "System.Title": "Sample",
+                    "System.State": "New",
+                    "System.IterationPath": "Project\\Sprint 1",
+                    "System.AreaPath": "Project",
+                    "System.ChangedDate": "2024-01-01T00:00:00Z",
+                    "Microsoft.VSTS.Scheduling.Effort": { "value": "invalid" }
+                  }
+                }
+              ]
+            }
+            """;
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender);
+
+        var revisions = client.TestParseReportingRevisionsPayload(json);
+
+        Assert.HasCount(1, revisions);
+        Assert.IsNull(revisions[0].Effort);
+    }
+
+    [TestMethod]
     public void ParseReportingRevisionsPayload_WhenMissingValueArray_ThrowsWithTruncatedPayloadMarker()
     {
         var largePayload = new string('x', 2100);

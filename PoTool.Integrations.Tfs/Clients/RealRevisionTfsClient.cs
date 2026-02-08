@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Net.Http;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -26,6 +27,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient
     private const int MaxRetries = 3;
     private const int MaxPayloadLogLength = 2000; // Limit error logs to a readable size without losing essential context.
     private const string TruncationSuffix = "... (truncated)";
+    private const int DefaultMaxParseWarningsPerPage = 10;
+    private const int MaxValuePreviewLength = 64;
 
     /// <summary>
     /// Field whitelist for revision API.
@@ -286,6 +289,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient
     private IReadOnlyList<WorkItemRevision> ParseReportingRevisionsPayload(JsonDocument doc)
     {
         var revisions = new List<WorkItemRevision>();
+        var maxParseWarnings = Math.Max(0, _diagnostics?.GetMaxParseWarningsPerPage() ?? DefaultMaxParseWarningsPerPage);
+        var warningLimiter = new ParseWarningLimiter(maxParseWarnings);
 
         // Parse revisions from response (some API versions return "value" vs legacy "values")
         if (doc.RootElement.TryGetProperty("value", out var valuesArray) ||
@@ -293,7 +298,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         {
             foreach (var revision in valuesArray.EnumerateArray())
             {
-                var workItemRevision = ParseWorkItemRevision(revision);
+                var workItemRevision = ParseWorkItemRevision(revision, warningLimiter);
                 if (workItemRevision != null)
                 {
                     revisions.Add(workItemRevision);
@@ -315,24 +320,58 @@ public class RealRevisionTfsClient : IRevisionTfsClient
                 truncatedPayload);
         }
 
+        if (warningLimiter.SuppressedCount > 0)
+        {
+            _logger.LogWarning(
+                "Suppressed {SuppressedCount} additional revision parse warnings for this page.",
+                warningLimiter.SuppressedCount);
+        }
+
         return revisions;
     }
 
-    private WorkItemRevision? ParseWorkItemRevision(JsonElement revision)
+    private WorkItemRevision? ParseWorkItemRevision(JsonElement revision, ParseWarningLimiter warningLimiter)
     {
         try
         {
-            if (!revision.TryGetProperty("id", out var idElement))
+            var hasWorkItemId = TryGetIntProperty(revision, "id", out var idElement, out var workItemId, out var idFailureReason);
+            var hasRevisionNumber = TryGetIntProperty(revision, "rev", out var revElement, out var revisionNumber, out var revFailureReason);
+            var warningContext = new ParseWarningContext(hasWorkItemId ? workItemId : null, hasRevisionNumber ? revisionNumber : null);
+
+            if (!hasWorkItemId)
             {
+                LogParseWarning(
+                    warningLimiter,
+                    "id",
+                    idElement,
+                    idFailureReason == "missing",
+                    warningContext,
+                    idFailureReason ?? "Invalid work item id value");
                 return null;
             }
 
-            var workItemId = idElement.GetInt32();
-            var revisionNumber = revision.TryGetProperty("rev", out var revEl) ? revEl.GetInt32() : 0;
+            if (!hasRevisionNumber)
+            {
+                LogParseWarning(
+                    warningLimiter,
+                    "rev",
+                    revElement,
+                    revFailureReason == "missing",
+                    warningContext,
+                    revFailureReason ?? "Invalid revision number value");
+                return null;
+            }
 
             // Parse fields
             if (!revision.TryGetProperty("fields", out var fields))
             {
+                LogParseWarning(
+                    warningLimiter,
+                    "fields",
+                    default,
+                    isMissing: true,
+                    warningContext,
+                    "Missing fields object");
                 return null;
             }
 
@@ -348,14 +387,19 @@ public class RealRevisionTfsClient : IRevisionTfsClient
             var createdDate = GetDateTimeField(fields, "System.CreatedDate");
             var changedDate = GetDateTimeField(fields, "System.ChangedDate");
             var closedDate = GetDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
-            var effort = GetIntField(fields, "Microsoft.VSTS.Scheduling.Effort");
+            var effort = GetIntField(fields, "Microsoft.VSTS.Scheduling.Effort", warningLimiter, warningContext);
 
             // If ChangedDate is missing, log warning and skip this revision - timestamp is critical for ordering
             if (!changedDate.HasValue)
             {
-                _logger.LogWarning(
-                    "Skipping work item {WorkItemId} revision {RevisionNumber}: Missing System.ChangedDate field",
-                    workItemId, revisionNumber);
+                var hasChangedDate = fields.TryGetProperty("System.ChangedDate", out var changedDateElement);
+                LogParseWarning(
+                    warningLimiter,
+                    "System.ChangedDate",
+                    changedDateElement,
+                    !hasChangedDate,
+                    warningContext,
+                    "Missing or invalid System.ChangedDate field");
                 return null;
             }
 
@@ -386,7 +430,11 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to parse work item revision");
+            if (warningLimiter.TryLog(() => _logger.LogWarning(ex, "Failed to parse work item revision")))
+            {
+                return null;
+            }
+
             return null;
         }
     }
@@ -399,7 +447,12 @@ public class RealRevisionTfsClient : IRevisionTfsClient
     {
         try
         {
-            var revisionNumber = revision.TryGetProperty("rev", out var revEl) ? revEl.GetInt32() : 0;
+            var revisionNumber = 0;
+            if (revision.TryGetProperty("rev", out var revEl) &&
+                TryParseIntValue(revEl, out var parsedRevision, out _))
+            {
+                revisionNumber = parsedRevision;
+            }
 
             if (!revision.TryGetProperty("fields", out var fields))
             {
@@ -695,30 +748,232 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         }
     }
 
-    private static int? GetIntField(JsonElement fields, string fieldName)
+    private int? GetIntField(
+        JsonElement fields,
+        string fieldName,
+        ParseWarningLimiter? warningLimiter = null,
+        ParseWarningContext? warningContext = null)
     {
         if (!fields.TryGetProperty(fieldName, out var element))
         {
             return null;
         }
 
-        if (element.ValueKind == JsonValueKind.Null)
+        if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
         {
             return null;
         }
 
         if (element.ValueKind == JsonValueKind.Number)
         {
-            return element.GetInt32();
+            if (element.TryGetInt32(out var intValue))
+            {
+                return intValue;
+            }
+
+            if (element.TryGetInt64(out var longValue))
+            {
+                if (longValue >= int.MinValue && longValue <= int.MaxValue)
+                {
+                    return (int)longValue;
+                }
+
+                LogParseWarning(
+                    warningLimiter,
+                    fieldName,
+                    element,
+                    isMissing: false,
+                    warningContext,
+                    "Integer value is out of range");
+                return null;
+            }
+
+            LogParseWarning(
+                warningLimiter,
+                fieldName,
+                element,
+                isMissing: false,
+                warningContext,
+                "Invalid numeric value");
+            return null;
         }
 
-        if (element.ValueKind == JsonValueKind.String &&
-            int.TryParse(element.GetString(), out var intValue))
+        if (element.ValueKind == JsonValueKind.String)
         {
-            return intValue;
+            var rawValue = element.GetString()?.Trim();
+            if (int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
+            {
+                return intValue;
+            }
+
+            LogParseWarning(
+                warningLimiter,
+                fieldName,
+                element,
+                isMissing: false,
+                warningContext,
+                "Invalid integer string");
+            return null;
         }
 
+        LogParseWarning(
+            warningLimiter,
+            fieldName,
+            element,
+            isMissing: false,
+            warningContext,
+            "Unsupported JSON value kind");
         return null;
+    }
+
+    private static bool TryGetIntProperty(
+        JsonElement parent,
+        string propertyName,
+        out JsonElement element,
+        out int value,
+        out string? failureReason)
+    {
+        value = default;
+        if (!parent.TryGetProperty(propertyName, out element))
+        {
+            failureReason = "missing";
+            return false;
+        }
+
+        if (TryParseIntValue(element, out value, out failureReason))
+        {
+            return true;
+        }
+
+        failureReason ??= "Invalid integer value";
+        return false;
+    }
+
+    private static bool TryParseIntValue(JsonElement element, out int value, out string? failureReason)
+    {
+        value = default;
+        failureReason = null;
+
+        if (element.ValueKind == JsonValueKind.Number)
+        {
+            if (element.TryGetInt32(out value))
+            {
+                return true;
+            }
+
+            if (element.TryGetInt64(out var longValue))
+            {
+                if (longValue >= int.MinValue && longValue <= int.MaxValue)
+                {
+                    value = (int)longValue;
+                    return true;
+                }
+
+                failureReason = "Integer value is out of range";
+                return false;
+            }
+
+            failureReason = "Invalid numeric value";
+            return false;
+        }
+
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            var rawValue = element.GetString()?.Trim();
+            if (int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+            {
+                return true;
+            }
+
+            failureReason = "Invalid integer string";
+            return false;
+        }
+
+        if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
+        {
+            failureReason = "null";
+            return false;
+        }
+
+        failureReason = $"Unsupported JSON value kind ({element.ValueKind})";
+        return false;
+    }
+
+    private void LogParseWarning(
+        ParseWarningLimiter? warningLimiter,
+        string fieldName,
+        JsonElement element,
+        bool isMissing,
+        ParseWarningContext? warningContext,
+        string reason)
+    {
+        if (warningLimiter == null || warningContext == null)
+        {
+            return;
+        }
+
+        warningLimiter.TryLog(() =>
+        {
+            var valueKind = isMissing ? "Missing" : element.ValueKind.ToString();
+            var valueSnippet = isMissing ? "<missing>" : GetValueSnippet(element);
+            _logger.LogWarning(
+                "Revision parse warning. Field={FieldName} Kind={ValueKind} Value={ValueSnippet} WorkItemId={WorkItemId} Revision={RevisionNumber} Reason={Reason}",
+                fieldName,
+                valueKind,
+                valueSnippet,
+                warningContext.Value.WorkItemId,
+                warningContext.Value.RevisionNumber,
+                reason);
+        });
+    }
+
+    private static string GetValueSnippet(JsonElement element)
+    {
+        var rawValue = element.ValueKind == JsonValueKind.String
+            ? element.GetString() ?? string.Empty
+            : element.GetRawText();
+
+        if (rawValue.Length <= MaxValuePreviewLength)
+        {
+            return rawValue;
+        }
+
+        return $"{rawValue[..MaxValuePreviewLength]}...";
+    }
+
+    private readonly record struct ParseWarningContext(int? WorkItemId, int? RevisionNumber);
+
+    private sealed class ParseWarningLimiter
+    {
+        private readonly int _limit;
+        private int _count;
+        private int _suppressed;
+
+        public ParseWarningLimiter(int limit)
+        {
+            _limit = limit;
+        }
+
+        public int SuppressedCount => _suppressed;
+
+        public bool TryLog(Action logAction)
+        {
+            if (_limit <= 0)
+            {
+                _suppressed++;
+                return false;
+            }
+
+            if (_count < _limit)
+            {
+                _count++;
+                logAction();
+                return true;
+            }
+
+            _suppressed++;
+            return false;
+        }
     }
 
     private HttpClient GetAuthenticatedHttpClient()
