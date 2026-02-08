@@ -109,7 +109,7 @@ public class RevisionIngestionService
                 runStartUtc,
                 _throttler.ReadConcurrency,
                 _throttler.WriteConcurrency,
-                RelationRevisionHydrator.MaxConcurrentFetches,
+                RelationRevisionHydrator.HydrationConcurrency,
                 out var runContext);
 
             if (runContext.IsEnabled)

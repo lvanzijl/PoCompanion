@@ -322,8 +322,8 @@ public sealed class RevisionIngestionDiagnostics
             return true;
         }
 
-        var threshold = (int)Math.Ceiling(normalized * int.MaxValue);
-        return RandomNumberGenerator.GetInt32(0, int.MaxValue) <= threshold;
+        var threshold = (int)(normalized * int.MaxValue);
+        return RandomNumberGenerator.GetInt32(0, int.MaxValue) < threshold;
     }
 
     private sealed class RunScope : IDisposable

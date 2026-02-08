@@ -22,8 +22,10 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
     private readonly RevisionIngestionDiagnostics _diagnostics;
 
     // Concurrency control for relation fetching
-    public const int MaxConcurrentFetches = 4;
+    private const int MaxConcurrentFetches = 4;
     private readonly SemaphoreSlim _concurrencySemaphore = new(MaxConcurrentFetches, MaxConcurrentFetches);
+
+    public static int HydrationConcurrency => MaxConcurrentFetches;
 
     // Cache of last hydrated revision per work item
     private readonly ConcurrentDictionary<int, int> _lastHydratedRevision = new();
@@ -152,12 +154,8 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
         var logPerWorkItem = runContext.IsEnabled && runContext.LogPerWorkItemHydration;
         var captureCallTiming = runContext.IsEnabled;
         var perItemStart = logPerWorkItem ? Stopwatch.GetTimestamp() : 0;
-        var callStart = captureCallTiming ? Stopwatch.GetTimestamp() : 0;
         var relationDeltaCount = 0;
-
-        long GetCallDurationMs() => captureCallTiming
-            ? RevisionIngestionDiagnostics.GetElapsedMilliseconds(callStart)
-            : 0;
+        var callDurationMs = 0L;
 
         try
         {
@@ -175,7 +173,7 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
                     "Work item {WorkItemId} already hydrated up to revision {Revision}",
                     workItemId, lastHydrated);
                 LogPerWorkItem(runContext, logPerWorkItem, workItemId, 0, false, perItemStart, 0);
-                return new HydrationWorkItemResult(0, 0, 0, GetCallDurationMs(), true, false);
+                return new HydrationWorkItemResult(0, 0, 0, callDurationMs, true, false);
             }
 
             if (lastRevisionInDb == 0)
@@ -185,7 +183,7 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
                     "No revisions found in database for work item {WorkItemId}, skipping hydration",
                     workItemId);
                 LogPerWorkItem(runContext, logPerWorkItem, workItemId, 0, false, perItemStart, 0);
-                return new HydrationWorkItemResult(0, 0, 0, GetCallDurationMs(), false, false);
+                return new HydrationWorkItemResult(0, 0, 0, callDurationMs, false, false);
             }
 
             _logger.LogDebug(
@@ -193,7 +191,12 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
                 workItemId, lastRevisionInDb);
 
             // Fetch all revisions with relations from TFS
+            var callStart = captureCallTiming ? Stopwatch.GetTimestamp() : 0;
             var revisions = await revisionClient.GetWorkItemRevisionsAsync(workItemId, cancellationToken);
+            if (captureCallTiming)
+            {
+                callDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(callStart);
+            }
 
             int revisionsHydrated = 0;
             var relationsPresent = logPerWorkItem &&
@@ -265,7 +268,7 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
                 revisionsHydrated, workItemId);
 
             LogPerWorkItem(runContext, logPerWorkItem, workItemId, revisions.Count, relationsPresent, perItemStart, relationDeltaCount);
-            return new HydrationWorkItemResult(revisionsHydrated, revisions.Count, relationDeltaCount, GetCallDurationMs(), false, true);
+            return new HydrationWorkItemResult(revisionsHydrated, revisions.Count, relationDeltaCount, callDurationMs, false, true);
         }
         catch (Exception ex)
         {
