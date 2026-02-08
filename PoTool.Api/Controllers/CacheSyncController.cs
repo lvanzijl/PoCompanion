@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Api.Exceptions;
 using PoTool.Api.Hubs;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
@@ -34,11 +35,19 @@ public class CacheSyncController : ControllerBase
     /// </summary>
     [HttpGet("{productOwnerId}")]
     [ProducesResponseType(typeof(CacheStateDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<CacheStateDto>> GetCacheStatus(int productOwnerId, CancellationToken cancellationToken)
     {
-        // Always return a valid cache state (create if doesn't exist)
-        var cacheState = await _cacheStateRepository.GetOrCreateCacheStateAsync(productOwnerId, cancellationToken);
-        return Ok(cacheState);
+        try
+        {
+            // Return cache state (create if doesn't exist for valid ProductOwner)
+            var cacheState = await _cacheStateRepository.GetOrCreateCacheStateAsync(productOwnerId, cancellationToken);
+            return Ok(cacheState);
+        }
+        catch (ProductOwnerNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     /// <summary>
@@ -114,6 +123,7 @@ public class CacheSyncController : ControllerBase
     /// </summary>
     [HttpDelete("{productOwnerId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult> DeleteCache(int productOwnerId, CancellationToken cancellationToken)
     {
@@ -122,11 +132,18 @@ public class CacheSyncController : ControllerBase
             return Conflict(new { message = "Cannot delete cache while sync is running" });
         }
 
-        await _cacheStateRepository.ResetCacheStateAsync(productOwnerId, cancellationToken);
-        
-        _logger.LogInformation("Cache reset for ProductOwner {ProductOwnerId}", productOwnerId);
-        
-        return Ok(new { message = "Cache reset successfully" });
+        try
+        {
+            await _cacheStateRepository.ResetCacheStateAsync(productOwnerId, cancellationToken);
+            
+            _logger.LogInformation("Cache reset for ProductOwner {ProductOwnerId}", productOwnerId);
+            
+            return Ok(new { message = "Cache reset successfully" });
+        }
+        catch (ProductOwnerNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     /// <summary>
