@@ -59,7 +59,11 @@ public static class ApiServiceCollectionExtensions
         services.AddOptions<RevisionIngestionDiagnosticsOptions>()
             .Bind(configuration.GetSection("RevisionIngestionDiagnostics"));
         services.AddOptions<RevisionIngestionPersistenceOptimizationOptions>()
-            .Bind(configuration.GetSection("RevisionIngestionPersistenceOptimization"));
+            .Bind(configuration.GetSection("RevisionIngestionPersistenceOptimization"))
+            .Validate(
+                options => isDevelopment || !string.Equals(options.SqliteSynchronous, "OFF", StringComparison.OrdinalIgnoreCase),
+                "SqliteSynchronous=OFF is only allowed in Development.")
+            .ValidateOnStart();
 
         services.AddSingleton<SqlitePragmaConnectionInterceptor>();
 
