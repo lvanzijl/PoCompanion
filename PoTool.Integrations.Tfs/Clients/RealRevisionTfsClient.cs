@@ -945,7 +945,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient
             return rawValue;
         }
 
-        return $"{rawValue[..MaxValuePreviewLength]}...";
+        var maxLength = Math.Max(0, MaxValuePreviewLength - TruncationSuffix.Length);
+        return $"{rawValue[..maxLength]}{TruncationSuffix}";
     }
 
     private record struct ParseWarningContext(int? WorkItemId, int? RevisionNumber);
@@ -967,7 +968,6 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         {
             if (_limit <= 0)
             {
-                Interlocked.Increment(ref _suppressed);
                 return false;
             }
 
