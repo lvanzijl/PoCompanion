@@ -514,7 +514,7 @@ public class RevisionIngestionService
                             _ => throw new ArgumentOutOfRangeException(
                                 nameof(delta.ChangeType),
                                 delta.ChangeType,
-                                "Unsupported relation change type.")
+                                $"Unsupported relation change type: {delta.ChangeType}.")
                         };
 
                         relationDeltas.Add(new RevisionRelationDeltaEntity

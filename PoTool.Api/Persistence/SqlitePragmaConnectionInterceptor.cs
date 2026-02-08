@@ -149,6 +149,12 @@ public sealed class SqlitePragmaConnectionInterceptor : DbConnectionInterceptor
             return "NORMAL";
         }
 
+        if (string.Equals(configuredMode, "NORMAL", StringComparison.OrdinalIgnoreCase))
+        {
+            return "NORMAL";
+        }
+
+        _logger.LogWarning("SqliteSynchronous={ConfiguredMode} is invalid. Falling back to NORMAL.", configuredMode);
         return "NORMAL";
     }
 }
