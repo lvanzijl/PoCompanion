@@ -77,6 +77,26 @@ public record ReportingRevisionsResult
     public string? ContinuationToken { get; init; }
 
     /// <summary>
+    /// HTTP status code returned by the reporting API call.
+    /// </summary>
+    public int? HttpStatusCode { get; init; }
+
+    /// <summary>
+    /// Duration in milliseconds of the HTTP request.
+    /// </summary>
+    public long? HttpDurationMs { get; init; }
+
+    /// <summary>
+    /// Duration in milliseconds of JSON parsing.
+    /// </summary>
+    public long? ParseDurationMs { get; init; }
+
+    /// <summary>
+    /// Duration in milliseconds of transforming JSON into revision objects.
+    /// </summary>
+    public long? TransformDurationMs { get; init; }
+
+    /// <summary>
     /// Whether this result represents a complete set (no more pages).
     /// </summary>
     public bool IsComplete => string.IsNullOrEmpty(ContinuationToken);

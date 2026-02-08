@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Net.Http;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PoTool.Core.Contracts;
+using PoTool.Integrations.Tfs.Diagnostics;
 using PoTool.Shared.Exceptions;
 using PoTool.Shared.Settings;
 
@@ -19,6 +21,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
     private readonly ILogger<RealRevisionTfsClient> _logger;
     private readonly TfsRequestThrottler _throttler;
     private readonly TfsRequestSender _requestSender;
+    private readonly RevisionIngestionDiagnostics? _diagnostics;
 
     private const int MaxRetries = 3;
     private const int MaxPayloadLogLength = 2000; // Limit error logs to a readable size without losing essential context.
@@ -51,13 +54,15 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         ITfsConfigurationService configService,
         ILogger<RealRevisionTfsClient> logger,
         TfsRequestThrottler throttler,
-        TfsRequestSender requestSender)
+        TfsRequestSender requestSender,
+        RevisionIngestionDiagnostics? diagnostics = null)
     {
         _httpClientFactory = httpClientFactory;
         _configService = configService;
         _logger = logger;
         _throttler = throttler;
         _requestSender = requestSender;
+        _diagnostics = diagnostics;
     }
 
     /// <inheritdoc />
@@ -73,7 +78,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
 
         var httpClient = GetAuthenticatedHttpClient();
 
-        return await ExecuteWithRetryAsync(async () =>
+        return await ExecuteWithRetryAsync("Reporting", async () =>
         {
             // Build URL for reporting work item revisions API
             // /_apis/wit/reporting/workitemrevisions
@@ -81,11 +86,25 @@ public class RealRevisionTfsClient : IRevisionTfsClient
 
             _logger.LogDebug("Calling reporting revisions API: {Url}", url);
 
+            var captureTimings = _diagnostics?.TryGetCurrentRun(out var runContext) == true &&
+                                 runContext.LogPerPageSummary;
+
+            var httpStart = captureTimings ? Stopwatch.GetTimestamp() : 0;
             var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
+            long? httpDurationMs = captureTimings
+                ? RevisionIngestionDiagnostics.GetElapsedMilliseconds(httpStart)
+                : null;
+            int? httpStatusCode = captureTimings ? (int)response.StatusCode : null;
+
+            var parseStart = captureTimings ? Stopwatch.GetTimestamp() : 0;
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            long? parseDurationMs = captureTimings
+                ? RevisionIngestionDiagnostics.GetElapsedMilliseconds(parseStart)
+                : null;
 
             string? nextContinuationToken = null;
 
@@ -101,7 +120,11 @@ public class RealRevisionTfsClient : IRevisionTfsClient
                 nextContinuationToken = headerTokens.FirstOrDefault() ?? nextContinuationToken;
             }
 
+            var transformStart = captureTimings ? Stopwatch.GetTimestamp() : 0;
             var revisions = ParseReportingRevisionsPayload(doc);
+            long? transformDurationMs = captureTimings
+                ? RevisionIngestionDiagnostics.GetElapsedMilliseconds(transformStart)
+                : null;
 
             _logger.LogInformation(
                 "Retrieved {Count} revisions from reporting API. HasMoreResults: {HasMore}",
@@ -111,7 +134,11 @@ public class RealRevisionTfsClient : IRevisionTfsClient
             return new ReportingRevisionsResult
             {
                 Revisions = revisions,
-                ContinuationToken = nextContinuationToken
+                ContinuationToken = nextContinuationToken,
+                HttpStatusCode = httpStatusCode,
+                HttpDurationMs = httpDurationMs,
+                ParseDurationMs = parseDurationMs,
+                TransformDurationMs = transformDurationMs
             };
         }, cancellationToken);
     }
@@ -127,7 +154,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
 
         var httpClient = GetAuthenticatedHttpClient();
 
-        return await ExecuteWithRetryAsync(async () =>
+        return await ExecuteWithRetryAsync("Relations", async () =>
         {
             // Per-item revisions endpoint: /_apis/wit/workItems/{id}/revisions
             var url = BuildWorkItemRevisionsUrl(config, workItemId);
@@ -737,13 +764,17 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         };
     }
 
-    private async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
+    private async Task<T> ExecuteWithRetryAsync<T>(string stage, Func<Task<T>> operation, CancellationToken cancellationToken)
     {
         var retryCount = 0;
         var baseDelay = TimeSpan.FromSeconds(1);
+        RevisionIngestionRunContext runContext = default;
+        var hasDiagnostics = _diagnostics?.TryGetCurrentRun(out runContext) == true && runContext.IsEnabled;
 
         while (true)
         {
+            var attemptStart = hasDiagnostics ? Stopwatch.GetTimestamp() : 0;
+
             try
             {
                 return await _throttler.ExecuteReadAsync(operation, cancellationToken);
@@ -764,6 +795,21 @@ public class RealRevisionTfsClient : IRevisionTfsClient
             {
                 retryCount++;
                 var delay = baseDelay * Math.Pow(2, retryCount - 1);
+
+                if (hasDiagnostics)
+                {
+                    var durationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(attemptStart);
+                    var statusCode = (ex as TfsException)?.StatusCode;
+                    _diagnostics!.LogRetryAttempt(
+                        runContext,
+                        stage,
+                        retryCount,
+                        MaxRetries,
+                        delay.TotalMilliseconds,
+                        statusCode,
+                        durationMs,
+                        ex);
+                }
 
                 _logger.LogWarning(
                     ex,

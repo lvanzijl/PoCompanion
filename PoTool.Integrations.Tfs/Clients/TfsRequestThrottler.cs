@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using PoTool.Integrations.Tfs.Diagnostics;
 
 namespace PoTool.Integrations.Tfs.Clients;
 
@@ -12,6 +13,7 @@ public sealed class TfsRequestThrottler : IDisposable
     private readonly SemaphoreSlim _readSemaphore;
     private readonly SemaphoreSlim _writeSemaphore;
     private readonly ILogger<TfsRequestThrottler> _logger;
+    private readonly RevisionIngestionDiagnostics? _diagnostics;
 
     // Default concurrency limits
     private const int DefaultReadConcurrency = 6;
@@ -20,16 +22,24 @@ public sealed class TfsRequestThrottler : IDisposable
     public TfsRequestThrottler(
         ILogger<TfsRequestThrottler> logger,
         int readConcurrency = DefaultReadConcurrency,
-        int writeConcurrency = DefaultWriteConcurrency)
+        int writeConcurrency = DefaultWriteConcurrency,
+        RevisionIngestionDiagnostics? diagnostics = null)
     {
         _logger = logger;
+        _diagnostics = diagnostics;
         _readSemaphore = new SemaphoreSlim(readConcurrency, readConcurrency);
         _writeSemaphore = new SemaphoreSlim(writeConcurrency, writeConcurrency);
+        ReadConcurrency = readConcurrency;
+        WriteConcurrency = writeConcurrency;
 
         _logger.LogInformation(
             "TFS request throttler initialized with ReadConcurrency={ReadConcurrency}, WriteConcurrency={WriteConcurrency}",
             readConcurrency, writeConcurrency);
     }
+
+    public int ReadConcurrency { get; }
+
+    public int WriteConcurrency { get; }
 
     /// <summary>
     /// Executes a read operation with throttling applied.
@@ -45,6 +55,12 @@ public sealed class TfsRequestThrottler : IDisposable
         if (waitTime.TotalMilliseconds > 100)
         {
             _logger.LogDebug("Read operation waited {WaitMs}ms for throttle", waitTime.TotalMilliseconds);
+        }
+
+        if (waitTime.TotalMilliseconds > 100 &&
+            _diagnostics?.TryGetCurrentRun(out var runContext) == true)
+        {
+            _diagnostics.LogThrottleWait(runContext, "Read", (long)waitTime.TotalMilliseconds);
         }
 
         try
@@ -71,6 +87,12 @@ public sealed class TfsRequestThrottler : IDisposable
         if (waitTime.TotalMilliseconds > 100)
         {
             _logger.LogDebug("Write operation waited {WaitMs}ms for throttle", waitTime.TotalMilliseconds);
+        }
+
+        if (waitTime.TotalMilliseconds > 100 &&
+            _diagnostics?.TryGetCurrentRun(out var runContext) == true)
+        {
+            _diagnostics.LogThrottleWait(runContext, "Write", (long)waitTime.TotalMilliseconds);
         }
 
         try
