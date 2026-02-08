@@ -12,6 +12,7 @@ using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
 using PoTool.Integrations.Tfs.Clients;
 using PoTool.Integrations.Tfs.Diagnostics;
+using CoreRelationChangeType = PoTool.Core.Contracts.RelationChangeType;
 using PersistenceRelationChangeType = PoTool.Api.Persistence.Entities.RelationChangeType;
 
 namespace PoTool.Api.Services;
@@ -507,16 +508,7 @@ public class RevisionIngestionService
                 {
                     foreach (var delta in revision.RelationDeltas)
                     {
-                        var changeTypeValue = (int)delta.ChangeType;
-                        if (!Enum.IsDefined(typeof(PersistenceRelationChangeType), changeTypeValue))
-                        {
-                            throw new ArgumentOutOfRangeException(
-                                nameof(delta.ChangeType),
-                                delta.ChangeType,
-                                $"Unsupported relation change type: {delta.ChangeType}.");
-                        }
-
-                        var changeType = (PersistenceRelationChangeType)changeTypeValue;
+                        var changeType = MapRelationChangeType(delta.ChangeType);
 
                         relationDeltas.Add(new RevisionRelationDeltaEntity
                         {
@@ -645,6 +637,20 @@ public class RevisionIngestionService
         }
 
         return null;
+    }
+
+    private static PersistenceRelationChangeType MapRelationChangeType(CoreRelationChangeType changeType)
+    {
+        var changeTypeValue = (int)changeType;
+        if (!Enum.IsDefined(typeof(PersistenceRelationChangeType), changeTypeValue))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(changeType),
+                changeType,
+                $"Unsupported relation change type: {changeType}.");
+        }
+
+        return (PersistenceRelationChangeType)changeTypeValue;
     }
     
     private sealed class PersistMetrics
