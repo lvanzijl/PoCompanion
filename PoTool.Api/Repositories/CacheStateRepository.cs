@@ -26,6 +26,16 @@ public class CacheStateRepository : ICacheStateRepository
 
         if (entity == null)
         {
+            // Validate that the ProductOwner exists before creating cache state
+            var productOwnerExists = await _context.Profiles
+                .AnyAsync(p => p.Id == productOwnerId, cancellationToken);
+
+            if (!productOwnerExists)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot create cache state for ProductOwner {productOwnerId} because the ProductOwner does not exist.");
+            }
+
             entity = new ProductOwnerCacheStateEntity
             {
                 ProductOwnerId = productOwnerId,
@@ -160,6 +170,16 @@ public class CacheStateRepository : ICacheStateRepository
 
         if (entity == null)
         {
+            // Validate that the ProductOwner exists before creating cache state
+            var productOwnerExists = await _context.Profiles
+                .AnyAsync(p => p.Id == productOwnerId, cancellationToken);
+
+            if (!productOwnerExists)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot create cache state for ProductOwner {productOwnerId} because the ProductOwner does not exist.");
+            }
+
             entity = new ProductOwnerCacheStateEntity
             {
                 ProductOwnerId = productOwnerId,
