@@ -1,10 +1,14 @@
 using System.Collections.Concurrent;
+using System.Data.Common;
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
+using PoTool.Integrations.Tfs.Clients;
+using PoTool.Integrations.Tfs.Diagnostics;
 
 namespace PoTool.Api.Services;
 
@@ -16,6 +20,8 @@ public class RevisionIngestionService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RevisionIngestionService> _logger;
+    private readonly RevisionIngestionDiagnostics _diagnostics;
+    private readonly TfsRequestThrottler _throttler;
 
     // Concurrency control: one ingestion per ProductOwner
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _ingestionLocks = new();
@@ -23,10 +29,14 @@ public class RevisionIngestionService
 
     public RevisionIngestionService(
         IServiceScopeFactory scopeFactory,
-        ILogger<RevisionIngestionService> logger)
+        ILogger<RevisionIngestionService> logger,
+        RevisionIngestionDiagnostics diagnostics,
+        TfsRequestThrottler throttler)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _diagnostics = diagnostics;
+        _throttler = throttler;
     }
 
     /// <summary>
@@ -91,6 +101,24 @@ public class RevisionIngestionService
                 ? watermark.LastSyncStartDateTime 
                 : null;
 
+            var runStartUtc = DateTimeOffset.UtcNow;
+            using var runScope = _diagnostics.StartRun(
+                productOwnerId,
+                isBackfill: !watermark.IsInitialBackfillComplete,
+                startDateTime,
+                runStartUtc,
+                _throttler.ReadConcurrency,
+                _throttler.WriteConcurrency,
+                RelationRevisionHydrator.HydrationConcurrency,
+                out var runContext);
+
+            if (runContext.IsEnabled)
+            {
+                var dbProvider = context.Database.ProviderName ?? "Unknown";
+                var connectionMode = GetConnectionMode(context);
+                _diagnostics.LogRunDatabase(runContext, dbProvider, connectionMode);
+            }
+
             // Record sync start time for next incremental sync
             var syncStartTime = DateTimeOffset.UtcNow;
 
@@ -106,25 +134,50 @@ public class RevisionIngestionService
                     "Fetching revision page {PageNumber} for ProductOwner {ProductOwnerId}",
                     pageCount, productOwnerId);
 
+                var logPerPageSummary = runContext.IsEnabled && runContext.LogPerPageSummary;
+                var pageStartTimestamp = logPerPageSummary ? Stopwatch.GetTimestamp() : 0;
+                using var pageScope = _diagnostics.BeginPageScope(runContext, pageCount);
+                var pageWorkItemIds = logPerPageSummary ? new HashSet<int>() : null;
+
                 var result = await revisionClient.GetReportingRevisionsAsync(
                     startDateTime,
                     continuationToken,
                     expandMode: ReportingExpandMode.None,
                     cts.Token);
 
+                var persistMetrics = runContext.IsEnabled && (runContext.LogEfSaveChangesDetails || logPerPageSummary)
+                    ? new PersistMetrics()
+                    : null;
+                var persistStartTimestamp = logPerPageSummary ? Stopwatch.GetTimestamp() : 0;
+
                 // Process and persist revisions
-                var persistedCount = await PersistRevisionsAsync(context, result.Revisions, cts.Token);
+                var persistedCount = await PersistRevisionsAsync(context, result.Revisions, persistMetrics, cts.Token);
                 totalRevisions += persistedCount;
+
+                var persistDurationMs = logPerPageSummary
+                    ? RevisionIngestionDiagnostics.GetElapsedMilliseconds(persistStartTimestamp)
+                    : 0;
 
                 // Track impacted work item IDs for relation hydration
                 foreach (var revision in result.Revisions)
                 {
                     impactedWorkItemIds.Add(revision.WorkItemId);
+                    pageWorkItemIds?.Add(revision.WorkItemId);
                 }
 
                 _logger.LogInformation(
                     "Persisted {Count} revisions (page {Page}) for ProductOwner {ProductOwnerId}",
                     persistedCount, pageCount, productOwnerId);
+
+                if (persistMetrics != null && runContext.LogEfSaveChangesDetails)
+                {
+                    _diagnostics.LogSaveChangesDetails(
+                        runContext,
+                        persistMetrics.SaveChangesDurationMs,
+                        persistMetrics.RevisionHeaderCount,
+                        persistMetrics.FieldDeltaCount,
+                        persistMetrics.RelationDeltaCount);
+                }
 
                 // Update continuation token
                 continuationToken = result.ContinuationToken;
@@ -138,6 +191,44 @@ public class RevisionIngestionService
                     RevisionsProcessed = totalRevisions,
                     CurrentPage = pageCount
                 });
+
+                if (logPerPageSummary)
+                {
+                    var continuationTokenPresent = !string.IsNullOrEmpty(result.ContinuationToken);
+                    var continuationTokenLength = continuationTokenPresent ? result.ContinuationToken!.Length : 0;
+                    var httpDurationMs = result.HttpDurationMs ?? 0;
+                    var dbSlow = persistDurationMs >= runContext.SlowDbThresholdMs;
+                    var httpSlow = httpDurationMs >= runContext.SlowHttpThresholdMs;
+                    var totalPageDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(pageStartTimestamp);
+                    var pageSlow = totalPageDurationMs >= runContext.SlowPageThresholdMs;
+                    var memoryBytes = GC.GetTotalMemory(false);
+
+                    _diagnostics.LogPageRequest(
+                        runContext,
+                        continuationTokenPresent,
+                        continuationTokenLength,
+                        result.HttpDurationMs,
+                        result.HttpStatusCode,
+                        result.ParseDurationMs,
+                        result.TransformDurationMs);
+
+                    _diagnostics.LogPageCounts(
+                        runContext,
+                        result.Revisions.Count,
+                        pageWorkItemIds?.Count ?? 0,
+                        persistMetrics?.RevisionHeaderCount ?? 0,
+                        persistMetrics?.FieldDeltaCount ?? 0,
+                        persistMetrics?.RelationDeltaCount ?? 0);
+
+                    _diagnostics.LogPagePersistence(
+                        runContext,
+                        persistDurationMs,
+                        totalPageDurationMs,
+                        pageSlow,
+                        httpSlow,
+                        dbSlow,
+                        memoryBytes);
+                }
 
                 hasMore = !result.IsComplete;
             }
@@ -307,6 +398,7 @@ public class RevisionIngestionService
     private async Task<int> PersistRevisionsAsync(
         PoToolDbContext context,
         IReadOnlyList<WorkItemRevision> revisions,
+        PersistMetrics? metrics,
         CancellationToken cancellationToken)
     {
         if (revisions.Count == 0)
@@ -315,6 +407,23 @@ public class RevisionIngestionService
         }
 
         var persistedCount = 0;
+
+        Task SaveChangesMaybeRecordTimingAsync()
+        {
+            if (metrics == null)
+            {
+                return context.SaveChangesAsync(cancellationToken);
+            }
+
+            var saveStart = Stopwatch.GetTimestamp();
+            return SaveChangesAndRecordTimingAsync(saveStart);
+        }
+
+        async Task SaveChangesAndRecordTimingAsync(long saveStart)
+        {
+            await context.SaveChangesAsync(cancellationToken);
+            metrics.SaveChangesDurationMs += RevisionIngestionDiagnostics.GetElapsedMilliseconds(saveStart);
+        }
 
         foreach (var revision in revisions)
         {
@@ -352,9 +461,10 @@ public class RevisionIngestionService
             };
 
             context.RevisionHeaders.Add(header);
+            metrics?.IncrementRevisionHeader();
             
             // Save immediately to get header ID needed for related entities
-            await context.SaveChangesAsync(cancellationToken);
+            await SaveChangesMaybeRecordTimingAsync();
 
             // Add field deltas
             if (revision.FieldDeltas != null)
@@ -368,6 +478,7 @@ public class RevisionIngestionService
                         OldValue = delta.OldValue,
                         NewValue = delta.NewValue
                     });
+                    metrics?.IncrementFieldDelta();
                 }
             }
 
@@ -383,6 +494,7 @@ public class RevisionIngestionService
                         RelationType = delta.RelationType,
                         TargetWorkItemId = delta.TargetWorkItemId
                     });
+                    metrics?.IncrementRelationDelta();
                 }
             }
 
@@ -392,23 +504,68 @@ public class RevisionIngestionService
             // while maintaining checkpoint progress during large backfills
             if (persistedCount % BatchSaveSize == 0)
             {
-                await context.SaveChangesAsync(cancellationToken);
+                await SaveChangesMaybeRecordTimingAsync();
             }
         }
 
         // Final save for any remaining changes
         if (context.ChangeTracker.HasChanges())
         {
-            await context.SaveChangesAsync(cancellationToken);
+            await SaveChangesMaybeRecordTimingAsync();
         }
 
         return persistedCount;
+    }
+
+    private static string? GetConnectionMode(PoToolDbContext context)
+    {
+        var connectionString = context.Database.GetDbConnection().ConnectionString;
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return null;
+        }
+
+        try
+        {
+            var builder = new DbConnectionStringBuilder
+            {
+                ConnectionString = connectionString
+            };
+
+            if (builder.TryGetValue("Mode", out var mode))
+            {
+                return mode?.ToString();
+            }
+
+            if (builder.TryGetValue("ApplicationIntent", out var intent))
+            {
+                return intent?.ToString();
+            }
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+
+        return null;
     }
     
     /// <summary>
     /// Number of revisions to persist before committing a batch save.
     /// </summary>
     private const int BatchSaveSize = 50;
+
+    private sealed class PersistMetrics
+    {
+        public int RevisionHeaderCount { get; private set; }
+        public int FieldDeltaCount { get; private set; }
+        public int RelationDeltaCount { get; private set; }
+        public long SaveChangesDurationMs { get; set; }
+
+        public void IncrementRevisionHeader() => RevisionHeaderCount++;
+        public void IncrementFieldDelta() => FieldDeltaCount++;
+        public void IncrementRelationDelta() => RelationDeltaCount++;
+    }
 }
 
 /// <summary>

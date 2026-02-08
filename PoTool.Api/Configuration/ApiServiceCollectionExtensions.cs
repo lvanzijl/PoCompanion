@@ -14,6 +14,7 @@ using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Core.WorkItems.Filtering;
 using PoTool.Core.Health;
 using PoTool.Client.Services;
+using PoTool.Integrations.Tfs.Diagnostics;
 
 namespace PoTool.Api.Configuration;
 
@@ -53,6 +54,10 @@ public static class ApiServiceCollectionExtensions
         {
             options.ServiceLifetime = ServiceLifetime.Scoped;
         });
+
+        // Configure revision ingestion diagnostics options (runtime reloadable)
+        services.AddOptions<RevisionIngestionDiagnosticsOptions>()
+            .Bind(configuration.GetSection("RevisionIngestionDiagnostics"));
 
         // Configure database - allow override for testing
         if (configureDatabase != null)
@@ -251,6 +256,7 @@ public static class ApiServiceCollectionExtensions
         // Register TFS throttling and request services (used by RealTfsClient)
         services.AddSingleton<TfsRequestThrottler>();
         services.AddScoped<TfsRequestSender>();
+        services.AddSingleton<RevisionIngestionDiagnostics>();
 
         // Always register HttpClientFactory for handlers that need it
         services.AddHttpClient();

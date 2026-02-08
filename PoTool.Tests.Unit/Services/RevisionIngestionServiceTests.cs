@@ -4,7 +4,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
+using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
+using PoTool.Integrations.Tfs.Clients;
+using PoTool.Integrations.Tfs.Diagnostics;
 
 namespace PoTool.Tests.Unit;
 
@@ -32,15 +35,20 @@ public sealed class RevisionIngestionServiceTests
 
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddOptions<RevisionIngestionDiagnosticsOptions>();
         services.AddDbContext<PoToolDbContext>(options =>
             options.UseInMemoryDatabase($"RevisionIngestion_{Guid.NewGuid()}"));
         services.AddSingleton<IRevisionTfsClient>(stubClient);
         services.AddSingleton<IRelationRevisionHydrator, StubRelationRevisionHydrator>();
+        services.AddSingleton<RevisionIngestionDiagnostics>();
+        services.AddSingleton<TfsRequestThrottler>();
 
         using var provider = services.BuildServiceProvider();
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
-            provider.GetRequiredService<ILogger<RevisionIngestionService>>());
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>());
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
