@@ -262,11 +262,7 @@ public class RevisionIngestionService
 
                 hasMore = !result.IsComplete;
 
-                List<WorkItemRevision>? revisionList = result.Revisions as List<WorkItemRevision>;
-                if (revisionList != null)
-                {
-                    revisionList.Clear();
-                }
+                result = result with { Revisions = Array.Empty<WorkItemRevision>() };
 
                 pageWorkItemIds?.Clear();
             }

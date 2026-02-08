@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using PoTool.Core.Contracts;
 using PoTool.Integrations.Tfs.Diagnostics;
@@ -962,18 +963,18 @@ public class RealRevisionTfsClient : IRevisionTfsClient
 
             if (_limit == 0)
             {
-                _suppressed++;
+                Interlocked.Increment(ref _suppressed);
                 return false;
             }
 
-            if (_count < _limit)
+            var currentCount = Interlocked.Increment(ref _count);
+            if (currentCount <= _limit)
             {
-                _count++;
                 logAction();
                 return true;
             }
 
-            _suppressed++;
+            Interlocked.Increment(ref _suppressed);
             return false;
         }
     }
