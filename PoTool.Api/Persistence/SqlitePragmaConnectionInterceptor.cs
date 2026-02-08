@@ -145,7 +145,7 @@ public sealed class SqlitePragmaConnectionInterceptor : DbConnectionInterceptor
                 return "OFF";
             }
 
-            _logger.LogError("SqliteSynchronous=OFF is only allowed in Development. Falling back to NORMAL.");
+            _logger.LogError("SqliteSynchronous=OFF is only permitted in Development environment. Overriding to NORMAL for safety.");
             return "NORMAL";
         }
 
