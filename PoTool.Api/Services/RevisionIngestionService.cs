@@ -408,7 +408,7 @@ public class RevisionIngestionService
 
         var persistedCount = 0;
 
-        Task SaveChangesAsync()
+        Task SaveChangesWithOptionalMetricsAsync()
         {
             if (metrics == null)
             {
@@ -464,7 +464,7 @@ public class RevisionIngestionService
             metrics?.IncrementRevisionHeader();
             
             // Save immediately to get header ID needed for related entities
-            await SaveChangesAsync();
+            await SaveChangesWithOptionalMetricsAsync();
 
             // Add field deltas
             if (revision.FieldDeltas != null)
@@ -504,14 +504,14 @@ public class RevisionIngestionService
             // while maintaining checkpoint progress during large backfills
             if (persistedCount % BatchSaveSize == 0)
             {
-                await SaveChangesAsync();
+                await SaveChangesWithOptionalMetricsAsync();
             }
         }
 
         // Final save for any remaining changes
         if (context.ChangeTracker.HasChanges())
         {
-            await SaveChangesAsync();
+            await SaveChangesWithOptionalMetricsAsync();
         }
 
         return persistedCount;

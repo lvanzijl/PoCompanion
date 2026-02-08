@@ -52,15 +52,16 @@ public sealed class TfsRequestThrottler : IDisposable
         await _readSemaphore.WaitAsync(cancellationToken);
         var waitTime = sw.Elapsed;
 
-        if (waitTime.TotalMilliseconds > 100)
+        var waitMs = waitTime.TotalMilliseconds;
+        if (waitMs > 100)
         {
-            _logger.LogDebug("Read operation waited {WaitMs}ms for throttle", waitTime.TotalMilliseconds);
+            _logger.LogDebug("Read operation waited {WaitMs}ms for throttle", waitMs);
         }
 
-        if (waitTime.TotalMilliseconds > 100 &&
+        if (waitMs > 100 &&
             _diagnostics?.TryGetCurrentRun(out var runContext) == true)
         {
-            _diagnostics.LogThrottleWait(runContext, "Read", (long)waitTime.TotalMilliseconds);
+            _diagnostics.LogThrottleWait(runContext, "Read", (long)waitMs);
         }
 
         try
@@ -84,15 +85,16 @@ public sealed class TfsRequestThrottler : IDisposable
         await _writeSemaphore.WaitAsync(cancellationToken);
         var waitTime = sw.Elapsed;
 
-        if (waitTime.TotalMilliseconds > 100)
+        var waitMs = waitTime.TotalMilliseconds;
+        if (waitMs > 100)
         {
-            _logger.LogDebug("Write operation waited {WaitMs}ms for throttle", waitTime.TotalMilliseconds);
+            _logger.LogDebug("Write operation waited {WaitMs}ms for throttle", waitMs);
         }
 
-        if (waitTime.TotalMilliseconds > 100 &&
+        if (waitMs > 100 &&
             _diagnostics?.TryGetCurrentRun(out var runContext) == true)
         {
-            _diagnostics.LogThrottleWait(runContext, "Write", (long)waitTime.TotalMilliseconds);
+            _diagnostics.LogThrottleWait(runContext, "Write", (long)waitMs);
         }
 
         try

@@ -305,6 +305,14 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
             relationDeltaCount);
     }
 
+    /// <summary>
+    /// Captures per-work-item hydration metrics for diagnostics aggregation.
+    /// </summary>
+    /// <param name="RevisionsHydrated">Number of revisions with relation deltas persisted.</param>
+    /// <param name="RevisionsFetched">Total number of revisions fetched from the per-item API.</param>
+    /// <param name="RelationDeltaCount">Total number of relation deltas written.</param>
+    /// <param name="SkippedDueToCache">True when hydration was skipped due to cached completion.</param>
+    /// <param name="CallMade">True when the per-item revisions API was called.</param>
     private readonly record struct HydrationWorkItemResult(
         int RevisionsHydrated,
         int RevisionsFetched,
