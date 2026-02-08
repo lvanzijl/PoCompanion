@@ -207,7 +207,10 @@ public class RevisionIngestionService
                 }
 
                 context.ChangeTracker.Clear();
-                context.RevisionIngestionWatermarks.Attach(watermark);
+                if (context.Entry(watermark).State == EntityState.Detached)
+                {
+                    context.RevisionIngestionWatermarks.Attach(watermark);
+                }
 
                 // Update continuation token
                 continuationToken = result.ContinuationToken;
@@ -310,7 +313,10 @@ public class RevisionIngestionService
             }
 
             // Mark ingestion complete
-            context.RevisionIngestionWatermarks.Attach(watermark);
+            if (context.Entry(watermark).State == EntityState.Detached)
+            {
+                context.RevisionIngestionWatermarks.Attach(watermark);
+            }
             watermark.LastIngestionCompletedAt = DateTimeOffset.UtcNow;
             watermark.LastIngestionRevisionCount = totalRevisions;
             watermark.ContinuationToken = null; // Clear token on successful completion
@@ -557,17 +563,17 @@ public class RevisionIngestionService
                 persistedCount++;
             }
 
-            if (headers!.Count > 0)
+            if (headers is { Count: > 0 })
             {
                 context.RevisionHeaders.AddRange(headers);
             }
 
-            if (fieldDeltas!.Count > 0)
+            if (fieldDeltas is { Count: > 0 })
             {
                 context.RevisionFieldDeltas.AddRange(fieldDeltas);
             }
 
-            if (relationDeltas!.Count > 0)
+            if (relationDeltas is { Count: > 0 })
             {
                 context.RevisionRelationDeltas.AddRange(relationDeltas);
             }

@@ -430,11 +430,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient
         }
         catch (Exception ex)
         {
-            if (warningLimiter.TryLog(() => _logger.LogWarning(ex, "Failed to parse work item revision")))
-            {
-                return null;
-            }
-
+            warningLimiter.TryLog(() => _logger.LogWarning(ex, "Failed to parse work item revision"));
             return null;
         }
     }
