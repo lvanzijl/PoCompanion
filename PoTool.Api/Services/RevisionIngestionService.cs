@@ -37,6 +37,9 @@ public class RevisionIngestionService
 
     private const string ContinuationTokenProtectorPurpose = "RevisionIngestionContinuationToken";
     private const int ContinuationTokenHashLength = 12;
+    private static readonly DateTimeOffset BackfillStartMinimumUtc =
+        new(new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+    private static readonly TimeSpan BackfillFallbackWindow = TimeSpan.FromDays(180);
 
     // Concurrency control: one ingestion per ProductOwner
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _ingestionLocks = new();
@@ -588,36 +591,40 @@ public class RevisionIngestionService
             return null;
         }
 
-        // Query for any cached work items that belong to this product owner's hierarchy
-        // Check if we have any cached work items first to avoid Min exception on empty set
-        var hasWorkItems = await context.WorkItems
-            .AnyAsync(wi => rootWorkItemIds.Contains(wi.TfsId) || rootWorkItemIds.Contains(wi.ParentTfsId ?? 0), cancellationToken);
-
-        if (!hasWorkItems)
-        {
-            _logger.LogDebug("No cached work items found for ProductOwner {ProductOwnerId}, backfill will scan all history", productOwnerId);
-            return null;
-        }
-
         // Query cached work items and find the earliest date on the client side
         // Note: SQLite doesn't support Min/OrderBy on DateTimeOffset, so we need client-side evaluation
         // To minimize memory usage, we select only the date fields and use ToListAsync with a small projection
         var workItemDates = await context.WorkItems
-            .Where(wi => rootWorkItemIds.Contains(wi.TfsId) || rootWorkItemIds.Contains(wi.ParentTfsId ?? 0))
-            .Select(wi => new { wi.CreatedDate, wi.TfsChangedDate })
+            .Select(wi => new WorkItemDateSnapshot(wi.TfsId, wi.ParentTfsId, wi.CreatedDate, wi.TfsChangedDate))
             .ToListAsync(cancellationToken);
 
+        if (workItemDates.Count == 0)
+        {
+            return GetFallbackBackfillStartDate(
+                productOwnerId,
+                "No cached work items available for backfill start inference.");
+        }
+
+        var scopedWorkItems = FilterWorkItemsToScope(workItemDates, rootWorkItemIds);
+
+        if (scopedWorkItems.Count == 0)
+        {
+            return GetFallbackBackfillStartDate(
+                productOwnerId,
+                "No cached work items found within the product root hierarchy.");
+        }
+
         // Find the earliest CreatedDate on the client side
-        var earliestCreatedDate = workItemDates
-            .Where(wi => wi.CreatedDate != null)
-            .Select(wi => wi.CreatedDate!.Value)
+        var earliestCreatedDate = scopedWorkItems
+            .Where(wi => wi.CreatedDate.HasValue)
+            .Select(wi => wi.CreatedDate!.Value.ToUniversalTime())
             .OrderBy(d => d)
             .FirstOrDefault();
 
         if (earliestCreatedDate != default(DateTimeOffset))
         {
             // Subtract 1 day buffer to ensure we don't miss revisions
-            var inferredStartDate = earliestCreatedDate.AddDays(-1);
+            var inferredStartDate = ClampBackfillStartDate(earliestCreatedDate.AddDays(-1), productOwnerId, "CreatedDate");
             _logger.LogInformation(
                 "Inferred backfill start date from earliest CreatedDate for ProductOwner {ProductOwnerId}: {StartDate} (1 day before {EarliestDate})",
                 productOwnerId,
@@ -627,15 +634,16 @@ public class RevisionIngestionService
         }
 
         // Fallback to TfsChangedDate if CreatedDate is not available
-        var earliestChangedDate = workItemDates
-            .Select(wi => wi.TfsChangedDate)
+        var earliestChangedDate = scopedWorkItems
+            .Where(wi => wi.TfsChangedDate.HasValue)
+            .Select(wi => wi.TfsChangedDate!.Value.ToUniversalTime())
             .OrderBy(d => d)
             .FirstOrDefault();
 
         if (earliestChangedDate != default(DateTimeOffset))
         {
             // Subtract 1 day buffer to ensure we don't miss revisions
-            var inferredStart = earliestChangedDate.AddDays(-1);
+            var inferredStart = ClampBackfillStartDate(earliestChangedDate.AddDays(-1), productOwnerId, "TfsChangedDate");
             _logger.LogInformation(
                 "Inferred backfill start date from earliest TfsChangedDate for ProductOwner {ProductOwnerId}: {StartDate} (1 day before {EarliestDate})",
                 productOwnerId,
@@ -644,9 +652,79 @@ public class RevisionIngestionService
             return inferredStart;
         }
 
-        _logger.LogDebug("No timestamp found on cached work items for ProductOwner {ProductOwnerId}, backfill will scan all history", productOwnerId);
-        return null;
+        return GetFallbackBackfillStartDate(
+            productOwnerId,
+            "No valid CreatedDate or TfsChangedDate values found in scoped work items.");
     }
+
+    private static IReadOnlyList<WorkItemDateSnapshot> FilterWorkItemsToScope(
+        IReadOnlyList<WorkItemDateSnapshot> workItems,
+        IReadOnlyCollection<int> rootWorkItemIds)
+    {
+        var childrenLookup = workItems
+            .Where(wi => wi.ParentTfsId.HasValue)
+            .GroupBy(wi => wi.ParentTfsId!.Value)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        var scopedIds = new HashSet<int>(rootWorkItemIds);
+        var queue = new Queue<int>(rootWorkItemIds);
+
+        while (queue.Count > 0)
+        {
+            var parentId = queue.Dequeue();
+            if (!childrenLookup.TryGetValue(parentId, out var children))
+            {
+                continue;
+            }
+
+            foreach (var child in children)
+            {
+                if (scopedIds.Add(child.TfsId))
+                {
+                    queue.Enqueue(child.TfsId);
+                }
+            }
+        }
+
+        return workItems
+            .Where(item => scopedIds.Contains(item.TfsId))
+            .ToList();
+    }
+
+    private DateTimeOffset GetFallbackBackfillStartDate(int productOwnerId, string reason)
+    {
+        var fallback = DateTimeOffset.UtcNow.Subtract(BackfillFallbackWindow);
+        var normalizedFallback = ClampBackfillStartDate(fallback, productOwnerId, "Fallback");
+        _logger.LogWarning(
+            "Using fallback backfill start date for ProductOwner {ProductOwnerId}: {StartDate}. Reason: {Reason}",
+            productOwnerId,
+            normalizedFallback,
+            reason);
+        return normalizedFallback;
+    }
+
+    private DateTimeOffset ClampBackfillStartDate(DateTimeOffset dateTime, int productOwnerId, string source)
+    {
+        var utc = dateTime.ToUniversalTime();
+        if (utc < BackfillStartMinimumUtc)
+        {
+            _logger.LogWarning(
+                "Inferred backfill start date {StartDate} from {Source} for ProductOwner {ProductOwnerId} is earlier than minimum {Minimum}. Clamping.",
+                utc,
+                source,
+                productOwnerId,
+                BackfillStartMinimumUtc);
+            return BackfillStartMinimumUtc;
+        }
+
+        return utc;
+    }
+
+    private sealed record WorkItemDateSnapshot(
+        int TfsId,
+        int? ParentTfsId,
+        DateTimeOffset? CreatedDate,
+        DateTimeOffset? TfsChangedDate);
 
     private async Task<RevisionIngestionWatermarkEntity> GetOrCreateWatermarkAsync(
         PoToolDbContext context,

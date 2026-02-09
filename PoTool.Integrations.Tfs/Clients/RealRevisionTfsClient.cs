@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -257,28 +259,27 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         // Build URL: {collection}/_apis/wit/reporting/workitemrevisions
         var baseUrl = $"{config.Url.TrimEnd('/')}{reportingEndpointPath}";
 
-        var queryParams = new List<string>
+        var queryParams = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            $"api-version={config.ApiVersion}"
+            ["api-version"] = config.ApiVersion,
+            ["fields"] = string.Join(",", FieldWhitelist)
         };
-
-        // Add field whitelist
-        queryParams.Add($"fields={string.Join(",", FieldWhitelist)}");
 
         // Parameter conflict validation: prefer continuation token over startDateTime
         // When a continuation token is present, the API ignores startDateTime
         if (!string.IsNullOrEmpty(continuationToken))
         {
             // Add continuation token for paging
-            queryParams.Add($"continuationToken={Uri.EscapeDataString(continuationToken)}");
+            queryParams["continuationToken"] = continuationToken;
             // Do NOT add startDateTime when continuation token is present
         }
         else if (startDateTime.HasValue)
         {
             // Add startDateTime for incremental sync (only when no continuation token)
-            // Uses ISO 8601 round-trip format ("O") which Azure DevOps/TFS reporting API accepts
-            // Format example: "2024-01-15T10:30:00.0000000+00:00"
-            queryParams.Add($"startDateTime={startDateTime.Value:O}");
+            // Uses invariant ISO 8601 UTC format, e.g. "2024-01-15T10:30:00.0000000Z"
+            var serializedStartDateTime = ToTfsQueryDateTimeUtc(startDateTime.Value);
+            ValidateSerializedStartDateTime(serializedStartDateTime);
+            queryParams["startDateTime"] = serializedStartDateTime;
         }
 
         // Add expand parameter if requested
@@ -286,10 +287,13 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         // Only $expand=fields is allowed (for long text fields)
         if (expandMode == ReportingExpandMode.Fields)
         {
-            queryParams.Add("$expand=fields");
+            queryParams["$expand"] = "fields";
         }
 
-        return $"{baseUrl}?{string.Join("&", queryParams)}";
+        var query = string.Join("&", queryParams.Select(param =>
+            $"{param.Key}={Uri.EscapeDataString(param.Value)}"));
+
+        return $"{baseUrl}?{query}";
     }
 
     private string BuildWorkItemRevisionsUrl(TfsConfigEntity config, int workItemId)
@@ -308,10 +312,22 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
     {
         return await ExecuteWithRetryAsync("Reporting", async () =>
         {
+            string? serializedStartDateTime = null;
+            if (startDateTime.HasValue && string.IsNullOrEmpty(continuationToken))
+            {
+                serializedStartDateTime = ToTfsQueryDateTimeUtc(startDateTime.Value);
+                _logger.LogInformation(
+                    "Reporting revisions startDateTime raw {StartDateTimeRaw} serialized {StartDateTimeSerialized}",
+                    startDateTime.Value,
+                    serializedStartDateTime);
+            }
+
             var url = BuildReportingRevisionsUrl(config, startDateTime, continuationToken, expandMode);
-            var logUrl = RedactContinuationToken(url);
+            var logUrl = SanitizeUrlForLogging(url);
+            var requestPathAndQuery = new Uri(url).PathAndQuery;
 
             _logger.LogDebug("Calling reporting revisions API: {Url}", logUrl);
+            _logger.LogDebug("Reporting revisions request path+query: {PathAndQuery}", requestPathAndQuery);
 
             var httpStart = captureTimings ? Stopwatch.GetTimestamp() : 0;
             var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
@@ -418,6 +434,71 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         }
 
         return $"{url[..tokenStart]}<redacted>{url[tokenEnd..]}";
+    }
+
+    private static string SanitizeUrlForLogging(string url)
+    {
+        var uri = new Uri(url);
+        var sanitizedBuilder = new UriBuilder(uri)
+        {
+            UserName = string.Empty,
+            Password = string.Empty
+        };
+
+        return RedactContinuationToken(sanitizedBuilder.Uri.ToString());
+    }
+
+    private static string ToTfsQueryDateTimeUtc(DateTimeOffset dateTime)
+    {
+        return dateTime.ToUniversalTime()
+            .ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture);
+    }
+
+    private static void ValidateSerializedStartDateTime(string serializedStartDateTime)
+    {
+        if (string.IsNullOrWhiteSpace(serializedStartDateTime))
+        {
+            throw new InvalidOperationException("Serialized startDateTime is empty.");
+        }
+
+        if (serializedStartDateTime.Any(char.IsWhiteSpace))
+        {
+            throw new InvalidOperationException(
+                $"Serialized startDateTime contains whitespace: '{serializedStartDateTime}'.");
+        }
+
+        if (!serializedStartDateTime.EndsWith("Z", StringComparison.Ordinal) &&
+            !serializedStartDateTime.EndsWith("+00:00", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Serialized startDateTime must be UTC (Z or +00:00): '{serializedStartDateTime}'.");
+        }
+    }
+
+    private static bool IsNonRetryableReportingError(string stage, TfsException exception)
+    {
+        if (!string.Equals(stage, "Reporting", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (exception.StatusCode != (int)HttpStatusCode.BadRequest)
+        {
+            return false;
+        }
+
+        var errorContent = exception.ErrorContent ?? string.Empty;
+        return errorContent.Contains("not valid for Nullable`1", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsNonRetryableReportingClientError(string stage, InvalidOperationException exception)
+    {
+        if (!string.Equals(stage, "Reporting", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return exception.Message.Contains("startDateTime", StringComparison.OrdinalIgnoreCase);
     }
 
     // Caller must hold _paginationGate.
@@ -1452,6 +1533,22 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             catch (TfsAuthorizationException)
             {
                 throw; // Don't retry authorization errors
+            }
+            catch (TfsException ex) when (IsNonRetryableReportingError(stage, ex))
+            {
+                _logger.LogError(
+                    ex,
+                    "Non-retryable reporting API error encountered for stage {Stage}.",
+                    stage);
+                throw;
+            }
+            catch (InvalidOperationException ex) when (IsNonRetryableReportingClientError(stage, ex))
+            {
+                _logger.LogError(
+                    ex,
+                    "Non-retryable reporting API client error encountered for stage {Stage}.",
+                    stage);
+                throw;
             }
             catch (OperationCanceledException)
             {
