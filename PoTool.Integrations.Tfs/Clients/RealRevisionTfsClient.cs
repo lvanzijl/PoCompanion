@@ -145,6 +145,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
                 _totalPagesFetched++;
                 var pageIndex = _totalPagesFetched;
+                LogEffortParseSummary(pagePayload.EffortParseSummary, pageIndex);
 
                 if (pagePayload.PayloadError != null)
                 {
@@ -488,22 +489,27 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             var transformStart = captureTimings ? Stopwatch.GetTimestamp() : 0;
             var payloadError = (string?)null;
             IReadOnlyList<WorkItemRevision> revisions;
+            EffortParseSummary effortParseSummary;
 
             try
             {
-                revisions = ParseReportingRevisionsPayload(doc);
+                var parseResult = ParseReportingRevisionsPayload(doc);
+                revisions = parseResult.Revisions;
+                effortParseSummary = parseResult.EffortParseSummary;
             }
             catch (TfsException ex) when (ex.StatusCode is null)
             {
                 payloadError = ex.Message;
                 _logger.LogError(ex, "Reporting revisions payload parsing failed");
                 revisions = Array.Empty<WorkItemRevision>();
+                effortParseSummary = EffortParseSummary.Empty;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 payloadError = ex.Message;
                 _logger.LogError(ex, "Reporting revisions payload parsing failed with unexpected error");
                 revisions = Array.Empty<WorkItemRevision>();
+                effortParseSummary = EffortParseSummary.Empty;
             }
 
             long? transformDurationMs = captureTimings
@@ -523,7 +529,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                 httpDurationMs,
                 parseDurationMs,
                 transformDurationMs,
-                payloadError);
+                payloadError,
+                effortParseSummary);
         }, cancellationToken);
     }
 
@@ -683,11 +690,30 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         return unchecked((uint)hash).ToString(TokenHashHexFormat, CultureInfo.InvariantCulture);
     }
 
-    private IReadOnlyList<WorkItemRevision> ParseReportingRevisionsPayload(JsonDocument doc)
+    private void LogEffortParseSummary(EffortParseSummary summary, int pageIndex)
+    {
+        if (summary.FailedCount <= 0 || !_logger.IsEnabled(LogLevel.Warning))
+        {
+            return;
+        }
+
+        var sampleValues = summary.Samples.Count > 0
+            ? string.Join(" | ", summary.Samples)
+            : "<none>";
+
+        _logger.LogWarning(
+            "Effort parse failures on reporting revisions page. PageIndex={PageIndex} FailedEffortParseCount={FailedEffortParseCount} Samples={Samples}",
+            pageIndex,
+            summary.FailedCount,
+            sampleValues);
+    }
+
+    private RevisionParseResult ParseReportingRevisionsPayload(JsonDocument doc)
     {
         var revisions = new List<WorkItemRevision>();
         var maxParseWarnings = _diagnostics?.GetMaxParseWarningsPerPage() ?? DefaultMaxParseWarningsPerPage;
         var warningLimiter = new ParseWarningLimiter(maxParseWarnings);
+        var effortParseTracker = new EffortParseTracker();
 
         // Parse revisions from response (some API versions return "value" vs legacy "values")
         if (doc.RootElement.TryGetProperty("value", out var valuesArray) ||
@@ -695,7 +721,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         {
             foreach (var revision in valuesArray.EnumerateArray())
             {
-                var workItemRevision = ParseWorkItemRevision(revision, warningLimiter);
+                var workItemRevision = ParseWorkItemRevision(revision, warningLimiter, effortParseTracker);
                 if (workItemRevision != null)
                 {
                     revisions.Add(workItemRevision);
@@ -724,10 +750,13 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                 warningLimiter.SuppressedCount);
         }
 
-        return revisions;
+        return new RevisionParseResult(revisions, effortParseTracker.ToSummary());
     }
 
-    private WorkItemRevision? ParseWorkItemRevision(JsonElement revision, ParseWarningLimiter warningLimiter)
+    private WorkItemRevision? ParseWorkItemRevision(
+        JsonElement revision,
+        ParseWarningLimiter warningLimiter,
+        EffortParseTracker? effortParseTracker)
     {
         try
         {
@@ -794,7 +823,11 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             var createdDate = GetDateTimeField(fields, "System.CreatedDate");
             var changedDate = GetDateTimeField(fields, "System.ChangedDate");
             var closedDate = GetDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
-            var effort = GetIntField(fields, "Microsoft.VSTS.Scheduling.Effort", warningLimiter, warningContext);
+            var effort = GetDoubleField(fields, "Microsoft.VSTS.Scheduling.Effort", out var effortParseFailed, out var effortValueSnippet);
+            if (effortParseFailed)
+            {
+                effortParseTracker?.RecordFailure(effortValueSnippet);
+            }
 
             // If ChangedDate is missing, log warning and skip this revision - timestamp is critical for ordering
             if (!changedDate.HasValue)
@@ -946,7 +979,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             var changedDate = GetDateTimeField(fields, "System.ChangedDate") ?? DateTimeOffset.UtcNow;
             var createdDate = GetDateTimeField(fields, "System.CreatedDate");
             var closedDate = GetDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
-            var effort = GetIntField(fields, "Microsoft.VSTS.Scheduling.Effort");
+            var effort = GetDoubleField(fields, "Microsoft.VSTS.Scheduling.Effort");
 
             var changedBy = GetStringField(fields, "System.ChangedBy");
 
@@ -1149,6 +1182,73 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         {
             return null;
         }
+    }
+
+    private static double? GetDoubleField(
+        JsonElement fields,
+        string fieldName,
+        out bool parseFailed,
+        out string? valueSnippet)
+    {
+        parseFailed = false;
+        valueSnippet = null;
+
+        if (!fields.TryGetProperty(fieldName, out var element))
+        {
+            return null;
+        }
+
+        if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
+        {
+            return null;
+        }
+
+        try
+        {
+            if (element.ValueKind == JsonValueKind.Number)
+            {
+                if (element.TryGetDouble(out var doubleValue))
+                {
+                    return doubleValue;
+                }
+
+                parseFailed = true;
+                valueSnippet = GetValueSnippet(element);
+                return null;
+            }
+
+            if (element.ValueKind == JsonValueKind.String)
+            {
+                var rawValue = element.GetString()?.Trim();
+                if (string.IsNullOrEmpty(rawValue))
+                {
+                    return null;
+                }
+
+                if (double.TryParse(rawValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedValue))
+                {
+                    return parsedValue;
+                }
+
+                parseFailed = true;
+                valueSnippet = GetValueSnippet(element);
+                return null;
+            }
+
+            parseFailed = true;
+            valueSnippet = GetValueSnippet(element);
+            return null;
+        }
+        catch
+        {
+            parseFailed = true;
+            return null;
+        }
+    }
+
+    private static double? GetDoubleField(JsonElement fields, string fieldName)
+    {
+        return GetDoubleField(fields, fieldName, out _, out _);
     }
 
     private int? GetIntField(
@@ -1379,6 +1479,43 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         }
     }
 
+    private sealed record RevisionParseResult(
+        IReadOnlyList<WorkItemRevision> Revisions,
+        EffortParseSummary EffortParseSummary);
+
+    private sealed record EffortParseSummary(int FailedCount, IReadOnlyList<string> Samples)
+    {
+        public static EffortParseSummary Empty { get; } = new(0, Array.Empty<string>());
+    }
+
+    private sealed class EffortParseTracker
+    {
+        private const int MaxSamples = 3;
+        private readonly List<string> _samples = new();
+        private int _failedCount;
+
+        public void RecordFailure(string? valueSnippet)
+        {
+            _failedCount++;
+            if (_samples.Count >= MaxSamples)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(valueSnippet))
+            {
+                _samples.Add(valueSnippet);
+            }
+        }
+
+        public EffortParseSummary ToSummary()
+        {
+            return _failedCount == 0
+                ? EffortParseSummary.Empty
+                : new EffortParseSummary(_failedCount, _samples.ToArray());
+        }
+    }
+
     private HttpClient GetAuthenticatedHttpClient()
     {
         var client = _httpClientFactory.CreateClient("TfsClient.NTLM");
@@ -1507,7 +1644,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         long? HttpDurationMs,
         long? ParseDurationMs,
         long? TransformDurationMs,
-        string? PayloadError)
+        string? PayloadError,
+        EffortParseSummary EffortParseSummary)
     {
         public static ReportingRevisionsPagePayload Empty { get; } = new(
             Array.Empty<WorkItemRevision>(),
@@ -1516,7 +1654,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             null,
             null,
             null,
-            null);
+            null,
+            EffortParseSummary.Empty);
     }
 
     private record RelationInfo(string RelationType, int TargetId);

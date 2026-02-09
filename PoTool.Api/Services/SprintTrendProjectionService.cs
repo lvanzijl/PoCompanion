@@ -182,8 +182,10 @@ public class SprintTrendProjectionService
         var workedWorkItems = await GetWorkedWorkItemsAsync(context, sprint, product.Id, resolvedWorkItemIds, productByWorkItem, classifications, cancellationToken);
 
         // Calculate metrics
-        int plannedCount = 0, plannedEffort = 0;
-        int workedCount = 0, workedEffort = 0;
+        int plannedCount = 0;
+        double plannedEffort = 0;
+        int workedCount = 0;
+        double workedEffort = 0;
         int bugsPlannedCount = 0, bugsWorkedCount = 0;
         int maxRevisionId = 0;
 
@@ -203,7 +205,7 @@ public class SprintTrendProjectionService
             else
             {
                 plannedCount++;
-                plannedEffort += revision.Effort ?? 0;
+                plannedEffort += revision.Effort ?? 0d;
             }
         }
 
@@ -221,7 +223,7 @@ public class SprintTrendProjectionService
             else
             {
                 workedCount++;
-                workedEffort += revision.Effort ?? 0;
+                workedEffort += revision.Effort ?? 0d;
             }
         }
 
@@ -230,9 +232,9 @@ public class SprintTrendProjectionService
             SprintId = sprint.Id,
             ProductId = product.Id,
             PlannedCount = plannedCount,
-            PlannedEffort = plannedEffort,
+            PlannedEffort = (int)Math.Round(plannedEffort),
             WorkedCount = workedCount,
-            WorkedEffort = workedEffort,
+            WorkedEffort = (int)Math.Round(workedEffort),
             BugsPlannedCount = bugsPlannedCount,
             BugsWorkedCount = bugsWorkedCount,
             LastComputedAt = DateTimeOffset.UtcNow,

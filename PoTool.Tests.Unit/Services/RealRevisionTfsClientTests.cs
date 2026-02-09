@@ -549,7 +549,79 @@ public sealed class RealRevisionTfsClientTests
         Assert.HasCount(1, revisions);
         Assert.AreEqual(42, revisions[0].WorkItemId);
         Assert.AreEqual(3, revisions[0].RevisionNumber);
-        Assert.AreEqual(5, revisions[0].Effort);
+        Assert.AreEqual(5d, revisions[0].Effort);
+    }
+
+    [TestMethod]
+    public void ParseReportingRevisionsPayload_WithDecimalEffortNumber_ParsesDouble()
+    {
+        var json = """
+            {
+              "value": [
+                {
+                  "id": 10,
+                  "rev": 4,
+                  "fields": {
+                    "System.WorkItemType": "Task",
+                    "System.Title": "Sample",
+                    "System.State": "New",
+                    "System.IterationPath": "Project\\Sprint 1",
+                    "System.AreaPath": "Project",
+                    "System.ChangedDate": "2024-01-01T00:00:00Z",
+                    "Microsoft.VSTS.Scheduling.Effort": 1.25
+                  }
+                }
+              ]
+            }
+            """;
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        var revisions = client.TestParseReportingRevisionsPayload(json);
+
+        Assert.HasCount(1, revisions);
+        Assert.AreEqual(1.25d, revisions[0].Effort);
+    }
+
+    [TestMethod]
+    public void ParseReportingRevisionsPayload_WithDecimalEffortString_ParsesDouble()
+    {
+        var json = """
+            {
+              "value": [
+                {
+                  "id": 10,
+                  "rev": 4,
+                  "fields": {
+                    "System.WorkItemType": "Task",
+                    "System.Title": "Sample",
+                    "System.State": "New",
+                    "System.IterationPath": "Project\\Sprint 1",
+                    "System.AreaPath": "Project",
+                    "System.ChangedDate": "2024-01-01T00:00:00Z",
+                    "Microsoft.VSTS.Scheduling.Effort": "0.5"
+                  }
+                }
+              ]
+            }
+            """;
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        var revisions = client.TestParseReportingRevisionsPayload(json);
+
+        Assert.HasCount(1, revisions);
+        Assert.AreEqual(0.5d, revisions[0].Effort);
     }
 
     [TestMethod]
@@ -764,7 +836,9 @@ public sealed class RealRevisionTfsClientTests
                 "ParseReportingRevisionsPayload",
                 BindingFlags.NonPublic | BindingFlags.Instance);
 
-            return (IReadOnlyList<WorkItemRevision>)method!.Invoke(this, new object?[] { doc })!;
+            var parseResult = method!.Invoke(this, new object?[] { doc });
+            var revisionsProperty = parseResult!.GetType().GetProperty("Revisions");
+            return (IReadOnlyList<WorkItemRevision>)revisionsProperty!.GetValue(parseResult)!;
         }
 
         public string? TestExtractContinuationToken(HttpResponseMessage response)
