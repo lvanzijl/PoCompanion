@@ -13,6 +13,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
+using PoTool.Core.WorkItems;
 using PoTool.Integrations.Tfs.Clients;
 using PoTool.Integrations.Tfs.Diagnostics;
 using CoreRelationChangeType = PoTool.Core.Contracts.RelationChangeType;
@@ -94,6 +95,12 @@ public class RevisionIngestionService
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
             var revisionClient = scope.ServiceProvider.GetRequiredService<IRevisionTfsClient>();
+            var tfsClient = scope.ServiceProvider.GetRequiredService<ITfsClient>();
+            var allowedWorkItemIds = await ResolveAllowedWorkItemIdsForProductOwnerAsync(
+                context,
+                tfsClient,
+                productOwnerId,
+                cts.Token);
 
             // Get or create watermark record
             var watermark = await GetOrCreateWatermarkAsync(context, productOwnerId, cts.Token);
@@ -169,12 +176,16 @@ public class RevisionIngestionService
                     expandMode: ReportingExpandMode.None,
                     cts.Token);
 
-                var revisionCount = result.Revisions.Count;
+                var rawRevisionCount = result.Revisions.Count;
+                var scopedRevisions = result.Revisions
+                    .Where(revision => allowedWorkItemIds.Contains(revision.WorkItemId))
+                    .ToList();
+                var scopedRevisionCount = scopedRevisions.Count;
                 var pageContinuationToken = result.ContinuationToken;
                 var pageRequestDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(pageRequestStartTimestamp);
                 var tokenAdvanced = pageTracker.IsTokenAdvanced(pageContinuationToken);
                 var tokenTracking = pageTracker.TrackToken(pageContinuationToken);
-                var consecutiveEmptyPages = pageTracker.UpdateEmptyPages(revisionCount);
+                var consecutiveEmptyPages = pageTracker.UpdateEmptyPages(scopedRevisionCount);
                 var hasMoreResults = result.HasMoreResults;
                 if (result.Termination != null)
                 {
@@ -188,7 +199,7 @@ public class RevisionIngestionService
                 var persistMetrics = new PersistMetrics();
 
                 // Process and persist revisions
-                var persistedCount = await PersistRevisionsAsync(context, result.Revisions, persistMetrics, cts.Token);
+                var persistedCount = await PersistRevisionsAsync(context, scopedRevisions, persistMetrics, cts.Token);
                 totalRevisions += persistedCount;
 
                 var persistDurationMs = logPerPageSummary ? persistMetrics.PersistDurationMs : 0;
@@ -196,9 +207,10 @@ public class RevisionIngestionService
                 {
                     var memoryMb = GC.GetTotalMemory(false) / (1024d * 1024d);
                     _logger.LogInformation(
-                        "Reporting revisions page summary. PageIndex={PageIndex} RevisionCount={RevisionCount} HasMoreResults={HasMoreResults} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} SeenTokenRepeated={SeenTokenRepeated} ConsecutiveEmptyPages={ConsecutiveEmptyPages} DurationMs={DurationMs} TotalPersistedSoFar={TotalPersistedSoFar} MemoryMb={MemoryMb}",
+                        "Reporting revisions page summary. PageIndex={PageIndex} RawRevisionCount={RawRevisionCount} ScopedRevisionCount={ScopedRevisionCount} HasMoreResults={HasMoreResults} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} SeenTokenRepeated={SeenTokenRepeated} ConsecutiveEmptyPages={ConsecutiveEmptyPages} DurationMs={DurationMs} TotalPersistedSoFar={TotalPersistedSoFar} MemoryMb={MemoryMb}",
                         pageIndex,
-                        revisionCount,
+                        rawRevisionCount,
+                        scopedRevisionCount,
                         hasMoreResults,
                         tokenTracking.TokenHash,
                         tokenAdvanced,
@@ -210,7 +222,7 @@ public class RevisionIngestionService
                 }
 
                 // Track impacted work item IDs for relation hydration
-                foreach (var revision in result.Revisions)
+                foreach (var revision in scopedRevisions)
                 {
                     impactedWorkItemIds.Add(revision.WorkItemId);
                     pageWorkItemIds?.Add(revision.WorkItemId);
@@ -259,7 +271,7 @@ public class RevisionIngestionService
 
                 continuationToken = pageContinuationToken;
 
-                if (pageContinuationToken != null || revisionCount > 0)
+                if (pageContinuationToken != null || rawRevisionCount > 0)
                 {
                     watermark.ContinuationToken = ProtectContinuationToken(pageContinuationToken);
                     context.Entry(watermark).State = EntityState.Modified;
@@ -296,7 +308,8 @@ public class RevisionIngestionService
 
                     _diagnostics.LogPageCounts(
                         runContext,
-                        result.Revisions.Count,
+                        rawRevisionCount,
+                        scopedRevisionCount,
                         pageWorkItemIds?.Count ?? 0,
                         persistMetrics?.RevisionHeaderCount ?? 0,
                         persistMetrics?.FieldDeltaCount ?? 0,
@@ -374,6 +387,7 @@ public class RevisionIngestionService
             }
 
             // Hydrate relations for impacted work items
+            impactedWorkItemIds.IntersectWith(allowedWorkItemIds);
             if (impactedWorkItemIds.Count > 0)
             {
                 _logger.LogInformation(
@@ -554,6 +568,57 @@ public class RevisionIngestionService
         }
 
         return watermark;
+    }
+
+    private async Task<HashSet<int>> ResolveAllowedWorkItemIdsForProductOwnerAsync(
+        PoToolDbContext context,
+        ITfsClient tfsClient,
+        int productOwnerId,
+        CancellationToken cancellationToken)
+    {
+        var productOwner = await context.Profiles
+            .Include(profile => profile.Products)
+            .FirstOrDefaultAsync(profile => profile.Id == productOwnerId, cancellationToken);
+
+        if (productOwner == null)
+        {
+            throw new InvalidOperationException($"ProductOwner {productOwnerId} was not found.");
+        }
+
+        if (productOwner.Products.Count == 0)
+        {
+            throw new InvalidOperationException($"ProductOwner {productOwnerId} has no products configured.");
+        }
+
+        var rootWorkItemIds = productOwner.Products
+            .Select(product => product.BacklogRootWorkItemId)
+            .Where(rootId => rootId > 0)
+            .Distinct()
+            .ToArray();
+
+        if (rootWorkItemIds.Length == 0)
+        {
+            throw new InvalidOperationException($"ProductOwner {productOwnerId} has no valid backlog root work item IDs.");
+        }
+
+        var workItems = await tfsClient.GetWorkItemsByRootIdsAsync(
+            rootWorkItemIds,
+            null,
+            null,
+            cancellationToken);
+
+        var descendantWorkItems = WorkItemHierarchyHelper.FilterDescendants(rootWorkItemIds, workItems);
+        var allowedWorkItemIds = descendantWorkItems
+            .Select(workItem => workItem.TfsId)
+            .ToHashSet();
+
+        if (allowedWorkItemIds.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"ProductOwner {productOwnerId} has no work items under configured backlog roots.");
+        }
+
+        return allowedWorkItemIds;
     }
 
     private async Task<int> PersistRevisionsAsync(

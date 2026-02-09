@@ -35,7 +35,9 @@ public static class WorkItemHierarchyHelper
     /// <param name="rootIds">The IDs of root items to include.</param>
     /// <param name="allItems">All available work items.</param>
     /// <returns>Filtered list containing only the specified roots and their descendants.</returns>
-    public static List<WorkItemDto> FilterDescendants(List<int> rootIds, IEnumerable<WorkItemDto> allItems)
+    public static List<WorkItemDto> FilterDescendants(
+        IReadOnlyCollection<int> rootIds,
+        IEnumerable<WorkItemDto> allItems)
     {
         var itemsToInclude = new HashSet<int>();
         var itemsList = allItems as List<WorkItemDto> ?? allItems.ToList();
