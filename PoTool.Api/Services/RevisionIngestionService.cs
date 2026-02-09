@@ -607,8 +607,8 @@ public class RevisionIngestionService
             null,
             cancellationToken);
 
-        var scopedWorkItems = WorkItemHierarchyHelper.FilterDescendants(rootWorkItemIds, workItems);
-        var allowedWorkItemIds = scopedWorkItems
+        var descendantWorkItems = WorkItemHierarchyHelper.FilterDescendants(rootWorkItemIds, workItems);
+        var allowedWorkItemIds = descendantWorkItems
             .Select(workItem => workItem.TfsId)
             .ToHashSet();
 
