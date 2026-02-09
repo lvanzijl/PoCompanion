@@ -148,19 +148,18 @@ public class RevisionIngestionService
 
             // Ingest revisions in batches
             bool hasMore = true;
-            int pageCount = 0;
             var impactedWorkItemIds = new HashSet<int>();
 
             while (hasMore && !cts.Token.IsCancellationRequested)
             {
-                pageCount = pageTracker.NextPageIndex();
+                var pageIndex = pageTracker.NextPageIndex();
                 _logger.LogDebug(
                     "Fetching revision page {PageNumber} for ProductOwner {ProductOwnerId}",
-                    pageCount, productOwnerId);
+                    pageIndex, productOwnerId);
 
                 var logPerPageSummary = runContext.IsEnabled && runContext.LogPerPageSummary;
                 var pageStartTimestamp = logPerPageSummary ? Stopwatch.GetTimestamp() : 0;
-                using var pageScope = _diagnostics.BeginPageScope(runContext, pageCount);
+                using var pageScope = _diagnostics.BeginPageScope(runContext, pageIndex);
                 var pageWorkItemIds = logPerPageSummary ? new HashSet<int>() : null;
 
                 var pageRequestStartTimestamp = Stopwatch.GetTimestamp();
@@ -198,7 +197,7 @@ public class RevisionIngestionService
                     var memoryMb = GC.GetTotalMemory(false) / (1024d * 1024d);
                     _logger.LogInformation(
                         "Reporting revisions page summary. PageIndex={PageIndex} RevisionCount={RevisionCount} HasMoreResults={HasMoreResults} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} SeenTokenRepeated={SeenTokenRepeated} ConsecutiveEmptyPages={ConsecutiveEmptyPages} DurationMs={DurationMs} TotalPersistedSoFar={TotalPersistedSoFar} MemoryMb={MemoryMb}",
-                        pageCount,
+                        pageIndex,
                         revisionCount,
                         hasMoreResults,
                         tokenTracking.TokenHash,
@@ -219,7 +218,7 @@ public class RevisionIngestionService
 
                 _logger.LogInformation(
                     "Persisted {Count} revisions (page {Page}) for ProductOwner {ProductOwnerId}",
-                    persistedCount, pageCount, productOwnerId);
+                    persistedCount, pageIndex, productOwnerId);
 
                 _logger.LogInformation(
                     "Revision ingestion page persist. TransactionUsed={TransactionUsed} PersistDurationMs={PersistDurationMs} SaveChangesDurationMs={SaveChangesDurationMs} CommitDurationMs={CommitDurationMs} RevisionHeaderCount={RevisionHeaderCount} FieldDeltaCount={FieldDeltaCount} RelationDeltaCount={RelationDeltaCount}",
@@ -243,7 +242,7 @@ public class RevisionIngestionService
 
                 if (runContext.IsEnabled &&
                     runContext.LogGcStatsEveryNPages > 0 &&
-                    pageCount % runContext.LogGcStatsEveryNPages == 0)
+                    pageIndex % runContext.LogGcStatsEveryNPages == 0)
                 {
                     var trackedEntries = context.ChangeTracker.Entries().Count();
                     _diagnostics.LogGcStats(
@@ -262,7 +261,7 @@ public class RevisionIngestionService
 
                 if (pageContinuationToken != null || revisionCount > 0)
                 {
-                    watermark.ContinuationToken = ProtectContinuationToken(continuationToken);
+                    watermark.ContinuationToken = ProtectContinuationToken(pageContinuationToken);
                     context.Entry(watermark).State = EntityState.Modified;
                     await context.SaveChangesAsync(cts.Token);
                 }
@@ -272,7 +271,7 @@ public class RevisionIngestionService
                     Stage = watermark.IsInitialBackfillComplete ? "Incremental Sync" : "Initial Backfill",
                     PercentComplete = result.HasMoreResults ? 0 : 100, // Keep at 0% until the final page completes because total pages are unknown
                     RevisionsProcessed = totalRevisions,
-                    CurrentPage = pageCount
+                    CurrentPage = pageIndex
                 });
 
                 if (logPerPageSummary)
@@ -326,10 +325,10 @@ public class RevisionIngestionService
                 {
                     termination = new ReportingRevisionsTermination(
                         ReportingRevisionsTerminationReason.RepeatedContinuationToken,
-                        $"Continuation token repeated on page {pageCount}.");
+                        $"Continuation token repeated on page {pageIndex}.");
                     LogEarlyTermination(
                         "TokenRepeated",
-                        pageCount,
+                        pageIndex,
                         consecutiveEmptyPages,
                         tokenTracking.TokenHash,
                         totalRevisions);
@@ -339,10 +338,10 @@ public class RevisionIngestionService
                 {
                     termination = new ReportingRevisionsTermination(
                         ReportingRevisionsTerminationReason.RepeatedContinuationToken,
-                        $"Continuation token did not advance on page {pageCount}.");
+                        $"Continuation token did not advance on page {pageIndex}.");
                     LogEarlyTermination(
                         "TokenNotAdvanced",
-                        pageCount,
+                        pageIndex,
                         consecutiveEmptyPages,
                         tokenTracking.TokenHash,
                         totalRevisions);
@@ -352,10 +351,10 @@ public class RevisionIngestionService
                 {
                     termination = new ReportingRevisionsTermination(
                         ReportingRevisionsTerminationReason.MaxEmptyPages,
-                        $"Exceeded maximum consecutive empty pages ({maxEmptyPages}) on page {pageCount}.");
+                        $"Exceeded maximum consecutive empty pages ({maxEmptyPages}) on page {pageIndex}.");
                     LogEarlyTermination(
                         "EmptyPageStreak",
-                        pageCount,
+                        pageIndex,
                         consecutiveEmptyPages,
                         tokenTracking.TokenHash,
                         totalRevisions);
@@ -452,13 +451,13 @@ public class RevisionIngestionService
 
             _logger.LogInformation(
                 "Revision ingestion completed for ProductOwner {ProductOwnerId}: {TotalRevisions} revisions in {Pages} pages",
-                productOwnerId, totalRevisions, pageCount);
+                productOwnerId, totalRevisions, pageTracker.PageIndex);
 
             return new RevisionIngestionResult
             {
                 Success = true,
                 RevisionsIngested = totalRevisions,
-                PagesProcessed = pageCount,
+                PagesProcessed = pageTracker.PageIndex,
                 WasTerminatedEarly = termination != null,
                 TerminationReason = termination?.Reason,
                 TerminationMessage = termination?.Message,
@@ -925,6 +924,7 @@ public class RevisionIngestionService
             using var sha = SHA256.Create();
             var hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(continuationToken));
             var hashHex = Convert.ToHexString(hashBytes);
+            // SHA256 hashes are always 32 bytes (64 hex characters), so the prefix length is safe.
             return hashHex[..ContinuationTokenHashLength];
         }
     }
