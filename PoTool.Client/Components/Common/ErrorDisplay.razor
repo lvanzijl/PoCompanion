@@ -15,6 +15,13 @@
                 </MudText>
             }
 
+            @if (Actions != null)
+            {
+                <MudStack Row="true" Spacing="2" Class="mt-2">
+                    @Actions
+                </MudStack>
+            }
+
             @if (ShowTechnicalDetails)
             {
                 <MudExpansionPanels Class="mt-2">
@@ -89,4 +96,10 @@
     /// </summary>
     [Parameter]
     public EventCallback OnDismiss { get; set; }
+
+    /// <summary>
+    /// Optional action buttons shown under the error message.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
 }
