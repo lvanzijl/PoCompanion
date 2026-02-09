@@ -77,6 +77,11 @@ public record ReportingRevisionsResult
     public string? ContinuationToken { get; init; }
 
     /// <summary>
+    /// Whether the reporting API indicates more results are available.
+    /// </summary>
+    public bool HasMoreResults => ContinuationToken is not null;
+
+    /// <summary>
     /// HTTP status code returned by the reporting API call.
     /// </summary>
     public int? HttpStatusCode { get; init; }
@@ -99,7 +104,7 @@ public record ReportingRevisionsResult
     /// <summary>
     /// Whether this result represents a complete set (no more pages).
     /// </summary>
-    public bool IsComplete => string.IsNullOrEmpty(ContinuationToken);
+    public bool IsComplete => ContinuationToken is null;
 }
 
 /// <summary>

@@ -219,6 +219,34 @@ public sealed class RevisionIngestionDiagnostics
         PageCountsLog(_logger, revisionCount, distinctWorkItemCount, revisionHeaderCount, fieldDeltaCount, relationDeltaCount, null);
     }
 
+    public void LogPagePagination(
+        RevisionIngestionRunContext runContext,
+        int pageIndex,
+        int revisionCount,
+        bool hasMoreResults,
+        bool continuationTokenPresent,
+        string? continuationTokenHash,
+        bool tokenAdvanced,
+        int consecutiveEmptyPages,
+        int consecutiveSameTokenPages)
+    {
+        if (!runContext.IsEnabled || !runContext.LogPerPageSummary)
+        {
+            return;
+        }
+
+        _logger.LogInformation(
+            "Revision ingestion page pagination. PageIndex={PageIndex} RevisionCount={RevisionCount} HasMoreResults={HasMoreResults} ContinuationTokenPresent={ContinuationTokenPresent} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} ConsecutiveEmptyPages={ConsecutiveEmptyPages} ConsecutiveSameTokenPages={ConsecutiveSameTokenPages}",
+            pageIndex,
+            revisionCount,
+            hasMoreResults,
+            continuationTokenPresent,
+            continuationTokenHash,
+            tokenAdvanced,
+            consecutiveEmptyPages,
+            consecutiveSameTokenPages);
+    }
+
     public void LogSaveChangesDetails(
         RevisionIngestionRunContext runContext,
         long saveChangesDurationMs,

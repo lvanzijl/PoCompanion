@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Data.Sqlite;
 using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
@@ -50,6 +51,106 @@ public sealed class RevisionIngestionServiceTests
     }
 
     [TestMethod]
+    public async Task IngestRevisionsAsync_AbortsOnConsecutiveEmptyPagesWithToken()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult
+            {
+                Revisions = Array.Empty<WorkItemRevision>(),
+                ContinuationToken = "t1"
+            },
+            new ReportingRevisionsResult
+            {
+                Revisions = Array.Empty<WorkItemRevision>(),
+                ContinuationToken = "t1"
+            }
+        };
+
+        var stubClient = new StubRevisionTfsClient(results);
+        using var provider = BuildServiceProvider(stubClient);
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsFalse(result.Success);
+        StringAssert.Contains(result.ErrorMessage ?? string.Empty, "empty page");
+        Assert.AreEqual(2, stubClient.ReportingCalls);
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_AbortsOnRepeatedContinuationToken()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult
+            {
+                Revisions = new[] { CreateRevision(10, 1) },
+                ContinuationToken = "t1"
+            },
+            new ReportingRevisionsResult
+            {
+                Revisions = new[] { CreateRevision(10, 2) },
+                ContinuationToken = "t1"
+            }
+        };
+
+        var stubClient = new StubRevisionTfsClient(results);
+        using var provider = BuildServiceProvider(stubClient);
+        SeedWatermark(provider, continuationToken: "t1");
+
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsFalse(result.Success);
+        StringAssert.Contains(result.ErrorMessage ?? string.Empty, "Continuation token did not advance");
+        Assert.AreEqual(2, stubClient.ReportingCalls);
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_CompletesOnEmptyPageWithNullToken()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult
+            {
+                Revisions = new[] { CreateRevision(99, 1) },
+                ContinuationToken = "t1"
+            },
+            new ReportingRevisionsResult
+            {
+                Revisions = Array.Empty<WorkItemRevision>(),
+                ContinuationToken = null
+            }
+        };
+
+        var stubClient = new StubRevisionTfsClient(results);
+        using var provider = BuildServiceProvider(stubClient);
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual(2, stubClient.ReportingCalls);
+    }
+
+    [TestMethod]
     public async Task IngestRevisionsAsync_PersistsFieldAndRelationDeltas()
     {
         var revision = new WorkItemRevision
@@ -75,7 +176,7 @@ public sealed class RevisionIngestionServiceTests
             {
                 new RelationDelta
                 {
-                    ChangeType = RelationChangeType.Added,
+                    ChangeType = PoTool.Core.Contracts.RelationChangeType.Added,
                     RelationType = "System.LinkTypes.Hierarchy-Forward",
                     TargetWorkItemId = 101
                 }
@@ -182,7 +283,7 @@ public sealed class RevisionIngestionServiceTests
         using var scope = provider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
         context.Database.EnsureCreated();
-        context.Profiles.Add(new PoTool.Api.Persistence.Entities.ProfileEntity
+        context.Profiles.Add(new ProfileEntity
         {
             Id = 1,
             Name = "Test Owner",
@@ -191,5 +292,34 @@ public sealed class RevisionIngestionServiceTests
         });
         context.SaveChanges();
         return provider;
+    }
+
+    private static void SeedWatermark(ServiceProvider provider, string? continuationToken)
+    {
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        context.RevisionIngestionWatermarks.Add(new RevisionIngestionWatermarkEntity
+        {
+            ProductOwnerId = 1,
+            ContinuationToken = continuationToken,
+            IsInitialBackfillComplete = true,
+            LastSyncStartDateTime = DateTimeOffset.UtcNow
+        });
+        context.SaveChanges();
+    }
+
+    private static WorkItemRevision CreateRevision(int workItemId, int revisionNumber)
+    {
+        return new WorkItemRevision
+        {
+            WorkItemId = workItemId,
+            RevisionNumber = revisionNumber,
+            WorkItemType = "Bug",
+            Title = "Test",
+            State = "New",
+            IterationPath = "Iteration 1",
+            AreaPath = "Area 1",
+            ChangedDate = DateTimeOffset.UtcNow
+        };
     }
 }

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Net.Http;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -337,15 +338,65 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
-    public void ReportingRevisionsResult_IsCompleteTrue_WhenContinuationTokenEmpty()
+    public void ReportingRevisionsResult_HasMoreResultsFalse_WhenContinuationTokenMissing()
     {
         var result = new ReportingRevisionsResult
         {
             Revisions = Array.Empty<WorkItemRevision>(),
-            ContinuationToken = string.Empty
+            ContinuationToken = null
         };
 
-        Assert.IsTrue(result.IsComplete);
+        Assert.IsFalse(result.HasMoreResults);
+    }
+
+    [TestMethod]
+    public void ReportingRevisionsResult_HasMoreResultsTrue_WhenContinuationTokenPresent()
+    {
+        var result = new ReportingRevisionsResult
+        {
+            Revisions = Array.Empty<WorkItemRevision>(),
+            ContinuationToken = "token"
+        };
+
+        Assert.IsTrue(result.HasMoreResults);
+    }
+
+    [TestMethod]
+    public void ExtractContinuationToken_WhenHeaderIsWhitespace_ReturnsNull()
+    {
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender);
+
+        foreach (var headerValue in new[] { string.Empty, "   " })
+        {
+            var response = new HttpResponseMessage();
+            response.Headers.TryAddWithoutValidation("x-ms-continuationtoken", headerValue);
+
+            var token = client.TestExtractContinuationToken(response);
+
+            Assert.IsNull(token);
+        }
+    }
+
+    [TestMethod]
+    public void ExtractContinuationToken_WhenHeaderMissing_ReturnsNull()
+    {
+        var response = new HttpResponseMessage();
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender);
+
+        var token = client.TestExtractContinuationToken(response);
+
+        Assert.IsNull(token);
     }
 
     [TestMethod]
@@ -663,6 +714,15 @@ public sealed class RealRevisionTfsClientTests
                 BindingFlags.NonPublic | BindingFlags.Instance);
 
             return (IReadOnlyList<WorkItemRevision>)method!.Invoke(this, new object?[] { doc })!;
+        }
+
+        public string? TestExtractContinuationToken(HttpResponseMessage response)
+        {
+            var method = typeof(RealRevisionTfsClient).GetMethod(
+                "ExtractContinuationToken",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+            return (string?)method!.Invoke(null, new object?[] { response });
         }
 
         public void TestParseWorkItemRevisionFromPerItem(string json, int workItemId)

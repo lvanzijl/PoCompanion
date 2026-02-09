@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
@@ -108,6 +110,10 @@ public class RevisionIngestionService
             DateTimeOffset? startDateTime = watermark.IsInitialBackfillComplete 
                 ? watermark.LastSyncStartDateTime 
                 : null;
+            string? previousToken = continuationToken;
+            string? previousTokenHash = ShortHash(previousToken);
+            int consecutiveEmptyPages = 0;
+            int consecutiveSameTokenPages = 0;
 
             var runStartUtc = DateTimeOffset.UtcNow;
             using var runScope = _diagnostics.StartRun(
@@ -152,6 +158,57 @@ public class RevisionIngestionService
                     continuationToken,
                     expandMode: ReportingExpandMode.None,
                     cts.Token);
+
+                var revisionCount = result.Revisions.Count;
+                var pageContinuationToken = result.ContinuationToken;
+                var tokenHash = ShortHash(pageContinuationToken);
+                var tokenAdvanced = !string.Equals(tokenHash, previousTokenHash, StringComparison.Ordinal);
+
+                if (revisionCount == 0)
+                {
+                    consecutiveEmptyPages++;
+                }
+                else
+                {
+                    consecutiveEmptyPages = 0;
+                }
+
+                if (pageContinuationToken != null &&
+                    string.Equals(pageContinuationToken, previousToken, StringComparison.Ordinal))
+                {
+                    consecutiveSameTokenPages++;
+                }
+                else
+                {
+                    consecutiveSameTokenPages = 0;
+                }
+
+                if (logPerPageSummary)
+                {
+                    // Example: Revision ingestion page pagination. PageIndex=3 RevisionCount=0 HasMoreResults=True ContinuationTokenPresent=True ContinuationTokenHash=1a2b3c4d TokenAdvanced=False ConsecutiveEmptyPages=1 ConsecutiveSameTokenPages=1
+                    _diagnostics.LogPagePagination(
+                        runContext,
+                        pageCount,
+                        revisionCount,
+                        result.HasMoreResults,
+                        pageContinuationToken != null,
+                        tokenHash,
+                        tokenAdvanced,
+                        consecutiveEmptyPages,
+                        consecutiveSameTokenPages);
+                }
+
+                if (revisionCount == 0 && consecutiveEmptyPages >= 2)
+                {
+                    if (pageContinuationToken == null)
+                    {
+                        hasMore = false;
+                        break;
+                    }
+
+                    throw new InvalidOperationException(
+                        "Reporting revisions returned consecutive empty pages while continuation token remained present; refusing infinite loop.");
+                }
 
                 var persistMetrics = new PersistMetrics();
 
@@ -209,16 +266,24 @@ public class RevisionIngestionService
                 context.ChangeTracker.Clear();
                 context.RevisionIngestionWatermarks.Attach(watermark);
 
-                // Update continuation token
-                continuationToken = result.ContinuationToken;
-                watermark.ContinuationToken = continuationToken;
-                context.Entry(watermark).State = EntityState.Modified;
-                await context.SaveChangesAsync(cts.Token);
+                if (consecutiveSameTokenPages >= 2)
+                {
+                    throw new InvalidOperationException("Continuation token did not advance; paging would loop forever.");
+                }
+
+                continuationToken = pageContinuationToken;
+
+                if (revisionCount > 0)
+                {
+                    watermark.ContinuationToken = continuationToken;
+                    context.Entry(watermark).State = EntityState.Modified;
+                    await context.SaveChangesAsync(cts.Token);
+                }
 
                 progressCallback?.Invoke(new RevisionIngestionProgress
                 {
                     Stage = watermark.IsInitialBackfillComplete ? "Incremental Sync" : "Initial Backfill",
-                    PercentComplete = result.IsComplete ? 100 : 0, // Keep at 0% until the final page completes because total pages are unknown
+                    PercentComplete = result.HasMoreResults ? 0 : 100, // Keep at 0% until the final page completes because total pages are unknown
                     RevisionsProcessed = totalRevisions,
                     CurrentPage = pageCount
                 });
@@ -261,7 +326,9 @@ public class RevisionIngestionService
                         memoryBytes);
                 }
 
-                hasMore = !result.IsComplete;
+                hasMore = result.HasMoreResults;
+                previousToken = pageContinuationToken;
+                previousTokenHash = tokenHash;
 
                 pageWorkItemIds?.Clear();
             }
@@ -639,6 +706,17 @@ public class RevisionIngestionService
         }
 
         return persistedCount;
+    }
+
+    private static string? ShortHash(string? value)
+    {
+        if (value == null)
+        {
+            return null;
+        }
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+        return Convert.ToHexString(hash)[..8];
     }
 
     private static string? GetConnectionMode(PoToolDbContext context)
