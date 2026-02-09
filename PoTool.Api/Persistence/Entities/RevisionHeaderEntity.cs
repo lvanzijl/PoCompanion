@@ -86,7 +86,7 @@ public class RevisionHeaderEntity
     /// <summary>
     /// Effort value at this revision (Microsoft.VSTS.Scheduling.Effort).
     /// </summary>
-    public int? Effort { get; set; }
+    public double? Effort { get; set; }
 
     /// <summary>
     /// Tags at this revision (semicolon-separated).

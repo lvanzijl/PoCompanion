@@ -264,7 +264,7 @@ public record WorkItemRevision
     /// <summary>
     /// Effort value.
     /// </summary>
-    public int? Effort { get; init; }
+    public double? Effort { get; init; }
 
     /// <summary>
     /// Tags (semicolon-separated).
