@@ -115,7 +115,7 @@ public sealed record ReportingRevisionsTermination
 
 /// <summary>
 /// Validated page from the reporting revisions API.
-/// A page must contain revisions or explicitly signal completion.
+/// Pages may be empty when the server advances the continuation token without returning data.
 /// </summary>
 public sealed record ReportingRevisionsResult
 {
@@ -141,11 +141,6 @@ public sealed record ReportingRevisionsResult
             throw new InvalidOperationException("Invalid state: a terminated result cannot include a continuation token.");
         }
 
-        if (Revisions.Count == 0 && ContinuationToken != null)
-        {
-            throw new InvalidOperationException(
-                "Empty page with continuation token detected; use termination metadata to signal pagination issues.");
-        }
     }
 
     /// <summary>

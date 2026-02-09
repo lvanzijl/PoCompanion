@@ -360,12 +360,13 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
-    public void ReportingRevisionsResult_ThrowsWhenEmptyPageHasContinuationToken()
+    public void ReportingRevisionsResult_AllowsEmptyPageWithContinuationToken()
     {
-        var exception = CaptureException<InvalidOperationException>(() =>
-            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "token"));
+        var result = new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "token");
 
-        StringAssert.Contains(exception.Message, "Empty page", StringComparison.OrdinalIgnoreCase);
+        Assert.IsFalse(result.IsComplete);
+        Assert.IsTrue(result.HasMoreResults);
+        CollectionAssert.AreEqual(Array.Empty<WorkItemRevision>(), (WorkItemRevision[])result.Revisions);
     }
 
     [TestMethod]

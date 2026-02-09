@@ -7,9 +7,9 @@ public sealed class RevisionIngestionPaginationOptions
 {
     /// <summary>
     /// Maximum number of empty pages allowed per ingestion run (minimum 1).
-    /// Default is 3 to tolerate short empty bursts before terminating the stream.
+    /// Default is 50 to tolerate extended empty bursts before terminating the stream.
     /// </summary>
-    public int MaxEmptyPages { get; init; } = 3;
+    public int MaxEmptyPages { get; init; } = 50;
 
     /// <summary>
     /// Maximum number of pages that advance the token without returning data (minimum 1).
