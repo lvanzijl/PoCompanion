@@ -37,6 +37,7 @@ public class RevisionIngestionService
 
     private const string ContinuationTokenProtectorPurpose = "RevisionIngestionContinuationToken";
     private const int ContinuationTokenHashLength = 12;
+    // Clamp backfill start dates to year 2000 to avoid pathological values from invalid data.
     private static readonly DateTimeOffset BackfillStartMinimumUtc =
         new(new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
     private static readonly TimeSpan BackfillFallbackWindow = TimeSpan.FromDays(180);

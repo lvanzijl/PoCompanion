@@ -450,6 +450,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
     private static string ToTfsQueryDateTimeUtc(DateTimeOffset dateTime)
     {
+        // Use 7 fractional digits to match .NET round-trip precision and avoid losing ticks.
         return dateTime.ToUniversalTime()
             .ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture);
     }
