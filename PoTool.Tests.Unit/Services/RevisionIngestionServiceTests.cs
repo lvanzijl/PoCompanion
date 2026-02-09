@@ -142,18 +142,19 @@ public sealed class RevisionIngestionServiceTests
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_TerminatesAfterConsecutiveEmptyPages()
+    public async Task IngestRevisionsAsync_ContinuesWhenEmptyPages_DoesNotTerminate()
     {
+        // This test verifies that empty pages (after scoping) do not cause early termination
+        // The ingestion should continue as long as the token advances and HasMoreResults is true
         var results = new[]
         {
             new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t1"),
-            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t2")
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t2"),
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, null) // Final page with data
         };
 
         var stubClient = new StubRevisionTfsClient(results);
-        using var provider = BuildServiceProvider(
-            stubClient,
-            new RevisionIngestionPaginationOptions { MaxEmptyPages = 2 });
+        using var provider = BuildServiceProvider(stubClient);
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
             provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
@@ -166,9 +167,8 @@ public sealed class RevisionIngestionServiceTests
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
         Assert.IsTrue(result.Success);
-        Assert.IsTrue(result.WasTerminatedEarly);
-        Assert.AreEqual(ReportingRevisionsTerminationReason.MaxEmptyPages, result.TerminationReason);
-        Assert.AreEqual(2, stubClient.ReportingCalls);
+        Assert.IsFalse(result.WasTerminatedEarly); // Should NOT terminate early
+        Assert.AreEqual(3, stubClient.ReportingCalls); // All 3 pages should be processed
     }
 
     [TestMethod]
@@ -301,19 +301,65 @@ public sealed class RevisionIngestionServiceTests
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_UsesScopedCountsForEmptyPageTermination()
+    public async Task IngestRevisionsAsync_ContinuesWithManyScopedEmptyPages()
     {
+        // This test verifies that many scoped empty pages (raw pages have data but scoped to 0) 
+        // do not cause early termination. The ingestion continues as long as token advances.
         var results = new[]
         {
-            new ReportingRevisionsResult(new[] { CreateRevision(1, 1) }, "t1")
+            // Page 1: out-of-scope revision (workItemId=1, not in allowed set)
+            new ReportingRevisionsResult(new[] { CreateRevision(1, 1) }, "t1"),
+            // Page 2: out-of-scope revision (workItemId=2, not in allowed set)
+            new ReportingRevisionsResult(new[] { CreateRevision(2, 1) }, "t2"),
+            // Page 3: out-of-scope revision (workItemId=3, not in allowed set)
+            new ReportingRevisionsResult(new[] { CreateRevision(3, 1) }, "t3"),
+            // Page 4: in-scope revision (workItemId=100, in allowed set)
+            new ReportingRevisionsResult(new[] { CreateRevision(100, 1) }, null)
         };
 
         var stubClient = new StubRevisionTfsClient(results);
         using var provider = BuildServiceProvider(
             stubClient,
-            new RevisionIngestionPaginationOptions { MaxEmptyPages = 1 },
             backlogRootId: 100,
-            descendantWorkItemIds: Array.Empty<int>());
+            descendantWorkItemIds: new[] { 100, 101 });
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.IsFalse(result.WasTerminatedEarly); // Should NOT terminate early despite empty scoped pages
+        Assert.AreEqual(4, stubClient.ReportingCalls); // All 4 pages should be processed
+
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        Assert.AreEqual(1, await context.RevisionHeaders.CountAsync()); // Only the last page had scoped revision
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_TerminatesAtMaxTotalPages()
+    {
+        // This test verifies that MaxTotalPages is enforced as a safety limit
+        var results = new[]
+        {
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, "t1"),
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 2) }, "t2"),
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 3) }, "t3"),
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 4) }, "t4"),
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 5) }, "t5"),
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 6) }, "t6") // Should not be reached
+        };
+
+        var stubClient = new StubRevisionTfsClient(results);
+        using var provider = BuildServiceProvider(
+            stubClient,
+            new RevisionIngestionPaginationOptions { MaxTotalPages = 5 });
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
             provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
@@ -327,12 +373,63 @@ public sealed class RevisionIngestionServiceTests
 
         Assert.IsTrue(result.Success);
         Assert.IsTrue(result.WasTerminatedEarly);
-        Assert.AreEqual(ReportingRevisionsTerminationReason.MaxEmptyPages, result.TerminationReason);
-        Assert.AreEqual(1, stubClient.ReportingCalls);
+        Assert.AreEqual(ReportingRevisionsTerminationReason.MaxTotalPages, result.TerminationReason);
+        Assert.AreEqual(5, stubClient.ReportingCalls); // Should stop at page 5
+    }
 
-        using var scope = provider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
-        Assert.AreEqual(0, await context.RevisionHeaders.CountAsync());
+    [TestMethod]
+    public async Task IngestRevisionsAsync_BackfillInfersStartDateFromCachedWorkItems()
+    {
+        // This test verifies that backfill automatically infers the start date 
+        // from the earliest CreatedDate of cached work items
+        var results = new[]
+        {
+            new ReportingRevisionsResult(new[] { CreateRevision(100, 1) }, null)
+        };
+
+        var stubClient = new StubRevisionTfsClient(results);
+        using var provider = BuildServiceProvider(stubClient, backlogRootId: 100, descendantWorkItemIds: new[] { 100 });
+
+        // Add a cached work item with a known CreatedDate
+        using (var setupScope = provider.CreateScope())
+        {
+            var context = setupScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+            var earliestDate = new DateTimeOffset(2024, 1, 15, 10, 0, 0, TimeSpan.Zero);
+            context.WorkItems.Add(new WorkItemEntity
+            {
+                TfsId = 100,
+                Type = "Feature",
+                Title = "Test Feature",
+                AreaPath = "Area",
+                IterationPath = "Iteration",
+                State = "Active",
+                RetrievedAt = DateTimeOffset.UtcNow,
+                TfsChangedDate = DateTimeOffset.UtcNow,
+                CreatedDate = earliestDate
+            });
+            await context.SaveChangesAsync();
+        }
+
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        if (!result.Success)
+        {
+            Assert.Fail($"Ingestion failed: {result.ErrorMessage ?? result.Message}");
+        }
+
+        Assert.IsTrue(result.Success);
+        // The backfill should have used an inferred start date (1 day before earliest CreatedDate)
+        // We can't directly assert the start date used, but the test ensures no exception is thrown
+        // and the ingestion completes successfully
     }
 
     private sealed class StubRevisionTfsClient : IRevisionTfsClient

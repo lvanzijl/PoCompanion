@@ -124,13 +124,15 @@ public class RevisionIngestionService
 
             int totalRevisions = 0;
             string? continuationToken = UnprotectContinuationToken(watermark.ContinuationToken);
+            // For incremental sync, use last sync start time
+            // For backfill with no last sync time, infer from cached work items
             DateTimeOffset? startDateTime = watermark.IsInitialBackfillComplete 
                 ? watermark.LastSyncStartDateTime 
-                : null;
+                : await InferBackfillStartDateTimeAsync(context, productOwnerId, cts.Token);
             ReportingRevisionsTermination? termination = null;
             var paginationOptions = _paginationOptions.CurrentValue;
-            var maxEmptyPages = Math.Max(1, paginationOptions.MaxEmptyPages);
-            var pageTracker = new ReportingRevisionsPageTracker(maxEmptyPages);
+            var maxTotalPages = Math.Max(1, paginationOptions.MaxTotalPages);
+            var pageTracker = new ReportingRevisionsPageTracker();
 
             var runStartUtc = DateTimeOffset.UtcNow;
             using var runScope = _diagnostics.StartRun(
@@ -181,11 +183,11 @@ public class RevisionIngestionService
                     .Where(revision => allowedWorkItemIds.Contains(revision.WorkItemId))
                     .ToList();
                 var scopedRevisionCount = scopedRevisions.Count;
+                var scopedRevisionsPersistedCount = 0; // Will be set after persistence
                 var pageContinuationToken = result.ContinuationToken;
                 var pageRequestDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(pageRequestStartTimestamp);
                 var tokenAdvanced = pageTracker.IsTokenAdvanced(pageContinuationToken);
                 var tokenTracking = pageTracker.TrackToken(pageContinuationToken);
-                var consecutiveEmptyPages = pageTracker.UpdateEmptyPages(scopedRevisionCount);
                 var hasMoreResults = result.HasMoreResults;
                 if (result.Termination != null)
                 {
@@ -200,6 +202,7 @@ public class RevisionIngestionService
 
                 // Process and persist revisions
                 var persistedCount = await PersistRevisionsAsync(context, scopedRevisions, persistMetrics, cts.Token);
+                scopedRevisionsPersistedCount = persistedCount;
                 totalRevisions += persistedCount;
 
                 var persistDurationMs = logPerPageSummary ? persistMetrics.PersistDurationMs : 0;
@@ -207,15 +210,15 @@ public class RevisionIngestionService
                 {
                     var memoryMb = GC.GetTotalMemory(false) / (1024d * 1024d);
                     _logger.LogInformation(
-                        "Reporting revisions page summary. PageIndex={PageIndex} RawRevisionCount={RawRevisionCount} ScopedRevisionCount={ScopedRevisionCount} HasMoreResults={HasMoreResults} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} SeenTokenRepeated={SeenTokenRepeated} ConsecutiveEmptyPages={ConsecutiveEmptyPages} DurationMs={DurationMs} TotalPersistedSoFar={TotalPersistedSoFar} MemoryMb={MemoryMb}",
+                        "Reporting revisions page summary. PageIndex={PageIndex} RawRevisionCount={RawRevisionCount} ScopedRevisionCount={ScopedRevisionCount} PersistedCount={PersistedCount} HasMoreResults={HasMoreResults} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} SeenTokenRepeated={SeenTokenRepeated} DurationMs={DurationMs} TotalPersistedSoFar={TotalPersistedSoFar} MemoryMb={MemoryMb}",
                         pageIndex,
                         rawRevisionCount,
                         scopedRevisionCount,
+                        scopedRevisionsPersistedCount,
                         hasMoreResults,
                         tokenTracking.TokenHash,
                         tokenAdvanced,
                         tokenTracking.SeenTokenRepeated,
-                        consecutiveEmptyPages,
                         pageRequestDurationMs,
                         totalRevisions,
                         memoryMb);
@@ -330,10 +333,13 @@ public class RevisionIngestionService
                     termination = result.Termination;
                 }
 
+                // Apply termination conditions in priority order:
+                // 1. Explicit termination from TFS client
                 if (termination != null)
                 {
                     hasMore = false;
                 }
+                // 2. Token repeated (safety: infinite loop prevention)
                 else if (tokenTracking.SeenTokenRepeated)
                 {
                     termination = new ReportingRevisionsTermination(
@@ -342,11 +348,11 @@ public class RevisionIngestionService
                     LogEarlyTermination(
                         "TokenRepeated",
                         pageIndex,
-                        consecutiveEmptyPages,
                         tokenTracking.TokenHash,
                         totalRevisions);
                     hasMore = false;
                 }
+                // 3. Token did not advance when more results expected (safety: infinite loop prevention)
                 else if (hasMoreResults && !tokenAdvanced)
                 {
                     termination = new ReportingRevisionsTermination(
@@ -355,28 +361,29 @@ public class RevisionIngestionService
                     LogEarlyTermination(
                         "TokenNotAdvanced",
                         pageIndex,
-                        consecutiveEmptyPages,
                         tokenTracking.TokenHash,
                         totalRevisions);
                     hasMore = false;
                 }
-                else if (consecutiveEmptyPages >= maxEmptyPages)
+                // 4. MaxTotalPages exceeded (safety: prevent runaway pagination)
+                else if (pageIndex >= maxTotalPages)
                 {
                     termination = new ReportingRevisionsTermination(
-                        ReportingRevisionsTerminationReason.MaxEmptyPages,
-                        $"Exceeded maximum consecutive empty pages ({maxEmptyPages}) on page {pageIndex}.");
+                        ReportingRevisionsTerminationReason.MaxTotalPages,
+                        $"Exceeded maximum total pages ({maxTotalPages}) on page {pageIndex}.");
                     LogEarlyTermination(
-                        "EmptyPageStreak",
+                        "MaxTotalPages",
                         pageIndex,
-                        consecutiveEmptyPages,
                         tokenTracking.TokenHash,
                         totalRevisions);
                     hasMore = false;
                 }
+                // 5. No more results from TFS
                 else if (!hasMoreResults)
                 {
                     hasMore = false;
                 }
+                // 6. Continue to next page
                 else
                 {
                     pageTracker.CommitToken(pageContinuationToken);
@@ -546,6 +553,99 @@ public class RevisionIngestionService
     public bool IsIngestionRunning(int productOwnerId)
     {
         return _activeIngestions.ContainsKey(productOwnerId);
+    }
+
+    /// <summary>
+    /// Infers the backfill start date from the earliest cached work item for a product owner.
+    /// Returns null if no cached work items exist (will scan all history).
+    /// Subtracts a 1-day buffer to ensure we don't miss revisions.
+    /// </summary>
+    private async Task<DateTimeOffset?> InferBackfillStartDateTimeAsync(
+        PoToolDbContext context,
+        int productOwnerId,
+        CancellationToken cancellationToken)
+    {
+        // Get the product owner and their product roots
+        var productOwner = await context.Profiles
+            .Include(profile => profile.Products)
+            .FirstOrDefaultAsync(profile => profile.Id == productOwnerId, cancellationToken);
+
+        if (productOwner == null || productOwner.Products.Count == 0)
+        {
+            _logger.LogDebug("No products found for ProductOwner {ProductOwnerId}, backfill will scan all history", productOwnerId);
+            return null;
+        }
+
+        var rootWorkItemIds = productOwner.Products
+            .Select(product => product.BacklogRootWorkItemId)
+            .Where(rootId => rootId > 0)
+            .Distinct()
+            .ToList();
+
+        if (rootWorkItemIds.Count == 0)
+        {
+            _logger.LogDebug("No valid backlog root IDs for ProductOwner {ProductOwnerId}, backfill will scan all history", productOwnerId);
+            return null;
+        }
+
+        // Query for any cached work items that belong to this product owner's hierarchy
+        // Check if we have any cached work items first to avoid Min exception on empty set
+        var hasWorkItems = await context.WorkItems
+            .AnyAsync(wi => rootWorkItemIds.Contains(wi.TfsId) || rootWorkItemIds.Contains(wi.ParentTfsId ?? 0), cancellationToken);
+
+        if (!hasWorkItems)
+        {
+            _logger.LogDebug("No cached work items found for ProductOwner {ProductOwnerId}, backfill will scan all history", productOwnerId);
+            return null;
+        }
+
+        // Query cached work items and find the earliest date on the client side
+        // Note: SQLite doesn't support Min/OrderBy on DateTimeOffset, so we need client-side evaluation
+        // To minimize memory usage, we select only the date fields and use ToListAsync with a small projection
+        var workItemDates = await context.WorkItems
+            .Where(wi => rootWorkItemIds.Contains(wi.TfsId) || rootWorkItemIds.Contains(wi.ParentTfsId ?? 0))
+            .Select(wi => new { wi.CreatedDate, wi.TfsChangedDate })
+            .ToListAsync(cancellationToken);
+
+        // Find the earliest CreatedDate on the client side
+        var earliestCreatedDate = workItemDates
+            .Where(wi => wi.CreatedDate != null)
+            .Select(wi => wi.CreatedDate!.Value)
+            .OrderBy(d => d)
+            .FirstOrDefault();
+
+        if (earliestCreatedDate != default(DateTimeOffset))
+        {
+            // Subtract 1 day buffer to ensure we don't miss revisions
+            var inferredStartDate = earliestCreatedDate.AddDays(-1);
+            _logger.LogInformation(
+                "Inferred backfill start date from earliest CreatedDate for ProductOwner {ProductOwnerId}: {StartDate} (1 day before {EarliestDate})",
+                productOwnerId,
+                inferredStartDate,
+                earliestCreatedDate);
+            return inferredStartDate;
+        }
+
+        // Fallback to TfsChangedDate if CreatedDate is not available
+        var earliestChangedDate = workItemDates
+            .Select(wi => wi.TfsChangedDate)
+            .OrderBy(d => d)
+            .FirstOrDefault();
+
+        if (earliestChangedDate != default(DateTimeOffset))
+        {
+            // Subtract 1 day buffer to ensure we don't miss revisions
+            var inferredStart = earliestChangedDate.AddDays(-1);
+            _logger.LogInformation(
+                "Inferred backfill start date from earliest TfsChangedDate for ProductOwner {ProductOwnerId}: {StartDate} (1 day before {EarliestDate})",
+                productOwnerId,
+                inferredStart,
+                earliestChangedDate);
+            return inferredStart;
+        }
+
+        _logger.LogDebug("No timestamp found on cached work items for ProductOwner {ProductOwnerId}, backfill will scan all history", productOwnerId);
+        return null;
     }
 
     private async Task<RevisionIngestionWatermarkEntity> GetOrCreateWatermarkAsync(
@@ -912,7 +1012,6 @@ public class RevisionIngestionService
     private void LogEarlyTermination(
         string reason,
         int pageIndex,
-        int consecutiveEmptyPages,
         string? continuationTokenHash,
         int totalPersistedSoFar)
     {
@@ -922,10 +1021,9 @@ public class RevisionIngestionService
         }
 
         _logger.LogWarning(
-            "Reporting revisions pagination terminated early. Reason={Reason} PageIndex={PageIndex} EmptyStreak={EmptyStreak} ContinuationTokenHash={ContinuationTokenHash} TotalPersistedSoFar={TotalPersistedSoFar}",
+            "Reporting revisions pagination terminated early. Reason={Reason} PageIndex={PageIndex} ContinuationTokenHash={ContinuationTokenHash} TotalPersistedSoFar={TotalPersistedSoFar}",
             reason,
             pageIndex,
-            consecutiveEmptyPages,
             continuationTokenHash,
             totalPersistedSoFar);
     }
@@ -935,16 +1033,7 @@ public class RevisionIngestionService
         private readonly HashSet<string> _seenTokenHashes = new(StringComparer.Ordinal);
         private string? _previousToken;
 
-        public ReportingRevisionsPageTracker(int maxEmptyPages)
-        {
-            MaxEmptyPages = maxEmptyPages;
-        }
-
         public int PageIndex { get; private set; }
-
-        public int ConsecutiveEmptyPages { get; private set; }
-
-        public int MaxEmptyPages { get; }
 
         public int NextPageIndex()
         {
@@ -967,12 +1056,6 @@ public class RevisionIngestionService
             }
 
             return new TokenTrackingSnapshot(tokenHash, seenTokenRepeated);
-        }
-
-        public int UpdateEmptyPages(int revisionCount)
-        {
-            ConsecutiveEmptyPages = revisionCount == 0 ? ConsecutiveEmptyPages + 1 : 0;
-            return ConsecutiveEmptyPages;
         }
 
         public void CommitToken(string? newToken)
