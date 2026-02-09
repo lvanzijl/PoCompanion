@@ -67,6 +67,15 @@ public class RevisionSyncStage : ISyncStage
 
             progressCallback(100);
 
+            if (result.WasTerminatedEarly)
+            {
+                _logger.LogWarning(
+                    "Revision ingestion terminated early for ProductOwner {ProductOwnerId}. Reason={Reason} Message={Message}",
+                    context.ProductOwnerId,
+                    result.TerminationReason,
+                    result.TerminationMessage);
+            }
+
             _logger.LogInformation(
                 "Successfully ingested {RevisionCount} revisions in {PageCount} pages for ProductOwner {ProductOwnerId}",
                 result.RevisionsIngested,

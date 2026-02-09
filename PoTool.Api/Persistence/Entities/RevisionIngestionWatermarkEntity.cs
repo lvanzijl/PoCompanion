@@ -56,7 +56,7 @@ public class RevisionIngestionWatermarkEntity
     public bool IsInitialBackfillComplete { get; set; }
 
     /// <summary>
-    /// Last error message if ingestion failed.
+    /// Last error message if ingestion failed or terminated early for safety.
     /// </summary>
     [MaxLength(2000)]
     public string? LastErrorMessage { get; set; }

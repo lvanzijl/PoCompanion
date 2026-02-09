@@ -22,16 +22,8 @@ public sealed class RevisionIngestionServiceTests
     {
         var results = new[]
         {
-            new ReportingRevisionsResult
-            {
-                Revisions = Array.Empty<WorkItemRevision>(),
-                ContinuationToken = "t1"
-            },
-            new ReportingRevisionsResult
-            {
-                Revisions = Array.Empty<WorkItemRevision>(),
-                ContinuationToken = null
-            }
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, "t1"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
         };
 
         var stubClient = new StubRevisionTfsClient(results);
@@ -51,20 +43,14 @@ public sealed class RevisionIngestionServiceTests
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_AbortsOnConsecutiveEmptyPagesWithToken()
+    public async Task IngestRevisionsAsync_RecordsTerminationReasonFromClient()
     {
+        var termination = new ReportingRevisionsTermination(
+            ReportingRevisionsTerminationReason.MaxEmptyPages,
+            "Max empty pages exceeded");
         var results = new[]
         {
-            new ReportingRevisionsResult
-            {
-                Revisions = Array.Empty<WorkItemRevision>(),
-                ContinuationToken = "t1"
-            },
-            new ReportingRevisionsResult
-            {
-                Revisions = Array.Empty<WorkItemRevision>(),
-                ContinuationToken = "t1"
-            }
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, null, termination)
         };
 
         var stubClient = new StubRevisionTfsClient(results);
@@ -78,32 +64,30 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsFalse(result.Success);
-        StringAssert.Contains(result.ErrorMessage ?? string.Empty, "empty page");
-        Assert.AreEqual(2, stubClient.ReportingCalls);
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.WasTerminatedEarly);
+        Assert.AreEqual(termination.Reason, result.TerminationReason);
+
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var watermark = await context.RevisionIngestionWatermarks.SingleAsync();
+        StringAssert.Contains(watermark.LastErrorMessage ?? string.Empty, termination.Message);
+        Assert.AreEqual(1, stubClient.ReportingCalls);
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_AbortsOnRepeatedContinuationToken()
+    public async Task IngestRevisionsAsync_StopsOnTerminationResult()
     {
+        var termination = new ReportingRevisionsTermination(
+            ReportingRevisionsTerminationReason.RepeatedContinuationToken,
+            "Continuation token repeated");
         var results = new[]
         {
-            new ReportingRevisionsResult
-            {
-                Revisions = new[] { CreateRevision(10, 1) },
-                ContinuationToken = "t1"
-            },
-            new ReportingRevisionsResult
-            {
-                Revisions = new[] { CreateRevision(10, 2) },
-                ContinuationToken = "t1"
-            }
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, null, termination)
         };
 
         var stubClient = new StubRevisionTfsClient(results);
         using var provider = BuildServiceProvider(stubClient);
-        SeedWatermark(provider, continuationToken: "t1");
-
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
             provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
@@ -113,9 +97,10 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsFalse(result.Success);
-        StringAssert.Contains(result.ErrorMessage ?? string.Empty, "Continuation token did not advance");
-        Assert.AreEqual(2, stubClient.ReportingCalls);
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.WasTerminatedEarly);
+        Assert.AreEqual(termination.Reason, result.TerminationReason);
+        Assert.AreEqual(1, stubClient.ReportingCalls);
     }
 
     [TestMethod]
@@ -123,16 +108,8 @@ public sealed class RevisionIngestionServiceTests
     {
         var results = new[]
         {
-            new ReportingRevisionsResult
-            {
-                Revisions = new[] { CreateRevision(99, 1) },
-                ContinuationToken = "t1"
-            },
-            new ReportingRevisionsResult
-            {
-                Revisions = Array.Empty<WorkItemRevision>(),
-                ContinuationToken = null
-            }
+            new ReportingRevisionsResult(new[] { CreateRevision(99, 1) }, "t1"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
         };
 
         var stubClient = new StubRevisionTfsClient(results);
@@ -185,11 +162,7 @@ public sealed class RevisionIngestionServiceTests
 
         var results = new[]
         {
-            new ReportingRevisionsResult
-            {
-                Revisions = new[] { revision },
-                ContinuationToken = null
-            }
+            new ReportingRevisionsResult(new[] { revision }, null)
         };
 
         var stubClient = new StubRevisionTfsClient(results);
@@ -292,20 +265,6 @@ public sealed class RevisionIngestionServiceTests
         });
         context.SaveChanges();
         return provider;
-    }
-
-    private static void SeedWatermark(ServiceProvider provider, string? continuationToken)
-    {
-        using var scope = provider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
-        context.RevisionIngestionWatermarks.Add(new RevisionIngestionWatermarkEntity
-        {
-            ProductOwnerId = 1,
-            ContinuationToken = continuationToken,
-            IsInitialBackfillComplete = true,
-            LastSyncStartDateTime = DateTimeOffset.UtcNow
-        });
-        context.SaveChanges();
     }
 
     private static WorkItemRevision CreateRevision(int workItemId, int revisionNumber)
