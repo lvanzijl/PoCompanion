@@ -125,6 +125,8 @@ public class CacheStateRepository : ICacheStateRepository
     {
         var entity = await GetOrCreateEntityAsync(productOwnerId, cancellationToken);
 
+        await ClearCachedDataAsync(productOwnerId, cancellationToken);
+
         entity.SyncStatus = CacheSyncStatus.Idle;
         entity.LastAttemptSync = null;
         entity.LastSuccessfulSync = null;
@@ -139,6 +141,113 @@ public class CacheStateRepository : ICacheStateRepository
         entity.StageProgressPercent = 0;
 
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task ClearCachedDataAsync(int productOwnerId, CancellationToken cancellationToken)
+    {
+        var isInMemory = _context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory";
+        var productIds = await _context.Products
+            .Where(product => product.ProductOwnerId == productOwnerId)
+            .Select(product => product.Id)
+            .ToListAsync(cancellationToken);
+        var pullRequestIds = await _context.PullRequests
+            .Where(pr => pr.ProductId.HasValue && productIds.Contains(pr.ProductId.Value))
+            .Select(pr => pr.Id)
+            .ToListAsync(cancellationToken);
+
+        if (isInMemory)
+        {
+            var revisionFieldDeltas = await _context.RevisionFieldDeltas.ToListAsync(cancellationToken);
+            var revisionRelationDeltas = await _context.RevisionRelationDeltas.ToListAsync(cancellationToken);
+            var revisionHeaders = await _context.RevisionHeaders.ToListAsync(cancellationToken);
+            var revisionWatermarks = await _context.RevisionIngestionWatermarks
+                .Where(w => w.ProductOwnerId == productOwnerId)
+                .ToListAsync(cancellationToken);
+            var resolvedWorkItems = await _context.ResolvedWorkItems
+                .Where(item => item.ResolvedProductId.HasValue && productIds.Contains(item.ResolvedProductId.Value))
+                .ToListAsync(cancellationToken);
+            var sprintMetrics = await _context.SprintMetricsProjections
+                .Where(metric => productIds.Contains(metric.ProductId))
+                .ToListAsync(cancellationToken);
+            // Cached validation results are global and not product-owner scoped.
+            var cachedValidationResults = await _context.CachedValidationResults.ToListAsync(cancellationToken);
+            var cachedMetrics = await _context.CachedMetrics
+                .Where(m => m.ProductOwnerId == productOwnerId)
+                .ToListAsync(cancellationToken);
+            var cachedPipelineRuns = await _context.CachedPipelineRuns
+                .Where(r => r.ProductOwnerId == productOwnerId)
+                .ToListAsync(cancellationToken);
+            var pullRequestFileChanges = await _context.PullRequestFileChanges
+                .Where(change => pullRequestIds.Contains(change.PullRequestId))
+                .ToListAsync(cancellationToken);
+            var pullRequestComments = await _context.PullRequestComments
+                .Where(comment => pullRequestIds.Contains(comment.PullRequestId))
+                .ToListAsync(cancellationToken);
+            var pullRequestIterations = await _context.PullRequestIterations
+                .Where(iteration => pullRequestIds.Contains(iteration.PullRequestId))
+                .ToListAsync(cancellationToken);
+            var pullRequests = await _context.PullRequests
+                .Where(pr => pr.ProductId.HasValue && productIds.Contains(pr.ProductId.Value))
+                .ToListAsync(cancellationToken);
+            // Work items and sprints are global caches and not product-owner scoped.
+            var workItems = await _context.WorkItems.ToListAsync(cancellationToken);
+            var sprints = await _context.Sprints.ToListAsync(cancellationToken);
+
+            _context.RevisionFieldDeltas.RemoveRange(revisionFieldDeltas);
+            _context.RevisionRelationDeltas.RemoveRange(revisionRelationDeltas);
+            _context.RevisionHeaders.RemoveRange(revisionHeaders);
+            _context.RevisionIngestionWatermarks.RemoveRange(revisionWatermarks);
+            _context.ResolvedWorkItems.RemoveRange(resolvedWorkItems);
+            _context.SprintMetricsProjections.RemoveRange(sprintMetrics);
+            _context.CachedValidationResults.RemoveRange(cachedValidationResults);
+            _context.CachedMetrics.RemoveRange(cachedMetrics);
+            _context.CachedPipelineRuns.RemoveRange(cachedPipelineRuns);
+            _context.PullRequestFileChanges.RemoveRange(pullRequestFileChanges);
+            _context.PullRequestComments.RemoveRange(pullRequestComments);
+            _context.PullRequestIterations.RemoveRange(pullRequestIterations);
+            _context.PullRequests.RemoveRange(pullRequests);
+            _context.WorkItems.RemoveRange(workItems);
+            _context.Sprints.RemoveRange(sprints);
+
+            await _context.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        await _context.RevisionFieldDeltas.ExecuteDeleteAsync(cancellationToken);
+        await _context.RevisionRelationDeltas.ExecuteDeleteAsync(cancellationToken);
+        await _context.RevisionHeaders.ExecuteDeleteAsync(cancellationToken);
+        await _context.RevisionIngestionWatermarks
+            .Where(w => w.ProductOwnerId == productOwnerId)
+            .ExecuteDeleteAsync(cancellationToken);
+        await _context.ResolvedWorkItems
+            .Where(item => item.ResolvedProductId.HasValue && productIds.Contains(item.ResolvedProductId.Value))
+            .ExecuteDeleteAsync(cancellationToken);
+        await _context.SprintMetricsProjections
+            .Where(metric => productIds.Contains(metric.ProductId))
+            .ExecuteDeleteAsync(cancellationToken);
+        // Cached validation results are global and not product-owner scoped.
+        await _context.CachedValidationResults.ExecuteDeleteAsync(cancellationToken);
+        await _context.CachedMetrics
+            .Where(m => m.ProductOwnerId == productOwnerId)
+            .ExecuteDeleteAsync(cancellationToken);
+        await _context.CachedPipelineRuns
+            .Where(r => r.ProductOwnerId == productOwnerId)
+            .ExecuteDeleteAsync(cancellationToken);
+        await _context.PullRequestFileChanges
+            .Where(change => pullRequestIds.Contains(change.PullRequestId))
+            .ExecuteDeleteAsync(cancellationToken);
+        await _context.PullRequestComments
+            .Where(comment => pullRequestIds.Contains(comment.PullRequestId))
+            .ExecuteDeleteAsync(cancellationToken);
+        await _context.PullRequestIterations
+            .Where(iteration => pullRequestIds.Contains(iteration.PullRequestId))
+            .ExecuteDeleteAsync(cancellationToken);
+        await _context.PullRequests
+            .Where(pr => pr.ProductId.HasValue && productIds.Contains(pr.ProductId.Value))
+            .ExecuteDeleteAsync(cancellationToken);
+        // Work items and sprints are global caches and not product-owner scoped.
+        await _context.WorkItems.ExecuteDeleteAsync(cancellationToken);
+        await _context.Sprints.ExecuteDeleteAsync(cancellationToken);
     }
 
     /// <inheritdoc />

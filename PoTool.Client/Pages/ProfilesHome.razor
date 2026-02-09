@@ -29,7 +29,16 @@
         else if (_errorResponse != null)
         {
             <ErrorDisplay ErrorResponse="@_errorResponse" 
-                          OnDismiss="ClearError" />
+                          OnDismiss="ClearError">
+                <Actions>
+                    <CompactButton Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Settings"
+                                   Href="/settings/tfs">
+                        Open Settings
+                    </CompactButton>
+                </Actions>
+            </ErrorDisplay>
         }
         else
         {

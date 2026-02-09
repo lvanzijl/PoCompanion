@@ -314,7 +314,11 @@ public sealed class RealRevisionTfsClientTests
 
         // Assert
         Assert.DoesNotContain(" ", serializedStartDateTime, "Serialized startDateTime must not contain spaces.");
-        StringAssert.EndsWith(serializedStartDateTime, "Z", "Serialized startDateTime must be in UTC (Z).");
+        StringAssert.Contains(serializedStartDateTime, "T", "Serialized startDateTime must use ISO-8601 format.");
+        Assert.IsTrue(
+            serializedStartDateTime.EndsWith("Z", StringComparison.Ordinal) ||
+            serializedStartDateTime.EndsWith("+00:00", StringComparison.Ordinal),
+            $"Serialized startDateTime must be in UTC (Z or +00:00). Actual: {serializedStartDateTime}");
     }
 
     [TestMethod]

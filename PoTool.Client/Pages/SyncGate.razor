@@ -24,12 +24,17 @@
             <MudAlert Severity="Severity.Error" Class="mb-4">
                 <MudText Typo="Typo.body1">@_errorMessage</MudText>
             </MudAlert>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RetryAsync">
-                Retry
-            </MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="GoToProfiles">
-                Back to Profiles
-            </MudButton>
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RetryAsync">
+                    Retry
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="GoToProfiles">
+                    Back to Profiles
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="GoToSettings">
+                    Open Settings
+                </MudButton>
+            </MudStack>
         }
         else if (_cacheState != null)
         {
@@ -67,6 +72,9 @@
                     </MudButton>
                     <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="GoToProfiles">
                         Back to Profiles
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="GoToSettings">
+                        Open Settings
                     </MudButton>
                 </MudStack>
             }
@@ -336,6 +344,12 @@
     private void GoToProfiles()
     {
         NavigationManager.NavigateTo("/profiles", replace: true);
+    }
+
+    private void GoToSettings()
+    {
+        var destination = _profileId.HasValue ? "/settings/cache" : "/settings/tfs";
+        NavigationManager.NavigateTo(destination, replace: true);
     }
 
     private void NavigateToTarget()

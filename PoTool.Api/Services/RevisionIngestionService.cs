@@ -607,18 +607,20 @@ public class RevisionIngestionService
 
         if (workItemDates.Count == 0)
         {
-            return GetFallbackBackfillStartDate(
-                productOwnerId,
-                "No cached work items available for backfill start inference.");
+            _logger.LogWarning(
+                "No cached work items available for ProductOwner {ProductOwnerId}, backfill will scan all history",
+                productOwnerId);
+            return null;
         }
 
         var scopedWorkItems = FilterWorkItemsToScope(workItemDates, rootWorkItemIds);
 
         if (scopedWorkItems.Count == 0)
         {
-            return GetFallbackBackfillStartDate(
-                productOwnerId,
-                "No cached work items found within the product root hierarchy.");
+            _logger.LogWarning(
+                "No cached work items found within product root hierarchy for ProductOwner {ProductOwnerId}, backfill will scan all history",
+                productOwnerId);
+            return null;
         }
 
         // Find the earliest CreatedDate on the client side
@@ -659,9 +661,10 @@ public class RevisionIngestionService
             return inferredStart;
         }
 
-        return GetFallbackBackfillStartDate(
-            productOwnerId,
-            "No valid CreatedDate or TfsChangedDate values found in scoped work items.");
+        _logger.LogWarning(
+            "No valid CreatedDate or TfsChangedDate values found in scoped work items for ProductOwner {ProductOwnerId}, backfill will scan all history",
+            productOwnerId);
+        return null;
     }
 
     private static IReadOnlyList<WorkItemDateSnapshot> FilterWorkItemsToScope(

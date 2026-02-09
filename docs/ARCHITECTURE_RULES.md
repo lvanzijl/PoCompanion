@@ -34,9 +34,9 @@ This document outlines the key architectural rules and patterns used in PoCompan
   - Must implement `IRequest<Result<T>>`
   - Should be read-only
 
-### 2.2 MediatR Integration
-- All commands and queries are handled through MediatR
-- Handlers are registered automatically via assembly scanning
+### 2.2 Mediator Integration (Source-Generated Only)
+- MediatR is forbidden in this solution
+- All commands and queries are handled through the source-generated Mediator library
 - Controllers should only orchestrate requests, not contain business logic
 
 ---
