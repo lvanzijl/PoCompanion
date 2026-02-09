@@ -1,6 +1,9 @@
 using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +31,10 @@ public class RevisionIngestionService
     private readonly RevisionIngestionDiagnostics _diagnostics;
     private readonly TfsRequestThrottler _throttler;
     private readonly IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions> _persistenceOptions;
+    private readonly IOptionsMonitor<RevisionIngestionPaginationOptions> _paginationOptions;
+    private readonly IDataProtector _tokenProtector;
+
+    private const string ContinuationTokenProtectorPurpose = "RevisionIngestionContinuationToken";
 
     // Concurrency control: one ingestion per ProductOwner
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _ingestionLocks = new();
@@ -38,13 +45,17 @@ public class RevisionIngestionService
         ILogger<RevisionIngestionService> logger,
         RevisionIngestionDiagnostics diagnostics,
         TfsRequestThrottler throttler,
-        IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions> persistenceOptions)
+        IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions> persistenceOptions,
+        IOptionsMonitor<RevisionIngestionPaginationOptions> paginationOptions,
+        IDataProtectionProvider dataProtectionProvider)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
         _diagnostics = diagnostics;
         _throttler = throttler;
         _persistenceOptions = persistenceOptions;
+        _paginationOptions = paginationOptions;
+        _tokenProtector = dataProtectionProvider.CreateProtector(ContinuationTokenProtectorPurpose);
     }
 
     /// <summary>
@@ -104,11 +115,14 @@ public class RevisionIngestionService
             });
 
             int totalRevisions = 0;
-            string? continuationToken = watermark.ContinuationToken;
+            string? continuationToken = UnprotectContinuationToken(watermark.ContinuationToken);
             DateTimeOffset? startDateTime = watermark.IsInitialBackfillComplete 
                 ? watermark.LastSyncStartDateTime 
                 : null;
             ReportingRevisionsTermination? termination = null;
+            var paginationOptions = _paginationOptions.CurrentValue;
+            var maxEmptyPages = Math.Max(1, paginationOptions.MaxEmptyPages);
+            var pageTracker = new ReportingRevisionsPageTracker(maxEmptyPages);
 
             var runStartUtc = DateTimeOffset.UtcNow;
             using var runScope = _diagnostics.StartRun(
@@ -138,7 +152,7 @@ public class RevisionIngestionService
 
             while (hasMore && !cts.Token.IsCancellationRequested)
             {
-                pageCount++;
+                pageCount = pageTracker.NextPageIndex();
                 _logger.LogDebug(
                     "Fetching revision page {PageNumber} for ProductOwner {ProductOwnerId}",
                     pageCount, productOwnerId);
@@ -148,6 +162,7 @@ public class RevisionIngestionService
                 using var pageScope = _diagnostics.BeginPageScope(runContext, pageCount);
                 var pageWorkItemIds = logPerPageSummary ? new HashSet<int>() : null;
 
+                var pageRequestStartTimestamp = Stopwatch.GetTimestamp();
                 var result = await revisionClient.GetReportingRevisionsAsync(
                     startDateTime,
                     continuationToken,
@@ -156,6 +171,11 @@ public class RevisionIngestionService
 
                 var revisionCount = result.Revisions.Count;
                 var pageContinuationToken = result.ContinuationToken;
+                var pageRequestDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(pageRequestStartTimestamp);
+                var tokenAdvanced = pageTracker.IsTokenAdvanced(pageContinuationToken);
+                var tokenTracking = pageTracker.TrackToken(pageContinuationToken);
+                var consecutiveEmptyPages = pageTracker.UpdateEmptyPages(revisionCount);
+                var hasMoreResults = result.HasMoreResults;
                 if (result.Termination != null)
                 {
                     termination = result.Termination;
@@ -172,6 +192,22 @@ public class RevisionIngestionService
                 totalRevisions += persistedCount;
 
                 var persistDurationMs = logPerPageSummary ? persistMetrics.PersistDurationMs : 0;
+                if (logPerPageSummary && _logger.IsEnabled(LogLevel.Information))
+                {
+                    var memoryMb = GC.GetTotalMemory(false) / (1024d * 1024d);
+                    _logger.LogInformation(
+                        "Reporting revisions page summary. PageIndex={PageIndex} RevisionCount={RevisionCount} HasMoreResults={HasMoreResults} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} SeenTokenRepeated={SeenTokenRepeated} ConsecutiveEmptyPages={ConsecutiveEmptyPages} DurationMs={DurationMs} TotalPersistedSoFar={TotalPersistedSoFar} MemoryMb={MemoryMb}",
+                        pageCount,
+                        revisionCount,
+                        hasMoreResults,
+                        tokenTracking.TokenHash,
+                        tokenAdvanced,
+                        tokenTracking.SeenTokenRepeated,
+                        consecutiveEmptyPages,
+                        pageRequestDurationMs,
+                        totalRevisions,
+                        memoryMb);
+                }
 
                 // Track impacted work item IDs for relation hydration
                 foreach (var revision in result.Revisions)
@@ -223,9 +259,9 @@ public class RevisionIngestionService
 
                 continuationToken = pageContinuationToken;
 
-                if (revisionCount > 0)
+                if (pageContinuationToken != null || revisionCount > 0)
                 {
-                    watermark.ContinuationToken = continuationToken;
+                    watermark.ContinuationToken = ProtectContinuationToken(continuationToken);
                     context.Entry(watermark).State = EntityState.Modified;
                     await context.SaveChangesAsync(cts.Token);
                 }
@@ -276,7 +312,63 @@ public class RevisionIngestionService
                         memoryBytes);
                 }
 
-                hasMore = result.HasMoreResults;
+                if (termination == null && result.Termination != null)
+                {
+                    termination = result.Termination;
+                }
+
+                if (termination != null)
+                {
+                    hasMore = false;
+                }
+                else if (tokenTracking.SeenTokenRepeated)
+                {
+                    termination = new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.RepeatedContinuationToken,
+                        $"Continuation token repeated on page {pageCount}.");
+                    LogEarlyTermination(
+                        "TokenRepeated",
+                        pageCount,
+                        consecutiveEmptyPages,
+                        tokenTracking.TokenHash,
+                        totalRevisions);
+                    hasMore = false;
+                }
+                else if (hasMoreResults && !tokenAdvanced)
+                {
+                    termination = new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.RepeatedContinuationToken,
+                        $"Continuation token did not advance on page {pageCount}.");
+                    LogEarlyTermination(
+                        "TokenNotAdvanced",
+                        pageCount,
+                        consecutiveEmptyPages,
+                        tokenTracking.TokenHash,
+                        totalRevisions);
+                    hasMore = false;
+                }
+                else if (consecutiveEmptyPages >= maxEmptyPages)
+                {
+                    termination = new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.MaxEmptyPages,
+                        $"Exceeded maximum consecutive empty pages ({maxEmptyPages}) on page {pageCount}.");
+                    LogEarlyTermination(
+                        "EmptyPageStreak",
+                        pageCount,
+                        consecutiveEmptyPages,
+                        tokenTracking.TokenHash,
+                        totalRevisions);
+                    hasMore = false;
+                }
+                else if (!hasMoreResults)
+                {
+                    hasMore = false;
+                }
+                else
+                {
+                    pageTracker.CommitToken(pageContinuationToken);
+                    hasMore = true;
+                }
 
                 pageWorkItemIds?.Clear();
             }
@@ -323,7 +415,10 @@ public class RevisionIngestionService
             context.RevisionIngestionWatermarks.Attach(watermark);
             watermark.LastIngestionCompletedAt = DateTimeOffset.UtcNow;
             watermark.LastIngestionRevisionCount = totalRevisions;
-            watermark.ContinuationToken = null; // Clear token on successful completion
+            if (termination == null)
+            {
+                watermark.ContinuationToken = null; // Clear token on successful completion
+            }
 
             if (termination != null)
             {
@@ -719,6 +814,120 @@ public class RevisionIngestionService
 
         return (PersistenceRelationChangeType)changeTypeValue;
     }
+
+    private string? ProtectContinuationToken(string? continuationToken)
+    {
+        if (string.IsNullOrWhiteSpace(continuationToken))
+        {
+            return null;
+        }
+
+        return _tokenProtector.Protect(continuationToken);
+    }
+
+    private string? UnprotectContinuationToken(string? continuationToken)
+    {
+        if (string.IsNullOrWhiteSpace(continuationToken))
+        {
+            return null;
+        }
+
+        try
+        {
+            return _tokenProtector.Unprotect(continuationToken);
+        }
+        catch (CryptographicException)
+        {
+            return continuationToken;
+        }
+    }
+
+    private void LogEarlyTermination(
+        string reason,
+        int pageIndex,
+        int consecutiveEmptyPages,
+        string? continuationTokenHash,
+        int totalPersistedSoFar)
+    {
+        if (!_logger.IsEnabled(LogLevel.Warning))
+        {
+            return;
+        }
+
+        _logger.LogWarning(
+            "Reporting revisions pagination terminated early. Reason={Reason} PageIndex={PageIndex} EmptyStreak={EmptyStreak} ContinuationTokenHash={ContinuationTokenHash} TotalPersistedSoFar={TotalPersistedSoFar}",
+            reason,
+            pageIndex,
+            consecutiveEmptyPages,
+            continuationTokenHash,
+            totalPersistedSoFar);
+    }
+
+    private sealed class ReportingRevisionsPageTracker
+    {
+        private readonly HashSet<string> _seenTokenHashes = new(StringComparer.Ordinal);
+        private string? _previousToken;
+
+        public ReportingRevisionsPageTracker(int maxEmptyPages)
+        {
+            MaxEmptyPages = maxEmptyPages;
+        }
+
+        public int PageIndex { get; private set; }
+
+        public int ConsecutiveEmptyPages { get; private set; }
+
+        public int MaxEmptyPages { get; }
+
+        public int NextPageIndex()
+        {
+            PageIndex++;
+            return PageIndex;
+        }
+
+        public bool IsTokenAdvanced(string? newToken)
+        {
+            return !string.Equals(newToken, _previousToken, StringComparison.Ordinal);
+        }
+
+        public TokenTrackingSnapshot TrackToken(string? newToken)
+        {
+            var tokenHash = HashContinuationToken(newToken);
+            var seenTokenRepeated = tokenHash != null && _seenTokenHashes.Contains(tokenHash);
+            if (tokenHash != null)
+            {
+                _seenTokenHashes.Add(tokenHash);
+            }
+
+            return new TokenTrackingSnapshot(tokenHash, seenTokenRepeated);
+        }
+
+        public int UpdateEmptyPages(int revisionCount)
+        {
+            ConsecutiveEmptyPages = revisionCount == 0 ? ConsecutiveEmptyPages + 1 : 0;
+            return ConsecutiveEmptyPages;
+        }
+
+        public void CommitToken(string? newToken)
+        {
+            _previousToken = newToken;
+        }
+
+        private static string? HashContinuationToken(string? continuationToken)
+        {
+            if (string.IsNullOrWhiteSpace(continuationToken))
+            {
+                return null;
+            }
+
+            using var sha = SHA256.Create();
+            var hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(continuationToken));
+            var hashHex = Convert.ToHexString(hashBytes);
+            return hashHex[..Math.Min(12, hashHex.Length)];
+        }
+    }
+
+    private sealed record TokenTrackingSnapshot(string? TokenHash, bool SeenTokenRepeated);
     
     private sealed class PersistMetrics
     {

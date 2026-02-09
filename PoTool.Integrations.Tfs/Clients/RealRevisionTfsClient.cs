@@ -107,198 +107,44 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             var hasRunContext = _diagnostics?.TryGetCurrentRun(out runContext) == true;
             var logPerPageSummary = hasRunContext && runContext.LogPerPageSummary;
 
-            var options = _paginationOptions.CurrentValue;
-            var maxEmptyPages = Math.Max(1, options.MaxEmptyPages);
-            var maxProgressWithoutDataPages = Math.Max(1, options.MaxProgressWithoutDataPages);
-            var maxTotalPages = Math.Max(1, options.MaxTotalPages);
+            var pagePayload = await FetchReportingRevisionsPageAsync(
+                httpClient,
+                config,
+                startDateTime,
+                NormalizeContinuationToken(continuationToken),
+                expandMode,
+                logPerPageSummary,
+                cancellationToken);
 
-            EnsurePaginationState(continuationToken, maxTotalPages);
+            _totalPagesFetched++;
+            var pageIndex = _totalPagesFetched;
+            LogEffortParseSummary(pagePayload.EffortParseSummary, pageIndex);
 
-            var currentToken = NormalizeContinuationToken(continuationToken);
-            var currentStartDateTime = startDateTime;
-
-            while (true)
+            if (pagePayload.PayloadError != null)
             {
-                if (_totalPagesFetched >= maxTotalPages)
-                {
-                    return CreateTerminationResult(
-                        new ReportingRevisionsTermination(
-                            ReportingRevisionsTerminationReason.MaxTotalPages,
-                            $"Maximum page limit ({maxTotalPages}) reached before completing reporting revisions pagination."),
-                        ReportingRevisionsPagePayload.Empty,
-                        pageIndex: _totalPagesFetched,
-                        currentToken,
-                        tokenAdvanced: false,
-                        skipReason: null,
-                        logPerPageSummary,
-                        runContext);
-                }
-
-                var pagePayload = await FetchReportingRevisionsPageAsync(
-                    httpClient,
-                    config,
-                    currentStartDateTime,
-                    currentToken,
-                    expandMode,
-                    logPerPageSummary,
-                    cancellationToken);
-
-                _totalPagesFetched++;
-                var pageIndex = _totalPagesFetched;
-                LogEffortParseSummary(pagePayload.EffortParseSummary, pageIndex);
-
-                if (pagePayload.PayloadError != null)
-                {
-                    return CreateTerminationResult(
-                        new ReportingRevisionsTermination(
-                            ReportingRevisionsTerminationReason.MalformedPayload,
-                            $"Reporting revisions payload malformed on page {pageIndex}: {pagePayload.PayloadError}"),
-                        pagePayload,
-                        pageIndex,
-                        currentToken,
-                        tokenAdvanced: false,
-                        skipReason: null,
-                        logPerPageSummary,
-                        runContext);
-                }
-
-                var revisionCount = pagePayload.Revisions.Count;
-                var nextContinuationToken = NormalizeContinuationToken(pagePayload.ContinuationToken);
-                var tokenAdvanced = !string.Equals(nextContinuationToken, currentToken, StringComparison.Ordinal);
-                var tokenRepeated = !string.IsNullOrWhiteSpace(nextContinuationToken) &&
-                                    _observedContinuationTokens.Contains(nextContinuationToken);
-
-                if (revisionCount == 0 && nextContinuationToken == null)
-                {
-                    var result = new ReportingRevisionsResult(
-                        pagePayload.Revisions,
-                        null,
-                        termination: null,
-                        pagePayload.HttpStatusCode,
-                        pagePayload.HttpDurationMs,
-                        pagePayload.ParseDurationMs,
-                        pagePayload.TransformDurationMs);
-
-                    LogPaginationSummary(
-                        runContext,
-                        pageIndex,
-                        revisionCount,
-                        nextContinuationToken,
-                        tokenAdvanced,
-                        skipReason: null,
-                        logPerPageSummary,
-                        termination: null);
-
-                    return MarkPaginationComplete(result);
-                }
-
-                if (revisionCount == 0 && nextContinuationToken != null)
-                {
-                    _emptyPages++;
-                    if (tokenAdvanced)
-                    {
-                        _progressWithoutDataPages++;
-                    }
-
-                    if (tokenRepeated)
-                    {
-                        return CreateTerminationResult(
-                            new ReportingRevisionsTermination(
-                                ReportingRevisionsTerminationReason.RepeatedContinuationToken,
-                                $"Continuation token repeated while skipping empty page {pageIndex}."),
-                            pagePayload,
-                            pageIndex,
-                            nextContinuationToken,
-                            tokenAdvanced,
-                            skipReason: "Empty page returned with continuation token; skipping ahead.",
-                            logPerPageSummary,
-                            runContext);
-                    }
-
-                    if (_emptyPages > maxEmptyPages)
-                    {
-                        return CreateTerminationResult(
-                            new ReportingRevisionsTermination(
-                                ReportingRevisionsTerminationReason.MaxEmptyPages,
-                                $"Exceeded maximum empty pages ({maxEmptyPages}) while paging reporting revisions."),
-                            pagePayload,
-                            pageIndex,
-                            nextContinuationToken,
-                            tokenAdvanced,
-                            skipReason: "Empty page returned with continuation token; skipping ahead.",
-                            logPerPageSummary,
-                            runContext);
-                    }
-
-                    if (_progressWithoutDataPages > maxProgressWithoutDataPages)
-                    {
-                        return CreateTerminationResult(
-                            new ReportingRevisionsTermination(
-                                ReportingRevisionsTerminationReason.ProgressWithoutData,
-                                $"Exceeded maximum progress-without-data pages ({maxProgressWithoutDataPages})."),
-                            pagePayload,
-                            pageIndex,
-                            nextContinuationToken,
-                            tokenAdvanced,
-                            skipReason: "Empty page returned with continuation token; skipping ahead.",
-                            logPerPageSummary,
-                            runContext);
-                    }
-
-                    LogPaginationSummary(
-                        runContext,
-                        pageIndex,
-                        revisionCount,
-                        nextContinuationToken,
-                        tokenAdvanced,
-                        skipReason: "Empty page returned with continuation token; skipping ahead.",
-                        logPerPageSummary,
-                        termination: null);
-
-                    TrackContinuationToken(nextContinuationToken, maxTotalPages);
-                    currentToken = nextContinuationToken;
-                    currentStartDateTime = null;
-                    continue;
-                }
-
-                if (tokenRepeated)
-                {
-                    return CreateTerminationResult(
-                        new ReportingRevisionsTermination(
-                            ReportingRevisionsTerminationReason.RepeatedContinuationToken,
-                            $"Continuation token repeated after page {pageIndex}."),
-                        pagePayload,
-                        pageIndex,
-                        nextContinuationToken,
-                        tokenAdvanced,
-                        skipReason: null,
-                        logPerPageSummary,
-                        runContext);
-                }
-
-                TrackContinuationToken(nextContinuationToken, maxTotalPages);
-
-                var pageResult = new ReportingRevisionsResult(
-                    pagePayload.Revisions,
-                    nextContinuationToken,
-                    termination: null,
-                    pagePayload.HttpStatusCode,
-                    pagePayload.HttpDurationMs,
-                    pagePayload.ParseDurationMs,
-                    pagePayload.TransformDurationMs);
-
-                LogPaginationSummary(
-                    runContext,
+                return CreateTerminationResult(
+                    new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.MalformedPayload,
+                        $"Reporting revisions payload malformed on page {pageIndex}: {pagePayload.PayloadError}"),
+                    pagePayload,
                     pageIndex,
-                    revisionCount,
-                    nextContinuationToken,
-                    tokenAdvanced,
+                    continuationToken,
+                    tokenAdvanced: false,
                     skipReason: null,
                     logPerPageSummary,
-                    termination: null);
-
-                return MarkPaginationComplete(pageResult);
+                    runContext);
             }
+
+            var result = new ReportingRevisionsResult(
+                pagePayload.Revisions,
+                pagePayload.ContinuationToken,
+                termination: null,
+                pagePayload.HttpStatusCode,
+                pagePayload.HttpDurationMs,
+                pagePayload.ParseDurationMs,
+                pagePayload.TransformDurationMs);
+
+            return MarkPaginationComplete(result);
         }
         finally
         {
@@ -458,8 +304,9 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         return await ExecuteWithRetryAsync("Reporting", async () =>
         {
             var url = BuildReportingRevisionsUrl(config, startDateTime, continuationToken, expandMode);
+            var logUrl = RedactContinuationToken(url);
 
-            _logger.LogDebug("Calling reporting revisions API: {Url}", url);
+            _logger.LogDebug("Calling reporting revisions API: {Url}", logUrl);
 
             var httpStart = captureTimings ? Stopwatch.GetTimestamp() : 0;
             var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
@@ -547,6 +394,25 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
     private static string? NormalizeContinuationToken(string? continuationToken)
     {
         return string.IsNullOrWhiteSpace(continuationToken) ? null : continuationToken;
+    }
+
+    private static string RedactContinuationToken(string url)
+    {
+        const string tokenParam = "continuationToken=";
+        var tokenIndex = url.IndexOf(tokenParam, StringComparison.OrdinalIgnoreCase);
+        if (tokenIndex < 0)
+        {
+            return url;
+        }
+
+        var tokenStart = tokenIndex + tokenParam.Length;
+        var tokenEnd = url.IndexOf('&', tokenStart);
+        if (tokenEnd < 0)
+        {
+            return $"{url[..tokenStart]}<redacted>";
+        }
+
+        return $"{url[..tokenStart]}<redacted>{url[tokenEnd..]}";
     }
 
     // Caller must hold _paginationGate.

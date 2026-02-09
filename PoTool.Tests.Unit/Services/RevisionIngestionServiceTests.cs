@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -34,7 +35,9 @@ public sealed class RevisionIngestionServiceTests
             provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
             provider.GetRequiredService<RevisionIngestionDiagnostics>(),
             provider.GetRequiredService<TfsRequestThrottler>(),
-            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>());
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
@@ -60,7 +63,9 @@ public sealed class RevisionIngestionServiceTests
             provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
             provider.GetRequiredService<RevisionIngestionDiagnostics>(),
             provider.GetRequiredService<TfsRequestThrottler>(),
-            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>());
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
@@ -93,7 +98,9 @@ public sealed class RevisionIngestionServiceTests
             provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
             provider.GetRequiredService<RevisionIngestionDiagnostics>(),
             provider.GetRequiredService<TfsRequestThrottler>(),
-            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>());
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
@@ -119,11 +126,71 @@ public sealed class RevisionIngestionServiceTests
             provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
             provider.GetRequiredService<RevisionIngestionDiagnostics>(),
             provider.GetRequiredService<TfsRequestThrottler>(),
-            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>());
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
         Assert.IsTrue(result.Success);
+        Assert.AreEqual(2, stubClient.ReportingCalls);
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_TerminatesAfterConsecutiveEmptyPages()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t1"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t2")
+        };
+
+        var stubClient = new StubRevisionTfsClient(results);
+        using var provider = BuildServiceProvider(
+            stubClient,
+            new RevisionIngestionPaginationOptions { MaxEmptyPages = 2 });
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.WasTerminatedEarly);
+        Assert.AreEqual(ReportingRevisionsTerminationReason.MaxEmptyPages, result.TerminationReason);
+        Assert.AreEqual(2, stubClient.ReportingCalls);
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_TerminatesOnRepeatedContinuationToken()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, "t1"),
+            new ReportingRevisionsResult(new[] { CreateRevision(11, 1) }, "t1")
+        };
+
+        var stubClient = new StubRevisionTfsClient(results);
+        using var provider = BuildServiceProvider(stubClient);
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.WasTerminatedEarly);
+        Assert.AreEqual(ReportingRevisionsTerminationReason.RepeatedContinuationToken, result.TerminationReason);
         Assert.AreEqual(2, stubClient.ReportingCalls);
     }
 
@@ -172,7 +239,9 @@ public sealed class RevisionIngestionServiceTests
             provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
             provider.GetRequiredService<RevisionIngestionDiagnostics>(),
             provider.GetRequiredService<TfsRequestThrottler>(),
-            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>());
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
@@ -237,12 +306,47 @@ public sealed class RevisionIngestionServiceTests
         }
     }
 
-    private static ServiceProvider BuildServiceProvider(IRevisionTfsClient revisionClient)
+    private sealed class StaticOptionsMonitor<T> : IOptionsMonitor<T>
+    {
+        private sealed class NullDisposable : IDisposable
+        {
+            public static NullDisposable Instance { get; } = new();
+
+            public void Dispose()
+            {
+            }
+        }
+
+        public StaticOptionsMonitor(T currentValue)
+        {
+            CurrentValue = currentValue;
+        }
+
+        public T CurrentValue { get; }
+
+        public T Get(string? name)
+        {
+            return CurrentValue;
+        }
+
+        public IDisposable OnChange(Action<T, string> listener)
+        {
+            return NullDisposable.Instance;
+        }
+    }
+
+    private static ServiceProvider BuildServiceProvider(
+        IRevisionTfsClient revisionClient,
+        RevisionIngestionPaginationOptions? paginationOptions = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddOptions<RevisionIngestionDiagnosticsOptions>();
         services.AddOptions<RevisionIngestionPersistenceOptimizationOptions>();
+        services.AddSingleton<IOptionsMonitor<RevisionIngestionPaginationOptions>>(
+            new StaticOptionsMonitor<RevisionIngestionPaginationOptions>(
+                paginationOptions ?? new RevisionIngestionPaginationOptions()));
+        services.AddDataProtection();
         var connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();
         services.AddSingleton(connection);
