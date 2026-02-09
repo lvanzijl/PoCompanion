@@ -275,7 +275,7 @@ public sealed class RevisionIngestionServiceTests
         using var provider = BuildServiceProvider(
             stubClient,
             backlogRootId: 100,
-            descendantWorkItemIds: new[] { 101 },
+            descendantWorkItemIds: new[] { 100, 101 },
             relationHydrator: relationHydrator);
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
