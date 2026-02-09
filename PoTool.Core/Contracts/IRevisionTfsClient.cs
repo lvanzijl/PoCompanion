@@ -61,20 +61,108 @@ public interface IRevisionTfsClient
 }
 
 /// <summary>
-/// Result from the reporting revisions API.
+/// Reasons for terminating the reporting revisions pagination stream early.
 /// </summary>
-public record ReportingRevisionsResult
+public enum ReportingRevisionsTerminationReason
 {
+    /// <summary>
+    /// The client exceeded the maximum number of empty pages allowed.
+    /// </summary>
+    MaxEmptyPages = 1,
+
+    /// <summary>
+    /// The client exceeded the maximum number of total pages allowed.
+    /// </summary>
+    MaxTotalPages = 2,
+
+    /// <summary>
+    /// A continuation token was repeated or oscillated.
+    /// </summary>
+    RepeatedContinuationToken = 3,
+
+    /// <summary>
+    /// The stream advanced without delivering any revisions.
+    /// </summary>
+    ProgressWithoutData = 4,
+
+    /// <summary>
+    /// The reporting payload could not be parsed safely.
+    /// </summary>
+    MalformedPayload = 5
+}
+
+/// <summary>
+/// Structured information about why the reporting revisions stream was terminated.
+/// </summary>
+public sealed record ReportingRevisionsTermination
+{
+    public ReportingRevisionsTermination(ReportingRevisionsTerminationReason reason, string message)
+    {
+        Reason = reason;
+        Message = message;
+    }
+
+    /// <summary>
+    /// The termination reason code.
+    /// </summary>
+    public ReportingRevisionsTerminationReason Reason { get; }
+
+    /// <summary>
+    /// Human-readable termination detail for diagnostics.
+    /// </summary>
+    public string Message { get; }
+}
+
+/// <summary>
+/// Validated page from the reporting revisions API.
+/// A page must contain revisions or explicitly signal completion.
+/// </summary>
+public sealed record ReportingRevisionsResult
+{
+    public ReportingRevisionsResult(
+        IReadOnlyList<WorkItemRevision> revisions,
+        string? continuationToken,
+        ReportingRevisionsTermination? termination = null,
+        int? httpStatusCode = null,
+        long? httpDurationMs = null,
+        long? parseDurationMs = null,
+        long? transformDurationMs = null)
+    {
+        Revisions = revisions ?? throw new ArgumentNullException(nameof(revisions));
+        ContinuationToken = string.IsNullOrWhiteSpace(continuationToken) ? null : continuationToken;
+        Termination = termination;
+        HttpStatusCode = httpStatusCode;
+        HttpDurationMs = httpDurationMs;
+        ParseDurationMs = parseDurationMs;
+        TransformDurationMs = transformDurationMs;
+
+        if (Termination != null && ContinuationToken != null)
+        {
+            throw new InvalidOperationException("Invalid state: a terminated result cannot include a continuation token.");
+        }
+
+        if (Revisions.Count == 0 && ContinuationToken != null)
+        {
+            throw new InvalidOperationException(
+                "Empty page with continuation token detected; use termination metadata to signal pagination issues.");
+        }
+    }
+
     /// <summary>
     /// The revisions retrieved.
     /// </summary>
-    public required IReadOnlyList<WorkItemRevision> Revisions { get; init; }
+    public IReadOnlyList<WorkItemRevision> Revisions { get; }
 
     /// <summary>
     /// Continuation token for retrieving the next page of results.
     /// Null if there are no more results.
     /// </summary>
-    public string? ContinuationToken { get; init; }
+    public string? ContinuationToken { get; }
+
+    /// <summary>
+    /// Optional termination details when the client ends the stream early.
+    /// </summary>
+    public ReportingRevisionsTermination? Termination { get; }
 
     /// <summary>
     /// Whether the reporting API indicates more results are available.
@@ -84,27 +172,32 @@ public record ReportingRevisionsResult
     /// <summary>
     /// HTTP status code returned by the reporting API call.
     /// </summary>
-    public int? HttpStatusCode { get; init; }
+    public int? HttpStatusCode { get; }
 
     /// <summary>
     /// Duration in milliseconds of the HTTP request.
     /// </summary>
-    public long? HttpDurationMs { get; init; }
+    public long? HttpDurationMs { get; }
 
     /// <summary>
     /// Duration in milliseconds of JSON parsing.
     /// </summary>
-    public long? ParseDurationMs { get; init; }
+    public long? ParseDurationMs { get; }
 
     /// <summary>
     /// Duration in milliseconds of transforming JSON into revision objects.
     /// </summary>
-    public long? TransformDurationMs { get; init; }
+    public long? TransformDurationMs { get; }
 
     /// <summary>
     /// Whether this result represents a complete set (no more pages).
     /// </summary>
     public bool IsComplete => ContinuationToken is null;
+
+    /// <summary>
+    /// Whether this page indicates an early termination.
+    /// </summary>
+    public bool WasTerminatedEarly => Termination is not null;
 }
 
 /// <summary>

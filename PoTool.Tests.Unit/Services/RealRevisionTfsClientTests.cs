@@ -2,8 +2,10 @@ using System.Reflection;
 using System.Net.Http;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Integrations.Tfs.Clients;
 using PoTool.Shared.Exceptions;
@@ -25,6 +27,7 @@ public sealed class RealRevisionTfsClientTests
     private TfsRequestThrottler _throttler = null!;
     private Mock<ILogger<TfsRequestSender>> _mockRequestSenderLogger = null!;
     private TfsRequestSender _requestSender = null!;
+    private Mock<IOptionsMonitor<RevisionIngestionPaginationOptions>> _mockPaginationOptions = null!;
 
     [TestInitialize]
     public void Setup()
@@ -36,6 +39,9 @@ public sealed class RealRevisionTfsClientTests
         _throttler = new TfsRequestThrottler(_mockThrottlerLogger.Object);
         _mockRequestSenderLogger = new Mock<ILogger<TfsRequestSender>>();
         _requestSender = new TfsRequestSender(_mockRequestSenderLogger.Object);
+        _mockPaginationOptions = new Mock<IOptionsMonitor<RevisionIngestionPaginationOptions>>();
+        _mockPaginationOptions.Setup(options => options.CurrentValue)
+            .Returns(new RevisionIngestionPaginationOptions());
     }
 
     [TestMethod]
@@ -53,7 +59,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         // Act
         var url = client.TestBuildReportingRevisionsUrl(
@@ -86,7 +92,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         // Act
         var url = client.TestBuildReportingRevisionsUrl(
@@ -121,7 +127,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         // Act
         var exception = ExpectInnerException<InvalidOperationException>(() =>
@@ -154,7 +160,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         // Act
         var url = client.TestBuildReportingRevisionsUrl(
@@ -182,7 +188,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         // Act - Test all expand modes
         var urlNone = client.TestBuildReportingRevisionsUrl(
@@ -221,7 +227,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         var startDateTime = DateTimeOffset.Parse("2024-01-01T00:00:00Z");
         var continuationToken = "some-token-123";
@@ -257,7 +263,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         var startDateTime = DateTimeOffset.Parse("2024-01-01T00:00:00Z");
 
@@ -292,7 +298,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         // Act
         var url = client.TestBuildReportingRevisionsUrl(
@@ -316,11 +322,7 @@ public sealed class RealRevisionTfsClientTests
     [TestMethod]
     public void ReportingRevisionsResult_IsCompleteTrue_WhenContinuationTokenMissing()
     {
-        var result = new ReportingRevisionsResult
-        {
-            Revisions = Array.Empty<WorkItemRevision>(),
-            ContinuationToken = null
-        };
+        var result = new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null);
 
         Assert.IsTrue(result.IsComplete);
     }
@@ -328,23 +330,23 @@ public sealed class RealRevisionTfsClientTests
     [TestMethod]
     public void ReportingRevisionsResult_IsCompleteFalse_WhenContinuationTokenPresent()
     {
-        var result = new ReportingRevisionsResult
-        {
-            Revisions = Array.Empty<WorkItemRevision>(),
-            ContinuationToken = "token"
-        };
+        var result = new ReportingRevisionsResult(new[] { CreateMinimalRevision() }, "token");
 
         Assert.IsFalse(result.IsComplete);
     }
 
     [TestMethod]
+    public void ReportingRevisionsResult_IsCompleteTrue_WhenRevisionsPresentAndNoToken()
+    {
+        var result = new ReportingRevisionsResult(new[] { CreateMinimalRevision() }, null);
+
+        Assert.IsTrue(result.IsComplete);
+    }
+
+    [TestMethod]
     public void ReportingRevisionsResult_HasMoreResultsFalse_WhenContinuationTokenMissing()
     {
-        var result = new ReportingRevisionsResult
-        {
-            Revisions = Array.Empty<WorkItemRevision>(),
-            ContinuationToken = null
-        };
+        var result = new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null);
 
         Assert.IsFalse(result.HasMoreResults);
     }
@@ -352,13 +354,31 @@ public sealed class RealRevisionTfsClientTests
     [TestMethod]
     public void ReportingRevisionsResult_HasMoreResultsTrue_WhenContinuationTokenPresent()
     {
-        var result = new ReportingRevisionsResult
-        {
-            Revisions = Array.Empty<WorkItemRevision>(),
-            ContinuationToken = "token"
-        };
+        var result = new ReportingRevisionsResult(new[] { CreateMinimalRevision() }, "token");
 
         Assert.IsTrue(result.HasMoreResults);
+    }
+
+    [TestMethod]
+    public void ReportingRevisionsResult_ThrowsWhenEmptyPageHasContinuationToken()
+    {
+        var exception = CaptureException<InvalidOperationException>(() =>
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "token"));
+
+        StringAssert.Contains(exception.Message, "Empty page", StringComparison.OrdinalIgnoreCase);
+    }
+
+    [TestMethod]
+    public void ReportingRevisionsResult_ThrowsWhenTerminationHasContinuationToken()
+    {
+        var termination = new ReportingRevisionsTermination(
+            ReportingRevisionsTerminationReason.MaxTotalPages,
+            "Pagination stopped");
+
+        var exception = CaptureException<InvalidOperationException>(() =>
+            new ReportingRevisionsResult(new[] { CreateMinimalRevision() }, "token", termination));
+
+        StringAssert.Contains(exception.Message, "terminated result", StringComparison.OrdinalIgnoreCase);
     }
 
     [TestMethod]
@@ -369,7 +389,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         foreach (var headerValue in new[] { string.Empty, "   " })
         {
@@ -392,7 +412,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         var token = client.TestExtractContinuationToken(response);
 
@@ -413,7 +433,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         var url = client.TestBuildWorkItemRevisionsUrl(config, 123);
 
@@ -447,7 +467,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         var revisions = client.TestParseReportingRevisionsPayload(json);
 
@@ -484,7 +504,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         var revisions = client.TestParseReportingRevisionsPayload(json);
 
@@ -522,7 +542,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         var revisions = client.TestParseReportingRevisionsPayload(json);
 
@@ -559,7 +579,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         var revisions = client.TestParseReportingRevisionsPayload(json);
 
@@ -594,7 +614,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         var revisions = client.TestParseReportingRevisionsPayload(json);
 
@@ -613,7 +633,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         var tfsException = ExpectInnerException<TfsException>(() =>
             _ = client.TestParseReportingRevisionsPayload(json));
@@ -644,7 +664,7 @@ public sealed class RealRevisionTfsClientTests
             _mockConfigService.Object,
             _mockLogger.Object,
             _throttler,
-            _requestSender);
+            _requestSender, _mockPaginationOptions.Object);
 
         var tfsException = ExpectInnerException<TfsException>(() =>
             client.TestParseWorkItemRevisionFromPerItem(json, 1));
@@ -668,6 +688,36 @@ public sealed class RealRevisionTfsClientTests
         throw new AssertFailedException($"Expected {typeof(TException).Name} was not thrown");
     }
 
+    private static TException CaptureException<TException>(Action action)
+        where TException : Exception
+    {
+        try
+        {
+            action();
+        }
+        catch (TException ex)
+        {
+            return ex;
+        }
+
+        throw new AssertFailedException($"Expected {typeof(TException).Name} was not thrown");
+    }
+
+    private static WorkItemRevision CreateMinimalRevision()
+    {
+        return new WorkItemRevision
+        {
+            WorkItemId = 1,
+            RevisionNumber = 1,
+            WorkItemType = "Bug",
+            Title = "Test",
+            State = "New",
+            IterationPath = "Iteration 1",
+            AreaPath = "Area 1",
+            ChangedDate = DateTimeOffset.UtcNow
+        };
+    }
+
     /// <summary>
     /// Testable subclass that exposes the private BuildReportingRevisionsUrl method for testing.
     /// </summary>
@@ -678,8 +728,9 @@ public sealed class RealRevisionTfsClientTests
             ITfsConfigurationService configService,
             ILogger<RealRevisionTfsClient> logger,
             TfsRequestThrottler throttler,
-            TfsRequestSender requestSender)
-            : base(httpClientFactory, configService, logger, throttler, requestSender)
+            TfsRequestSender requestSender,
+            IOptionsMonitor<RevisionIngestionPaginationOptions> paginationOptions)
+            : base(httpClientFactory, configService, logger, throttler, requestSender, paginationOptions)
         {
         }
 

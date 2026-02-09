@@ -58,6 +58,14 @@ public static class ApiServiceCollectionExtensions
         // Configure revision ingestion diagnostics options (runtime reloadable)
         services.AddOptions<RevisionIngestionDiagnosticsOptions>()
             .Bind(configuration.GetSection("RevisionIngestionDiagnostics"));
+        services.AddOptions<RevisionIngestionPaginationOptions>()
+            .Bind(configuration.GetSection("RevisionIngestionPagination"))
+            .Validate(
+                options => options.MaxEmptyPages >= 1 &&
+                           options.MaxProgressWithoutDataPages >= 1 &&
+                           options.MaxTotalPages >= 1,
+                "Revision ingestion pagination limits must be >= 1.")
+            .ValidateOnStart();
         services.AddOptions<RevisionIngestionPersistenceOptimizationOptions>()
             .Bind(configuration.GetSection("RevisionIngestionPersistenceOptimization"))
             .Validate(
