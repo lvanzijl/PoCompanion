@@ -41,11 +41,11 @@ public sealed class RevisionIngestionDiagnostics
             new EventId(6203, nameof(PagePersistLog)),
             "Revision ingestion page persistence. PersistDurationMs={PersistDurationMs} TotalPageDurationMs={TotalPageDurationMs} PageSlow={PageSlow} HttpSlow={HttpSlow} DbSlow={DbSlow} MemoryBytes={MemoryBytes}");
 
-    private static readonly Action<ILogger, int, int, int, int, int, Exception?> PageCountsLog =
-        LoggerMessage.Define<int, int, int, int, int>(
+    private static readonly Action<ILogger, int, int, int, int, int, int, Exception?> PageCountsLog =
+        LoggerMessage.Define<int, int, int, int, int, int>(
             LogLevel.Information,
             new EventId(6204, nameof(PageCountsLog)),
-            "Revision ingestion page counts. RevisionCount={RevisionCount} DistinctWorkItemCount={DistinctWorkItemCount} RevisionHeaderCount={RevisionHeaderCount} FieldDeltaCount={FieldDeltaCount} RelationDeltaCount={RelationDeltaCount}");
+            "Revision ingestion page counts. RawRevisionCount={RawRevisionCount} ScopedRevisionCount={ScopedRevisionCount} DistinctWorkItemCount={DistinctWorkItemCount} RevisionHeaderCount={RevisionHeaderCount} FieldDeltaCount={FieldDeltaCount} RelationDeltaCount={RelationDeltaCount}");
 
     private static readonly Action<ILogger, long, int, int, int, Exception?> SaveChangesLog =
         LoggerMessage.Define<long, int, int, int>(
@@ -205,7 +205,8 @@ public sealed class RevisionIngestionDiagnostics
 
     public void LogPageCounts(
         RevisionIngestionRunContext runContext,
-        int revisionCount,
+        int rawRevisionCount,
+        int scopedRevisionCount,
         int distinctWorkItemCount,
         int revisionHeaderCount,
         int fieldDeltaCount,
@@ -216,7 +217,15 @@ public sealed class RevisionIngestionDiagnostics
             return;
         }
 
-        PageCountsLog(_logger, revisionCount, distinctWorkItemCount, revisionHeaderCount, fieldDeltaCount, relationDeltaCount, null);
+        PageCountsLog(
+            _logger,
+            rawRevisionCount,
+            scopedRevisionCount,
+            distinctWorkItemCount,
+            revisionHeaderCount,
+            fieldDeltaCount,
+            relationDeltaCount,
+            null);
     }
 
     public void LogPagePagination(
