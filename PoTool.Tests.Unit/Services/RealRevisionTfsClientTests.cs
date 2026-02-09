@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using System.Net.Http;
 using System.Text.Json;
@@ -281,6 +282,39 @@ public sealed class RealRevisionTfsClientTests
         Assert.IsFalse(
             url.Contains("continuationToken=", StringComparison.Ordinal),
             "URL should NOT contain continuation token when none provided");
+    }
+
+    [TestMethod]
+    public void BuildReportingRevisionsUrl_SerializesStartDateTimeUtcWithoutSpaces()
+    {
+        // Arrange
+        var config = new TfsConfigEntity
+        {
+            Url = "https://tfs.example.com/DefaultCollection",
+            ApiVersion = "6.0"
+        };
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        var startDateTime = DateTimeOffset.Parse("2022-01-05T14:07:30.2100000+00:00", CultureInfo.InvariantCulture);
+
+        // Act
+        var url = client.TestBuildReportingRevisionsUrl(
+            config,
+            startDateTime: startDateTime,
+            continuationToken: null,
+            expandMode: ReportingExpandMode.None);
+
+        var serializedStartDateTime = GetQueryValue(url, "startDateTime");
+
+        // Assert
+        Assert.DoesNotContain(" ", serializedStartDateTime, "Serialized startDateTime must not contain spaces.");
+        StringAssert.EndsWith(serializedStartDateTime, "Z", "Serialized startDateTime must be in UTC (Z).");
     }
 
     [TestMethod]
@@ -789,6 +823,24 @@ public sealed class RealRevisionTfsClientTests
             AreaPath = "Area 1",
             ChangedDate = DateTimeOffset.UtcNow
         };
+    }
+
+    private static string GetQueryValue(string url, string key)
+    {
+        var uri = new Uri(url);
+        var query = uri.Query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var part in query)
+        {
+            var pair = part.Split('=', 2);
+            if (pair.Length == 2 && string.Equals(pair[0], key, StringComparison.Ordinal))
+            {
+                return Uri.UnescapeDataString(pair[1]);
+            }
+        }
+
+        throw new AssertFailedException($"Query parameter '{key}' was not found in URL.");
     }
 
     /// <summary>
