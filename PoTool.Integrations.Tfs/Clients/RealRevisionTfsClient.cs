@@ -110,18 +110,12 @@ public class RealRevisionTfsClient : IRevisionTfsClient
                 ? RevisionIngestionDiagnostics.GetElapsedMilliseconds(parseStart)
                 : null;
 
-            string? nextContinuationToken = null;
+            var nextContinuationToken = ExtractContinuationToken(response);
 
-            // Parse continuation token from response headers or body
-            if (doc.RootElement.TryGetProperty("continuationToken", out var tokenElement))
+            if (nextContinuationToken == null &&
+                doc.RootElement.TryGetProperty("continuationToken", out var tokenElement))
             {
-                nextContinuationToken = tokenElement.GetString();
-            }
-
-            // Check if there's a continuation URL in headers (alternative paging mechanism)
-            if (response.Headers.TryGetValues("x-ms-continuationtoken", out var headerTokens))
-            {
-                nextContinuationToken = headerTokens.FirstOrDefault() ?? nextContinuationToken;
+                nextContinuationToken = NormalizeContinuationToken(tokenElement.GetString());
             }
 
             var transformStart = captureTimings ? Stopwatch.GetTimestamp() : 0;
@@ -130,10 +124,11 @@ public class RealRevisionTfsClient : IRevisionTfsClient
                 ? RevisionIngestionDiagnostics.GetElapsedMilliseconds(transformStart)
                 : null;
 
+            var hasMoreResults = nextContinuationToken is not null;
             _logger.LogInformation(
                 "Retrieved {Count} revisions from reporting API. HasMoreResults: {HasMore}",
                 revisions.Count,
-                !string.IsNullOrEmpty(nextContinuationToken));
+                hasMoreResults);
 
             return new ReportingRevisionsResult
             {
@@ -285,6 +280,21 @@ public class RealRevisionTfsClient : IRevisionTfsClient
     private string BuildWorkItemRevisionsUrl(TfsConfigEntity config, int workItemId)
     {
         return $"{config.Url.TrimEnd('/')}/_apis/wit/workItems/{workItemId}/revisions?api-version={config.ApiVersion}&$expand=relations";
+    }
+
+    private static string? ExtractContinuationToken(HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("x-ms-continuationtoken", out var headerTokens))
+        {
+            return null;
+        }
+
+        return NormalizeContinuationToken(headerTokens.FirstOrDefault());
+    }
+
+    private static string? NormalizeContinuationToken(string? continuationToken)
+    {
+        return string.IsNullOrWhiteSpace(continuationToken) ? null : continuationToken;
     }
 
     private IReadOnlyList<WorkItemRevision> ParseReportingRevisionsPayload(JsonDocument doc)
