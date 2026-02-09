@@ -35,6 +35,7 @@ public class RevisionIngestionService
     private readonly IDataProtector _tokenProtector;
 
     private const string ContinuationTokenProtectorPurpose = "RevisionIngestionContinuationToken";
+    private const int ContinuationTokenHashLength = 12;
 
     // Concurrency control: one ingestion per ProductOwner
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _ingestionLocks = new();
@@ -838,7 +839,8 @@ public class RevisionIngestionService
         }
         catch (CryptographicException)
         {
-            return continuationToken;
+            _logger.LogWarning("Failed to unprotect continuation token; ignoring stored token.");
+            return null;
         }
     }
 
@@ -923,7 +925,7 @@ public class RevisionIngestionService
             using var sha = SHA256.Create();
             var hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(continuationToken));
             var hashHex = Convert.ToHexString(hashBytes);
-            return hashHex[..Math.Min(12, hashHex.Length)];
+            return hashHex[..Math.Min(ContinuationTokenHashLength, hashHex.Length)];
         }
     }
 

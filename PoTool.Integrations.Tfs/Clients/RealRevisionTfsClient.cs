@@ -144,7 +144,12 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                 pagePayload.ParseDurationMs,
                 pagePayload.TransformDurationMs);
 
-            return MarkPaginationComplete(result);
+            if (result.IsComplete)
+            {
+                return MarkPaginationComplete(result);
+            }
+
+            return result;
         }
         finally
         {
