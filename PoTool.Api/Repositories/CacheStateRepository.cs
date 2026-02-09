@@ -146,6 +146,14 @@ public class CacheStateRepository : ICacheStateRepository
     private async Task ClearCachedDataAsync(int productOwnerId, CancellationToken cancellationToken)
     {
         var isInMemory = _context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory";
+        var productIds = await _context.Products
+            .Where(product => product.ProductOwnerId == productOwnerId)
+            .Select(product => product.Id)
+            .ToListAsync(cancellationToken);
+        var pullRequestIds = await _context.PullRequests
+            .Where(pr => pr.ProductId.HasValue && productIds.Contains(pr.ProductId.Value))
+            .Select(pr => pr.Id)
+            .ToListAsync(cancellationToken);
 
         if (isInMemory)
         {
@@ -156,7 +164,9 @@ public class CacheStateRepository : ICacheStateRepository
                 .Where(w => w.ProductOwnerId == productOwnerId)
                 .ToListAsync(cancellationToken);
             var resolvedWorkItems = await _context.ResolvedWorkItems.ToListAsync(cancellationToken);
-            var sprintMetrics = await _context.SprintMetricsProjections.ToListAsync(cancellationToken);
+            var sprintMetrics = await _context.SprintMetricsProjections
+                .Where(metric => productIds.Contains(metric.ProductId))
+                .ToListAsync(cancellationToken);
             var cachedValidationResults = await _context.CachedValidationResults.ToListAsync(cancellationToken);
             var cachedMetrics = await _context.CachedMetrics
                 .Where(m => m.ProductOwnerId == productOwnerId)
@@ -164,10 +174,18 @@ public class CacheStateRepository : ICacheStateRepository
             var cachedPipelineRuns = await _context.CachedPipelineRuns
                 .Where(r => r.ProductOwnerId == productOwnerId)
                 .ToListAsync(cancellationToken);
-            var pullRequestFileChanges = await _context.PullRequestFileChanges.ToListAsync(cancellationToken);
-            var pullRequestComments = await _context.PullRequestComments.ToListAsync(cancellationToken);
-            var pullRequestIterations = await _context.PullRequestIterations.ToListAsync(cancellationToken);
-            var pullRequests = await _context.PullRequests.ToListAsync(cancellationToken);
+            var pullRequestFileChanges = await _context.PullRequestFileChanges
+                .Where(change => pullRequestIds.Contains(change.PullRequestId))
+                .ToListAsync(cancellationToken);
+            var pullRequestComments = await _context.PullRequestComments
+                .Where(comment => pullRequestIds.Contains(comment.PullRequestId))
+                .ToListAsync(cancellationToken);
+            var pullRequestIterations = await _context.PullRequestIterations
+                .Where(iteration => pullRequestIds.Contains(iteration.PullRequestId))
+                .ToListAsync(cancellationToken);
+            var pullRequests = await _context.PullRequests
+                .Where(pr => pr.ProductId.HasValue && productIds.Contains(pr.ProductId.Value))
+                .ToListAsync(cancellationToken);
             var workItems = await _context.WorkItems.ToListAsync(cancellationToken);
             var sprints = await _context.Sprints.ToListAsync(cancellationToken);
 
@@ -175,7 +193,8 @@ public class CacheStateRepository : ICacheStateRepository
             _context.RevisionRelationDeltas.RemoveRange(revisionRelationDeltas);
             _context.RevisionHeaders.RemoveRange(revisionHeaders);
             _context.RevisionIngestionWatermarks.RemoveRange(revisionWatermarks);
-            _context.ResolvedWorkItems.RemoveRange(resolvedWorkItems);
+            _context.ResolvedWorkItems.RemoveRange(resolvedWorkItems.Where(item =>
+                item.ResolvedProductId.HasValue && productIds.Contains(item.ResolvedProductId.Value)));
             _context.SprintMetricsProjections.RemoveRange(sprintMetrics);
             _context.CachedValidationResults.RemoveRange(cachedValidationResults);
             _context.CachedMetrics.RemoveRange(cachedMetrics);
@@ -197,8 +216,12 @@ public class CacheStateRepository : ICacheStateRepository
         await _context.RevisionIngestionWatermarks
             .Where(w => w.ProductOwnerId == productOwnerId)
             .ExecuteDeleteAsync(cancellationToken);
-        await _context.ResolvedWorkItems.ExecuteDeleteAsync(cancellationToken);
-        await _context.SprintMetricsProjections.ExecuteDeleteAsync(cancellationToken);
+        await _context.ResolvedWorkItems
+            .Where(item => item.ResolvedProductId.HasValue && productIds.Contains(item.ResolvedProductId.Value))
+            .ExecuteDeleteAsync(cancellationToken);
+        await _context.SprintMetricsProjections
+            .Where(metric => productIds.Contains(metric.ProductId))
+            .ExecuteDeleteAsync(cancellationToken);
         await _context.CachedValidationResults.ExecuteDeleteAsync(cancellationToken);
         await _context.CachedMetrics
             .Where(m => m.ProductOwnerId == productOwnerId)
@@ -206,10 +229,18 @@ public class CacheStateRepository : ICacheStateRepository
         await _context.CachedPipelineRuns
             .Where(r => r.ProductOwnerId == productOwnerId)
             .ExecuteDeleteAsync(cancellationToken);
-        await _context.PullRequestFileChanges.ExecuteDeleteAsync(cancellationToken);
-        await _context.PullRequestComments.ExecuteDeleteAsync(cancellationToken);
-        await _context.PullRequestIterations.ExecuteDeleteAsync(cancellationToken);
-        await _context.PullRequests.ExecuteDeleteAsync(cancellationToken);
+        await _context.PullRequestFileChanges
+            .Where(change => pullRequestIds.Contains(change.PullRequestId))
+            .ExecuteDeleteAsync(cancellationToken);
+        await _context.PullRequestComments
+            .Where(comment => pullRequestIds.Contains(comment.PullRequestId))
+            .ExecuteDeleteAsync(cancellationToken);
+        await _context.PullRequestIterations
+            .Where(iteration => pullRequestIds.Contains(iteration.PullRequestId))
+            .ExecuteDeleteAsync(cancellationToken);
+        await _context.PullRequests
+            .Where(pr => pr.ProductId.HasValue && productIds.Contains(pr.ProductId.Value))
+            .ExecuteDeleteAsync(cancellationToken);
         await _context.WorkItems.ExecuteDeleteAsync(cancellationToken);
         await _context.Sprints.ExecuteDeleteAsync(cancellationToken);
     }
