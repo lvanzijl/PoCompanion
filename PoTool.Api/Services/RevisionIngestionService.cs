@@ -42,6 +42,12 @@ public class RevisionIngestionService
         new(new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
     private static readonly TimeSpan BackfillFallbackWindow = TimeSpan.FromDays(180);
 
+    private sealed record WorkItemDateSnapshot(
+        int TfsId,
+        int? ParentTfsId,
+        DateTimeOffset? CreatedDate,
+        DateTimeOffset? TfsChangedDate);
+
     // Concurrency control: one ingestion per ProductOwner
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _ingestionLocks = new();
     private readonly ConcurrentDictionary<int, CancellationTokenSource> _activeIngestions = new();
@@ -721,11 +727,6 @@ public class RevisionIngestionService
         return utc;
     }
 
-    private sealed record WorkItemDateSnapshot(
-        int TfsId,
-        int? ParentTfsId,
-        DateTimeOffset? CreatedDate,
-        DateTimeOffset? TfsChangedDate);
 
     private async Task<RevisionIngestionWatermarkEntity> GetOrCreateWatermarkAsync(
         PoToolDbContext context,
