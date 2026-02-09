@@ -326,7 +326,10 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             var logUrl = SanitizeUrlForLogging(url);
             var requestPathAndQuery = new Uri(url).PathAndQuery;
 
-            _logger.LogDebug("Calling reporting revisions API: {Url}", logUrl);
+            _logger.LogDebug(
+                "Calling reporting revisions API: {Url}. startDateTime={StartDateTimeSerialized}",
+                logUrl,
+                serializedStartDateTime ?? "<none>");
             _logger.LogDebug("Reporting revisions request path+query: {PathAndQuery}", requestPathAndQuery);
 
             var httpStart = captureTimings ? Stopwatch.GetTimestamp() : 0;
@@ -450,9 +453,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
     private static string ToTfsQueryDateTimeUtc(DateTimeOffset dateTime)
     {
-        // Use 7 fractional digits to match .NET round-trip precision and avoid losing ticks.
-        return dateTime.ToUniversalTime()
-            .ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture);
+        return dateTime.UtcDateTime.ToString("O", CultureInfo.InvariantCulture);
     }
 
     private static void ValidateSerializedStartDateTime(string serializedStartDateTime)
