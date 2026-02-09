@@ -600,19 +600,21 @@ public class RevisionIngestionService
         }
 
         // Query cached work items and find the earliest date on the client side
-        // Note: We use ToListAsync to pull data to client side because SQLite doesn't support Min on DateTimeOffset
-        var workItems = await context.WorkItems
+        // Note: SQLite doesn't support Min/OrderBy on DateTimeOffset, so we need client-side evaluation
+        // To minimize memory usage, we select only the date fields and use ToListAsync with a small projection
+        var workItemDates = await context.WorkItems
             .Where(wi => rootWorkItemIds.Contains(wi.TfsId) || rootWorkItemIds.Contains(wi.ParentTfsId ?? 0))
             .Select(wi => new { wi.CreatedDate, wi.TfsChangedDate })
             .ToListAsync(cancellationToken);
 
-        var earliestCreatedDate = workItems
+        // Find the earliest CreatedDate on the client side
+        var earliestCreatedDate = workItemDates
             .Where(wi => wi.CreatedDate != null)
             .Select(wi => wi.CreatedDate!.Value)
-            .DefaultIfEmpty(DateTimeOffset.MaxValue)
-            .Min();
+            .OrderBy(d => d)
+            .FirstOrDefault();
 
-        if (earliestCreatedDate != DateTimeOffset.MaxValue)
+        if (earliestCreatedDate != default(DateTimeOffset))
         {
             // Subtract 1 day buffer to ensure we don't miss revisions
             var inferredStartDate = earliestCreatedDate.AddDays(-1);
@@ -625,12 +627,12 @@ public class RevisionIngestionService
         }
 
         // Fallback to TfsChangedDate if CreatedDate is not available
-        var earliestChangedDate = workItems
+        var earliestChangedDate = workItemDates
             .Select(wi => wi.TfsChangedDate)
-            .DefaultIfEmpty(DateTimeOffset.MaxValue)
-            .Min();
+            .OrderBy(d => d)
+            .FirstOrDefault();
 
-        if (earliestChangedDate != DateTimeOffset.MaxValue)
+        if (earliestChangedDate != default(DateTimeOffset))
         {
             // Subtract 1 day buffer to ensure we don't miss revisions
             var inferredStart = earliestChangedDate.AddDays(-1);
