@@ -925,7 +925,7 @@ public class RevisionIngestionService
             using var sha = SHA256.Create();
             var hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(continuationToken));
             var hashHex = Convert.ToHexString(hashBytes);
-            return hashHex[..Math.Min(ContinuationTokenHashLength, hashHex.Length)];
+            return hashHex[..ContinuationTokenHashLength];
         }
     }
 
