@@ -925,7 +925,7 @@ public class RevisionIngestionService
             using var sha = SHA256.Create();
             var hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(continuationToken));
             var hashHex = Convert.ToHexString(hashBytes);
-            // SHA256 hashes are always 32 bytes (64 hex characters), so the prefix length is safe.
+            // SHA256 hashes are always 32 bytes; hex encoding uses two characters per byte (64 chars total).
             // 12 characters keeps logs compact while still offering low collision risk for diagnostics.
             return hashHex[..ContinuationTokenHashLength];
         }

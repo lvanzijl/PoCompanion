@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Reflection;
 using System.Net.Http;
 using System.Text.Json;
@@ -367,7 +366,7 @@ public sealed class RealRevisionTfsClientTests
 
         Assert.IsFalse(result.IsComplete);
         Assert.IsTrue(result.HasMoreResults);
-        CollectionAssert.AreEqual(Array.Empty<WorkItemRevision>(), result.Revisions.ToArray());
+        CollectionAssert.AreEqual(Array.Empty<WorkItemRevision>(), (WorkItemRevision[])result.Revisions);
     }
 
     [TestMethod]
