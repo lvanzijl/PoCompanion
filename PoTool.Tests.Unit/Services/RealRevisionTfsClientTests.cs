@@ -313,7 +313,7 @@ public sealed class RealRevisionTfsClientTests
         var serializedStartDateTime = GetQueryValue(url, "startDateTime");
 
         // Assert
-        Assert.IsFalse(serializedStartDateTime.Contains(' '), "Serialized startDateTime must not contain spaces.");
+        Assert.DoesNotContain(" ", serializedStartDateTime, "Serialized startDateTime must not contain spaces.");
         StringAssert.EndsWith(serializedStartDateTime, "Z", "Serialized startDateTime must be in UTC (Z).");
     }
 
