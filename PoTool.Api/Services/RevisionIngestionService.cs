@@ -838,7 +838,8 @@ public class RevisionIngestionService
         }
         catch (CryptographicException)
         {
-            _logger.LogWarning("Failed to unprotect continuation token; ignoring stored token.");
+            _logger.LogWarning(
+                "Failed to unprotect continuation token; ignoring stored token and restarting pagination from the last sync start.");
             return null;
         }
     }
@@ -925,6 +926,7 @@ public class RevisionIngestionService
             var hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(continuationToken));
             var hashHex = Convert.ToHexString(hashBytes);
             // SHA256 hashes are always 32 bytes (64 hex characters), so the prefix length is safe.
+            // 12 characters keeps logs compact while still offering low collision risk for diagnostics.
             return hashHex[..ContinuationTokenHashLength];
         }
     }
