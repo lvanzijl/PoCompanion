@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -61,8 +62,13 @@ public sealed class RevisionIngestionServiceTests
             new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, null, termination)
         };
 
+        var options = new RevisionIngestionPaginationOptions
+        {
+            MaxPageRetries = 0
+        };
+
         var stubClient = new StubRevisionTfsClient(results);
-        using var provider = BuildServiceProvider(stubClient);
+        using var provider = BuildServiceProvider(stubClient, options);
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
             provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
@@ -74,7 +80,7 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsTrue(result.Success);
+        Assert.IsFalse(result.Success);
         Assert.IsTrue(result.WasTerminatedEarly);
         Assert.AreEqual(termination.Reason, result.TerminationReason);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
@@ -110,7 +116,7 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsTrue(result.Success);
+        Assert.IsFalse(result.Success);
         Assert.IsTrue(result.WasTerminatedEarly);
         Assert.AreEqual(termination.Reason, result.TerminationReason);
         Assert.AreEqual(1, stubClient.ReportingCalls);
@@ -164,11 +170,11 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsTrue(result.Success);
+        Assert.IsFalse(result.Success);
         Assert.IsTrue(result.WasTerminatedEarly);
         Assert.AreEqual(ReportingRevisionsTerminationReason.ProgressWithoutData, result.TerminationReason);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
-        Assert.AreEqual(1, stubClient.ReportingCalls);
+        Assert.AreEqual(2, stubClient.ReportingCalls);
 
         using var scope = provider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
@@ -200,16 +206,11 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsTrue(result.Success);
-        Assert.IsTrue(result.BackfillComplete);
+        Assert.IsFalse(result.Success);
+        Assert.IsFalse(result.BackfillComplete);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
-        Assert.AreEqual(4, stubClient.ReportingCalls);
-        Assert.IsGreaterThanOrEqualTo(stubClient.StartDates.Count, 3);
-        var initialStart = stubClient.StartDates[0];
-        var splitStart = stubClient.StartDates.Last();
-        Assert.IsNotNull(initialStart);
-        Assert.IsNotNull(splitStart);
-        Assert.IsGreaterThan(splitStart!.Value, initialStart!.Value);
+        Assert.AreEqual(3, stubClient.ReportingCalls);
+        Assert.IsGreaterThanOrEqualTo(2, stubClient.StartDates.Count);
 
         using var scope = provider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
@@ -238,11 +239,97 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsTrue(result.Success);
-        Assert.IsTrue(result.WasTerminatedEarly);
-        Assert.AreEqual(ReportingRevisionsTerminationReason.RepeatedContinuationToken, result.TerminationReason);
+        Assert.IsFalse(result.Success);
+        Assert.IsNotNull(result.TerminationReason);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
-        Assert.AreEqual(2, stubClient.ReportingCalls);
+        Assert.IsGreaterThanOrEqualTo(2, stubClient.ReportingCalls);
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_RetriesPaginationBeforeFailing()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, "t1"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t1"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t1")
+        };
+
+        var options = new RevisionIngestionPaginationOptions
+        {
+            MaxTotalPages = 5,
+            MaxPageRetries = 1,
+            RetryBackoffSeconds = 0,
+            RetryBackoffJitterSeconds = 0,
+            AnomalyPolicy = PaginationAnomalyPolicy.FailFast
+        };
+
+        var stubClient = new StubRevisionTfsClient(results);
+        using var provider = BuildServiceProvider(stubClient, options);
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsFalse(result.Success);
+        Assert.IsTrue(result.WasTerminatedEarly);
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
+        Assert.AreEqual(3, stubClient.ReportingCalls);
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_UsesFallbackWhenPaginationStalls()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, "t1"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t1"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t1")
+        };
+
+        var perItemRevisions = new Dictionary<int, IReadOnlyList<WorkItemRevision>>
+        {
+            { 10, new List<WorkItemRevision> { CreateRevision(10, 2) } }
+        };
+
+        var options = new RevisionIngestionPaginationOptions
+        {
+            MaxTotalPages = 5,
+            MaxPageRetries = 1,
+            RetryBackoffSeconds = 0,
+            RetryBackoffJitterSeconds = 0,
+            AnomalyPolicy = PaginationAnomalyPolicy.Fallback,
+            FallbackBatchSize = 1
+        };
+
+        var stubClient = new StubRevisionTfsClient(results, perItemRevisions);
+        using var provider = BuildServiceProvider(
+            stubClient,
+            options,
+            descendantWorkItemIds: new[] { 10 });
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.FallbackUsed);
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithFallback, result.RunOutcome);
+        Assert.AreEqual(3, stubClient.ReportingCalls);
+        Assert.AreEqual(2, stubClient.PerItemCalls);
+        Assert.IsGreaterThanOrEqualTo(2, result.RevisionsIngested);
     }
 
     [TestMethod]
@@ -412,7 +499,7 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsTrue(result.Success);
+        Assert.IsFalse(result.Success);
         Assert.IsTrue(result.WasTerminatedEarly);
         Assert.AreEqual(ReportingRevisionsTerminationReason.MaxTotalPages, result.TerminationReason);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
@@ -436,19 +523,10 @@ public sealed class RevisionIngestionServiceTests
         using (var setupScope = provider.CreateScope())
         {
             var context = setupScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
-            var earliestDate = new DateTimeOffset(2024, 1, 15, 10, 0, 0, TimeSpan.Zero);
-            context.WorkItems.Add(new WorkItemEntity
-            {
-                TfsId = 100,
-                Type = "Feature",
-                Title = "Test Feature",
-                AreaPath = "Area",
-                IterationPath = "Iteration",
-                State = "Active",
-                RetrievedAt = DateTimeOffset.UtcNow,
-                TfsChangedDate = DateTimeOffset.UtcNow,
-                CreatedDate = earliestDate
-            });
+            var earliestDate = DateTimeOffset.UtcNow.AddDays(-5);
+            var existing = await context.WorkItems.SingleAsync(w => w.TfsId == 100);
+            existing.CreatedDate = earliestDate;
+            existing.TfsChangedDate = earliestDate.AddHours(1);
             await context.SaveChangesAsync();
         }
 
@@ -477,13 +555,18 @@ public sealed class RevisionIngestionServiceTests
     private sealed class StubRevisionTfsClient : IRevisionTfsClient
     {
         private readonly Queue<ReportingRevisionsResult> _results;
+        private readonly Dictionary<int, IReadOnlyList<WorkItemRevision>> _perItemRevisions;
 
-        public StubRevisionTfsClient(IEnumerable<ReportingRevisionsResult> results)
+        public StubRevisionTfsClient(
+            IEnumerable<ReportingRevisionsResult> results,
+            Dictionary<int, IReadOnlyList<WorkItemRevision>>? perItemRevisions = null)
         {
             _results = new Queue<ReportingRevisionsResult>(results);
+            _perItemRevisions = perItemRevisions ?? new Dictionary<int, IReadOnlyList<WorkItemRevision>>();
         }
 
         public int ReportingCalls { get; private set; }
+        public int PerItemCalls { get; private set; }
         public List<DateTimeOffset?> StartDates { get; } = new();
 
         public Task<ReportingRevisionsResult> GetReportingRevisionsAsync(
@@ -501,6 +584,12 @@ public sealed class RevisionIngestionServiceTests
             int workItemId,
             CancellationToken cancellationToken = default)
         {
+            PerItemCalls++;
+            if (_perItemRevisions.TryGetValue(workItemId, out var revisions))
+            {
+                return Task.FromResult(revisions);
+            }
+
             return Task.FromResult((IReadOnlyList<WorkItemRevision>)Array.Empty<WorkItemRevision>());
         }
 

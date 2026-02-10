@@ -62,6 +62,27 @@ public class RevisionIngestionWatermarkEntity
     public string? LastErrorMessage { get; set; }
 
     /// <summary>
+    /// Hash of the last stable continuation token observed during ingestion (for diagnostics/resume).
+    /// </summary>
+    [MaxLength(128)]
+    public string? LastStableContinuationTokenHash { get; set; }
+
+    /// <summary>
+    /// Latest ChangedDate observed from persisted revisions in the last run.
+    /// </summary>
+    public DateTimeOffset? LastStableChangedDateUtc { get; set; }
+
+    /// <summary>
+    /// When fallback per-work-item ingestion was last used and whether it was active on the last run.
+    /// </summary>
+    public bool FallbackUsedLastRun { get; set; }
+
+    /// <summary>
+    /// Resume index for fallback ingestion (allows resumable per-item retrieval).
+    /// </summary>
+    public int? FallbackResumeIndex { get; set; }
+
+    /// <summary>
     /// Outcome classification of the last ingestion run (for diagnostics).
     /// </summary>
     [MaxLength(100)]
