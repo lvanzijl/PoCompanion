@@ -533,8 +533,8 @@ public class RevisionIngestionService
             windowQueue.Enqueue(new RevisionIngestionWindow(
                 nextWindowStart,
                 nextWindowEnd,
-                depth: 0,
-                sequence: Interlocked.Increment(ref windowSequence)));
+                Depth: 0,
+                Sequence: Interlocked.Increment(ref windowSequence)));
             nextWindowStart = nextWindowEnd;
         }
 
@@ -546,15 +546,17 @@ public class RevisionIngestionService
             var windowResult = await ProcessSingleWindowAsync(
                 window,
                 context,
+                watermark,
                 revisionClient,
                 allowedWorkItemIds,
                 paginationOptions,
                 runContext,
                 progressCallback,
                 totalPersisted,
-                ref scopedFieldDumpLogged,
+                scopedFieldDumpLogged,
                 cancellationToken);
 
+            scopedFieldDumpLogged = windowResult.ScopedFieldDumpLogged;
             windowsProcessed++;
             pagesProcessed += windowResult.PagesProcessed;
             totalPersisted += windowResult.PersistedCount;
@@ -648,13 +650,14 @@ public class RevisionIngestionService
     private async Task<WindowProcessingResult> ProcessSingleWindowAsync(
         RevisionIngestionWindow window,
         PoToolDbContext context,
+        RevisionIngestionWatermarkEntity watermark,
         IRevisionTfsClient revisionClient,
         HashSet<int> allowedWorkItemIds,
         RevisionIngestionPaginationOptions paginationOptions,
         RevisionIngestionRunContext runContext,
         Action<RevisionIngestionProgress>? progressCallback,
         int totalPersistedBeforeWindow,
-        ref bool scopedFieldDumpLogged,
+        bool scopedFieldDumpLogged,
         CancellationToken cancellationToken)
     {
         var pageTracker = new ReportingRevisionsPageTracker();
@@ -950,7 +953,8 @@ public class RevisionIngestionService
             pagesProcessed,
             windowPersisted,
             stallReason,
-            termination);
+            termination,
+            scopedFieldDumpLogged);
     }
 
     private static TimeSpan GrowWindowDuration(TimeSpan current)
@@ -1493,7 +1497,8 @@ public class RevisionIngestionService
         int PagesProcessed,
         int PersistedCount,
         WindowStallReason? StallReason,
-        ReportingRevisionsTermination? Termination);
+        ReportingRevisionsTermination? Termination,
+        bool ScopedFieldDumpLogged);
 
     private sealed record WindowRunResult(
         int TotalPersisted,

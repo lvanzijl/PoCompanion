@@ -204,12 +204,12 @@ public sealed class RevisionIngestionServiceTests
         Assert.IsTrue(result.BackfillComplete);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
         Assert.AreEqual(4, stubClient.ReportingCalls);
-        Assert.IsTrue(stubClient.StartDates.Count >= 3);
+        Assert.IsGreaterThanOrEqualTo(stubClient.StartDates.Count, 3);
         var initialStart = stubClient.StartDates[0];
         var splitStart = stubClient.StartDates.Last();
         Assert.IsNotNull(initialStart);
         Assert.IsNotNull(splitStart);
-        Assert.IsTrue(splitStart!.Value > initialStart!.Value);
+        Assert.IsGreaterThan(splitStart!.Value, initialStart!.Value);
 
         using var scope = provider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
