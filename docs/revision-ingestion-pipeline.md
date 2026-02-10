@@ -12,7 +12,7 @@ Collect work item revisions from the TFS reporting endpoint for trend analysis, 
 - Each ingested revision stores a snapshot of the whitelisted fields (type, title, state, reason, iteration, area, created, changed, closed, effort, tags, severity, changedBy).
 - Missing fields are recorded as “not provided” (never interpreted as a clear).
 - No relation handling during revision ingestion; relation hydration is skipped.
-- Run outcome is stored on the ingestion watermark (`CompletedNormally` or `CompletedWithPaginationAnomaly`).
+- Run outcome is stored on the ingestion watermark (`CompletedNormally`, `CompletedWithFallback`, or `CompletedWithPaginationAnomaly`).
 
 ## Pagination Rules
 - **Continue** only when all hold: `RawRevisionCount > 0`, continuation token advances (not seen before), `HasMoreResults == true`.

@@ -63,7 +63,11 @@ public static class ApiServiceCollectionExtensions
             .Validate(
                 options => options.MaxEmptyPages >= 1 &&
                            options.MaxProgressWithoutDataPages >= 1 &&
-                           options.MaxTotalPages >= 1,
+                           options.MaxTotalPages >= 1 &&
+                           options.MaxPageRetries >= 0 &&
+                           options.RetryBackoffSeconds >= 0 &&
+                           options.RetryBackoffJitterSeconds >= 0 &&
+                           options.FallbackBatchSize >= 1,
                 "Revision ingestion pagination limits must be >= 1.")
             .ValidateOnStart();
         services.AddOptions<RevisionIngestionPersistenceOptimizationOptions>()

@@ -140,6 +140,10 @@ public class RevisionIngestionService
             });
 
             int totalRevisions = 0;
+            var distinctWorkItemIds = new HashSet<int>();
+            var distinctWorkItemCount = 0;
+            DateTimeOffset? minChangedDate = null;
+            DateTimeOffset? maxChangedDate = null;
             // For incremental sync, use last sync start time
             // For backfill with no last sync time, infer from cached work items
             DateTimeOffset? startDateTime = watermark.IsInitialBackfillComplete 
@@ -148,6 +152,9 @@ public class RevisionIngestionService
             ReportingRevisionsTermination? termination = null;
             var runOutcome = RevisionIngestionRunOutcome.CompletedNormally;
             var paginationOptions = _paginationOptions.CurrentValue;
+            var fallbackUsed = false;
+            string? lastStableContinuationTokenHash = null;
+            WindowStallReason? lastStallReason = null;
 
             var runStartUtc = DateTimeOffset.UtcNow;
             using var runScope = _diagnostics.StartRun(
@@ -196,6 +203,53 @@ public class RevisionIngestionService
             totalRevisions = windowRunResult.TotalPersisted;
             termination = windowRunResult.LastTermination;
             runOutcome = windowRunResult.RunOutcome;
+            distinctWorkItemIds = new HashSet<int>(windowRunResult.DistinctWorkItemIds);
+            distinctWorkItemCount = distinctWorkItemIds.Count;
+            minChangedDate = windowRunResult.MinChangedDate;
+            maxChangedDate = windowRunResult.MaxChangedDate;
+            lastStableContinuationTokenHash = windowRunResult.LastStableContinuationTokenHash;
+            lastStallReason = windowRunResult.LastStallReason;
+
+            FallbackIngestionResult? fallbackResult = null;
+            if (ShouldActivateFallback(paginationOptions, windowRunResult))
+            {
+                _logger.LogWarning(
+                    "Reporting revisions pagination anomaly detected; activating fallback per-work-item retrieval. ProductOwnerId={ProductOwnerId} TerminationReason={TerminationReason} WindowsProcessed={WindowsProcessed}",
+                    productOwnerId,
+                    windowRunResult.LastTermination?.Reason,
+                    windowRunResult.WindowsProcessed);
+
+                fallbackResult = await RunFallbackIngestionAsync(
+                    context,
+                    revisionClient,
+                    allowedWorkItemIds,
+                    watermark,
+                    runContext,
+                    paginationOptions.FallbackBatchSize,
+                    cts.Token);
+
+                fallbackUsed = fallbackResult.Success;
+                if (fallbackResult.Success)
+                {
+                    totalRevisions += fallbackResult.PersistedCount;
+                    distinctWorkItemIds.UnionWith(fallbackResult.DistinctWorkItemIds);
+                    distinctWorkItemCount = distinctWorkItemIds.Count;
+                    minChangedDate = GetWindowRawMin(minChangedDate, fallbackResult.MinChangedDate);
+                    maxChangedDate = GetWindowRawMax(maxChangedDate, fallbackResult.MaxChangedDate);
+                    runOutcome = RevisionIngestionRunOutcome.CompletedWithFallback;
+                }
+                else
+                {
+                    runOutcome = RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly;
+                }
+            }
+
+            if (termination == null &&
+                runOutcome == RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly &&
+                lastStallReason.HasValue)
+            {
+                termination = CreateTerminationFromStall(lastStallReason.Value);
+            }
 
             // Mark ingestion complete
             context.ChangeTracker.Clear();
@@ -203,6 +257,9 @@ public class RevisionIngestionService
             watermark.LastIngestionCompletedAt = DateTimeOffset.UtcNow;
             watermark.LastIngestionRevisionCount = totalRevisions;
             watermark.LastRunOutcome = runOutcome.ToString();
+            watermark.LastStableContinuationTokenHash = lastStableContinuationTokenHash;
+            watermark.LastStableChangedDateUtc = maxChangedDate;
+            watermark.FallbackUsedLastRun = fallbackUsed;
             watermark.ContinuationToken = null; // Windowed ingestion does not reuse tokens across runs
 
             if (termination != null)
@@ -210,8 +267,13 @@ public class RevisionIngestionService
                 watermark.LastErrorMessage = $"Reporting revisions pagination ended early ({termination.Reason}): {termination.Message}";
                 watermark.LastErrorAt = DateTimeOffset.UtcNow;
             }
+            else if (runOutcome == RevisionIngestionRunOutcome.CompletedWithFallback)
+            {
+                watermark.LastErrorMessage = "Reporting revisions pagination anomaly recovered via fallback ingestion.";
+                watermark.LastErrorAt = DateTimeOffset.UtcNow;
+            }
 
-            if (windowRunResult.BackfillComplete)
+            if (windowRunResult.BackfillComplete && runOutcome == RevisionIngestionRunOutcome.CompletedNormally)
             {
                 watermark.IsInitialBackfillComplete = true;
                 _logger.LogInformation(
@@ -221,10 +283,14 @@ public class RevisionIngestionService
                     windowRunResult.WindowsMarkedUnretrievable);
             }
 
-            if (termination == null)
+            if (runOutcome == RevisionIngestionRunOutcome.CompletedNormally)
             {
                 // Update watermark for next incremental sync
                 watermark.LastSyncStartDateTime = syncStartTime;
+            }
+            else
+            {
+                watermark.LastSyncStartDateTime = null;
             }
 
             context.Entry(watermark).State = EntityState.Modified;
@@ -252,19 +318,35 @@ public class RevisionIngestionService
             var dbSnapshotEnd = await CaptureRevisionDatabaseSnapshotAsync(context, cts.Token);
             LogDatabaseSnapshot("End", dbSnapshotEnd);
 
+            _logger.LogInformation(
+                "Revision ingestion run outcome. ProductOwnerId={ProductOwnerId} Outcome={Outcome} TotalPersisted={TotalPersisted} DistinctWorkItems={DistinctWorkItems} MinChangedDate={MinChangedDate} MaxChangedDate={MaxChangedDate} FallbackUsed={FallbackUsed}",
+                productOwnerId,
+                runOutcome,
+                totalRevisions,
+                distinctWorkItemCount,
+                minChangedDate,
+                maxChangedDate,
+                fallbackUsed);
+
             return new RevisionIngestionResult
             {
                 RunOutcome = runOutcome,
-                Success = true,
+                Success = runOutcome is RevisionIngestionRunOutcome.CompletedNormally or RevisionIngestionRunOutcome.CompletedWithFallback,
+                FallbackUsed = fallbackUsed,
                 RevisionsIngested = totalRevisions,
+                DistinctWorkItemsIngested = distinctWorkItemCount,
                 PagesProcessed = windowRunResult.PagesProcessed,
-                WasTerminatedEarly = termination != null,
+                WasTerminatedEarly = runOutcome != RevisionIngestionRunOutcome.CompletedNormally,
                 TerminationReason = termination?.Reason,
                 TerminationMessage = termination?.Message,
+                MinChangedDateIngested = minChangedDate,
+                MaxChangedDateIngested = maxChangedDate,
                 Message = termination != null
                     ? $"Ingestion terminated early after {totalRevisions} revisions: {termination.Message}"
-                    : $"Successfully ingested {totalRevisions} revisions",
-                BackfillComplete = windowRunResult.BackfillComplete
+                    : runOutcome == RevisionIngestionRunOutcome.CompletedWithFallback
+                        ? $"Reporting revisions fallback used; ingested {totalRevisions} revisions"
+                        : $"Successfully ingested {totalRevisions} revisions",
+                BackfillComplete = windowRunResult.BackfillComplete && runOutcome == RevisionIngestionRunOutcome.CompletedNormally
             };
         }
         catch (OperationCanceledException)
@@ -304,7 +386,7 @@ public class RevisionIngestionService
 
             return new RevisionIngestionResult
             {
-                RunOutcome = RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly,
+                RunOutcome = RevisionIngestionRunOutcome.Failed,
                 Success = false,
                 ErrorMessage = ex.Message,
                 Message = $"Ingestion failed: {ex.Message}"
@@ -502,6 +584,102 @@ public class RevisionIngestionService
         return utc;
     }
 
+    private static bool ShouldActivateFallback(
+        RevisionIngestionPaginationOptions paginationOptions,
+        WindowRunResult windowRunResult)
+    {
+        return paginationOptions.AnomalyPolicy == PaginationAnomalyPolicy.Fallback &&
+               (windowRunResult.RunOutcome == RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly ||
+                windowRunResult.WindowsMarkedUnretrievable > 0 ||
+                windowRunResult.LastTermination != null);
+    }
+
+    private async Task<FallbackIngestionResult> RunFallbackIngestionAsync(
+        PoToolDbContext context,
+        IRevisionTfsClient revisionClient,
+        HashSet<int> allowedWorkItemIds,
+        RevisionIngestionWatermarkEntity watermark,
+        RevisionIngestionRunContext runContext,
+        int batchSize,
+        CancellationToken cancellationToken)
+    {
+        _ = runContext;
+        var orderedWorkItemIds = allowedWorkItemIds.OrderBy(id => id).ToList();
+        var startIndex = Math.Clamp(watermark.FallbackResumeIndex ?? 0, 0, Math.Max(0, orderedWorkItemIds.Count - 1));
+        var persisted = 0;
+        var distinctIds = new HashSet<int>();
+        DateTimeOffset? minChangedDate = null;
+        DateTimeOffset? maxChangedDate = null;
+
+        _logger.LogInformation(
+            "Starting fallback per-work-item ingestion. TotalWorkItems={TotalWorkItems} StartIndex={StartIndex}",
+            orderedWorkItemIds.Count,
+            startIndex);
+
+        context.RevisionIngestionWatermarks.Attach(watermark);
+
+        for (var index = startIndex; index < orderedWorkItemIds.Count; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var workItemId = orderedWorkItemIds[index];
+
+            watermark.FallbackResumeIndex = index;
+            await context.SaveChangesAsync(cancellationToken);
+
+            var revisions = await _throttler.ExecuteReadAsync(
+                () => revisionClient.GetWorkItemRevisionsAsync(workItemId, cancellationToken),
+                cancellationToken);
+
+            if (revisions.Count > 0)
+            {
+                var persistedCount = await PersistRevisionsAsync(context, revisions, null, cancellationToken);
+                persisted += persistedCount;
+                if (persistedCount > 0)
+                {
+                    distinctIds.Add(workItemId);
+                    var localMin = revisions.Min(r => r.ChangedDate).ToUniversalTime();
+                    var localMax = revisions.Max(r => r.ChangedDate).ToUniversalTime();
+                    minChangedDate = GetWindowRawMin(minChangedDate, localMin);
+                    maxChangedDate = GetWindowRawMax(maxChangedDate, localMax);
+                }
+            }
+
+            if ((index + 1) % Math.Max(1, batchSize) == 0)
+            {
+                context.ChangeTracker.Clear();
+                context.RevisionIngestionWatermarks.Attach(watermark);
+            }
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Fallback ingestion progress. Index={Index}/{Total} WorkItemId={WorkItemId} TotalPersisted={TotalPersisted}",
+                    index + 1,
+                    orderedWorkItemIds.Count,
+                    workItemId,
+                    persisted);
+            }
+        }
+
+        watermark.FallbackResumeIndex = null;
+        await context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Fallback ingestion completed. Persisted={Persisted} DistinctWorkItems={DistinctWorkItems} MinChangedDate={MinChangedDate} MaxChangedDate={MaxChangedDate}",
+            persisted,
+            distinctIds.Count,
+            minChangedDate,
+            maxChangedDate);
+
+        return new FallbackIngestionResult(
+            Success: true,
+            PersistedCount: persisted,
+            DistinctWorkItemCount: distinctIds.Count,
+            DistinctWorkItemIds: distinctIds.ToArray(),
+            MinChangedDate: minChangedDate,
+            MaxChangedDate: maxChangedDate);
+    }
+
     private async Task<WindowRunResult> ProcessWindowsAsync(
         PoToolDbContext context,
         IRevisionTfsClient revisionClient,
@@ -522,6 +700,11 @@ public class RevisionIngestionService
         var pagesProcessed = 0;
         var lastTermination = (ReportingRevisionsTermination?)null;
         var windowSequence = 0;
+        var distinctWorkItemIds = new HashSet<int>();
+        DateTimeOffset? minChangedDate = null;
+        DateTimeOffset? maxChangedDate = null;
+        string? lastStableContinuationTokenHash = null;
+        WindowStallReason? lastStallReason = null;
         var nextWindowStart = backfillStartUtc;
         var currentWindowDuration = InitialWindowDuration;
         var windowQueue = new Queue<RevisionIngestionWindow>();
@@ -571,24 +754,41 @@ public class RevisionIngestionService
             pagesProcessed += windowResult.PagesProcessed;
             totalPersisted += windowResult.PersistedCount;
             lastTermination ??= windowResult.Termination;
+            if (windowResult.MinChangedDate.HasValue)
+            {
+                minChangedDate = minChangedDate == null || windowResult.MinChangedDate < minChangedDate
+                    ? windowResult.MinChangedDate
+                    : minChangedDate;
+            }
+
+            if (windowResult.MaxChangedDate.HasValue)
+            {
+                maxChangedDate = maxChangedDate == null || windowResult.MaxChangedDate > maxChangedDate
+                    ? windowResult.MaxChangedDate
+                    : maxChangedDate;
+            }
+
+            if (windowResult.PersistedWorkItemIds.Count > 0)
+            {
+                distinctWorkItemIds.UnionWith(windowResult.PersistedWorkItemIds);
+            }
+
+            lastStableContinuationTokenHash = windowResult.LastTokenHash ?? lastStableContinuationTokenHash;
 
             if (windowResult.Outcome == WindowProcessingOutcome.Stalled)
             {
-                var splitChildren = SplitWindow(window, ref windowSequence);
-                if (splitChildren.Count == 0)
+                if (paginationOptions.AnomalyPolicy == PaginationAnomalyPolicy.Fallback)
                 {
-                    windowResult = windowResult with { Outcome = WindowProcessingOutcome.MarkedUnretrievableAtMinimumChunk };
+                    break;
                 }
-                else
-                {
-                    windowResult = windowResult with { Outcome = WindowProcessingOutcome.SplitScheduled };
-                    InsertWindowsAtFront(windowQueue, splitChildren);
-                }
+                windowResult = windowResult with { Outcome = WindowProcessingOutcome.MarkedUnretrievableAtMinimumChunk };
+                lastStallReason ??= windowResult.StallReason;
             }
 
             if (windowResult.Outcome == WindowProcessingOutcome.MarkedUnretrievableAtMinimumChunk)
             {
                 windowsMarkedUnretrievable++;
+                break;
             }
             else if (windowResult.Outcome is WindowProcessingOutcome.CompletedNormally or WindowProcessingOutcome.CompletedRawEmpty)
             {
@@ -596,6 +796,7 @@ public class RevisionIngestionService
             }
             else
             {
+                lastStallReason ??= windowResult.StallReason;
                 currentWindowDuration = ShrinkWindowDuration(currentWindowDuration);
             }
 
@@ -628,7 +829,13 @@ public class RevisionIngestionService
             backfillComplete,
             scopedFieldDumpLogged,
             lastTermination,
-            runOutcome);
+            runOutcome,
+            distinctWorkItemIds.Count,
+            distinctWorkItemIds,
+            minChangedDate,
+            maxChangedDate,
+            lastStableContinuationTokenHash,
+            lastStallReason);
     }
 
     private static void InsertWindowsAtFront(
@@ -683,10 +890,30 @@ public class RevisionIngestionService
         DateTimeOffset? windowRawMinChangedDate = null;
         DateTimeOffset? windowRawMaxChangedDate = null;
         var windowRawInWindow = false;
+        var persistedWorkItemIds = new HashSet<int>();
+        DateTimeOffset? minChangedDate = null;
+        DateTimeOffset? maxChangedDate = null;
+        string? lastTokenHash = null;
+        var retryAttempt = 0;
 
         while (!cancellationToken.IsCancellationRequested)
         {
             var pageIndex = pageTracker.NextPageIndex();
+            if (pageIndex > maxTotalPages)
+            {
+                termination = new ReportingRevisionsTermination(
+                    ReportingRevisionsTerminationReason.MaxTotalPages,
+                    $"Exceeded maximum total pages ({maxTotalPages}) on page {pageIndex}.");
+                LogEarlyTermination(
+                    "MaxTotalPages",
+                    pageIndex,
+                    null,
+                    totalPersistedBeforeWindow + windowPersisted);
+                stallReason = WindowStallReason.MaxPageLimit;
+                outcome = WindowProcessingOutcome.Stalled;
+                break;
+            }
+
             pagesProcessed = pageIndex;
             _logger.LogDebug(
                 "Fetching revision page {PageNumber} for ProductOwner window {WindowStart} - {WindowEnd}",
@@ -700,11 +927,29 @@ public class RevisionIngestionService
             var pageWorkItemIds = logPerPageSummary ? new HashSet<int>() : null;
 
             var pageRequestStartTimestamp = Stopwatch.GetTimestamp();
-            var result = await revisionClient.GetReportingRevisionsAsync(
-                window.StartUtc,
-                continuationToken,
-                expandMode: ReportingExpandMode.None,
-                cancellationToken);
+            ReportingRevisionsResult result;
+            try
+            {
+                result = await revisionClient.GetReportingRevisionsAsync(
+                    window.StartUtc,
+                    continuationToken,
+                    expandMode: ReportingExpandMode.None,
+                    cancellationToken);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException)
+            {
+                termination = new ReportingRevisionsTermination(
+                    ReportingRevisionsTerminationReason.ProgressWithoutData,
+                    $"Pagination fetch failed on page {pageIndex}: {ex.Message}");
+                LogEarlyTermination(
+                    "FetchFailed",
+                    pageIndex,
+                    null,
+                    totalPersistedBeforeWindow + windowPersisted);
+                stallReason = WindowStallReason.RawZeroWithHasMore;
+                outcome = WindowProcessingOutcome.Stalled;
+                break;
+            }
 
             var rawRevisionCount = result.Revisions.Count;
             var rawMinChangedDate = rawRevisionCount > 0 ? result.Revisions.Min(revision => revision.ChangedDate) : (DateTimeOffset?)null;
@@ -764,18 +1009,29 @@ public class RevisionIngestionService
             scopedRevisionsPersistedCount = persistedCount;
             windowPersisted += persistedCount;
             var totalPersistedAfterPage = totalPersistedBeforeWindow + windowPersisted;
+            if (persistedCount > 0)
+            {
+                foreach (var revision in scopedInWindow)
+                {
+                    persistedWorkItemIds.Add(revision.WorkItemId);
+                    var changedUtc = revision.ChangedDate.ToUniversalTime();
+                    minChangedDate = minChangedDate == null || changedUtc < minChangedDate ? changedUtc : minChangedDate;
+                    maxChangedDate = maxChangedDate == null || changedUtc > maxChangedDate ? changedUtc : maxChangedDate;
+                }
+            }
 
             var persistDurationMs = logPerPageSummary ? persistMetrics.PersistDurationMs : 0;
             if (logPerPageSummary && _logger.IsEnabled(LogLevel.Information))
             {
                 var memoryMb = GC.GetTotalMemory(false) / (1024d * 1024d);
                 _logger.LogInformation(
-                    "Reporting revisions page summary. WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PageIndex={PageIndex} RawRevisionCount={RawRevisionCount} ScopedRevisionCount={ScopedRevisionCount} PersistedCount={PersistedCount} HasMoreResults={HasMoreResults} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} SeenTokenRepeated={SeenTokenRepeated} DurationMs={DurationMs} TotalPersistedWindow={TotalPersistedWindow} TotalPersistedRun={TotalPersistedRun} MinChangedDateRaw={MinChangedDateRaw} MaxChangedDateRaw={MaxChangedDateRaw} MemoryMb={MemoryMb}",
+                    "Reporting revisions page summary. WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PageIndex={PageIndex} RawRevisionCount={RawRevisionCount} ScopedRevisionCount={ScopedRevisionCount} DistinctWorkItemCount={DistinctWorkItemCount} PersistedCount={PersistedCount} HasMoreResults={HasMoreResults} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} SeenTokenRepeated={SeenTokenRepeated} DurationMs={DurationMs} TotalPersistedWindow={TotalPersistedWindow} TotalPersistedRun={TotalPersistedRun} MinChangedDateRaw={MinChangedDateRaw} MaxChangedDateRaw={MaxChangedDateRaw} MemoryMb={MemoryMb}",
                     window.StartUtc,
                     window.EndUtc,
                     pageIndex,
                     rawRevisionCount,
                     scopedRevisionCount,
+                    pageWorkItemIds?.Count ?? 0,
                     scopedRevisionsPersistedCount,
                     hasMoreResults,
                     tokenTracking.TokenHash,
@@ -911,11 +1167,12 @@ public class RevisionIngestionService
             }
 
             var paginationAnomaly = termination != null;
+            var retryable = termination == null;
             var stalled = false;
             if (paginationAnomaly)
             {
                 stalled = true;
-                stallReason = WindowStallReason.TokenNotAdvancing;
+                stallReason = WindowStallReason.ClientTermination;
             }
             else if (tokenTracking.SeenTokenRepeated)
             {
@@ -959,27 +1216,31 @@ public class RevisionIngestionService
                 stallReason = WindowStallReason.TokenNotAdvancing;
                 stalled = true;
             }
-            else if (pageIndex >= maxTotalPages)
-            {
-                termination = new ReportingRevisionsTermination(
-                    ReportingRevisionsTerminationReason.MaxTotalPages,
-                    $"Exceeded maximum total pages ({maxTotalPages}) on page {pageIndex}.");
-                LogEarlyTermination(
-                    "MaxTotalPages",
-                    pageIndex,
-                    tokenTracking.TokenHash,
-                    totalPersistedAfterPage);
-                paginationAnomaly = true;
-                stallReason = WindowStallReason.MaxPageLimit;
-                stalled = true;
-            }
 
             if (stalled)
             {
+                if (retryable && retryAttempt < paginationOptions.MaxPageRetries)
+                {
+                    var backoff = GetRetryDelay(paginationOptions, retryAttempt);
+                    retryAttempt++;
+                    _logger.LogWarning(
+                        "Pagination anomaly detected; retrying page. PageIndex={PageIndex} Attempt={Attempt}/{MaxAttempts} StallReason={StallReason} BackoffMs={BackoffMs}",
+                        pageIndex,
+                        retryAttempt,
+                        paginationOptions.MaxPageRetries,
+                        stallReason,
+                        backoff.TotalMilliseconds);
+                    pageTracker.RewindPageIndex();
+                    pageTracker.RollbackToken(tokenTracking);
+                    await Task.Delay(backoff, cancellationToken);
+                    continue;
+                }
+
                 outcome = WindowProcessingOutcome.Stalled;
                 break;
             }
 
+            retryAttempt = 0;
             var windowComplete = false;
 
             if (pagePosition == PagePosition.OverlapsWindow)
@@ -999,6 +1260,7 @@ public class RevisionIngestionService
 
             continuationToken = pageContinuationToken;
             pageTracker.CommitToken(pageContinuationToken);
+            lastTokenHash = tokenTracking.TokenHash ?? lastTokenHash;
 
             if (windowComplete)
             {
@@ -1015,7 +1277,45 @@ public class RevisionIngestionService
             windowPersisted,
             stallReason,
             termination,
-            scopedFieldDumpLogged);
+            scopedFieldDumpLogged,
+            persistedWorkItemIds,
+            minChangedDate,
+            maxChangedDate,
+            lastTokenHash);
+    }
+
+    private static ReportingRevisionsTermination CreateTerminationFromStall(WindowStallReason stallReason)
+    {
+        return stallReason switch
+        {
+            WindowStallReason.TokenRepeated or WindowStallReason.TokenNotAdvancing => new ReportingRevisionsTermination(
+                ReportingRevisionsTerminationReason.RepeatedContinuationToken,
+                "Continuation token did not advance."),
+            WindowStallReason.RawZeroWithHasMore => new ReportingRevisionsTermination(
+                ReportingRevisionsTerminationReason.ProgressWithoutData,
+                "Reporting revisions returned no data while indicating more results."),
+            WindowStallReason.MaxPageLimit => new ReportingRevisionsTermination(
+                ReportingRevisionsTerminationReason.MaxTotalPages,
+                "Maximum total pages reached."),
+            WindowStallReason.ClientTermination => new ReportingRevisionsTermination(
+                ReportingRevisionsTerminationReason.ProgressWithoutData,
+                "Reporting client terminated pagination."),
+            _ => new ReportingRevisionsTermination(
+                ReportingRevisionsTerminationReason.ProgressWithoutData,
+                "Pagination anomaly detected.")
+        };
+    }
+
+    private static TimeSpan GetRetryDelay(
+        RevisionIngestionPaginationOptions paginationOptions,
+        int retryAttempt)
+    {
+        var baseDelaySeconds = Math.Max(0, paginationOptions.RetryBackoffSeconds);
+        var jitterSeconds = Math.Max(0, paginationOptions.RetryBackoffJitterSeconds);
+        var exponentialSeconds = baseDelaySeconds * Math.Pow(2, Math.Max(0, retryAttempt));
+        var jitter = jitterSeconds == 0 ? 0 : Random.Shared.NextDouble() * jitterSeconds;
+        var totalSeconds = Math.Max(0, exponentialSeconds + jitter);
+        return TimeSpan.FromSeconds(totalSeconds);
     }
 
     private static TimeSpan GrowWindowDuration(TimeSpan current)
@@ -1627,18 +1927,36 @@ public class RevisionIngestionService
         public TokenTrackingSnapshot TrackToken(string? newToken)
         {
             var tokenHash = HashContinuationToken(newToken);
-            var seenTokenRepeated = tokenHash != null && _seenTokenHashes.Contains(tokenHash);
+            var addedToSeen = false;
+            var seenTokenRepeated = false;
             if (tokenHash != null)
             {
-                _seenTokenHashes.Add(tokenHash);
+                addedToSeen = _seenTokenHashes.Add(tokenHash);
+                seenTokenRepeated = !addedToSeen;
             }
 
-            return new TokenTrackingSnapshot(tokenHash, seenTokenRepeated);
+            return new TokenTrackingSnapshot(tokenHash, seenTokenRepeated, addedToSeen);
         }
 
         public void CommitToken(string? newToken)
         {
             _previousToken = newToken;
+        }
+
+        public void RewindPageIndex()
+        {
+            if (PageIndex > 0)
+            {
+                PageIndex--;
+            }
+        }
+
+        public void RollbackToken(TokenTrackingSnapshot snapshot)
+        {
+            if (snapshot.TokenHash != null && snapshot.AddedToSeen)
+            {
+                _seenTokenHashes.Remove(snapshot.TokenHash);
+            }
         }
 
         private static string? HashContinuationToken(string? continuationToken)
@@ -1657,7 +1975,7 @@ public class RevisionIngestionService
         }
     }
 
-    private sealed record TokenTrackingSnapshot(string? TokenHash, bool SeenTokenRepeated);
+    private sealed record TokenTrackingSnapshot(string? TokenHash, bool SeenTokenRepeated, bool AddedToSeen);
 
     private sealed class RevisionIngestionDiagnosticState
     {
@@ -1753,7 +2071,11 @@ public class RevisionIngestionService
         int PersistedCount,
         WindowStallReason? StallReason,
         ReportingRevisionsTermination? Termination,
-        bool ScopedFieldDumpLogged);
+        bool ScopedFieldDumpLogged,
+        IReadOnlyCollection<int> PersistedWorkItemIds,
+        DateTimeOffset? MinChangedDate,
+        DateTimeOffset? MaxChangedDate,
+        string? LastTokenHash);
 
     private sealed record WindowRunResult(
         int TotalPersisted,
@@ -1763,7 +2085,21 @@ public class RevisionIngestionService
         bool BackfillComplete,
         bool ScopedFieldDumpLogged,
         ReportingRevisionsTermination? LastTermination,
-        RevisionIngestionRunOutcome RunOutcome);
+        RevisionIngestionRunOutcome RunOutcome,
+        int DistinctWorkItemCount,
+        IReadOnlyCollection<int> DistinctWorkItemIds,
+        DateTimeOffset? MinChangedDate,
+        DateTimeOffset? MaxChangedDate,
+        string? LastStableContinuationTokenHash,
+        WindowStallReason? LastStallReason);
+
+    private sealed record FallbackIngestionResult(
+        bool Success,
+        int PersistedCount,
+        int DistinctWorkItemCount,
+        IReadOnlyCollection<int> DistinctWorkItemIds,
+        DateTimeOffset? MinChangedDate,
+        DateTimeOffset? MaxChangedDate);
 
     private sealed record DatabaseRevisionSnapshot(
         int TotalRows,
@@ -1785,7 +2121,8 @@ public class RevisionIngestionService
         TokenRepeated = 0,
         RawZeroWithHasMore = 1,
         TokenNotAdvancing = 2,
-        MaxPageLimit = 3
+        MaxPageLimit = 3,
+        ClientTermination = 4
     }
 
     private enum PagePosition
@@ -1800,7 +2137,9 @@ public class RevisionIngestionService
 public enum RevisionIngestionRunOutcome
 {
     CompletedNormally = 0,
-    CompletedWithPaginationAnomaly = 1
+    CompletedWithPaginationAnomaly = 1,
+    CompletedWithFallback = 2,
+    Failed = 3
 }
 
 /// <summary>
@@ -1814,7 +2153,11 @@ public record RevisionIngestionResult
     public bool WasCancelled { get; init; }
     public bool WasTerminatedEarly { get; init; }
     public int RevisionsIngested { get; init; }
+    public int DistinctWorkItemsIngested { get; init; }
     public int PagesProcessed { get; init; }
+    public bool FallbackUsed { get; init; }
+    public DateTimeOffset? MinChangedDateIngested { get; init; }
+    public DateTimeOffset? MaxChangedDateIngested { get; init; }
     public string? ErrorMessage { get; init; }
     public ReportingRevisionsTerminationReason? TerminationReason { get; init; }
     public string? TerminationMessage { get; init; }
