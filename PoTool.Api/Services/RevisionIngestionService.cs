@@ -3,6 +3,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -39,6 +40,10 @@ public class RevisionIngestionService
     private static readonly DateTimeOffset BackfillStartMinimumUtc =
         new(new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
     private static readonly TimeSpan BackfillFallbackWindow = TimeSpan.FromDays(180);
+    private static readonly TimeSpan InitialWindowDuration = TimeSpan.FromDays(30);
+    private static readonly TimeSpan MaximumWindowDuration = TimeSpan.FromDays(120);
+    private static readonly TimeSpan PreferredMinimumWindowDuration = TimeSpan.FromDays(1);
+    private static readonly TimeSpan MinimumWindowDuration = TimeSpan.FromHours(6);
 
     private sealed record WorkItemDateSnapshot(
         int TfsId,
@@ -132,7 +137,6 @@ public class RevisionIngestionService
             });
 
             int totalRevisions = 0;
-            string? continuationToken = UnprotectContinuationToken(watermark.ContinuationToken);
             // For incremental sync, use last sync start time
             // For backfill with no last sync time, infer from cached work items
             DateTimeOffset? startDateTime = watermark.IsInitialBackfillComplete 
@@ -141,9 +145,6 @@ public class RevisionIngestionService
             ReportingRevisionsTermination? termination = null;
             var runOutcome = RevisionIngestionRunOutcome.CompletedNormally;
             var paginationOptions = _paginationOptions.CurrentValue;
-            var maxTotalPages = Math.Max(1, paginationOptions.MaxTotalPages);
-            var pageTracker = new ReportingRevisionsPageTracker();
-            var scopedFieldDumpLogged = false;
 
             var runStartUtc = DateTimeOffset.UtcNow;
             using var runScope = _diagnostics.StartRun(
@@ -166,273 +167,31 @@ public class RevisionIngestionService
             // Record sync start time for next incremental sync
             var syncStartTime = DateTimeOffset.UtcNow;
 
-            // Ingest revisions in batches
-            bool hasMore = true;
-
-            while (hasMore && !cts.Token.IsCancellationRequested)
+            var normalizedStartDateTime = startDateTime ?? GetFallbackBackfillStartDate(
+                productOwnerId,
+                "No cached backfill start date available; using fallback window.");
+            var backfillStartUtc = ClampBackfillStartDate(normalizedStartDateTime, productOwnerId, "BackfillStart");
+            var backfillEndUtc = DateTimeOffset.UtcNow;
+            if (backfillEndUtc <= backfillStartUtc)
             {
-                var pageIndex = pageTracker.NextPageIndex();
-                _logger.LogDebug(
-                    "Fetching revision page {PageNumber} for ProductOwner {ProductOwnerId}",
-                    pageIndex, productOwnerId);
-
-                var logPerPageSummary = runContext.IsEnabled && runContext.LogPerPageSummary;
-                var pageStartTimestamp = logPerPageSummary ? Stopwatch.GetTimestamp() : 0;
-                using var pageScope = _diagnostics.BeginPageScope(runContext, pageIndex);
-                var pageWorkItemIds = logPerPageSummary ? new HashSet<int>() : null;
-
-                var pageRequestStartTimestamp = Stopwatch.GetTimestamp();
-                var result = await revisionClient.GetReportingRevisionsAsync(
-                    startDateTime,
-                    continuationToken,
-                    expandMode: ReportingExpandMode.None,
-                    cts.Token);
-
-                var rawRevisionCount = result.Revisions.Count;
-                var scopedRevisions = result.Revisions
-                    .Where(revision => allowedWorkItemIds.Contains(revision.WorkItemId))
-                    .ToList();
-                var scopedRevisionCount = scopedRevisions.Count;
-                var scopedRevisionsPersistedCount = 0; // Will be set after persistence
-                var pageContinuationToken = result.ContinuationToken;
-                var pageRequestDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(pageRequestStartTimestamp);
-                var tokenAdvanced = pageTracker.IsTokenAdvanced(pageContinuationToken);
-                var tokenTracking = pageTracker.TrackToken(pageContinuationToken);
-                var hasMoreResults = result.HasMoreResults;
-                if (result.Termination != null)
-                {
-                    termination = result.Termination;
-                    _logger.LogWarning(
-                        "Reporting revisions pagination terminated early. Reason={Reason} Message={Message}",
-                        termination.Reason,
-                        termination.Message);
-                }
-
-                // Emit a single diagnostic dump of whitelisted fields for the first scoped page only.
-                if (!scopedFieldDumpLogged && scopedRevisionCount > 0)
-                {
-                    LogScopedRevisionFieldSnapshot(pageIndex, scopedRevisions);
-                    scopedFieldDumpLogged = true;
-                }
-
-                var persistMetrics = new PersistMetrics();
-
-                // Process and persist revisions
-                var persistedCount = await PersistRevisionsAsync(context, scopedRevisions, persistMetrics, cts.Token);
-                scopedRevisionsPersistedCount = persistedCount;
-                totalRevisions += persistedCount;
-
-                var persistDurationMs = logPerPageSummary ? persistMetrics.PersistDurationMs : 0;
-                if (logPerPageSummary && _logger.IsEnabled(LogLevel.Information))
-                {
-                    var memoryMb = GC.GetTotalMemory(false) / (1024d * 1024d);
-                    _logger.LogInformation(
-                        "Reporting revisions page summary. PageIndex={PageIndex} RawRevisionCount={RawRevisionCount} ScopedRevisionCount={ScopedRevisionCount} PersistedCount={PersistedCount} HasMoreResults={HasMoreResults} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} SeenTokenRepeated={SeenTokenRepeated} DurationMs={DurationMs} TotalPersistedSoFar={TotalPersistedSoFar} MemoryMb={MemoryMb}",
-                        pageIndex,
-                        rawRevisionCount,
-                        scopedRevisionCount,
-                        scopedRevisionsPersistedCount,
-                        hasMoreResults,
-                        tokenTracking.TokenHash,
-                        tokenAdvanced,
-                        tokenTracking.SeenTokenRepeated,
-                        pageRequestDurationMs,
-                        totalRevisions,
-                        memoryMb);
-                }
-
-                // Track impacted work item IDs for relation hydration
-                foreach (var revision in scopedRevisions)
-                {
-                    pageWorkItemIds?.Add(revision.WorkItemId);
-                }
-
-                _logger.LogInformation(
-                    "Persisted {Count} revisions (page {Page}) for ProductOwner {ProductOwnerId}",
-                    persistedCount, pageIndex, productOwnerId);
-
-                _logger.LogInformation(
-                    "Revision ingestion page persist. TransactionUsed={TransactionUsed} PersistDurationMs={PersistDurationMs} SaveChangesDurationMs={SaveChangesDurationMs} CommitDurationMs={CommitDurationMs} RevisionHeaderCount={RevisionHeaderCount} FieldDeltaCount={FieldDeltaCount} RelationDeltaCount={RelationDeltaCount}",
-                    persistMetrics.TransactionUsed,
-                    persistMetrics.PersistDurationMs,
-                    persistMetrics.SaveChangesDurationMs,
-                    persistMetrics.CommitDurationMs ?? -1,
-                    persistMetrics.RevisionHeaderCount,
-                    persistMetrics.FieldDeltaCount,
-                    persistMetrics.RelationDeltaCount);
-
-                if (runContext.LogEfSaveChangesDetails)
-                {
-                    _diagnostics.LogSaveChangesDetails(
-                        runContext,
-                        persistMetrics.SaveChangesDurationMs,
-                        persistMetrics.RevisionHeaderCount,
-                        persistMetrics.FieldDeltaCount,
-                        persistMetrics.RelationDeltaCount);
-                }
-
-                if (runContext.IsEnabled &&
-                    runContext.LogGcStatsEveryNPages > 0 &&
-                    pageIndex % runContext.LogGcStatsEveryNPages == 0)
-                {
-                    var trackedEntries = context.ChangeTracker.Entries().Count();
-                    _diagnostics.LogGcStats(
-                        runContext,
-                        GC.GetTotalMemory(false),
-                        GC.CollectionCount(0),
-                        GC.CollectionCount(1),
-                        GC.CollectionCount(2),
-                        trackedEntries);
-                }
-
-                context.ChangeTracker.Clear();
-                context.RevisionIngestionWatermarks.Attach(watermark);
-
-                continuationToken = pageContinuationToken;
-
-                if (pageContinuationToken != null || rawRevisionCount > 0)
-                {
-                    watermark.ContinuationToken = ProtectContinuationToken(pageContinuationToken);
-                    context.Entry(watermark).State = EntityState.Modified;
-                    await context.SaveChangesAsync(cts.Token);
-                }
-
-                progressCallback?.Invoke(new RevisionIngestionProgress
-                {
-                    Stage = watermark.IsInitialBackfillComplete ? "Incremental Sync" : "Initial Backfill",
-                    PercentComplete = result.HasMoreResults ? 0 : 100, // Keep at 0% until the final page completes because total pages are unknown
-                    RevisionsProcessed = totalRevisions,
-                    CurrentPage = pageIndex
-                });
-
-                if (logPerPageSummary)
-                {
-                    var continuationTokenPresent = !string.IsNullOrEmpty(result.ContinuationToken);
-                    var continuationTokenLength = continuationTokenPresent ? result.ContinuationToken!.Length : 0;
-                    var httpDurationMs = result.HttpDurationMs ?? 0;
-                    var dbSlow = persistDurationMs >= runContext.SlowDbThresholdMs;
-                    var httpSlow = httpDurationMs >= runContext.SlowHttpThresholdMs;
-                    var totalPageDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(pageStartTimestamp);
-                    var pageSlow = totalPageDurationMs >= runContext.SlowPageThresholdMs;
-                    var memoryBytes = GC.GetTotalMemory(false);
-
-                    _diagnostics.LogPageRequest(
-                        runContext,
-                        continuationTokenPresent,
-                        continuationTokenLength,
-                        result.HttpDurationMs,
-                        result.HttpStatusCode,
-                        result.ParseDurationMs,
-                        result.TransformDurationMs);
-
-                    _diagnostics.LogPageCounts(
-                        runContext,
-                        rawRevisionCount,
-                        scopedRevisionCount,
-                        pageWorkItemIds?.Count ?? 0,
-                        persistMetrics?.RevisionHeaderCount ?? 0,
-                        persistMetrics?.FieldDeltaCount ?? 0,
-                        persistMetrics?.RelationDeltaCount ?? 0);
-
-                    _diagnostics.LogPagePersistence(
-                        runContext,
-                        persistDurationMs,
-                        totalPageDurationMs,
-                        pageSlow,
-                        httpSlow,
-                        dbSlow,
-                        memoryBytes);
-                }
-
-                if (termination == null && result.Termination != null)
-                {
-                    termination = result.Termination;
-                    runOutcome = RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly;
-                }
-
-                var paginationAnomaly = termination != null;
-
-                // Apply pagination stop/continue rules in priority order:
-                // 1. Explicit termination from TFS client
-                if (paginationAnomaly)
-                {
-                    hasMore = false;
-                }
-                // 2. Token repeated (safety: infinite loop prevention)
-                else if (tokenTracking.SeenTokenRepeated)
-                {
-                    termination = new ReportingRevisionsTermination(
-                        ReportingRevisionsTerminationReason.RepeatedContinuationToken,
-                        $"Continuation token repeated on page {pageIndex}.");
-                    LogEarlyTermination(
-                        "TokenRepeated",
-                        pageIndex,
-                        tokenTracking.TokenHash,
-                        totalRevisions);
-                    paginationAnomaly = true;
-                    hasMore = false;
-                }
-                // 3. No more results from TFS (normal completion)
-                else if (!hasMoreResults)
-                {
-                    hasMore = false;
-                }
-                // 4. Dead page or stalled pagination (API anomaly)
-                else if (rawRevisionCount == 0 && (hasMoreResults || !tokenAdvanced || tokenTracking.SeenTokenRepeated))
-                {
-                    termination = new ReportingRevisionsTermination(
-                        ReportingRevisionsTerminationReason.ProgressWithoutData,
-                        $"Reporting revisions returned no data on page {pageIndex} while indicating more results.");
-                    LogEarlyTermination(
-                        "DeadPageNoData",
-                        pageIndex,
-                        tokenTracking.TokenHash,
-                        totalRevisions);
-                    paginationAnomaly = true;
-                    hasMore = false;
-                }
-                // 5. Token did not advance (safety: infinite loop prevention)
-                else if (!tokenAdvanced)
-                {
-                    termination = new ReportingRevisionsTermination(
-                        ReportingRevisionsTerminationReason.RepeatedContinuationToken,
-                        $"Continuation token did not advance on page {pageIndex}.");
-                    LogEarlyTermination(
-                        "TokenNotAdvanced",
-                        pageIndex,
-                        tokenTracking.TokenHash,
-                        totalRevisions);
-                    paginationAnomaly = true;
-                    hasMore = false;
-                }
-                // 6. MaxTotalPages exceeded (safety: prevent runaway pagination)
-                else if (pageIndex >= maxTotalPages)
-                {
-                    termination = new ReportingRevisionsTermination(
-                        ReportingRevisionsTerminationReason.MaxTotalPages,
-                        $"Exceeded maximum total pages ({maxTotalPages}) on page {pageIndex}.");
-                    LogEarlyTermination(
-                        "MaxTotalPages",
-                        pageIndex,
-                        tokenTracking.TokenHash,
-                        totalRevisions);
-                    paginationAnomaly = true;
-                    hasMore = false;
-                }
-                // 7. Continue to next page (only when data returned and token advanced)
-                else
-                {
-                    pageTracker.CommitToken(pageContinuationToken);
-                    hasMore = true;
-                }
-
-                if (paginationAnomaly)
-                {
-                    runOutcome = RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly;
-                }
-
-                pageWorkItemIds?.Clear();
+                backfillEndUtc = backfillStartUtc.AddMinutes(1);
             }
+
+            var windowRunResult = await ProcessWindowsAsync(
+                context,
+                revisionClient,
+                allowedWorkItemIds,
+                watermark,
+                backfillStartUtc,
+                backfillEndUtc,
+                paginationOptions,
+                runContext,
+                progressCallback,
+                cts.Token);
+
+            totalRevisions = windowRunResult.TotalPersisted;
+            termination = windowRunResult.LastTermination;
+            runOutcome = windowRunResult.RunOutcome;
 
             // Mark ingestion complete
             context.ChangeTracker.Clear();
@@ -440,10 +199,7 @@ public class RevisionIngestionService
             watermark.LastIngestionCompletedAt = DateTimeOffset.UtcNow;
             watermark.LastIngestionRevisionCount = totalRevisions;
             watermark.LastRunOutcome = runOutcome.ToString();
-            if (termination == null)
-            {
-                watermark.ContinuationToken = null; // Clear token on successful completion
-            }
+            watermark.ContinuationToken = null; // Windowed ingestion does not reuse tokens across runs
 
             if (termination != null)
             {
@@ -451,10 +207,14 @@ public class RevisionIngestionService
                 watermark.LastErrorAt = DateTimeOffset.UtcNow;
             }
 
-            if (!watermark.IsInitialBackfillComplete && termination == null)
+            if (windowRunResult.BackfillComplete)
             {
                 watermark.IsInitialBackfillComplete = true;
-                _logger.LogInformation("Initial backfill completed for ProductOwner {ProductOwnerId}", productOwnerId);
+                _logger.LogInformation(
+                    "Initial backfill completed for ProductOwner {ProductOwnerId}. WindowsProcessed={WindowsProcessed} WindowsMarkedUnretrievable={WindowsMarkedUnretrievable}",
+                    productOwnerId,
+                    windowRunResult.WindowsProcessed,
+                    windowRunResult.WindowsMarkedUnretrievable);
             }
 
             if (termination == null)
@@ -462,6 +222,7 @@ public class RevisionIngestionService
                 // Update watermark for next incremental sync
                 watermark.LastSyncStartDateTime = syncStartTime;
             }
+
             context.Entry(watermark).State = EntityState.Modified;
             await context.SaveChangesAsync(cts.Token);
             context.ChangeTracker.Clear();
@@ -475,21 +236,27 @@ public class RevisionIngestionService
             });
 
             _logger.LogInformation(
-                "Revision ingestion completed for ProductOwner {ProductOwnerId}: {TotalRevisions} revisions in {Pages} pages. Outcome={Outcome}",
-                productOwnerId, totalRevisions, pageTracker.PageIndex, runOutcome);
+                "Revision ingestion completed for ProductOwner {ProductOwnerId}: {TotalRevisions} revisions. Outcome={Outcome} WindowsProcessed={WindowsProcessed} WindowsMarkedUnretrievable={WindowsMarkedUnretrievable} BackfillComplete={BackfillComplete}",
+                productOwnerId,
+                totalRevisions,
+                runOutcome,
+                windowRunResult.WindowsProcessed,
+                windowRunResult.WindowsMarkedUnretrievable,
+                windowRunResult.BackfillComplete);
 
             return new RevisionIngestionResult
             {
                 RunOutcome = runOutcome,
                 Success = true,
                 RevisionsIngested = totalRevisions,
-                PagesProcessed = pageTracker.PageIndex,
+                PagesProcessed = windowRunResult.PagesProcessed,
                 WasTerminatedEarly = termination != null,
                 TerminationReason = termination?.Reason,
                 TerminationMessage = termination?.Message,
                 Message = termination != null
                     ? $"Ingestion terminated early after {totalRevisions} revisions: {termination.Message}"
-                    : $"Successfully ingested {totalRevisions} revisions"
+                    : $"Successfully ingested {totalRevisions} revisions",
+                BackfillComplete = windowRunResult.BackfillComplete
             };
         }
         catch (OperationCanceledException)
@@ -725,6 +492,577 @@ public class RevisionIngestionService
         }
 
         return utc;
+    }
+
+    private async Task<WindowRunResult> ProcessWindowsAsync(
+        PoToolDbContext context,
+        IRevisionTfsClient revisionClient,
+        HashSet<int> allowedWorkItemIds,
+        RevisionIngestionWatermarkEntity watermark,
+        DateTimeOffset backfillStartUtc,
+        DateTimeOffset backfillEndUtc,
+        RevisionIngestionPaginationOptions paginationOptions,
+        RevisionIngestionRunContext runContext,
+        Action<RevisionIngestionProgress>? progressCallback,
+        CancellationToken cancellationToken)
+    {
+        var totalPersisted = 0;
+        var scopedFieldDumpLogged = false;
+        var windowsProcessed = 0;
+        var windowsMarkedUnretrievable = 0;
+        var pagesProcessed = 0;
+        var lastTermination = (ReportingRevisionsTermination?)null;
+        var windowSequence = 0;
+        var nextWindowStart = backfillStartUtc;
+        var currentWindowDuration = InitialWindowDuration;
+        var windowQueue = new Queue<RevisionIngestionWindow>();
+
+        void EnqueueNextBaseWindow()
+        {
+            if (nextWindowStart >= backfillEndUtc)
+            {
+                return;
+            }
+
+            var nextWindowEnd = nextWindowStart + currentWindowDuration;
+            if (nextWindowEnd > backfillEndUtc)
+            {
+                nextWindowEnd = backfillEndUtc;
+            }
+
+            windowQueue.Enqueue(new RevisionIngestionWindow(
+                nextWindowStart,
+                nextWindowEnd,
+                depth: 0,
+                sequence: Interlocked.Increment(ref windowSequence)));
+            nextWindowStart = nextWindowEnd;
+        }
+
+        EnqueueNextBaseWindow();
+
+        while (windowQueue.Count > 0 && !cancellationToken.IsCancellationRequested)
+        {
+            var window = windowQueue.Dequeue();
+            var windowResult = await ProcessSingleWindowAsync(
+                window,
+                context,
+                revisionClient,
+                allowedWorkItemIds,
+                paginationOptions,
+                runContext,
+                progressCallback,
+                totalPersisted,
+                ref scopedFieldDumpLogged,
+                cancellationToken);
+
+            windowsProcessed++;
+            pagesProcessed += windowResult.PagesProcessed;
+            totalPersisted += windowResult.PersistedCount;
+            lastTermination ??= windowResult.Termination;
+
+            if (windowResult.Outcome == WindowProcessingOutcome.Stalled)
+            {
+                var splitChildren = SplitWindow(window, ref windowSequence);
+                if (splitChildren.Count == 0)
+                {
+                    windowResult = windowResult with { Outcome = WindowProcessingOutcome.MarkedUnretrievableAtMinimumChunk };
+                }
+                else
+                {
+                    windowResult = windowResult with { Outcome = WindowProcessingOutcome.SplitScheduled };
+                    InsertWindowsAtFront(windowQueue, splitChildren);
+                }
+            }
+
+            if (windowResult.Outcome == WindowProcessingOutcome.MarkedUnretrievableAtMinimumChunk)
+            {
+                windowsMarkedUnretrievable++;
+            }
+            else if (windowResult.Outcome is WindowProcessingOutcome.CompletedNormally or WindowProcessingOutcome.CompletedRawEmpty)
+            {
+                currentWindowDuration = GrowWindowDuration(currentWindowDuration);
+            }
+            else
+            {
+                currentWindowDuration = ShrinkWindowDuration(currentWindowDuration);
+            }
+
+            LogWindowOutcome(window, windowResult);
+
+            if (windowQueue.Count == 0)
+            {
+                EnqueueNextBaseWindow();
+            }
+        }
+
+        var backfillComplete = windowQueue.Count == 0 && nextWindowStart >= backfillEndUtc;
+        var runOutcome = windowsMarkedUnretrievable > 0 || lastTermination != null
+            ? RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly
+            : RevisionIngestionRunOutcome.CompletedNormally;
+
+        LogRunSummary(
+            backfillStartUtc,
+            backfillEndUtc,
+            windowsProcessed,
+            windowsMarkedUnretrievable,
+            totalPersisted,
+            backfillComplete);
+
+        return new WindowRunResult(
+            totalPersisted,
+            pagesProcessed,
+            windowsProcessed,
+            windowsMarkedUnretrievable,
+            backfillComplete,
+            scopedFieldDumpLogged,
+            lastTermination,
+            runOutcome);
+    }
+
+    private static void InsertWindowsAtFront(
+        Queue<RevisionIngestionWindow> queue,
+        IReadOnlyList<RevisionIngestionWindow> children)
+    {
+        if (children.Count == 0)
+        {
+            return;
+        }
+
+        var reordered = new Queue<RevisionIngestionWindow>(children.Count + queue.Count);
+        foreach (var child in children)
+        {
+            reordered.Enqueue(child);
+        }
+
+        while (queue.Count > 0)
+        {
+            reordered.Enqueue(queue.Dequeue());
+        }
+
+        while (reordered.Count > 0)
+        {
+            queue.Enqueue(reordered.Dequeue());
+        }
+    }
+
+    private async Task<WindowProcessingResult> ProcessSingleWindowAsync(
+        RevisionIngestionWindow window,
+        PoToolDbContext context,
+        IRevisionTfsClient revisionClient,
+        HashSet<int> allowedWorkItemIds,
+        RevisionIngestionPaginationOptions paginationOptions,
+        RevisionIngestionRunContext runContext,
+        Action<RevisionIngestionProgress>? progressCallback,
+        int totalPersistedBeforeWindow,
+        ref bool scopedFieldDumpLogged,
+        CancellationToken cancellationToken)
+    {
+        var pageTracker = new ReportingRevisionsPageTracker();
+        var continuationToken = (string?)null;
+        var pagesProcessed = 0;
+        var windowPersisted = 0;
+        var outcome = WindowProcessingOutcome.CompletedRawEmpty;
+        var stallReason = (WindowStallReason?)null;
+        var termination = (ReportingRevisionsTermination?)null;
+        var hasSeenWindowOverlap = false;
+        var maxTotalPages = Math.Max(1, paginationOptions.MaxTotalPages);
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var pageIndex = pageTracker.NextPageIndex();
+            pagesProcessed = pageIndex;
+            _logger.LogDebug(
+                "Fetching revision page {PageNumber} for ProductOwner window {WindowStart} - {WindowEnd}",
+                pageIndex,
+                window.StartUtc,
+                window.EndUtc);
+
+            var logPerPageSummary = runContext.IsEnabled && runContext.LogPerPageSummary;
+            var pageStartTimestamp = logPerPageSummary ? Stopwatch.GetTimestamp() : 0;
+            using var pageScope = _diagnostics.BeginPageScope(runContext, pageIndex);
+            var pageWorkItemIds = logPerPageSummary ? new HashSet<int>() : null;
+
+            var pageRequestStartTimestamp = Stopwatch.GetTimestamp();
+            var result = await revisionClient.GetReportingRevisionsAsync(
+                window.StartUtc,
+                continuationToken,
+                expandMode: ReportingExpandMode.None,
+                cancellationToken);
+
+            var rawRevisionCount = result.Revisions.Count;
+            var rawMinChangedDate = rawRevisionCount > 0 ? result.Revisions.Min(revision => revision.ChangedDate) : (DateTimeOffset?)null;
+            var rawMaxChangedDate = rawRevisionCount > 0 ? result.Revisions.Max(revision => revision.ChangedDate) : (DateTimeOffset?)null;
+            var scopedRevisions = result.Revisions
+                .Where(revision => allowedWorkItemIds.Contains(revision.WorkItemId))
+                .ToList();
+            var scopedInWindow = scopedRevisions
+                .Where(revision => revision.ChangedDate >= window.StartUtc && revision.ChangedDate < window.EndUtc)
+                .ToList();
+            var scopedRevisionCount = scopedRevisions.Count;
+            var scopedRevisionsPersistedCount = 0;
+            var pageContinuationToken = result.ContinuationToken;
+            var pageRequestDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(pageRequestStartTimestamp);
+            var tokenAdvanced = pageTracker.IsTokenAdvanced(pageContinuationToken);
+            var tokenTracking = pageTracker.TrackToken(pageContinuationToken);
+            var hasMoreResults = result.HasMoreResults;
+            var pagePosition = ClassifyPage(rawMinChangedDate, rawMaxChangedDate, window);
+
+            if (result.Termination != null)
+            {
+                termination = result.Termination;
+                _logger.LogWarning(
+                    "Reporting revisions pagination terminated early. Reason={Reason} Message={Message}",
+                    termination.Reason,
+                    termination.Message);
+            }
+
+            if (!scopedFieldDumpLogged && scopedRevisionCount > 0)
+            {
+                LogScopedRevisionFieldSnapshot(pageIndex, scopedRevisions);
+                scopedFieldDumpLogged = true;
+            }
+
+            var persistMetrics = new PersistMetrics();
+            var persistedCount = await PersistRevisionsAsync(context, scopedInWindow, persistMetrics, cancellationToken);
+            scopedRevisionsPersistedCount = persistedCount;
+            windowPersisted += persistedCount;
+            var totalPersistedAfterPage = totalPersistedBeforeWindow + windowPersisted;
+
+            var persistDurationMs = logPerPageSummary ? persistMetrics.PersistDurationMs : 0;
+            if (logPerPageSummary && _logger.IsEnabled(LogLevel.Information))
+            {
+                var memoryMb = GC.GetTotalMemory(false) / (1024d * 1024d);
+                _logger.LogInformation(
+                    "Reporting revisions page summary. WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PageIndex={PageIndex} RawRevisionCount={RawRevisionCount} ScopedRevisionCount={ScopedRevisionCount} PersistedCount={PersistedCount} HasMoreResults={HasMoreResults} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} SeenTokenRepeated={SeenTokenRepeated} DurationMs={DurationMs} TotalPersistedWindow={TotalPersistedWindow} TotalPersistedRun={TotalPersistedRun} MinChangedDateRaw={MinChangedDateRaw} MaxChangedDateRaw={MaxChangedDateRaw} MemoryMb={MemoryMb}",
+                    window.StartUtc,
+                    window.EndUtc,
+                    pageIndex,
+                    rawRevisionCount,
+                    scopedRevisionCount,
+                    scopedRevisionsPersistedCount,
+                    hasMoreResults,
+                    tokenTracking.TokenHash,
+                    tokenAdvanced,
+                    tokenTracking.SeenTokenRepeated,
+                    pageRequestDurationMs,
+                    windowPersisted,
+                    totalPersistedAfterPage,
+                    rawMinChangedDate,
+                    rawMaxChangedDate,
+                    memoryMb);
+            }
+
+            foreach (var revision in scopedRevisions)
+            {
+                pageWorkItemIds?.Add(revision.WorkItemId);
+            }
+
+            _logger.LogInformation(
+                "Persisted {Count} revisions (page {Page}) for window {WindowStart} - {WindowEnd}",
+                scopedRevisionsPersistedCount,
+                pageIndex,
+                window.StartUtc,
+                window.EndUtc);
+
+            _logger.LogInformation(
+                "Revision ingestion page persist. TransactionUsed={TransactionUsed} PersistDurationMs={PersistDurationMs} SaveChangesDurationMs={SaveChangesDurationMs} CommitDurationMs={CommitDurationMs} RevisionHeaderCount={RevisionHeaderCount} FieldDeltaCount={FieldDeltaCount} RelationDeltaCount={RelationDeltaCount}",
+                persistMetrics.TransactionUsed,
+                persistMetrics.PersistDurationMs,
+                persistMetrics.SaveChangesDurationMs,
+                persistMetrics.CommitDurationMs ?? -1,
+                persistMetrics.RevisionHeaderCount,
+                persistMetrics.FieldDeltaCount,
+                persistMetrics.RelationDeltaCount);
+
+            if (runContext.LogEfSaveChangesDetails)
+            {
+                _diagnostics.LogSaveChangesDetails(
+                    runContext,
+                    persistMetrics.SaveChangesDurationMs,
+                    persistMetrics.RevisionHeaderCount,
+                    persistMetrics.FieldDeltaCount,
+                    persistMetrics.RelationDeltaCount);
+            }
+
+            if (runContext.IsEnabled &&
+                runContext.LogGcStatsEveryNPages > 0 &&
+                pageIndex % runContext.LogGcStatsEveryNPages == 0)
+            {
+                var trackedEntries = context.ChangeTracker.Entries().Count();
+                _diagnostics.LogGcStats(
+                    runContext,
+                    GC.GetTotalMemory(false),
+                    GC.CollectionCount(0),
+                    GC.CollectionCount(1),
+                    GC.CollectionCount(2),
+                    trackedEntries);
+            }
+
+            context.ChangeTracker.Clear();
+            context.RevisionIngestionWatermarks.Attach(watermark);
+
+            progressCallback?.Invoke(new RevisionIngestionProgress
+            {
+                Stage = watermark.IsInitialBackfillComplete ? "Incremental Sync" : "Initial Backfill",
+                PercentComplete = 0,
+                RevisionsProcessed = totalPersistedAfterPage,
+                CurrentPage = pageIndex
+            });
+
+            if (logPerPageSummary)
+            {
+                var continuationTokenPresent = !string.IsNullOrEmpty(result.ContinuationToken);
+                var continuationTokenLength = continuationTokenPresent ? result.ContinuationToken!.Length : 0;
+                var httpDurationMs = result.HttpDurationMs ?? 0;
+                var dbSlow = persistDurationMs >= runContext.SlowDbThresholdMs;
+                var httpSlow = httpDurationMs >= runContext.SlowHttpThresholdMs;
+                var totalPageDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(pageStartTimestamp);
+                var pageSlow = totalPageDurationMs >= runContext.SlowPageThresholdMs;
+                var memoryBytes = GC.GetTotalMemory(false);
+
+                _diagnostics.LogPageRequest(
+                    runContext,
+                    continuationTokenPresent,
+                    continuationTokenLength,
+                    result.HttpDurationMs,
+                    result.HttpStatusCode,
+                    result.ParseDurationMs,
+                    result.TransformDurationMs);
+
+                _diagnostics.LogPageCounts(
+                    runContext,
+                    rawRevisionCount,
+                    scopedRevisionCount,
+                    pageWorkItemIds?.Count ?? 0,
+                    persistMetrics?.RevisionHeaderCount ?? 0,
+                    persistMetrics?.FieldDeltaCount ?? 0,
+                    persistMetrics?.RelationDeltaCount ?? 0);
+
+                _diagnostics.LogPagePersistence(
+                    runContext,
+                    persistDurationMs,
+                    totalPageDurationMs,
+                    pageSlow,
+                    httpSlow,
+                    dbSlow,
+                    memoryBytes);
+            }
+
+            var paginationAnomaly = termination != null;
+            var stalled = false;
+            if (paginationAnomaly)
+            {
+                stalled = true;
+                stallReason = WindowStallReason.TokenNotAdvancing;
+            }
+            else if (tokenTracking.SeenTokenRepeated)
+            {
+                termination = new ReportingRevisionsTermination(
+                    ReportingRevisionsTerminationReason.RepeatedContinuationToken,
+                    $"Continuation token repeated on page {pageIndex}.");
+                LogEarlyTermination(
+                    "TokenRepeated",
+                    pageIndex,
+                    tokenTracking.TokenHash,
+                    totalPersistedAfterPage);
+                paginationAnomaly = true;
+                stallReason = WindowStallReason.TokenRepeated;
+                stalled = true;
+            }
+            else if (rawRevisionCount == 0 && (hasMoreResults || !tokenAdvanced))
+            {
+                termination = new ReportingRevisionsTermination(
+                    ReportingRevisionsTerminationReason.ProgressWithoutData,
+                    $"Reporting revisions returned no data on page {pageIndex} while indicating more results.");
+                LogEarlyTermination(
+                    "DeadPageNoData",
+                    pageIndex,
+                    tokenTracking.TokenHash,
+                    totalPersistedAfterPage);
+                paginationAnomaly = true;
+                stallReason = WindowStallReason.RawZeroWithHasMore;
+                stalled = true;
+            }
+            else if (!tokenAdvanced && hasMoreResults)
+            {
+                termination = new ReportingRevisionsTermination(
+                    ReportingRevisionsTerminationReason.RepeatedContinuationToken,
+                    $"Continuation token did not advance on page {pageIndex}.");
+                LogEarlyTermination(
+                    "TokenNotAdvanced",
+                    pageIndex,
+                    tokenTracking.TokenHash,
+                    totalPersistedAfterPage);
+                paginationAnomaly = true;
+                stallReason = WindowStallReason.TokenNotAdvancing;
+                stalled = true;
+            }
+            else if (pageIndex >= maxTotalPages)
+            {
+                termination = new ReportingRevisionsTermination(
+                    ReportingRevisionsTerminationReason.MaxTotalPages,
+                    $"Exceeded maximum total pages ({maxTotalPages}) on page {pageIndex}.");
+                LogEarlyTermination(
+                    "MaxTotalPages",
+                    pageIndex,
+                    tokenTracking.TokenHash,
+                    totalPersistedAfterPage);
+                paginationAnomaly = true;
+                stallReason = WindowStallReason.MaxPageLimit;
+                stalled = true;
+            }
+
+            if (stalled)
+            {
+                outcome = WindowProcessingOutcome.Stalled;
+                break;
+            }
+
+            var windowComplete = false;
+
+            if (pagePosition == PagePosition.OverlapsWindow)
+            {
+                hasSeenWindowOverlap = true;
+            }
+            else if (pagePosition == PagePosition.OlderThanWindow ||
+                (pagePosition == PagePosition.NewerThanWindow && hasSeenWindowOverlap))
+            {
+                windowComplete = true;
+            }
+
+            if (!hasMoreResults)
+            {
+                windowComplete = true;
+            }
+
+            continuationToken = pageContinuationToken;
+            pageTracker.CommitToken(pageContinuationToken);
+
+            if (windowComplete)
+            {
+                outcome = windowPersisted > 0 ? WindowProcessingOutcome.CompletedNormally : WindowProcessingOutcome.CompletedRawEmpty;
+                break;
+            }
+        }
+
+        return new WindowProcessingResult(
+            outcome,
+            pagesProcessed,
+            windowPersisted,
+            stallReason,
+            termination);
+    }
+
+    private static TimeSpan GrowWindowDuration(TimeSpan current)
+    {
+        var doubled = TimeSpan.FromTicks(current.Ticks * 2);
+        if (doubled > MaximumWindowDuration)
+        {
+            return MaximumWindowDuration;
+        }
+
+        return doubled;
+    }
+
+    private static TimeSpan ShrinkWindowDuration(TimeSpan current)
+    {
+        if (current <= PreferredMinimumWindowDuration)
+        {
+            return MinimumWindowDuration;
+        }
+
+        var halved = TimeSpan.FromTicks(current.Ticks / 2);
+        if (halved < PreferredMinimumWindowDuration)
+        {
+            return PreferredMinimumWindowDuration;
+        }
+
+        return halved;
+    }
+
+    private static IReadOnlyList<RevisionIngestionWindow> SplitWindow(
+        RevisionIngestionWindow window,
+        ref int windowSequence)
+    {
+        var duration = window.EndUtc - window.StartUtc;
+        if (duration <= MinimumWindowDuration)
+        {
+            return Array.Empty<RevisionIngestionWindow>();
+        }
+
+        if (duration <= PreferredMinimumWindowDuration)
+        {
+            var start = window.StartUtc;
+            var end = window.EndUtc;
+            var mid = start.Add(duration / 2);
+            return new[]
+            {
+                new RevisionIngestionWindow(start, mid, window.Depth + 1, Interlocked.Increment(ref windowSequence)),
+                new RevisionIngestionWindow(mid, end, window.Depth + 1, Interlocked.Increment(ref windowSequence))
+            };
+        }
+
+        var splitPoint = window.StartUtc + TimeSpan.FromTicks(duration.Ticks / 2);
+        return new[]
+        {
+            new RevisionIngestionWindow(window.StartUtc, splitPoint, window.Depth + 1, Interlocked.Increment(ref windowSequence)),
+            new RevisionIngestionWindow(splitPoint, window.EndUtc, window.Depth + 1, Interlocked.Increment(ref windowSequence))
+        };
+    }
+
+    private static PagePosition ClassifyPage(
+        DateTimeOffset? minChangedDate,
+        DateTimeOffset? maxChangedDate,
+        RevisionIngestionWindow window)
+    {
+        if (minChangedDate == null || maxChangedDate == null)
+        {
+            return PagePosition.Unknown;
+        }
+
+        if (minChangedDate.Value >= window.EndUtc)
+        {
+            return PagePosition.NewerThanWindow;
+        }
+
+        if (maxChangedDate.Value < window.StartUtc)
+        {
+            return PagePosition.OlderThanWindow;
+        }
+
+        return PagePosition.OverlapsWindow;
+    }
+
+    private void LogWindowOutcome(
+        RevisionIngestionWindow window,
+        WindowProcessingResult result)
+    {
+        _logger.LogInformation(
+            "Revision ingestion window outcome. WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PagesProcessed={PagesProcessed} PersistedCount={PersistedCount} Outcome={Outcome} StallReason={StallReason}",
+            window.StartUtc,
+            window.EndUtc,
+            result.PagesProcessed,
+            result.PersistedCount,
+            result.Outcome,
+            result.StallReason);
+    }
+
+    private void LogRunSummary(
+        DateTimeOffset backfillStartUtc,
+        DateTimeOffset backfillEndUtc,
+        int windowsProcessed,
+        int windowsMarkedUnretrievable,
+        int totalPersisted,
+        bool backfillComplete)
+    {
+        _logger.LogInformation(
+            "Revision ingestion run summary. BackfillStartUtc={BackfillStartUtc} BackfillEndUtc={BackfillEndUtc} WindowsProcessed={WindowsProcessed} WindowsMarkedUnretrievable={WindowsMarkedUnretrievable} TotalPersisted={TotalPersisted} BackfillComplete={BackfillComplete}",
+            backfillStartUtc,
+            backfillEndUtc,
+            windowsProcessed,
+            windowsMarkedUnretrievable,
+            totalPersisted,
+            backfillComplete);
     }
 
 
@@ -1143,6 +1481,54 @@ public class RevisionIngestionService
         public void IncrementFieldDelta() => FieldDeltaCount++;
         public void IncrementRelationDelta() => RelationDeltaCount++;
     }
+
+    private sealed record RevisionIngestionWindow(
+        DateTimeOffset StartUtc,
+        DateTimeOffset EndUtc,
+        int Depth,
+        int Sequence);
+
+    private sealed record WindowProcessingResult(
+        WindowProcessingOutcome Outcome,
+        int PagesProcessed,
+        int PersistedCount,
+        WindowStallReason? StallReason,
+        ReportingRevisionsTermination? Termination);
+
+    private sealed record WindowRunResult(
+        int TotalPersisted,
+        int PagesProcessed,
+        int WindowsProcessed,
+        int WindowsMarkedUnretrievable,
+        bool BackfillComplete,
+        bool ScopedFieldDumpLogged,
+        ReportingRevisionsTermination? LastTermination,
+        RevisionIngestionRunOutcome RunOutcome);
+
+    private enum WindowProcessingOutcome
+    {
+        CompletedNormally = 0,
+        CompletedRawEmpty = 1,
+        Stalled = 2,
+        SplitScheduled = 3,
+        MarkedUnretrievableAtMinimumChunk = 4
+    }
+
+    private enum WindowStallReason
+    {
+        TokenRepeated = 0,
+        RawZeroWithHasMore = 1,
+        TokenNotAdvancing = 2,
+        MaxPageLimit = 3
+    }
+
+    private enum PagePosition
+    {
+        Unknown = 0,
+        NewerThanWindow = 1,
+        OverlapsWindow = 2,
+        OlderThanWindow = 3
+    }
 }
 
 public enum RevisionIngestionRunOutcome
@@ -1166,6 +1552,7 @@ public record RevisionIngestionResult
     public string? ErrorMessage { get; init; }
     public ReportingRevisionsTerminationReason? TerminationReason { get; init; }
     public string? TerminationMessage { get; init; }
+    public bool BackfillComplete { get; init; }
     public required string Message { get; init; }
 }
 
