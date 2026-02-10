@@ -62,7 +62,13 @@ public class RevisionSyncStage : ISyncStage
                     throw new OperationCanceledException("Revision ingestion was cancelled");
                 }
 
-                return SyncStageResult.CreateFailure(result.ErrorMessage ?? "Unknown error during revision ingestion");
+                var errorMessage = result.ErrorMessage ?? result.Message ?? "Unknown error during revision ingestion";
+                _logger.LogWarning(
+                    "Revision ingestion stage failed for ProductOwner {ProductOwnerId}. Outcome={Outcome} Error={ErrorMessage}",
+                    context.ProductOwnerId,
+                    result.RunOutcome,
+                    errorMessage);
+                return SyncStageResult.CreateFailure(errorMessage);
             }
 
             progressCallback(100);
