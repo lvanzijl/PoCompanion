@@ -602,6 +602,7 @@ public class PoToolDbContext : DbContext
 
             entity.Property(e => e.ContinuationToken).HasMaxLength(2000);
             entity.Property(e => e.LastErrorMessage).HasMaxLength(2000);
+            entity.Property(e => e.LastRunOutcome).HasMaxLength(100);
 
             entity.HasOne(e => e.ProductOwner)
                 .WithOne()

@@ -77,6 +77,7 @@ public sealed class RevisionIngestionServiceTests
         Assert.IsTrue(result.Success);
         Assert.IsTrue(result.WasTerminatedEarly);
         Assert.AreEqual(termination.Reason, result.TerminationReason);
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
 
         using var scope = provider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
@@ -142,15 +143,12 @@ public sealed class RevisionIngestionServiceTests
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_ContinuesWhenEmptyPages_DoesNotTerminate()
+    public async Task IngestRevisionsAsync_StopsOnDeadPageWithoutData()
     {
-        // This test verifies that empty pages (after scoping) do not cause early termination
-        // The ingestion should continue as long as the token advances and HasMoreResults is true
         var results = new[]
         {
             new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t1"),
-            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t2"),
-            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, null) // Final page with data
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, "t2")
         };
 
         var stubClient = new StubRevisionTfsClient(results);
@@ -167,8 +165,15 @@ public sealed class RevisionIngestionServiceTests
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
         Assert.IsTrue(result.Success);
-        Assert.IsFalse(result.WasTerminatedEarly); // Should NOT terminate early
-        Assert.AreEqual(3, stubClient.ReportingCalls); // All 3 pages should be processed
+        Assert.IsTrue(result.WasTerminatedEarly);
+        Assert.AreEqual(ReportingRevisionsTerminationReason.ProgressWithoutData, result.TerminationReason);
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
+        Assert.AreEqual(1, stubClient.ReportingCalls);
+
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var watermark = await context.RevisionIngestionWatermarks.SingleAsync();
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly.ToString(), watermark.LastRunOutcome);
     }
 
     [TestMethod]
@@ -196,11 +201,12 @@ public sealed class RevisionIngestionServiceTests
         Assert.IsTrue(result.Success);
         Assert.IsTrue(result.WasTerminatedEarly);
         Assert.AreEqual(ReportingRevisionsTerminationReason.RepeatedContinuationToken, result.TerminationReason);
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
         Assert.AreEqual(2, stubClient.ReportingCalls);
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_PersistsFieldAndRelationDeltas()
+    public async Task IngestRevisionsAsync_PersistsWhitelistedFieldSnapshotWithoutDeltas()
     {
         var revision = new WorkItemRevision
         {
@@ -209,27 +215,16 @@ public sealed class RevisionIngestionServiceTests
             WorkItemType = "Bug",
             Title = "Connection timeout",
             State = "New",
+            Reason = "Initial",
             IterationPath = "Iteration 1",
             AreaPath = "Area 1",
+            CreatedDate = DateTimeOffset.UtcNow.AddDays(-2),
             ChangedDate = DateTimeOffset.UtcNow,
-            FieldDeltas = new Dictionary<string, FieldDelta>
-            {
-                ["System.State"] = new FieldDelta
-                {
-                    FieldName = "System.State",
-                    OldValue = "New",
-                    NewValue = "Active"
-                }
-            },
-            RelationDeltas = new[]
-            {
-                new RelationDelta
-                {
-                    ChangeType = PoTool.Core.Contracts.RelationChangeType.Added,
-                    RelationType = "System.LinkTypes.Hierarchy-Forward",
-                    TargetWorkItemId = 101
-                }
-            }
+            ClosedDate = DateTimeOffset.UtcNow.AddDays(1),
+            Effort = 5,
+            Tags = "sample",
+            Severity = "2 - High",
+            ChangedBy = "Unit Tester"
         };
 
         var results = new[]
@@ -255,15 +250,20 @@ public sealed class RevisionIngestionServiceTests
         using var scope = provider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
         var header = await context.RevisionHeaders.SingleAsync();
-        var fieldDelta = await context.RevisionFieldDeltas.SingleAsync();
-        var relationDelta = await context.RevisionRelationDeltas.SingleAsync();
-
-        Assert.AreEqual(header.Id, fieldDelta.RevisionHeaderId);
-        Assert.AreEqual(header.Id, relationDelta.RevisionHeaderId);
+        Assert.AreEqual(revision.WorkItemId, header.WorkItemId);
+        Assert.AreEqual(revision.RevisionNumber, header.RevisionNumber);
+        Assert.AreEqual(revision.Reason, header.Reason);
+        Assert.AreEqual(revision.ClosedDate, header.ClosedDate);
+        Assert.AreEqual(revision.Effort, header.Effort);
+        Assert.AreEqual(revision.Tags, header.Tags);
+        Assert.AreEqual(revision.Severity, header.Severity);
+        Assert.AreEqual(revision.ChangedBy, header.ChangedBy);
+        Assert.AreEqual(0, await context.RevisionFieldDeltas.CountAsync());
+        Assert.AreEqual(0, await context.RevisionRelationDeltas.CountAsync());
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_FiltersRevisionsAndHydrationToAllowedWorkItemIds()
+    public async Task IngestRevisionsAsync_FiltersRevisionsToAllowedWorkItemIds()
     {
         var results = new[]
         {
@@ -295,9 +295,7 @@ public sealed class RevisionIngestionServiceTests
         var headers = await context.RevisionHeaders.ToListAsync();
         Assert.HasCount(1, headers);
         Assert.AreEqual(100, headers[0].WorkItemId);
-        CollectionAssert.AreEquivalent(
-            new[] { 100 },
-            relationHydrator.HydratedWorkItemIds?.ToArray());
+        Assert.IsNull(relationHydrator.HydratedWorkItemIds);
     }
 
     [TestMethod]
@@ -335,11 +333,14 @@ public sealed class RevisionIngestionServiceTests
 
         Assert.IsTrue(result.Success);
         Assert.IsFalse(result.WasTerminatedEarly); // Should NOT terminate early despite empty scoped pages
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedNormally, result.RunOutcome);
         Assert.AreEqual(4, stubClient.ReportingCalls); // All 4 pages should be processed
 
         using var scope = provider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
         Assert.AreEqual(1, await context.RevisionHeaders.CountAsync()); // Only the last page had scoped revision
+        var watermark = await context.RevisionIngestionWatermarks.SingleAsync();
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedNormally.ToString(), watermark.LastRunOutcome);
     }
 
     [TestMethod]
@@ -374,6 +375,7 @@ public sealed class RevisionIngestionServiceTests
         Assert.IsTrue(result.Success);
         Assert.IsTrue(result.WasTerminatedEarly);
         Assert.AreEqual(ReportingRevisionsTerminationReason.MaxTotalPages, result.TerminationReason);
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
         Assert.AreEqual(5, stubClient.ReportingCalls); // Should stop at page 5
     }
 

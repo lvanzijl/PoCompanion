@@ -799,9 +799,6 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
             var changedBy = GetStringField(fields, "System.ChangedBy");
 
-            // Parse relation deltas if present
-            var relationDeltas = ParseRelationDeltas(revision);
-
             return new WorkItemRevision
             {
                 WorkItemId = workItemId,
@@ -818,8 +815,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                 Effort = effort,
                 Tags = tags,
                 Severity = severity,
-                ChangedBy = changedBy,
-                RelationDeltas = relationDeltas
+                ChangedBy = changedBy
             };
         }
         catch (Exception ex)
@@ -970,52 +966,6 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             _logger.LogWarning(ex, "Invalid JSON operation while parsing work item revision for work item {WorkItemId}", workItemId);
             return null;
         }
-    }
-
-    private List<RelationDelta> ParseRelationDeltas(JsonElement revision)
-    {
-        var deltas = new List<RelationDelta>();
-
-        // The reporting API may include relation changes directly
-        // Check for "relations" property with added/removed indicators
-        if (!revision.TryGetProperty("relations", out var relations))
-        {
-            return deltas;
-        }
-
-        foreach (var relation in relations.EnumerateArray())
-        {
-            var relationType = relation.TryGetProperty("rel", out var relEl) ? relEl.GetString() : null;
-            var url = relation.TryGetProperty("url", out var urlEl) ? urlEl.GetString() : null;
-
-            if (string.IsNullOrEmpty(relationType) || string.IsNullOrEmpty(url))
-            {
-                continue;
-            }
-
-            // Extract work item ID from URL
-            var targetId = ExtractWorkItemIdFromUrl(url);
-            if (targetId <= 0)
-            {
-                continue;
-            }
-
-            // Check if this is an added or removed relation
-            var isAdded = relation.TryGetProperty("isNew", out var isNewEl) && isNewEl.GetBoolean();
-            var isRemoved = relation.TryGetProperty("isRemoved", out var isRemovedEl) && isRemovedEl.GetBoolean();
-
-            if (isAdded || isRemoved)
-            {
-                deltas.Add(new RelationDelta
-                {
-                    ChangeType = isAdded ? Core.Contracts.RelationChangeType.Added : Core.Contracts.RelationChangeType.Removed,
-                    RelationType = relationType,
-                    TargetWorkItemId = targetId
-                });
-            }
-        }
-
-        return deltas;
     }
 
     private List<RelationInfo> ParseRelations(JsonElement revision, int workItemId, int revisionNumber)

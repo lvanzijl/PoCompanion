@@ -62,6 +62,12 @@ public class RevisionIngestionWatermarkEntity
     public string? LastErrorMessage { get; set; }
 
     /// <summary>
+    /// Outcome classification of the last ingestion run (for diagnostics).
+    /// </summary>
+    [MaxLength(100)]
+    public string? LastRunOutcome { get; set; }
+
+    /// <summary>
     /// When the last error occurred.
     /// </summary>
     public DateTimeOffset? LastErrorAt { get; set; }

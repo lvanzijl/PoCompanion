@@ -16,8 +16,6 @@ using PoTool.Core.Configuration;
 using PoTool.Core.WorkItems;
 using PoTool.Integrations.Tfs.Clients;
 using PoTool.Integrations.Tfs.Diagnostics;
-using CoreRelationChangeType = PoTool.Core.Contracts.RelationChangeType;
-using PersistenceRelationChangeType = PoTool.Api.Persistence.Entities.RelationChangeType;
 
 namespace PoTool.Api.Services;
 
@@ -91,6 +89,7 @@ public class RevisionIngestionService
             _logger.LogInformation("Revision ingestion already in progress for ProductOwner {ProductOwnerId}", productOwnerId);
             return new RevisionIngestionResult
             {
+                RunOutcome = RevisionIngestionRunOutcome.CompletedNormally,
                 Success = false,
                 IsAlreadyRunning = true,
                 Message = "Revision ingestion already in progress"
@@ -140,9 +139,11 @@ public class RevisionIngestionService
                 ? watermark.LastSyncStartDateTime 
                 : await InferBackfillStartDateTimeAsync(context, productOwnerId, cts.Token);
             ReportingRevisionsTermination? termination = null;
+            var runOutcome = RevisionIngestionRunOutcome.CompletedNormally;
             var paginationOptions = _paginationOptions.CurrentValue;
             var maxTotalPages = Math.Max(1, paginationOptions.MaxTotalPages);
             var pageTracker = new ReportingRevisionsPageTracker();
+            var scopedFieldDumpLogged = false;
 
             var runStartUtc = DateTimeOffset.UtcNow;
             using var runScope = _diagnostics.StartRun(
@@ -152,7 +153,7 @@ public class RevisionIngestionService
                 runStartUtc,
                 _throttler.ReadConcurrency,
                 _throttler.WriteConcurrency,
-                RelationRevisionHydrator.HydrationConcurrency,
+                hydrationConcurrency: 0,
                 out var runContext);
 
             if (runContext.IsEnabled)
@@ -167,7 +168,6 @@ public class RevisionIngestionService
 
             // Ingest revisions in batches
             bool hasMore = true;
-            var impactedWorkItemIds = new HashSet<int>();
 
             while (hasMore && !cts.Token.IsCancellationRequested)
             {
@@ -208,6 +208,13 @@ public class RevisionIngestionService
                         termination.Message);
                 }
 
+                // Emit a single diagnostic dump of whitelisted fields for the first scoped page only.
+                if (!scopedFieldDumpLogged && scopedRevisionCount > 0)
+                {
+                    LogScopedRevisionFieldSnapshot(pageIndex, scopedRevisions);
+                    scopedFieldDumpLogged = true;
+                }
+
                 var persistMetrics = new PersistMetrics();
 
                 // Process and persist revisions
@@ -237,7 +244,6 @@ public class RevisionIngestionService
                 // Track impacted work item IDs for relation hydration
                 foreach (var revision in scopedRevisions)
                 {
-                    impactedWorkItemIds.Add(revision.WorkItemId);
                     pageWorkItemIds?.Add(revision.WorkItemId);
                 }
 
@@ -341,11 +347,14 @@ public class RevisionIngestionService
                 if (termination == null && result.Termination != null)
                 {
                     termination = result.Termination;
+                    runOutcome = RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly;
                 }
 
-                // Apply termination conditions in priority order:
+                var paginationAnomaly = termination != null;
+
+                // Apply pagination stop/continue rules in priority order:
                 // 1. Explicit termination from TFS client
-                if (termination != null)
+                if (paginationAnomaly)
                 {
                     hasMore = false;
                 }
@@ -360,10 +369,30 @@ public class RevisionIngestionService
                         pageIndex,
                         tokenTracking.TokenHash,
                         totalRevisions);
+                    paginationAnomaly = true;
                     hasMore = false;
                 }
-                // 3. Token did not advance when more results expected (safety: infinite loop prevention)
-                else if (hasMoreResults && !tokenAdvanced)
+                // 3. No more results from TFS (normal completion)
+                else if (!hasMoreResults)
+                {
+                    hasMore = false;
+                }
+                // 4. Dead page or stalled pagination (API anomaly)
+                else if (rawRevisionCount == 0 && (hasMoreResults || !tokenAdvanced || tokenTracking.SeenTokenRepeated))
+                {
+                    termination = new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.ProgressWithoutData,
+                        $"Reporting revisions returned no data on page {pageIndex} while indicating more results.");
+                    LogEarlyTermination(
+                        "DeadPageNoData",
+                        pageIndex,
+                        tokenTracking.TokenHash,
+                        totalRevisions);
+                    paginationAnomaly = true;
+                    hasMore = false;
+                }
+                // 5. Token did not advance (safety: infinite loop prevention)
+                else if (!tokenAdvanced)
                 {
                     termination = new ReportingRevisionsTermination(
                         ReportingRevisionsTerminationReason.RepeatedContinuationToken,
@@ -373,9 +402,10 @@ public class RevisionIngestionService
                         pageIndex,
                         tokenTracking.TokenHash,
                         totalRevisions);
+                    paginationAnomaly = true;
                     hasMore = false;
                 }
-                // 4. MaxTotalPages exceeded (safety: prevent runaway pagination)
+                // 6. MaxTotalPages exceeded (safety: prevent runaway pagination)
                 else if (pageIndex >= maxTotalPages)
                 {
                     termination = new ReportingRevisionsTermination(
@@ -386,59 +416,22 @@ public class RevisionIngestionService
                         pageIndex,
                         tokenTracking.TokenHash,
                         totalRevisions);
+                    paginationAnomaly = true;
                     hasMore = false;
                 }
-                // 5. No more results from TFS
-                else if (!hasMoreResults)
-                {
-                    hasMore = false;
-                }
-                // 6. Continue to next page
+                // 7. Continue to next page (only when data returned and token advanced)
                 else
                 {
                     pageTracker.CommitToken(pageContinuationToken);
                     hasMore = true;
                 }
 
+                if (paginationAnomaly)
+                {
+                    runOutcome = RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly;
+                }
+
                 pageWorkItemIds?.Clear();
-            }
-
-            // Hydrate relations for impacted work items
-            impactedWorkItemIds.IntersectWith(allowedWorkItemIds);
-            if (impactedWorkItemIds.Count > 0)
-            {
-                _logger.LogInformation(
-                    "Hydrating relations for {Count} impacted work items",
-                    impactedWorkItemIds.Count);
-
-                progressCallback?.Invoke(new RevisionIngestionProgress
-                {
-                    Stage = "Hydrating Relations",
-                    PercentComplete = 90,
-                    RevisionsProcessed = totalRevisions
-                });
-
-                // Resolve IRelationRevisionHydrator from scope
-                using var hydrationScope = _scopeFactory.CreateScope();
-                var relationHydrator = hydrationScope.ServiceProvider.GetRequiredService<IRelationRevisionHydrator>();
-
-                var hydrationResult = await relationHydrator.HydrateAsync(
-                    impactedWorkItemIds,
-                    cts.Token);
-
-                if (!hydrationResult.Success)
-                {
-                    _logger.LogWarning(
-                        "Relation hydration completed with errors: {ErrorMessage}",
-                        hydrationResult.ErrorMessage);
-                }
-                else
-                {
-                    _logger.LogInformation(
-                        "Successfully hydrated relations for {WorkItems} work items ({Revisions} revisions)",
-                        hydrationResult.WorkItemsProcessed,
-                        hydrationResult.RevisionsHydrated);
-                }
             }
 
             // Mark ingestion complete
@@ -446,6 +439,7 @@ public class RevisionIngestionService
             context.RevisionIngestionWatermarks.Attach(watermark);
             watermark.LastIngestionCompletedAt = DateTimeOffset.UtcNow;
             watermark.LastIngestionRevisionCount = totalRevisions;
+            watermark.LastRunOutcome = runOutcome.ToString();
             if (termination == null)
             {
                 watermark.ContinuationToken = null; // Clear token on successful completion
@@ -481,11 +475,12 @@ public class RevisionIngestionService
             });
 
             _logger.LogInformation(
-                "Revision ingestion completed for ProductOwner {ProductOwnerId}: {TotalRevisions} revisions in {Pages} pages",
-                productOwnerId, totalRevisions, pageTracker.PageIndex);
+                "Revision ingestion completed for ProductOwner {ProductOwnerId}: {TotalRevisions} revisions in {Pages} pages. Outcome={Outcome}",
+                productOwnerId, totalRevisions, pageTracker.PageIndex, runOutcome);
 
             return new RevisionIngestionResult
             {
+                RunOutcome = runOutcome,
                 Success = true,
                 RevisionsIngested = totalRevisions,
                 PagesProcessed = pageTracker.PageIndex,
@@ -502,6 +497,7 @@ public class RevisionIngestionService
             _logger.LogInformation("Revision ingestion cancelled for ProductOwner {ProductOwnerId}", productOwnerId);
             return new RevisionIngestionResult
             {
+                RunOutcome = RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly,
                 Success = false,
                 WasCancelled = true,
                 Message = "Ingestion was cancelled"
@@ -533,6 +529,7 @@ public class RevisionIngestionService
 
             return new RevisionIngestionResult
             {
+                RunOutcome = RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly,
                 Success = false,
                 ErrorMessage = ex.Message,
                 Message = $"Ingestion failed: {ex.Message}"
@@ -804,6 +801,39 @@ public class RevisionIngestionService
         return allowedWorkItemIds;
     }
 
+    private void LogScopedRevisionFieldSnapshot(int pageIndex, IReadOnlyCollection<WorkItemRevision> revisions)
+    {
+        if (!_logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        foreach (var revision in revisions)
+        {
+            _logger.LogInformation(
+                "Scoped revision field snapshot. PageIndex={PageIndex} WorkItemId={WorkItemId} RevisionNumber={RevisionNumber} Fields={Fields}",
+                pageIndex,
+                revision.WorkItemId,
+                revision.RevisionNumber,
+                new
+                {
+                    revision.WorkItemType,
+                    revision.Title,
+                    revision.State,
+                    revision.Reason,
+                    revision.IterationPath,
+                    revision.AreaPath,
+                    revision.CreatedDate,
+                    revision.ChangedDate,
+                    revision.ClosedDate,
+                    revision.Effort,
+                    revision.Tags,
+                    revision.Severity,
+                    revision.ChangedBy
+                });
+        }
+    }
+
     private async Task<int> PersistRevisionsAsync(
         PoToolDbContext context,
         IReadOnlyList<WorkItemRevision> revisions,
@@ -824,8 +854,6 @@ public class RevisionIngestionService
         List<int>? workItemIds = null;
         HashSet<(int WorkItemId, int RevisionNumber)>? existingKeys = null;
         List<RevisionHeaderEntity>? headers = null;
-        List<RevisionFieldDeltaEntity>? fieldDeltas = null;
-        List<RevisionRelationDeltaEntity>? relationDeltas = null;
 
         try
         {
@@ -857,8 +885,6 @@ public class RevisionIngestionService
             }
 
             headers = new List<RevisionHeaderEntity>(revisions.Count);
-            fieldDeltas = new List<RevisionFieldDeltaEntity>();
-            relationDeltas = new List<RevisionRelationDeltaEntity>();
 
             foreach (var revision in revisions)
             {
@@ -890,54 +916,12 @@ public class RevisionIngestionService
                 headers.Add(header);
                 metrics?.IncrementRevisionHeader();
 
-                if (revision.FieldDeltas != null)
-                {
-                    foreach (var (fieldName, delta) in revision.FieldDeltas)
-                    {
-                        fieldDeltas.Add(new RevisionFieldDeltaEntity
-                        {
-                            RevisionHeader = header,
-                            FieldName = delta.FieldName,
-                            OldValue = delta.OldValue,
-                            NewValue = delta.NewValue
-                        });
-                        metrics?.IncrementFieldDelta();
-                    }
-                }
-
-                if (revision.RelationDeltas != null)
-                {
-                    foreach (var delta in revision.RelationDeltas)
-                    {
-                        var changeType = MapRelationChangeType(delta.ChangeType);
-
-                        relationDeltas.Add(new RevisionRelationDeltaEntity
-                        {
-                            RevisionHeader = header,
-                            ChangeType = changeType,
-                            RelationType = delta.RelationType,
-                            TargetWorkItemId = delta.TargetWorkItemId
-                        });
-                        metrics?.IncrementRelationDelta();
-                    }
-                }
-
                 persistedCount++;
             }
 
             if (headers != null && headers.Count > 0)
             {
                 context.RevisionHeaders.AddRange(headers);
-            }
-
-            if (fieldDeltas != null && fieldDeltas.Count > 0)
-            {
-                context.RevisionFieldDeltas.AddRange(fieldDeltas);
-            }
-
-            if (relationDeltas != null && relationDeltas.Count > 0)
-            {
-                context.RevisionRelationDeltas.AddRange(relationDeltas);
             }
 
             if (options.Enabled)
@@ -1004,8 +988,6 @@ public class RevisionIngestionService
             }
 
             headers?.Clear();
-            fieldDeltas?.Clear();
-            relationDeltas?.Clear();
             workItemIds?.Clear();
             existingKeys?.Clear();
         }
@@ -1044,23 +1026,6 @@ public class RevisionIngestionService
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Maps core relation change types to persistence enum values with validation to catch drift.
-    /// </summary>
-    private static PersistenceRelationChangeType MapRelationChangeType(CoreRelationChangeType changeType)
-    {
-        var changeTypeValue = (int)changeType;
-        if (!Enum.IsDefined(typeof(PersistenceRelationChangeType), changeTypeValue))
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(changeType),
-                changeType,
-                $"Unsupported relation change type: {changeType}.");
-        }
-
-        return (PersistenceRelationChangeType)changeTypeValue;
     }
 
     private string? ProtectContinuationToken(string? continuationToken)
@@ -1180,11 +1145,18 @@ public class RevisionIngestionService
     }
 }
 
+public enum RevisionIngestionRunOutcome
+{
+    CompletedNormally = 0,
+    CompletedWithPaginationAnomaly = 1
+}
+
 /// <summary>
 /// Result of a revision ingestion operation.
 /// </summary>
 public record RevisionIngestionResult
 {
+    public RevisionIngestionRunOutcome RunOutcome { get; init; } = RevisionIngestionRunOutcome.CompletedNormally;
     public bool Success { get; init; }
     public bool IsAlreadyRunning { get; init; }
     public bool WasCancelled { get; init; }
