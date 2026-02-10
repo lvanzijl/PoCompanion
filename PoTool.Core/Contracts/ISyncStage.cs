@@ -80,9 +80,19 @@ public class SyncStageResult
     public bool Success { get; init; }
 
     /// <summary>
+    /// Whether the stage completed with warnings.
+    /// </summary>
+    public bool HasWarnings { get; init; }
+
+    /// <summary>
     /// Error message if the stage failed.
     /// </summary>
     public string? ErrorMessage { get; init; }
+
+    /// <summary>
+    /// Warning message if the stage completed with warnings.
+    /// </summary>
+    public string? WarningMessage { get; init; }
 
     /// <summary>
     /// Number of items processed in this stage.
@@ -97,8 +107,19 @@ public class SyncStageResult
     /// <summary>
     /// Creates a successful result.
     /// </summary>
-    public static SyncStageResult CreateSuccess(int itemCount, DateTimeOffset? newWatermark = null)
-        => new() { Success = true, ItemCount = itemCount, NewWatermark = newWatermark };
+    public static SyncStageResult CreateSuccess(
+        int itemCount,
+        DateTimeOffset? newWatermark = null,
+        bool hasWarnings = false,
+        string? warningMessage = null)
+        => new()
+        {
+            Success = true,
+            ItemCount = itemCount,
+            NewWatermark = newWatermark,
+            HasWarnings = hasWarnings,
+            WarningMessage = warningMessage
+        };
 
     /// <summary>
     /// Creates a failed result.

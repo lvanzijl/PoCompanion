@@ -251,6 +251,17 @@ public class RevisionIngestionService
                 termination = CreateTerminationFromStall(lastStallReason.Value);
             }
 
+            var paginationWarning = runOutcome == RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly;
+            var hasProgress = totalRevisions > 0 || fallbackUsed;
+            var successWithWarnings = paginationWarning && hasProgress;
+            var warningMessage = paginationWarning
+                ? termination != null
+                    ? $"Reporting revisions pagination ended early ({termination.Reason}): {termination.Message}"
+                    : lastStallReason.HasValue
+                        ? $"Reporting revisions pagination stalled ({lastStallReason})"
+                        : "Reporting revisions pagination anomaly detected."
+                : null;
+
             // Mark ingestion complete
             context.ChangeTracker.Clear();
             context.RevisionIngestionWatermarks.Attach(watermark);
@@ -272,6 +283,11 @@ public class RevisionIngestionService
                 watermark.LastErrorMessage = "Reporting revisions pagination anomaly recovered via fallback ingestion.";
                 watermark.LastErrorAt = DateTimeOffset.UtcNow;
             }
+            else if (warningMessage != null)
+            {
+                watermark.LastErrorMessage = warningMessage;
+                watermark.LastErrorAt = DateTimeOffset.UtcNow;
+            }
 
             if (windowRunResult.BackfillComplete && runOutcome == RevisionIngestionRunOutcome.CompletedNormally)
             {
@@ -283,7 +299,9 @@ public class RevisionIngestionService
                     windowRunResult.WindowsMarkedUnretrievable);
             }
 
-            if (runOutcome == RevisionIngestionRunOutcome.CompletedNormally)
+            if (runOutcome == RevisionIngestionRunOutcome.CompletedNormally ||
+                runOutcome == RevisionIngestionRunOutcome.CompletedWithFallback ||
+                successWithWarnings)
             {
                 // Update watermark for next incremental sync
                 watermark.LastSyncStartDateTime = syncStartTime;
@@ -328,7 +346,7 @@ public class RevisionIngestionService
                 maxChangedDate,
                 fallbackUsed);
 
-            var success = runOutcome is RevisionIngestionRunOutcome.CompletedNormally or RevisionIngestionRunOutcome.CompletedWithFallback;
+            var success = runOutcome is RevisionIngestionRunOutcome.CompletedNormally or RevisionIngestionRunOutcome.CompletedWithFallback || successWithWarnings;
             var errorMessage = success
                 ? null
                 : termination != null
@@ -336,12 +354,23 @@ public class RevisionIngestionService
                     : lastStallReason.HasValue
                         ? $"Reporting revisions pagination stalled ({lastStallReason})"
                         : "Reporting revisions pagination anomaly detected.";
+            var finalMessage = successWithWarnings
+                ? warningMessage ?? $"Ingestion completed with warnings after {totalRevisions} revisions"
+                : success
+                    ? runOutcome == RevisionIngestionRunOutcome.CompletedWithFallback
+                        ? $"Reporting revisions fallback used; ingested {totalRevisions} revisions"
+                        : $"Successfully ingested {totalRevisions} revisions"
+                    : termination != null
+                        ? $"Ingestion terminated early after {totalRevisions} revisions: {termination.Message}"
+                        : errorMessage ?? $"Ingestion ended with outcome {runOutcome} after {totalRevisions} revisions";
 
             return new RevisionIngestionResult
             {
                 RunOutcome = runOutcome,
                 Success = success,
+                HasWarnings = successWithWarnings,
                 ErrorMessage = errorMessage,
+                WarningMessage = warningMessage,
                 FallbackUsed = fallbackUsed,
                 RevisionsIngested = totalRevisions,
                 DistinctWorkItemsIngested = distinctWorkItemCount,
@@ -351,13 +380,7 @@ public class RevisionIngestionService
                 TerminationMessage = termination?.Message,
                 MinChangedDateIngested = minChangedDate,
                 MaxChangedDateIngested = maxChangedDate,
-                Message = success
-                    ? runOutcome == RevisionIngestionRunOutcome.CompletedWithFallback
-                        ? $"Reporting revisions fallback used; ingested {totalRevisions} revisions"
-                        : $"Successfully ingested {totalRevisions} revisions"
-                    : termination != null
-                        ? $"Ingestion terminated early after {totalRevisions} revisions: {termination.Message}"
-                        : errorMessage ?? $"Ingestion ended with outcome {runOutcome} after {totalRevisions} revisions",
+                Message = finalMessage,
                 BackfillComplete = windowRunResult.BackfillComplete && runOutcome == RevisionIngestionRunOutcome.CompletedNormally
             };
         }
@@ -2161,6 +2184,7 @@ public record RevisionIngestionResult
 {
     public RevisionIngestionRunOutcome RunOutcome { get; init; } = RevisionIngestionRunOutcome.CompletedNormally;
     public bool Success { get; init; }
+    public bool HasWarnings { get; init; }
     public bool IsAlreadyRunning { get; init; }
     public bool WasCancelled { get; init; }
     public bool WasTerminatedEarly { get; init; }
@@ -2171,6 +2195,7 @@ public record RevisionIngestionResult
     public DateTimeOffset? MinChangedDateIngested { get; init; }
     public DateTimeOffset? MaxChangedDateIngested { get; init; }
     public string? ErrorMessage { get; init; }
+    public string? WarningMessage { get; init; }
     public ReportingRevisionsTerminationReason? TerminationReason { get; init; }
     public string? TerminationMessage { get; init; }
     public bool BackfillComplete { get; init; }

@@ -61,6 +61,20 @@ public interface ICacheStateRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Marks sync as successful but with warnings and updates watermarks and counts.
+    /// </summary>
+    Task MarkSyncSuccessWithWarningsAsync(
+        int productOwnerId,
+        int workItemCount,
+        int pullRequestCount,
+        int pipelineCount,
+        DateTimeOffset? workItemWatermark,
+        DateTimeOffset? pullRequestWatermark,
+        DateTimeOffset? pipelineWatermark,
+        string? warningMessage,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Marks sync as failed with an error message.
     /// </summary>
     /// <param name="productOwnerId">The ProductOwner ID.</param>

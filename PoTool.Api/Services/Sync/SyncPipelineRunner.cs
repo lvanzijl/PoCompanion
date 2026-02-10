@@ -111,6 +111,8 @@ public class SyncPipelineRunner : ISyncPipeline
             SyncStageResult? workItemResult = null;
             SyncStageResult? pullRequestResult = null;
             SyncStageResult? pipelineResult = null;
+            var hasWarnings = false;
+            string? warningMessage = null;
 
             // ============================================
             // Stage 1: Sync Work Items
@@ -124,12 +126,17 @@ public class SyncPipelineRunner : ISyncPipeline
                 yield break;
             }
             workItemResult = stage1Result;
+            if (workItemResult.HasWarnings)
+            {
+                hasWarnings = true;
+                warningMessage ??= workItemResult.WarningMessage ?? workItemResult.ErrorMessage;
+            }
 
             // ============================================
             // Stage 2: Sync Team Sprints
             // ============================================
             var teamSprintStage = scope.ServiceProvider.GetRequiredService<TeamSprintSyncStage>();
-            var (stage2Update, _) = await ExecuteStageAsync(teamSprintStage, syncContext, cacheStateRepo, cts.Token);
+            var (stage2Update, stage2Result) = await ExecuteStageAsync(teamSprintStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage2Update;
 
             if (stage2Update.HasFailed)
@@ -140,12 +147,17 @@ public class SyncPipelineRunner : ISyncPipeline
                     workItemResult?.NewWatermark, null, null, cts.Token);
                 yield break;
             }
+            if (stage2Result.HasWarnings)
+            {
+                hasWarnings = true;
+                warningMessage ??= stage2Result.WarningMessage ?? stage2Result.ErrorMessage;
+            }
 
             // ============================================
             // Stage 3: Sync Revisions
             // ============================================
             var revisionStage = scope.ServiceProvider.GetRequiredService<RevisionSyncStage>();
-            var (stage3Update, _) = await ExecuteStageAsync(revisionStage, syncContext, cacheStateRepo, cts.Token);
+            var (stage3Update, stage3Result) = await ExecuteStageAsync(revisionStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage3Update;
 
             if (stage3Update.HasFailed)
@@ -155,6 +167,11 @@ public class SyncPipelineRunner : ISyncPipeline
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
                     workItemResult?.NewWatermark, null, null, cts.Token);
                 yield break;
+            }
+            if (stage3Result.HasWarnings)
+            {
+                hasWarnings = true;
+                warningMessage ??= stage3Result.WarningMessage ?? stage3Result.ErrorMessage;
             }
 
             // ============================================
@@ -172,6 +189,11 @@ public class SyncPipelineRunner : ISyncPipeline
                 yield break;
             }
             pullRequestResult = stage4Result;
+            if (pullRequestResult.HasWarnings)
+            {
+                hasWarnings = true;
+                warningMessage ??= pullRequestResult.WarningMessage ?? pullRequestResult.ErrorMessage;
+            }
 
             // ============================================
             // Stage 5: Sync Pipelines
@@ -187,12 +209,17 @@ public class SyncPipelineRunner : ISyncPipeline
                 yield break;
             }
             pipelineResult = stage5Result;
+            if (pipelineResult.HasWarnings)
+            {
+                hasWarnings = true;
+                warningMessage ??= pipelineResult.WarningMessage ?? pipelineResult.ErrorMessage;
+            }
 
             // ============================================
             // Stage 6: Compute Validations
             // ============================================
             var validationStage = scope.ServiceProvider.GetRequiredService<ValidationComputeStage>();
-            var (stage6Update, _) = await ExecuteStageAsync(validationStage, syncContext, cacheStateRepo, cts.Token);
+            var (stage6Update, stage6Result) = await ExecuteStageAsync(validationStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage6Update;
 
             if (stage6Update.HasFailed)
@@ -201,12 +228,17 @@ public class SyncPipelineRunner : ISyncPipeline
                     workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, pipelineResult?.NewWatermark, cts.Token);
                 yield break;
             }
+            if (stage6Result.HasWarnings)
+            {
+                hasWarnings = true;
+                warningMessage ??= stage6Result.WarningMessage ?? stage6Result.ErrorMessage;
+            }
 
             // ============================================
             // Stage 7: Compute Metrics
             // ============================================
             var metricsStage = scope.ServiceProvider.GetRequiredService<MetricsComputeStage>();
-            var (stage7Update, _) = await ExecuteStageAsync(metricsStage, syncContext, cacheStateRepo, cts.Token);
+            var (stage7Update, stage7Result) = await ExecuteStageAsync(metricsStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage7Update;
 
             if (stage7Update.HasFailed)
@@ -214,6 +246,16 @@ public class SyncPipelineRunner : ISyncPipeline
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
                     workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, pipelineResult?.NewWatermark, cts.Token);
                 yield break;
+            }
+            if (stage7Result.HasWarnings)
+            {
+                hasWarnings = true;
+                warningMessage ??= stage7Result.WarningMessage ?? stage7Result.ErrorMessage;
+            }
+
+            if (hasWarnings && string.IsNullOrWhiteSpace(warningMessage))
+            {
+                warningMessage = "Sync completed with warnings.";
             }
 
             // ============================================
@@ -234,6 +276,8 @@ public class SyncPipelineRunner : ISyncPipeline
             finalizeStage.WorkItemWatermark = workItemResult?.NewWatermark;
             finalizeStage.PullRequestWatermark = pullRequestResult?.NewWatermark;
             finalizeStage.PipelineWatermark = pipelineResult?.NewWatermark;
+            finalizeStage.HasWarnings = hasWarnings;
+            finalizeStage.WarningMessage = warningMessage;
 
             var (stage8Update, _) = await ExecuteStageAsync(finalizeStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage8Update;
@@ -256,6 +300,8 @@ public class SyncPipelineRunner : ISyncPipeline
                 StageProgressPercent = 100,
                 IsComplete = true,
                 HasFailed = false,
+                HasWarnings = hasWarnings,
+                WarningMessage = warningMessage,
                 StageNumber = TotalStages,
                 TotalStages = TotalStages
             };
@@ -301,6 +347,8 @@ public class SyncPipelineRunner : ISyncPipeline
                 IsComplete = true,
                 HasFailed = true,
                 ErrorMessage = result.ErrorMessage,
+                HasWarnings = result.HasWarnings,
+                WarningMessage = result.WarningMessage,
                 StageNumber = stage.StageNumber,
                 TotalStages = TotalStages
             }, result);
@@ -312,6 +360,8 @@ public class SyncPipelineRunner : ISyncPipeline
             StageProgressPercent = 100,
             IsComplete = false,
             HasFailed = false,
+            HasWarnings = result.HasWarnings,
+            WarningMessage = result.WarningMessage,
             StageNumber = stage.StageNumber,
             TotalStages = TotalStages
         }, result);

@@ -80,7 +80,8 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsFalse(result.Success);
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.HasWarnings);
         Assert.IsTrue(result.WasTerminatedEarly);
         Assert.AreEqual(termination.Reason, result.TerminationReason);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
@@ -89,6 +90,7 @@ public sealed class RevisionIngestionServiceTests
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
         var watermark = await context.RevisionIngestionWatermarks.SingleAsync();
         StringAssert.Contains(watermark.LastErrorMessage ?? string.Empty, termination.Message);
+        Assert.IsNotNull(watermark.LastSyncStartDateTime);
         Assert.AreEqual(1, stubClient.ReportingCalls);
     }
 
@@ -116,9 +118,11 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsFalse(result.Success);
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.HasWarnings);
         Assert.IsTrue(result.WasTerminatedEarly);
         Assert.AreEqual(termination.Reason, result.TerminationReason);
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
         Assert.AreEqual(1, stubClient.ReportingCalls);
     }
 
@@ -170,7 +174,8 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsFalse(result.Success);
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.HasWarnings);
         Assert.IsTrue(result.WasTerminatedEarly);
         Assert.AreEqual(ReportingRevisionsTerminationReason.ProgressWithoutData, result.TerminationReason);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
@@ -206,7 +211,8 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsFalse(result.Success);
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.HasWarnings);
         Assert.IsFalse(result.BackfillComplete);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
         Assert.AreEqual(3, stubClient.ReportingCalls);
@@ -239,7 +245,8 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsFalse(result.Success);
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.HasWarnings);
         Assert.IsNotNull(result.TerminationReason);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
         Assert.IsGreaterThanOrEqualTo(2, stubClient.ReportingCalls);
@@ -277,7 +284,8 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsFalse(result.Success);
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.HasWarnings);
         Assert.IsTrue(result.WasTerminatedEarly);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
         Assert.AreEqual(3, stubClient.ReportingCalls);
@@ -499,7 +507,8 @@ public sealed class RevisionIngestionServiceTests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsFalse(result.Success);
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.HasWarnings);
         Assert.IsTrue(result.WasTerminatedEarly);
         Assert.AreEqual(ReportingRevisionsTerminationReason.MaxTotalPages, result.TerminationReason);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);

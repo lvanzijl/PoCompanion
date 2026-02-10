@@ -28,9 +28,19 @@ public class SyncProgressUpdate
     public bool HasFailed { get; init; }
 
     /// <summary>
+    /// Whether the sync completed with warnings.
+    /// </summary>
+    public bool HasWarnings { get; init; }
+
+    /// <summary>
     /// Error message if failed.
     /// </summary>
     public string? ErrorMessage { get; init; }
+
+    /// <summary>
+    /// Warning message if completed with warnings.
+    /// </summary>
+    public string? WarningMessage { get; init; }
 
     /// <summary>
     /// Stage number (1-6).

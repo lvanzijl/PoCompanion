@@ -60,6 +60,21 @@
                     </MudStack>
                 </MudPaper>
             }
+            else if (_cacheState.SyncStatus == CacheSyncStatusDto.SuccessWithWarnings)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
+                    @(_cacheState.LastErrorMessage ?? "Sync completed with warnings. Data may be partially up to date.")
+                </MudAlert>
+
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToTarget">
+                        Continue
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="TriggerSyncAsync">
+                        Retry Sync
+                    </MudButton>
+                </MudStack>
+            }
             else if (_cacheState.SyncStatus == CacheSyncStatusDto.Failed)
             {
                 <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
@@ -212,11 +227,12 @@
         if (_cacheState != null)
         {
             _cacheState.SyncStatus = update.HasFailed ? CacheSyncStatusDto.Failed :
-                         update.IsComplete ? CacheSyncStatusDto.Success :
-                         CacheSyncStatusDto.InProgress;
+                         update.IsComplete
+                             ? (update.HasWarnings ? CacheSyncStatusDto.SuccessWithWarnings : CacheSyncStatusDto.Success)
+                             : CacheSyncStatusDto.InProgress;
             _cacheState.CurrentSyncStage = update.CurrentStage;
             _cacheState.StageProgressPercent = update.StageProgressPercent;
-            _cacheState.LastErrorMessage = update.ErrorMessage;
+            _cacheState.LastErrorMessage = update.HasWarnings ? update.WarningMessage : update.ErrorMessage;
 
             InvokeAsync(() =>
             {
@@ -399,6 +415,7 @@
         {
             CacheSyncStatusDto.InProgress => "Preparing Your Workspace",
             CacheSyncStatusDto.Success => "Workspace Ready",
+            CacheSyncStatusDto.SuccessWithWarnings => "Workspace Ready with Warnings",
             CacheSyncStatusDto.Failed => "Sync Failed",
             _ => "Initializing Workspace"
         };
@@ -412,6 +429,7 @@
         {
             CacheSyncStatusDto.InProgress => $"Loading work items and data{profileText}. This may take a moment...",
             CacheSyncStatusDto.Success => "Your data is ready. Redirecting...",
+            CacheSyncStatusDto.SuccessWithWarnings => "Data loaded with warnings. You can continue while we retry later.",
             CacheSyncStatusDto.Failed => "There was a problem loading your data. You can try again or select a different profile.",
             _ => $"Setting up your workspace{profileText}..."
         };

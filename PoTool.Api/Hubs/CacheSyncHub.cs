@@ -76,6 +76,8 @@ public class SyncProgressBroadcaster : ISyncProgressBroadcaster
             IsComplete = update.IsComplete,
             HasFailed = update.HasFailed,
             ErrorMessage = update.ErrorMessage,
+            HasWarnings = update.HasWarnings,
+            WarningMessage = update.WarningMessage,
             StageNumber = update.StageNumber,
             TotalStages = update.TotalStages
         };
