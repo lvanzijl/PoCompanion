@@ -79,7 +79,10 @@
 
             @if (!string.IsNullOrEmpty(_cacheState.LastErrorMessage))
             {
-                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">
+                var severity = _cacheState.SyncStatus == CacheSyncStatusDto.Failed
+                    ? Severity.Error
+                    : Severity.Warning;
+                <MudAlert Severity="@severity" Dense="true" Class="mt-2">
                     @_cacheState.LastErrorMessage
                 </MudAlert>
             }
@@ -192,11 +195,12 @@
         if (_cacheState != null)
         {
             _cacheState.SyncStatus = update.HasFailed ? CacheSyncStatusDto.Failed :
-                         update.IsComplete ? CacheSyncStatusDto.Success :
-                         CacheSyncStatusDto.InProgress;
+                         update.IsComplete
+                             ? (update.HasWarnings ? CacheSyncStatusDto.SuccessWithWarnings : CacheSyncStatusDto.Success)
+                             : CacheSyncStatusDto.InProgress;
             _cacheState.CurrentSyncStage = update.CurrentStage;
             _cacheState.StageProgressPercent = update.StageProgressPercent;
-            _cacheState.LastErrorMessage = update.ErrorMessage;
+            _cacheState.LastErrorMessage = update.HasWarnings ? update.WarningMessage : update.ErrorMessage;
             
             InvokeAsync(StateHasChanged);
 
@@ -289,6 +293,7 @@
         return _cacheState?.SyncStatus switch
         {
             CacheSyncStatusDto.Success => Color.Success,
+            CacheSyncStatusDto.SuccessWithWarnings => Color.Warning,
             CacheSyncStatusDto.InProgress => Color.Info,
             CacheSyncStatusDto.Failed => Color.Error,
             _ => Color.Default
@@ -300,6 +305,7 @@
         return _cacheState?.SyncStatus switch
         {
             CacheSyncStatusDto.Success => "Synced",
+            CacheSyncStatusDto.SuccessWithWarnings => "Synced with warnings",
             CacheSyncStatusDto.InProgress => "Syncing...",
             CacheSyncStatusDto.Failed => "Failed",
             _ => "Not Synced"

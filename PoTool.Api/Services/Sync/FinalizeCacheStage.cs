@@ -22,6 +22,8 @@ public class FinalizeCacheStage : ISyncStage
     public DateTimeOffset? WorkItemWatermark { get; set; }
     public DateTimeOffset? PullRequestWatermark { get; set; }
     public DateTimeOffset? PipelineWatermark { get; set; }
+    public bool HasWarnings { get; set; }
+    public string? WarningMessage { get; set; }
 
     public FinalizeCacheStage(
         ICacheStateRepository cacheStateRepo,
@@ -47,15 +49,31 @@ public class FinalizeCacheStage : ISyncStage
             progressCallback(50);
 
             // Commit all watermarks and update counts
-            await _cacheStateRepo.MarkSyncSuccessAsync(
-                context.ProductOwnerId,
-                WorkItemCount,
-                PullRequestCount,
-                PipelineCount,
-                WorkItemWatermark,
-                PullRequestWatermark,
-                PipelineWatermark,
-                cancellationToken);
+            if (HasWarnings)
+            {
+                await _cacheStateRepo.MarkSyncSuccessWithWarningsAsync(
+                    context.ProductOwnerId,
+                    WorkItemCount,
+                    PullRequestCount,
+                    PipelineCount,
+                    WorkItemWatermark,
+                    PullRequestWatermark,
+                    PipelineWatermark,
+                    WarningMessage,
+                    cancellationToken);
+            }
+            else
+            {
+                await _cacheStateRepo.MarkSyncSuccessAsync(
+                    context.ProductOwnerId,
+                    WorkItemCount,
+                    PullRequestCount,
+                    PipelineCount,
+                    WorkItemWatermark,
+                    PullRequestWatermark,
+                    PipelineWatermark,
+                    cancellationToken);
+            }
 
             progressCallback(100);
 
@@ -66,7 +84,7 @@ public class FinalizeCacheStage : ISyncStage
                 PullRequestCount,
                 PipelineCount);
 
-            return SyncStageResult.CreateSuccess(1);
+            return SyncStageResult.CreateSuccess(1, hasWarnings: HasWarnings, warningMessage: WarningMessage);
         }
         catch (OperationCanceledException)
         {

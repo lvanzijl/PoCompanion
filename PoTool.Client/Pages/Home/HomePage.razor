@@ -446,12 +446,19 @@
                 // Check sync status
                 var cacheState = await CacheSyncService.GetCacheStatusAsync(_profileId.Value);
                 if (cacheState != null && 
-                    (cacheState.SyncStatus == PoTool.Shared.Settings.CacheSyncStatusDto.Success || 
+                    (cacheState.SyncStatus == PoTool.Shared.Settings.CacheSyncStatusDto.Success ||
+                     cacheState.SyncStatus == PoTool.Shared.Settings.CacheSyncStatusDto.SuccessWithWarnings ||
                      cacheState.LastSuccessfulSync.HasValue))
                 {
                     // Reload health signals after successful sync
                     await LoadHealthSignalsAsync();
-                    Snackbar.Add("Cache sync completed successfully!", Severity.Success);
+                    var severity = cacheState.SyncStatus == PoTool.Shared.Settings.CacheSyncStatusDto.SuccessWithWarnings
+                        ? Severity.Warning
+                        : Severity.Success;
+                    var message = cacheState.SyncStatus == PoTool.Shared.Settings.CacheSyncStatusDto.SuccessWithWarnings
+                        ? cacheState.LastErrorMessage ?? "Cache sync completed with warnings."
+                        : "Cache sync completed successfully!";
+                    Snackbar.Add(message, severity);
                 }
                 else if (cacheState != null && cacheState.SyncStatus == PoTool.Shared.Settings.CacheSyncStatusDto.InProgress)
                 {

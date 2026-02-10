@@ -88,7 +88,10 @@ public class RevisionSyncStage : ISyncStage
                 result.PagesProcessed,
                 context.ProductOwnerId);
 
-            return SyncStageResult.CreateSuccess(result.RevisionsIngested);
+            return SyncStageResult.CreateSuccess(
+                result.RevisionsIngested,
+                hasWarnings: result.HasWarnings,
+                warningMessage: result.WarningMessage);
         }
         catch (OperationCanceledException)
         {

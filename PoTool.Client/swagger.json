@@ -5173,13 +5173,15 @@
           "Idle",
           "InProgress",
           "Success",
-          "Failed"
+          "Failed",
+          "SuccessWithWarnings"
         ],
         "enum": [
           0,
           1,
           2,
-          3
+          3,
+          4
         ]
       },
       "SyncTriggerResponse": {

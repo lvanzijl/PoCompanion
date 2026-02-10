@@ -23,5 +23,10 @@ public enum CacheSyncStatus
     /// <summary>
     /// Last sync failed.
     /// </summary>
-    Failed = 3
+    Failed = 3,
+
+    /// <summary>
+    /// Last sync completed with warnings but data is available.
+    /// </summary>
+    SuccessWithWarnings = 4
 }

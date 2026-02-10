@@ -26,9 +26,19 @@ public record SyncProgressUpdateDto
     public bool HasFailed { get; init; }
 
     /// <summary>
+    /// Whether the sync completed with warnings.
+    /// </summary>
+    public bool HasWarnings { get; init; }
+
+    /// <summary>
     /// Error message if sync failed.
     /// </summary>
     public string? ErrorMessage { get; init; }
+
+    /// <summary>
+    /// Warning message if sync completed with warnings.
+    /// </summary>
+    public string? WarningMessage { get; init; }
 
     /// <summary>
     /// Current stage number (1-based).

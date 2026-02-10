@@ -103,6 +103,36 @@ public class CacheStateRepository : ICacheStateRepository
     }
 
     /// <inheritdoc />
+    public async Task MarkSyncSuccessWithWarningsAsync(
+        int productOwnerId,
+        int workItemCount,
+        int pullRequestCount,
+        int pipelineCount,
+        DateTimeOffset? workItemWatermark,
+        DateTimeOffset? pullRequestWatermark,
+        DateTimeOffset? pipelineWatermark,
+        string? warningMessage,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await GetOrCreateEntityAsync(productOwnerId, cancellationToken);
+
+        entity.SyncStatus = CacheSyncStatus.SuccessWithWarnings;
+        entity.LastSuccessfulSync = DateTimeOffset.UtcNow;
+        entity.LastAttemptSync = DateTimeOffset.UtcNow;
+        entity.WorkItemCount = workItemCount;
+        entity.PullRequestCount = pullRequestCount;
+        entity.PipelineCount = pipelineCount;
+        entity.WorkItemWatermark = workItemWatermark;
+        entity.PullRequestWatermark = pullRequestWatermark;
+        entity.PipelineWatermark = pipelineWatermark;
+        entity.LastErrorMessage = warningMessage?.Length > 2000 ? warningMessage[..1997] + "..." : warningMessage;
+        entity.CurrentSyncStage = null;
+        entity.StageProgressPercent = 0;
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task MarkSyncFailedAsync(
         int productOwnerId,
         string errorMessage,
