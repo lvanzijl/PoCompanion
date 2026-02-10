@@ -115,6 +115,9 @@ public class RevisionIngestionService
                 tfsClient,
                 productOwnerId,
                 cts.Token);
+            var diagnosticState = new RevisionIngestionDiagnosticState();
+            var dbSnapshotStart = await CaptureRevisionDatabaseSnapshotAsync(context, cts.Token);
+            LogDatabaseSnapshot("Start", dbSnapshotStart);
 
             // Get or create watermark record
             var watermark = await GetOrCreateWatermarkAsync(context, productOwnerId, cts.Token);
@@ -186,6 +189,7 @@ public class RevisionIngestionService
                 backfillEndUtc,
                 paginationOptions,
                 runContext,
+                diagnosticState,
                 progressCallback,
                 cts.Token);
 
@@ -243,6 +247,10 @@ public class RevisionIngestionService
                 windowRunResult.WindowsProcessed,
                 windowRunResult.WindowsMarkedUnretrievable,
                 windowRunResult.BackfillComplete);
+
+            LogCreationSnapshotSummary(diagnosticState, allowedWorkItemIds);
+            var dbSnapshotEnd = await CaptureRevisionDatabaseSnapshotAsync(context, cts.Token);
+            LogDatabaseSnapshot("End", dbSnapshotEnd);
 
             return new RevisionIngestionResult
             {
@@ -503,6 +511,7 @@ public class RevisionIngestionService
         DateTimeOffset backfillEndUtc,
         RevisionIngestionPaginationOptions paginationOptions,
         RevisionIngestionRunContext runContext,
+        RevisionIngestionDiagnosticState diagnosticState,
         Action<RevisionIngestionProgress>? progressCallback,
         CancellationToken cancellationToken)
     {
@@ -551,6 +560,7 @@ public class RevisionIngestionService
                 allowedWorkItemIds,
                 paginationOptions,
                 runContext,
+                diagnosticState,
                 progressCallback,
                 totalPersisted,
                 scopedFieldDumpLogged,
@@ -655,6 +665,7 @@ public class RevisionIngestionService
         HashSet<int> allowedWorkItemIds,
         RevisionIngestionPaginationOptions paginationOptions,
         RevisionIngestionRunContext runContext,
+        RevisionIngestionDiagnosticState diagnosticState,
         Action<RevisionIngestionProgress>? progressCallback,
         int totalPersistedBeforeWindow,
         bool scopedFieldDumpLogged,
@@ -669,6 +680,9 @@ public class RevisionIngestionService
         var termination = (ReportingRevisionsTermination?)null;
         var hasSeenWindowOverlap = false;
         var maxTotalPages = Math.Max(1, paginationOptions.MaxTotalPages);
+        DateTimeOffset? windowRawMinChangedDate = null;
+        DateTimeOffset? windowRawMaxChangedDate = null;
+        var windowRawInWindow = false;
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -698,10 +712,13 @@ public class RevisionIngestionService
             var scopedRevisions = result.Revisions
                 .Where(revision => allowedWorkItemIds.Contains(revision.WorkItemId))
                 .ToList();
+            diagnosticState.RecordRevisions(scopedRevisions);
             var scopedInWindow = scopedRevisions
                 .Where(revision => revision.ChangedDate >= window.StartUtc && revision.ChangedDate < window.EndUtc)
                 .ToList();
             var scopedRevisionCount = scopedRevisions.Count;
+            var candidatePersistCount = scopedInWindow.Count;
+            var outsideWindowCount = scopedRevisionCount - candidatePersistCount;
             var scopedRevisionsPersistedCount = 0;
             var pageContinuationToken = result.ContinuationToken;
             var pageRequestDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(pageRequestStartTimestamp);
@@ -709,6 +726,23 @@ public class RevisionIngestionService
             var tokenTracking = pageTracker.TrackToken(pageContinuationToken);
             var hasMoreResults = result.HasMoreResults;
             var pagePosition = ClassifyPage(rawMinChangedDate, rawMaxChangedDate, window);
+            windowRawMinChangedDate = GetWindowRawMin(windowRawMinChangedDate, rawMinChangedDate);
+            windowRawMaxChangedDate = GetWindowRawMax(windowRawMaxChangedDate, rawMaxChangedDate);
+            windowRawInWindow |= DoesRawOverlapWindow(rawMinChangedDate, rawMaxChangedDate, window);
+
+            if (!diagnosticState.HasLoggedFirstPageRaw && pageIndex == 1)
+            {
+                var distinctRawWorkItemIds = result.Revisions.Select(revision => revision.WorkItemId).Distinct().Count();
+                var rawScopedCount = result.Revisions.Count(revision => allowedWorkItemIds.Contains(revision.WorkItemId));
+                _logger.LogInformation(
+                    "Reporting revisions page 1 raw snapshot. RawRevisionCount={RawRevisionCount} DistinctWorkItemCount={DistinctWorkItemCount} MinChangedDateRaw={MinChangedDateRaw} MaxChangedDateRaw={MaxChangedDateRaw} RawScopedWorkItems={RawScopedWorkItems}",
+                    rawRevisionCount,
+                    distinctRawWorkItemIds,
+                    rawMinChangedDate,
+                    rawMaxChangedDate,
+                    rawScopedCount);
+                diagnosticState.HasLoggedFirstPageRaw = true;
+            }
 
             if (result.Termination != null)
             {
@@ -776,6 +810,31 @@ public class RevisionIngestionService
                 persistMetrics.RevisionHeaderCount,
                 persistMetrics.FieldDeltaCount,
                 persistMetrics.RelationDeltaCount);
+
+            var duplicatesDropped = persistMetrics.DuplicateCount;
+            var missingRequiredDropped = persistMetrics.MissingRequiredCount;
+            var dbConstraintDrops = persistMetrics.DbConstraintCount;
+            var otherDrops = Math.Max(0, candidatePersistCount - (scopedRevisionsPersistedCount + duplicatesDropped + missingRequiredDropped + dbConstraintDrops));
+            var boundedOutsideWindowCount = Math.Max(0, outsideWindowCount);
+
+            _logger.LogInformation(
+                "Revision ingestion drop accounting. WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PageIndex={PageIndex} RawRevisionCount={RawRevisionCount} ScopedRevisionCount={ScopedRevisionCount} CandidatePersistCount={CandidatePersistCount} PersistedCount={PersistedCount} DropsAlreadyExists={DropsAlreadyExists} DropsOutsideWindow={DropsOutsideWindow} DropsMissingRequiredField={DropsMissingRequiredField} DropsDbConstraint={DropsDbConstraint} DropsOther={DropsOther}",
+                window.StartUtc,
+                window.EndUtc,
+                pageIndex,
+                rawRevisionCount,
+                scopedRevisionCount,
+                candidatePersistCount,
+                scopedRevisionsPersistedCount,
+                duplicatesDropped,
+                boundedOutsideWindowCount,
+                missingRequiredDropped,
+                dbConstraintDrops,
+                otherDrops);
+
+            _logger.LogInformation(
+                "Revision deduplication key WorkItemId+RevisionNumber. RevisionNumberUsed=True ChangedDateUsed=False DuplicatesSkipped={DuplicatesSkipped}",
+                duplicatesDropped);
 
             if (runContext.LogEfSaveChangesDetails)
             {
@@ -948,6 +1007,8 @@ public class RevisionIngestionService
             }
         }
 
+        LogWindowRawRange(window, windowRawMinChangedDate, windowRawMaxChangedDate, windowRawInWindow);
+
         return new WindowProcessingResult(
             outcome,
             pagesProcessed,
@@ -1067,6 +1128,114 @@ public class RevisionIngestionService
             windowsMarkedUnretrievable,
             totalPersisted,
             backfillComplete);
+    }
+
+    private async Task<DatabaseRevisionSnapshot> CaptureRevisionDatabaseSnapshotAsync(
+        PoToolDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var totalRows = await context.RevisionHeaders.CountAsync(cancellationToken);
+        var distinctWorkItemIds = await context.RevisionHeaders
+            .Select(header => header.WorkItemId)
+            .Distinct()
+            .CountAsync(cancellationToken);
+        var changedDates = await context.RevisionHeaders
+            .AsNoTracking()
+            .Select(header => header.ChangedDate)
+            .ToListAsync(cancellationToken);
+        var minChangedDate = changedDates.Count > 0 ? changedDates.Min() : (DateTimeOffset?)null;
+        var maxChangedDate = changedDates.Count > 0 ? changedDates.Max() : (DateTimeOffset?)null;
+
+        return new DatabaseRevisionSnapshot(totalRows, distinctWorkItemIds, minChangedDate, maxChangedDate);
+    }
+
+    private void LogDatabaseSnapshot(string stage, DatabaseRevisionSnapshot snapshot)
+    {
+        _logger.LogInformation(
+            "Revision ingestion DB snapshot. Stage={Stage} TotalRows={TotalRows} DistinctWorkItemIds={DistinctWorkItemIds} MinChangedDate={MinChangedDate} MaxChangedDate={MaxChangedDate}",
+            stage,
+            snapshot.TotalRows,
+            snapshot.DistinctWorkItemIds,
+            snapshot.MinChangedDate,
+            snapshot.MaxChangedDate);
+    }
+
+    private void LogCreationSnapshotSummary(
+        RevisionIngestionDiagnosticState diagnosticState,
+        IReadOnlyCollection<int> scopedWorkItemIds)
+    {
+        var (withCreation, withoutCreation) = diagnosticState.GetCreationSnapshotSummary(scopedWorkItemIds);
+        _logger.LogInformation(
+            "Creation snapshot coverage. ScopedWorkItems={ScopedWorkItems} WithCreationObserved={WithCreationObserved} WithoutCreationObserved={WithoutCreationObserved}",
+            scopedWorkItemIds.Count,
+            withCreation,
+            withoutCreation);
+    }
+
+    private void LogWindowRawRange(
+        RevisionIngestionWindow window,
+        DateTimeOffset? minChangedDateRaw,
+        DateTimeOffset? maxChangedDateRaw,
+        bool hasRawInsideWindow)
+    {
+        _logger.LogInformation(
+            "Revision ingestion window raw range. WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} MinChangedDateRaw={MinChangedDateRaw} MaxChangedDateRaw={MaxChangedDateRaw} RawInsideWindow={RawInsideWindow}",
+            window.StartUtc,
+            window.EndUtc,
+            minChangedDateRaw,
+            maxChangedDateRaw,
+            hasRawInsideWindow);
+
+        if (!hasRawInsideWindow)
+        {
+            _logger.LogWarning(
+                "No raw revisions fell inside the window bounds. WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc}",
+                window.StartUtc,
+                window.EndUtc);
+        }
+    }
+
+    private static DateTimeOffset? GetWindowRawMin(DateTimeOffset? current, DateTimeOffset? candidate)
+    {
+        if (candidate == null)
+        {
+            return current;
+        }
+
+        if (current == null || candidate.Value < current.Value)
+        {
+            return candidate;
+        }
+
+        return current;
+    }
+
+    private static DateTimeOffset? GetWindowRawMax(DateTimeOffset? current, DateTimeOffset? candidate)
+    {
+        if (candidate == null)
+        {
+            return current;
+        }
+
+        if (current == null || candidate.Value > current.Value)
+        {
+            return candidate;
+        }
+
+        return current;
+    }
+
+    private static bool DoesRawOverlapWindow(
+        DateTimeOffset? minChangedDate,
+        DateTimeOffset? maxChangedDate,
+        RevisionIngestionWindow window)
+    {
+        if (minChangedDate == null || maxChangedDate == null)
+        {
+            return false;
+        }
+
+        return maxChangedDate.Value >= window.StartUtc && minChangedDate.Value < window.EndUtc;
     }
 
 
@@ -1232,6 +1401,13 @@ public class RevisionIngestionService
             {
                 if (existingKeys.Contains((revision.WorkItemId, revision.RevisionNumber)))
                 {
+                    metrics?.IncrementDuplicate();
+                    continue;
+                }
+
+                if (!HasRequiredRevisionFields(revision))
+                {
+                    metrics?.IncrementMissingRequired();
                     continue;
                 }
 
@@ -1335,6 +1511,18 @@ public class RevisionIngestionService
         }
 
         return persistedCount;
+    }
+
+    private static bool HasRequiredRevisionFields(WorkItemRevision revision)
+    {
+        return revision.WorkItemId > 0
+            && revision.RevisionNumber > 0
+            && !string.IsNullOrWhiteSpace(revision.WorkItemType)
+            && !string.IsNullOrWhiteSpace(revision.Title)
+            && !string.IsNullOrWhiteSpace(revision.State)
+            && !string.IsNullOrWhiteSpace(revision.IterationPath)
+            && !string.IsNullOrWhiteSpace(revision.AreaPath)
+            && revision.ChangedDate != default;
     }
 
     private static string? GetConnectionMode(PoToolDbContext context)
@@ -1470,12 +1658,77 @@ public class RevisionIngestionService
     }
 
     private sealed record TokenTrackingSnapshot(string? TokenHash, bool SeenTokenRepeated);
-    
+
+    private sealed class RevisionIngestionDiagnosticState
+    {
+        private readonly Dictionary<int, CreationObservation> _creationByWorkItem = new();
+
+        public bool HasLoggedFirstPageRaw { get; set; }
+
+        public void RecordRevisions(IEnumerable<WorkItemRevision> revisions)
+        {
+            foreach (var revision in revisions)
+            {
+                var changedUtc = revision.ChangedDate.ToUniversalTime();
+                var createdUtc = revision.CreatedDate?.ToUniversalTime();
+
+                if (!_creationByWorkItem.TryGetValue(revision.WorkItemId, out var observation))
+                {
+                    observation = new CreationObservation(false, changedUtc);
+                }
+
+                var earliestChangedDate = observation.EarliestChangedDateUtc;
+                if (changedUtc < earliestChangedDate)
+                {
+                    earliestChangedDate = changedUtc;
+                }
+
+                var creationObserved = observation.CreationObserved;
+                if (createdUtc.HasValue && createdUtc.Value == changedUtc)
+                {
+                    creationObserved = true;
+                }
+
+                if (changedUtc <= earliestChangedDate)
+                {
+                    creationObserved = true;
+                }
+
+                _creationByWorkItem[revision.WorkItemId] = new CreationObservation(
+                    creationObserved,
+                    earliestChangedDate);
+            }
+        }
+
+        public (int WithCreation, int WithoutCreation) GetCreationSnapshotSummary(IReadOnlyCollection<int> scopedWorkItemIds)
+        {
+            var withCreation = 0;
+
+            foreach (var workItemId in scopedWorkItemIds)
+            {
+                if (_creationByWorkItem.TryGetValue(workItemId, out var observation) && observation.CreationObserved)
+                {
+                    withCreation++;
+                }
+            }
+
+            var withoutCreation = scopedWorkItemIds.Count - withCreation;
+            return (withCreation, withoutCreation);
+        }
+    }
+
+    private sealed record CreationObservation(
+        bool CreationObserved,
+        DateTimeOffset EarliestChangedDateUtc);
+
     private sealed class PersistMetrics
     {
         public int RevisionHeaderCount { get; private set; }
         public int FieldDeltaCount { get; private set; }
         public int RelationDeltaCount { get; private set; }
+        public int DuplicateCount { get; private set; }
+        public int MissingRequiredCount { get; private set; }
+        public int DbConstraintCount { get; set; }
         public long SaveChangesDurationMs { get; set; }
         public long? CommitDurationMs { get; set; }
         public long PersistDurationMs { get; set; }
@@ -1484,6 +1737,8 @@ public class RevisionIngestionService
         public void IncrementRevisionHeader() => RevisionHeaderCount++;
         public void IncrementFieldDelta() => FieldDeltaCount++;
         public void IncrementRelationDelta() => RelationDeltaCount++;
+        public void IncrementDuplicate() => DuplicateCount++;
+        public void IncrementMissingRequired() => MissingRequiredCount++;
     }
 
     private sealed record RevisionIngestionWindow(
@@ -1509,6 +1764,12 @@ public class RevisionIngestionService
         bool ScopedFieldDumpLogged,
         ReportingRevisionsTermination? LastTermination,
         RevisionIngestionRunOutcome RunOutcome);
+
+    private sealed record DatabaseRevisionSnapshot(
+        int TotalRows,
+        int DistinctWorkItemIds,
+        DateTimeOffset? MinChangedDate,
+        DateTimeOffset? MaxChangedDate);
 
     private enum WindowProcessingOutcome
     {
