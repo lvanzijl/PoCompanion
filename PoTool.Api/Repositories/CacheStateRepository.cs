@@ -166,6 +166,10 @@ public class CacheStateRepository : ICacheStateRepository
         entity.WorkItemWatermark = null;
         entity.PullRequestWatermark = null;
         entity.PipelineWatermark = null;
+        entity.RelationshipsSnapshotAsOfUtc = null;
+        entity.RelationshipsSnapshotWorkItemWatermark = null;
+        entity.ResolutionAsOfUtc = null;
+        entity.SprintTrendProjectionAsOfUtc = null;
         entity.LastErrorMessage = null;
         entity.CurrentSyncStage = null;
         entity.StageProgressPercent = 0;
@@ -207,6 +211,9 @@ public class CacheStateRepository : ICacheStateRepository
             var cachedPipelineRuns = await _context.CachedPipelineRuns
                 .Where(r => r.ProductOwnerId == productOwnerId)
                 .ToListAsync(cancellationToken);
+            var relationshipEdges = await _context.WorkItemRelationshipEdges
+                .Where(e => e.ProductOwnerId == productOwnerId)
+                .ToListAsync(cancellationToken);
             var pullRequestFileChanges = await _context.PullRequestFileChanges
                 .Where(change => pullRequestIds.Contains(change.PullRequestId))
                 .ToListAsync(cancellationToken);
@@ -232,6 +239,7 @@ public class CacheStateRepository : ICacheStateRepository
             _context.CachedValidationResults.RemoveRange(cachedValidationResults);
             _context.CachedMetrics.RemoveRange(cachedMetrics);
             _context.CachedPipelineRuns.RemoveRange(cachedPipelineRuns);
+            _context.WorkItemRelationshipEdges.RemoveRange(relationshipEdges);
             _context.PullRequestFileChanges.RemoveRange(pullRequestFileChanges);
             _context.PullRequestComments.RemoveRange(pullRequestComments);
             _context.PullRequestIterations.RemoveRange(pullRequestIterations);
@@ -256,17 +264,20 @@ public class CacheStateRepository : ICacheStateRepository
             .Where(metric => productIds.Contains(metric.ProductId))
             .ExecuteDeleteAsync(cancellationToken);
         // Cached validation results are global and not product-owner scoped.
-        await _context.CachedValidationResults.ExecuteDeleteAsync(cancellationToken);
-        await _context.CachedMetrics
-            .Where(m => m.ProductOwnerId == productOwnerId)
-            .ExecuteDeleteAsync(cancellationToken);
-        await _context.CachedPipelineRuns
-            .Where(r => r.ProductOwnerId == productOwnerId)
-            .ExecuteDeleteAsync(cancellationToken);
-        await _context.PullRequestFileChanges
-            .Where(change => pullRequestIds.Contains(change.PullRequestId))
-            .ExecuteDeleteAsync(cancellationToken);
-        await _context.PullRequestComments
+            await _context.CachedValidationResults.ExecuteDeleteAsync(cancellationToken);
+            await _context.CachedMetrics
+                .Where(m => m.ProductOwnerId == productOwnerId)
+                .ExecuteDeleteAsync(cancellationToken);
+            await _context.CachedPipelineRuns
+                .Where(r => r.ProductOwnerId == productOwnerId)
+                .ExecuteDeleteAsync(cancellationToken);
+            await _context.WorkItemRelationshipEdges
+                .Where(e => e.ProductOwnerId == productOwnerId)
+                .ExecuteDeleteAsync(cancellationToken);
+            await _context.PullRequestFileChanges
+                .Where(change => pullRequestIds.Contains(change.PullRequestId))
+                .ExecuteDeleteAsync(cancellationToken);
+            await _context.PullRequestComments
             .Where(comment => pullRequestIds.Contains(comment.PullRequestId))
             .ExecuteDeleteAsync(cancellationToken);
         await _context.PullRequestIterations

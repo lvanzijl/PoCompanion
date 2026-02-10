@@ -173,6 +173,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         return await ExecuteWithRetryAsync("Relations", async () =>
         {
             // Per-item revisions endpoint: /_apis/wit/workItems/{id}/revisions
+            // Request only fields (no relations) to avoid relation-derived ingestion.
             var url = BuildWorkItemRevisionsUrl(config, workItemId);
 
             _logger.LogDebug("Calling per-item revisions API for work item {WorkItemId}", workItemId);
@@ -192,16 +193,14 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
             // Store previous revision fields for delta calculation
             Dictionary<string, string?>? previousFields = null;
-            List<RelationInfo>? previousRelations = null;
 
             foreach (var revision in revisionsArray.EnumerateArray())
             {
-                var workItemRevision = ParseWorkItemRevisionFromPerItem(revision, workItemId, previousFields, previousRelations);
+                var workItemRevision = ParseWorkItemRevisionFromPerItem(revision, workItemId, previousFields);
                 if (workItemRevision != null)
                 {
                     revisions.Add(workItemRevision.Value.Revision);
                     previousFields = workItemRevision.Value.CurrentFields;
-                    previousRelations = workItemRevision.Value.CurrentRelations;
                 }
             }
 
@@ -298,7 +297,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
     private string BuildWorkItemRevisionsUrl(TfsConfigEntity config, int workItemId)
     {
-        return $"{config.Url.TrimEnd('/')}/_apis/wit/workItems/{workItemId}/revisions?api-version={config.ApiVersion}&$expand=relations";
+        return $"{config.Url.TrimEnd('/')}/_apis/wit/workItems/{workItemId}/revisions?api-version={config.ApiVersion}&$expand=fields";
     }
 
     private async Task<ReportingRevisionsPagePayload> FetchReportingRevisionsPageAsync(
@@ -825,11 +824,10 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         }
     }
 
-    private (WorkItemRevision Revision, Dictionary<string, string?> CurrentFields, List<RelationInfo> CurrentRelations)? ParseWorkItemRevisionFromPerItem(
+    private (WorkItemRevision Revision, Dictionary<string, string?> CurrentFields)? ParseWorkItemRevisionFromPerItem(
         JsonElement revision,
         int workItemId,
-        Dictionary<string, string?>? previousFields,
-        List<RelationInfo>? previousRelations)
+        Dictionary<string, string?>? previousFields)
     {
         try
         {
@@ -871,55 +869,6 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                 }
             }
 
-            // Parse current relations (required when $expand=relations is requested)
-            var currentRelations = ParseRelations(revision, workItemId, revisionNumber);
-
-            // Calculate relation deltas
-            var relationDeltas = new List<RelationDelta>();
-            if (previousRelations != null)
-            {
-                // Find added relations
-                foreach (var rel in currentRelations)
-                {
-                    if (!previousRelations.Any(p => p.RelationType == rel.RelationType && p.TargetId == rel.TargetId))
-                    {
-                        relationDeltas.Add(new RelationDelta
-                        {
-                            ChangeType = Core.Contracts.RelationChangeType.Added,
-                            RelationType = rel.RelationType,
-                            TargetWorkItemId = rel.TargetId
-                        });
-                    }
-                }
-
-                // Find removed relations
-                foreach (var rel in previousRelations)
-                {
-                    if (!currentRelations.Any(c => c.RelationType == rel.RelationType && c.TargetId == rel.TargetId))
-                    {
-                        relationDeltas.Add(new RelationDelta
-                        {
-                            ChangeType = Core.Contracts.RelationChangeType.Removed,
-                            RelationType = rel.RelationType,
-                            TargetWorkItemId = rel.TargetId
-                        });
-                    }
-                }
-            }
-            else if (currentRelations.Count > 0)
-            {
-                // First revision - all relations are "added"
-                foreach (var rel in currentRelations)
-                {
-                    relationDeltas.Add(new RelationDelta
-                    {
-                        ChangeType = Core.Contracts.RelationChangeType.Added,
-                        RelationType = rel.RelationType,
-                        TargetWorkItemId = rel.TargetId
-                    });
-                }
-            }
-
             var workItemType = currentFields.GetValueOrDefault("System.WorkItemType") ?? "Unknown";
             var title = currentFields.GetValueOrDefault("System.Title") ?? "";
             var state = currentFields.GetValueOrDefault("System.State") ?? "Unknown";
@@ -951,10 +900,10 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                 Severity = currentFields.GetValueOrDefault("Microsoft.VSTS.Common.Severity"),
                 ChangedBy = changedBy,
                 FieldDeltas = fieldDeltas.Count > 0 ? fieldDeltas : null,
-                RelationDeltas = relationDeltas.Count > 0 ? relationDeltas : null
+                RelationDeltas = null
             };
 
-            return (workItemRevision, currentFields, currentRelations);
+            return (workItemRevision, currentFields);
         }
         catch (JsonException ex)
         {
@@ -966,69 +915,6 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             _logger.LogWarning(ex, "Invalid JSON operation while parsing work item revision for work item {WorkItemId}", workItemId);
             return null;
         }
-    }
-
-    private List<RelationInfo> ParseRelations(JsonElement revision, int workItemId, int revisionNumber)
-    {
-        var relations = new List<RelationInfo>();
-
-        if (!revision.TryGetProperty("relations", out var relationsArray))
-        {
-            var message = $"Per-item revisions response missing required relations field (expected due to $expand=relations) for work item {workItemId} revision {revisionNumber}.";
-            _logger.LogError(message);
-
-            throw new TfsException(message, TruncatePayloadForLogging(revision.GetRawText()));
-        }
-
-        if (relationsArray.ValueKind != JsonValueKind.Array)
-        {
-            var message = $"Per-item revisions response relations field is not an array for work item {workItemId} revision {revisionNumber}.";
-            _logger.LogError(message);
-
-            throw new TfsException(message, TruncatePayloadForLogging(revision.GetRawText()));
-        }
-
-        foreach (var relation in relationsArray.EnumerateArray())
-        {
-            var relationType = relation.TryGetProperty("rel", out var relEl) ? relEl.GetString() : null;
-            var url = relation.TryGetProperty("url", out var urlEl) ? urlEl.GetString() : null;
-
-            if (string.IsNullOrEmpty(relationType) || string.IsNullOrEmpty(url))
-            {
-                continue;
-            }
-
-            var targetId = ExtractWorkItemIdFromUrl(url);
-            if (targetId > 0)
-            {
-                relations.Add(new RelationInfo(relationType, targetId));
-            }
-        }
-
-        return relations;
-    }
-
-    private static int ExtractWorkItemIdFromUrl(string url)
-    {
-        // URL format: https://server/collection/_apis/wit/workItems/{id}
-        try
-        {
-            var lastSlash = url.LastIndexOf('/');
-            if (lastSlash >= 0 && lastSlash < url.Length - 1)
-            {
-                var idPart = url[(lastSlash + 1)..];
-                if (int.TryParse(idPart, out var id))
-                {
-                    return id;
-                }
-            }
-        }
-        catch
-        {
-            // Ignore parsing errors
-        }
-
-        return 0;
     }
 
     private static string TruncatePayloadForLogging(string payload)
@@ -1578,5 +1464,4 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             EffortParseSummary.Empty);
     }
 
-    private record RelationInfo(string RelationType, int TargetId);
 }

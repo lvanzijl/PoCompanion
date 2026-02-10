@@ -15,7 +15,7 @@ public class MetricsComputeStage : ISyncStage
     private readonly ILogger<MetricsComputeStage> _logger;
 
     public string StageName => "ComputeMetrics";
-    public int StageNumber => 7;
+    public int StageNumber => 10;
 
     public MetricsComputeStage(
         PoToolDbContext context,
