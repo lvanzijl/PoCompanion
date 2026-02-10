@@ -328,10 +328,20 @@ public class RevisionIngestionService
                 maxChangedDate,
                 fallbackUsed);
 
+            var success = runOutcome is RevisionIngestionRunOutcome.CompletedNormally or RevisionIngestionRunOutcome.CompletedWithFallback;
+            var errorMessage = success
+                ? null
+                : termination != null
+                    ? $"Reporting revisions pagination ended early ({termination.Reason}): {termination.Message}"
+                    : lastStallReason.HasValue
+                        ? $"Reporting revisions pagination stalled ({lastStallReason})"
+                        : "Reporting revisions pagination anomaly detected.";
+
             return new RevisionIngestionResult
             {
                 RunOutcome = runOutcome,
-                Success = runOutcome is RevisionIngestionRunOutcome.CompletedNormally or RevisionIngestionRunOutcome.CompletedWithFallback,
+                Success = success,
+                ErrorMessage = errorMessage,
                 FallbackUsed = fallbackUsed,
                 RevisionsIngested = totalRevisions,
                 DistinctWorkItemsIngested = distinctWorkItemCount,
@@ -341,11 +351,13 @@ public class RevisionIngestionService
                 TerminationMessage = termination?.Message,
                 MinChangedDateIngested = minChangedDate,
                 MaxChangedDateIngested = maxChangedDate,
-                Message = termination != null
-                    ? $"Ingestion terminated early after {totalRevisions} revisions: {termination.Message}"
-                    : runOutcome == RevisionIngestionRunOutcome.CompletedWithFallback
+                Message = success
+                    ? runOutcome == RevisionIngestionRunOutcome.CompletedWithFallback
                         ? $"Reporting revisions fallback used; ingested {totalRevisions} revisions"
-                        : $"Successfully ingested {totalRevisions} revisions",
+                        : $"Successfully ingested {totalRevisions} revisions"
+                    : termination != null
+                        ? $"Ingestion terminated early after {totalRevisions} revisions: {termination.Message}"
+                        : errorMessage ?? $"Ingestion ended with outcome {runOutcome} after {totalRevisions} revisions",
                 BackfillComplete = windowRunResult.BackfillComplete && runOutcome == RevisionIngestionRunOutcome.CompletedNormally
             };
         }
