@@ -177,6 +177,46 @@ public sealed class RevisionIngestionServiceTests
     }
 
     [TestMethod]
+    public async Task IngestRevisionsAsync_SplitsWindowWhenPaginationStalls()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, "t1"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t1"),
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 2) }, null),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
+        };
+
+        var stubClient = new StubRevisionTfsClient(results);
+        using var provider = BuildServiceProvider(stubClient);
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.BackfillComplete);
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
+        Assert.AreEqual(4, stubClient.ReportingCalls);
+        Assert.IsTrue(stubClient.StartDates.Count >= 3);
+        var initialStart = stubClient.StartDates[0];
+        var splitStart = stubClient.StartDates.Last();
+        Assert.IsNotNull(initialStart);
+        Assert.IsNotNull(splitStart);
+        Assert.IsTrue(splitStart!.Value > initialStart!.Value);
+
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        Assert.AreEqual(2, await context.RevisionHeaders.CountAsync());
+    }
+
+    [TestMethod]
     public async Task IngestRevisionsAsync_TerminatesOnRepeatedContinuationToken()
     {
         var results = new[]
@@ -444,6 +484,7 @@ public sealed class RevisionIngestionServiceTests
         }
 
         public int ReportingCalls { get; private set; }
+        public List<DateTimeOffset?> StartDates { get; } = new();
 
         public Task<ReportingRevisionsResult> GetReportingRevisionsAsync(
             DateTimeOffset? startDateTime = null,
@@ -452,6 +493,7 @@ public sealed class RevisionIngestionServiceTests
             CancellationToken cancellationToken = default)
         {
             ReportingCalls++;
+            StartDates.Add(startDateTime);
             return Task.FromResult(_results.Dequeue());
         }
 
@@ -559,6 +601,19 @@ public sealed class RevisionIngestionServiceTests
             BacklogRootWorkItemId = backlogRootId,
             CreatedAt = DateTimeOffset.UtcNow,
             LastModified = DateTimeOffset.UtcNow
+        });
+        context.WorkItems.Add(new WorkItemEntity
+        {
+            TfsId = backlogRootId,
+            ParentTfsId = null,
+            Type = "Feature",
+            Title = $"Root {backlogRootId}",
+            AreaPath = "Area",
+            IterationPath = "Iteration",
+            State = "Active",
+            RetrievedAt = DateTimeOffset.UtcNow,
+            TfsChangedDate = DateTimeOffset.UtcNow,
+            CreatedDate = DateTimeOffset.UtcNow.AddDays(-2)
         });
         context.SaveChanges();
         return provider;
