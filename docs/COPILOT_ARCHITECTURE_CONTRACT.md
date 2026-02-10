@@ -65,6 +65,8 @@ You MUST follow these rules when generating or modifying code.
 * Unit tests MUST use MSTest.
 * Unit tests MUST NOT call real TFS.
 * All business logic MUST be unit-testable without infrastructure.
+* If a test hangs, blocks, or takes excessive time, delete it instead of fixing or adding timeouts.
+* Do not disable/skip tests; remove them.
 
 ## Dependencies
 
