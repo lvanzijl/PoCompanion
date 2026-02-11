@@ -334,7 +334,9 @@ public class CacheManagementService
 
             case "recent":
                 // SQLite cannot apply Max() on DateTimeOffset in queries, so we need client-side evaluation
-                // Get all revision headers and compute max ChangedDate per WorkItemId in memory
+                // Note: This loads all revision headers (WorkItemId, ChangedDate only) into memory.
+                // For typical datasets this is acceptable since validation is an administrative operation.
+                // ProjectOnly two fields to minimize memory footprint.
                 var allRevisions = await _context.RevisionHeaders
                     .Select(r => new { r.WorkItemId, r.ChangedDate })
                     .ToListAsync(cancellationToken);
