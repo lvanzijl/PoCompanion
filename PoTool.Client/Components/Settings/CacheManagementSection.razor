@@ -1,0 +1,404 @@
+@using PoTool.Client.Services
+@using PoTool.Shared.Settings
+@inject CacheSyncService CacheSyncService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<div class="settings-section">
+    <MudText Typo="Typo.h4" Class="mb-3">Cache Management</MudText>
+
+    @* ── Cache Insights ── *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Analytics" Color="Color.Info" />
+                <MudText Typo="Typo.h6">Cache Insights</MudText>
+            </MudStack>
+            <MudButton Variant="Variant.Text" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="LoadInsightsAsync" Disabled="@_loading">
+                Refresh
+            </MudButton>
+        </MudStack>
+
+        @if (_loading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (_insights != null)
+        {
+            <MudGrid Spacing="2" Class="mb-3">
+                <MudItem xs="6" sm="4">
+                    <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">Status</MudText>
+                    <MudChip T="string" Color="@GetStatusColor(_insights.SyncStatus)" Size="Size.Small">
+                        @_insights.SyncStatus
+                    </MudChip>
+                </MudItem>
+                <MudItem xs="6" sm="4">
+                    <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">Last Successful Sync</MudText>
+                    <MudText Typo="Typo.body2">
+                        @(_insights.LastSuccessfulSync?.LocalDateTime.ToString("g") ?? "Never")
+                    </MudText>
+                </MudItem>
+                <MudItem xs="6" sm="4">
+                    <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">Last Attempt</MudText>
+                    <MudText Typo="Typo.body2">
+                        @(_insights.LastAttemptSync?.LocalDateTime.ToString("g") ?? "Never")
+                    </MudText>
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_insights.LastErrorMessage))
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
+                    @_insights.LastErrorMessage
+                </MudAlert>
+            }
+
+            <MudSimpleTable Dense="true" Hover="true" Bordered="true" Striped="true">
+                <thead>
+                    <tr>
+                        <th>Entity Type</th>
+                        <th style="text-align:right">Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _insights.EntityCounts)
+                    {
+                        <tr>
+                            <td>@item.EntityType</td>
+                            <td style="text-align:right">@item.TotalCount.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+    </MudPaper>
+
+    @* ── Granular Cache Reset ── *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.DeleteSweep" Color="Color.Error" />
+            <MudText Typo="Typo.h6">Cache Reset</MudText>
+        </MudStack>
+
+        <MudText Typo="Typo.body2" Class="mb-3" Style="color: var(--mud-palette-text-secondary);">
+            Select entity types to reset, or reset everything at once.
+        </MudText>
+
+        <MudGrid Spacing="1" Class="mb-3">
+            @foreach (var type in CacheEntityTypes.All)
+            {
+                <MudItem xs="6" sm="4" md="3">
+                    <MudCheckBox T="bool" Value="@IsTypeSelected(type)"
+                                 ValueChanged="@(v => ToggleTypeSelection(type, v))"
+                                 Label="@type" Dense="true" Color="Color.Error" />
+                </MudItem>
+            }
+        </MudGrid>
+
+        <MudStack Row="true" Spacing="2">
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Delete"
+                       Disabled="@(_resetting || _selectedTypes.Count == 0)"
+                       OnClick="ResetSelectedAsync">
+                Reset Selected (@_selectedTypes.Count)
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.DeleteForever"
+                       Disabled="@_resetting"
+                       OnClick="ResetAllAsync">
+                Reset All
+            </MudButton>
+        </MudStack>
+
+        @if (_resetResult != null)
+        {
+            <MudAlert Severity="Severity.Success" Dense="true" Class="mt-3">
+                @_resetResult.Message
+            </MudAlert>
+        }
+    </MudPaper>
+
+    @* ── Revision Validation ── *@
+    <MudPaper Elevation="2" Class="pa-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.FactCheck" Color="Color.Tertiary" />
+            <MudText Typo="Typo.h6">Revision Validation</MudText>
+        </MudStack>
+
+        <MudText Typo="Typo.body2" Class="mb-3" Style="color: var(--mud-palette-text-secondary);">
+            Validate cached revision data by replaying revisions and comparing against the cached work item state.
+        </MudText>
+
+        <MudGrid Spacing="2" Class="mb-3">
+            <MudItem xs="12" sm="4">
+                <MudSelect T="string" @bind-Value="_validationMode" Label="Mode" Dense="true"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem Value="@("single")">Single Work Item</MudSelectItem>
+                    <MudSelectItem Value="@("sample")">Random Sample</MudSelectItem>
+                    <MudSelectItem Value="@("recent")">Recently Changed</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            @if (_validationMode == "single")
+            {
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="int?" @bind-Value="_validationWorkItemId"
+                                     Label="Work Item ID" Variant="Variant.Outlined"
+                                     Margin="Margin.Dense" />
+                </MudItem>
+            }
+            else
+            {
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="int" @bind-Value="_validationSampleSize"
+                                     Label="Sample Size" Variant="Variant.Outlined"
+                                     Margin="Margin.Dense" Min="1" Max="50" />
+                </MudItem>
+            }
+            <MudItem xs="12" sm="4" Class="d-flex align-end">
+                <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           Disabled="@_validating"
+                           OnClick="RunValidationAsync">
+                    Validate
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+
+        @if (_validating)
+        {
+            <MudProgressLinear Color="Color.Tertiary" Indeterminate="true" Class="mb-2" />
+        }
+
+        @if (_validationReport != null)
+        {
+            <MudStack Row="true" Spacing="3" Class="mb-3">
+                <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">
+                    @_validationReport.Passed Passed
+                </MudChip>
+                <MudChip T="string" Color="@(_validationReport.Failed > 0 ? Color.Error : Color.Default)"
+                         Size="Size.Small" Variant="Variant.Filled">
+                    @_validationReport.Failed Failed
+                </MudChip>
+                <MudText Typo="Typo.caption" Class="align-self-center"
+                         Style="color: var(--mud-palette-text-secondary);">
+                    Validated at @_validationReport.ValidatedAt.LocalDateTime.ToString("g")
+                </MudText>
+            </MudStack>
+
+            @foreach (var item in _validationReport.Results)
+            {
+                <MudPaper Outlined="true" Class="pa-3 mb-2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-1">
+                        <MudIcon Icon="@(item.IsValid ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)"
+                                 Color="@(item.IsValid ? Color.Success : Color.Error)" Size="Size.Small" />
+                        <MudText Typo="Typo.subtitle2">Work Item @item.WorkItemId</MudText>
+                        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">
+                            @item.RevisionCount revisions (last: #@item.LastRevisionNumber)
+                        </MudText>
+                    </MudStack>
+
+                    @if (!string.IsNullOrEmpty(item.ErrorMessage))
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true">@item.ErrorMessage</MudAlert>
+                    }
+
+                    @if (item.Diffs.Count > 0)
+                    {
+                        <MudSimpleTable Dense="true" Hover="true" Bordered="true" Class="mt-2">
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Replayed Value</th>
+                                    <th>Cached Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var diff in item.Diffs)
+                                {
+                                    <tr>
+                                        <td><MudText Typo="Typo.body2" Style="font-family: monospace;">@diff.FieldName</MudText></td>
+                                        <td><MudText Typo="Typo.body2" Color="Color.Warning">@(diff.ReplayedValue ?? "(null)")</MudText></td>
+                                        <td><MudText Typo="Typo.body2" Color="Color.Info">@(diff.RestValue ?? "(null)")</MudText></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    }
+                </MudPaper>
+            }
+
+            <MudButton Variant="Variant.Text" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Download"
+                       OnClick="ExportValidationJson">
+                Export as JSON
+            </MudButton>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public int ProductOwnerId { get; set; }
+
+    // Insights state
+    private CacheInsightsDto? _insights;
+    private bool _loading = true;
+
+    // Reset state
+    private readonly HashSet<string> _selectedTypes = new();
+    private bool _resetting;
+    private CacheResetResponse? _resetResult;
+
+    // Validation state
+    private string _validationMode = "single";
+    private int? _validationWorkItemId;
+    private int _validationSampleSize = 5;
+    private bool _validating;
+    private RevisionValidationReport? _validationReport;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInsightsAsync();
+    }
+
+    private async Task LoadInsightsAsync()
+    {
+        _loading = true;
+        try
+        {
+            _insights = await CacheSyncService.GetCacheInsightsAsync(ProductOwnerId);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    // Reset helpers
+    private bool IsTypeSelected(string type) => _selectedTypes.Contains(type);
+
+    private void ToggleTypeSelection(string type, bool selected)
+    {
+        if (selected) _selectedTypes.Add(type);
+        else _selectedTypes.Remove(type);
+    }
+
+    private async Task ResetSelectedAsync()
+    {
+        var confirmed = await ShowConfirmationAsync(
+            $"Reset {_selectedTypes.Count} entity type(s)?",
+            $"This will delete all cached data for: {string.Join(", ", _selectedTypes)}");
+        if (!confirmed) return;
+
+        _resetting = true;
+        _resetResult = null;
+        try
+        {
+            var request = new CacheResetRequest { EntityTypes = _selectedTypes.ToList() };
+            _resetResult = await CacheSyncService.ResetCacheSelectiveAsync(ProductOwnerId, request);
+            if (_resetResult?.Success == true)
+            {
+                Snackbar.Add("Cache reset completed", Severity.Success);
+                await LoadInsightsAsync();
+            }
+            else
+            {
+                Snackbar.Add("Cache reset failed", Severity.Error);
+            }
+        }
+        finally
+        {
+            _resetting = false;
+        }
+    }
+
+    private async Task ResetAllAsync()
+    {
+        var confirmed = await ShowConfirmationAsync(
+            "Reset all cached data?",
+            "This will delete ALL cached data and reset the sync state.");
+        if (!confirmed) return;
+
+        _resetting = true;
+        _resetResult = null;
+        try
+        {
+            var request = new CacheResetRequest(); // Empty = reset all
+            _resetResult = await CacheSyncService.ResetCacheSelectiveAsync(ProductOwnerId, request);
+            if (_resetResult?.Success == true)
+            {
+                Snackbar.Add("Full cache reset completed", Severity.Success);
+                await LoadInsightsAsync();
+            }
+            else
+            {
+                Snackbar.Add("Cache reset failed", Severity.Error);
+            }
+        }
+        finally
+        {
+            _resetting = false;
+        }
+    }
+
+    private async Task<bool> ShowConfirmationAsync(string title, string message)
+    {
+        var parameters = new DialogParameters<MudMessageBox>();
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small };
+        var result = await DialogService.ShowMessageBox(title, message, yesText: "Reset", cancelText: "Cancel");
+        return result == true;
+    }
+
+    // Validation
+    private async Task RunValidationAsync()
+    {
+        _validating = true;
+        _validationReport = null;
+        try
+        {
+            var request = new RevisionValidationRequest
+            {
+                Mode = _validationMode,
+                WorkItemId = _validationMode == "single" ? _validationWorkItemId : null,
+                SampleSize = _validationSampleSize
+            };
+            _validationReport = await CacheSyncService.ValidateRevisionsAsync(ProductOwnerId, request);
+            if (_validationReport != null)
+            {
+                var severity = _validationReport.Failed > 0 ? Severity.Warning : Severity.Success;
+                Snackbar.Add($"Validation complete: {_validationReport.Passed} passed, {_validationReport.Failed} failed", severity);
+            }
+            else
+            {
+                Snackbar.Add("Validation failed", Severity.Error);
+            }
+        }
+        finally
+        {
+            _validating = false;
+        }
+    }
+
+    private void ExportValidationJson()
+    {
+        if (_validationReport == null) return;
+        var json = System.Text.Json.JsonSerializer.Serialize(_validationReport,
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        Snackbar.Add("JSON written to browser console. Open dev tools to copy.", Severity.Info);
+        Console.WriteLine(json);
+    }
+
+    private static Color GetStatusColor(CacheSyncStatusDto status)
+    {
+        return status switch
+        {
+            CacheSyncStatusDto.Success => Color.Success,
+            CacheSyncStatusDto.SuccessWithWarnings => Color.Warning,
+            CacheSyncStatusDto.InProgress => Color.Info,
+            CacheSyncStatusDto.Failed => Color.Error,
+            _ => Color.Default
+        };
+    }
+}

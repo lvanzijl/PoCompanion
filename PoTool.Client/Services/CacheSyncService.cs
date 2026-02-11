@@ -118,6 +118,75 @@ public class CacheSyncService
             return false;
         }
     }
+
+    /// <summary>
+    /// Gets detailed cache insights for a Product Owner.
+    /// </summary>
+    public async Task<CacheInsightsDto?> GetCacheInsightsAsync(int productOwnerId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<CacheInsightsDto>(
+                $"api/CacheSync/{productOwnerId}/insights",
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Resets specific cache entity types.
+    /// </summary>
+    public async Task<CacheResetResponse?> ResetCacheSelectiveAsync(
+        int productOwnerId,
+        CacheResetRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                $"api/CacheSync/{productOwnerId}/reset",
+                request,
+                cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<CacheResetResponse>(cancellationToken: cancellationToken);
+            }
+            return null;
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Validates revision cache integrity.
+    /// </summary>
+    public async Task<RevisionValidationReport?> ValidateRevisionsAsync(
+        int productOwnerId,
+        RevisionValidationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                $"api/CacheSync/{productOwnerId}/validate",
+                request,
+                cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<RevisionValidationReport>(cancellationToken: cancellationToken);
+            }
+            return null;
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
+    }
 }
 
 /// <summary>
