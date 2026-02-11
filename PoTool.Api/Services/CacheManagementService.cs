@@ -333,13 +333,18 @@ public class CacheManagementService
                     .ToListAsync(cancellationToken);
 
             case "recent":
-                return await _context.RevisionHeaders
+                // SQLite cannot apply Max() on DateTimeOffset in queries, so we need client-side evaluation
+                var workItemsWithDates = await _context.RevisionHeaders
                     .GroupBy(r => r.WorkItemId)
-                    .Select(g => new { WorkItemId = g.Key, MaxChanged = g.Max(r => r.ChangedDate) })
+                    .Select(g => new { WorkItemId = g.Key, ChangedDates = g.Select(r => r.ChangedDate).ToList() })
+                    .ToListAsync(cancellationToken);
+                
+                return workItemsWithDates
+                    .Select(x => new { x.WorkItemId, MaxChanged = x.ChangedDates.Max() })
                     .OrderByDescending(x => x.MaxChanged)
                     .Take(Math.Min(request.SampleSize, 50))
                     .Select(x => x.WorkItemId)
-                    .ToListAsync(cancellationToken);
+                    .ToList();
 
             default:
                 return new List<int>();
