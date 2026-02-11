@@ -66,6 +66,26 @@ public class ProductOwnerCacheStateEntity
     public DateTimeOffset? PipelineWatermark { get; set; }
 
     /// <summary>
+    /// Timestamp of the last relationships snapshot build.
+    /// </summary>
+    public DateTimeOffset? RelationshipsSnapshotAsOfUtc { get; set; }
+
+    /// <summary>
+    /// Work item watermark the relationships snapshot was based on (for staleness checks).
+    /// </summary>
+    public DateTimeOffset? RelationshipsSnapshotWorkItemWatermark { get; set; }
+
+    /// <summary>
+    /// Timestamp of the last work item resolution run.
+    /// </summary>
+    public DateTimeOffset? ResolutionAsOfUtc { get; set; }
+
+    /// <summary>
+    /// Timestamp of the last sprint trend projection computation.
+    /// </summary>
+    public DateTimeOffset? SprintTrendProjectionAsOfUtc { get; set; }
+
+    /// <summary>
     /// Error message from last failed sync attempt.
     /// </summary>
     [MaxLength(2000)]

@@ -18,7 +18,7 @@ public class ValidationComputeStage : ISyncStage
     private readonly ILogger<ValidationComputeStage> _logger;
 
     public string StageName => "ComputeValidations";
-    public int StageNumber => 6;
+    public int StageNumber => 9;
 
     public ValidationComputeStage(
         PoToolDbContext context,

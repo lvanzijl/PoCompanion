@@ -40,6 +40,8 @@ public class WorkItemResolutionService
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var cacheState = await context.ProductOwnerCacheStates
+            .FirstOrDefaultAsync(state => state.ProductOwnerId == productOwnerId, cancellationToken);
 
         _logger.LogInformation("Starting work item resolution for ProductOwner {ProductOwnerId}", productOwnerId);
 
@@ -70,8 +72,20 @@ public class WorkItemResolutionService
         // Get the latest revision for each work item
         var latestRevisions = await GetLatestRevisionsAsync(context, cancellationToken);
 
-        // Build parent chain lookup from relation deltas
-        var parentChain = await BuildParentChainAsync(context, latestRevisions.Keys.ToList(), cancellationToken);
+        if (cacheState?.RelationshipsSnapshotAsOfUtc == null)
+        {
+            _logger.LogWarning(
+                "Relationship snapshot missing for ProductOwner {ProductOwnerId}. Resolution cannot proceed.",
+                productOwnerId);
+            return new ResolutionResult
+            {
+                Success = false,
+                Message = "Relationships snapshot missing or empty"
+            };
+        }
+
+        // Build parent chain lookup from relationship snapshot
+        var parentChain = await BuildParentChainAsync(context, productOwnerId, latestRevisions.Keys.ToList(), cancellationToken);
 
         var resolvedCount = 0;
         var orphanCount = 0;
@@ -139,6 +153,18 @@ public class WorkItemResolutionService
             }
         }
 
+        cacheState ??= new ProductOwnerCacheStateEntity
+        {
+            ProductOwnerId = productOwnerId,
+            SyncStatus = CacheSyncStatus.Idle
+        };
+        if (cacheState.Id == 0)
+        {
+            context.ProductOwnerCacheStates.Add(cacheState);
+        }
+
+        cacheState.ResolutionAsOfUtc = DateTimeOffset.UtcNow;
+
         await context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
@@ -170,34 +196,38 @@ public class WorkItemResolutionService
 
     private async Task<Dictionary<int, int?>> BuildParentChainAsync(
         PoToolDbContext context,
+        int productOwnerId,
         List<int> workItemIds,
         CancellationToken cancellationToken)
     {
-        // Get all relation deltas for parent links
-        var relationDeltas = await context.RevisionRelationDeltas
-            .Where(rd => workItemIds.Contains(rd.RevisionHeader.WorkItemId))
-            .Where(rd => rd.RelationType == ParentRelationType)
-            .Include(rd => rd.RevisionHeader)
-            .OrderBy(rd => rd.RevisionHeader.RevisionNumber)
+        var relationEdges = await context.WorkItemRelationshipEdges
+            .Where(edge => edge.ProductOwnerId == productOwnerId)
+            .Where(edge => workItemIds.Contains(edge.SourceWorkItemId) ||
+                           (edge.TargetWorkItemId.HasValue && workItemIds.Contains(edge.TargetWorkItemId.Value)))
             .ToListAsync(cancellationToken);
 
         // Build current parent for each work item by replaying deltas
         var parentChain = new Dictionary<int, int?>();
 
-        foreach (var delta in relationDeltas)
+        foreach (var edge in relationEdges)
         {
-            var workItemId = delta.RevisionHeader.WorkItemId;
-
-            if (delta.ChangeType == RelationChangeType.Added)
+            if (!IsHierarchyRelation(edge.RelationType))
             {
-                parentChain[workItemId] = delta.TargetWorkItemId;
+                continue;
             }
-            else if (delta.ChangeType == RelationChangeType.Removed)
+
+            var relationType = edge.RelationType ?? string.Empty;
+
+            if (relationType.Equals(ParentRelationType, StringComparison.OrdinalIgnoreCase))
             {
-                if (parentChain.TryGetValue(workItemId, out var currentParent) && currentParent == delta.TargetWorkItemId)
-                {
-                    parentChain[workItemId] = null;
-                }
+                parentChain[edge.SourceWorkItemId] = edge.TargetWorkItemId;
+                continue;
+            }
+
+            if (relationType.Equals("System.LinkTypes.Hierarchy-Forward", StringComparison.OrdinalIgnoreCase)
+                && edge.TargetWorkItemId.HasValue)
+            {
+                parentChain[edge.TargetWorkItemId.Value] = edge.SourceWorkItemId;
             }
         }
 
@@ -276,6 +306,12 @@ public class WorkItemResolutionService
         // If we couldn't reach a product root, mark as orphan
         resolution.Status = ResolutionStatus.Orphan;
         return resolution;
+    }
+
+    private static bool IsHierarchyRelation(string? relationType)
+    {
+        return !string.IsNullOrWhiteSpace(relationType) &&
+               relationType.Contains("Hierarchy", StringComparison.OrdinalIgnoreCase);
     }
 
     private class WorkItemResolution

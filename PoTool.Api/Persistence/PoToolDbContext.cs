@@ -190,6 +190,11 @@ public class PoToolDbContext : DbContext
     public DbSet<ResolvedWorkItemEntity> ResolvedWorkItems => Set<ResolvedWorkItemEntity>();
 
     /// <summary>
+    /// Snapshot of current work item relationships for a ProductOwner.
+    /// </summary>
+    public DbSet<WorkItemRelationshipEdgeEntity> WorkItemRelationshipEdges => Set<WorkItemRelationshipEdgeEntity>();
+
+    /// <summary>
     /// Pre-computed sprint metrics projections.
     /// </summary>
     public DbSet<SprintMetricsProjectionEntity> SprintMetricsProjections => Set<SprintMetricsProjectionEntity>();
@@ -623,6 +628,13 @@ public class PoToolDbContext : DbContext
             entity.HasIndex(e => e.ResolutionStatus);
 
             entity.Property(e => e.WorkItemType).HasMaxLength(100).IsRequired();
+        });
+
+        modelBuilder.Entity<WorkItemRelationshipEdgeEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.ProductOwnerId, e.SourceWorkItemId });
+            entity.HasIndex(e => new { e.ProductOwnerId, e.TargetWorkItemId });
+            entity.Property(e => e.RelationType).HasMaxLength(256).IsRequired();
         });
 
         // Sprint metrics projections
