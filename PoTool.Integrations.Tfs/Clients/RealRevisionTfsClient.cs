@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using PoTool.Core;
 using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
 using PoTool.Integrations.Tfs.Diagnostics;
@@ -50,26 +51,9 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
     private const string TokenHashHexFormat = "X8";
 
     /// <summary>
-    /// Field whitelist for revision API.
-    /// Only these fields will be requested and stored.
+    /// Field whitelist for revision API — delegates to the single source of truth.
     /// </summary>
-    private static readonly string[] FieldWhitelist = new[]
-    {
-        "System.Id",
-        "System.WorkItemType",
-        "System.Title",
-        "System.State",
-        "System.Reason",
-        "System.IterationPath",
-        "System.AreaPath",
-        "System.CreatedDate",
-        "System.ChangedDate",
-        "System.ChangedBy",
-        "Microsoft.VSTS.Common.ClosedDate",
-        "Microsoft.VSTS.Scheduling.Effort",
-        "System.Tags",
-        "Microsoft.VSTS.Common.Severity"
-    };
+    private static readonly IReadOnlyList<string> FieldWhitelist = RevisionFieldWhitelist.Fields;
 
     public RealRevisionTfsClient(
         IHttpClientFactory httpClientFactory,

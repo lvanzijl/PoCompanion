@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Api.Exceptions;
 using PoTool.Api.Hubs;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
 
@@ -16,17 +17,20 @@ public class CacheSyncController : ControllerBase
     private readonly ICacheStateRepository _cacheStateRepository;
     private readonly ISyncPipeline _syncPipeline;
     private readonly ISyncProgressBroadcaster _broadcaster;
+    private readonly CacheManagementService _cacheManagement;
     private readonly ILogger<CacheSyncController> _logger;
 
     public CacheSyncController(
         ICacheStateRepository cacheStateRepository,
         ISyncPipeline syncPipeline,
         ISyncProgressBroadcaster broadcaster,
+        CacheManagementService cacheManagement,
         ILogger<CacheSyncController> logger)
     {
         _cacheStateRepository = cacheStateRepository;
         _syncPipeline = syncPipeline;
         _broadcaster = broadcaster;
+        _cacheManagement = cacheManagement;
         _logger = logger;
     }
 
@@ -158,11 +162,51 @@ public class CacheSyncController : ControllerBase
             IsSyncing = _syncPipeline.IsSyncRunning(productOwnerId)
         });
     }
-}
+    /// <summary>
+    /// Gets detailed cache insights for a Product Owner.
+    /// </summary>
+    [HttpGet("{productOwnerId}/insights")]
+    [ProducesResponseType(typeof(CacheInsightsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<CacheInsightsDto>> GetCacheInsights(int productOwnerId, CancellationToken cancellationToken)
+    {
+        var insights = await _cacheManagement.GetInsightsAsync(productOwnerId, cancellationToken);
+        return Ok(insights);
+    }
 
-/// <summary>
-/// Response for sync trigger operation.
-/// </summary>
+    /// <summary>
+    /// Resets specific cache entity types for a Product Owner.
+    /// </summary>
+    [HttpPost("{productOwnerId}/reset")]
+    [ProducesResponseType(typeof(CacheResetResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<CacheResetResponse>> ResetCache(
+        int productOwnerId,
+        [FromBody] CacheResetRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (_syncPipeline.IsSyncRunning(productOwnerId))
+        {
+            return Conflict(new { message = "Cannot reset cache while sync is running" });
+        }
+
+        var result = await _cacheManagement.ResetSelectiveAsync(productOwnerId, request, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Validates revision cache integrity for a Product Owner.
+    /// </summary>
+    [HttpPost("{productOwnerId}/validate")]
+    [ProducesResponseType(typeof(RevisionValidationReport), StatusCodes.Status200OK)]
+    public async Task<ActionResult<RevisionValidationReport>> ValidateRevisions(
+        int productOwnerId,
+        [FromBody] RevisionValidationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var report = await _cacheManagement.ValidateRevisionsAsync(productOwnerId, request, cancellationToken);
+        return Ok(report);
+    }
+}
 public record SyncTriggerResponse
 {
     public bool Accepted { get; init; }
