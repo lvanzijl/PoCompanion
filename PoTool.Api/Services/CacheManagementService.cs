@@ -334,13 +334,14 @@ public class CacheManagementService
 
             case "recent":
                 // SQLite cannot apply Max() on DateTimeOffset in queries, so we need client-side evaluation
-                var workItemsWithDates = await _context.RevisionHeaders
-                    .GroupBy(r => r.WorkItemId)
-                    .Select(g => new { WorkItemId = g.Key, ChangedDates = g.Select(r => r.ChangedDate).ToList() })
+                // Get all revision headers and compute max ChangedDate per WorkItemId in memory
+                var allRevisions = await _context.RevisionHeaders
+                    .Select(r => new { r.WorkItemId, r.ChangedDate })
                     .ToListAsync(cancellationToken);
                 
-                return workItemsWithDates
-                    .Select(x => new { x.WorkItemId, MaxChanged = x.ChangedDates.Max() })
+                return allRevisions
+                    .GroupBy(r => r.WorkItemId)
+                    .Select(g => new { WorkItemId = g.Key, MaxChanged = g.Max(r => r.ChangedDate) })
                     .OrderByDescending(x => x.MaxChanged)
                     .Take(Math.Min(request.SampleSize, 50))
                     .Select(x => x.WorkItemId)
