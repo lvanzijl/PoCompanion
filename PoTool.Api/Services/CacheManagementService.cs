@@ -408,7 +408,7 @@ public class CacheManagementService
 
     /// <summary>
     /// Builds a dictionary of field values from the last revision header.
-    /// Public for testability.
+    /// Internal for testability via InternalsVisibleTo.
     /// </summary>
     internal static Dictionary<string, string?> BuildReplayedState(RevisionHeaderEntity revision)
     {
@@ -433,7 +433,7 @@ public class CacheManagementService
 
     /// <summary>
     /// Builds a dictionary of field values from a cached work item entity.
-    /// Public for testability.
+    /// Internal for testability via InternalsVisibleTo.
     /// </summary>
     internal static Dictionary<string, string?> BuildCachedWorkItemState(WorkItemEntity workItem)
     {
@@ -459,7 +459,7 @@ public class CacheManagementService
     /// <summary>
     /// Compares two field state dictionaries and returns diffs.
     /// Normalizes null/empty to treat them equivalently.
-    /// Public for testability.
+    /// Internal for testability via InternalsVisibleTo.
     /// </summary>
     internal static List<FieldDiffDto> CompareStates(
         Dictionary<string, string?> replayedState,
