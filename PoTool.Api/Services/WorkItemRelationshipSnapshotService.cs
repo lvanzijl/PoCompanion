@@ -105,7 +105,7 @@ public class WorkItemRelationshipSnapshotService
             productOwnerId,
             snapshotAsOf);
 
-        return RelationshipSnapshotResult.Success(edges.Count, snapshotAsOf);
+        return RelationshipSnapshotResult.CreateSuccess(edges.Count, snapshotAsOf);
     }
 
     private static List<WorkItemRelationshipEdgeEntity> BuildEdges(
@@ -178,7 +178,7 @@ public sealed record RelationshipSnapshotResult
     public DateTimeOffset? SnapshotAsOfUtc { get; init; }
     public string? ErrorMessage { get; init; }
 
-    public static RelationshipSnapshotResult Success(int edgeCount, DateTimeOffset snapshotAsOfUtc) =>
+    public static RelationshipSnapshotResult CreateSuccess(int edgeCount, DateTimeOffset snapshotAsOfUtc) =>
         new()
         {
             Success = true,
