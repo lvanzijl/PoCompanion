@@ -24,6 +24,13 @@
                            Class="@GetTopicClass("cache")">
                     Cache Status
                 </MudNavLink>
+                
+                <MudNavLink OnClick="@(() => SelectTopic("cache-management"))" 
+                           Icon="@Icons.Material.Filled.Storage"
+                           IconColor="@GetTopicColor("cache-management")"
+                           Class="@GetTopicClass("cache-management")">
+                    Cache Management
+                </MudNavLink>
             }
             
             <MudNavLink OnClick="@(() => SelectTopic("tfs"))" 
@@ -72,6 +79,22 @@
                     <MudText Typo="Typo.h4" Class="mb-3">Cache Status</MudText>
                     <MudAlert Severity="Severity.Info">
                         No active profile selected. Please select or create a profile to view cache status.
+                    </MudAlert>
+                </div>
+            }
+        }
+        else if (_currentTopic == "cache-management")
+        {
+            @if (_profileId.HasValue)
+            {
+                <CacheManagementSection ProductOwnerId="@_profileId.Value" />
+            }
+            else
+            {
+                <div class="settings-section">
+                    <MudText Typo="Typo.h4" Class="mb-3">Cache Management</MudText>
+                    <MudAlert Severity="Severity.Info">
+                        No active profile selected. Please select or create a profile to manage cache.
                     </MudAlert>
                 </div>
             }
