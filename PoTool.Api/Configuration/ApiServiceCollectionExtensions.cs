@@ -172,10 +172,13 @@ public static class ApiServiceCollectionExtensions
         // Register Work Item State Classification service
         services.AddScoped<IWorkItemStateClassificationService, WorkItemStateClassificationService>();
 
-        // Register Sync Pipeline services (Stages 1-8)
+        // Register Sync Pipeline services (Stages 1-11)
         services.AddScoped<WorkItemSyncStage>();
         services.AddScoped<TeamSprintSyncStage>();
         services.AddScoped<RevisionSyncStage>();
+        services.AddScoped<WorkItemRelationshipSnapshotStage>();
+        services.AddScoped<WorkItemResolutionSyncStage>();
+        services.AddScoped<SprintTrendProjectionSyncStage>();
         services.AddScoped<PullRequestSyncStage>();
         services.AddScoped<PipelineSyncStage>();
         services.AddScoped<ValidationComputeStage>();
@@ -325,6 +328,9 @@ public static class ApiServiceCollectionExtensions
 
         // Register Work Item Resolution Service (for Sprint Trend hierarchical resolution)
         services.AddSingleton<WorkItemResolutionService>();
+
+        // Register Work Item Relationship Snapshot Service (for building relationship edges)
+        services.AddSingleton<WorkItemRelationshipSnapshotService>();
 
         // Register Sprint Trend Projection Service (for sprint metrics computation)
         services.AddSingleton<SprintTrendProjectionService>();
