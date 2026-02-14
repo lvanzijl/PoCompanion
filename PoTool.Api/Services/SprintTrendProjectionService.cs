@@ -282,6 +282,7 @@ public class SprintTrendProjectionService
 
         // SQLite may fail to translate DateTimeOffset range predicates in this query shape.
         // Materialize candidate revisions first, then apply the date filter in memory.
+        // This intentionally trades some query selectivity for provider compatibility.
         var sprintRevisionCandidates = await context.RevisionHeaders
             .Include(h => h.FieldDeltas)
             .Where(h => resolvedWorkItemIds.Contains(h.WorkItemId))
