@@ -226,6 +226,38 @@
                             </tbody>
                         </MudSimpleTable>
                     }
+
+                    @if (item.ChangeTimeline.Count > 0)
+                    {
+                        <MudText Typo="Typo.caption" Class="mt-2 mb-1" Style="color: var(--mud-palette-text-secondary);">
+                            Full revision timeline (@item.ChangeTimeline.Count changes)
+                        </MudText>
+                        <MudSimpleTable Dense="true" Hover="true" Bordered="true">
+                            <thead>
+                                <tr>
+                                    <th>Date/Time</th>
+                                    <th>Revision</th>
+                                    <th>Changed By</th>
+                                    <th>Field</th>
+                                    <th>Old Value</th>
+                                    <th>New Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var change in item.ChangeTimeline)
+                                {
+                                    <tr>
+                                        <td>@change.ChangedDate.LocalDateTime.ToString("g")</td>
+                                        <td>#@change.RevisionNumber</td>
+                                        <td>@(change.ChangedBy ?? "(unknown)")</td>
+                                        <td><MudText Typo="Typo.body2" Style="font-family: monospace;">@change.FieldName</MudText></td>
+                                        <td><MudText Typo="Typo.body2" Color="Color.Warning">@(change.OldValue ?? "(null)")</MudText></td>
+                                        <td><MudText Typo="Typo.body2" Color="Color.Info">@(change.NewValue ?? "(null)")</MudText></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    }
                 </MudPaper>
             }
 

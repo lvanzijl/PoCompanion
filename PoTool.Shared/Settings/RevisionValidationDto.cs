@@ -96,6 +96,11 @@ public class WorkItemValidationResult
     /// Field differences found.
     /// </summary>
     public List<FieldDiffDto> Diffs { get; set; } = new();
+
+    /// <summary>
+    /// Full timeline of recorded revision field changes for this work item.
+    /// </summary>
+    public List<RevisionTimelineEntryDto> ChangeTimeline { get; set; } = new();
 }
 
 /// <summary>
@@ -117,4 +122,40 @@ public class FieldDiffDto
     /// Value from REST API / cached work item.
     /// </summary>
     public string? RestValue { get; set; }
+}
+
+/// <summary>
+/// A single field-level change recorded in a work item revision.
+/// </summary>
+public class RevisionTimelineEntryDto
+{
+    /// <summary>
+    /// Revision number where the change was recorded.
+    /// </summary>
+    public int RevisionNumber { get; set; }
+
+    /// <summary>
+    /// Date/time when the change was made.
+    /// </summary>
+    public DateTimeOffset ChangedDate { get; set; }
+
+    /// <summary>
+    /// User who made the change.
+    /// </summary>
+    public string? ChangedBy { get; set; }
+
+    /// <summary>
+    /// TFS field reference name that changed.
+    /// </summary>
+    public string FieldName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Previous value (if available).
+    /// </summary>
+    public string? OldValue { get; set; }
+
+    /// <summary>
+    /// New value after the change.
+    /// </summary>
+    public string? NewValue { get; set; }
 }
