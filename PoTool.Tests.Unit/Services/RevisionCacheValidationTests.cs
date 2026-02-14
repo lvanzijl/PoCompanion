@@ -308,6 +308,67 @@ public class RevisionCacheValidationTests
 
     #endregion
 
+    #region Revision Timeline Tests
+
+    [TestMethod]
+    [Description("BuildRevisionTimelineEntries returns all field changes in revision order with normalized values")]
+    public void BuildRevisionTimelineEntries_ReturnsOrderedTimeline()
+    {
+        var revisions = new List<RevisionHeaderEntity>
+        {
+            new()
+            {
+                RevisionNumber = 2,
+                ChangedDate = new DateTimeOffset(2025, 1, 2, 10, 0, 0, TimeSpan.Zero),
+                ChangedBy = "User B",
+                FieldDeltas =
+                {
+                    new RevisionFieldDeltaEntity { Id = 2, FieldName = "System.State", OldValue = "New", NewValue = "Active" }
+                }
+            },
+            new()
+            {
+                RevisionNumber = 1,
+                ChangedDate = new DateTimeOffset(2025, 1, 1, 9, 0, 0, TimeSpan.Zero),
+                ChangedBy = "User A",
+                FieldDeltas =
+                {
+                    new RevisionFieldDeltaEntity { Id = 1, FieldName = "System.Title", OldValue = "  ", NewValue = "Created" }
+                }
+            }
+        };
+
+        var timeline = CacheManagementService.BuildRevisionTimelineEntries(revisions);
+
+        Assert.HasCount(2, timeline);
+        Assert.AreEqual(1, timeline[0].RevisionNumber);
+        Assert.AreEqual("System.Title", timeline[0].FieldName);
+        Assert.IsNull(timeline[0].OldValue);
+        Assert.AreEqual("Created", timeline[0].NewValue);
+        Assert.AreEqual("User A", timeline[0].ChangedBy);
+
+        Assert.AreEqual(2, timeline[1].RevisionNumber);
+        Assert.AreEqual("System.State", timeline[1].FieldName);
+        Assert.AreEqual("New", timeline[1].OldValue);
+        Assert.AreEqual("Active", timeline[1].NewValue);
+    }
+
+    [TestMethod]
+    [Description("BuildRevisionTimelineEntries returns empty list when there are no field deltas")]
+    public void BuildRevisionTimelineEntries_NoFieldDeltas_ReturnsEmpty()
+    {
+        var revisions = new List<RevisionHeaderEntity>
+        {
+            new() { RevisionNumber = 1, ChangedDate = DateTimeOffset.UtcNow }
+        };
+
+        var timeline = CacheManagementService.BuildRevisionTimelineEntries(revisions);
+
+        Assert.IsEmpty(timeline);
+    }
+
+    #endregion
+
     #region RevisionFieldWhitelist Tests
 
     [TestMethod]

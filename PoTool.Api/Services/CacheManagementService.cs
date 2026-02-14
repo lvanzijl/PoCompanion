@@ -295,7 +295,7 @@ public class CacheManagementService
 
         foreach (var workItemId in workItemIds)
         {
-            var result = await ValidateSingleWorkItemAsync(workItemId, cancellationToken);
+            var result = await ValidateSingleWorkItemAsync(workItemId, request.Mode == "single", cancellationToken);
             report.Results.Add(result);
         }
 
@@ -360,6 +360,7 @@ public class CacheManagementService
     /// </summary>
     internal async Task<WorkItemValidationResult> ValidateSingleWorkItemAsync(
         int workItemId,
+        bool includeTimeline,
         CancellationToken cancellationToken)
     {
         var result = new WorkItemValidationResult { WorkItemId = workItemId };
@@ -367,8 +368,15 @@ public class CacheManagementService
         try
         {
             // Get all revisions for this work item ordered by revision number
-            var revisions = await _context.RevisionHeaders
-                .Where(r => r.WorkItemId == workItemId)
+            IQueryable<RevisionHeaderEntity> revisionsQuery = _context.RevisionHeaders
+                .Where(r => r.WorkItemId == workItemId);
+
+            if (includeTimeline)
+            {
+                revisionsQuery = revisionsQuery.Include(r => r.FieldDeltas);
+            }
+
+            var revisions = await revisionsQuery
                 .OrderBy(r => r.RevisionNumber)
                 .ToListAsync(cancellationToken);
 
@@ -404,6 +412,11 @@ public class CacheManagementService
             // Compare using whitelist fields
             result.Diffs = CompareStates(replayedState, cachedState);
             result.IsValid = result.Diffs.Count == 0;
+
+            if (includeTimeline)
+            {
+                result.ChangeTimeline = BuildRevisionTimelineEntries(revisions);
+            }
         }
         catch (Exception ex)
         {
@@ -497,6 +510,24 @@ public class CacheManagementService
         }
 
         return diffs;
+    }
+
+    internal static List<RevisionTimelineEntryDto> BuildRevisionTimelineEntries(List<RevisionHeaderEntity> revisions)
+    {
+        return revisions
+            .OrderBy(r => r.RevisionNumber)
+            .SelectMany(r => r.FieldDeltas
+                .OrderBy(d => d.Id)
+                .Select(d => new RevisionTimelineEntryDto
+                {
+                    RevisionNumber = r.RevisionNumber,
+                    ChangedDate = r.ChangedDate,
+                    ChangedBy = r.ChangedBy,
+                    FieldName = d.FieldName,
+                    OldValue = Normalize(d.OldValue),
+                    NewValue = Normalize(d.NewValue)
+                }))
+            .ToList();
     }
 
     /// <summary>
