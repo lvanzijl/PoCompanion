@@ -62,6 +62,10 @@ public class GetSprintTrendMetricsQueryHandlerTests
             .Setup(p => p.GetProjectionsAsync(It.IsAny<int>(), It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<SprintMetricsProjectionEntity>());
 
+        _mockProjectionService
+            .Setup(p => p.ComputeProjectionsAsync(It.IsAny<int>(), It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SprintMetricsProjectionEntity>());
+
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
@@ -115,6 +119,10 @@ public class GetSprintTrendMetricsQueryHandlerTests
         _mockProjectionService.Verify(
             p => p.ComputeProjectionsAsync(1, sprintIds, It.IsAny<CancellationToken>()),
             Times.Once);
+
+        _mockProjectionService.Verify(
+            p => p.GetProjectionsAsync(1, sprintIds, It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [TestMethod]
@@ -189,9 +197,8 @@ public class GetSprintTrendMetricsQueryHandlerTests
         };
 
         _mockProjectionService
-            .SetupSequence(p => p.GetProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SprintMetricsProjectionEntity>())
-            .ReturnsAsync(computedProjections);
+            .Setup(p => p.GetProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SprintMetricsProjectionEntity>());
 
         _mockProjectionService
             .Setup(p => p.ComputeProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
@@ -207,6 +214,10 @@ public class GetSprintTrendMetricsQueryHandlerTests
 
         _mockProjectionService.Verify(
             p => p.ComputeProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _mockProjectionService.Verify(
+            p => p.GetProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
@@ -32,42 +33,55 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
         GetSprintTrendMetricsQuery query,
         CancellationToken cancellationToken)
     {
-        _logger.LogDebug(
-            "Handling GetSprintTrendMetricsQuery for ProductOwner {ProductOwnerId}, {SprintCount} sprints",
-            query.ProductOwnerId, query.SprintIds.Count);
+        _logger.LogInformation(
+            "Handling GetSprintTrendMetricsQuery for ProductOwner {ProductOwnerId}, SprintCount {SprintCount}, Recompute {Recompute}",
+            query.ProductOwnerId, query.SprintIds.Count, query.Recompute);
 
         try
         {
-            // If recompute requested, compute projections first
+            IReadOnlyList<SprintMetricsProjectionEntity> projections;
+
             if (query.Recompute)
             {
-                await _projectionService.ComputeProjectionsAsync(
-                    query.ProductOwnerId,
-                    query.SprintIds,
-                    cancellationToken);
-            }
-
-            // Get projections
-            var projections = await _projectionService.GetProjectionsAsync(
-                query.ProductOwnerId,
-                query.SprintIds,
-                cancellationToken);
-
-            if (projections.Count == 0 && !query.Recompute)
-            {
                 _logger.LogInformation(
-                    "No sprint trend projections found for ProductOwner {ProductOwnerId}. Recomputing for requested sprint range.",
+                    "Recompute requested for ProductOwner {ProductOwnerId}. Computing projections for requested sprint range.",
                     query.ProductOwnerId);
 
-                await _projectionService.ComputeProjectionsAsync(
+                projections = await _projectionService.ComputeProjectionsAsync(
                     query.ProductOwnerId,
                     query.SprintIds,
                     cancellationToken);
 
+                _logger.LogInformation(
+                    "Computed {ProjectionCount} sprint trend projections for ProductOwner {ProductOwnerId} during recompute request.",
+                    projections.Count, query.ProductOwnerId);
+            }
+            else
+            {
                 projections = await _projectionService.GetProjectionsAsync(
                     query.ProductOwnerId,
                     query.SprintIds,
                     cancellationToken);
+
+                _logger.LogInformation(
+                    "Retrieved {ProjectionCount} cached sprint trend projections for ProductOwner {ProductOwnerId}.",
+                    projections.Count, query.ProductOwnerId);
+
+                if (projections.Count == 0)
+                {
+                    _logger.LogWarning(
+                        "No cached sprint trend projections found for ProductOwner {ProductOwnerId}. Triggering projection computation for requested sprint range.",
+                        query.ProductOwnerId);
+
+                    projections = await _projectionService.ComputeProjectionsAsync(
+                        query.ProductOwnerId,
+                        query.SprintIds,
+                        cancellationToken);
+
+                    _logger.LogInformation(
+                        "Computed {ProjectionCount} sprint trend projections for ProductOwner {ProductOwnerId} after cache miss.",
+                        projections.Count, query.ProductOwnerId);
+                }
             }
 
             // Get sprints for additional info
@@ -118,6 +132,10 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                 })
                 .OrderBy(m => m.StartUtc ?? DateTimeOffset.MaxValue)
                 .ToList();
+
+            _logger.LogInformation(
+                "Returning sprint trend metrics for ProductOwner {ProductOwnerId}: {SprintMetricCount} sprint rows from {ProjectionCount} projections.",
+                query.ProductOwnerId, metricsBySprint.Count, projections.Count);
 
             return new GetSprintTrendMetricsResponse
             {

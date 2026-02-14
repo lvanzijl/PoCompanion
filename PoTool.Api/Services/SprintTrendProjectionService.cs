@@ -48,12 +48,20 @@ public class SprintTrendProjectionService
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
 
-        _logger.LogInformation("Computing sprint metrics for ProductOwner {ProductOwnerId}", productOwnerId);
+        var sprintIdList = sprintIds.Distinct().ToList();
+
+        _logger.LogInformation(
+            "Computing sprint trend projections for ProductOwner {ProductOwnerId} across {SprintCount} sprints.",
+            productOwnerId, sprintIdList.Count);
 
         // Get products for this ProductOwner
         var products = await context.Products
             .Where(p => p.ProductOwnerId == productOwnerId)
             .ToListAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Found {ProductCount} products for ProductOwner {ProductOwnerId}.",
+            products.Count, productOwnerId);
 
         if (products.Count == 0)
         {
@@ -65,17 +73,26 @@ public class SprintTrendProjectionService
 
         // Get sprints
         var sprints = await context.Sprints
-            .Where(s => sprintIds.Contains(s.Id))
+            .Where(s => sprintIdList.Contains(s.Id))
             .ToListAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Found {SprintCount} matching sprint records for ProductOwner {ProductOwnerId}.",
+            sprints.Count, productOwnerId);
 
         // Get state classifications for activity detection
         var classifications = await GetStateClassificationsAsync(context, cancellationToken);
+        _logger.LogDebug("Loaded {ClassificationCount} state classifications for sprint trend computation.", classifications.Count);
 
         // Get resolved work items that belong to these products
         var resolvedItems = await context.ResolvedWorkItems
             .Where(r => r.ResolvedProductId != null && productIds.Contains(r.ResolvedProductId.Value))
             .Where(r => r.ResolutionStatus == ResolutionStatus.Resolved)
             .ToListAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Found {ResolvedItemCount} resolved work items mapped to ProductOwner {ProductOwnerId}.",
+            resolvedItems.Count, productOwnerId);
 
         var resolvedWorkItemIds = resolvedItems.Select(r => r.WorkItemId).ToHashSet();
 
@@ -85,6 +102,10 @@ public class SprintTrendProjectionService
             .GroupBy(h => h.WorkItemId)
             .Select(g => g.OrderByDescending(h => h.RevisionNumber).First())
             .ToListAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Found {RevisionCount} latest revisions for resolved work items of ProductOwner {ProductOwnerId}.",
+            latestRevisions.Count, productOwnerId);
 
         var revisionsByWorkItem = latestRevisions.ToDictionary(r => r.WorkItemId, r => r);
 
@@ -108,6 +129,16 @@ public class SprintTrendProjectionService
                     cancellationToken);
 
                 projections.Add(projection);
+
+                _logger.LogDebug(
+                    "Sprint trend projection computed for SprintId {SprintId}, ProductId {ProductId}: PlannedCount={PlannedCount}, WorkedCount={WorkedCount}, BugsPlanned={BugsPlannedCount}, BugsWorked={BugsWorkedCount}, IncludedUpToRevisionId={RevisionId}.",
+                    sprint.Id,
+                    product.Id,
+                    projection.PlannedCount,
+                    projection.WorkedCount,
+                    projection.BugsPlannedCount,
+                    projection.BugsWorkedCount,
+                    projection.IncludedUpToRevisionId);
 
                 // Upsert projection
                 var existing = await context.SprintMetricsProjections
@@ -157,11 +188,23 @@ public class SprintTrendProjectionService
             .Select(p => p.Id)
             .ToListAsync(cancellationToken);
 
-        return await context.SprintMetricsProjections
-            .Where(p => sprintIds.Contains(p.SprintId) && productIds.Contains(p.ProductId))
+        _logger.LogDebug(
+            "Looking up cached sprint trend projections for ProductOwner {ProductOwnerId}. ProductCount={ProductCount}.",
+            productOwnerId, productIds.Count);
+
+        var sprintIdList = sprintIds.Distinct().ToList();
+
+        var projections = await context.SprintMetricsProjections
+            .Where(p => sprintIdList.Contains(p.SprintId) && productIds.Contains(p.ProductId))
             .Include(p => p.Sprint)
             .Include(p => p.Product)
             .ToListAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Retrieved {ProjectionCount} cached sprint trend projections for ProductOwner {ProductOwnerId} across {SprintCount} requested sprints.",
+            projections.Count, productOwnerId, sprintIdList.Count);
+
+        return projections;
     }
 
     private async Task<SprintMetricsProjectionEntity> ComputeSprintProductMetricsAsync(
@@ -301,6 +344,15 @@ public class SprintTrendProjectionService
             .ToListAsync(cancellationToken);
 
         var allRevisionsToCheck = sprintRevisions.Union(lateCompletions).ToList();
+
+        _logger.LogDebug(
+            "Worked item scan for SprintId {SprintId}, ProductId {ProductId}: SprintRevisionCandidates={CandidateCount}, SprintRevisionsInRange={InRangeCount}, LateCompletions={LateCompletionCount}, RevisionsChecked={CheckedCount}.",
+            sprint.Id,
+            productId,
+            sprintRevisionCandidates.Count,
+            sprintRevisions.Count,
+            lateCompletions.Count,
+            allRevisionsToCheck.Count);
 
         foreach (var revision in allRevisionsToCheck)
         {
