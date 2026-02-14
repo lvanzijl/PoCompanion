@@ -280,12 +280,16 @@ public class SprintTrendProjectionService
         var sprintStart = sprint.StartUtc ?? DateTimeOffset.MinValue;
         var sprintEnd = sprint.EndUtc ?? DateTimeOffset.MaxValue;
 
-        // Get all revisions in the sprint date range
-        var sprintRevisions = await context.RevisionHeaders
+        // SQLite may fail to translate DateTimeOffset range predicates in this query shape.
+        // Materialize candidate revisions first, then apply the date filter in memory.
+        // This intentionally trades some query selectivity for provider compatibility.
+        var sprintRevisionCandidates = await context.RevisionHeaders
             .Include(h => h.FieldDeltas)
-            .Where(h => h.ChangedDate >= sprintStart && h.ChangedDate <= sprintEnd)
             .Where(h => resolvedWorkItemIds.Contains(h.WorkItemId))
             .ToListAsync(cancellationToken);
+        var sprintRevisions = sprintRevisionCandidates
+            .Where(h => h.ChangedDate >= sprintStart && h.ChangedDate <= sprintEnd)
+            .ToList();
 
         // Also check for late completions: Done while IterationPath == Sprint
         // (attributed to sprint even if change happens later)
