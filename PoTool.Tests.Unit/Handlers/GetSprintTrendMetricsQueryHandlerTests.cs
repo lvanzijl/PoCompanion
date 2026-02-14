@@ -118,15 +118,24 @@ public class GetSprintTrendMetricsQueryHandlerTests
     }
 
     [TestMethod]
-    [Description("Should not call ComputeProjectionsAsync when recompute is false")]
-    public async Task Handle_RecomputeFalse_DoesNotCallComputeProjections()
+    [Description("Should not call ComputeProjectionsAsync when projections already exist and recompute is false")]
+    public async Task Handle_RecomputeFalse_WithExistingProjections_DoesNotCallComputeProjections()
     {
         // Arrange
         var query = new GetSprintTrendMetricsQuery(1, new[] { 1 }, false);
         
         _mockProjectionService
             .Setup(p => p.GetProjectionsAsync(It.IsAny<int>(), It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SprintMetricsProjectionEntity>());
+            .ReturnsAsync(new List<SprintMetricsProjectionEntity>
+            {
+                new()
+                {
+                    SprintId = 1,
+                    ProductId = 1,
+                    LastComputedAt = DateTimeOffset.UtcNow,
+                    IncludedUpToRevisionId = 1
+                }
+            });
 
         // Act
         await _handler.Handle(query, CancellationToken.None);
@@ -135,6 +144,70 @@ public class GetSprintTrendMetricsQueryHandlerTests
         _mockProjectionService.Verify(
             p => p.ComputeProjectionsAsync(It.IsAny<int>(), It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [TestMethod]
+    [Description("Should recompute projections when cached projections are missing")]
+    public async Task Handle_RecomputeFalse_WithEmptyCachedProjections_RecomputesAndReturnsData()
+    {
+        // Arrange
+        var sprintIds = new[] { 1 };
+        var query = new GetSprintTrendMetricsQuery(1, sprintIds, false);
+
+        var team = new TeamEntity { Name = "Test Team", TeamAreaPath = "Project\\Team" };
+        _context.Teams.Add(team);
+        await _context.SaveChangesAsync();
+
+        var sprint = new SprintEntity
+        {
+            Name = "Sprint 1",
+            Path = "Project\\Sprint 1",
+            TeamId = team.Id
+        };
+        _context.Sprints.Add(sprint);
+
+        var product = new ProductEntity
+        {
+            Name = "Product A",
+            BacklogRootWorkItemId = 100,
+            ProductOwnerId = 1
+        };
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+
+        var computedProjections = new List<SprintMetricsProjectionEntity>
+        {
+            new()
+            {
+                SprintId = sprint.Id,
+                ProductId = product.Id,
+                PlannedCount = 3,
+                WorkedCount = 2,
+                LastComputedAt = DateTimeOffset.UtcNow,
+                IncludedUpToRevisionId = 1
+            }
+        };
+
+        _mockProjectionService
+            .SetupSequence(p => p.GetProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SprintMetricsProjectionEntity>())
+            .ReturnsAsync(computedProjections);
+
+        _mockProjectionService
+            .Setup(p => p.ComputeProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(computedProjections);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.IsTrue(result.Success);
+        Assert.IsNotNull(result.Metrics);
+        Assert.HasCount(1, result.Metrics);
+
+        _mockProjectionService.Verify(
+            p => p.ComputeProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [TestMethod]
