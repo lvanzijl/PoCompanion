@@ -53,6 +53,23 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                 query.SprintIds,
                 cancellationToken);
 
+            if (projections.Count == 0 && !query.Recompute)
+            {
+                _logger.LogInformation(
+                    "No sprint trend projections found for ProductOwner {ProductOwnerId}. Recomputing for requested sprint range.",
+                    query.ProductOwnerId);
+
+                await _projectionService.ComputeProjectionsAsync(
+                    query.ProductOwnerId,
+                    query.SprintIds,
+                    cancellationToken);
+
+                projections = await _projectionService.GetProjectionsAsync(
+                    query.ProductOwnerId,
+                    query.SprintIds,
+                    cancellationToken);
+            }
+
             // Get sprints for additional info
             var sprints = await _context.Sprints
                 .Where(s => query.SprintIds.Contains(s.Id))
