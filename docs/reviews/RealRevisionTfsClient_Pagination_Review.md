@@ -81,8 +81,10 @@
 ### Mismatches / ambiguities / mixed models
 - Header-first + body-fallback precedence is present, but only for `continuationToken`; no other server pagination signals are read.
 - No parsing/usage of `isLastBatch`/`nextLink`-style body fields in this client.
-- Pagination state fields exist in class (`_observedContinuationTokens`, `_emptyPages`, `_progressWithoutDataPages`, `_paginationCompleted`) but state bootstrap method `EnsurePaginationState(...)` has no call sites in the file (`RealRevisionTfsClient.cs:490`; no references found).
-- `_paginationOptions` is injected (`RealRevisionTfsClient.cs:35,72`) but not read in this file.
+- Pagination state fields exist in class (`_observedContinuationTokens`, `_emptyPages`, `_progressWithoutDataPages`, `_paginationCompleted`).
+- State bootstrap helper `EnsurePaginationState(...)` exists (`RealRevisionTfsClient.cs:490-502`).
+- No call sites for `EnsurePaginationState(...)` were found in the file.
+- `_paginationOptions` is injected (`RealRevisionTfsClient.cs:35,72`) but not read anywhere else within `RealRevisionTfsClient.cs` (file-local reference scan).
 
 ### Needs deeper analysis
 - **Needs deeper analysis:** whether absence of `isLastBatch`/`nextLink` handling is safe for all TFS response variants used in this environment.
@@ -153,13 +155,13 @@
   - repeated token detection (`1212-1225`)
   - empty page + hasMore or no token advance (`1226-1239`)
   - token not advancing while `hasMoreResults` (`1240-1253`).
-- Retry path exists for retryable anomalies before declaring stall (`1257-1271`).
+- Retry path exists for a retryable anomaly before declaring stall (`1257-1271`).
 - Window completion can occur by page position heuristic or `!hasMoreResults` (`1281-1294`).
 
 **Deep-dive next**
 - Log/observe page-by-page tuple: `(pageIndex, tokenHash, hasMoreResults, tokenAdvanced, rawRevisionCount, scopedRevisionCount)`; these are already partially emitted at `1063-1080`.
 - Inspect server responses for cases where token is present but no data (`rawRevisionCount == 0`) to confirm intended termination behavior (`1226-1239`).
-- Validate whether identical requests can reoccur due retry rollback path (`1268-1270`) and whether subsequent response differs.
+- Validate whether identical requests can reoccur due to retry rollback path (`1268-1270`) and whether subsequent response differs.
 - Validate caller misuse possibility: wrong token reuse is guarded by `pageTracker`, but cross-window token reset is intentional (`continuationToken` initialized null at `917`).
 
 #### 2) `ProcessWindowsAsync` orchestration loop (`RevisionIngestionService.cs:770-874`)
@@ -190,7 +192,7 @@
 
 **Deep-dive next**
 - Observe whether repeated hydration for same work item is prevented by `_lastHydratedRevision` guard (`31`, `170-177`).
-- Validate whether this path runs in production sync flow (no call site found in `PoTool.Api` search).
+- Validate whether this path runs in production sync flow (no call site found in repository text search under `/PoTool.Api`).
 
 ---
 
@@ -243,4 +245,3 @@
 2. The presence of unused pagination-state members in `RealRevisionTfsClient` may indicate an incomplete or superseded protection strategy against repeated batches.
 3. Per-item revisions retrieval (`GetWorkItemRevisionsAsync`) assumes non-paged completeness; this assumption should be confirmed against observed responses for high-revision work items.
 4. If relation hydration is intended as active behavior, missing call-site wiring would affect when per-item revision retrieval executes in production.
-
