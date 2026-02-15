@@ -354,17 +354,39 @@ public class RevisionCacheValidationTests
     }
 
     [TestMethod]
-    [Description("BuildRevisionTimelineEntries returns empty list when there are no field deltas")]
-    public void BuildRevisionTimelineEntries_NoFieldDeltas_ReturnsEmpty()
+    [Description("BuildRevisionTimelineEntries falls back to revision-header diffs when no field deltas are present")]
+    public void BuildRevisionTimelineEntries_NoFieldDeltas_FallsBackToHeaderDiffs()
     {
         var revisions = new List<RevisionHeaderEntity>
         {
-            new() { RevisionNumber = 1, ChangedDate = DateTimeOffset.UtcNow }
+            new()
+            {
+                WorkItemId = 42,
+                RevisionNumber = 1,
+                WorkItemType = "Bug",
+                Title = "Original title",
+                State = "New",
+                IterationPath = "Iteration 1",
+                AreaPath = "Area 1",
+                ChangedDate = new DateTimeOffset(2025, 1, 1, 9, 0, 0, TimeSpan.Zero)
+            },
+            new()
+            {
+                WorkItemId = 42,
+                RevisionNumber = 2,
+                WorkItemType = "Bug",
+                Title = "Updated title",
+                State = "Active",
+                IterationPath = "Iteration 1",
+                AreaPath = "Area 1",
+                ChangedDate = new DateTimeOffset(2025, 1, 2, 10, 0, 0, TimeSpan.Zero)
+            }
         };
 
         var timeline = CacheManagementService.BuildRevisionTimelineEntries(revisions);
 
-        Assert.IsEmpty(timeline);
+        Assert.IsTrue(timeline.Any(change => change.RevisionNumber == 2 && change.FieldName == "System.Title"));
+        Assert.IsTrue(timeline.Any(change => change.RevisionNumber == 2 && change.FieldName == "System.State"));
     }
 
     #endregion

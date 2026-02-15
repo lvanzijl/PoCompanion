@@ -514,8 +514,11 @@ public class CacheManagementService
 
     internal static List<RevisionTimelineEntryDto> BuildRevisionTimelineEntries(List<RevisionHeaderEntity> revisions)
     {
-        return revisions
+        var orderedRevisions = revisions
             .OrderBy(r => r.RevisionNumber)
+            .ToList();
+
+        var timeline = orderedRevisions
             .SelectMany(r => r.FieldDeltas
                 .OrderBy(d => d.Id)
                 .Select(d => new RevisionTimelineEntryDto
@@ -528,6 +531,46 @@ public class CacheManagementService
                     NewValue = Normalize(d.NewValue)
                 }))
             .ToList();
+
+        if (timeline.Count > 0)
+        {
+            return timeline;
+        }
+
+        Dictionary<string, string?>? previousRevisionState = null;
+        foreach (var revision in orderedRevisions)
+        {
+            var currentState = BuildReplayedState(revision);
+
+            foreach (var field in RevisionFieldWhitelist.Fields)
+            {
+                var previousValue = Normalize(previousRevisionState?.GetValueOrDefault(field));
+                var currentValue = Normalize(currentState.GetValueOrDefault(field));
+
+                if (previousRevisionState == null && currentValue == null)
+                {
+                    continue;
+                }
+                if (previousRevisionState != null && string.Equals(previousValue, currentValue, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                timeline.Add(new RevisionTimelineEntryDto
+                {
+                    RevisionNumber = revision.RevisionNumber,
+                    ChangedDate = revision.ChangedDate,
+                    ChangedBy = revision.ChangedBy,
+                    FieldName = field,
+                    OldValue = previousValue,
+                    NewValue = currentValue
+                });
+            }
+
+            previousRevisionState = currentState;
+        }
+
+        return timeline;
     }
 
     /// <summary>
