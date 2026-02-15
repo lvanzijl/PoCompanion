@@ -245,3 +245,18 @@
 2. The presence of unused pagination-state members in `RealRevisionTfsClient` may indicate an incomplete or superseded protection strategy against repeated batches.
 3. Per-item revisions retrieval (`GetWorkItemRevisionsAsync`) assumes non-paged completeness; this assumption should be confirmed against observed responses for high-revision work items.
 4. If relation hydration is intended as active behavior, missing call-site wiring would affect when per-item revision retrieval executes in production.
+
+## F) Deep-analysis closure and single remaining next step
+
+### Deeper analysis completed from current codebase (no runtime log required)
+1. **Pagination safety policy source is in `RevisionIngestionService`, not in `RealRevisionTfsClient` state fields.**  
+   `RevisionIngestionPaginationOptions` is consumed by `RevisionIngestionService` loop controls (`PoTool.Api/Services/RevisionIngestionService.cs:924-1266`), while `_paginationOptions` in `RealRevisionTfsClient` is injected but not read beyond constructor assignment (`PoTool.Integrations.Tfs/Clients/RealRevisionTfsClient.cs:35,72`).
+2. **`EnsurePaginationState` and token-history fields are currently inactive in effective control flow.**  
+   `EnsurePaginationState(...)` has no call sites in repository search; only declaration exists in `RealRevisionTfsClient` (`RealRevisionTfsClient.cs:490-502`), so repeated/non-advancing token defense is currently enforced by ingestion loop logic (`RevisionIngestionService.cs:1212-1253`), not by client-internal history tracking.
+3. **Relation hydration path remains unwired in production sync flow.**  
+   `RelationRevisionHydrator` is registered (`PoTool.Api/Configuration/ApiServiceCollectionExtensions.cs:327`) and calls `GetWorkItemRevisionsAsync` internally, but no production call site for `HydrateAsync(...)` exists under `PoTool.Api` search results.
+4. **Per-item revisions endpoint is requested without paging/continuation handling in client code.**  
+   `GetWorkItemRevisionsAsync(...)` reads `value` and returns as-is (`RealRevisionTfsClient.cs:147-197`) and does not parse continuation headers/body, so completeness for extreme revision counts cannot be proven from static code alone.
+
+### Remaining next step (only)
+- **Run the application, execute a full sync, and attach the sync log together with this `RealRevisionTfsClient_Pagination_Review.md` file so the agent can perform further runtime pagination analysis.**
