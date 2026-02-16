@@ -1,0 +1,19 @@
+{
+  "value": [
+    {
+      "id": 102,
+      "rev": 4,
+      "fields": {
+        "System.WorkItemType": "Bug",
+        "System.Title": "Finalize batch",
+        "System.State": "Done",
+        "System.IterationPath": "Project\\Sprint 2",
+        "System.AreaPath": "Project",
+        "System.ChangedDate": "2025-01-02T10:00:00Z",
+        "System.ChangedBy": "bob"
+      }
+    }
+  ],
+  "isLastBatch": true,
+  "continuationToken": "token-that-should-be-ignored"
+}

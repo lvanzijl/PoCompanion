@@ -26,4 +26,8 @@
     <ProjectReference Include="..\PoTool.Integrations.Tfs\PoTool.Integrations.Tfs.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="RecordedPayloads/**/*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

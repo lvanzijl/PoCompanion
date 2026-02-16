@@ -1,0 +1,19 @@
+{
+  "value": [
+    {
+      "id": 103,
+      "rev": 5,
+      "fields": {
+        "System.WorkItemType": "Task",
+        "System.Title": "Payload token page",
+        "System.State": "Committed",
+        "System.IterationPath": "Project\\Sprint 3",
+        "System.AreaPath": "Project",
+        "System.ChangedDate": "2025-01-03T10:00:00Z",
+        "System.ChangedBy": "carol"
+      }
+    }
+  ],
+  "isLastBatch": false,
+  "continuationToken": "token-from-payload"
+}
