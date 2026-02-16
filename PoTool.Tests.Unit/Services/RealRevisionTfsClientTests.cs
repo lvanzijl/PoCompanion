@@ -459,6 +459,48 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
+    public void ExtractContinuationTokenFromPayload_WithNumericContinuationToken_ReturnsStringToken()
+    {
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        const string payload = """
+            {
+              "continuationToken": 12345
+            }
+            """;
+
+        var token = client.TestExtractContinuationTokenFromPayload(payload);
+
+        Assert.AreEqual("12345", token);
+    }
+
+    [TestMethod]
+    public void ExtractContinuationTokenFromPayload_WithNextLinkContinuationToken_ReturnsToken()
+    {
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        const string payload = """
+            {
+              "nextLink": "https://tfs.example.com/DefaultCollection/_apis/wit/reporting/workitemrevisions?api-version=7.0&continuationToken=token%2Bvalue"
+            }
+            """;
+
+        var token = client.TestExtractContinuationTokenFromPayload(payload);
+
+        Assert.AreEqual("token+value", token);
+    }
+
+    [TestMethod]
     public void BuildWorkItemRevisionsUrl_IncludesExpandRelations()
     {
         var config = new TfsConfigEntity
@@ -943,6 +985,16 @@ public sealed class RealRevisionTfsClientTests
                 BindingFlags.NonPublic | BindingFlags.Static);
 
             return (string?)method!.Invoke(null, new object?[] { response });
+        }
+
+        public string? TestExtractContinuationTokenFromPayload(string json)
+        {
+            using var doc = JsonDocument.Parse(json);
+            var method = typeof(RealRevisionTfsClient).GetMethod(
+                "ExtractContinuationTokenFromPayload",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+            return (string?)method!.Invoke(null, new object?[] { doc.RootElement });
         }
 
         public void TestParseWorkItemRevisionFromPerItem(string json, int workItemId)
