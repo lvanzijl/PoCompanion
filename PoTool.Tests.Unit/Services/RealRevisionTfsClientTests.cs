@@ -459,8 +459,11 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
-    public void ExtractContinuationTokenFromPayload_WithNumericContinuationToken_ReturnsStringToken()
+    public void ExtractContinuationToken_WhenHeaderHasWhitespace_TrimmedTokenReturned()
     {
+        var response = new HttpResponseMessage();
+        response.Headers.TryAddWithoutValidation("x-ms-continuationtoken", "  token-123  ");
+
         var client = new TestableRealRevisionTfsClient(
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
@@ -468,20 +471,17 @@ public sealed class RealRevisionTfsClientTests
             _throttler,
             _requestSender, _mockPaginationOptions.Object);
 
-        const string payload = """
-            {
-              "continuationToken": 12345
-            }
-            """;
+        var token = client.TestExtractContinuationToken(response);
 
-        var token = client.TestExtractContinuationTokenFromPayload(payload);
-
-        Assert.AreEqual("12345", token);
+        Assert.AreEqual("token-123", token);
     }
 
     [TestMethod]
-    public void ExtractContinuationTokenFromPayload_WithNextLinkContinuationToken_ReturnsToken()
+    public void ExtractContinuationToken_WhenHeaderTokenQuoted_StripsQuotes()
     {
+        var response = new HttpResponseMessage();
+        response.Headers.TryAddWithoutValidation("x-ms-continuationtoken", "\"token-quoted\"");
+
         var client = new TestableRealRevisionTfsClient(
             _mockHttpClientFactory.Object,
             _mockConfigService.Object,
@@ -489,15 +489,9 @@ public sealed class RealRevisionTfsClientTests
             _throttler,
             _requestSender, _mockPaginationOptions.Object);
 
-        const string payload = """
-            {
-              "nextLink": "https://tfs.example.com/DefaultCollection/_apis/wit/reporting/workitemrevisions?api-version=7.0&continuationToken=token%2Bvalue"
-            }
-            """;
+        var token = client.TestExtractContinuationToken(response);
 
-        var token = client.TestExtractContinuationTokenFromPayload(payload);
-
-        Assert.AreEqual("token+value", token);
+        Assert.AreEqual("token-quoted", token);
     }
 
     [TestMethod]
