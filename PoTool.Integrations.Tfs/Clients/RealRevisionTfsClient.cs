@@ -93,11 +93,15 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             var hasRunContext = _diagnostics?.TryGetCurrentRun(out runContext) == true;
             var logPerPageSummary = hasRunContext && runContext.LogPerPageSummary;
 
+            var maxTokenHistory = Math.Max(1, _paginationOptions.CurrentValue.MaxTotalPages);
+            var normalizedContinuationToken = NormalizeContinuationToken(continuationToken);
+            EnsurePaginationState(normalizedContinuationToken, maxTokenHistory);
+
             var pagePayload = await FetchReportingRevisionsPageAsync(
                 httpClient,
                 config,
                 startDateTime,
-                NormalizeContinuationToken(continuationToken),
+                normalizedContinuationToken,
                 expandMode,
                 logPerPageSummary,
                 cancellationToken);
