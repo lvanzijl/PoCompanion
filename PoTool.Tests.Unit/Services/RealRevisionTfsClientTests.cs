@@ -802,11 +802,11 @@ public sealed class RealRevisionTfsClientTests
             Content = new StringContent("{\"error\":\"bad request\"}")
         };
 
-        TfsException exception;
+        TfsException? exception = null;
         try
         {
             await client.TestHandleHttpErrorsAsync(response, CancellationToken.None);
-            throw new AssertFailedException($"Expected {nameof(TfsException)} was not thrown");
+            Assert.Fail($"Expected {nameof(TfsException)} was not thrown");
         }
         catch (TargetInvocationException ex) when (ex.InnerException is TfsException innerException)
         {
@@ -817,6 +817,7 @@ public sealed class RealRevisionTfsClientTests
             exception = ex;
         }
 
+        Assert.IsNotNull(exception);
         Assert.IsTrue(exception.Message.Contains("continuationToken=<redacted>", StringComparison.Ordinal));
         Assert.IsFalse(exception.Message.Contains("secret-token", StringComparison.Ordinal));
     }

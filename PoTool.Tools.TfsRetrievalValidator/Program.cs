@@ -378,7 +378,7 @@ internal sealed class TfsCaptureHandler(TfsDumpCollector dumpCollector, ILogger<
                 .Select(part =>
                 {
                     var separatorIndex = part.IndexOf('=');
-                    if (separatorIndex <= 0)
+                    if (separatorIndex < 0)
                     {
                         return part;
                     }
@@ -397,6 +397,8 @@ internal sealed class TfsCaptureHandler(TfsDumpCollector dumpCollector, ILogger<
 
 internal sealed class TfsDumpCollector
 {
+    private const int MaxTopFailingEndpointsToReport = 10;
+    private const double HighPagesWithoutScopedRevisionsThreshold = 0.5d;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly ConcurrentQueue<CapturedResponse> _responses = new();
 
@@ -465,7 +467,7 @@ internal sealed class TfsDumpCollector
             .Select(group => new EndpointFailureSummary(group.Key, group.Count(), group.First().ResponseStatusCode))
             .OrderByDescending(summary => summary.Count)
             .ThenBy(summary => summary.Endpoint, StringComparer.Ordinal)
-            .Take(10)
+            .Take(MaxTopFailingEndpointsToReport)
             .ToList();
 
         var recommendations = new List<string>();
@@ -489,8 +491,9 @@ internal sealed class TfsDumpCollector
             recommendations.Add("Investigate reporting pagination termination and consider fallback or smaller windows for continuation token progress.");
         }
 
+        var thresholdPageCount = snapshot.RevisionPagesFetched * HighPagesWithoutScopedRevisionsThreshold;
         if (snapshot.RevisionPagesFetched > 0 &&
-            snapshot.PagesWithoutScopedRevisions > snapshot.RevisionPagesFetched / 2)
+            snapshot.PagesWithoutScopedRevisions > thresholdPageCount)
         {
             recommendations.Add("High number of pages without scoped revisions suggests filter mismatch; verify root hierarchy coverage and revision field projection.");
         }
