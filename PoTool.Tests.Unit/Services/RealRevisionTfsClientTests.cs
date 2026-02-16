@@ -981,6 +981,16 @@ public sealed class RealRevisionTfsClientTests
             return (string?)method!.Invoke(null, new object?[] { response });
         }
 
+        public string? TestExtractContinuationTokenFromPayload(string json)
+        {
+            using var doc = JsonDocument.Parse(json);
+            var method = typeof(RealRevisionTfsClient).GetMethod(
+                "ExtractContinuationTokenFromPayload",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+            return (string?)method!.Invoke(null, new object?[] { doc.RootElement });
+        }
+
         public void TestParseWorkItemRevisionFromPerItem(string json, int workItemId)
         {
             using var doc = JsonDocument.Parse(json);

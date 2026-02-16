@@ -334,10 +334,9 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
             var nextContinuationToken = ExtractContinuationToken(response);
 
-            if (nextContinuationToken == null &&
-                doc.RootElement.TryGetProperty("continuationToken", out var tokenElement))
+            if (nextContinuationToken == null)
             {
-                nextContinuationToken = NormalizeContinuationToken(tokenElement.GetString());
+                nextContinuationToken = ExtractContinuationTokenFromPayload(doc.RootElement);
             }
 
             var transformStart = captureTimings ? Stopwatch.GetTimestamp() : 0;
@@ -396,6 +395,57 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         }
 
         return NormalizeContinuationToken(headerTokens.FirstOrDefault());
+    }
+
+    private static string? ExtractContinuationTokenFromPayload(JsonElement rootElement)
+    {
+        if (rootElement.TryGetProperty("continuationToken", out var tokenElement))
+        {
+            var token = tokenElement.ValueKind switch
+            {
+                JsonValueKind.String => tokenElement.GetString(),
+                JsonValueKind.Number => tokenElement.GetRawText(),
+                _ => null
+            };
+
+            var normalizedToken = NormalizeContinuationToken(token);
+            if (normalizedToken != null)
+            {
+                return normalizedToken;
+            }
+        }
+
+        if (rootElement.TryGetProperty("nextLink", out var nextLinkElement) &&
+            nextLinkElement.ValueKind == JsonValueKind.String)
+        {
+            return ExtractContinuationTokenFromNextLink(nextLinkElement.GetString());
+        }
+
+        return null;
+    }
+
+    private static string? ExtractContinuationTokenFromNextLink(string? nextLink)
+    {
+        if (string.IsNullOrWhiteSpace(nextLink) ||
+            !Uri.TryCreate(nextLink, UriKind.Absolute, out var nextUri))
+        {
+            return null;
+        }
+
+        var query = nextUri.Query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var part in query)
+        {
+            var pair = part.Split('=', 2);
+            if (pair.Length == 2 &&
+                pair[0].Equals("continuationToken", StringComparison.OrdinalIgnoreCase))
+            {
+                return NormalizeContinuationToken(Uri.UnescapeDataString(pair[1]));
+            }
+        }
+
+        return null;
     }
 
     private static string? NormalizeContinuationToken(string? continuationToken)
