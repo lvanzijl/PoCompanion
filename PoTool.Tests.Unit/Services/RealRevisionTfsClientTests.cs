@@ -571,13 +571,15 @@ public sealed class RealRevisionTfsClientTests
             .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(config);
 
-        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        var httpClient = new HttpClient(new StubHttpMessageHandler(() =>
         {
-            Content = new StringContent("{\"value\":[]}")
-        };
-        response.Headers.TryAddWithoutValidation("x-ms-continuationtoken", "server-token");
-
-        var httpClient = new HttpClient(new StubHttpMessageHandler(response));
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"value\":[]}")
+            };
+            response.Headers.TryAddWithoutValidation("x-ms-continuationtoken", "server-token");
+            return response;
+        }));
         _mockHttpClientFactory
             .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
             .Returns(httpClient);
@@ -593,8 +595,7 @@ public sealed class RealRevisionTfsClientTests
         SetPrivateField(client, "_totalPagesFetched", 9);
         SetPrivateField(client, "_emptyPages", 4);
         SetPrivateField(client, "_progressWithoutDataPages", 2);
-        var observedTokens = GetPrivateField<HashSet<string>>(client, "_observedContinuationTokens");
-        observedTokens.Add("old-token");
+        SetPrivateField(client, "_observedContinuationTokens", new HashSet<string>(StringComparer.Ordinal) { "old-token" });
 
         var result = await client.GetReportingRevisionsAsync(
             continuationToken: "new-token",
@@ -605,7 +606,10 @@ public sealed class RealRevisionTfsClientTests
         Assert.AreEqual(1, GetPrivateField<int>(client, "_totalPagesFetched"));
         Assert.AreEqual(0, GetPrivateField<int>(client, "_emptyPages"));
         Assert.AreEqual(0, GetPrivateField<int>(client, "_progressWithoutDataPages"));
-        CollectionAssert.AreEqual(new[] { "new-token" }, observedTokens.ToArray());
+        var observedTokens = GetPrivateField<HashSet<string>>(client, "_observedContinuationTokens");
+        Assert.HasCount(1, observedTokens);
+        Assert.Contains("new-token", observedTokens);
+        Assert.DoesNotContain("old-token", observedTokens);
     }
 
     [TestMethod]
@@ -1039,7 +1043,9 @@ public sealed class RealRevisionTfsClientTests
     {
         var field = instance.GetType().BaseType?.GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
         Assert.IsNotNull(field, $"Field '{fieldName}' was not found.");
-        return (T)field!.GetValue(instance)!;
+        var value = field!.GetValue(instance);
+        Assert.IsNotNull(value, $"Field '{fieldName}' value was null.");
+        return (T)value;
     }
 
     private static void SetPrivateField<T>(object instance, string fieldName, T value)
@@ -1141,17 +1147,18 @@ public sealed class RealRevisionTfsClientTests
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler
     {
-        private readonly HttpResponseMessage _response;
+        private readonly Func<HttpResponseMessage> _responseFactory;
 
-        public StubHttpMessageHandler(HttpResponseMessage response)
+        public StubHttpMessageHandler(Func<HttpResponseMessage> responseFactory)
         {
-            _response = response;
+            _responseFactory = responseFactory;
         }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            _response.RequestMessage = request;
-            return Task.FromResult(_response);
+            var response = _responseFactory();
+            response.RequestMessage = request;
+            return Task.FromResult(response);
         }
     }
 }
