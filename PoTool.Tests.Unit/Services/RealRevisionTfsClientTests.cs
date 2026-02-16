@@ -80,7 +80,7 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
-    public void BuildReportingRevisionsUrl_WithExpandModeFields_IncludesExpandFields()
+    public void BuildReportingRevisionsUrl_WithExpandModeFields_DoesNotIncludeExpandForCompatibility()
     {
         // Arrange
         var config = new TfsConfigEntity
@@ -104,9 +104,12 @@ public sealed class RealRevisionTfsClientTests
             expandMode: ReportingExpandMode.Fields);
 
         // Assert
+        Assert.IsFalse(
+            url.Contains("$expand=", StringComparison.Ordinal),
+            "URL must not contain $expand when fields whitelist is present");
         Assert.IsTrue(
-            url.Contains("$expand=fields", StringComparison.Ordinal),
-            "URL should contain $expand=fields when mode is Fields");
+            url.Contains("fields=", StringComparison.Ordinal),
+            "URL should keep the fields whitelist query parameter");
         Assert.IsFalse(
             url.Contains("relations", StringComparison.OrdinalIgnoreCase),
             "URL should never contain 'relations' for reporting endpoint");
@@ -283,6 +286,24 @@ public sealed class RealRevisionTfsClientTests
         Assert.IsFalse(
             url.Contains("continuationToken=", StringComparison.Ordinal),
             "URL should NOT contain continuation token when none provided");
+    }
+
+    [TestMethod]
+    public void IsNonRetryableReportingError_WithExpandFieldsConflict_ReturnsTrue()
+    {
+        var method = typeof(RealRevisionTfsClient).GetMethod(
+            "IsNonRetryableReportingError",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.IsNotNull(method);
+
+        var exception = new TfsException(
+            "bad request",
+            (int)HttpStatusCode.BadRequest,
+            "The expand parameter can not be used with the fields parameter.");
+
+        var result = (bool)method!.Invoke(null, new object[] { "Reporting", exception })!;
+
+        Assert.IsTrue(result);
     }
 
     [TestMethod]
