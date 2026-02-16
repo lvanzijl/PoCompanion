@@ -385,12 +385,15 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             queryParams["startDateTime"] = serializedStartDateTime;
         }
 
-        // Add expand parameter if requested
-        // IMPORTANT: The reporting endpoint does NOT support $expand=relations
-        // Only $expand=fields is allowed (for long text fields)
+        // IMPORTANT: On some TFS/Azure DevOps Server versions, reporting endpoint rejects
+        // requests that contain both "fields" and "$expand" query parameters.
+        // Keep the field whitelist and ignore expand for reporting endpoint compatibility.
         if (expandMode == ReportingExpandMode.Fields)
         {
-            queryParams["$expand"] = "fields";
+            _logger.LogWarning(
+                "Ignoring reporting revisions expand mode {ExpandMode} for endpoint {EndpointPath} because 'fields' and '$expand' cannot be combined on this endpoint.",
+                expandMode,
+                reportingEndpointPath);
         }
 
         var query = string.Join("&", queryParams.Select(param =>
@@ -712,7 +715,9 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         }
 
         var errorContent = exception.ErrorContent ?? string.Empty;
-        return errorContent.Contains("not valid for Nullable`1", StringComparison.OrdinalIgnoreCase);
+        return errorContent.Contains("not valid for Nullable`1", StringComparison.OrdinalIgnoreCase) ||
+               errorContent.Contains("expand parameter can not be used with the fields parameter", StringComparison.OrdinalIgnoreCase) ||
+               errorContent.Contains("expand parameter cannot be used with the fields parameter", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsNonRetryableReportingClientError(string stage, InvalidOperationException exception)
