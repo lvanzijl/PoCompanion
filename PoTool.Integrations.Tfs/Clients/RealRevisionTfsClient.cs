@@ -1319,17 +1319,23 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
         var statusCode = (int)response.StatusCode;
+        var requestUri = response.RequestMessage?.RequestUri is { } uri
+            ? SanitizeUrlForLogging(uri.ToString())
+            : "<unknown>";
 
         _logger.LogError(
-            "TFS API error: {StatusCode} {ReasonPhrase}. Response: {Content}",
-            statusCode, response.ReasonPhrase, content);
+            "TFS API error at {RequestUri}: {StatusCode} {ReasonPhrase}. Response: {Content}",
+            requestUri,
+            statusCode,
+            response.ReasonPhrase,
+            content);
 
         throw response.StatusCode switch
         {
             System.Net.HttpStatusCode.Unauthorized => new TfsAuthenticationException("TFS authentication failed. Check credentials.", content),
             System.Net.HttpStatusCode.Forbidden => new TfsAuthorizationException("TFS access denied. Check permissions.", content),
-            System.Net.HttpStatusCode.NotFound => new TfsResourceNotFoundException($"TFS resource not found: {response.RequestMessage?.RequestUri}", content),
-            _ => new TfsException($"TFS API error: {statusCode} {response.ReasonPhrase}", statusCode, content)
+            System.Net.HttpStatusCode.NotFound => new TfsResourceNotFoundException($"TFS resource not found: {requestUri}", content),
+            _ => new TfsException($"TFS API error at {requestUri}: {statusCode} {response.ReasonPhrase}", statusCode, content)
         };
     }
 
