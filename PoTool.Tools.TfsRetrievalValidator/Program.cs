@@ -99,6 +99,19 @@ try
         .ToList();
 
     var allowedWorkItemIds = workItems.Select(item => item.TfsId).ToHashSet();
+    var revisionStartDateTime = workItems
+        .Select(item => item.CreatedDate ?? item.ChangedDate)
+        .Where(date => date.HasValue)
+        .Select(date => date!.Value)
+        .DefaultIfEmpty()
+        .Min();
+    var inferredStartDateTime = revisionStartDateTime == default
+        ? (DateTimeOffset?)null
+        : revisionStartDateTime.AddDays(-1);
+    logger.LogInformation(
+        "Revision retrieval startDateTime inferred as {StartDateTime}",
+        inferredStartDateTime?.ToString("O", CultureInfo.InvariantCulture) ?? "<none>");
+
     var revisions = new List<WorkItemRevision>();
     string? continuationToken = null;
     var pageNumber = 0;
@@ -110,6 +123,7 @@ try
     do
     {
         var page = await revisionClient.GetReportingRevisionsAsync(
+            startDateTime: inferredStartDateTime,
             continuationToken: continuationToken,
             expandMode: ReportingExpandMode.Fields);
 

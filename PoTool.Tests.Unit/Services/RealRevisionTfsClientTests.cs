@@ -459,6 +459,42 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
+    public void ExtractContinuationToken_WhenHeaderHasWhitespace_TrimmedTokenReturned()
+    {
+        var response = new HttpResponseMessage();
+        response.Headers.TryAddWithoutValidation("x-ms-continuationtoken", "  token-123  ");
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        var token = client.TestExtractContinuationToken(response);
+
+        Assert.AreEqual("token-123", token);
+    }
+
+    [TestMethod]
+    public void ExtractContinuationToken_WhenHeaderTokenQuoted_StripsQuotes()
+    {
+        var response = new HttpResponseMessage();
+        response.Headers.TryAddWithoutValidation("x-ms-continuationtoken", "\"token-quoted\"");
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        var token = client.TestExtractContinuationToken(response);
+
+        Assert.AreEqual("token-quoted", token);
+    }
+
+    [TestMethod]
     public void BuildWorkItemRevisionsUrl_IncludesExpandRelations()
     {
         var config = new TfsConfigEntity

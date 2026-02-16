@@ -400,7 +400,20 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
     private static string? NormalizeContinuationToken(string? continuationToken)
     {
-        return string.IsNullOrWhiteSpace(continuationToken) ? null : continuationToken;
+        if (string.IsNullOrWhiteSpace(continuationToken))
+        {
+            return null;
+        }
+
+        var normalized = continuationToken.Trim();
+        if (normalized.Length >= 2 &&
+            normalized[0] == '"' &&
+            normalized[^1] == '"')
+        {
+            normalized = normalized[1..^1].Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
     }
 
     private static string RedactContinuationToken(string url)
