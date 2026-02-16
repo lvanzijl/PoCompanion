@@ -537,6 +537,27 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
+    public void ExtractContinuationTokenFromPayload_WhenNextLinkHasFragment_ReturnsTokenWithoutFragment()
+    {
+        var json = """
+            {
+              "nextLink": "/DefaultCollection/_apis/wit/reporting/workitemrevisions?$top=200&continuationToken=relative-token#section"
+            }
+            """;
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        var token = client.TestExtractContinuationTokenFromPayload(json);
+
+        Assert.AreEqual("relative-token", token);
+    }
+
+    [TestMethod]
     public void BuildWorkItemRevisionsUrl_IncludesExpandRelations()
     {
         var config = new TfsConfigEntity

@@ -445,11 +445,6 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
         if (string.IsNullOrWhiteSpace(queryText))
         {
-            queryText = ExtractQueryFromRelativeNextLink(nextLink);
-        }
-
-        if (string.IsNullOrWhiteSpace(queryText))
-        {
             return null;
         }
 
@@ -477,7 +472,15 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             return string.Empty;
         }
 
-        return nextLink[(queryIndex + 1)..];
+        var fragmentIndex = nextLink.IndexOf('#', queryIndex + 1);
+        if (fragmentIndex == queryIndex + 1)
+        {
+            return string.Empty;
+        }
+
+        return fragmentIndex < 0
+            ? nextLink[(queryIndex + 1)..]
+            : nextLink[(queryIndex + 1)..fragmentIndex];
     }
 
     private static bool TryGetPropertyCaseInsensitive(
@@ -489,8 +492,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         {
             foreach (var property in element.EnumerateObject())
             {
-                if (property.NameEquals(propertyName) ||
-                    property.Name.Equals(propertyName, StringComparison.OrdinalIgnoreCase))
+                if (property.Name.Equals(propertyName, StringComparison.OrdinalIgnoreCase))
                 {
                     propertyValue = property.Value;
                     return true;
