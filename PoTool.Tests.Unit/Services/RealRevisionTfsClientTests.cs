@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Reflection;
 using System.Net.Http;
 using System.Text.Json;
@@ -558,6 +559,56 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
+    public async Task GetReportingRevisionsAsync_WhenPreviousPaginationCompleted_ResetsPaginationStateBeforeFetching()
+    {
+        var config = new TfsConfigEntity
+        {
+            Url = "https://tfs.example.com/DefaultCollection",
+            ApiVersion = "6.0"
+        };
+
+        _mockConfigService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
+
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("{\"value\":[]}")
+        };
+        response.Headers.TryAddWithoutValidation("x-ms-continuationtoken", "server-token");
+
+        var httpClient = new HttpClient(new StubHttpMessageHandler(response));
+        _mockHttpClientFactory
+            .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
+            .Returns(httpClient);
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        SetPrivateField(client, "_paginationCompleted", true);
+        SetPrivateField(client, "_totalPagesFetched", 9);
+        SetPrivateField(client, "_emptyPages", 4);
+        SetPrivateField(client, "_progressWithoutDataPages", 2);
+        var observedTokens = GetPrivateField<HashSet<string>>(client, "_observedContinuationTokens");
+        observedTokens.Add("old-token");
+
+        var result = await client.GetReportingRevisionsAsync(
+            continuationToken: "new-token",
+            expandMode: ReportingExpandMode.None,
+            cancellationToken: CancellationToken.None);
+
+        Assert.AreEqual("server-token", result.ContinuationToken);
+        Assert.AreEqual(1, GetPrivateField<int>(client, "_totalPagesFetched"));
+        Assert.AreEqual(0, GetPrivateField<int>(client, "_emptyPages"));
+        Assert.AreEqual(0, GetPrivateField<int>(client, "_progressWithoutDataPages"));
+        CollectionAssert.AreEqual(new[] { "new-token" }, observedTokens.ToArray());
+    }
+
+    [TestMethod]
     public void BuildWorkItemRevisionsUrl_IncludesExpandRelations()
     {
         var config = new TfsConfigEntity
@@ -984,6 +1035,20 @@ public sealed class RealRevisionTfsClientTests
         throw new AssertFailedException($"Query parameter '{key}' was not found in URL.");
     }
 
+    private static T GetPrivateField<T>(object instance, string fieldName)
+    {
+        var field = instance.GetType().BaseType?.GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.IsNotNull(field, $"Field '{fieldName}' was not found.");
+        return (T)field!.GetValue(instance)!;
+    }
+
+    private static void SetPrivateField<T>(object instance, string fieldName, T value)
+    {
+        var field = instance.GetType().BaseType?.GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.IsNotNull(field, $"Field '{fieldName}' was not found.");
+        field!.SetValue(instance, value);
+    }
+
     /// <summary>
     /// Testable subclass that exposes the private BuildReportingRevisionsUrl method for testing.
     /// </summary>
@@ -1071,6 +1136,22 @@ public sealed class RealRevisionTfsClientTests
                 BindingFlags.NonPublic | BindingFlags.Instance);
 
             return (Task)method!.Invoke(this, new object?[] { response, cancellationToken })!;
+        }
+    }
+
+    private sealed class StubHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly HttpResponseMessage _response;
+
+        public StubHttpMessageHandler(HttpResponseMessage response)
+        {
+            _response = response;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            _response.RequestMessage = request;
+            return Task.FromResult(_response);
         }
     }
 }
