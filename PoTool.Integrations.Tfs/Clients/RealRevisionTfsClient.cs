@@ -94,8 +94,25 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             var logPerPageSummary = hasRunContext && runContext.LogPerPageSummary;
 
             var maxTokenHistory = Math.Max(1, _paginationOptions.CurrentValue.MaxTotalPages);
+            var maxEmptyPages = Math.Max(1, _paginationOptions.CurrentValue.MaxEmptyPages);
+            var maxProgressWithoutDataPages = Math.Max(1, _paginationOptions.CurrentValue.MaxProgressWithoutDataPages);
             var normalizedContinuationToken = NormalizeContinuationToken(continuationToken);
             EnsurePaginationState(normalizedContinuationToken, maxTokenHistory);
+            if (_totalPagesFetched >= maxTokenHistory)
+            {
+                var nextPageIndex = _totalPagesFetched + 1;
+                return CreateTerminationResult(
+                    new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.MaxTotalPages,
+                        $"Exceeded maximum total pages ({maxTokenHistory}) before fetching page {nextPageIndex}."),
+                    ReportingRevisionsPagePayload.Empty,
+                    nextPageIndex,
+                    normalizedContinuationToken,
+                    tokenAdvanced: false,
+                    skipReason: "MaxTotalPages",
+                    logPerPageSummary,
+                    runContext);
+            }
 
             var pagePayload = await FetchReportingRevisionsPageAsync(
                 httpClient,
@@ -125,9 +142,110 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                     runContext);
             }
 
+            var nextContinuationToken = pagePayload.ContinuationToken;
+            var tokenAdvanced = !string.Equals(
+                normalizedContinuationToken,
+                nextContinuationToken,
+                StringComparison.Ordinal);
+            var hasMoreResults = nextContinuationToken is not null;
+
+            if (pagePayload.Revisions.Count == 0)
+            {
+                _emptyPages++;
+                if (hasMoreResults && tokenAdvanced)
+                {
+                    _progressWithoutDataPages++;
+                }
+            }
+            else
+            {
+                _emptyPages = 0;
+                _progressWithoutDataPages = 0;
+            }
+
+            if (hasMoreResults && !tokenAdvanced)
+            {
+                return CreateTerminationResult(
+                    new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.RepeatedContinuationToken,
+                        $"Continuation token did not advance on page {pageIndex}."),
+                    pagePayload,
+                    pageIndex,
+                    normalizedContinuationToken,
+                    tokenAdvanced,
+                    skipReason: "TokenNotAdvanced",
+                    logPerPageSummary,
+                    runContext);
+            }
+
+            if (hasMoreResults &&
+                nextContinuationToken is not null &&
+                _observedContinuationTokens.Contains(nextContinuationToken))
+            {
+                return CreateTerminationResult(
+                    new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.RepeatedContinuationToken,
+                        $"Continuation token repeated on page {pageIndex}."),
+                    pagePayload,
+                    pageIndex,
+                    normalizedContinuationToken,
+                    tokenAdvanced,
+                    skipReason: "TokenRepeated",
+                    logPerPageSummary,
+                    runContext);
+            }
+
+            if (_emptyPages > maxEmptyPages)
+            {
+                return CreateTerminationResult(
+                    new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.MaxEmptyPages,
+                        $"Exceeded maximum empty pages ({maxEmptyPages}) on page {pageIndex}."),
+                    pagePayload,
+                    pageIndex,
+                    normalizedContinuationToken,
+                    tokenAdvanced,
+                    skipReason: "MaxEmptyPages",
+                    logPerPageSummary,
+                    runContext);
+            }
+
+            if (_progressWithoutDataPages > maxProgressWithoutDataPages)
+            {
+                return CreateTerminationResult(
+                    new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.ProgressWithoutData,
+                        $"Exceeded maximum progress-without-data pages ({maxProgressWithoutDataPages}) on page {pageIndex}."),
+                    pagePayload,
+                    pageIndex,
+                    normalizedContinuationToken,
+                    tokenAdvanced,
+                    skipReason: "ProgressWithoutData",
+                    logPerPageSummary,
+                    runContext);
+            }
+
+            if (hasMoreResults)
+            {
+                TrackContinuationToken(nextContinuationToken, maxTokenHistory);
+            }
+
+            if (logPerPageSummary)
+            {
+                LogPaginationSummary(
+                    runContext,
+                    pageIndex,
+                    pagePayload.Revisions.Count,
+                    normalizedContinuationToken,
+                    tokenAdvanced,
+                    skipReason: null,
+                    logPerPageSummary,
+                    termination: null);
+            }
+
             var result = new ReportingRevisionsResult(
                 pagePayload.Revisions,
-                pagePayload.ContinuationToken,
+                nextContinuationToken,
                 termination: null,
                 pagePayload.HttpStatusCode,
                 pagePayload.HttpDurationMs,
