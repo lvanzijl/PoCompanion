@@ -784,6 +784,43 @@ public sealed class RealRevisionTfsClientTests
         Assert.IsTrue(tfsException.Message.Contains("$expand=relations", StringComparison.OrdinalIgnoreCase));
     }
 
+    [TestMethod]
+    public async Task HandleHttpErrorsAsync_WithContinuationTokenInUrl_RedactsTokenInExceptionMessage()
+    {
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        using var response = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest)
+        {
+            RequestMessage = new HttpRequestMessage(
+                HttpMethod.Get,
+                "https://tfs.example.com/DefaultCollection/_apis/wit/reporting/workitemrevisions?continuationToken=secret-token&api-version=7.0"),
+            Content = new StringContent("{\"error\":\"bad request\"}")
+        };
+
+        TfsException exception;
+        try
+        {
+            await client.TestHandleHttpErrorsAsync(response, CancellationToken.None);
+            throw new AssertFailedException($"Expected {nameof(TfsException)} was not thrown");
+        }
+        catch (TargetInvocationException ex) when (ex.InnerException is TfsException innerException)
+        {
+            exception = innerException;
+        }
+        catch (TfsException ex)
+        {
+            exception = ex;
+        }
+
+        Assert.IsTrue(exception.Message.Contains("continuationToken=<redacted>", StringComparison.Ordinal));
+        Assert.IsFalse(exception.Message.Contains("secret-token", StringComparison.Ordinal));
+    }
+
     private static TException ExpectInnerException<TException>(Action action)
         where TException : Exception
     {
@@ -915,6 +952,15 @@ public sealed class RealRevisionTfsClientTests
                 BindingFlags.NonPublic | BindingFlags.Instance);
 
             _ = method!.Invoke(this, new object?[] { doc.RootElement, workItemId, null, null });
+        }
+
+        public Task TestHandleHttpErrorsAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+        {
+            var method = typeof(RealRevisionTfsClient).GetMethod(
+                "HandleHttpErrorsAsync",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+
+            return (Task)method!.Invoke(this, new object?[] { response, cancellationToken })!;
         }
     }
 }

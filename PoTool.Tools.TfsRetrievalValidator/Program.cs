@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
@@ -101,6 +102,10 @@ try
     var revisions = new List<WorkItemRevision>();
     string? continuationToken = null;
     var pageNumber = 0;
+    var totalRawRevisions = 0;
+    var pagesWithoutScopedRevisions = 0;
+    string? reportingTerminationReason = null;
+    string? reportingTerminationMessage = null;
 
     do
     {
@@ -112,6 +117,12 @@ try
         var scopedRevisions = page.Revisions
             .Where(revision => allowedWorkItemIds.Contains(revision.WorkItemId))
             .ToList();
+
+        totalRawRevisions += page.Revisions.Count;
+        if (scopedRevisions.Count == 0)
+        {
+            pagesWithoutScopedRevisions++;
+        }
 
         revisions.AddRange(scopedRevisions);
         continuationToken = page.ContinuationToken;
@@ -125,6 +136,8 @@ try
 
         if (page.WasTerminatedEarly)
         {
+            reportingTerminationReason = page.Termination?.Reason.ToString();
+            reportingTerminationMessage = page.Termination?.Message;
             logger.LogWarning(
                 "Revision retrieval terminated early. Reason={Reason}, Message={Message}",
                 page.Termination?.Reason,
@@ -141,13 +154,31 @@ try
         workItems.Count,
         revisions.Count,
         hierarchyRelations.Count);
+    logger.LogInformation(
+        "Revision pagination summary: pages={PageCount}, rawRevisions={RawRevisions}, scopedRevisions={ScopedRevisions}, pagesWithoutScopedRevisions={PagesWithoutScopedRevisions}",
+        pageNumber,
+        totalRawRevisions,
+        revisions.Count,
+        pagesWithoutScopedRevisions);
+
+    if (pagesWithoutScopedRevisions > 0)
+    {
+        logger.LogWarning(
+            "Detected {PagesWithoutScopedRevisions} pages without scoped revisions. This can indicate poor root filtering coverage or sparse historical data.",
+            pagesWithoutScopedRevisions);
+    }
 
     snapshot = new RawModelSnapshot(
         RetrievedAt: DateTimeOffset.Now,
         RootWorkItemId: options.RootWorkItemId,
         WorkItems: workItems,
         Revisions: revisions,
-        HierarchyRelations: hierarchyRelations);
+        HierarchyRelations: hierarchyRelations,
+        RevisionPagesFetched: pageNumber,
+        TotalRawRevisions: totalRawRevisions,
+        PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
+        ReportingTerminationReason: reportingTerminationReason,
+        ReportingTerminationMessage: reportingTerminationMessage);
 
     logger.LogInformation("Run completed successfully. Output directory: {RunDirectory}", runDirectory);
 }
@@ -163,7 +194,12 @@ finally
         RootWorkItemId: 0,
         WorkItems: [],
         Revisions: [],
-        HierarchyRelations: []);
+        HierarchyRelations: [],
+        RevisionPagesFetched: 0,
+        TotalRawRevisions: 0,
+        PagesWithoutScopedRevisions: 0,
+        ReportingTerminationReason: null,
+        ReportingTerminationMessage: null);
     await dumpCollector.WriteDumpAsync(zipPath, snapshot);
 }
 
@@ -209,7 +245,12 @@ internal sealed record RawModelSnapshot(
     int RootWorkItemId,
     IReadOnlyList<WorkItemDto> WorkItems,
     IReadOnlyList<WorkItemRevision> Revisions,
-    IReadOnlyList<HierarchyRelationSnapshot> HierarchyRelations);
+    IReadOnlyList<HierarchyRelationSnapshot> HierarchyRelations,
+    int RevisionPagesFetched,
+    int TotalRawRevisions,
+    int PagesWithoutScopedRevisions,
+    string? ReportingTerminationReason,
+    string? ReportingTerminationMessage);
 
 internal sealed class AppSettingsTfsConfigurationService(IOptions<TfsConfigEntity> options) : ITfsConfigurationService
 {
@@ -234,28 +275,56 @@ internal sealed class TfsCaptureHandler(TfsDumpCollector dumpCollector, ILogger<
     {
         var startedAt = DateTimeOffset.Now;
         var requestBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
-        var response = await base.SendAsync(request, cancellationToken);
-        var durationMs = (long)(DateTimeOffset.Now - startedAt).TotalMilliseconds;
+        HttpResponseMessage response;
+        long durationMs;
+
+        try
+        {
+            response = await base.SendAsync(request, cancellationToken);
+            durationMs = (long)(DateTimeOffset.Now - startedAt).TotalMilliseconds;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            durationMs = (long)(DateTimeOffset.Now - startedAt).TotalMilliseconds;
+            dumpCollector.AddResponse(new CapturedResponse(
+                Sequence: Interlocked.Increment(ref _sequence),
+                RequestMethod: request.Method.Method,
+                RequestUrl: SanitizeRequestUrl(request.RequestUri),
+                RequestedAtLocal: startedAt,
+                DurationMs: durationMs,
+                RequestHeaders: FlattenHeaders(request.Headers),
+                ResponseStatusCode: 0,
+                ResponseReasonPhrase: null,
+                ResponseHeaders: new Dictionary<string, string>(),
+                ResponseContentType: null,
+                RequestBody: requestBody,
+                ResponseBodyCaptured: false,
+                ResponseBody: string.Empty,
+                TransportError: ex.GetType().Name + ": " + ex.Message));
+            throw;
+        }
 
         if (response.Content is not null)
         {
             var responseBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
             var responseBody = Encoding.UTF8.GetString(responseBytes);
-            if (LooksLikeJson(responseBody, response.Content.Headers.ContentType?.MediaType))
-            {
-                dumpCollector.AddResponse(new CapturedResponse(
-                    Sequence: Interlocked.Increment(ref _sequence),
-                    RequestMethod: request.Method.Method,
-                    RequestUrl: request.RequestUri?.ToString() ?? string.Empty,
-                    RequestedAtLocal: startedAt,
-                    DurationMs: durationMs,
-                    RequestHeaders: FlattenHeaders(request.Headers),
-                    ResponseStatusCode: (int)response.StatusCode,
-                    ResponseReasonPhrase: response.ReasonPhrase,
-                    ResponseHeaders: FlattenHeaders(response.Headers),
-                    RequestBody: requestBody,
-                    ResponseBody: responseBody));
-            }
+            var responseContentType = response.Content.Headers.ContentType?.MediaType;
+            var responseBodyIsJson = LooksLikeJson(responseBody, responseContentType);
+            dumpCollector.AddResponse(new CapturedResponse(
+                Sequence: Interlocked.Increment(ref _sequence),
+                RequestMethod: request.Method.Method,
+                RequestUrl: SanitizeRequestUrl(request.RequestUri),
+                RequestedAtLocal: startedAt,
+                DurationMs: durationMs,
+                RequestHeaders: FlattenHeaders(request.Headers),
+                ResponseStatusCode: (int)response.StatusCode,
+                ResponseReasonPhrase: response.ReasonPhrase,
+                ResponseHeaders: FlattenHeaders(response.Headers),
+                ResponseContentType: responseContentType,
+                RequestBody: requestBody,
+                ResponseBodyCaptured: responseBodyIsJson,
+                ResponseBody: responseBodyIsJson ? responseBody : string.Empty,
+                TransportError: null));
 
             var bufferedContent = new ByteArrayContent(responseBytes);
             foreach (var header in response.Content.Headers)
@@ -287,6 +356,43 @@ internal sealed class TfsCaptureHandler(TfsDumpCollector dumpCollector, ILogger<
     {
         return headers.ToDictionary(header => header.Key, header => string.Join(", ", header.Value));
     }
+
+    private static string SanitizeRequestUrl(Uri? requestUri)
+    {
+        if (requestUri is null)
+        {
+            return string.Empty;
+        }
+
+        var uriBuilder = new UriBuilder(requestUri)
+        {
+            UserName = string.Empty,
+            Password = string.Empty
+        };
+
+        var query = uriBuilder.Query;
+        if (query.Contains("continuationToken=", StringComparison.OrdinalIgnoreCase))
+        {
+            var parts = query.TrimStart('?')
+                .Split('&', StringSplitOptions.RemoveEmptyEntries)
+                .Select(part =>
+                {
+                    var separatorIndex = part.IndexOf('=');
+                    if (separatorIndex <= 0)
+                    {
+                        return part;
+                    }
+
+                    var key = part[..separatorIndex];
+                    return key.Equals("continuationToken", StringComparison.OrdinalIgnoreCase)
+                        ? $"{key}=<redacted>"
+                        : part;
+                });
+            uriBuilder.Query = string.Join("&", parts);
+        }
+
+        return uriBuilder.Uri.ToString();
+    }
 }
 
 internal sealed class TfsDumpCollector
@@ -303,13 +409,19 @@ internal sealed class TfsDumpCollector
     {
         await using var fileStream = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None);
         using var archive = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false);
+        var orderedResponses = _responses.OrderBy(item => item.Sequence).ToList();
 
-        foreach (var response in _responses.OrderBy(item => item.Sequence))
+        foreach (var response in orderedResponses)
         {
             var metadataEntry = archive.CreateEntry($"responses/{response.Sequence:D5}.metadata.json", CompressionLevel.Optimal);
             await using (var metadataStream = metadataEntry.Open())
             {
                 await JsonSerializer.SerializeAsync(metadataStream, response with { ResponseBody = string.Empty }, JsonOptions);
+            }
+
+            if (!response.ResponseBodyCaptured)
+            {
+                continue;
             }
 
             var bodyEntry = archive.CreateEntry($"responses/{response.Sequence:D5}.json", CompressionLevel.Optimal);
@@ -327,6 +439,91 @@ internal sealed class TfsDumpCollector
             await using var writer = new StreamWriter(modelStream, Encoding.UTF8);
             await writer.WriteAsync(anonymized);
         }
+
+        var summaryEntry = archive.CreateEntry("analysis-summary.json", CompressionLevel.Optimal);
+        await using var summaryStream = summaryEntry.Open();
+        await JsonSerializer.SerializeAsync(summaryStream, BuildSummary(snapshot, orderedResponses), JsonOptions);
+    }
+
+    private static DumpAnalysisSummary BuildSummary(
+        RawModelSnapshot snapshot,
+        IReadOnlyList<CapturedResponse> responses)
+    {
+        var statusCounts = responses
+            .GroupBy(response => response.ResponseStatusCode)
+            .OrderBy(group => group.Key)
+            .ToDictionary(group => group.Key.ToString(CultureInfo.InvariantCulture), group => group.Count());
+        var transportErrorCount = responses.Count(response => !string.IsNullOrWhiteSpace(response.TransportError));
+        if (transportErrorCount > 0)
+        {
+            statusCounts["transport_error"] = transportErrorCount;
+        }
+
+        var endpointFailures = responses
+            .Where(response => response.ResponseStatusCode >= 400 || !string.IsNullOrWhiteSpace(response.TransportError))
+            .GroupBy(response => NormalizeEndpoint(response.RequestUrl))
+            .Select(group => new EndpointFailureSummary(group.Key, group.Count(), group.First().ResponseStatusCode))
+            .OrderByDescending(summary => summary.Count)
+            .ThenBy(summary => summary.Endpoint, StringComparer.Ordinal)
+            .Take(10)
+            .ToList();
+
+        var recommendations = new List<string>();
+        if (responses.Any(response => response.ResponseStatusCode is 401 or 403))
+        {
+            recommendations.Add("Validate NTLM identity and TFS permissions for the configured collection/project.");
+        }
+
+        if (responses.Any(response => response.ResponseStatusCode is 429 or 503))
+        {
+            recommendations.Add("Tune retry/backoff and request throttling for reporting and work item endpoints.");
+        }
+
+        if (transportErrorCount > 0)
+        {
+            recommendations.Add("Transport-level failures detected; validate DNS/connectivity from validator host and TFS base URL reachability.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(snapshot.ReportingTerminationReason))
+        {
+            recommendations.Add("Investigate reporting pagination termination and consider fallback or smaller windows for continuation token progress.");
+        }
+
+        if (snapshot.RevisionPagesFetched > 0 &&
+            snapshot.PagesWithoutScopedRevisions > snapshot.RevisionPagesFetched / 2)
+        {
+            recommendations.Add("High number of pages without scoped revisions suggests filter mismatch; verify root hierarchy coverage and revision field projection.");
+        }
+
+        if (recommendations.Count == 0)
+        {
+            recommendations.Add("No obvious transport failures detected; inspect model-snapshot consistency against expected hierarchy and revision counts.");
+        }
+
+        return new DumpAnalysisSummary(
+            GeneratedAt: DateTimeOffset.Now,
+            RequestCount: responses.Count,
+            ErrorCount: responses.Count(response => response.ResponseStatusCode >= 400 || !string.IsNullOrWhiteSpace(response.TransportError)),
+            StatusCodeCounts: statusCounts,
+            TopFailingEndpoints: endpointFailures,
+            RevisionPagesFetched: snapshot.RevisionPagesFetched,
+            TotalRawRevisions: snapshot.TotalRawRevisions,
+            ScopedRevisions: snapshot.Revisions.Count,
+            PagesWithoutScopedRevisions: snapshot.PagesWithoutScopedRevisions,
+            ReportingTerminationReason: snapshot.ReportingTerminationReason,
+            ReportingTerminationMessage: snapshot.ReportingTerminationMessage,
+            Recommendations: recommendations);
+    }
+
+    private static string NormalizeEndpoint(string requestUrl)
+    {
+        if (Uri.TryCreate(requestUrl, UriKind.Absolute, out var uri))
+        {
+            return uri.AbsolutePath;
+        }
+
+        var queryIndex = requestUrl.IndexOf('?', StringComparison.Ordinal);
+        return queryIndex >= 0 ? requestUrl[..queryIndex] : requestUrl;
     }
 
     private static string AnonymizeJson(string json)
@@ -438,8 +635,27 @@ internal sealed record CapturedResponse(
     int ResponseStatusCode,
     string? ResponseReasonPhrase,
     IReadOnlyDictionary<string, string> ResponseHeaders,
+    string? ResponseContentType,
     string? RequestBody,
-    string ResponseBody);
+    bool ResponseBodyCaptured,
+    string ResponseBody,
+    string? TransportError);
+
+internal sealed record DumpAnalysisSummary(
+    DateTimeOffset GeneratedAt,
+    int RequestCount,
+    int ErrorCount,
+    IReadOnlyDictionary<string, int> StatusCodeCounts,
+    IReadOnlyList<EndpointFailureSummary> TopFailingEndpoints,
+    int RevisionPagesFetched,
+    int TotalRawRevisions,
+    int ScopedRevisions,
+    int PagesWithoutScopedRevisions,
+    string? ReportingTerminationReason,
+    string? ReportingTerminationMessage,
+    IReadOnlyList<string> Recommendations);
+
+internal sealed record EndpointFailureSummary(string Endpoint, int Count, int SampleStatusCode);
 
 internal sealed class FileLoggerProvider(string logPath) : ILoggerProvider
 {
