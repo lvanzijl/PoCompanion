@@ -604,12 +604,171 @@ public sealed class RealRevisionTfsClientTests
 
         Assert.AreEqual("server-token", result.ContinuationToken);
         Assert.AreEqual(1, GetPrivateField<int>(client, "_totalPagesFetched"));
-        Assert.AreEqual(0, GetPrivateField<int>(client, "_emptyPages"));
-        Assert.AreEqual(0, GetPrivateField<int>(client, "_progressWithoutDataPages"));
+        Assert.AreEqual(1, GetPrivateField<int>(client, "_emptyPages"));
+        Assert.AreEqual(1, GetPrivateField<int>(client, "_progressWithoutDataPages"));
         var observedTokens = GetPrivateField<HashSet<string>>(client, "_observedContinuationTokens");
-        Assert.HasCount(1, observedTokens);
+        Assert.HasCount(2, observedTokens);
         Assert.Contains("new-token", observedTokens);
+        Assert.Contains("server-token", observedTokens);
         Assert.DoesNotContain("old-token", observedTokens);
+    }
+
+    [TestMethod]
+    public async Task GetReportingRevisionsAsync_WhenContinuationTokenDoesNotAdvance_TerminatesEarly()
+    {
+        var config = new TfsConfigEntity
+        {
+            Url = "https://tfs.example.com/DefaultCollection",
+            ApiVersion = "6.0"
+        };
+
+        _mockConfigService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
+
+        var httpClient = new HttpClient(new StubHttpMessageHandler(() =>
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"value\":[]}")
+            };
+            response.Headers.TryAddWithoutValidation("x-ms-continuationtoken", "same-token");
+            return response;
+        }));
+        _mockHttpClientFactory
+            .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
+            .Returns(httpClient);
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        var result = await client.GetReportingRevisionsAsync(
+            continuationToken: "same-token",
+            expandMode: ReportingExpandMode.None,
+            cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.WasTerminatedEarly);
+        Assert.IsNotNull(result.Termination);
+        Assert.AreEqual(ReportingRevisionsTerminationReason.RepeatedContinuationToken, result.Termination!.Reason);
+    }
+
+    [TestMethod]
+    public async Task GetReportingRevisionsAsync_WhenProgressWithoutDataExceedsLimit_TerminatesEarly()
+    {
+        var config = new TfsConfigEntity
+        {
+            Url = "https://tfs.example.com/DefaultCollection",
+            ApiVersion = "6.0"
+        };
+
+        _mockConfigService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
+
+        _mockPaginationOptions.Setup(options => options.CurrentValue)
+            .Returns(new RevisionIngestionPaginationOptions
+            {
+                MaxProgressWithoutDataPages = 2,
+                MaxEmptyPages = 10,
+                MaxTotalPages = 10
+            });
+
+        var responseQueue = new Queue<HttpResponseMessage>(new[]
+        {
+            CreateReportingResponseWithContinuationToken("token-1"),
+            CreateReportingResponseWithContinuationToken("token-2")
+        });
+
+        var httpClient = new HttpClient(new StubHttpMessageHandler(() => responseQueue.Dequeue()));
+        _mockHttpClientFactory
+            .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
+            .Returns(httpClient);
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        var firstPage = await client.GetReportingRevisionsAsync(
+            continuationToken: null,
+            expandMode: ReportingExpandMode.None,
+            cancellationToken: CancellationToken.None);
+
+        Assert.IsFalse(firstPage.WasTerminatedEarly);
+        Assert.AreEqual("token-1", firstPage.ContinuationToken);
+
+        var secondPage = await client.GetReportingRevisionsAsync(
+            continuationToken: firstPage.ContinuationToken,
+            expandMode: ReportingExpandMode.None,
+            cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(secondPage.WasTerminatedEarly);
+        Assert.IsNotNull(secondPage.Termination);
+        Assert.AreEqual(ReportingRevisionsTerminationReason.ProgressWithoutData, secondPage.Termination!.Reason);
+    }
+
+    [TestMethod]
+    public async Task GetReportingRevisionsAsync_WhenMaxTotalPagesReached_TerminatesWithoutAdditionalRequest()
+    {
+        var config = new TfsConfigEntity
+        {
+            Url = "https://tfs.example.com/DefaultCollection",
+            ApiVersion = "6.0"
+        };
+
+        _mockConfigService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
+
+        _mockPaginationOptions.Setup(options => options.CurrentValue)
+            .Returns(new RevisionIngestionPaginationOptions
+            {
+                MaxTotalPages = 1,
+                MaxEmptyPages = 10,
+                MaxProgressWithoutDataPages = 10
+            });
+
+        var requestCount = 0;
+        var httpClient = new HttpClient(new StubHttpMessageHandler(() =>
+        {
+            requestCount++;
+            return CreateReportingResponseWithContinuationToken("token-1");
+        }));
+        _mockHttpClientFactory
+            .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
+            .Returns(httpClient);
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        var firstPage = await client.GetReportingRevisionsAsync(
+            continuationToken: null,
+            expandMode: ReportingExpandMode.None,
+            cancellationToken: CancellationToken.None);
+
+        Assert.IsFalse(firstPage.WasTerminatedEarly);
+        Assert.AreEqual("token-1", firstPage.ContinuationToken);
+
+        var secondPage = await client.GetReportingRevisionsAsync(
+            continuationToken: firstPage.ContinuationToken,
+            expandMode: ReportingExpandMode.None,
+            cancellationToken: CancellationToken.None);
+
+        Assert.AreEqual(1, requestCount);
+        Assert.IsTrue(secondPage.WasTerminatedEarly);
+        Assert.IsNotNull(secondPage.Termination);
+        Assert.IsEmpty(secondPage.Revisions);
+        Assert.AreEqual(ReportingRevisionsTerminationReason.MaxTotalPages, secondPage.Termination!.Reason);
     }
 
     [TestMethod]
@@ -1019,6 +1178,16 @@ public sealed class RealRevisionTfsClientTests
             AreaPath = "Area 1",
             ChangedDate = DateTimeOffset.UtcNow
         };
+    }
+
+    private static HttpResponseMessage CreateReportingResponseWithContinuationToken(string continuationToken)
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("{\"value\":[]}")
+        };
+        response.Headers.TryAddWithoutValidation("x-ms-continuationtoken", continuationToken);
+        return response;
     }
 
     private static string GetQueryValue(string url, string key)
