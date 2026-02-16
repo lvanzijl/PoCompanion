@@ -101,16 +101,15 @@ try
     var allowedWorkItemIds = workItems.Select(item => item.TfsId).ToHashSet();
     var revisionStartDateTime = workItems
         .Select(item => item.CreatedDate ?? item.ChangedDate)
-        .Where(date => date.HasValue)
-        .Select(date => date!.Value)
-        .DefaultIfEmpty()
         .Min();
-    var inferredStartDateTime = revisionStartDateTime == default
-        ? (DateTimeOffset?)null
-        : revisionStartDateTime.AddDays(-1);
+    var inferredStartDateTime = revisionStartDateTime?.AddDays(-1);
     logger.LogInformation(
         "Revision retrieval startDateTime inferred as {StartDateTime}",
         inferredStartDateTime?.ToString("O", CultureInfo.InvariantCulture) ?? "<none>");
+    if (inferredStartDateTime is null)
+    {
+        logger.LogWarning("Unable to infer revision startDateTime from work item CreatedDate/ChangedDate; retrieval will start without a date bound.");
+    }
 
     var revisions = new List<WorkItemRevision>();
     string? continuationToken = null;

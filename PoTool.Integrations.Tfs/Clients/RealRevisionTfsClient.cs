@@ -410,7 +410,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             normalized[0] == '"' &&
             normalized[^1] == '"')
         {
-            normalized = normalized[1..^1].Trim();
+            normalized = normalized[1..^1];
         }
 
         return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
