@@ -49,11 +49,16 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
     private const int DefaultMaxParseWarningsPerPage = 10;
     private const int MaxValuePreviewLength = 64;
     private const string TokenHashHexFormat = "X8";
+    private const int ReportingGetUrlLengthThreshold = 1900;
+    private const int DefaultPerItemRevisionsPageSize = 200;
+    private const string ReportingEndpointPath = "/_apis/wit/reporting/workitemrevisions";
 
     /// <summary>
     /// Field whitelist for revision API — delegates to the single source of truth.
     /// </summary>
-    private static readonly IReadOnlyList<string> FieldWhitelist = RevisionFieldWhitelist.Fields;
+    private static readonly IReadOnlyList<string> DefaultFieldWhitelist = RevisionFieldWhitelist.Fields;
+    private readonly IReadOnlyList<string> _fieldWhitelist;
+    private readonly int _perItemRevisionsPageSize;
 
     public RealRevisionTfsClient(
         IHttpClientFactory httpClientFactory,
@@ -62,7 +67,9 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         TfsRequestThrottler throttler,
         TfsRequestSender requestSender,
         IOptionsMonitor<RevisionIngestionPaginationOptions> paginationOptions,
-        RevisionIngestionDiagnostics? diagnostics = null)
+        RevisionIngestionDiagnostics? diagnostics = null,
+        IReadOnlyList<string>? fieldWhitelist = null,
+        int perItemRevisionsPageSize = DefaultPerItemRevisionsPageSize)
     {
         _httpClientFactory = httpClientFactory;
         _configService = configService;
@@ -71,6 +78,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         _requestSender = requestSender;
         _paginationOptions = paginationOptions;
         _diagnostics = diagnostics;
+        _fieldWhitelist = fieldWhitelist ?? DefaultFieldWhitelist;
+        _perItemRevisionsPageSize = Math.Max(1, perItemRevisionsPageSize);
     }
 
     /// <inheritdoc />
@@ -238,6 +247,9 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                     tokenAdvanced,
                     skipReason: null,
                     logPerPageSummary,
+                    pagePayload.IsLastBatch,
+                    pagePayload.NextLink is not null,
+                    pagePayload.ContinuationTokenSource,
                     termination: null);
             }
 
@@ -276,36 +288,67 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
         return await ExecuteWithRetryAsync("Relations", async () =>
         {
-            // Per-item revisions endpoint: /_apis/wit/workItems/{id}/revisions
-            // Request only fields (no relations) to avoid relation-derived ingestion.
-            var url = BuildWorkItemRevisionsUrl(config, workItemId);
-
-            _logger.LogDebug("Calling per-item revisions API for work item {WorkItemId}", workItemId);
-
-            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
-            await HandleHttpErrorsAsync(response, cancellationToken);
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
             var revisions = new List<WorkItemRevision>();
-
-            if (!doc.RootElement.TryGetProperty("value", out var revisionsArray))
-            {
-                return revisions;
-            }
-
-            // Store previous revision fields for delta calculation
             Dictionary<string, string?>? previousFields = null;
+            var currentSkip = 0;
 
-            foreach (var revision in revisionsArray.EnumerateArray())
+            while (true)
             {
-                var workItemRevision = ParseWorkItemRevisionFromPerItem(revision, workItemId, previousFields);
-                if (workItemRevision != null)
+                var url = BuildWorkItemRevisionsUrl(config, workItemId, _perItemRevisionsPageSize, currentSkip);
+                _logger.LogDebug(
+                    "Calling per-item revisions API for work item {WorkItemId} with skip={Skip} top={Top}",
+                    workItemId,
+                    currentSkip,
+                    _perItemRevisionsPageSize);
+
+                var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
+                await HandleHttpErrorsAsync(response, cancellationToken);
+
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+                if (!doc.RootElement.TryGetProperty("value", out var revisionsArray))
                 {
-                    revisions.Add(workItemRevision.Value.Revision);
-                    previousFields = workItemRevision.Value.CurrentFields;
+                    break;
                 }
+
+                var returnedCount = 0;
+                foreach (var revision in revisionsArray.EnumerateArray())
+                {
+                    var workItemRevision = ParseWorkItemRevisionFromPerItem(revision, workItemId, previousFields);
+                    if (workItemRevision != null)
+                    {
+                        revisions.Add(workItemRevision.Value.Revision);
+                        previousFields = workItemRevision.Value.CurrentFields;
+                        returnedCount++;
+                    }
+                }
+
+                _logger.LogInformation(
+                    "Per-item revisions page fetched. WorkItemId={WorkItemId} Skip={Skip} Top={Top} ReturnedCount={ReturnedCount} CumulativeCount={CumulativeCount}",
+                    workItemId,
+                    currentSkip,
+                    _perItemRevisionsPageSize,
+                    returnedCount,
+                    revisions.Count);
+
+                if (returnedCount == 0)
+                {
+                    if (currentSkip == 0)
+                    {
+                        break;
+                    }
+
+                    throw new InvalidOperationException(
+                        $"Per-item revisions pagination returned an empty page for work item {workItemId} at skip {currentSkip}. Aborting to prevent an infinite loop.");
+                }
+
+                if (returnedCount < _perItemRevisionsPageSize)
+                {
+                    break;
+                }
+
+                currentSkip += returnedCount;
             }
 
             _logger.LogInformation(
@@ -346,26 +389,24 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         string? continuationToken,
         ReportingExpandMode expandMode)
     {
-        const string reportingEndpointPath = "/_apis/wit/reporting/workitemrevisions";
-
         if (expandMode != ReportingExpandMode.None && expandMode != ReportingExpandMode.Fields)
         {
             _logger.LogError(
                 "Invalid reporting revisions expand mode {ExpandMode} for endpoint {EndpointPath}. Only None/Fields are allowed. Relations is not supported.",
                 expandMode,
-                reportingEndpointPath);
+                ReportingEndpointPath);
 
             throw new InvalidOperationException(
-                $"Reporting endpoint {reportingEndpointPath} does not support expand mode '{expandMode}'. Relations is not supported. Only None/Fields are allowed.");
+                $"Reporting endpoint {ReportingEndpointPath} does not support expand mode '{expandMode}'. Relations is not supported. Only None/Fields are allowed.");
         }
 
         // Build URL: {collection}/_apis/wit/reporting/workitemrevisions
-        var baseUrl = $"{config.Url.TrimEnd('/')}{reportingEndpointPath}";
+        var baseUrl = $"{config.Url.TrimEnd('/')}{ReportingEndpointPath}";
 
         var queryParams = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["api-version"] = config.ApiVersion,
-            ["fields"] = string.Join(",", FieldWhitelist)
+            ["fields"] = string.Join(",", _fieldWhitelist)
         };
 
         // Parameter conflict validation: prefer continuation token over startDateTime
@@ -393,7 +434,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             _logger.LogWarning(
                 "Ignoring reporting revisions expand mode {ExpandMode} for endpoint {EndpointPath} because 'fields' and '$expand' cannot be combined on this endpoint.",
                 expandMode,
-                reportingEndpointPath);
+                ReportingEndpointPath);
         }
 
         var query = string.Join("&", queryParams.Select(param =>
@@ -402,9 +443,26 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         return $"{baseUrl}?{query}";
     }
 
-    private string BuildWorkItemRevisionsUrl(TfsConfigEntity config, int workItemId)
+    private string BuildWorkItemRevisionsUrl(TfsConfigEntity config, int workItemId, int? top = null, int? skip = null)
     {
-        return $"{config.Url.TrimEnd('/')}/_apis/wit/workItems/{workItemId}/revisions?api-version={config.ApiVersion}&$expand=fields";
+        var queryParams = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["api-version"] = config.ApiVersion,
+            ["$expand"] = "fields"
+        };
+        if (top.HasValue)
+        {
+            queryParams["$top"] = top.Value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        if (skip.HasValue)
+        {
+            queryParams["$skip"] = skip.Value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        var query = string.Join("&", queryParams.Select(param =>
+            $"{param.Key}={Uri.EscapeDataString(param.Value)}"));
+        return $"{config.Url.TrimEnd('/')}/_apis/wit/workItems/{workItemId}/revisions?{query}";
     }
 
     private async Task<ReportingRevisionsPagePayload> FetchReportingRevisionsPageAsync(
@@ -429,17 +487,24 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             }
 
             var url = BuildReportingRevisionsUrl(config, startDateTime, continuationToken, expandMode);
-            var logUrl = SanitizeUrlForLogging(url);
-            var requestPathAndQuery = new Uri(url).PathAndQuery;
+            var usePost = url.Length > ReportingGetUrlLengthThreshold;
+            var request = usePost
+                ? BuildReportingRevisionsPostRequest(config, serializedStartDateTime, continuationToken)
+                : new HttpRequestMessage(HttpMethod.Get, url);
+
+            using var requestScope = request;
+            var logUrl = SanitizeUrlForLogging(request.RequestUri!.ToString());
+            var requestPathAndQuery = request.RequestUri.PathAndQuery;
 
             _logger.LogDebug(
-                "Calling reporting revisions API: {Url}. startDateTime={StartDateTimeSerialized}",
+                "Calling reporting revisions API using {Method}: {Url}. startDateTime={StartDateTimeSerialized}",
+                request.Method.Method,
                 logUrl,
                 serializedStartDateTime ?? "<none>");
             _logger.LogDebug("Reporting revisions request path+query: {PathAndQuery}", requestPathAndQuery);
 
             var httpStart = captureTimings ? Stopwatch.GetTimestamp() : 0;
-            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
+            var response = await SendAsync(httpClient, config, request, cancellationToken, handleErrors: false);
             await HandleHttpErrorsAsync(response, cancellationToken);
 
             long? httpDurationMs = captureTimings
@@ -455,11 +520,30 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                 ? RevisionIngestionDiagnostics.GetElapsedMilliseconds(parseStart)
                 : null;
 
-            var nextContinuationToken = ExtractContinuationToken(response);
-
-            if (nextContinuationToken == null)
+            var payloadPagingMetadata = ExtractPayloadPagingMetadata(doc.RootElement);
+            var nextContinuationToken = (string?)null;
+            var continuationTokenSource = ContinuationTokenSource.None;
+            if (payloadPagingMetadata.IsLastBatch != true)
             {
-                nextContinuationToken = ExtractContinuationTokenFromPayload(doc.RootElement);
+                if (payloadPagingMetadata.NextLinkContinuationToken is not null)
+                {
+                    nextContinuationToken = payloadPagingMetadata.NextLinkContinuationToken;
+                    continuationTokenSource = ContinuationTokenSource.PayloadNextLink;
+                }
+                else if (payloadPagingMetadata.PayloadContinuationToken is not null)
+                {
+                    nextContinuationToken = payloadPagingMetadata.PayloadContinuationToken;
+                    continuationTokenSource = ContinuationTokenSource.PayloadContinuationToken;
+                }
+                else
+                {
+                    var headerContinuationToken = ExtractContinuationToken(response);
+                    if (headerContinuationToken is not null)
+                    {
+                        nextContinuationToken = headerContinuationToken;
+                        continuationTokenSource = ContinuationTokenSource.Header;
+                    }
+                }
             }
 
             var transformStart = captureTimings ? Stopwatch.GetTimestamp() : 0;
@@ -494,13 +578,19 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
             var hasMoreResults = nextContinuationToken is not null;
             _logger.LogInformation(
-                "Retrieved {Count} revisions from reporting API. HasMoreResults: {HasMore}",
+                "Retrieved {Count} revisions from reporting API. HasMoreResults={HasMore} IsLastBatch={IsLastBatch} NextLinkPresent={NextLinkPresent} ContinuationTokenSource={ContinuationTokenSource}",
                 revisions.Count,
-                hasMoreResults);
+                hasMoreResults,
+                payloadPagingMetadata.IsLastBatch,
+                payloadPagingMetadata.NextLink is not null,
+                continuationTokenSource);
 
             return new ReportingRevisionsPagePayload(
                 revisions,
                 nextContinuationToken,
+                payloadPagingMetadata.IsLastBatch,
+                payloadPagingMetadata.NextLink,
+                continuationTokenSource,
                 httpStatusCode,
                 httpDurationMs,
                 parseDurationMs,
@@ -520,8 +610,30 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         return NormalizeContinuationToken(headerTokens.FirstOrDefault());
     }
 
-    private static string? ExtractContinuationTokenFromPayload(JsonElement rootElement)
+    private static ReportingPayloadPagingMetadata ExtractPayloadPagingMetadata(JsonElement rootElement)
     {
+        bool? isLastBatch = null;
+        if (TryGetPropertyCaseInsensitive(rootElement, "isLastBatch", out var isLastBatchElement))
+        {
+            isLastBatch = isLastBatchElement.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.String when bool.TryParse(isLastBatchElement.GetString(), out var parsed) => parsed,
+                _ => null
+            };
+        }
+
+        string? nextLink = null;
+        string? nextLinkContinuationToken = null;
+        if (TryGetPropertyCaseInsensitive(rootElement, "nextLink", out var nextLinkElement) &&
+            nextLinkElement.ValueKind == JsonValueKind.String)
+        {
+            nextLink = nextLinkElement.GetString();
+            nextLinkContinuationToken = ExtractContinuationTokenFromNextLink(nextLink);
+        }
+
+        string? payloadContinuationToken = null;
         if (TryGetPropertyCaseInsensitive(rootElement, "continuationToken", out var tokenElement))
         {
             var token = tokenElement.ValueKind switch
@@ -531,20 +643,20 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                 _ => null
             };
 
-            var normalizedToken = NormalizeContinuationToken(token);
-            if (normalizedToken != null)
-            {
-                return normalizedToken;
-            }
+            payloadContinuationToken = NormalizeContinuationToken(token);
         }
 
-        if (TryGetPropertyCaseInsensitive(rootElement, "nextLink", out var nextLinkElement) &&
-            nextLinkElement.ValueKind == JsonValueKind.String)
-        {
-            return ExtractContinuationTokenFromNextLink(nextLinkElement.GetString());
-        }
+        return new ReportingPayloadPagingMetadata(
+            isLastBatch,
+            nextLink,
+            payloadContinuationToken,
+            nextLinkContinuationToken);
+    }
 
-        return null;
+    private static string? ExtractContinuationTokenFromPayload(JsonElement rootElement)
+    {
+        var metadata = ExtractPayloadPagingMetadata(rootElement);
+        return metadata.NextLinkContinuationToken ?? metadata.PayloadContinuationToken;
     }
 
     private static string? ExtractContinuationTokenFromNextLink(string? nextLink)
@@ -792,6 +904,9 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                 tokenAdvanced,
                 skipReason,
                 logPerPageSummary,
+                pagePayload.IsLastBatch,
+                pagePayload.NextLink is not null,
+                pagePayload.ContinuationTokenSource,
                 termination: termination);
         }
 
@@ -816,6 +931,9 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         bool tokenAdvanced,
         string? skipReason,
         bool logPerPageSummary,
+        bool? isLastBatch,
+        bool nextLinkPresent,
+        ContinuationTokenSource continuationTokenSource,
         ReportingRevisionsTermination? termination)
     {
         if (!logPerPageSummary || !runContext.IsEnabled || !_logger.IsEnabled(LogLevel.Information))
@@ -825,12 +943,15 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
         var tokenHash = HashContinuationToken(continuationToken);
         _logger.LogInformation(
-            "Reporting revisions pagination. PageIndex={PageIndex} RevisionCount={RevisionCount} ContinuationTokenPresent={ContinuationTokenPresent} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} EmptyPages={EmptyPages} ProgressWithoutDataPages={ProgressWithoutDataPages} TotalPages={TotalPages} SkipReason={SkipReason} TerminationReason={TerminationReason} TerminationMessage={TerminationMessage}",
+            "Reporting revisions pagination. PageIndex={PageIndex} RevisionCount={RevisionCount} ContinuationTokenPresent={ContinuationTokenPresent} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} IsLastBatch={IsLastBatch} NextLinkPresent={NextLinkPresent} ContinuationTokenSource={ContinuationTokenSource} EmptyPages={EmptyPages} ProgressWithoutDataPages={ProgressWithoutDataPages} TotalPages={TotalPages} SkipReason={SkipReason} TerminationReason={TerminationReason} TerminationMessage={TerminationMessage}",
             pageIndex,
             revisionCount,
             continuationToken != null,
             tokenHash,
             tokenAdvanced,
+            isLastBatch,
+            nextLinkPresent,
+            continuationTokenSource,
             _emptyPages,
             _progressWithoutDataPages,
             _totalPagesFetched,
@@ -1073,7 +1194,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
             // Build current field values
             var currentFields = new Dictionary<string, string?>();
-            foreach (var fieldName in FieldWhitelist)
+            foreach (var fieldName in _fieldWhitelist)
             {
                 currentFields[fieldName] = GetStringField(fields, fieldName);
             }
@@ -1664,12 +1785,69 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         bool handleErrors = true)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        return await SendAsync(
+            httpClient,
+            request,
+            cancellationToken,
+            config.TimeoutSeconds,
+            handleErrors);
+    }
+
+    private async Task<HttpResponseMessage> SendAsync(
+        HttpClient httpClient,
+        TfsConfigEntity config,
+        HttpRequestMessage request,
+        CancellationToken cancellationToken,
+        bool handleErrors = true)
+    {
+        return await SendAsync(
+            httpClient,
+            request,
+            cancellationToken,
+            config.TimeoutSeconds,
+            handleErrors);
+    }
+
+    private async Task<HttpResponseMessage> SendAsync(
+        HttpClient httpClient,
+        HttpRequestMessage request,
+        CancellationToken cancellationToken,
+        int timeoutSeconds,
+        bool handleErrors = true)
+    {
         return await _requestSender.SendAsync(
             httpClient,
             request,
-            config.TimeoutSeconds,
+            timeoutSeconds,
             cancellationToken,
             handleErrors ? HandleHttpErrorsAsync : null);
+    }
+
+    private HttpRequestMessage BuildReportingRevisionsPostRequest(
+        TfsConfigEntity config,
+        string? serializedStartDateTime,
+        string? continuationToken)
+    {
+        var postUrl = $"{config.Url.TrimEnd('/')}{ReportingEndpointPath}?api-version={Uri.EscapeDataString(config.ApiVersion)}";
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["fields"] = _fieldWhitelist
+        };
+
+        if (!string.IsNullOrEmpty(continuationToken))
+        {
+            payload["continuationToken"] = continuationToken;
+        }
+        else if (!string.IsNullOrEmpty(serializedStartDateTime))
+        {
+            payload["startDateTime"] = serializedStartDateTime;
+        }
+
+        var content = JsonSerializer.Serialize(payload);
+        return new HttpRequestMessage(HttpMethod.Post, postUrl)
+        {
+            Content = new StringContent(content, Encoding.UTF8, "application/json")
+        };
     }
 
     public void Dispose()
@@ -1680,6 +1858,9 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
     private sealed record ReportingRevisionsPagePayload(
         IReadOnlyList<WorkItemRevision> Revisions,
         string? ContinuationToken,
+        bool? IsLastBatch,
+        string? NextLink,
+        ContinuationTokenSource ContinuationTokenSource,
         int? HttpStatusCode,
         long? HttpDurationMs,
         long? ParseDurationMs,
@@ -1692,10 +1873,27 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             null,
             null,
             null,
+            ContinuationTokenSource.None,
+            null,
+            null,
             null,
             null,
             null,
             EffortParseSummary.Empty);
+    }
+
+    private sealed record ReportingPayloadPagingMetadata(
+        bool? IsLastBatch,
+        string? NextLink,
+        string? PayloadContinuationToken,
+        string? NextLinkContinuationToken);
+
+    private enum ContinuationTokenSource
+    {
+        None,
+        Header,
+        PayloadContinuationToken,
+        PayloadNextLink
     }
 
 }

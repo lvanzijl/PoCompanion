@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Net.Http;
@@ -580,6 +581,29 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
+    public void ExtractContinuationTokenFromPayload_WhenNextLinkAndContinuationTokenExist_PrefersNextLink()
+    {
+        var json = """
+            {
+              "continuationToken": "payload-token",
+              "nextLink": "https://tfs.example.com/DefaultCollection/_apis/wit/reporting/workitemrevisions?continuationToken=next-link-token"
+            }
+            """;
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender,
+            _mockPaginationOptions.Object);
+
+        var token = client.TestExtractContinuationTokenFromPayload(json);
+
+        Assert.AreEqual("next-link-token", token);
+    }
+
+    [TestMethod]
     public async Task GetReportingRevisionsAsync_WhenPreviousPaginationCompleted_ResetsPaginationStateBeforeFetching()
     {
         var config = new TfsConfigEntity
@@ -793,7 +817,7 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
-    public void BuildWorkItemRevisionsUrl_IncludesExpandRelations()
+    public void BuildWorkItemRevisionsUrl_IncludesExpandFields()
     {
         var config = new TfsConfigEntity
         {
@@ -810,7 +834,390 @@ public sealed class RealRevisionTfsClientTests
 
         var url = client.TestBuildWorkItemRevisionsUrl(config, 123);
 
-        Assert.IsTrue(url.Contains("$expand=relations", StringComparison.Ordinal));
+        Assert.IsTrue(url.Contains("$expand=fields", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void BuildWorkItemRevisionsUrl_WithTopAndSkip_IncludesPagingQueryParameters()
+    {
+        var config = new TfsConfigEntity
+        {
+            Url = "https://tfs.example.com/DefaultCollection",
+            ApiVersion = "6.0"
+        };
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender,
+            _mockPaginationOptions.Object);
+
+        var url = client.TestBuildWorkItemRevisionsUrl(config, 123, top: 200, skip: 400);
+
+        Assert.IsTrue(url.Contains("$top=200", StringComparison.Ordinal));
+        Assert.IsTrue(url.Contains("$skip=400", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void NormalizeContinuationToken_TrimAndUnwrapQuotes()
+    {
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender,
+            _mockPaginationOptions.Object);
+
+        var normalized = client.TestNormalizeContinuationToken("  \"token-123\"  ");
+
+        Assert.AreEqual("token-123", normalized);
+    }
+
+    [TestMethod]
+    public void ExtractContinuationTokenFromNextLink_WithAbsoluteAndRelativeLinks_ReturnsToken()
+    {
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender,
+            _mockPaginationOptions.Object);
+
+        var absolute = client.TestExtractContinuationTokenFromNextLink(
+            "https://tfs.example.com/DefaultCollection/_apis/wit/reporting/workitemrevisions?continuationToken=absolute-token");
+        var relative = client.TestExtractContinuationTokenFromNextLink(
+            "/DefaultCollection/_apis/wit/reporting/workitemrevisions?continuationToken=relative-token");
+
+        Assert.AreEqual("absolute-token", absolute);
+        Assert.AreEqual("relative-token", relative);
+    }
+
+    [TestMethod]
+    public async Task GetReportingRevisionsAsync_WhenIsLastBatchTrue_ReturnsNoContinuationToken()
+    {
+        var config = CreateConfig();
+        _mockConfigService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
+
+        var payload = LoadRecordedPayload("reporting_last_page_isLastBatch_true_no_nextLink.json");
+        var httpClient = new HttpClient(new StubHttpMessageHandler(() => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(payload)
+        }));
+        _mockHttpClientFactory
+            .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
+            .Returns(httpClient);
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender,
+            _mockPaginationOptions.Object);
+
+        var result = await client.GetReportingRevisionsAsync(cancellationToken: CancellationToken.None);
+
+        Assert.IsNull(result.ContinuationToken);
+        Assert.IsTrue(result.IsComplete);
+    }
+
+    [TestMethod]
+    public async Task GetReportingRevisionsAsync_WhenNextLinkPresent_UsesTokenFromNextLink()
+    {
+        var config = CreateConfig();
+        _mockConfigService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
+
+        var payload = LoadRecordedPayload("reporting_page_with_nextLink_isLastBatch_false.json");
+        var httpClient = new HttpClient(new StubHttpMessageHandler(() => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(payload)
+        }));
+        _mockHttpClientFactory
+            .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
+            .Returns(httpClient);
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender,
+            _mockPaginationOptions.Object);
+
+        var result = await client.GetReportingRevisionsAsync(cancellationToken: CancellationToken.None);
+
+        Assert.AreEqual("token-from-nextlink", result.ContinuationToken);
+    }
+
+    [TestMethod]
+    public async Task GetReportingRevisionsAsync_WhenOnlyPayloadContinuationTokenPresent_UsesPayloadToken()
+    {
+        var config = CreateConfig();
+        _mockConfigService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
+
+        var payload = LoadRecordedPayload("reporting_page_with_continuationToken_field_only.json");
+        var httpClient = new HttpClient(new StubHttpMessageHandler(() => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(payload)
+        }));
+        _mockHttpClientFactory
+            .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
+            .Returns(httpClient);
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender,
+            _mockPaginationOptions.Object);
+
+        var result = await client.GetReportingRevisionsAsync(cancellationToken: CancellationToken.None);
+
+        Assert.AreEqual("token-from-payload", result.ContinuationToken);
+    }
+
+    [TestMethod]
+    public async Task GetReportingRevisionsAsync_WhenOnlyNumericPayloadContinuationTokenPresent_UsesNormalizedPayloadToken()
+    {
+        var config = CreateConfig();
+        _mockConfigService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
+
+        var payload = LoadRecordedPayload("reporting_page_with_continuationToken_number.json");
+        var httpClient = new HttpClient(new StubHttpMessageHandler(() => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(payload)
+        }));
+        _mockHttpClientFactory
+            .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
+            .Returns(httpClient);
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender,
+            _mockPaginationOptions.Object);
+
+        var result = await client.GetReportingRevisionsAsync(cancellationToken: CancellationToken.None);
+
+        Assert.AreEqual("12345", result.ContinuationToken);
+    }
+
+    [TestMethod]
+    public async Task GetReportingRevisionsAsync_WhenPayloadHasNoToken_UsesHeaderContinuationToken()
+    {
+        var config = CreateConfig();
+        _mockConfigService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
+
+        var httpClient = new HttpClient(new StubHttpMessageHandler(() =>
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"value\":[]}")
+            };
+            response.Headers.TryAddWithoutValidation("x-ms-continuationtoken", "header-token");
+            return response;
+        }));
+        _mockHttpClientFactory
+            .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
+            .Returns(httpClient);
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender,
+            _mockPaginationOptions.Object);
+
+        var result = await client.GetReportingRevisionsAsync(cancellationToken: CancellationToken.None);
+
+        Assert.AreEqual("header-token", result.ContinuationToken);
+    }
+
+    [TestMethod]
+    public async Task GetReportingRevisionsAsync_WhenReportingUrlExceedsThreshold_UsesPostBody()
+    {
+        var config = CreateConfig();
+        _mockConfigService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
+
+        HttpRequestMessage? capturedRequest = null;
+        string? capturedBody = null;
+        var httpClient = new HttpClient(new RecordingHttpMessageHandler(request =>
+        {
+            capturedRequest = request;
+            capturedBody = request.Content == null
+                ? null
+                : request.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"value\":[],\"isLastBatch\":true}")
+            };
+        }));
+        _mockHttpClientFactory
+            .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
+            .Returns(httpClient);
+
+        var oversizedFieldList = Enumerable.Range(1, 400)
+            .Select(i => $"Custom.Field.{i:000}")
+            .ToArray();
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender,
+            _mockPaginationOptions.Object,
+            fieldWhitelist: oversizedFieldList);
+
+        _ = await client.GetReportingRevisionsAsync(
+            continuationToken: "post-token",
+            cancellationToken: CancellationToken.None);
+
+        Assert.IsNotNull(capturedRequest);
+        Assert.AreEqual(HttpMethod.Post, capturedRequest!.Method);
+        Assert.IsNotNull(capturedBody);
+        StringAssert.Contains(capturedBody, "\"fields\"", StringComparison.Ordinal);
+        StringAssert.Contains(capturedBody, "\"continuationToken\":\"post-token\"", StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public async Task GetReportingRevisionsAsync_WhenReportingUrlWithinThreshold_UsesGet()
+    {
+        var config = CreateConfig();
+        _mockConfigService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
+
+        HttpRequestMessage? capturedRequest = null;
+        var httpClient = new HttpClient(new RecordingHttpMessageHandler(request =>
+        {
+            capturedRequest = request;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"value\":[],\"isLastBatch\":true}")
+            };
+        }));
+        _mockHttpClientFactory
+            .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
+            .Returns(httpClient);
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender,
+            _mockPaginationOptions.Object);
+
+        _ = await client.GetReportingRevisionsAsync(cancellationToken: CancellationToken.None);
+
+        Assert.IsNotNull(capturedRequest);
+        Assert.AreEqual(HttpMethod.Get, capturedRequest!.Method);
+    }
+
+    [TestMethod]
+    public async Task GetWorkItemRevisionsAsync_WithPagedResponses_ReturnsOrderedRevisionsWithCrossPageDeltas()
+    {
+        var config = CreateConfig();
+        _mockConfigService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
+
+        var responses = new Queue<HttpResponseMessage>(new[]
+        {
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(LoadRecordedPayload("per_item_revisions_page_1.json"))
+            },
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(LoadRecordedPayload("per_item_revisions_page_2.json"))
+            }
+        });
+
+        var httpClient = new HttpClient(new StubHttpMessageHandler(() => responses.Dequeue()));
+        _mockHttpClientFactory
+            .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
+            .Returns(httpClient);
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender,
+            _mockPaginationOptions.Object,
+            perItemRevisionsPageSize: 2);
+
+        var revisions = await client.GetWorkItemRevisionsAsync(300, CancellationToken.None);
+
+        Assert.HasCount(3, revisions);
+        CollectionAssert.AreEqual(new[] { 1, 2, 3 }, revisions.Select(r => r.RevisionNumber).ToArray());
+        Assert.IsNotNull(revisions[2].FieldDeltas);
+        var stateDelta = revisions[2].FieldDeltas!.GetValueOrDefault("System.State");
+        Assert.IsNotNull(stateDelta);
+        Assert.AreEqual("Active", stateDelta!.OldValue);
+        Assert.AreEqual("Done", stateDelta.NewValue);
+    }
+
+    [TestMethod]
+    public async Task GetWorkItemRevisionsAsync_WhenPagedResponseDoesNotAdvance_Throws()
+    {
+        var config = CreateConfig();
+        _mockConfigService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config);
+
+        var responses = new Queue<HttpResponseMessage>();
+        for (var i = 0; i < 4; i++)
+        {
+            responses.Enqueue(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(LoadRecordedPayload("per_item_revisions_page_1.json"))
+            });
+            responses.Enqueue(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"value\":[]}")
+            });
+        }
+
+        var httpClient = new HttpClient(new StubHttpMessageHandler(() => responses.Dequeue()));
+        _mockHttpClientFactory
+            .Setup(factory => factory.CreateClient("TfsClient.NTLM"))
+            .Returns(httpClient);
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender,
+            _mockPaginationOptions.Object,
+            perItemRevisionsPageSize: 2);
+
+        var exception = await CaptureExceptionAsync<InvalidOperationException>(() =>
+            client.GetWorkItemRevisionsAsync(300, CancellationToken.None));
+        StringAssert.Contains(exception.Message, "empty page", StringComparison.OrdinalIgnoreCase);
     }
 
     [TestMethod]
@@ -1087,7 +1494,7 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
-    public void ParseWorkItemRevisionFromPerItem_WhenRelationsMissing_Throws()
+    public void ParseWorkItemRevisionFromPerItem_WhenFieldsPresent_DoesNotThrow()
     {
         var json = """
             {
@@ -1111,11 +1518,7 @@ public sealed class RealRevisionTfsClientTests
             _throttler,
             _requestSender, _mockPaginationOptions.Object);
 
-        var tfsException = ExpectInnerException<TfsException>(() =>
-            client.TestParseWorkItemRevisionFromPerItem(json, 1));
-
-        Assert.IsTrue(tfsException.Message.Contains("relations", StringComparison.OrdinalIgnoreCase));
-        Assert.IsTrue(tfsException.Message.Contains("$expand=relations", StringComparison.OrdinalIgnoreCase));
+        client.TestParseWorkItemRevisionFromPerItem(json, 1);
     }
 
     [TestMethod]
@@ -1186,6 +1589,21 @@ public sealed class RealRevisionTfsClientTests
         throw new AssertFailedException($"Expected {typeof(TException).Name} was not thrown");
     }
 
+    private static async Task<TException> CaptureExceptionAsync<TException>(Func<Task> action)
+        where TException : Exception
+    {
+        try
+        {
+            await action();
+        }
+        catch (TException ex)
+        {
+            return ex;
+        }
+
+        throw new AssertFailedException($"Expected {typeof(TException).Name} was not thrown");
+    }
+
     private static WorkItemRevision CreateMinimalRevision()
     {
         return new WorkItemRevision
@@ -1199,6 +1617,21 @@ public sealed class RealRevisionTfsClientTests
             AreaPath = "Area 1",
             ChangedDate = DateTimeOffset.UtcNow
         };
+    }
+
+    private static TfsConfigEntity CreateConfig()
+    {
+        return new TfsConfigEntity
+        {
+            Url = "https://tfs.example.com/DefaultCollection",
+            ApiVersion = "6.0"
+        };
+    }
+
+    private static string LoadRecordedPayload(string fileName)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "RecordedPayloads", fileName);
+        return File.ReadAllText(path);
     }
 
     private static HttpResponseMessage CreateReportingResponseWithContinuationToken(string continuationToken)
@@ -1256,8 +1689,19 @@ public sealed class RealRevisionTfsClientTests
             ILogger<RealRevisionTfsClient> logger,
             TfsRequestThrottler throttler,
             TfsRequestSender requestSender,
-            IOptionsMonitor<RevisionIngestionPaginationOptions> paginationOptions)
-            : base(httpClientFactory, configService, logger, throttler, requestSender, paginationOptions)
+            IOptionsMonitor<RevisionIngestionPaginationOptions> paginationOptions,
+            IReadOnlyList<string>? fieldWhitelist = null,
+            int perItemRevisionsPageSize = 200)
+            : base(
+                httpClientFactory,
+                configService,
+                logger,
+                throttler,
+                requestSender,
+                paginationOptions,
+                diagnostics: null,
+                fieldWhitelist: fieldWhitelist,
+                perItemRevisionsPageSize: perItemRevisionsPageSize)
         {
         }
 
@@ -1275,13 +1719,13 @@ public sealed class RealRevisionTfsClientTests
             return (string)method!.Invoke(this, new object?[] { config, startDateTime, continuationToken, expandMode })!;
         }
 
-        public string TestBuildWorkItemRevisionsUrl(TfsConfigEntity config, int workItemId)
+        public string TestBuildWorkItemRevisionsUrl(TfsConfigEntity config, int workItemId, int? top = null, int? skip = null)
         {
             var method = typeof(RealRevisionTfsClient).GetMethod(
                 "BuildWorkItemRevisionsUrl",
                 BindingFlags.NonPublic | BindingFlags.Instance);
 
-            return (string)method!.Invoke(this, new object?[] { config, workItemId })!;
+            return (string)method!.Invoke(this, new object?[] { config, workItemId, top, skip })!;
         }
 
         public IReadOnlyList<WorkItemRevision> TestParseReportingRevisionsPayload(string json)
@@ -1315,6 +1759,24 @@ public sealed class RealRevisionTfsClientTests
             return (string?)method!.Invoke(null, new object?[] { doc.RootElement });
         }
 
+        public string? TestExtractContinuationTokenFromNextLink(string nextLink)
+        {
+            var method = typeof(RealRevisionTfsClient).GetMethod(
+                "ExtractContinuationTokenFromNextLink",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+            return (string?)method!.Invoke(null, new object?[] { nextLink });
+        }
+
+        public string? TestNormalizeContinuationToken(string token)
+        {
+            var method = typeof(RealRevisionTfsClient).GetMethod(
+                "NormalizeContinuationToken",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+            return (string?)method!.Invoke(null, new object?[] { token });
+        }
+
         public void TestParseWorkItemRevisionFromPerItem(string json, int workItemId)
         {
             using var doc = JsonDocument.Parse(json);
@@ -1322,7 +1784,7 @@ public sealed class RealRevisionTfsClientTests
                 "ParseWorkItemRevisionFromPerItem",
                 BindingFlags.NonPublic | BindingFlags.Instance);
 
-            _ = method!.Invoke(this, new object?[] { doc.RootElement, workItemId, null, null });
+            _ = method!.Invoke(this, new object?[] { doc.RootElement, workItemId, null });
         }
 
         public Task TestHandleHttpErrorsAsync(HttpResponseMessage response, CancellationToken cancellationToken)
@@ -1347,6 +1809,23 @@ public sealed class RealRevisionTfsClientTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var response = _responseFactory();
+            response.RequestMessage = request;
+            return Task.FromResult(response);
+        }
+    }
+
+    private sealed class RecordingHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, HttpResponseMessage> _responseFactory;
+
+        public RecordingHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responseFactory)
+        {
+            _responseFactory = responseFactory;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var response = _responseFactory(request);
             response.RequestMessage = request;
             return Task.FromResult(response);
         }

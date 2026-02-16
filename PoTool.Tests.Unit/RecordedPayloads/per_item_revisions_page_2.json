@@ -1,0 +1,18 @@
+{
+  "count": 1,
+  "value": [
+    {
+      "id": 300,
+      "rev": 3,
+      "fields": {
+        "System.WorkItemType": "Task",
+        "System.Title": "Cross-page delta sample updated",
+        "System.State": "Done",
+        "System.IterationPath": "Project\\Sprint 1",
+        "System.AreaPath": "Project",
+        "System.ChangedDate": "2025-02-03T08:00:00Z",
+        "System.ChangedBy": "bob"
+      }
+    }
+  ]
+}
