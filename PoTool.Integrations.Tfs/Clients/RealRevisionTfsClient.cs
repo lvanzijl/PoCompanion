@@ -399,7 +399,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
     private static string? ExtractContinuationTokenFromPayload(JsonElement rootElement)
     {
-        if (rootElement.TryGetProperty("continuationToken", out var tokenElement))
+        if (TryGetPropertyCaseInsensitive(rootElement, "continuationToken", out var tokenElement))
         {
             var token = tokenElement.ValueKind switch
             {
@@ -415,7 +415,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             }
         }
 
-        if (rootElement.TryGetProperty("nextLink", out var nextLinkElement) &&
+        if (TryGetPropertyCaseInsensitive(rootElement, "nextLink", out var nextLinkElement) &&
             nextLinkElement.ValueKind == JsonValueKind.String)
         {
             return ExtractContinuationTokenFromNextLink(nextLinkElement.GetString());
@@ -426,13 +426,34 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
     private static string? ExtractContinuationTokenFromNextLink(string? nextLink)
     {
-        if (string.IsNullOrWhiteSpace(nextLink) ||
-            !Uri.TryCreate(nextLink, UriKind.Absolute, out var nextUri))
+        if (string.IsNullOrWhiteSpace(nextLink))
         {
             return null;
         }
 
-        var query = nextUri.Query.TrimStart('?')
+        string queryText;
+        if (Uri.TryCreate(nextLink, UriKind.RelativeOrAbsolute, out var nextUri))
+        {
+            queryText = nextUri.IsAbsoluteUri
+                ? nextUri.Query
+                : ExtractQueryFromRelativeNextLink(nextLink);
+        }
+        else
+        {
+            queryText = ExtractQueryFromRelativeNextLink(nextLink);
+        }
+
+        if (string.IsNullOrWhiteSpace(queryText))
+        {
+            queryText = ExtractQueryFromRelativeNextLink(nextLink);
+        }
+
+        if (string.IsNullOrWhiteSpace(queryText))
+        {
+            return null;
+        }
+
+        var query = queryText.TrimStart('?')
             .Split('&', StringSplitOptions.RemoveEmptyEntries);
 
         foreach (var part in query)
@@ -446,6 +467,39 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
         }
 
         return null;
+    }
+
+    private static string ExtractQueryFromRelativeNextLink(string nextLink)
+    {
+        var queryIndex = nextLink.IndexOf('?', StringComparison.Ordinal);
+        if (queryIndex < 0 || queryIndex + 1 >= nextLink.Length)
+        {
+            return string.Empty;
+        }
+
+        return nextLink[(queryIndex + 1)..];
+    }
+
+    private static bool TryGetPropertyCaseInsensitive(
+        JsonElement element,
+        string propertyName,
+        out JsonElement propertyValue)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in element.EnumerateObject())
+            {
+                if (property.NameEquals(propertyName) ||
+                    property.Name.Equals(propertyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    propertyValue = property.Value;
+                    return true;
+                }
+            }
+        }
+
+        propertyValue = default;
+        return false;
     }
 
     private static string? NormalizeContinuationToken(string? continuationToken)
