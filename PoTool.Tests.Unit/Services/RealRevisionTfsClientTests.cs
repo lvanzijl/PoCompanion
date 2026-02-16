@@ -672,7 +672,7 @@ public sealed class RealRevisionTfsClientTests
         _mockPaginationOptions.Setup(options => options.CurrentValue)
             .Returns(new RevisionIngestionPaginationOptions
             {
-                MaxProgressWithoutDataPages = 1,
+                MaxProgressWithoutDataPages = 2,
                 MaxEmptyPages = 10,
                 MaxTotalPages = 10
             });
@@ -767,6 +767,7 @@ public sealed class RealRevisionTfsClientTests
         Assert.AreEqual(1, requestCount);
         Assert.IsTrue(secondPage.WasTerminatedEarly);
         Assert.IsNotNull(secondPage.Termination);
+        Assert.IsEmpty(secondPage.Revisions);
         Assert.AreEqual(ReportingRevisionsTerminationReason.MaxTotalPages, secondPage.Termination!.Reason);
     }
 

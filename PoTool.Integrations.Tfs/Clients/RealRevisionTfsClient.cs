@@ -93,18 +93,18 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             var hasRunContext = _diagnostics?.TryGetCurrentRun(out runContext) == true;
             var logPerPageSummary = hasRunContext && runContext.LogPerPageSummary;
 
-            var maxTokenHistory = Math.Max(1, _paginationOptions.CurrentValue.MaxTotalPages);
+            var maxTotalPages = Math.Max(1, _paginationOptions.CurrentValue.MaxTotalPages);
             var maxEmptyPages = Math.Max(1, _paginationOptions.CurrentValue.MaxEmptyPages);
             var maxProgressWithoutDataPages = Math.Max(1, _paginationOptions.CurrentValue.MaxProgressWithoutDataPages);
             var normalizedContinuationToken = NormalizeContinuationToken(continuationToken);
-            EnsurePaginationState(normalizedContinuationToken, maxTokenHistory);
-            if (_totalPagesFetched >= maxTokenHistory)
+            EnsurePaginationState(normalizedContinuationToken, maxTotalPages);
+            if (_totalPagesFetched >= maxTotalPages)
             {
                 var nextPageIndex = _totalPagesFetched + 1;
                 return CreateTerminationResult(
                     new ReportingRevisionsTermination(
                         ReportingRevisionsTerminationReason.MaxTotalPages,
-                        $"Exceeded maximum total pages ({maxTokenHistory}) before fetching page {nextPageIndex}."),
+                        $"Exceeded maximum total pages ({maxTotalPages}) before fetching page {nextPageIndex}."),
                     ReportingRevisionsPagePayload.Empty,
                     nextPageIndex,
                     normalizedContinuationToken,
@@ -178,9 +178,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                     runContext);
             }
 
-            if (hasMoreResults &&
-                nextContinuationToken is not null &&
-                _observedContinuationTokens.Contains(nextContinuationToken))
+            if (hasMoreResults && _observedContinuationTokens.Contains(nextContinuationToken!))
             {
                 return CreateTerminationResult(
                     new ReportingRevisionsTermination(
@@ -195,7 +193,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                     runContext);
             }
 
-            if (_emptyPages > maxEmptyPages)
+            if (_emptyPages >= maxEmptyPages)
             {
                 return CreateTerminationResult(
                     new ReportingRevisionsTermination(
@@ -210,7 +208,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                     runContext);
             }
 
-            if (_progressWithoutDataPages > maxProgressWithoutDataPages)
+            if (_progressWithoutDataPages >= maxProgressWithoutDataPages)
             {
                 return CreateTerminationResult(
                     new ReportingRevisionsTermination(
@@ -227,7 +225,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
             if (hasMoreResults)
             {
-                TrackContinuationToken(nextContinuationToken, maxTokenHistory);
+                TrackContinuationToken(nextContinuationToken, maxTotalPages);
             }
 
             if (logPerPageSummary)
