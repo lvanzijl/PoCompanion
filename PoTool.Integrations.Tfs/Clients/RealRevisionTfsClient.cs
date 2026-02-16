@@ -488,11 +488,9 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
             var url = BuildReportingRevisionsUrl(config, startDateTime, continuationToken, expandMode);
             var usePost = url.Length > ReportingGetUrlLengthThreshold;
-            var request = usePost
+            using var request = usePost
                 ? BuildReportingRevisionsPostRequest(config, serializedStartDateTime, continuationToken)
                 : new HttpRequestMessage(HttpMethod.Get, url);
-
-            using var requestScope = request;
             var logUrl = SanitizeUrlForLogging(request.RequestUri!.ToString());
             var requestPathAndQuery = request.RequestUri.PathAndQuery;
 
