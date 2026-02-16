@@ -716,7 +716,8 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
 
         var errorContent = exception.ErrorContent ?? string.Empty;
         return errorContent.Contains("not valid for Nullable`1", StringComparison.OrdinalIgnoreCase) ||
-               errorContent.Contains("expand parameter can not be used with the fields parameter", StringComparison.OrdinalIgnoreCase);
+               errorContent.Contains("expand parameter can not be used with the fields parameter", StringComparison.OrdinalIgnoreCase) ||
+               errorContent.Contains("expand parameter cannot be used with the fields parameter", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsNonRetryableReportingClientError(string stage, InvalidOperationException exception)

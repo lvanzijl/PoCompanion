@@ -299,7 +299,7 @@ public sealed class RealRevisionTfsClientTests
         var exception = new TfsException(
             "bad request",
             (int)HttpStatusCode.BadRequest,
-            "The expand parameter can not be used with the fields parameter.");
+            "The expand parameter cannot be used with the fields parameter.");
 
         var result = (bool)method!.Invoke(null, new object[] { "Reporting", exception })!;
 
