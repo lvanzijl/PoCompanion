@@ -124,7 +124,7 @@ try
         var page = await revisionClient.GetReportingRevisionsAsync(
             startDateTime: inferredStartDateTime,
             continuationToken: continuationToken,
-            expandMode: ReportingExpandMode.Fields);
+            expandMode: ReportingExpandMode.None);
 
         pageNumber++;
         var scopedRevisions = page.Revisions

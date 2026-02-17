@@ -117,6 +117,39 @@ public sealed class RealRevisionTfsClientTests
     }
 
     [TestMethod]
+    public void BuildReportingRevisionsUrl_WithExpandModeFields_MatchesNoneModeUrl()
+    {
+        // Arrange
+        var config = new TfsConfigEntity
+        {
+            Url = "https://tfs.example.com/DefaultCollection",
+            ApiVersion = "6.0"
+        };
+
+        var client = new TestableRealRevisionTfsClient(
+            _mockHttpClientFactory.Object,
+            _mockConfigService.Object,
+            _mockLogger.Object,
+            _throttler,
+            _requestSender, _mockPaginationOptions.Object);
+
+        // Act
+        var noneUrl = client.TestBuildReportingRevisionsUrl(
+            config,
+            startDateTime: null,
+            continuationToken: null,
+            expandMode: ReportingExpandMode.None);
+        var fieldsUrl = client.TestBuildReportingRevisionsUrl(
+            config,
+            startDateTime: null,
+            continuationToken: null,
+            expandMode: ReportingExpandMode.Fields);
+
+        // Assert
+        Assert.AreEqual(noneUrl, fieldsUrl, "Fields expand mode should be a no-op for the reporting endpoint URL.");
+    }
+
+    [TestMethod]
     public void BuildReportingRevisionsUrl_WithInvalidExpandMode_Throws()
     {
         // Arrange
