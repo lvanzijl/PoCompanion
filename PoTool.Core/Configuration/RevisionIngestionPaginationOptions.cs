@@ -6,6 +6,26 @@ namespace PoTool.Core.Configuration;
 public sealed class RevisionIngestionPaginationOptions
 {
     /// <summary>
+    /// OData page size for revision ingestion (minimum 1).
+    /// </summary>
+    public int ODataTop { get; init; } = 200;
+
+    /// <summary>
+    /// OData server-side scoping mode for WorkItemId constraints.
+    /// </summary>
+    public ODataRevisionScopeMode ODataScopeMode { get; init; } = ODataRevisionScopeMode.Range;
+
+    /// <summary>
+    /// Enables seek-pagination fallback when @odata.nextLink is missing on full pages.
+    /// </summary>
+    public bool ODataEnableSeekPagingFallback { get; init; } = true;
+
+    /// <summary>
+    /// Maximum URL length before switching from id-list filters to range filters.
+    /// </summary>
+    public int ODataMaxUrlLength { get; init; } = 1800;
+
+    /// <summary>
     /// Enables bounded incremental retry after pagination anomalies.
     /// </summary>
     public bool RetryEnabled { get; init; } = false;
@@ -72,6 +92,13 @@ public sealed class RevisionIngestionPaginationOptions
     /// Batch size for fallback per-work-item retrieval.
     /// </summary>
     public int FallbackBatchSize { get; init; } = 25;
+}
+
+public enum ODataRevisionScopeMode
+{
+    Range = 0,
+    IdList = 1,
+    Apply = 2
 }
 
 public enum PaginationAnomalyPolicy
