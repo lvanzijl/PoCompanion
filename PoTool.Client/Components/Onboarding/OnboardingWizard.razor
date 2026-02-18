@@ -104,11 +104,53 @@
                                 <strong>Authentication:</strong> Uses Windows credentials (NTLM) of the current user. No additional configuration required.
                             </MudAlert>
 
+                            <CompactSelect T="RevisionSource"
+                                           Value="_revisionSource"
+                                           ValueChanged="@OnRevisionSourceChanged"
+                                           Label="Revision Source"
+                                           Required="true"
+                                           HelperText="REST uses the reporting revisions endpoint; OData uses the Analytics endpoint. Both provide revision history and can differ in availability or latency.">
+                                <MudSelectItem Value="RevisionSource.RestReportingRevisions">REST reporting revisions</MudSelectItem>
+                                <MudSelectItem Value="RevisionSource.AnalyticsODataRevisions">Analytics OData revisions</MudSelectItem>
+                            </CompactSelect>
+
+                            @if (_revisionSource == RevisionSource.AnalyticsODataRevisions)
+                            {
+                                <CompactTextField Value="@_analyticsODataBaseUrl"
+                                             ValueChanged="@(async (string value) => await OnAnalyticsODataBaseUrlChanged(value))"
+                                             Label="Analytics OData Base URL"
+                                             Placeholder="https://server/tfs/Collection/Project/_odata/v3.0-preview"
+                                             Required="true"
+                                             Immediate="true"
+                                             HelperText="Required when Analytics OData is selected." />
+
+                                <CompactTextField Value="@_analyticsODataEntitySetPath"
+                                             ValueChanged="@((string value) => OnAnalyticsODataEntitySetPathChanged(value))"
+                                             Label="Analytics entity-set path"
+                                             Placeholder="WorkItemRevisions"
+                                             Immediate="true"
+                                             HelperText="Optional. Default is WorkItemRevisions." />
+                            }
+
+                            <MudPaper Elevation="0" Class="pa-2">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary"><strong>Effective configuration summary</strong></MudText>
+                                <MudText Typo="Typo.body2">Revision source: @_revisionSource</MudText>
+                                @if (_revisionSource == RevisionSource.AnalyticsODataRevisions)
+                                {
+                                    <MudText Typo="Typo.body2">Analytics OData base URL: @GetConfigSummaryValue(_analyticsODataBaseUrl)</MudText>
+                                    <MudText Typo="Typo.body2">Analytics entity set: @GetConfigSummaryValue(_analyticsODataEntitySetPath)</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2">Endpoint: REST reporting revisions</MudText>
+                                }
+                            </MudPaper>
+
                             <MudStack Row="true" Spacing="2" Class="mt-2">
                                 <CompactButton Variant="Variant.Filled" 
                                           Color="Color.Primary" 
                                           OnClick="SaveConfig"
-                                          Disabled="@(!_configFormValid || _isSaving)"
+                                          Disabled="@(!CanSaveConfiguration() || _isSaving)"
                                           StartIcon="@Icons.Material.Filled.Check">
                                     @if (_isSaving)
                                     {
@@ -586,6 +628,9 @@
     private bool _isSaving;
     private string _url = string.Empty;
     private string _project = string.Empty;
+    private RevisionSource _revisionSource = RevisionSource.RestReportingRevisions;
+    private string _analyticsODataBaseUrl = string.Empty;
+    private string _analyticsODataEntitySetPath = "WorkItemRevisions";
     private bool _isLoadingProjects;
     private List<TfsProjectDto>? _tfsProjects;
     private TfsProjectDto? _selectedProject;
@@ -700,6 +745,11 @@
             {
                 _url = config.Url ?? string.Empty;
                 _project = config.Project ?? string.Empty;
+                _revisionSource = config.RevisionSource;
+                _analyticsODataBaseUrl = config.AnalyticsODataBaseUrl ?? string.Empty;
+                _analyticsODataEntitySetPath = string.IsNullOrWhiteSpace(config.AnalyticsODataEntitySetPath)
+                    ? "WorkItemRevisions"
+                    : config.AnalyticsODataEntitySetPath;
                 // DefaultAreaPath is now derived from Project, no need to load it
             }
         }
@@ -738,7 +788,7 @@
         // For step 0 (TFS Configuration), require verification and no changes
         if (_currentStep == 0)
         {
-            return !WizardState.TfsVerified || !WizardState.CheckTfsFieldsUnchanged(_url, _project);
+            return !WizardState.TfsVerified || !WizardState.CheckTfsFieldsUnchanged(_url, _project, _revisionSource, _analyticsODataBaseUrl);
         }
         return false;
     }
@@ -789,6 +839,54 @@
         _project = project?.Name ?? string.Empty;
         WizardState.MarkTfsUnverified();
         StateHasChanged();
+    }
+
+    private async Task OnRevisionSourceChanged(RevisionSource value)
+    {
+        _revisionSource = value;
+        WizardState.MarkTfsUnverified();
+
+        if (_configForm != null)
+        {
+            await _configForm.Validate();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task OnAnalyticsODataBaseUrlChanged(string value)
+    {
+        _analyticsODataBaseUrl = value;
+        WizardState.MarkTfsUnverified();
+
+        if (_configForm != null)
+        {
+            await _configForm.Validate();
+        }
+
+        StateHasChanged();
+    }
+
+    private void OnAnalyticsODataEntitySetPathChanged(string value)
+    {
+        _analyticsODataEntitySetPath = value;
+        WizardState.MarkTfsUnverified();
+        StateHasChanged();
+    }
+
+    private bool CanSaveConfiguration()
+    {
+        if (!_configFormValid)
+        {
+            return false;
+        }
+
+        if (_revisionSource != RevisionSource.AnalyticsODataRevisions)
+        {
+            return true;
+        }
+
+        return !string.IsNullOrWhiteSpace(_analyticsODataBaseUrl);
     }
 
     private async Task LoadTfsProjects(string organizationUrl)
@@ -869,7 +967,16 @@
 
     private async Task SaveConfig()
     {
-        if (!_configFormValid) return;
+        if (!CanSaveConfiguration())
+        {
+            if (_revisionSource == RevisionSource.AnalyticsODataRevisions &&
+                string.IsNullOrWhiteSpace(_analyticsODataBaseUrl))
+            {
+                Snackbar.Add("Analytics OData base URL is required when Analytics OData revisions is selected.", Severity.Error);
+            }
+
+            return;
+        }
 
         ClearConfigError();
         _isSaving = true;
@@ -886,7 +993,12 @@
                 defaultAreaPath = _project, // Derived from project name (backward compatibility)
                 useDefaultCredentials = true,
                 timeoutSeconds = 30,
-                apiVersion = "7.0"
+                apiVersion = "7.0",
+                revisionSource = _revisionSource,
+                analyticsODataBaseUrl = _analyticsODataBaseUrl,
+                analyticsODataEntitySetPath = string.IsNullOrWhiteSpace(_analyticsODataEntitySetPath)
+                    ? "WorkItemRevisions"
+                    : _analyticsODataEntitySetPath
             };
 
             var request = new HttpRequestMessage(HttpMethod.Post, "/api/tfsconfig/save-and-verify")
@@ -928,7 +1040,7 @@
             
             if (_configCompleted == true)
             {
-                WizardState.MarkTfsVerified(_url, _project);
+                WizardState.MarkTfsVerified(_url, _project, _revisionSource, _analyticsODataBaseUrl);
                 Snackbar.Add("Configuration saved and verified successfully", Severity.Success);
             }
             else
@@ -959,6 +1071,11 @@
     private void ClearConfigError()
     {
         _configErrorResponse = null;
+    }
+
+    private static string GetConfigSummaryValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "(not set)" : value;
     }
 
     private List<TfsConfigProgressUpdate> GetFilteredProgressUpdates()

@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Client.Services;
 
@@ -20,11 +21,15 @@ public class OnboardingWizardState : IOnboardingWizardState
     public bool TfsDirty { get; private set; }
 
     /// <inheritdoc/>
-    public void MarkTfsVerified(string url, string project)
+    public void MarkTfsVerified(
+        string url,
+        string project,
+        RevisionSource revisionSource,
+        string? analyticsODataBaseUrl)
     {
         _tfsVerified = true;
         TfsDirty = false;
-        _verifiedFingerprint = ComputeFingerprint(url, project);
+        _verifiedFingerprint = ComputeFingerprint(url, project, revisionSource, analyticsODataBaseUrl);
     }
 
     /// <inheritdoc/>
@@ -36,14 +41,18 @@ public class OnboardingWizardState : IOnboardingWizardState
     }
 
     /// <inheritdoc/>
-    public bool CheckTfsFieldsUnchanged(string url, string project)
+    public bool CheckTfsFieldsUnchanged(
+        string url,
+        string project,
+        RevisionSource revisionSource,
+        string? analyticsODataBaseUrl)
     {
         if (!_tfsVerified || _verifiedFingerprint == null)
         {
             return false;
         }
 
-        var currentFingerprint = ComputeFingerprint(url, project);
+        var currentFingerprint = ComputeFingerprint(url, project, revisionSource, analyticsODataBaseUrl);
         var unchanged = currentFingerprint == _verifiedFingerprint;
 
         if (!unchanged)
@@ -62,9 +71,14 @@ public class OnboardingWizardState : IOnboardingWizardState
         _verifiedFingerprint = null;
     }
 
-    private static string ComputeFingerprint(string url, string project)
+    private static string ComputeFingerprint(
+        string url,
+        string project,
+        RevisionSource revisionSource,
+        string? analyticsODataBaseUrl)
     {
-        var combined = $"{url?.Trim() ?? ""}{FingerprintSeparator}{project?.Trim() ?? ""}";
+        var combined =
+            $"{url?.Trim() ?? ""}{FingerprintSeparator}{project?.Trim() ?? ""}{FingerprintSeparator}{revisionSource}{FingerprintSeparator}{analyticsODataBaseUrl?.Trim() ?? ""}";
         var bytes = Encoding.UTF8.GetBytes(combined);
         var hash = SHA256.HashData(bytes);
         return Convert.ToBase64String(hash);

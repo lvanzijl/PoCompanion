@@ -1,3 +1,4 @@
+using PoTool.Shared.Settings;
 namespace PoTool.Client.Services;
 
 /// <summary>
@@ -20,7 +21,11 @@ public interface IOnboardingWizardState
     /// </summary>
     /// <param name="url">TFS URL</param>
     /// <param name="project">Project name</param>
-    void MarkTfsVerified(string url, string project);
+    void MarkTfsVerified(
+        string url,
+        string project,
+        RevisionSource revisionSource,
+        string? analyticsODataBaseUrl);
 
     /// <summary>
     /// Marks TFS configuration as not verified (failed verification or field changed).
@@ -34,7 +39,11 @@ public interface IOnboardingWizardState
     /// <param name="url">Current TFS URL</param>
     /// <param name="project">Current project name</param>
     /// <returns>True if values match verified state, false if dirty</returns>
-    bool CheckTfsFieldsUnchanged(string url, string project);
+    bool CheckTfsFieldsUnchanged(
+        string url,
+        string project,
+        RevisionSource revisionSource,
+        string? analyticsODataBaseUrl);
 
     /// <summary>
     /// Resets all wizard state.

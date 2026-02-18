@@ -277,6 +277,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IEfConcurrencyGate, EfConcurrencyGate>();
         services.AddScoped<TfsConfigurationService>();
         services.AddScoped<ITfsConfigurationService>(sp => sp.GetRequiredService<TfsConfigurationService>());
+        services.AddScoped<IProductOwnerRevisionSourceOverrideProvider, ProductOwnerRevisionSourceOverrideProvider>();
         services.AddScoped<TfsAuthenticationProvider>();
         services.AddScoped<ProfileFilterService>();
 
@@ -321,6 +322,9 @@ public static class ApiServiceCollectionExtensions
             // Register RealRevisionTfsClient for revision-based reporting
             // Separate from RealTfsClient per architecture requirements
             services.AddScoped<IRevisionTfsClient, RealRevisionTfsClient>();
+            services.AddScoped<IWorkItemRevisionSource, RestReportingRevisionSource>();
+            services.AddScoped<IWorkItemRevisionSource, RealODataRevisionTfsClient>();
+            services.AddScoped<IWorkItemRevisionSourceSelector, WorkItemRevisionSourceSelector>();
         }
 
         // Register Revision Ingestion Service (for Sprint Trend feature)

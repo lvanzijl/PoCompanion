@@ -32,6 +32,23 @@ public class TfsConfigEntity
     public string ApiVersion { get; set; } = "7.0";
 
     /// <summary>
+    /// Configured revision ingestion source.
+    /// </summary>
+    public RevisionSource RevisionSource { get; set; } = RevisionSource.RestReportingRevisions;
+
+    /// <summary>
+    /// Analytics OData base URL (optional; required when RevisionSource is AnalyticsODataRevisions).
+    /// </summary>
+    [MaxLength(1024)]
+    public string AnalyticsODataBaseUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Analytics OData entity-set path (for example: WorkItemRevisions).
+    /// </summary>
+    [MaxLength(256)]
+    public string AnalyticsODataEntitySetPath { get; set; } = "WorkItemRevisions";
+
+    /// <summary>
     /// Default Area Path for work item queries.
     /// This is the AreaPath used in WIQL queries (e.g., "ProjectName\Team A").
     /// Required field - must be configured before sync operations.

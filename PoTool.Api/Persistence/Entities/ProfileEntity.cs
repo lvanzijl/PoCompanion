@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Persistence.Entities;
 
@@ -43,6 +44,12 @@ public class ProfileEntity
     /// </summary>
     [MaxLength(512)]
     public string? CustomPicturePath { get; set; }
+
+    /// <summary>
+    /// Optional per-profile override for revision source selection.
+    /// Null means fallback to global TFS configuration.
+    /// </summary>
+    public RevisionSource? RevisionSourceOverride { get; set; }
 
     /// <summary>
     /// Timestamp when this profile was created.

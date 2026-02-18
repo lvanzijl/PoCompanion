@@ -43,6 +43,11 @@ public sealed class RevisionIngestionPaginationOptions
     public int MaxTotalPages { get; init; } = 5000;
 
     /// <summary>
+    /// Maximum number of rows returned by a single source loop (minimum 1).
+    /// </summary>
+    public int MaxTotalRows { get; init; } = 500000;
+
+    /// <summary>
     /// Maximum number of retries for a pagination anomaly on the same page.
     /// Default is 2 to allow quick retry before falling back or failing.
     /// </summary>

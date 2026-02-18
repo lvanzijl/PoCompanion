@@ -16,6 +16,7 @@ using PoTool.Core.Contracts;
 using PoTool.Integrations.Tfs.Clients;
 using PoTool.Integrations.Tfs.Diagnostics;
 using PoTool.Shared.WorkItems;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit;
 
@@ -61,7 +62,7 @@ public sealed class RevisionIngestionServiceTests
             new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
         };
 
-        var stubClient = new StubRevisionTfsClient(results);
+        var stubClient = new StubRevisionSource(results);
 
         using var provider = BuildServiceProvider(stubClient);
         var service = new RevisionIngestionService(
@@ -95,7 +96,7 @@ public sealed class RevisionIngestionServiceTests
             MaxPageRetries = 0
         };
 
-        var stubClient = new StubRevisionTfsClient(results);
+        var stubClient = new StubRevisionSource(results);
         using var provider = BuildServiceProvider(stubClient, options);
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
@@ -133,7 +134,7 @@ public sealed class RevisionIngestionServiceTests
             new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, null, termination)
         };
 
-        var stubClient = new StubRevisionTfsClient(results);
+        var stubClient = new StubRevisionSource(results);
         using var provider = BuildServiceProvider(stubClient);
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
@@ -163,7 +164,7 @@ public sealed class RevisionIngestionServiceTests
             new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
         };
 
-        var stubClient = new StubRevisionTfsClient(results);
+        var stubClient = new StubRevisionSource(results);
         using var provider = BuildServiceProvider(stubClient);
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
@@ -189,7 +190,7 @@ public sealed class RevisionIngestionServiceTests
             new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, "t2")
         };
 
-        var stubClient = new StubRevisionTfsClient(results);
+        var stubClient = new StubRevisionSource(results);
         using var provider = BuildServiceProvider(stubClient);
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
@@ -226,7 +227,7 @@ public sealed class RevisionIngestionServiceTests
             new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
         };
 
-        var stubClient = new StubRevisionTfsClient(results);
+        var stubClient = new StubRevisionSource(results);
         using var provider = BuildServiceProvider(stubClient);
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
@@ -260,7 +261,7 @@ public sealed class RevisionIngestionServiceTests
             new ReportingRevisionsResult(new[] { CreateRevision(11, 1) }, "t1")
         };
 
-        var stubClient = new StubRevisionTfsClient(results);
+        var stubClient = new StubRevisionSource(results);
         using var provider = BuildServiceProvider(stubClient);
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
@@ -299,7 +300,7 @@ public sealed class RevisionIngestionServiceTests
             AnomalyPolicy = PaginationAnomalyPolicy.FailFast
         };
 
-        var stubClient = new StubRevisionTfsClient(results);
+        var stubClient = new StubRevisionSource(results);
         using var provider = BuildServiceProvider(stubClient, options);
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
@@ -344,7 +345,7 @@ public sealed class RevisionIngestionServiceTests
             FallbackBatchSize = 1
         };
 
-        var stubClient = new StubRevisionTfsClient(results, perItemRevisions);
+        var stubClient = new StubRevisionSource(results, perItemRevisions);
         using var provider = BuildServiceProvider(
             stubClient,
             options,
@@ -395,7 +396,7 @@ public sealed class RevisionIngestionServiceTests
             new ReportingRevisionsResult(new[] { revision }, null)
         };
 
-        var stubClient = new StubRevisionTfsClient(results);
+        var stubClient = new StubRevisionSource(results);
         using var provider = BuildServiceProvider(stubClient);
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
@@ -433,7 +434,7 @@ public sealed class RevisionIngestionServiceTests
             new ReportingRevisionsResult(new[] { CreateRevision(1, 1), CreateRevision(100, 1) }, null)
         };
 
-        var stubClient = new StubRevisionTfsClient(results);
+        var stubClient = new StubRevisionSource(results);
         var relationHydrator = new StubRelationRevisionHydrator();
         using var provider = BuildServiceProvider(
             stubClient,
@@ -478,7 +479,7 @@ public sealed class RevisionIngestionServiceTests
             new ReportingRevisionsResult(new[] { CreateRevision(100, 1) }, null)
         };
 
-        var stubClient = new StubRevisionTfsClient(results);
+        var stubClient = new StubRevisionSource(results);
         using var provider = BuildServiceProvider(
             stubClient,
             backlogRootId: 100,
@@ -520,7 +521,7 @@ public sealed class RevisionIngestionServiceTests
             new ReportingRevisionsResult(new[] { CreateRevision(10, 6) }, "t6") // Should not be reached
         };
 
-        var stubClient = new StubRevisionTfsClient(results);
+        var stubClient = new StubRevisionSource(results);
         using var provider = BuildServiceProvider(
             stubClient,
             new RevisionIngestionPaginationOptions { MaxTotalPages = 5 });
@@ -553,7 +554,7 @@ public sealed class RevisionIngestionServiceTests
             new ReportingRevisionsResult(new[] { CreateRevision(100, 1) }, null)
         };
 
-        var stubClient = new StubRevisionTfsClient(results);
+        var stubClient = new StubRevisionSource(results);
         using var provider = BuildServiceProvider(stubClient, backlogRootId: 100, descendantWorkItemIds: new[] { 100 });
 
         // Add a cached work item with a known CreatedDate
@@ -589,12 +590,12 @@ public sealed class RevisionIngestionServiceTests
         // and the ingestion completes successfully
     }
 
-    private sealed class StubRevisionTfsClient : IRevisionTfsClient
+    private sealed class StubRevisionSource : IWorkItemRevisionSource
     {
         private readonly Queue<ReportingRevisionsResult> _results;
         private readonly Dictionary<int, IReadOnlyList<WorkItemRevision>> _perItemRevisions;
 
-        public StubRevisionTfsClient(
+        public StubRevisionSource(
             IEnumerable<ReportingRevisionsResult> results,
             Dictionary<int, IReadOnlyList<WorkItemRevision>>? perItemRevisions = null)
         {
@@ -602,11 +603,13 @@ public sealed class RevisionIngestionServiceTests
             _perItemRevisions = perItemRevisions ?? new Dictionary<int, IReadOnlyList<WorkItemRevision>>();
         }
 
+        public RevisionSource SourceType => RevisionSource.RestReportingRevisions;
+
         public int ReportingCalls { get; private set; }
         public int PerItemCalls { get; private set; }
         public List<DateTimeOffset?> StartDates { get; } = new();
 
-        public Task<ReportingRevisionsResult> GetReportingRevisionsAsync(
+        public Task<ReportingRevisionsResult> GetRevisionsAsync(
             DateTimeOffset? startDateTime = null,
             string? continuationToken = null,
             ReportingExpandMode expandMode = ReportingExpandMode.None,
@@ -630,9 +633,22 @@ public sealed class RevisionIngestionServiceTests
             return Task.FromResult((IReadOnlyList<WorkItemRevision>)Array.Empty<WorkItemRevision>());
         }
 
-        public Task<bool> ValidateConnectionAsync(CancellationToken cancellationToken = default)
+    }
+
+    private sealed class StubRevisionSourceSelector : IWorkItemRevisionSourceSelector
+    {
+        private readonly IWorkItemRevisionSource _source;
+
+        public StubRevisionSourceSelector(IWorkItemRevisionSource source)
         {
-            return Task.FromResult(true);
+            _source = source;
+        }
+
+        public Task<IWorkItemRevisionSource> GetSourceAsync(
+            int? productOwnerId = null,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_source);
         }
     }
 
@@ -684,7 +700,7 @@ public sealed class RevisionIngestionServiceTests
     }
 
     private static ServiceProvider BuildServiceProvider(
-        IRevisionTfsClient revisionClient,
+        IWorkItemRevisionSource revisionClient,
         RevisionIngestionPaginationOptions? paginationOptions = null,
         int backlogRootId = 1,
         IReadOnlyCollection<int>? descendantWorkItemIds = null,
@@ -704,7 +720,8 @@ public sealed class RevisionIngestionServiceTests
         services.AddDbContext<PoToolDbContext>(options => options.UseSqlite(connection));
         services.AddSingleton<ITfsClient>(
             CreateTfsClient(backlogRootId, descendantWorkItemIds ?? DefaultDescendantWorkItemIds));
-        services.AddSingleton<IRevisionTfsClient>(revisionClient);
+        services.AddSingleton<IWorkItemRevisionSource>(revisionClient);
+        services.AddSingleton<IWorkItemRevisionSourceSelector>(new StubRevisionSourceSelector(revisionClient));
         services.AddSingleton<IRelationRevisionHydrator>(relationHydrator ?? new StubRelationRevisionHydrator());
         services.AddSingleton<RevisionIngestionDiagnostics>();
         services.AddSingleton<TfsRequestThrottler>();

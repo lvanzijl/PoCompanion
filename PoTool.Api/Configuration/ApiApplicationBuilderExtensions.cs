@@ -8,6 +8,7 @@ using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Contracts;
 using PoTool.Shared.Contracts.TfsVerification;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Configuration;
 
@@ -222,7 +223,10 @@ public static class ApiApplicationBuilderExtensions
                 req.DefaultAreaPath ?? string.Empty, // Ignored - derived from Project
                 req.UseDefaultCredentials,
                 req.TimeoutSeconds,
-                req.ApiVersion ?? "7.0");
+                req.ApiVersion ?? "7.0",
+                req.RevisionSource,
+                req.AnalyticsODataBaseUrl,
+                req.AnalyticsODataEntitySetPath);
             return Results.Ok();
         });
 
@@ -332,6 +336,9 @@ public static class ApiApplicationBuilderExtensions
                     req.UseDefaultCredentials,
                     req.TimeoutSeconds,
                     req.ApiVersion ?? "7.0",
+                    req.RevisionSource,
+                    req.AnalyticsODataBaseUrl,
+                    req.AnalyticsODataEntitySetPath,
                     ct);
                 await BroadcastAndWriteAsync("Saving Configuration", ProgressState.Succeeded, "Configuration saved successfully", 20, null);
 
@@ -456,7 +463,10 @@ public record TfsConfigRequest(
     string? DefaultAreaPath,
     bool UseDefaultCredentials = true,
     int TimeoutSeconds = 30,
-    string? ApiVersion = "7.0");
+    string? ApiVersion = "7.0",
+    RevisionSource? RevisionSource = null,
+    string? AnalyticsODataBaseUrl = null,
+    string? AnalyticsODataEntitySetPath = null);
 
 /// <summary>
 /// Request model for TFS API verification endpoint.
