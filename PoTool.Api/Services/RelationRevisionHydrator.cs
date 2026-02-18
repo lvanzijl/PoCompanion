@@ -150,7 +150,8 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
-        var revisionClient = scope.ServiceProvider.GetRequiredService<IRevisionTfsClient>();
+        var revisionSourceSelector = scope.ServiceProvider.GetRequiredService<IWorkItemRevisionSourceSelector>();
+        var revisionSource = await revisionSourceSelector.GetSourceAsync(cancellationToken);
         var logPerWorkItem = runContext.IsEnabled && runContext.LogPerWorkItemHydration;
         var captureCallTiming = runContext.IsEnabled;
         var perItemStart = logPerWorkItem ? Stopwatch.GetTimestamp() : 0;
@@ -192,7 +193,7 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
 
             // Fetch all revisions with relations from TFS
             var callStart = captureCallTiming ? Stopwatch.GetTimestamp() : 0;
-            var revisions = await revisionClient.GetWorkItemRevisionsAsync(workItemId, cancellationToken);
+            var revisions = await revisionSource.GetWorkItemRevisionsAsync(workItemId, cancellationToken);
             if (captureCallTiming)
             {
                 callDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(callStart);

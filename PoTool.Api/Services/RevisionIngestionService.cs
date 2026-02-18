@@ -108,7 +108,8 @@ public class RevisionIngestionService
         {
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
-            var revisionClient = scope.ServiceProvider.GetRequiredService<IRevisionTfsClient>();
+            var revisionSourceSelector = scope.ServiceProvider.GetRequiredService<IWorkItemRevisionSourceSelector>();
+            var revisionSource = await revisionSourceSelector.GetSourceAsync(cts.Token);
             var tfsClient = scope.ServiceProvider.GetRequiredService<ITfsClient>();
             var allowedWorkItemIds = await ResolveAllowedWorkItemIdsForProductOwnerAsync(
                 context,
@@ -196,7 +197,7 @@ public class RevisionIngestionService
 
             var windowRunResult = await ProcessWindowsAsync(
                 context,
-                revisionClient,
+                revisionSource,
                 allowedWorkItemIds,
                 watermark,
                 backfillStartUtc,
@@ -228,7 +229,7 @@ public class RevisionIngestionService
 
                 fallbackResult = await RunFallbackIngestionAsync(
                     context,
-                    revisionClient,
+                    revisionSource,
                     allowedWorkItemIds,
                     watermark,
                     runContext,
@@ -288,7 +289,7 @@ public class RevisionIngestionService
 
                     var retryResult = await ProcessWindowsAsync(
                         context,
-                        revisionClient,
+                        revisionSource,
                         allowedWorkItemIds,
                         watermark,
                         retryCursor ?? backfillStartUtc,
@@ -835,7 +836,7 @@ public class RevisionIngestionService
 
     private async Task<FallbackIngestionResult> RunFallbackIngestionAsync(
         PoToolDbContext context,
-        IRevisionTfsClient revisionClient,
+        IWorkItemRevisionSource revisionSource,
         HashSet<int> allowedWorkItemIds,
         RevisionIngestionWatermarkEntity watermark,
         RevisionIngestionRunContext runContext,
@@ -866,7 +867,7 @@ public class RevisionIngestionService
             await context.SaveChangesAsync(cancellationToken);
 
             var revisions = await _throttler.ExecuteReadAsync(
-                () => revisionClient.GetWorkItemRevisionsAsync(workItemId, cancellationToken),
+                () => revisionSource.GetWorkItemRevisionsAsync(workItemId, cancellationToken),
                 cancellationToken);
 
             if (revisions.Count > 0)
@@ -921,7 +922,7 @@ public class RevisionIngestionService
 
     private async Task<WindowRunResult> ProcessWindowsAsync(
         PoToolDbContext context,
-        IRevisionTfsClient revisionClient,
+        IWorkItemRevisionSource revisionSource,
         HashSet<int> allowedWorkItemIds,
         RevisionIngestionWatermarkEntity watermark,
         DateTimeOffset backfillStartUtc,
@@ -978,7 +979,7 @@ public class RevisionIngestionService
                 window,
                 context,
                 watermark,
-                revisionClient,
+                revisionSource,
                 allowedWorkItemIds,
                 paginationOptions,
                 runContext,
@@ -1107,7 +1108,7 @@ public class RevisionIngestionService
         RevisionIngestionWindow window,
         PoToolDbContext context,
         RevisionIngestionWatermarkEntity watermark,
-        IRevisionTfsClient revisionClient,
+        IWorkItemRevisionSource revisionSource,
         HashSet<int> allowedWorkItemIds,
         RevisionIngestionPaginationOptions paginationOptions,
         RevisionIngestionRunContext runContext,
@@ -1169,7 +1170,7 @@ public class RevisionIngestionService
             ReportingRevisionsResult result;
             try
             {
-                result = await revisionClient.GetReportingRevisionsAsync(
+                result = await revisionSource.GetRevisionsAsync(
                     window.StartUtc,
                     continuationToken,
                     expandMode: ReportingExpandMode.None,

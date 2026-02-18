@@ -11,6 +11,9 @@ out/
 **/bin/Release/
 **/obj/Debug/
 **/obj/Release/
+# Defensive patterns for accidentally created literal backslash paths
+**/bin\\*/
+**/obj\\*/
 # Lowercase variants to handle different directory naming conventions
 **/bin/debug/
 **/bin/release/
