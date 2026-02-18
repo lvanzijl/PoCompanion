@@ -144,17 +144,24 @@ public class RevisionIngestionService
             var distinctWorkItemCount = 0;
             DateTimeOffset? minChangedDate = null;
             DateTimeOffset? maxChangedDate = null;
-            // For incremental sync, use last sync start time
-            // For backfill with no last sync time, infer from cached work items
-            DateTimeOffset? startDateTime = watermark.IsInitialBackfillComplete 
-                ? watermark.LastSyncStartDateTime 
-                : await InferBackfillStartDateTimeAsync(context, productOwnerId, cts.Token);
             ReportingRevisionsTermination? termination = null;
             var runOutcome = RevisionIngestionRunOutcome.CompletedNormally;
             var paginationOptions = _paginationOptions.CurrentValue;
+            // For incremental sync, use durable checkpoint when retry mode is enabled.
+            // For backfill with no last sync time, infer from cached work items.
+            DateTimeOffset? startDateTime = watermark.IsInitialBackfillComplete
+                ? paginationOptions.RetryEnabled
+                    ? watermark.LastStableChangedDateUtc ?? watermark.LastSyncStartDateTime
+                    : watermark.LastSyncStartDateTime
+                : await InferBackfillStartDateTimeAsync(context, productOwnerId, cts.Token);
             var fallbackUsed = false;
             string? lastStableContinuationTokenHash = null;
             WindowStallReason? lastStallReason = null;
+            DateTimeOffset? durableCheckpoint = watermark.LastStableChangedDateUtc?.ToUniversalTime();
+            DateTimeOffset? bestObservedMaxChanged = durableCheckpoint;
+            var retryFinalOutcome = "NotRun";
+            var retryIterationsExecuted = 0;
+            DateTimeOffset? retryCursor = null;
 
             var runStartUtc = DateTimeOffset.UtcNow;
             using var runScope = _diagnostics.StartRun(
@@ -251,6 +258,111 @@ public class RevisionIngestionService
                 termination = CreateTerminationFromStall(lastStallReason.Value);
             }
 
+            if (paginationOptions.RetryEnabled &&
+                runOutcome == RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly)
+            {
+                var overlap = TimeSpan.FromMinutes(Math.Max(0, paginationOptions.RetryOverlapMinutes));
+                var epsilon = TimeSpan.FromSeconds(Math.Max(0, paginationOptions.ProgressEpsilonSeconds));
+                var observedMaxChanged = await GetScopedMaxChangedDateAsync(context, allowedWorkItemIds, cts.Token);
+                if (observedMaxChanged.HasValue &&
+                    (!bestObservedMaxChanged.HasValue || observedMaxChanged > bestObservedMaxChanged))
+                {
+                    bestObservedMaxChanged = observedMaxChanged.Value;
+                }
+                retryCursor = (durableCheckpoint ?? startDateTime ?? backfillStartUtc).ToUniversalTime().Subtract(overlap);
+
+                // Durable checkpoint is protected and only updated after a fully consistent run.
+                // Retry overlap is required because continuation-token anomalies can leave a short hidden gap near boundaries.
+                // Monotonic progress (bestObservedMaxChanged + epsilon) prevents endless retries on repeated pages/tokens.
+                for (var iteration = 1; iteration <= Math.Max(1, paginationOptions.RetryMaxIterations); iteration++)
+                {
+                    retryIterationsExecuted = iteration;
+                    _logger.LogWarning(
+                        "Revision ingestion retry iteration started. ProductOwnerId={ProductOwnerId} Iteration={Iteration} DurableCheckpoint={DurableCheckpoint} RetryCursor={RetryCursor} BestObservedMaxChanged={BestObservedMaxChanged} Overlap={Overlap}",
+                        productOwnerId,
+                        iteration,
+                        durableCheckpoint,
+                        retryCursor,
+                        bestObservedMaxChanged,
+                        overlap);
+
+                    var retryResult = await ProcessWindowsAsync(
+                        context,
+                        revisionClient,
+                        allowedWorkItemIds,
+                        watermark,
+                        retryCursor ?? backfillStartUtc,
+                        DateTimeOffset.UtcNow,
+                        paginationOptions,
+                        runContext,
+                        diagnosticState,
+                        progressCallback,
+                        cts.Token);
+
+                    totalRevisions += retryResult.TotalPersisted;
+                    distinctWorkItemIds.UnionWith(retryResult.DistinctWorkItemIds);
+                    distinctWorkItemCount = distinctWorkItemIds.Count;
+                    minChangedDate = GetWindowRawMin(minChangedDate, retryResult.MinChangedDate);
+                    maxChangedDate = GetWindowRawMax(maxChangedDate, retryResult.MaxChangedDate);
+                    runOutcome = retryResult.RunOutcome;
+                    termination = retryResult.LastTermination;
+                    lastStallReason = retryResult.LastStallReason;
+                    lastStableContinuationTokenHash = retryResult.LastStableContinuationTokenHash ?? lastStableContinuationTokenHash;
+
+                    var newMaxChangedInDb = await GetScopedMaxChangedDateAsync(context, allowedWorkItemIds, cts.Token);
+                    var retryProgressDetected = newMaxChangedInDb.HasValue &&
+                                               (!bestObservedMaxChanged.HasValue || newMaxChangedInDb > bestObservedMaxChanged.Value.Add(epsilon));
+
+                    _logger.LogWarning(
+                        "Revision ingestion retry iteration completed. ProductOwnerId={ProductOwnerId} Iteration={Iteration} RetryCursor={RetryCursor} BestObservedMaxChanged={BestObservedMaxChanged} NewMaxChangedInDb={NewMaxChangedInDb} ProgressDetected={ProgressDetected} Outcome={Outcome}",
+                        productOwnerId,
+                        iteration,
+                        retryCursor,
+                        bestObservedMaxChanged,
+                        newMaxChangedInDb,
+                        retryProgressDetected,
+                        runOutcome);
+
+                    if (runOutcome == RevisionIngestionRunOutcome.CompletedNormally &&
+                        await ValidateRetryConsistencyAsync(scope.ServiceProvider, context, allowedWorkItemIds, cts.Token))
+                    {
+                        if (newMaxChangedInDb.HasValue)
+                        {
+                            bestObservedMaxChanged = newMaxChangedInDb.Value;
+                        }
+
+                        retryFinalOutcome = "Success";
+                        break;
+                    }
+
+                    if (!retryProgressDetected)
+                    {
+                        retryFinalOutcome = "FailedWithNoProgress";
+                        runOutcome = RevisionIngestionRunOutcome.Failed;
+                        break;
+                    }
+
+                    bestObservedMaxChanged = newMaxChangedInDb;
+                    retryCursor = bestObservedMaxChanged!.Value.Subtract(overlap);
+                    retryFinalOutcome = "FailedAfterMaxIterations";
+                }
+
+                if (retryFinalOutcome != "Success")
+                {
+                    runOutcome = RevisionIngestionRunOutcome.Failed;
+                }
+
+                _logger.LogWarning(
+                    "Revision ingestion retry loop completed. ProductOwnerId={ProductOwnerId} Outcome={FinalOutcome} Iterations={Iterations} DurableCheckpoint={DurableCheckpoint} RetryCursor={RetryCursor} BestObservedMaxChanged={BestObservedMaxChanged} OverlapMinutes={OverlapMinutes}",
+                    productOwnerId,
+                    retryFinalOutcome,
+                    retryIterationsExecuted,
+                    durableCheckpoint,
+                    retryCursor,
+                    bestObservedMaxChanged,
+                    paginationOptions.RetryOverlapMinutes);
+            }
+
             var paginationWarning = runOutcome == RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly;
             var hasProgress = totalRevisions > 0 || fallbackUsed;
             var successWithWarnings = paginationWarning && hasProgress;
@@ -269,9 +381,20 @@ public class RevisionIngestionService
             watermark.LastIngestionRevisionCount = totalRevisions;
             watermark.LastRunOutcome = runOutcome.ToString();
             watermark.LastStableContinuationTokenHash = lastStableContinuationTokenHash;
-            watermark.LastStableChangedDateUtc = maxChangedDate;
             watermark.FallbackUsedLastRun = fallbackUsed;
             watermark.ContinuationToken = null; // Windowed ingestion does not reuse tokens across runs
+
+            var fullSuccess = runOutcome == RevisionIngestionRunOutcome.CompletedNormally;
+            var canAdvanceDurableCheckpoint = !paginationOptions.RetryEnabled
+                ? fullSuccess || runOutcome == RevisionIngestionRunOutcome.CompletedWithFallback || successWithWarnings
+                : fullSuccess;
+            if (canAdvanceDurableCheckpoint)
+            {
+                var durableCheckpointCandidate = paginationOptions.RetryEnabled
+                    ? bestObservedMaxChanged ?? maxChangedDate
+                    : maxChangedDate;
+                watermark.LastStableChangedDateUtc = durableCheckpointCandidate?.ToUniversalTime();
+            }
 
             if (termination != null)
             {
@@ -288,6 +411,13 @@ public class RevisionIngestionService
                 watermark.LastErrorMessage = warningMessage;
                 watermark.LastErrorAt = DateTimeOffset.UtcNow;
             }
+            else if (runOutcome == RevisionIngestionRunOutcome.Failed &&
+                     paginationOptions.RetryEnabled &&
+                     retryFinalOutcome != "NotRun")
+            {
+                watermark.LastErrorMessage = $"Incremental retry loop failed ({retryFinalOutcome}).";
+                watermark.LastErrorAt = DateTimeOffset.UtcNow;
+            }
 
             if (windowRunResult.BackfillComplete && runOutcome == RevisionIngestionRunOutcome.CompletedNormally)
             {
@@ -299,16 +429,10 @@ public class RevisionIngestionService
                     windowRunResult.WindowsMarkedUnretrievable);
             }
 
-            if (runOutcome == RevisionIngestionRunOutcome.CompletedNormally ||
-                runOutcome == RevisionIngestionRunOutcome.CompletedWithFallback ||
-                successWithWarnings)
+            if (canAdvanceDurableCheckpoint)
             {
-                // Update watermark for next incremental sync
-                watermark.LastSyncStartDateTime = syncStartTime;
-            }
-            else
-            {
-                watermark.LastSyncStartDateTime = null;
+                // Durable checkpoint doubles as the next incremental sync start.
+                watermark.LastSyncStartDateTime = watermark.LastStableChangedDateUtc ?? syncStartTime;
             }
 
             context.Entry(watermark).State = EntityState.Modified;
@@ -349,6 +473,10 @@ public class RevisionIngestionService
             var success = runOutcome is RevisionIngestionRunOutcome.CompletedNormally or RevisionIngestionRunOutcome.CompletedWithFallback || successWithWarnings;
             var errorMessage = success
                 ? null
+                : runOutcome == RevisionIngestionRunOutcome.Failed &&
+                  paginationOptions.RetryEnabled &&
+                  retryFinalOutcome != "NotRun"
+                    ? $"Incremental retry loop failed ({retryFinalOutcome})."
                 : termination != null
                     ? $"Reporting revisions pagination ended early ({termination.Reason}): {termination.Message}"
                     : lastStallReason.HasValue
@@ -588,6 +716,82 @@ public class RevisionIngestionService
         return workItems
             .Where(item => scopedIds.Contains(item.TfsId))
             .ToList();
+    }
+
+    private static async Task<DateTimeOffset?> GetScopedMaxChangedDateAsync(
+        PoToolDbContext context,
+        IReadOnlyCollection<int> allowedWorkItemIds,
+        CancellationToken cancellationToken)
+    {
+        if (allowedWorkItemIds.Count == 0)
+        {
+            return null;
+        }
+
+        var maxChangedDate = await context.RevisionHeaders
+            .AsNoTracking()
+            .Where(header => allowedWorkItemIds.Contains(header.WorkItemId))
+            .Select(header => (DateTimeOffset?)header.ChangedDate)
+            .MaxAsync(cancellationToken);
+
+        return maxChangedDate?.ToUniversalTime();
+    }
+
+    private static async Task<bool> ValidateRetryConsistencyAsync(
+        IServiceProvider serviceProvider,
+        PoToolDbContext context,
+        IReadOnlyCollection<int> allowedWorkItemIds,
+        CancellationToken cancellationToken)
+    {
+        if (allowedWorkItemIds.Count == 0)
+        {
+            return true;
+        }
+
+        var candidateWorkItemIds = await context.RevisionHeaders
+            .AsNoTracking()
+            .Where(header => allowedWorkItemIds.Contains(header.WorkItemId))
+            .OrderByDescending(header => header.ChangedDate)
+            .Select(header => header.WorkItemId)
+            .Distinct()
+            .Take(5)
+            .ToListAsync(cancellationToken);
+
+        if (candidateWorkItemIds.Count == 0)
+        {
+            return true;
+        }
+
+        var existingWorkItemIds = await context.WorkItems
+            .AsNoTracking()
+            .Where(workItem => candidateWorkItemIds.Contains(workItem.TfsId))
+            .Select(workItem => workItem.TfsId)
+            .ToListAsync(cancellationToken);
+
+        if (existingWorkItemIds.Count == 0)
+        {
+            return true;
+        }
+
+        var cacheManagementService = serviceProvider.GetService<CacheManagementService>();
+        if (cacheManagementService == null)
+        {
+            return true;
+        }
+        foreach (var workItemId in existingWorkItemIds)
+        {
+            var validationResult = await cacheManagementService.ValidateSingleWorkItemAsync(
+                workItemId,
+                includeTimeline: false,
+                cancellationToken);
+
+            if (!validationResult.IsValid)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private DateTimeOffset GetFallbackBackfillStartDate(int productOwnerId, string reason)

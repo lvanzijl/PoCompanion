@@ -25,6 +25,34 @@ public sealed class RevisionIngestionServiceTests
     private static readonly int[] DefaultDescendantWorkItemIds = { 10, 11, 42, 99 };
 
     [TestMethod]
+    public void RevisionIngestionPaginationOptions_DefaultRetrySettingsAreSafe()
+    {
+        var options = new RevisionIngestionPaginationOptions();
+
+        Assert.IsFalse(options.RetryEnabled);
+        Assert.AreEqual(3, options.RetryMaxIterations);
+        Assert.AreEqual(60, options.RetryOverlapMinutes);
+        Assert.AreEqual(1, options.ProgressEpsilonSeconds);
+    }
+
+    [TestMethod]
+    public void RevisionIngestionPaginationOptions_CanOverrideRetrySettings()
+    {
+        var options = new RevisionIngestionPaginationOptions
+        {
+            RetryEnabled = true,
+            RetryMaxIterations = 5,
+            RetryOverlapMinutes = 120,
+            ProgressEpsilonSeconds = 2
+        };
+
+        Assert.IsTrue(options.RetryEnabled);
+        Assert.AreEqual(5, options.RetryMaxIterations);
+        Assert.AreEqual(120, options.RetryOverlapMinutes);
+        Assert.AreEqual(2, options.ProgressEpsilonSeconds);
+    }
+
+    [TestMethod]
     public async Task IngestRevisionsAsync_StopsAfterContinuationTokenClears()
     {
         var results = new[]
@@ -779,7 +807,7 @@ public sealed class RevisionIngestionServiceTests
         return workItems;
     }
 
-    private static WorkItemRevision CreateRevision(int workItemId, int revisionNumber)
+    private static WorkItemRevision CreateRevision(int workItemId, int revisionNumber, DateTimeOffset? changedDate = null)
     {
         return new WorkItemRevision
         {
@@ -790,7 +818,7 @@ public sealed class RevisionIngestionServiceTests
             State = "New",
             IterationPath = "Iteration 1",
             AreaPath = "Area 1",
-            ChangedDate = DateTimeOffset.UtcNow
+            ChangedDate = changedDate ?? DateTimeOffset.UtcNow
         };
     }
 }
