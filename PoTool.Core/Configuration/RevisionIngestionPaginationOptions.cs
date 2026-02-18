@@ -6,6 +6,26 @@ namespace PoTool.Core.Configuration;
 public sealed class RevisionIngestionPaginationOptions
 {
     /// <summary>
+    /// Enables bounded incremental retry after pagination anomalies.
+    /// </summary>
+    public bool RetryEnabled { get; init; } = false;
+
+    /// <summary>
+    /// Maximum retry iterations executed after a pagination anomaly.
+    /// </summary>
+    public int RetryMaxIterations { get; init; } = 3;
+
+    /// <summary>
+    /// Overlap window in minutes applied when computing retry cursors.
+    /// </summary>
+    public int RetryOverlapMinutes { get; init; } = 60;
+
+    /// <summary>
+    /// Minimum ChangedDate delta (in seconds) required to treat retry progress as monotonic.
+    /// </summary>
+    public int ProgressEpsilonSeconds { get; init; } = 1;
+
+    /// <summary>
     /// Maximum number of empty pages allowed per ingestion run (minimum 1).
     /// Default is 50 to tolerate extended empty bursts before terminating the stream.
     /// </summary>

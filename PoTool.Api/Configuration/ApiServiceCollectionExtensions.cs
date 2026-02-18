@@ -67,8 +67,11 @@ public static class ApiServiceCollectionExtensions
                            options.MaxPageRetries >= 0 &&
                            options.RetryBackoffSeconds >= 0 &&
                            options.RetryBackoffJitterSeconds >= 0 &&
-                           options.FallbackBatchSize >= 1,
-                "Revision ingestion pagination limits must be >= 1.")
+                           options.FallbackBatchSize >= 1 &&
+                           options.RetryMaxIterations >= 1 &&
+                           options.RetryOverlapMinutes >= 0 &&
+                           options.ProgressEpsilonSeconds >= 0,
+                "Revision ingestion pagination configuration has invalid bounds.")
             .ValidateOnStart();
         services.AddOptions<RevisionIngestionPersistenceOptimizationOptions>()
             .Bind(configuration.GetSection("RevisionIngestionPersistenceOptimization"))
