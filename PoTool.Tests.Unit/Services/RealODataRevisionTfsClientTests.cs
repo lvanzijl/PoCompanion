@@ -29,10 +29,16 @@ public class RealODataRevisionTfsClientTests
         ]);
 
         var client = CreateClient(handler);
-        var page = await client.GetRevisionsAsync(DateTimeOffset.Parse("2026-01-01T00:00:00Z"));
+        var page = await client.GetRevisionsAsync(
+            DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
+            scopedWorkItemIds: [10, 11]);
 
         Assert.HasCount(2, page.Revisions);
         Assert.AreEqual("https://analytics/page2", page.ContinuationToken);
+        var firstRequest = Uri.UnescapeDataString(handler.RequestUris[0]);
+        StringAssert.Contains(firstRequest, "$orderby=ChangedDate asc,WorkItemId asc,Revision asc");
+        StringAssert.Contains(firstRequest, "WorkItemId ge 10 and WorkItemId le 11");
+        StringAssert.Contains(firstRequest, "$select=WorkItemId,Revision,ChangedDate,WorkItemType,Title,State,Reason,IterationPath,AreaPath,CreatedDate,ClosedDate,Effort,Tags,Severity,ChangedBy");
     }
 
     [TestMethod]
@@ -86,7 +92,82 @@ public class RealODataRevisionTfsClientTests
         Assert.AreEqual(3, page.Revisions[0].RevisionNumber);
     }
 
-    private static RealODataRevisionTfsClient CreateClient(QueueMessageHandler handler)
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenScopeModeIsIdList_UsesIdListFilter()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                { "WorkItemId": 7, "Revision": 1, "ChangedDate": "2026-01-03T00:00:00Z", "Title": "Alias", "WorkItemType": "Task", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+              ]
+            }
+            """
+        ]);
+
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            MaxTotalPages = 10,
+            MaxTotalRows = 100,
+            MaxEmptyPages = 2,
+            ODataScopeMode = ODataRevisionScopeMode.IdList,
+            ODataMaxUrlLength = 4000
+        });
+
+        _ = await client.GetRevisionsAsync(scopedWorkItemIds: [7, 9, 11]);
+
+        StringAssert.Contains(Uri.UnescapeDataString(handler.RequestUris[0]), "(WorkItemId eq 7 or WorkItemId eq 9 or WorkItemId eq 11)");
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenNextLinkMissingAndPageIsFull_UsesSeekContinuationFallback()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                { "WorkItemId": 42, "Revision": 1, "ChangedDate": "2026-01-01T00:00:00Z", "Title": "A", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" },
+                { "WorkItemId": 42, "Revision": 2, "ChangedDate": "2026-01-02T00:00:00Z", "Title": "B", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+              ]
+            }
+            """,
+            """
+            {
+              "value": [
+                { "WorkItemId": 42, "Revision": 3, "ChangedDate": "2026-01-03T00:00:00Z", "Title": "C", "WorkItemType": "Bug", "State": "Closed", "IterationPath": "I", "AreaPath": "A" }
+              ]
+            }
+            """
+        ]);
+
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            MaxTotalPages = 10,
+            MaxTotalRows = 100,
+            MaxEmptyPages = 2,
+            ODataTop = 2,
+            ODataEnableSeekPagingFallback = true
+        });
+
+        var first = await client.GetRevisionsAsync(
+            DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
+            scopedWorkItemIds: [42]);
+        var second = await client.GetRevisionsAsync(
+            continuationToken: first.ContinuationToken,
+            scopedWorkItemIds: [42]);
+
+        Assert.IsNotNull(first.ContinuationToken);
+        Assert.IsNull(second.ContinuationToken);
+        var secondRequest = Uri.UnescapeDataString(handler.RequestUris[1]);
+        StringAssert.Contains(secondRequest, "ChangedDate gt 2026-01-02T00:00:00.0000000+00:00");
+        StringAssert.Contains(secondRequest, "WorkItemId eq 42 and Revision gt 2");
+    }
+
+    private static RealODataRevisionTfsClient CreateClient(
+        QueueMessageHandler handler,
+        RevisionIngestionPaginationOptions? options = null)
     {
         var httpClient = new HttpClient(handler);
         var httpClientFactory = new Mock<IHttpClientFactory>();
@@ -105,7 +186,7 @@ public class RealODataRevisionTfsClientTests
             });
 
         var paginationOptions = new Mock<IOptionsMonitor<RevisionIngestionPaginationOptions>>();
-        paginationOptions.Setup(options => options.CurrentValue).Returns(new RevisionIngestionPaginationOptions
+        paginationOptions.Setup(current => current.CurrentValue).Returns(options ?? new RevisionIngestionPaginationOptions
         {
             MaxTotalPages = 10,
             MaxTotalRows = 100,

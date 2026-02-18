@@ -1173,6 +1173,7 @@ public class RevisionIngestionService
                 result = await revisionSource.GetRevisionsAsync(
                     window.StartUtc,
                     continuationToken,
+                    allowedWorkItemIds,
                     expandMode: ReportingExpandMode.None,
                     cancellationToken);
             }

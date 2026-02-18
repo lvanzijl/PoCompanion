@@ -126,6 +126,7 @@ try
         var page = await revisionSource.GetRevisionsAsync(
             startDateTime: inferredStartDateTime,
             continuationToken: continuationToken,
+            scopedWorkItemIds: allowedWorkItemIds,
             expandMode: ReportingExpandMode.None);
 
         pageNumber++;

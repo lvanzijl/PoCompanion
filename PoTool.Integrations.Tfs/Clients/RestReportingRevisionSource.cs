@@ -20,6 +20,7 @@ public sealed class RestReportingRevisionSource : IWorkItemRevisionSource
     public Task<ReportingRevisionsResult> GetRevisionsAsync(
         DateTimeOffset? startDateTime = null,
         string? continuationToken = null,
+        IReadOnlyCollection<int>? scopedWorkItemIds = null,
         ReportingExpandMode expandMode = ReportingExpandMode.None,
         CancellationToken cancellationToken = default)
     {
