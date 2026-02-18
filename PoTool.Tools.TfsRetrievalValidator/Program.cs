@@ -23,6 +23,8 @@ var runLogPath = Path.Combine(runDirectory, "run.log");
 var zipPath = Path.Combine(runDirectory, "tfs-dump.zip");
 var dumpCollector = new TfsDumpCollector();
 RawModelSnapshot? snapshot = null;
+var sessionSucceeded = false;
+var sessionOutcomeReason = "Run did not complete.";
 
 var environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
     ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
@@ -77,7 +79,7 @@ try
         });
 
     services.AddScoped<ITfsClient, RealTfsClient>();
-    services.AddScoped<IRevisionTfsClient, RealRevisionTfsClient>();
+    services.AddScoped<IWorkItemRevisionSource, RealODataRevisionTfsClient>();
 
     await using var provider = services.BuildServiceProvider().CreateAsyncScope();
     var scopedProvider = provider.ServiceProvider;
@@ -89,7 +91,7 @@ try
     }
 
     var tfsClient = scopedProvider.GetRequiredService<ITfsClient>();
-    var revisionClient = scopedProvider.GetRequiredService<IRevisionTfsClient>();
+    var revisionSource = scopedProvider.GetRequiredService<IWorkItemRevisionSource>();
     logger.LogInformation("Starting retrieval for RootWorkItemId={RootWorkItemId}", options.RootWorkItemId);
 
     var workItems = (await tfsClient.GetWorkItemsByRootIdsAsync(
@@ -121,10 +123,10 @@ try
 
     do
     {
-        var page = await revisionClient.GetReportingRevisionsAsync(
+        var page = await revisionSource.GetRevisionsAsync(
             startDateTime: inferredStartDateTime,
             continuationToken: continuationToken,
-            expandMode: ReportingExpandMode.Fields);
+            expandMode: ReportingExpandMode.None);
 
         pageNumber++;
         var scopedRevisions = page.Revisions
@@ -191,13 +193,29 @@ try
         TotalRawRevisions: totalRawRevisions,
         PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
         ReportingTerminationReason: reportingTerminationReason,
-        ReportingTerminationMessage: reportingTerminationMessage);
+        ReportingTerminationMessage: reportingTerminationMessage,
+        SessionSucceeded: string.IsNullOrWhiteSpace(reportingTerminationReason),
+        SessionOutcomeReason: string.IsNullOrWhiteSpace(reportingTerminationReason)
+            ? "Retrieved revisions from Analytics OData without early termination."
+            : $"Revision retrieval terminated early ({reportingTerminationReason}): {reportingTerminationMessage ?? "No additional details."}");
 
-    logger.LogInformation("Run completed successfully. Output directory: {RunDirectory}", runDirectory);
+    sessionSucceeded = snapshot.SessionSucceeded;
+    sessionOutcomeReason = snapshot.SessionOutcomeReason;
+    if (sessionSucceeded)
+    {
+        logger.LogInformation("Run completed successfully. Output directory: {RunDirectory}", runDirectory);
+    }
+    else
+    {
+        logger.LogError("Run completed with failure state. Reason: {Reason}", sessionOutcomeReason);
+        Environment.ExitCode = 1;
+    }
 }
 catch (Exception ex)
 {
     logger.LogError(ex, "Run failed.");
+    sessionSucceeded = false;
+    sessionOutcomeReason = $"{ex.GetType().Name}: {ex.Message}";
     Environment.ExitCode = 1;
 }
 finally
@@ -212,8 +230,16 @@ finally
         TotalRawRevisions: 0,
         PagesWithoutScopedRevisions: 0,
         ReportingTerminationReason: null,
-        ReportingTerminationMessage: null);
+        ReportingTerminationMessage: null,
+        SessionSucceeded: sessionSucceeded,
+        SessionOutcomeReason: sessionOutcomeReason);
     await dumpCollector.WriteDumpAsync(zipPath, snapshot);
+    logger.LogInformation(
+        "Session summary: succeeded={Succeeded}, reason={Reason}, outputDirectory={RunDirectory}, dump={ZipPath}",
+        sessionSucceeded,
+        sessionOutcomeReason,
+        runDirectory,
+        zipPath);
 }
 
 static List<HierarchyRelationSnapshot> ReconstructHierarchy(IEnumerable<WorkItemDto> workItems)
@@ -263,7 +289,9 @@ internal sealed record RawModelSnapshot(
     int TotalRawRevisions,
     int PagesWithoutScopedRevisions,
     string? ReportingTerminationReason,
-    string? ReportingTerminationMessage);
+    string? ReportingTerminationMessage,
+    bool SessionSucceeded,
+    string SessionOutcomeReason);
 
 internal sealed class AppSettingsTfsConfigurationService(IOptions<TfsConfigEntity> options) : ITfsConfigurationService
 {
@@ -518,6 +546,8 @@ internal sealed class TfsDumpCollector
 
         return new DumpAnalysisSummary(
             GeneratedAt: DateTimeOffset.Now,
+            SessionSucceeded: snapshot.SessionSucceeded,
+            SessionOutcomeReason: snapshot.SessionOutcomeReason,
             RequestCount: responses.Count,
             ErrorCount: responses.Count(response => response.ResponseStatusCode >= 400 || !string.IsNullOrWhiteSpace(response.TransportError)),
             StatusCodeCounts: statusCounts,
@@ -659,6 +689,8 @@ internal sealed record CapturedResponse(
 
 internal sealed record DumpAnalysisSummary(
     DateTimeOffset GeneratedAt,
+    bool SessionSucceeded,
+    string SessionOutcomeReason,
     int RequestCount,
     int ErrorCount,
     IReadOnlyDictionary<string, int> StatusCodeCounts,
