@@ -15,6 +15,9 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
 {
     private const int DefaultTop = 200;
     private const int MaxWarningLogs = 10;
+    private static readonly string[] WorkItemIdAliases = ["WorkItemId", "System_Id", "id", "WorkItemSK", "System.Id"];
+    private static readonly string[] RevisionAliases = ["Revision", "Rev", "System_Rev", "RevisionNumber", "System.Rev"];
+    private static readonly string[] ChangedDateAliases = ["ChangedDate", "RevisedDate", "System_ChangedDate", "System.ChangedDate"];
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ITfsConfigurationService _configService;
@@ -198,9 +201,9 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
 
     private WorkItemRevision? TryParseRevisionRow(JsonElement row)
     {
-        var workItemId = TryReadInt(row, "WorkItemId") ?? TryReadInt(row, "System_Id") ?? TryReadInt(row, "id");
-        var revisionNumber = TryReadInt(row, "Revision") ?? TryReadInt(row, "Rev") ?? TryReadInt(row, "System_Rev");
-        var changedDate = TryReadDate(row, "ChangedDate") ?? TryReadDate(row, "RevisedDate") ?? TryReadDate(row, "System_ChangedDate");
+        var workItemId = TryReadInt(row, WorkItemIdAliases);
+        var revisionNumber = TryReadInt(row, RevisionAliases);
+        var changedDate = TryReadDate(row, ChangedDateAliases);
         if (!workItemId.HasValue || !revisionNumber.HasValue || !changedDate.HasValue)
         {
             return null;
@@ -216,12 +219,12 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             Reason = ReadNullableString(row, "Reason", "System_Reason"),
             IterationPath = ReadString(row, "IterationPath", "System_IterationPath"),
             AreaPath = ReadString(row, "AreaPath", "System_AreaPath"),
-            CreatedDate = TryReadDate(row, "CreatedDate") ?? TryReadDate(row, "System_CreatedDate"),
+            CreatedDate = TryReadDate(row, "CreatedDate", "System_CreatedDate", "System.CreatedDate"),
             ChangedDate = changedDate.Value.ToUniversalTime(),
-            ClosedDate = TryReadDate(row, "ClosedDate") ?? TryReadDate(row, "Microsoft_VSTS_Common_ClosedDate"),
+            ClosedDate = TryReadDate(row, "ClosedDate", "Microsoft_VSTS_Common_ClosedDate", "Microsoft.VSTS.Common.ClosedDate"),
             Effort = TryReadDouble(row, "Effort") ?? TryReadDouble(row, "Microsoft_VSTS_Scheduling_Effort"),
             Tags = ReadNullableString(row, "Tags", "System_Tags"),
-            Severity = ReadNullableString(row, "Severity", "Microsoft_VSTS_Common_Severity"),
+            Severity = ReadNullableString(row, "Severity", "Microsoft_VSTS_Common_Severity", "Microsoft.VSTS.Common.Severity"),
             ChangedBy = ReadNullableString(row, "ChangedBy", "System_ChangedBy"),
             FieldDeltas = null,
             RelationDeltas = null
@@ -261,38 +264,44 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         return null;
     }
 
-    private static int? TryReadInt(JsonElement row, string key)
+    private static int? TryReadInt(JsonElement row, params string[] keys)
     {
-        if (!TryGetCaseInsensitiveProperty(row, key, out var element))
+        foreach (var key in keys)
         {
-            return null;
-        }
+            if (!TryGetCaseInsensitiveProperty(row, key, out var element))
+            {
+                continue;
+            }
 
-        if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var value))
-        {
-            return value;
-        }
+            if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var value))
+            {
+                return value;
+            }
 
-        if (element.ValueKind == JsonValueKind.String &&
-            int.TryParse(element.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
-        {
-            return value;
+            if (element.ValueKind == JsonValueKind.String &&
+                int.TryParse(element.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+            {
+                return value;
+            }
         }
 
         return null;
     }
 
-    private static DateTimeOffset? TryReadDate(JsonElement row, string key)
+    private static DateTimeOffset? TryReadDate(JsonElement row, params string[] keys)
     {
-        if (!TryGetCaseInsensitiveProperty(row, key, out var element))
+        foreach (var key in keys)
         {
-            return null;
-        }
+            if (!TryGetCaseInsensitiveProperty(row, key, out var element))
+            {
+                continue;
+            }
 
-        if (element.ValueKind == JsonValueKind.String &&
-            DateTimeOffset.TryParse(element.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var value))
-        {
-            return value;
+            if (element.ValueKind == JsonValueKind.String &&
+                DateTimeOffset.TryParse(element.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var value))
+            {
+                return value;
+            }
         }
 
         return null;

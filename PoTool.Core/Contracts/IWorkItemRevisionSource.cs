@@ -37,5 +37,7 @@ public interface IWorkItemRevisionSourceSelector
     /// <summary>
     /// Returns the active revision source for the current configuration context.
     /// </summary>
-    Task<IWorkItemRevisionSource> GetSourceAsync(CancellationToken cancellationToken = default);
+    Task<IWorkItemRevisionSource> GetSourceAsync(
+        int? productOwnerId = null,
+        CancellationToken cancellationToken = default);
 }

@@ -644,7 +644,9 @@ public sealed class RevisionIngestionServiceTests
             _source = source;
         }
 
-        public Task<IWorkItemRevisionSource> GetSourceAsync(CancellationToken cancellationToken = default)
+        public Task<IWorkItemRevisionSource> GetSourceAsync(
+            int? productOwnerId = null,
+            CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_source);
         }

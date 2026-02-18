@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Repositories;
@@ -35,7 +36,10 @@ public class ProductTeamLinkRepositoryTests
 
         _productRepository = new ProductRepository(_context);
         _teamRepository = new TeamRepository(_context);
-        _profileRepository = new ProfileRepository(_context);
+        var configService = new Mock<PoTool.Core.Contracts.ITfsConfigurationService>();
+        configService.Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Shared.Settings.TfsConfigEntity?)null);
+        _profileRepository = new ProfileRepository(_context, configService.Object);
     }
 
     [TestCleanup]

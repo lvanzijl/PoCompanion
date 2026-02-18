@@ -151,7 +151,7 @@ public class RelationRevisionHydrator : IRelationRevisionHydrator
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
         var revisionSourceSelector = scope.ServiceProvider.GetRequiredService<IWorkItemRevisionSourceSelector>();
-        var revisionSource = await revisionSourceSelector.GetSourceAsync(cancellationToken);
+        var revisionSource = await revisionSourceSelector.GetSourceAsync(cancellationToken: cancellationToken);
         var logPerWorkItem = runContext.IsEnabled && runContext.LogPerWorkItemHydration;
         var captureCallTiming = runContext.IsEnabled;
         var perItemStart = logPerWorkItem ? Stopwatch.GetTimestamp() : 0;

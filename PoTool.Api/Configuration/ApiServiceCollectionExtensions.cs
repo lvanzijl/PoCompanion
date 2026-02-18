@@ -277,6 +277,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IEfConcurrencyGate, EfConcurrencyGate>();
         services.AddScoped<TfsConfigurationService>();
         services.AddScoped<ITfsConfigurationService>(sp => sp.GetRequiredService<TfsConfigurationService>());
+        services.AddScoped<IProductOwnerRevisionSourceOverrideProvider, ProductOwnerRevisionSourceOverrideProvider>();
         services.AddScoped<TfsAuthenticationProvider>();
         services.AddScoped<ProfileFilterService>();
 

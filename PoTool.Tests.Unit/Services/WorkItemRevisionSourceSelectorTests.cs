@@ -21,6 +21,7 @@ public class WorkItemRevisionSourceSelectorTests
         var odataSource = new StubRevisionSource(RevisionSource.AnalyticsODataRevisions);
         var selector = new WorkItemRevisionSourceSelector(
             configService.Object,
+            new Mock<IProductOwnerRevisionSourceOverrideProvider>().Object,
             new[] { restSource, odataSource },
             NullLogger<WorkItemRevisionSourceSelector>.Instance);
 
@@ -41,12 +42,39 @@ public class WorkItemRevisionSourceSelectorTests
         var odataSource = new StubRevisionSource(RevisionSource.AnalyticsODataRevisions);
         var selector = new WorkItemRevisionSourceSelector(
             configService.Object,
+            new Mock<IProductOwnerRevisionSourceOverrideProvider>().Object,
             new[] { restSource, odataSource },
             NullLogger<WorkItemRevisionSourceSelector>.Instance);
 
         var source = await selector.GetSourceAsync();
 
         Assert.AreEqual(RevisionSource.RestReportingRevisions, source.SourceType);
+    }
+
+    [TestMethod]
+    public async Task GetSourceAsync_UsesProductOwnerOverride_WhenConfigured()
+    {
+        var configService = new Mock<ITfsConfigurationService>();
+        configService
+            .Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TfsConfigEntity { RevisionSource = RevisionSource.RestReportingRevisions });
+
+        var overrideProvider = new Mock<IProductOwnerRevisionSourceOverrideProvider>();
+        overrideProvider
+            .Setup(provider => provider.GetOverrideAsync(42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(RevisionSource.AnalyticsODataRevisions);
+
+        var restSource = new StubRevisionSource(RevisionSource.RestReportingRevisions);
+        var odataSource = new StubRevisionSource(RevisionSource.AnalyticsODataRevisions);
+        var selector = new WorkItemRevisionSourceSelector(
+            configService.Object,
+            overrideProvider.Object,
+            new[] { restSource, odataSource },
+            NullLogger<WorkItemRevisionSourceSelector>.Instance);
+
+        var source = await selector.GetSourceAsync(42);
+
+        Assert.AreEqual(RevisionSource.AnalyticsODataRevisions, source.SourceType);
     }
 
     private sealed class StubRevisionSource : IWorkItemRevisionSource

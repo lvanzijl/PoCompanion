@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using PoTool.Api.Exceptions;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
@@ -33,7 +34,10 @@ public class CacheStateRepositoryTests
         _context.Database.EnsureCreated();
 
         _repository = new CacheStateRepository(_context);
-        _profileRepository = new ProfileRepository(_context);
+        var configService = new Mock<PoTool.Core.Contracts.ITfsConfigurationService>();
+        configService.Setup(service => service.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Shared.Settings.TfsConfigEntity?)null);
+        _profileRepository = new ProfileRepository(_context, configService.Object);
     }
 
     [TestCleanup]

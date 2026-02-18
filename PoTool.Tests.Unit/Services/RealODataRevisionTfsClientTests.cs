@@ -64,6 +64,28 @@ public class RealODataRevisionTfsClientTests
         Assert.AreEqual("https://analytics/page2", handler.RequestUris[1]);
     }
 
+    [TestMethod]
+    public async Task GetRevisionsAsync_ParsesDotStyleFieldAliases()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                { "System.Id": 7, "System.Rev": 3, "System.ChangedDate": "2026-01-03T00:00:00Z", "System.Title": "Alias", "System.WorkItemType": "Task", "System.State": "Active", "System.IterationPath": "I", "System.AreaPath": "A" }
+              ]
+            }
+            """
+        ]);
+
+        var client = CreateClient(handler);
+        var page = await client.GetRevisionsAsync();
+
+        Assert.HasCount(1, page.Revisions);
+        Assert.AreEqual(7, page.Revisions[0].WorkItemId);
+        Assert.AreEqual(3, page.Revisions[0].RevisionNumber);
+    }
+
     private static RealODataRevisionTfsClient CreateClient(QueueMessageHandler handler)
     {
         var httpClient = new HttpClient(handler);
