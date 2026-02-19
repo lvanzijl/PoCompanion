@@ -80,7 +80,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var scopeMin = scopedWorkItemIds is { Count: > 0 } ? scopedWorkItemIds.Min() : (int?)null;
         var scopeMax = scopedWorkItemIds is { Count: > 0 } ? scopedWorkItemIds.Max() : (int?)null;
         _logger.LogInformation(
-            "Requesting OData revisions page. Mode={Mode} PageIndex={PageIndex} Top={Top} SeekTop={SeekTop} QuotedDateLiterals={QuotedDateLiterals} ScopeCount={ScopeCount} ScopeMin={ScopeMin} ScopeMax={ScopeMax} Filter={Filter}",
+            "Requesting OData revisions page. Mode={Mode} PageIndex={PageIndex} Top={Top} SeekTop={SeekTop} QuotedDateStrings={QuotedDateStrings} ScopeCount={ScopeCount} ScopeMin={ScopeMin} ScopeMax={ScopeMax} Filter={Filter}",
             mode,
             pageIndex,
             requestContext.Top,
