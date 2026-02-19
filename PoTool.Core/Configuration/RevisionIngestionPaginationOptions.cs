@@ -28,7 +28,7 @@ public sealed class RevisionIngestionPaginationOptions
     /// <summary>
     /// Uses single-quoted OData datetime literals in filters.
     /// </summary>
-    public bool ODataUseQuotedDateLiterals { get; init; } = true;
+    public bool ODataUseQuotedDateLiterals { get; init; } = false;
 
     /// <summary>
     /// OData server-side scoping mode for WorkItemId constraints.
