@@ -137,6 +137,21 @@ public class RealODataRevisionTfsClientTests
     }
 
     [TestMethod]
+    public async Task GetRevisionsAsync_WhenQuotedDateLiteralsEnabled_UsesDateTimeOffsetLiteral()
+    {
+        var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataUseQuotedDateLiterals = true
+        });
+
+        _ = await client.GetRevisionsAsync(DateTimeOffset.Parse("2026-01-01T00:00:00Z"));
+
+        var request = Uri.UnescapeDataString(handler.RequestUris[0]);
+        StringAssert.Contains(request, "ChangedDate ge datetimeoffset'2026-01-01T00:00:00.0000000Z'");
+    }
+
+    [TestMethod]
     public async Task GetRevisionsAsync_WhenFullSelectAndOrderByDisabled_OmitsProjectionAndOrder()
     {
         var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
