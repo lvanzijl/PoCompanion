@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using PoTool.Core;
 using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
 using PoTool.Shared.Settings;
@@ -17,6 +18,10 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
     private static readonly string[] WorkItemIdAliases = ["WorkItemId", "System_Id", "id", "WorkItemSK", "System.Id"];
     private static readonly string[] RevisionAliases = ["Revision", "Rev", "System_Rev", "RevisionNumber", "System.Rev"];
     private static readonly string[] ChangedDateAliases = ["ChangedDate", "RevisedDate", "System_ChangedDate", "System.ChangedDate"];
+    private static readonly RevisionFieldWhitelist.ODataRevisionSelectionSpec ODataSelectionSpec =
+        RevisionFieldWhitelist.BuildODataRevisionSelectionSpec(includeRevision: true);
+    private static readonly IReadOnlyDictionary<string, RevisionFieldWhitelist.ODataRevisionParseDescriptor> ParseDescriptorsByRestField =
+        ODataSelectionSpec.ParseDescriptors.ToDictionary(descriptor => descriptor.RestFieldRef, StringComparer.Ordinal);
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ITfsConfigurationService _configService;
@@ -489,32 +494,159 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
     {
         var workItemId = TryReadInt(row, WorkItemIdAliases);
         var revisionNumber = TryReadInt(row, RevisionAliases);
-        var changedDate = TryReadDate(row, ChangedDateAliases);
+        var changedDate = ReadDateBySpec(row, "System.ChangedDate") ?? TryReadDate(row, ChangedDateAliases);
         if (!workItemId.HasValue || !revisionNumber.HasValue || !changedDate.HasValue)
         {
             return null;
+        }
+
+        var iterationPath = ReadStringBySpec(row, "System.IterationPath");
+        if (string.IsNullOrWhiteSpace(iterationPath))
+        {
+            throw new InvalidOperationException($"OData revision row is missing required field 'System.IterationPath' for WorkItemId={workItemId.Value}, Revision={revisionNumber.Value}.");
         }
 
         return new WorkItemRevision
         {
             WorkItemId = workItemId.Value,
             RevisionNumber = revisionNumber.Value,
-            WorkItemType = ReadString(row, "WorkItemType", "System_WorkItemType"),
-            Title = ReadString(row, "Title", "System_Title"),
-            State = ReadString(row, "State", "System_State"),
-            Reason = ReadNullableString(row, "Reason", "System_Reason"),
-            IterationPath = ReadString(row, "IterationPath", "System_IterationPath"),
-            AreaPath = ReadString(row, "AreaPath", "System_AreaPath"),
-            CreatedDate = TryReadDate(row, "CreatedDate", "System_CreatedDate", "System.CreatedDate"),
+            WorkItemType = ReadStringBySpec(row, "System.WorkItemType"),
+            Title = ReadStringBySpec(row, "System.Title"),
+            State = ReadStringBySpec(row, "System.State"),
+            Reason = ReadNullableStringBySpec(row, "System.Reason"),
+            IterationPath = iterationPath,
+            AreaPath = ReadStringBySpec(row, "System.AreaPath"),
+            CreatedDate = ReadDateBySpec(row, "System.CreatedDate"),
             ChangedDate = changedDate.Value.ToUniversalTime(),
-            ClosedDate = TryReadDate(row, "ClosedDate", "Microsoft_VSTS_Common_ClosedDate", "Microsoft.VSTS.Common.ClosedDate"),
-            Effort = TryReadDouble(row, "Effort") ?? TryReadDouble(row, "Microsoft_VSTS_Scheduling_Effort"),
-            Tags = ReadNullableString(row, "Tags", "System_Tags"),
-            Severity = ReadNullableString(row, "Severity", "Microsoft_VSTS_Common_Severity", "Microsoft.VSTS.Common.Severity"),
-            ChangedBy = ReadNullableString(row, "ChangedBy", "System_ChangedBy"),
+            ClosedDate = ReadDateBySpec(row, "Microsoft.VSTS.Common.ClosedDate"),
+            Effort = ReadDoubleBySpec(row, "Microsoft.VSTS.Scheduling.Effort"),
+            Tags = ReadNullableStringBySpec(row, "System.Tags"),
+            Severity = ReadNullableStringBySpec(row, "Microsoft.VSTS.Common.Severity"),
+            ChangedBy = ReadNullableStringBySpec(row, "System.ChangedBy"),
             FieldDeltas = null,
             RelationDeltas = null
         };
+    }
+
+    private static string ReadStringBySpec(JsonElement row, string restFieldRef)
+    {
+        return ReadNullableStringBySpec(row, restFieldRef) ?? string.Empty;
+    }
+
+    private static string? ReadNullableStringBySpec(JsonElement row, string restFieldRef)
+    {
+        var value = ReadElementBySpec(row, restFieldRef);
+        if (value is null)
+        {
+            return null;
+        }
+
+        return ToNullableString(value.Value);
+    }
+
+    private static DateTimeOffset? ReadDateBySpec(JsonElement row, string restFieldRef)
+    {
+        var value = ReadElementBySpec(row, restFieldRef);
+        if (value is null || value.Value.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        return DateTimeOffset.TryParse(value.Value.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed)
+            ? parsed
+            : null;
+    }
+
+    private static double? ReadDoubleBySpec(JsonElement row, string restFieldRef)
+    {
+        var value = ReadElementBySpec(row, restFieldRef);
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (value.Value.ValueKind == JsonValueKind.Number && value.Value.TryGetDouble(out var number))
+        {
+            return number;
+        }
+
+        if (value.Value.ValueKind == JsonValueKind.String &&
+            double.TryParse(value.Value.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out number))
+        {
+            return number;
+        }
+
+        return null;
+    }
+
+    private static JsonElement? ReadElementBySpec(JsonElement row, string restFieldRef)
+    {
+        if (!ParseDescriptorsByRestField.TryGetValue(restFieldRef, out var descriptor))
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(descriptor.ScalarProperty) &&
+            TryGetCaseInsensitiveProperty(row, descriptor.ScalarProperty!, out var scalarValue))
+        {
+            return scalarValue;
+        }
+
+        if (!string.IsNullOrWhiteSpace(descriptor.NavigationProperty) &&
+            TryGetCaseInsensitiveProperty(row, descriptor.NavigationProperty!, out var navigationValue) &&
+            navigationValue.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in descriptor.ReadProperties)
+            {
+                if (TryGetCaseInsensitiveProperty(navigationValue, property, out var nestedValue))
+                {
+                    return nestedValue;
+                }
+            }
+        }
+
+        foreach (var property in descriptor.ReadProperties)
+        {
+            if (TryGetCaseInsensitiveProperty(row, property, out var directNestedValue))
+            {
+                return directNestedValue;
+            }
+        }
+
+        var restFieldTail = descriptor.RestFieldRef.Split('.').LastOrDefault();
+        if (!string.IsNullOrWhiteSpace(restFieldTail) &&
+            TryGetCaseInsensitiveProperty(row, restFieldTail, out var restFieldTailValue))
+        {
+            return restFieldTailValue;
+        }
+
+        var dotStyleAlias = descriptor.RestFieldRef.Replace('.', '_');
+        if (TryGetCaseInsensitiveProperty(row, dotStyleAlias, out var dotStyleAliasValue))
+        {
+            return dotStyleAliasValue;
+        }
+
+        if (TryGetCaseInsensitiveProperty(row, descriptor.RestFieldRef, out var restFieldValue))
+        {
+            return restFieldValue;
+        }
+
+        return null;
+    }
+
+    private static string? ToNullableString(JsonElement value)
+    {
+        if (value.ValueKind == JsonValueKind.String)
+        {
+            return value.GetString();
+        }
+
+        if (value.ValueKind is JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False)
+        {
+            return value.ToString();
+        }
+
+        return null;
     }
 
     private static string ReadString(JsonElement row, params string[] keys)

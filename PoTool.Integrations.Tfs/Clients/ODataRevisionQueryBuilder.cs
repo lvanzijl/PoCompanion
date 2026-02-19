@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using PoTool.Core;
 using PoTool.Core.Configuration;
 using PoTool.Shared.Settings;
 
@@ -10,24 +11,8 @@ internal sealed class ODataRevisionQueryBuilder
     private const string ChangedDateField = "ChangedDate";
     private const string WorkItemIdField = "WorkItemId";
     private const string RevisionField = "Revision";
-    private static readonly string[] MinimalSelectFields =
-    [
-        "WorkItemId",
-        "Revision",
-        "ChangedDate",
-        "WorkItemType",
-        "Title",
-        "State",
-        "Reason",
-        "IterationPath",
-        "AreaPath",
-        "CreatedDate",
-        "ClosedDate",
-        "Effort",
-        "Tags",
-        "Severity",
-        "ChangedBy"
-    ];
+    private static readonly RevisionFieldWhitelist.ODataRevisionSelectionSpec ODataSelectionSpec =
+        RevisionFieldWhitelist.BuildODataRevisionSelectionSpec(includeRevision: true);
 
     public string BuildInitialPageUrl(
         TfsConfigEntity config,
@@ -108,7 +93,14 @@ internal sealed class ODataRevisionQueryBuilder
 
         if (options.ODataSelectMode == ODataRevisionSelectMode.Minimal)
         {
-            query.Add($"$select={string.Join(",", MinimalSelectFields)}");
+            query.Add($"$select={string.Join(",", ODataSelectionSpec.TopLevelSelect)}");
+
+            if (ODataSelectionSpec.Expands.Count > 0)
+            {
+                var expandClauses = ODataSelectionSpec.Expands
+                    .Select(expand => $"{expand.Key}($select={string.Join(",", expand.Value)})");
+                query.Add($"$expand={string.Join(",", expandClauses)}");
+            }
         }
 
         if (options.ODataOrderByEnabled)
