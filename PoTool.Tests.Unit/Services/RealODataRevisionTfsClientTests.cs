@@ -37,7 +37,7 @@ public class RealODataRevisionTfsClientTests
         Assert.AreEqual("https://analytics/page2", page.ContinuationToken);
         var firstRequest = Uri.UnescapeDataString(handler.RequestUris[0]);
         StringAssert.Contains(firstRequest, "$orderby=ChangedDate asc,WorkItemId asc,Revision asc");
-        StringAssert.Contains(firstRequest, "ChangedDate ge '2026-01-01T00:00:00.0000000Z'");
+        StringAssert.Contains(firstRequest, "ChangedDate ge 2026-01-01T00:00:00.0000000Z");
         StringAssert.Contains(firstRequest, "WorkItemId ge 10 and WorkItemId le 11");
         StringAssert.Contains(firstRequest, "$select=WorkItemId,Revision,ChangedDate,WorkItemType,Title,State,Reason,IterationPath,AreaPath,CreatedDate,ClosedDate,Effort,Tags,Severity,ChangedBy");
     }
@@ -195,7 +195,7 @@ public class RealODataRevisionTfsClientTests
         StringAssert.StartsWith(first.ContinuationToken, "seek:");
         Assert.IsNull(second.ContinuationToken);
         var secondRequest = Uri.UnescapeDataString(handler.RequestUris[1]);
-        StringAssert.Contains(secondRequest, "ChangedDate gt '2026-01-02T00:00:00.0000000Z'");
+        StringAssert.Contains(secondRequest, "ChangedDate gt 2026-01-02T00:00:00.0000000Z");
         StringAssert.Contains(secondRequest, "WorkItemId eq 42 and Revision gt 2");
     }
 
