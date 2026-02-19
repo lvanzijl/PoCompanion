@@ -249,8 +249,21 @@ public class RealODataRevisionTfsClientTests
         Assert.IsFalse(request.Contains("WorkItemId ge 42 and WorkItemId le 42", StringComparison.Ordinal));
     }
 
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenRequestFails_ThrowsWithFilterAndResponseBody()
+    {
+        var handler = new StaticResponseMessageHandler(HttpStatusCode.BadRequest, """{ "error": { "message": "Invalid filter clause" } }""");
+        var client = CreateClient(handler);
+
+        var exception = await AssertThrowsAsync<HttpRequestException>(() =>
+            client.GetRevisionsAsync(DateTimeOffset.Parse("2026-01-01T00:00:00Z"), scopedWorkItemIds: [42]));
+
+        StringAssert.Contains(exception.Message, "Filter=");
+        StringAssert.Contains(exception.Message, "Invalid filter clause");
+    }
+
     private static RealODataRevisionTfsClient CreateClient(
-        QueueMessageHandler handler,
+        HttpMessageHandler handler,
         RevisionIngestionPaginationOptions? options = null)
     {
         var httpClient = new HttpClient(handler);
@@ -302,6 +315,17 @@ public class RealODataRevisionTfsClientTests
             var payload = _responses.Count > 0 ? _responses.Dequeue() : "{ \"value\": [] }";
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(payload)
+            });
+        }
+    }
+
+    private sealed class StaticResponseMessageHandler(HttpStatusCode statusCode, string payload) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new HttpResponseMessage(statusCode)
             {
                 Content = new StringContent(payload)
             });
