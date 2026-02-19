@@ -127,28 +127,30 @@ public class RealODataRevisionTfsClientTests
         var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
-            ODataUseQuotedDateLiterals = false
+            ODataQuoteDateStrings = false
         });
 
         _ = await client.GetRevisionsAsync(DateTimeOffset.Parse("2026-01-01T00:00:00Z"));
 
         var request = Uri.UnescapeDataString(handler.RequestUris[0]);
         StringAssert.Contains(request, "ChangedDate ge 2026-01-01T00:00:00.0000000Z");
+        Assert.IsFalse(request.Contains("datetimeoffset", StringComparison.OrdinalIgnoreCase));
     }
 
     [TestMethod]
-    public async Task GetRevisionsAsync_WhenQuotedDateLiteralsEnabled_UsesDateTimeOffsetLiteral()
+    public async Task GetRevisionsAsync_WhenQuotedDateLiteralsEnabled_UsesQuotedDateStringLiteral()
     {
         var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
-            ODataUseQuotedDateLiterals = true
+            ODataQuoteDateStrings = true
         });
 
         _ = await client.GetRevisionsAsync(DateTimeOffset.Parse("2026-01-01T00:00:00Z"));
 
         var request = Uri.UnescapeDataString(handler.RequestUris[0]);
-        StringAssert.Contains(request, "ChangedDate ge datetimeoffset'2026-01-01T00:00:00.0000000Z'");
+        StringAssert.Contains(request, "ChangedDate ge '2026-01-01T00:00:00.0000000Z'");
+        Assert.IsFalse(request.Contains("datetimeoffset", StringComparison.OrdinalIgnoreCase));
     }
 
     [TestMethod]
@@ -212,6 +214,29 @@ public class RealODataRevisionTfsClientTests
         var secondRequest = Uri.UnescapeDataString(handler.RequestUris[1]);
         StringAssert.Contains(secondRequest, "ChangedDate gt 2026-01-02T00:00:00.0000000Z");
         StringAssert.Contains(secondRequest, "WorkItemId eq 42 and Revision gt 2");
+        Assert.IsFalse(secondRequest.Contains("datetimeoffset", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenDateLiteralRejected_RetriesOnceWithAlternateQuoting()
+    {
+        var handler = new SequenceResponseMessageHandler(
+        [
+            (HttpStatusCode.BadRequest, """{ "error": { "message": "VS403483: Unrecognized 'Edm.String' literal 'ChangedDate'" } }"""),
+            (HttpStatusCode.OK, """{ "value": [] }""")
+        ]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataQuoteDateStrings = false
+        });
+
+        _ = await client.GetRevisionsAsync(DateTimeOffset.Parse("2026-01-01T00:00:00Z"), scopedWorkItemIds: [42]);
+
+        Assert.HasCount(2, handler.RequestUris);
+        var firstRequest = Uri.UnescapeDataString(handler.RequestUris[0]);
+        var secondRequest = Uri.UnescapeDataString(handler.RequestUris[1]);
+        StringAssert.Contains(firstRequest, "ChangedDate ge 2026-01-01T00:00:00.0000000Z");
+        StringAssert.Contains(secondRequest, "ChangedDate ge '2026-01-01T00:00:00.0000000Z'");
     }
 
     [TestMethod]
@@ -343,6 +368,25 @@ public class RealODataRevisionTfsClientTests
             return Task.FromResult(new HttpResponseMessage(statusCode)
             {
                 Content = new StringContent(payload)
+            });
+        }
+    }
+
+    private sealed class SequenceResponseMessageHandler(IEnumerable<(HttpStatusCode StatusCode, string Payload)> responses) : HttpMessageHandler
+    {
+        private readonly Queue<(HttpStatusCode StatusCode, string Payload)> _responses = new(responses);
+
+        public List<string> RequestUris { get; } = new();
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            RequestUris.Add(request.RequestUri?.ToString() ?? string.Empty);
+            var next = _responses.Count > 0
+                ? _responses.Dequeue()
+                : (StatusCode: HttpStatusCode.OK, Payload: """{ "value": [] }""");
+            return Task.FromResult(new HttpResponseMessage(next.StatusCode)
+            {
+                Content = new StringContent(next.Payload)
             });
         }
     }
