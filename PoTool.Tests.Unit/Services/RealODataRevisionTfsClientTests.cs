@@ -37,6 +37,7 @@ public class RealODataRevisionTfsClientTests
         Assert.AreEqual("https://analytics/page2", page.ContinuationToken);
         var firstRequest = Uri.UnescapeDataString(handler.RequestUris[0]);
         StringAssert.Contains(firstRequest, "$orderby=ChangedDate asc,WorkItemId asc,Revision asc");
+        StringAssert.Contains(firstRequest, "ChangedDate ge '2026-01-01T00:00:00.0000000Z'");
         StringAssert.Contains(firstRequest, "WorkItemId ge 10 and WorkItemId le 11");
         StringAssert.Contains(firstRequest, "$select=WorkItemId,Revision,ChangedDate,WorkItemType,Title,State,Reason,IterationPath,AreaPath,CreatedDate,ClosedDate,Effort,Tags,Severity,ChangedBy");
     }
@@ -121,6 +122,38 @@ public class RealODataRevisionTfsClientTests
     }
 
     [TestMethod]
+    public async Task GetRevisionsAsync_WhenQuotedDateLiteralsDisabled_UsesCompatibilityLiteral()
+    {
+        var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataUseQuotedDateLiterals = false
+        });
+
+        _ = await client.GetRevisionsAsync(DateTimeOffset.Parse("2026-01-01T00:00:00Z"));
+
+        var request = Uri.UnescapeDataString(handler.RequestUris[0]);
+        StringAssert.Contains(request, "ChangedDate ge 2026-01-01T00:00:00.0000000Z");
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenFullSelectAndOrderByDisabled_OmitsProjectionAndOrder()
+    {
+        var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataSelectMode = ODataRevisionSelectMode.Full,
+            ODataOrderByEnabled = false
+        });
+
+        _ = await client.GetRevisionsAsync();
+
+        var request = Uri.UnescapeDataString(handler.RequestUris[0]);
+        Assert.IsFalse(request.Contains("$select=", StringComparison.Ordinal));
+        Assert.IsFalse(request.Contains("$orderby=", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
     public async Task GetRevisionsAsync_WhenNextLinkMissingAndPageIsFull_UsesSeekContinuationFallback()
     {
         var handler = new QueueMessageHandler(
@@ -159,10 +192,61 @@ public class RealODataRevisionTfsClientTests
             scopedWorkItemIds: [42]);
 
         Assert.IsNotNull(first.ContinuationToken);
+        StringAssert.StartsWith(first.ContinuationToken, "seek:");
         Assert.IsNull(second.ContinuationToken);
         var secondRequest = Uri.UnescapeDataString(handler.RequestUris[1]);
-        StringAssert.Contains(secondRequest, "ChangedDate gt 2026-01-02T00:00:00.0000000+00:00");
+        StringAssert.Contains(secondRequest, "ChangedDate gt '2026-01-02T00:00:00.0000000Z'");
         StringAssert.Contains(secondRequest, "WorkItemId eq 42 and Revision gt 2");
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_SeekFallbackDetectsNoProgressAndThrows()
+    {
+        var repeatedPage = """
+                           {
+                             "value": [
+                               { "WorkItemId": 42, "Revision": 1, "ChangedDate": "2026-01-01T00:00:00Z", "Title": "A", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" },
+                               { "WorkItemId": 42, "Revision": 2, "ChangedDate": "2026-01-02T00:00:00Z", "Title": "B", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+                             ]
+                           }
+                           """;
+        var handler = new QueueMessageHandler([repeatedPage, repeatedPage]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataTop = 2,
+            ODataSeekPageSize = 2,
+            ODataEnableSeekPagingFallback = true,
+            MaxNoProgressPages = 1
+        });
+
+        var first = await client.GetRevisionsAsync(scopedWorkItemIds: [42]);
+        var exception = await AssertThrowsAsync<InvalidOperationException>(() =>
+            client.GetRevisionsAsync(continuationToken: first.ContinuationToken, scopedWorkItemIds: [42]));
+
+        StringAssert.Contains(exception.Message, "no progress");
+    }
+
+    [TestMethod]
+    public async Task GetWorkItemRevisionsAsync_UsesServerSideEqFilter()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                { "WorkItemId": 42, "Revision": 1, "ChangedDate": "2026-01-01T00:00:00Z", "Title": "A", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+              ]
+            }
+            """
+        ]);
+        var client = CreateClient(handler);
+
+        var revisions = await client.GetWorkItemRevisionsAsync(42);
+
+        Assert.HasCount(1, revisions);
+        var request = Uri.UnescapeDataString(handler.RequestUris[0]);
+        StringAssert.Contains(request, "WorkItemId eq 42");
+        Assert.IsFalse(request.Contains("WorkItemId ge 42 and WorkItemId le 42", StringComparison.Ordinal));
     }
 
     private static RealODataRevisionTfsClient CreateClient(
@@ -221,6 +305,21 @@ public class RealODataRevisionTfsClientTests
             {
                 Content = new StringContent(payload)
             });
+        }
+    }
+
+    private static async Task<TException> AssertThrowsAsync<TException>(Func<Task> action)
+        where TException : Exception
+    {
+        try
+        {
+            await action();
+            Assert.Fail($"Expected exception of type {typeof(TException).Name}.");
+            throw new InvalidOperationException("Unreachable");
+        }
+        catch (TException ex)
+        {
+            return ex;
         }
     }
 }

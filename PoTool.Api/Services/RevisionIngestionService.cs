@@ -1135,6 +1135,16 @@ public class RevisionIngestionService
         DateTimeOffset? maxChangedDate = null;
         string? lastTokenHash = null;
         var retryAttempt = 0;
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            var minScopeId = allowedWorkItemIds.Count > 0 ? allowedWorkItemIds.Min() : 0;
+            var maxScopeId = allowedWorkItemIds.Count > 0 ? allowedWorkItemIds.Max() : 0;
+            _logger.LogInformation(
+                "Revision ingestion OData scope prepared. ScopeSize={ScopeSize} MinWorkItemId={MinWorkItemId} MaxWorkItemId={MaxWorkItemId}",
+                allowedWorkItemIds.Count,
+                minScopeId,
+                maxScopeId);
+        }
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -1170,10 +1180,10 @@ public class RevisionIngestionService
             ReportingRevisionsResult result;
             try
             {
-                result = await revisionSource.GetRevisionsAsync(
+                result = await revisionSource.GetRevisionsForScopeAsync(
+                    allowedWorkItemIds,
                     window.StartUtc,
                     continuationToken,
-                    allowedWorkItemIds,
                     expandMode: ReportingExpandMode.None,
                     cancellationToken);
             }

@@ -23,6 +23,16 @@ public interface IWorkItemRevisionSource
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves a page of revisions for a known work-item scope.
+    /// </summary>
+    Task<ReportingRevisionsResult> GetRevisionsForScopeAsync(
+        IReadOnlyCollection<int> scopedWorkItemIds,
+        DateTimeOffset? startDateTime = null,
+        string? continuationToken = null,
+        ReportingExpandMode expandMode = ReportingExpandMode.None,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves full revisions for a single work item.
     /// </summary>
     Task<IReadOnlyList<WorkItemRevision>> GetWorkItemRevisionsAsync(

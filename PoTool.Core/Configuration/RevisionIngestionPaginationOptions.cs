@@ -11,6 +11,26 @@ public sealed class RevisionIngestionPaginationOptions
     public int ODataTop { get; init; } = 200;
 
     /// <summary>
+    /// OData seek page size when nextLink is missing (minimum 1).
+    /// </summary>
+    public int ODataSeekPageSize { get; init; } = 200;
+
+    /// <summary>
+    /// OData field projection mode.
+    /// </summary>
+    public ODataRevisionSelectMode ODataSelectMode { get; init; } = ODataRevisionSelectMode.Minimal;
+
+    /// <summary>
+    /// Enables deterministic order by on ChangedDate, WorkItemId, Revision.
+    /// </summary>
+    public bool ODataOrderByEnabled { get; init; } = true;
+
+    /// <summary>
+    /// Uses single-quoted OData datetime literals in filters.
+    /// </summary>
+    public bool ODataUseQuotedDateLiterals { get; init; } = true;
+
+    /// <summary>
     /// OData server-side scoping mode for WorkItemId constraints.
     /// </summary>
     public ODataRevisionScopeMode ODataScopeMode { get; init; } = ODataRevisionScopeMode.Range;
@@ -19,6 +39,11 @@ public sealed class RevisionIngestionPaginationOptions
     /// Enables seek-pagination fallback when @odata.nextLink is missing on full pages.
     /// </summary>
     public bool ODataEnableSeekPagingFallback { get; init; } = true;
+
+    /// <summary>
+    /// Maximum consecutive seek pages allowed without cursor progress (minimum 1).
+    /// </summary>
+    public int MaxNoProgressPages { get; init; } = 2;
 
     /// <summary>
     /// Maximum URL length before switching from id-list filters to range filters.
@@ -98,7 +123,14 @@ public enum ODataRevisionScopeMode
 {
     Range = 0,
     IdList = 1,
-    Apply = 2
+    Apply = 2,
+    None = 3
+}
+
+public enum ODataRevisionSelectMode
+{
+    Minimal = 0,
+    Full = 1
 }
 
 public enum PaginationAnomalyPolicy
