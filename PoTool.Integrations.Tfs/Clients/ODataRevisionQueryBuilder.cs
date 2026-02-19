@@ -168,6 +168,6 @@ internal sealed class ODataRevisionQueryBuilder
     private static string FormatDateLiteral(DateTimeOffset value, RevisionIngestionPaginationOptions options)
     {
         var literal = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffff'Z'", CultureInfo.InvariantCulture);
-        return options.ODataUseQuotedDateLiterals ? $"'{literal}'" : literal;
+        return options.ODataUseQuotedDateLiterals ? $"datetimeoffset'{literal}'" : literal;
     }
 }
