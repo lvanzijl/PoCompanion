@@ -39,7 +39,11 @@ public class RealODataRevisionTfsClientTests
         StringAssert.Contains(firstRequest, "$orderby=ChangedDate asc,WorkItemId asc,Revision asc");
         StringAssert.Contains(firstRequest, "ChangedDate ge 2026-01-01T00:00:00.0000000Z");
         StringAssert.Contains(firstRequest, "WorkItemId ge 10 and WorkItemId le 11");
-        StringAssert.Contains(firstRequest, "$select=WorkItemId,Revision,ChangedDate,WorkItemType,Title,State,Reason,IterationPath,AreaPath,CreatedDate,ClosedDate,Effort,Tags,Severity,ChangedBy");
+        StringAssert.Contains(firstRequest, "$select=WorkItemId,Revision,WorkItemType,Title,State,Reason,CreatedDate,ChangedDate,ClosedDate,Effort,TagNames,Severity");
+        StringAssert.Contains(firstRequest, "$expand=Iteration($select=IterationPath),Area($select=AreaPath),ChangedBy($select=UserName,UserEmail,UserId)");
+        Assert.DoesNotContain(firstRequest, "IterationPath,");
+        Assert.DoesNotContain(firstRequest, "AreaPath,");
+        Assert.DoesNotContain(firstRequest, "ChangedBy,");
     }
 
     [TestMethod]
@@ -91,6 +95,69 @@ public class RealODataRevisionTfsClientTests
         Assert.HasCount(1, page.Revisions);
         Assert.AreEqual(7, page.Revisions[0].WorkItemId);
         Assert.AreEqual(3, page.Revisions[0].RevisionNumber);
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_MapsNavigationAndTagNamesFields()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                {
+                  "WorkItemId": 17,
+                  "Revision": 4,
+                  "ChangedDate": "2026-01-03T00:00:00Z",
+                  "WorkItemType": "Bug",
+                  "Title": "Navigation",
+                  "State": "Active",
+                  "Iteration": { "IterationPath": "Team\\Sprint 1" },
+                  "Area": { "AreaPath": "Team\\Area" },
+                  "ChangedBy": { "UserName": "Ada", "UserEmail": "ada@example.com", "UserId": "1234" },
+                  "TagNames": "alpha;beta"
+                }
+              ]
+            }
+            """
+        ]);
+
+        var client = CreateClient(handler);
+        var page = await client.GetRevisionsAsync();
+
+        Assert.HasCount(1, page.Revisions);
+        var revision = page.Revisions[0];
+        Assert.AreEqual("Team\\Sprint 1", revision.IterationPath);
+        Assert.AreEqual("Team\\Area", revision.AreaPath);
+        Assert.AreEqual("Ada", revision.ChangedBy);
+        Assert.AreEqual("alpha;beta", revision.Tags);
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_ThrowsWhenIterationPathMissing()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                {
+                  "WorkItemId": 17,
+                  "Revision": 4,
+                  "ChangedDate": "2026-01-03T00:00:00Z",
+                  "WorkItemType": "Bug",
+                  "Title": "Missing Iteration",
+                  "State": "Active"
+                }
+              ]
+            }
+            """
+        ]);
+
+        var client = CreateClient(handler);
+        var exception = await AssertThrowsAsync<InvalidOperationException>(() => client.GetRevisionsAsync());
+
+        StringAssert.Contains(exception.Message, "System.IterationPath");
     }
 
     [TestMethod]
