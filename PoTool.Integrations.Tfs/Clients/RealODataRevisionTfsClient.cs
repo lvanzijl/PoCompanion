@@ -74,11 +74,42 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var pageIndex = requestContext.SeekState?.PageIndex ?? 1;
         var mode = requestContext.Mode;
         var url = requestContext.Url;
+        var scopeCount = scopedWorkItemIds?.Count ?? 0;
+        var scopeMin = scopedWorkItemIds is { Count: > 0 } ? scopedWorkItemIds.Min() : (int?)null;
+        var scopeMax = scopedWorkItemIds is { Count: > 0 } ? scopedWorkItemIds.Max() : (int?)null;
+        _logger.LogInformation(
+            "Requesting OData revisions page. Mode={Mode} PageIndex={PageIndex} Top={Top} SeekTop={SeekTop} QuotedDateLiterals={QuotedDateLiterals} ScopeCount={ScopeCount} ScopeMin={ScopeMin} ScopeMax={ScopeMax} Filter={Filter}",
+            mode,
+            pageIndex,
+            requestContext.Top,
+            seekTop,
+            options.ODataUseQuotedDateLiterals,
+            scopeCount,
+            scopeMin,
+            scopeMax,
+            TryGetFilterFromUrl(url) ?? "<none>");
         var httpClient = _httpClientFactory.CreateClient("TfsClient.NTLM");
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         using var response = await _requestSender.SendAsync(httpClient, request, config.TimeoutSeconds, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            var truncatedBody = TruncateForLog(responseBody);
+            _logger.LogError(
+                "OData revisions request failed. StatusCode={StatusCode} ReasonPhrase={ReasonPhrase} Mode={Mode} PageIndex={PageIndex} Url={Url} Filter={Filter} ResponseBody={ResponseBody}",
+                (int)response.StatusCode,
+                response.ReasonPhrase ?? string.Empty,
+                mode,
+                pageIndex,
+                RedactCredentials(url),
+                TryGetFilterFromUrl(url) ?? "<none>",
+                truncatedBody);
+            throw new HttpRequestException(
+                $"OData revisions request failed with status {(int)response.StatusCode} ({response.StatusCode}). Filter={TryGetFilterFromUrl(url) ?? "<none>"}. ResponseBody={truncatedBody}",
+                null,
+                response.StatusCode);
+        }
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
@@ -327,6 +358,18 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
 
         var builder = new UriBuilder(uri) { UserName = "***", Password = "***" };
         return builder.Uri.ToString();
+    }
+
+    private static string TruncateForLog(string? value, int maxLength = 2000)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "<empty>";
+        }
+
+        return value.Length <= maxLength
+            ? value
+            : value[..maxLength] + "...";
     }
 
     private static string EncodeSeekState(SeekContinuationState state)
