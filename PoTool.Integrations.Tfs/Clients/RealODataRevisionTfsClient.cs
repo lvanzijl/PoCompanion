@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,27 +14,6 @@ namespace PoTool.Integrations.Tfs.Clients;
 public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
 {
     private const int MaxWarningLogs = 10;
-    private const string ChangedDateField = "ChangedDate";
-    private const string WorkItemIdField = "WorkItemId";
-    private const string RevisionField = "Revision";
-    private static readonly string[] QuerySelectFields =
-    [
-        "WorkItemId",
-        "Revision",
-        "ChangedDate",
-        "WorkItemType",
-        "Title",
-        "State",
-        "Reason",
-        "IterationPath",
-        "AreaPath",
-        "CreatedDate",
-        "ClosedDate",
-        "Effort",
-        "Tags",
-        "Severity",
-        "ChangedBy"
-    ];
     private static readonly string[] WorkItemIdAliases = ["WorkItemId", "System_Id", "id", "WorkItemSK", "System.Id"];
     private static readonly string[] RevisionAliases = ["Revision", "Rev", "System_Rev", "RevisionNumber", "System.Rev"];
     private static readonly string[] ChangedDateAliases = ["ChangedDate", "RevisedDate", "System_ChangedDate", "System.ChangedDate"];
@@ -45,6 +23,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
     private readonly TfsRequestSender _requestSender;
     private readonly IOptionsMonitor<RevisionIngestionPaginationOptions> _paginationOptions;
     private readonly ILogger<RealODataRevisionTfsClient> _logger;
+    private readonly ODataRevisionQueryBuilder _queryBuilder = new();
 
     public RealODataRevisionTfsClient(
         IHttpClientFactory httpClientFactory,
@@ -69,6 +48,16 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         return GetAllRevisionsForWorkItemAsync(workItemId, cancellationToken);
     }
 
+    public Task<ReportingRevisionsResult> GetRevisionsForScopeAsync(
+        IReadOnlyCollection<int> scopedWorkItemIds,
+        DateTimeOffset? startDateTime = null,
+        string? continuationToken = null,
+        ReportingExpandMode expandMode = ReportingExpandMode.None,
+        CancellationToken cancellationToken = default)
+    {
+        return GetRevisionsAsync(startDateTime, continuationToken, scopedWorkItemIds, expandMode, cancellationToken);
+    }
+
     public async Task<ReportingRevisionsResult> GetRevisionsAsync(
         DateTimeOffset? startDateTime = null,
         string? continuationToken = null,
@@ -80,7 +69,11 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var config = await GetValidatedConfigAsync(cancellationToken);
         var options = _paginationOptions.CurrentValue;
         var top = Math.Max(1, options.ODataTop);
-        var url = BuildPageUrl(config, startDateTime, continuationToken, scopedWorkItemIds, options, top);
+        var seekTop = Math.Max(1, options.ODataSeekPageSize);
+        var requestContext = ResolveRequestContext(config, startDateTime, continuationToken, scopedWorkItemIds, options, top);
+        var pageIndex = requestContext.SeekState?.PageIndex ?? 1;
+        var mode = requestContext.Mode;
+        var url = requestContext.Url;
         var httpClient = _httpClientFactory.CreateClient("TfsClient.NTLM");
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -93,28 +86,69 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
 
         var revisions = ParseRevisions(root);
         var nextLink = TryGetCaseInsensitiveString(root, "@odata.nextLink");
-
         var minChangedDate = revisions.Count > 0 ? revisions.Min(revision => revision.ChangedDate) : (DateTimeOffset?)null;
         var maxChangedDate = revisions.Count > 0 ? revisions.Max(revision => revision.ChangedDate) : (DateTimeOffset?)null;
+        RevisionCursorTuple? maxTuple = TryGetMaxTuple(revisions, out var tuple) ? tuple : null;
 
         _logger.LogInformation(
-            "OData revisions page loaded. Count={Count} HasNextLink={HasNextLink} MinChangedDate={MinChangedDate} MaxChangedDate={MaxChangedDate}",
+            "OData revisions page loaded. Mode={Mode} PageIndex={PageIndex} RequestedUrl={RequestedUrl} Count={Count} MinChangedDate={MinChangedDate} MaxChangedDate={MaxChangedDate} MaxTuple={MaxTuple} HasNextLink={HasNextLink}",
+            mode,
+            pageIndex,
+            RedactCredentials(url),
             revisions.Count,
-            !string.IsNullOrWhiteSpace(nextLink),
             minChangedDate,
-            maxChangedDate);
+            maxChangedDate,
+            maxTuple,
+            !string.IsNullOrWhiteSpace(nextLink));
 
         var continuation = NormalizeToken(nextLink);
+        var stopReason = "NoMoreResults";
         if (continuation == null &&
             options.ODataEnableSeekPagingFallback &&
-            revisions.Count >= top &&
-            TryBuildSeekContinuationToken(config, startDateTime, scopedWorkItemIds, options, top, revisions, out var seekContinuation))
+            revisions.Count >= requestContext.Top &&
+            maxTuple is not null)
         {
-            continuation = seekContinuation;
-            _logger.LogInformation(
-                "OData seek paging fallback activated. ScopeCount={ScopeCount}",
-                scopedWorkItemIds?.Count ?? 0);
+            var noProgressPages = 0;
+            if (requestContext.SeekState?.LastCursor is not null)
+            {
+                noProgressPages = requestContext.SeekState.LastCursor.Equals(maxTuple.Value) ? requestContext.SeekState.NoProgressPages + 1 : 0;
+            }
+
+            if (noProgressPages >= Math.Max(1, options.MaxNoProgressPages))
+            {
+                throw new InvalidOperationException(
+                    $"OData seek paging detected no progress. Page={pageIndex}, Top={requestContext.Top}, Filter={TryGetFilterFromUrl(url) ?? "<none>"}, LastCursor={requestContext.SeekState?.LastCursor}, CurrentCursor={maxTuple}, SampleTuples={BuildTupleSample(revisions)}");
+            }
+
+            var seekPageUrl = _queryBuilder.BuildSeekPageUrl(
+                config,
+                startDateTime,
+                scopedWorkItemIds,
+                options,
+                seekTop,
+                maxTuple.Value.ChangedDate,
+                maxTuple.Value.WorkItemId,
+                maxTuple.Value.Revision);
+            continuation = EncodeSeekState(new SeekContinuationState(
+                seekPageUrl,
+                pageIndex + 1,
+                maxTuple.Value,
+                noProgressPages));
+            stopReason = "Seek";
         }
+        else if (!string.IsNullOrWhiteSpace(nextLink))
+        {
+            stopReason = "NextLink";
+        }
+        else if (revisions.Count < requestContext.Top)
+        {
+            stopReason = "ShortPage";
+        }
+
+        _logger.LogInformation(
+            "OData revisions request summary. TotalPages=1 TotalRows={TotalRows} StopReason={StopReason}",
+            revisions.Count,
+            stopReason);
 
         return new ReportingRevisionsResult(revisions, continuation);
     }
@@ -141,8 +175,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
                 scopedWorkItemIds: [workItemId],
                 expandMode: ReportingExpandMode.None,
                 cancellationToken: cancellationToken);
-            var pageRows = page.Revisions.Where(revision => revision.WorkItemId == workItemId).ToList();
-            rows.AddRange(pageRows);
+            rows.AddRange(page.Revisions);
 
             if (!page.HasMoreResults)
             {
@@ -156,7 +189,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
                 break;
             }
 
-            if (pageRows.Count == 0)
+            if (page.Revisions.Count == 0)
             {
                 emptyWithNextLinkPages++;
                 if (emptyWithNextLinkPages >= maxEmptyPages)
@@ -195,7 +228,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         return config;
     }
 
-    private static string BuildPageUrl(
+    private RequestContext ResolveRequestContext(
         TfsConfigEntity config,
         DateTimeOffset? startDateTime,
         string? continuationToken,
@@ -203,130 +236,146 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         RevisionIngestionPaginationOptions options,
         int top)
     {
-        if (!string.IsNullOrWhiteSpace(continuationToken))
+        var normalizedToken = NormalizeToken(continuationToken);
+        if (normalizedToken is null)
         {
-            return continuationToken!;
+            return new RequestContext(
+                _queryBuilder.BuildInitialPageUrl(config, startDateTime, scopedWorkItemIds, options, top),
+                RequestMode.Seek,
+                top,
+                null);
         }
 
-        var baseUrl = config.AnalyticsODataBaseUrl.TrimEnd('/');
-        var entitySet = config.AnalyticsODataEntitySetPath.Trim().TrimStart('/');
-        var builder = new List<string> { $"$top={top}" };
-        var filters = new List<string>();
-        if (startDateTime.HasValue)
+        if (TryDecodeSeekState(normalizedToken, out var seekState) && seekState is not null)
         {
-            var timestamp = Uri.EscapeDataString(startDateTime.Value.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture));
-            filters.Add($"{ChangedDateField} ge {timestamp}");
+            return new RequestContext(seekState.Url, RequestMode.Seek, ExtractTopOrFallback(seekState.Url, top), seekState);
         }
 
-        var scopeFilter = BuildScopeFilter(scopedWorkItemIds, options, options.ODataMaxUrlLength);
-        if (!string.IsNullOrWhiteSpace(scopeFilter))
-        {
-            filters.Add(scopeFilter);
-        }
-
-        if (filters.Count > 0)
-        {
-            builder.Add($"$filter={string.Join(" and ", filters)}");
-        }
-
-        builder.Add($"$select={string.Join(",", QuerySelectFields)}");
-        builder.Add($"$orderby={ChangedDateField} asc,{WorkItemIdField} asc,{RevisionField} asc");
-
-        return $"{baseUrl}/{entitySet}?{string.Join("&", builder)}";
+        return new RequestContext(normalizedToken, RequestMode.NextLink, ExtractTopOrFallback(normalizedToken, top), null);
     }
 
-    private static bool TryBuildSeekContinuationToken(
-        TfsConfigEntity config,
-        DateTimeOffset? startDateTime,
-        IReadOnlyCollection<int>? scopedWorkItemIds,
-        RevisionIngestionPaginationOptions options,
-        int top,
-        IReadOnlyList<WorkItemRevision> revisions,
-        out string? continuationToken)
+    private static int ExtractTopOrFallback(string url, int fallback)
     {
-        continuationToken = null;
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            var topSegment = uri.Query.Split('&', StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault(segment => segment.StartsWith("?$top=", StringComparison.OrdinalIgnoreCase) ||
+                                           segment.StartsWith("$top=", StringComparison.OrdinalIgnoreCase));
+            if (topSegment is not null)
+            {
+                var value = topSegment.Split('=', 2)[1];
+                if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) && parsed > 0)
+                {
+                    return parsed;
+                }
+            }
+        }
+
+        return fallback;
+    }
+
+    private static string? TryGetFilterFromUrl(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return null;
+        }
+
+        foreach (var segment in uri.Query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var trimmed = segment.TrimStart('?');
+            if (trimmed.StartsWith("$filter=", StringComparison.OrdinalIgnoreCase))
+            {
+                return Uri.UnescapeDataString(trimmed["$filter=".Length..]);
+            }
+        }
+
+        return null;
+    }
+
+    private static bool TryGetMaxTuple(IReadOnlyList<WorkItemRevision> revisions, out RevisionCursorTuple tuple)
+    {
+        tuple = default;
         if (revisions.Count == 0)
         {
             return false;
         }
 
-        var cursor = revisions
+        var max = revisions
             .OrderBy(revision => revision.ChangedDate)
             .ThenBy(revision => revision.WorkItemId)
             .ThenBy(revision => revision.RevisionNumber)
             .Last();
-
-        var baseUrl = config.AnalyticsODataBaseUrl.TrimEnd('/');
-        var entitySet = config.AnalyticsODataEntitySetPath.Trim().TrimStart('/');
-        var queryParts = new List<string> { $"$top={top}" };
-        var filters = new List<string>();
-
-        if (startDateTime.HasValue)
-        {
-            var startTimestamp = Uri.EscapeDataString(startDateTime.Value.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture));
-            filters.Add($"{ChangedDateField} ge {startTimestamp}");
-        }
-
-        var scopeFilter = BuildScopeFilter(scopedWorkItemIds, options, options.ODataMaxUrlLength);
-        if (!string.IsNullOrWhiteSpace(scopeFilter))
-        {
-            filters.Add(scopeFilter);
-        }
-
-        var changed = Uri.EscapeDataString(cursor.ChangedDate.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture));
-        filters.Add(
-            $"({ChangedDateField} gt {changed} or ({ChangedDateField} eq {changed} and {WorkItemIdField} gt {cursor.WorkItemId.ToString(CultureInfo.InvariantCulture)}) or ({ChangedDateField} eq {changed} and {WorkItemIdField} eq {cursor.WorkItemId.ToString(CultureInfo.InvariantCulture)} and {RevisionField} gt {cursor.RevisionNumber.ToString(CultureInfo.InvariantCulture)}))");
-
-        queryParts.Add($"$filter={string.Join(" and ", filters)}");
-        queryParts.Add($"$select={string.Join(",", QuerySelectFields)}");
-        queryParts.Add($"$orderby={ChangedDateField} asc,{WorkItemIdField} asc,{RevisionField} asc");
-        continuationToken = $"{baseUrl}/{entitySet}?{string.Join("&", queryParts)}";
+        tuple = new RevisionCursorTuple(max.ChangedDate.ToUniversalTime(), max.WorkItemId, max.RevisionNumber);
         return true;
     }
 
-    private static string? BuildScopeFilter(
-        IReadOnlyCollection<int>? scopedWorkItemIds,
-        RevisionIngestionPaginationOptions options,
-        int maxUrlLength)
+    private static string BuildTupleSample(IReadOnlyList<WorkItemRevision> revisions)
     {
-        if (scopedWorkItemIds == null || scopedWorkItemIds.Count == 0)
+        return string.Join(
+            "; ",
+            revisions.Take(3).Select(revision =>
+                $"{revision.ChangedDate.ToUniversalTime():yyyy-MM-ddTHH:mm:ss.fffffffZ}/{revision.WorkItemId}/{revision.RevisionNumber}"));
+    }
+
+    private static string RedactCredentials(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || string.IsNullOrEmpty(uri.UserInfo))
         {
-            return null;
+            return url;
         }
 
-        var orderedIds = scopedWorkItemIds
-            .Where(id => id > 0)
-            .Distinct()
-            .OrderBy(id => id)
-            .ToArray();
-        if (orderedIds.Length == 0)
+        var builder = new UriBuilder(uri) { UserName = "***", Password = "***" };
+        return builder.Uri.ToString();
+    }
+
+    private static string EncodeSeekState(SeekContinuationState state)
+    {
+        var encodedUrl = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(state.Url));
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"seek:{encodedUrl}|{state.PageIndex}|{state.LastCursor.ChangedDate.UtcTicks}|{state.LastCursor.WorkItemId}|{state.LastCursor.Revision}|{state.NoProgressPages}");
+    }
+
+    private static bool TryDecodeSeekState(string token, out SeekContinuationState? state)
+    {
+        state = null;
+        if (!token.StartsWith("seek:", StringComparison.Ordinal))
         {
-            return null;
+            return false;
         }
 
-        if (options.ODataScopeMode == ODataRevisionScopeMode.IdList)
+        try
         {
-            var sb = new StringBuilder();
-            for (var i = 0; i < orderedIds.Length; i++)
+            var payload = token["seek:".Length..];
+            var parts = payload.Split('|');
+            if (parts.Length != 6)
             {
-                if (i > 0)
-                {
-                    sb.Append(" or ");
-                }
-
-                sb.Append(WorkItemIdField)
-                    .Append(" eq ")
-                    .Append(orderedIds[i].ToString(CultureInfo.InvariantCulture));
+                return false;
             }
 
-            var idListFilter = $"({sb})";
-            if (idListFilter.Length <= maxUrlLength)
+            var url = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(parts[0]));
+            if (string.IsNullOrWhiteSpace(url) ||
+                !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var pageIndex) ||
+                !long.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var changedTicks) ||
+                !int.TryParse(parts[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out var workItemId) ||
+                !int.TryParse(parts[4], NumberStyles.Integer, CultureInfo.InvariantCulture, out var revision) ||
+                !int.TryParse(parts[5], NumberStyles.Integer, CultureInfo.InvariantCulture, out var noProgressPages))
             {
-                return idListFilter;
+                return false;
             }
-        }
 
-        return $"{WorkItemIdField} ge {orderedIds[0].ToString(CultureInfo.InvariantCulture)} and {WorkItemIdField} le {orderedIds[^1].ToString(CultureInfo.InvariantCulture)}";
+            state = new SeekContinuationState(
+                url,
+                pageIndex,
+                new RevisionCursorTuple(new DateTimeOffset(changedTicks, TimeSpan.Zero), workItemId, revision),
+                noProgressPages);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private List<WorkItemRevision> ParseRevisions(JsonElement root)
@@ -513,4 +562,20 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
     {
         return string.IsNullOrWhiteSpace(token) ? null : token.Trim();
     }
+
+    private enum RequestMode
+    {
+        NextLink,
+        Seek
+    }
+
+    private sealed record RequestContext(string Url, RequestMode Mode, int Top, SeekContinuationState? SeekState);
+
+    private readonly record struct RevisionCursorTuple(DateTimeOffset ChangedDate, int WorkItemId, int Revision)
+    {
+        public override string ToString()
+            => $"{ChangedDate:yyyy-MM-ddTHH:mm:ss.fffffffZ}/{WorkItemId}/{Revision}";
+    }
+
+    private sealed record SeekContinuationState(string Url, int PageIndex, RevisionCursorTuple LastCursor, int NoProgressPages);
 }

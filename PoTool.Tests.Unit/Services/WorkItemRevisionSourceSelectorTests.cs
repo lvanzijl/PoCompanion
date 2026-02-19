@@ -96,6 +96,16 @@ public class WorkItemRevisionSourceSelectorTests
             return Task.FromResult(new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null));
         }
 
+        public Task<ReportingRevisionsResult> GetRevisionsForScopeAsync(
+            IReadOnlyCollection<int> scopedWorkItemIds,
+            DateTimeOffset? startDateTime = null,
+            string? continuationToken = null,
+            ReportingExpandMode expandMode = ReportingExpandMode.None,
+            CancellationToken cancellationToken = default)
+        {
+            return GetRevisionsAsync(startDateTime, continuationToken, scopedWorkItemIds, expandMode, cancellationToken);
+        }
+
         public Task<IReadOnlyList<WorkItemRevision>> GetWorkItemRevisionsAsync(
             int workItemId,
             CancellationToken cancellationToken = default)

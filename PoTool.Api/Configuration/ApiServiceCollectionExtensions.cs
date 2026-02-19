@@ -62,12 +62,15 @@ public static class ApiServiceCollectionExtensions
             .Bind(configuration.GetSection("RevisionIngestionPagination"))
             .Validate(
                 options => options.MaxEmptyPages >= 1 &&
+                           options.MaxNoProgressPages >= 1 &&
                            options.MaxProgressWithoutDataPages >= 1 &&
                            options.MaxTotalPages >= 1 &&
                            options.MaxPageRetries >= 0 &&
                            options.RetryBackoffSeconds >= 0 &&
                            options.RetryBackoffJitterSeconds >= 0 &&
                            options.FallbackBatchSize >= 1 &&
+                           options.ODataTop >= 1 &&
+                           options.ODataSeekPageSize >= 1 &&
                            options.RetryMaxIterations >= 1 &&
                            options.RetryOverlapMinutes >= 0 &&
                            options.ProgressEpsilonSeconds >= 0,
