@@ -70,20 +70,22 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var options = _paginationOptions.CurrentValue;
         var top = Math.Max(1, options.ODataTop);
         var seekTop = Math.Max(1, options.ODataSeekPageSize);
-        var requestContext = ResolveRequestContext(config, startDateTime, continuationToken, scopedWorkItemIds, options, top);
+        var quoteDateStrings = options.ODataQuoteDateStrings;
+        var requestContext = ResolveRequestContext(config, startDateTime, continuationToken, scopedWorkItemIds, options, top, quoteDateStrings);
         var pageIndex = requestContext.SeekState?.PageIndex ?? 1;
         var mode = requestContext.Mode;
         var url = requestContext.Url;
+        var fallbackTriggered = false;
         var scopeCount = scopedWorkItemIds?.Count ?? 0;
         var scopeMin = scopedWorkItemIds is { Count: > 0 } ? scopedWorkItemIds.Min() : (int?)null;
         var scopeMax = scopedWorkItemIds is { Count: > 0 } ? scopedWorkItemIds.Max() : (int?)null;
         _logger.LogInformation(
-            "Requesting OData revisions page. Mode={Mode} PageIndex={PageIndex} Top={Top} SeekTop={SeekTop} QuotedDateLiterals={QuotedDateLiterals} ScopeCount={ScopeCount} ScopeMin={ScopeMin} ScopeMax={ScopeMax} Filter={Filter}",
+            "Requesting OData revisions page. Mode={Mode} PageIndex={PageIndex} Top={Top} SeekTop={SeekTop} QuotedDateStrings={QuotedDateStrings} ScopeCount={ScopeCount} ScopeMin={ScopeMin} ScopeMax={ScopeMax} Filter={Filter}",
             mode,
             pageIndex,
             requestContext.Top,
             seekTop,
-            options.ODataUseQuotedDateLiterals,
+            quoteDateStrings,
             scopeCount,
             scopeMin,
             scopeMax,
@@ -91,19 +93,41 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var httpClient = _httpClientFactory.CreateClient("TfsClient.NTLM");
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        using var response = await _requestSender.SendAsync(httpClient, request, config.TimeoutSeconds, cancellationToken);
+        var response = await _requestSender.SendAsync(httpClient, request, config.TimeoutSeconds, cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        {
+            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (ShouldRetryWithAlternateDateFormat(responseBody))
+            {
+                fallbackTriggered = true;
+                quoteDateStrings = !quoteDateStrings;
+                requestContext = ResolveRequestContext(config, startDateTime, continuationToken, scopedWorkItemIds, options, top, quoteDateStrings);
+                url = requestContext.Url;
+                _logger.LogWarning(
+                    "Retrying OData request with alternate date literal format");
+
+                response.Dispose();
+                using var retryRequest = new HttpRequestMessage(HttpMethod.Get, url);
+                response = await _requestSender.SendAsync(httpClient, retryRequest, config.TimeoutSeconds, cancellationToken);
+            }
+        }
+
+        using (response)
+        {
         if (!response.IsSuccessStatusCode)
         {
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
             var truncatedBody = TruncateForLog(responseBody);
             _logger.LogError(
-                "OData revisions request failed. StatusCode={StatusCode} ReasonPhrase={ReasonPhrase} Mode={Mode} PageIndex={PageIndex} Url={Url} Filter={Filter} ResponseBody={ResponseBody}",
+                "OData revisions request failed. StatusCode={StatusCode} ReasonPhrase={ReasonPhrase} Mode={Mode} PageIndex={PageIndex} Url={Url} Filter={Filter} QuotedDateStrings={QuotedDateStrings} FallbackTriggered={FallbackTriggered} ResponseBody={ResponseBody}",
                 (int)response.StatusCode,
                 response.ReasonPhrase ?? string.Empty,
                 mode,
                 pageIndex,
                 RedactCredentials(url),
                 TryGetFilterFromUrl(url) ?? "<none>",
+                quoteDateStrings,
+                fallbackTriggered,
                 truncatedBody);
             throw new HttpRequestException(
                 $"OData revisions request failed with status {(int)response.StatusCode} ({response.StatusCode}). Filter={TryGetFilterFromUrl(url) ?? "<none>"}. ResponseBody={truncatedBody}",
@@ -159,7 +183,8 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
                 seekTop,
                 maxTuple.Value.ChangedDate,
                 maxTuple.Value.WorkItemId,
-                maxTuple.Value.Revision);
+                maxTuple.Value.Revision,
+                quoteDateStrings);
             continuation = EncodeSeekState(new SeekContinuationState(
                 seekPageUrl,
                 pageIndex + 1,
@@ -177,11 +202,15 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         }
 
         _logger.LogInformation(
-            "OData revisions request summary. TotalPages=1 TotalRows={TotalRows} StopReason={StopReason}",
+            "OData revisions request summary. TotalPages=1 TotalRows={TotalRows} StopReason={StopReason} Filter={Filter} QuotedDateStrings={QuotedDateStrings} FallbackTriggered={FallbackTriggered}",
             revisions.Count,
-            stopReason);
+            stopReason,
+            TryGetFilterFromUrl(url) ?? "<none>",
+            quoteDateStrings,
+            fallbackTriggered);
 
         return new ReportingRevisionsResult(revisions, continuation);
+        }
     }
 
     private async Task<IReadOnlyList<WorkItemRevision>> GetAllRevisionsForWorkItemAsync(
@@ -265,13 +294,14 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         string? continuationToken,
         IReadOnlyCollection<int>? scopedWorkItemIds,
         RevisionIngestionPaginationOptions options,
-        int top)
+        int top,
+        bool quoteDateStrings)
     {
         var normalizedToken = NormalizeToken(continuationToken);
         if (normalizedToken is null)
         {
             return new RequestContext(
-                _queryBuilder.BuildInitialPageUrl(config, startDateTime, scopedWorkItemIds, options, top),
+                _queryBuilder.BuildInitialPageUrl(config, startDateTime, scopedWorkItemIds, options, top, quoteDateStrings),
                 RequestMode.Seek,
                 top,
                 null);
@@ -283,6 +313,14 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         }
 
         return new RequestContext(normalizedToken, RequestMode.NextLink, ExtractTopOrFallback(normalizedToken, top), null);
+    }
+
+    private static bool ShouldRetryWithAlternateDateFormat(string responseBody)
+    {
+        return !string.IsNullOrWhiteSpace(responseBody) &&
+               responseBody.Contains("Unrecognized", StringComparison.OrdinalIgnoreCase) &&
+               (responseBody.Contains("ChangedDate", StringComparison.OrdinalIgnoreCase) ||
+                responseBody.Contains("literal", StringComparison.OrdinalIgnoreCase));
     }
 
     private static int ExtractTopOrFallback(string url, int fallback)

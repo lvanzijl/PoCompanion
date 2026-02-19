@@ -34,7 +34,8 @@ internal sealed class ODataRevisionQueryBuilder
         DateTimeOffset? startDateTime,
         IReadOnlyCollection<int>? scopedWorkItemIds,
         RevisionIngestionPaginationOptions options,
-        int top)
+        int top,
+        bool? quoteDateStrings = null)
     {
         return BuildPageUrl(
             config,
@@ -42,7 +43,8 @@ internal sealed class ODataRevisionQueryBuilder
             scopedWorkItemIds,
             options,
             top,
-            seekCursor: null);
+            seekCursor: null,
+            quoteDateStrings);
     }
 
     public string BuildSeekPageUrl(
@@ -53,7 +55,8 @@ internal sealed class ODataRevisionQueryBuilder
         int top,
         DateTimeOffset seekChangedDate,
         int seekWorkItemId,
-        int seekRevision)
+        int seekRevision,
+        bool? quoteDateStrings = null)
     {
         return BuildPageUrl(
             config,
@@ -61,7 +64,8 @@ internal sealed class ODataRevisionQueryBuilder
             scopedWorkItemIds,
             options,
             top,
-            (seekChangedDate, seekWorkItemId, seekRevision));
+            (seekChangedDate, seekWorkItemId, seekRevision),
+            quoteDateStrings);
     }
 
     private string BuildPageUrl(
@@ -70,7 +74,8 @@ internal sealed class ODataRevisionQueryBuilder
         IReadOnlyCollection<int>? scopedWorkItemIds,
         RevisionIngestionPaginationOptions options,
         int top,
-        (DateTimeOffset ChangedDate, int WorkItemId, int Revision)? seekCursor)
+        (DateTimeOffset ChangedDate, int WorkItemId, int Revision)? seekCursor,
+        bool? quoteDateStrings)
     {
         var baseUrl = config.AnalyticsODataBaseUrl.TrimEnd('/');
         var entitySet = config.AnalyticsODataEntitySetPath.Trim().TrimStart('/');
@@ -79,7 +84,7 @@ internal sealed class ODataRevisionQueryBuilder
 
         if (startDateTime.HasValue)
         {
-            filters.Add($"{ChangedDateField} ge {FormatDateLiteral(startDateTime.Value, options)}");
+            filters.Add($"{ChangedDateField} ge {FormatDateLiteral(startDateTime.Value, options, quoteDateStrings)}");
         }
 
         var scopeFilter = BuildScopeFilter(scopedWorkItemIds, options);
@@ -91,7 +96,7 @@ internal sealed class ODataRevisionQueryBuilder
         if (seekCursor is not null)
         {
             var cursor = seekCursor.Value;
-            var changed = FormatDateLiteral(cursor.ChangedDate, options);
+            var changed = FormatDateLiteral(cursor.ChangedDate, options, quoteDateStrings);
             filters.Add(
                 $"({ChangedDateField} gt {changed} or ({ChangedDateField} eq {changed} and {WorkItemIdField} gt {cursor.WorkItemId.ToString(CultureInfo.InvariantCulture)}) or ({ChangedDateField} eq {changed} and {WorkItemIdField} eq {cursor.WorkItemId.ToString(CultureInfo.InvariantCulture)} and {RevisionField} gt {cursor.Revision.ToString(CultureInfo.InvariantCulture)}))");
         }
@@ -165,9 +170,9 @@ internal sealed class ODataRevisionQueryBuilder
         return $"{WorkItemIdField} ge {orderedIds[0].ToString(CultureInfo.InvariantCulture)} and {WorkItemIdField} le {orderedIds[^1].ToString(CultureInfo.InvariantCulture)}";
     }
 
-    private static string FormatDateLiteral(DateTimeOffset value, RevisionIngestionPaginationOptions options)
+    private static string FormatDateLiteral(DateTimeOffset value, RevisionIngestionPaginationOptions options, bool? quoteDateStrings)
     {
         var literal = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffff'Z'", CultureInfo.InvariantCulture);
-        return options.ODataUseQuotedDateLiterals ? $"datetimeoffset'{literal}'" : literal;
+        return (quoteDateStrings ?? options.ODataQuoteDateStrings) ? $"'{literal}'" : literal;
     }
 }

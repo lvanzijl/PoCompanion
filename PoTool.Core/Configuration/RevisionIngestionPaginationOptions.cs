@@ -25,10 +25,25 @@ public sealed class RevisionIngestionPaginationOptions
     /// </summary>
     public bool ODataOrderByEnabled { get; init; } = true;
 
+    private bool _oDataQuoteDateStrings;
+
     /// <summary>
-    /// Uses single-quoted OData datetime literals in filters.
+    /// Wraps OData date strings in single quotes.
     /// </summary>
-    public bool ODataUseQuotedDateLiterals { get; init; } = false;
+    public bool ODataQuoteDateStrings
+    {
+        get => _oDataQuoteDateStrings;
+        init => _oDataQuoteDateStrings = value;
+    }
+
+    /// <summary>
+    /// Backward-compatible alias for ODataQuoteDateStrings.
+    /// </summary>
+    public bool ODataUseQuotedDateLiterals
+    {
+        get => _oDataQuoteDateStrings;
+        init => _oDataQuoteDateStrings = value;
+    }
 
     /// <summary>
     /// OData server-side scoping mode for WorkItemId constraints.
