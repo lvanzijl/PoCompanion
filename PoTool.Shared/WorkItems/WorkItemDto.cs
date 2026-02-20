@@ -21,5 +21,6 @@ public sealed record WorkItemDto(
     string? Tags = null,
     bool? IsBlocked = null,
     List<WorkItemRelation>? Relations = null,
-    DateTimeOffset? ChangedDate = null
+    DateTimeOffset? ChangedDate = null,
+    int? BusinessValue = null
 );

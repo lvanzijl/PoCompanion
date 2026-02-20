@@ -494,7 +494,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
 
     /// <summary>
     /// Runtime requiredness rule for OData revision ingestion:
-    /// only WorkItemId is hard-required. All other whitelist fields are optional per row.
+    /// Only WorkItemId is business-required; WorkItemId+ChangedDate+(Revision if needed) are infra-required.
     /// Revision is required for storage identity in this pipeline, so rows missing Revision are skipped with warning.
     /// </summary>
     private WorkItemRevision? TryParseRevisionRow(JsonElement row, RevisionRowParseStats parseStats)
@@ -517,7 +517,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         if (!changedDate.HasValue)
         {
             parseStats.MissingChangedDateRows++;
-            changedDate = createdDate ?? DateTimeOffset.UnixEpoch;
+            throw new InvalidOperationException("OData revision row is missing required field 'ChangedDate'.");
         }
 
         return new WorkItemRevision
@@ -534,6 +534,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             ChangedDate = changedDate.Value.ToUniversalTime(),
             ClosedDate = ReadDateBySpec(row, "Microsoft.VSTS.Common.ClosedDate", parseStats),
             Effort = ReadDoubleBySpec(row, "Microsoft.VSTS.Scheduling.Effort", parseStats),
+            BusinessValue = ReadIntBySpec(row, "Microsoft.VSTS.Common.BusinessValue", parseStats),
             Tags = ReadNullableStringBySpec(row, "System.Tags", parseStats),
             Severity = ReadNullableStringBySpec(row, "Microsoft.VSTS.Common.Severity", parseStats),
             ChangedBy = ReadNullableStringBySpec(row, "System.ChangedBy", parseStats),
@@ -857,7 +858,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             if (MissingChangedDateRows > 0)
             {
                 logger.LogWarning(
-                    "Defaulted ChangedDate for {Count} OData revision rows because ChangedDate was missing.",
+                    "Encountered {Count} OData revision rows missing required ChangedDate.",
                     MissingChangedDateRows);
             }
 

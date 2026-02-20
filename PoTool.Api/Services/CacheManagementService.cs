@@ -447,6 +447,7 @@ public class CacheManagementService
             ["System.ChangedBy"] = revision.ChangedBy,
             ["Microsoft.VSTS.Common.ClosedDate"] = revision.ClosedDate?.ToString("o"),
             ["Microsoft.VSTS.Scheduling.Effort"] = revision.Effort?.ToString(),
+            ["Microsoft.VSTS.Common.BusinessValue"] = revision.BusinessValue?.ToString(),
             ["System.Tags"] = revision.Tags,
             ["Microsoft.VSTS.Common.Severity"] = revision.Severity
         };
@@ -472,6 +473,7 @@ public class CacheManagementService
             ["System.ChangedBy"] = null, // WorkItemEntity does not store ChangedBy
             ["Microsoft.VSTS.Common.ClosedDate"] = workItem.ClosedDate?.ToString("o"),
             ["Microsoft.VSTS.Scheduling.Effort"] = workItem.Effort?.ToString(),
+            ["Microsoft.VSTS.Common.BusinessValue"] = workItem.BusinessValue?.ToString(),
             ["System.Tags"] = workItem.Tags,
             ["Microsoft.VSTS.Common.Severity"] = workItem.Severity
         };

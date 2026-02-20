@@ -39,7 +39,7 @@ public class RealODataRevisionTfsClientTests
         StringAssert.Contains(firstRequest, "$orderby=ChangedDate asc,WorkItemId asc,Revision asc");
         StringAssert.Contains(firstRequest, "ChangedDate ge 2026-01-01T00:00:00.0000000Z");
         StringAssert.Contains(firstRequest, "WorkItemId ge 10 and WorkItemId le 11");
-        StringAssert.Contains(firstRequest, "$select=WorkItemId,Revision,WorkItemType,Title,State,Reason,CreatedDate,ChangedDate,ClosedDate,Effort,TagNames,Severity");
+        StringAssert.Contains(firstRequest, "$select=WorkItemId,Revision,WorkItemType,Title,State,Reason,CreatedDate,ChangedDate,ClosedDate,Effort,BusinessValue,TagNames,Severity");
         StringAssert.Contains(firstRequest, "$expand=Iteration($select=IterationPath),Area($select=AreaPath),ChangedBy($select=UserName,UserEmail,UserId)");
         Assert.DoesNotContain(firstRequest, "IterationPath,");
         Assert.DoesNotContain(firstRequest, "AreaPath,");
@@ -115,6 +115,7 @@ public class RealODataRevisionTfsClientTests
                   "Iteration": { "IterationPath": "Team\\Sprint 1" },
                   "Area": { "AreaPath": "Team\\Area" },
                   "ChangedBy": { "UserName": "Ada", "UserEmail": "ada@example.com", "UserId": "1234" },
+                  "BusinessValue": 9,
                   "TagNames": "alpha;beta"
                 }
               ]
@@ -130,6 +131,7 @@ public class RealODataRevisionTfsClientTests
         Assert.AreEqual("Team\\Sprint 1", revision.IterationPath);
         Assert.AreEqual("Team\\Area", revision.AreaPath);
         Assert.AreEqual("Ada", revision.ChangedBy);
+        Assert.AreEqual(9, revision.BusinessValue);
         Assert.AreEqual("alpha;beta", revision.Tags);
     }
 
@@ -193,7 +195,7 @@ public class RealODataRevisionTfsClientTests
     }
 
     [TestMethod]
-    public async Task GetRevisionsAsync_AllowsMissingChangedDate()
+    public async Task GetRevisionsAsync_ThrowsWhenChangedDateMissing()
     {
         var handler = new QueueMessageHandler(
         [
@@ -213,10 +215,8 @@ public class RealODataRevisionTfsClientTests
         ]);
 
         var client = CreateClient(handler);
-        var page = await client.GetRevisionsAsync();
-
-        Assert.HasCount(1, page.Revisions);
-        Assert.AreEqual(DateTimeOffset.UnixEpoch, page.Revisions[0].ChangedDate);
+        var exception = await AssertThrowsAsync<InvalidOperationException>(() => client.GetRevisionsAsync());
+        StringAssert.Contains(exception.Message, "ChangedDate");
     }
 
     [TestMethod]
@@ -229,7 +229,8 @@ public class RealODataRevisionTfsClientTests
               "value": [
                 {
                   "WorkItemId": 18,
-                  "Revision": 2
+                  "Revision": 2,
+                  "ChangedDate": "2026-01-03T00:00:00Z"
                 }
               ]
             }

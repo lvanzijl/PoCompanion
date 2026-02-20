@@ -89,6 +89,11 @@ public class RevisionHeaderEntity
     public double? Effort { get; set; }
 
     /// <summary>
+    /// Business value at this revision (Microsoft.VSTS.Common.BusinessValue).
+    /// </summary>
+    public int? BusinessValue { get; set; }
+
+    /// <summary>
     /// Tags at this revision (semicolon-separated).
     /// </summary>
     [MaxLength(2000)]

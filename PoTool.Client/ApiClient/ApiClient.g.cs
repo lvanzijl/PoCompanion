@@ -18668,6 +18668,9 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
         public int? Effort { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("businessValue")]
+        public int? BusinessValue { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public string? Description { get; set; } = default!;
 
@@ -18718,6 +18721,9 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("effort")]
         public int? Effort { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("businessValue")]
+        public int? BusinessValue { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public string? Description { get; set; } = default!;

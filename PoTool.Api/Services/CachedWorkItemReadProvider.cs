@@ -180,7 +180,8 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
             Tags: entity.Tags,
             IsBlocked: entity.IsBlocked,
             Relations: relations,
-            ChangedDate: entity.TfsChangedDate
+            ChangedDate: entity.TfsChangedDate,
+            BusinessValue: entity.BusinessValue
         );
     }
 }

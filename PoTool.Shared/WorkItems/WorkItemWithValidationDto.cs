@@ -19,5 +19,6 @@ public sealed record WorkItemWithValidationDto(
     DateTimeOffset? ClosedDate = null,
     string? Severity = null,
     string? Tags = null,
-    bool? IsBlocked = null
+    bool? IsBlocked = null,
+    int? BusinessValue = null
 );

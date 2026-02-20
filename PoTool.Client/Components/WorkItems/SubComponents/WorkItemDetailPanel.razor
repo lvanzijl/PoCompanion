@@ -180,6 +180,21 @@ else if (SelectedWorkItem != null)
                     </div>
                 }
 
+                @if (SelectedWorkItem.BusinessValue.HasValue)
+                {
+                    <div class="detail-field">
+                        <label>Business Value:</label>
+                        <span>@SelectedWorkItem.BusinessValue.Value</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="detail-field">
+                        <label>Business Value:</label>
+                        <span class="no-value">(not set)</span>
+                    </div>
+                }
+
                 <div class="detail-field">
                     <label>Description:</label>
                     @if (!string.IsNullOrWhiteSpace(SelectedWorkItem.Description))

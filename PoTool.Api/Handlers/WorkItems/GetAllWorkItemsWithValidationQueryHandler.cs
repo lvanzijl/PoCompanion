@@ -132,7 +132,8 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
             wi.ClosedDate,
             wi.Severity,
             wi.Tags,
-            wi.IsBlocked
+            wi.IsBlocked,
+            wi.BusinessValue
         )).ToList();
     }
 }

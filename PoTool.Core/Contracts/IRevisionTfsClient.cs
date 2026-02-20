@@ -262,6 +262,11 @@ public record WorkItemRevision
     public double? Effort { get; init; }
 
     /// <summary>
+    /// Business value.
+    /// </summary>
+    public int? BusinessValue { get; init; }
+
+    /// <summary>
     /// Tags (semicolon-separated).
     /// </summary>
     public string? Tags { get; init; }

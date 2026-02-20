@@ -701,6 +701,7 @@ public partial class RealTfsClient
         
         // Extract effort, dates, severity, and tags
         int? effort = ParseEffortField(fields);
+        int? businessValue = ParseBusinessValueField(fields);
         DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
         DateTimeOffset? changedDate = ParseDateTimeField(fields, "System.ChangedDate");
         DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
@@ -717,6 +718,7 @@ public partial class RealTfsClient
             State: state,
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
+            BusinessValue: businessValue,
             Description: description,
             CreatedDate: createdDate,
             ClosedDate: closedDate,

@@ -1119,6 +1119,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             var areaPath = GetStringField(fields, "System.AreaPath") ?? "";
             var tags = GetStringField(fields, "System.Tags");
             var severity = GetStringField(fields, "Microsoft.VSTS.Common.Severity");
+            var businessValue = GetIntField(fields, "Microsoft.VSTS.Common.BusinessValue", warningLimiter, warningContext);
 
             var createdDate = GetDateTimeField(fields, "System.CreatedDate");
             var changedDate = GetDateTimeField(fields, "System.ChangedDate");
@@ -1159,6 +1160,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                 ChangedDate = changedDate.Value,
                 ClosedDate = closedDate,
                 Effort = effort,
+                BusinessValue = businessValue,
                 Tags = tags,
                 Severity = severity,
                 ChangedBy = changedBy
@@ -1226,6 +1228,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
             var createdDate = GetDateTimeField(fields, "System.CreatedDate");
             var closedDate = GetDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
             var effort = GetDoubleField(fields, "Microsoft.VSTS.Scheduling.Effort");
+            var businessValue = GetIntField(fields, "Microsoft.VSTS.Common.BusinessValue");
 
             var changedBy = GetStringField(fields, "System.ChangedBy");
 
@@ -1243,6 +1246,7 @@ public class RealRevisionTfsClient : IRevisionTfsClient, IDisposable
                 ChangedDate = changedDate,
                 ClosedDate = closedDate,
                 Effort = effort,
+                BusinessValue = businessValue,
                 Tags = currentFields.GetValueOrDefault("System.Tags"),
                 Severity = currentFields.GetValueOrDefault("Microsoft.VSTS.Common.Severity"),
                 ChangedBy = changedBy,

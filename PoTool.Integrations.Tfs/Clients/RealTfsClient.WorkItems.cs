@@ -304,6 +304,7 @@ public partial class RealTfsClient
 
             // Extract effort field with robust parsing
             int? effort = ParseEffortField(fields);
+            int? businessValue = ParseBusinessValueField(fields);
 
             // Extract created date from TFS (System.CreatedDate)
             DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
@@ -333,6 +334,7 @@ public partial class RealTfsClient
                 State: state,
                 RetrievedAt: DateTimeOffset.UtcNow,
                 Effort: effort,
+                BusinessValue: businessValue,
                 Description: description,
                 CreatedDate: createdDate,
                 ClosedDate: closedDate,
@@ -561,6 +563,7 @@ public partial class RealTfsClient
                     // Extract effort field with robust parsing (requirement #5)
                     // Handle int, double, and string values safely
                     int? effort = ParseEffortField(fields);
+                    int? businessValue = ParseBusinessValueField(fields);
 
                     // Extract created date from TFS (System.CreatedDate)
                     DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
@@ -586,6 +589,7 @@ public partial class RealTfsClient
                         State: state,
                         RetrievedAt: DateTimeOffset.UtcNow,
                         Effort: effort,
+                        BusinessValue: businessValue,
                         Description: description,
                         CreatedDate: createdDate,
                         ClosedDate: closedDate,
@@ -653,6 +657,27 @@ public partial class RealTfsClient
                 return value.Equals("Yes", StringComparison.OrdinalIgnoreCase);
             }
         }
+        return null;
+    }
+
+    private static int? ParseBusinessValueField(JsonElement fields)
+    {
+        if (!fields.TryGetProperty(TfsFieldBusinessValue, out var businessValueField))
+        {
+            return null;
+        }
+
+        if (businessValueField.ValueKind == JsonValueKind.Number && businessValueField.TryGetInt32(out var value))
+        {
+            return value;
+        }
+
+        if (businessValueField.ValueKind == JsonValueKind.String &&
+            int.TryParse(businessValueField.GetString(), out value))
+        {
+            return value;
+        }
+
         return null;
     }
 }
