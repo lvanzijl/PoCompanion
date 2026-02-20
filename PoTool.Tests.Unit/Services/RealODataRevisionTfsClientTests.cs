@@ -134,7 +134,7 @@ public class RealODataRevisionTfsClientTests
     }
 
     [TestMethod]
-    public async Task GetRevisionsAsync_ThrowsWhenIterationPathMissing()
+    public async Task GetRevisionsAsync_AllowsMissingIterationObject()
     {
         var handler = new QueueMessageHandler(
         [
@@ -155,9 +155,146 @@ public class RealODataRevisionTfsClientTests
         ]);
 
         var client = CreateClient(handler);
+        var page = await client.GetRevisionsAsync();
+
+        Assert.HasCount(1, page.Revisions);
+        Assert.AreEqual(string.Empty, page.Revisions[0].IterationPath);
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_AllowsIterationObjectWithoutIterationPath()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                {
+                  "WorkItemId": 69829,
+                  "Revision": 1,
+                  "ChangedDate": "2026-01-03T00:00:00Z",
+                  "WorkItemType": "Bug",
+                  "Title": "Missing IterationPath",
+                  "State": "Active",
+                  "Iteration": { "Name": "Sprint 1" }
+                }
+              ]
+            }
+            """
+        ]);
+
+        var client = CreateClient(handler);
+        var page = await client.GetRevisionsAsync();
+
+        Assert.HasCount(1, page.Revisions);
+        Assert.AreEqual(69829, page.Revisions[0].WorkItemId);
+        Assert.AreEqual(1, page.Revisions[0].RevisionNumber);
+        Assert.AreEqual(string.Empty, page.Revisions[0].IterationPath);
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_AllowsMissingChangedDate()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                {
+                  "WorkItemId": 17,
+                  "Revision": 4,
+                  "WorkItemType": "Bug",
+                  "Title": "Missing ChangedDate",
+                  "State": "Active"
+                }
+              ]
+            }
+            """
+        ]);
+
+        var client = CreateClient(handler);
+        var page = await client.GetRevisionsAsync();
+
+        Assert.HasCount(1, page.Revisions);
+        Assert.AreEqual(DateTimeOffset.MinValue, page.Revisions[0].ChangedDate);
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_AllowsMissingMultipleOptionalFields()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                {
+                  "WorkItemId": 18,
+                  "Revision": 2
+                }
+              ]
+            }
+            """
+        ]);
+
+        var client = CreateClient(handler);
+        var page = await client.GetRevisionsAsync();
+
+        Assert.HasCount(1, page.Revisions);
+        Assert.AreEqual(string.Empty, page.Revisions[0].Title);
+        Assert.AreEqual(string.Empty, page.Revisions[0].IterationPath);
+        Assert.AreEqual(string.Empty, page.Revisions[0].AreaPath);
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_ThrowsWhenWorkItemIdMissing()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                {
+                  "Revision": 4,
+                  "ChangedDate": "2026-01-03T00:00:00Z",
+                  "WorkItemType": "Bug",
+                  "Title": "Missing WorkItemId",
+                  "State": "Active"
+                }
+              ]
+            }
+            """
+        ]);
+
+        var client = CreateClient(handler);
         var exception = await AssertThrowsAsync<InvalidOperationException>(() => client.GetRevisionsAsync());
 
-        StringAssert.Contains(exception.Message, "System.IterationPath");
+        StringAssert.Contains(exception.Message, "WorkItemId");
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_SkipsRowsWhenRevisionMissing()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                {
+                  "WorkItemId": 19,
+                  "ChangedDate": "2026-01-03T00:00:00Z",
+                  "WorkItemType": "Bug",
+                  "Title": "Missing Revision",
+                  "State": "Active"
+                }
+              ]
+            }
+            """
+        ]);
+
+        var client = CreateClient(handler);
+        var page = await client.GetRevisionsAsync();
+
+        Assert.HasCount(0, page.Revisions);
     }
 
     [TestMethod]
