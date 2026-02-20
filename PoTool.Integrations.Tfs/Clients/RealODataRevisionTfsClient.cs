@@ -472,10 +472,11 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             return revisions;
         }
 
+        var parseStats = new RevisionRowParseStats();
         var warningCount = 0;
         foreach (var row in valueArray.EnumerateArray())
         {
-            var parsed = TryParseRevisionRow(row);
+            var parsed = TryParseRevisionRow(row, parseStats);
             if (parsed != null)
             {
                 revisions.Add(parsed);
@@ -487,55 +488,68 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             }
         }
 
+        parseStats.LogSummary(_logger);
         return revisions;
     }
 
-    private WorkItemRevision? TryParseRevisionRow(JsonElement row)
+    /// <summary>
+    /// Runtime requiredness rule for OData revision ingestion:
+    /// only WorkItemId is hard-required. All other whitelist fields are optional per row.
+    /// Revision is required for storage identity in this pipeline, so rows missing Revision are skipped with warning.
+    /// </summary>
+    private WorkItemRevision? TryParseRevisionRow(JsonElement row, RevisionRowParseStats parseStats)
     {
-        var workItemId = TryReadInt(row, WorkItemIdAliases);
+        var workItemId = ReadIntBySpec(row, "System.Id", parseStats) ?? TryReadInt(row, WorkItemIdAliases);
         var revisionNumber = TryReadInt(row, RevisionAliases);
-        var changedDate = ReadDateBySpec(row, "System.ChangedDate") ?? TryReadDate(row, ChangedDateAliases);
-        if (!workItemId.HasValue || !revisionNumber.HasValue || !changedDate.HasValue)
+        if (!workItemId.HasValue)
         {
+            throw new InvalidOperationException("OData revision row is missing required field 'WorkItemId'.");
+        }
+
+        if (!revisionNumber.HasValue)
+        {
+            parseStats.MissingRevisionRows++;
             return null;
         }
 
-        var iterationPath = ReadStringBySpec(row, "System.IterationPath");
-        if (string.IsNullOrWhiteSpace(iterationPath))
+        var createdDate = ReadDateBySpec(row, "System.CreatedDate", parseStats);
+        var changedDate = ReadDateBySpec(row, "System.ChangedDate", parseStats) ?? TryReadDate(row, ChangedDateAliases);
+        if (!changedDate.HasValue)
         {
-            throw new InvalidOperationException($"OData revision row is missing required field 'System.IterationPath' for WorkItemId={workItemId.Value}, Revision={revisionNumber.Value}.");
+            parseStats.MissingChangedDateRows++;
+            changedDate = createdDate ?? DateTimeOffset.UnixEpoch;
         }
 
         return new WorkItemRevision
         {
             WorkItemId = workItemId.Value,
             RevisionNumber = revisionNumber.Value,
-            WorkItemType = ReadStringBySpec(row, "System.WorkItemType"),
-            Title = ReadStringBySpec(row, "System.Title"),
-            State = ReadStringBySpec(row, "System.State"),
-            Reason = ReadNullableStringBySpec(row, "System.Reason"),
-            IterationPath = iterationPath,
-            AreaPath = ReadStringBySpec(row, "System.AreaPath"),
-            CreatedDate = ReadDateBySpec(row, "System.CreatedDate"),
+            WorkItemType = ReadStringBySpec(row, "System.WorkItemType", parseStats),
+            Title = ReadStringBySpec(row, "System.Title", parseStats),
+            State = ReadStringBySpec(row, "System.State", parseStats),
+            Reason = ReadNullableStringBySpec(row, "System.Reason", parseStats),
+            IterationPath = ReadStringBySpec(row, "System.IterationPath", parseStats),
+            AreaPath = ReadStringBySpec(row, "System.AreaPath", parseStats),
+            CreatedDate = createdDate,
             ChangedDate = changedDate.Value.ToUniversalTime(),
-            ClosedDate = ReadDateBySpec(row, "Microsoft.VSTS.Common.ClosedDate"),
-            Effort = ReadDoubleBySpec(row, "Microsoft.VSTS.Scheduling.Effort"),
-            Tags = ReadNullableStringBySpec(row, "System.Tags"),
-            Severity = ReadNullableStringBySpec(row, "Microsoft.VSTS.Common.Severity"),
-            ChangedBy = ReadNullableStringBySpec(row, "System.ChangedBy"),
+            ClosedDate = ReadDateBySpec(row, "Microsoft.VSTS.Common.ClosedDate", parseStats),
+            Effort = ReadDoubleBySpec(row, "Microsoft.VSTS.Scheduling.Effort", parseStats),
+            Tags = ReadNullableStringBySpec(row, "System.Tags", parseStats),
+            Severity = ReadNullableStringBySpec(row, "Microsoft.VSTS.Common.Severity", parseStats),
+            ChangedBy = ReadNullableStringBySpec(row, "System.ChangedBy", parseStats),
             FieldDeltas = null,
             RelationDeltas = null
         };
     }
 
-    private static string ReadStringBySpec(JsonElement row, string restFieldRef)
+    private static string ReadStringBySpec(JsonElement row, string restFieldRef, RevisionRowParseStats? parseStats = null)
     {
-        return ReadNullableStringBySpec(row, restFieldRef) ?? string.Empty;
+        return ReadNullableStringBySpec(row, restFieldRef, parseStats) ?? string.Empty;
     }
 
-    private static string? ReadNullableStringBySpec(JsonElement row, string restFieldRef)
+    private static string? ReadNullableStringBySpec(JsonElement row, string restFieldRef, RevisionRowParseStats? parseStats = null)
     {
-        var value = ReadElementBySpec(row, restFieldRef);
+        var value = ReadElementBySpec(row, restFieldRef, parseStats);
         if (value is null)
         {
             return null;
@@ -544,9 +558,9 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         return ToNullableString(value.Value);
     }
 
-    private static DateTimeOffset? ReadDateBySpec(JsonElement row, string restFieldRef)
+    private static DateTimeOffset? ReadDateBySpec(JsonElement row, string restFieldRef, RevisionRowParseStats? parseStats = null)
     {
-        var value = ReadElementBySpec(row, restFieldRef);
+        var value = ReadElementBySpec(row, restFieldRef, parseStats);
         if (value is null || value.Value.ValueKind != JsonValueKind.String)
         {
             return null;
@@ -557,9 +571,9 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             : null;
     }
 
-    private static double? ReadDoubleBySpec(JsonElement row, string restFieldRef)
+    private static double? ReadDoubleBySpec(JsonElement row, string restFieldRef, RevisionRowParseStats? parseStats = null)
     {
-        var value = ReadElementBySpec(row, restFieldRef);
+        var value = ReadElementBySpec(row, restFieldRef, parseStats);
         if (value is null)
         {
             return null;
@@ -579,7 +593,29 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         return null;
     }
 
-    private static JsonElement? ReadElementBySpec(JsonElement row, string restFieldRef)
+    private static int? ReadIntBySpec(JsonElement row, string restFieldRef, RevisionRowParseStats? parseStats = null)
+    {
+        var value = ReadElementBySpec(row, restFieldRef, parseStats);
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (value.Value.ValueKind == JsonValueKind.Number && value.Value.TryGetInt32(out var number))
+        {
+            return number;
+        }
+
+        if (value.Value.ValueKind == JsonValueKind.String &&
+            int.TryParse(value.Value.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out number))
+        {
+            return number;
+        }
+
+        return null;
+    }
+
+    private static JsonElement? ReadElementBySpec(JsonElement row, string restFieldRef, RevisionRowParseStats? parseStats = null)
     {
         if (!ParseDescriptorsByRestField.TryGetValue(restFieldRef, out var descriptor))
         {
@@ -587,7 +623,8 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         }
 
         if (!string.IsNullOrWhiteSpace(descriptor.ScalarProperty) &&
-            TryGetCaseInsensitiveProperty(row, descriptor.ScalarProperty!, out var scalarValue))
+            TryGetCaseInsensitiveProperty(row, descriptor.ScalarProperty!, out var scalarValue) &&
+            !IsMissingValue(scalarValue))
         {
             return scalarValue;
         }
@@ -598,7 +635,8 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         {
             foreach (var property in descriptor.ReadProperties)
             {
-                if (TryGetCaseInsensitiveProperty(navigationValue, property, out var nestedValue))
+                if (TryGetCaseInsensitiveProperty(navigationValue, property, out var nestedValue) &&
+                    !IsMissingValue(nestedValue))
                 {
                     return nestedValue;
                 }
@@ -607,7 +645,8 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
 
         foreach (var property in descriptor.ReadProperties)
         {
-            if (TryGetCaseInsensitiveProperty(row, property, out var directNestedValue))
+            if (TryGetCaseInsensitiveProperty(row, property, out var directNestedValue) &&
+                !IsMissingValue(directNestedValue))
             {
                 return directNestedValue;
             }
@@ -615,24 +654,34 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
 
         var restFieldTail = descriptor.RestFieldRef.Split('.').LastOrDefault();
         if (!string.IsNullOrWhiteSpace(restFieldTail) &&
-            TryGetCaseInsensitiveProperty(row, restFieldTail, out var restFieldTailValue))
+            TryGetCaseInsensitiveProperty(row, restFieldTail, out var restFieldTailValue) &&
+            !IsMissingValue(restFieldTailValue))
         {
             return restFieldTailValue;
         }
 
         var dotStyleAlias = descriptor.RestFieldRef.Replace('.', '_');
-        if (TryGetCaseInsensitiveProperty(row, dotStyleAlias, out var dotStyleAliasValue))
+        if (TryGetCaseInsensitiveProperty(row, dotStyleAlias, out var dotStyleAliasValue) &&
+            !IsMissingValue(dotStyleAliasValue))
         {
             return dotStyleAliasValue;
         }
 
-        if (TryGetCaseInsensitiveProperty(row, descriptor.RestFieldRef, out var restFieldValue))
+        if (TryGetCaseInsensitiveProperty(row, descriptor.RestFieldRef, out var restFieldValue) &&
+            !IsMissingValue(restFieldValue))
         {
             return restFieldValue;
         }
 
+        parseStats?.TrackMissing(descriptor);
         return null;
     }
+
+    /// <summary>
+    /// Returns true when a JSON element represents an absent value in OData payloads.
+    /// </summary>
+    private static bool IsMissingValue(JsonElement element)
+        => element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined;
 
     private static string? ToNullableString(JsonElement value)
     {
@@ -774,6 +823,60 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
     private static string? NormalizeToken(string? token)
     {
         return string.IsNullOrWhiteSpace(token) ? null : token.Trim();
+    }
+
+    private sealed class RevisionRowParseStats
+    {
+        private readonly Dictionary<string, int> _missingScalarCount = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _missingNavigationCount = new(StringComparer.Ordinal);
+
+        public int MissingRevisionRows { get; set; }
+
+        public int MissingChangedDateRows { get; set; }
+
+        public void TrackMissing(RevisionFieldWhitelist.ODataRevisionParseDescriptor descriptor)
+        {
+            if (!string.IsNullOrWhiteSpace(descriptor.NavigationProperty))
+            {
+                Increment(_missingNavigationCount, descriptor.RestFieldRef);
+                return;
+            }
+
+            Increment(_missingScalarCount, descriptor.RestFieldRef);
+        }
+
+        public void LogSummary(ILogger logger)
+        {
+            if (MissingRevisionRows > 0)
+            {
+                logger.LogWarning(
+                    "Skipped {Count} OData revision rows because Revision was missing.",
+                    MissingRevisionRows);
+            }
+
+            if (MissingChangedDateRows > 0)
+            {
+                logger.LogWarning(
+                    "Defaulted ChangedDate for {Count} OData revision rows because ChangedDate was missing.",
+                    MissingChangedDateRows);
+            }
+
+            foreach (var kvp in _missingScalarCount.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+            {
+                logger.LogDebug("OData missingScalarCount[{Field}]={Count}", kvp.Key, kvp.Value);
+            }
+
+            foreach (var kvp in _missingNavigationCount.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+            {
+                logger.LogDebug("OData missingNavCount[{Field}]={Count}", kvp.Key, kvp.Value);
+            }
+        }
+
+        private static void Increment(Dictionary<string, int> counts, string field)
+        {
+            counts.TryGetValue(field, out var current);
+            counts[field] = current + 1;
+        }
     }
 
     private enum RequestMode
