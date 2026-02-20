@@ -216,7 +216,7 @@ public class RealODataRevisionTfsClientTests
         var page = await client.GetRevisionsAsync();
 
         Assert.HasCount(1, page.Revisions);
-        Assert.AreEqual(DateTimeOffset.MinValue, page.Revisions[0].ChangedDate);
+        Assert.AreEqual(DateTimeOffset.UnixEpoch, page.Revisions[0].ChangedDate);
     }
 
     [TestMethod]

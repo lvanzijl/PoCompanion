@@ -512,11 +512,12 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             return null;
         }
 
+        var createdDate = ReadDateBySpec(row, "System.CreatedDate", parseStats);
         var changedDate = ReadDateBySpec(row, "System.ChangedDate", parseStats) ?? TryReadDate(row, ChangedDateAliases);
         if (!changedDate.HasValue)
         {
             parseStats.MissingChangedDateRows++;
-            changedDate = DateTimeOffset.MinValue;
+            changedDate = createdDate ?? DateTimeOffset.UnixEpoch;
         }
 
         return new WorkItemRevision
@@ -529,7 +530,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             Reason = ReadNullableStringBySpec(row, "System.Reason", parseStats),
             IterationPath = ReadStringBySpec(row, "System.IterationPath", parseStats),
             AreaPath = ReadStringBySpec(row, "System.AreaPath", parseStats),
-            CreatedDate = ReadDateBySpec(row, "System.CreatedDate", parseStats),
+            CreatedDate = createdDate,
             ChangedDate = changedDate.Value.ToUniversalTime(),
             ClosedDate = ReadDateBySpec(row, "Microsoft.VSTS.Common.ClosedDate", parseStats),
             Effort = ReadDoubleBySpec(row, "Microsoft.VSTS.Scheduling.Effort", parseStats),
@@ -676,6 +677,9 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         return null;
     }
 
+    /// <summary>
+    /// Returns true when a JSON element represents an absent value in OData payloads.
+    /// </summary>
     private static bool IsMissingValue(JsonElement element)
         => element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined;
 
