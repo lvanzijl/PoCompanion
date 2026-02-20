@@ -372,6 +372,7 @@ public class BugTriageStateService
             cachedEntity.AreaPath = refreshedWorkItem.AreaPath;
             cachedEntity.IterationPath = refreshedWorkItem.IterationPath;
             cachedEntity.Effort = refreshedWorkItem.Effort;
+            cachedEntity.BusinessValue = refreshedWorkItem.BusinessValue;
             cachedEntity.Description = refreshedWorkItem.Description;
             cachedEntity.RetrievedAt = refreshedWorkItem.RetrievedAt;
             cachedEntity.Severity = refreshedWorkItem.Severity;

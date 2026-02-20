@@ -71,6 +71,11 @@ public class WorkItemEntity
     public int? Effort { get; set; }
 
     /// <summary>
+    /// Business value from TFS (Microsoft.VSTS.Common.BusinessValue).
+    /// </summary>
+    public int? BusinessValue { get; set; }
+
+    /// <summary>
     /// Work item description (nullable).
     /// </summary>
     public string? Description { get; set; }

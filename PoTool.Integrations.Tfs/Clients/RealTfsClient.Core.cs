@@ -25,6 +25,7 @@ public partial class RealTfsClient
     // TFS field paths
     private const string TfsFieldEffort = "Microsoft.VSTS.Scheduling.Effort";
     private const string TfsFieldStoryPoints = "Microsoft.VSTS.Scheduling.StoryPoints";
+    private const string TfsFieldBusinessValue = "Microsoft.VSTS.Common.BusinessValue";
     private const string TfsFieldState = "System.State";
     private const string TfsFieldSeverity = "Microsoft.VSTS.Common.Severity";
     private const string TfsFieldBlocked = "Microsoft.VSTS.CMMI.Blocked";
@@ -44,6 +45,7 @@ public partial class RealTfsClient
         "Microsoft.VSTS.Common.ClosedDate",
         "Microsoft.VSTS.Common.Severity",
         "System.Tags",
+        TfsFieldBusinessValue,
         TfsFieldEffort,
         TfsFieldStoryPoints
     };

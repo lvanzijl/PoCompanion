@@ -215,7 +215,8 @@ public class ValidationComputeStage : ISyncStage
             Severity: entity.Severity,
             Tags: entity.Tags,
             IsBlocked: entity.IsBlocked,
-            Relations: relations
+            Relations: relations,
+            BusinessValue: entity.BusinessValue
         );
     }
 }

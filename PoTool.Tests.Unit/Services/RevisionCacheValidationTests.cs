@@ -76,6 +76,7 @@ public class RevisionCacheValidationTests
             ChangedBy = "John Doe",
             ClosedDate = null,
             Effort = 3.0,
+            BusinessValue = 7,
             Tags = "Tag1; Tag2",
             Severity = "2 - High"
         };
@@ -96,6 +97,7 @@ public class RevisionCacheValidationTests
         Assert.AreEqual("John Doe", state["System.ChangedBy"]);
         Assert.IsNull(state["Microsoft.VSTS.Common.ClosedDate"]);
         Assert.AreEqual("3", state["Microsoft.VSTS.Scheduling.Effort"]);
+        Assert.AreEqual("7", state["Microsoft.VSTS.Common.BusinessValue"]);
         Assert.AreEqual("Tag1; Tag2", state["System.Tags"]);
         Assert.AreEqual("2 - High", state["Microsoft.VSTS.Common.Severity"]);
     }
@@ -124,6 +126,7 @@ public class RevisionCacheValidationTests
         Assert.IsNull(state["System.ChangedBy"]);
         Assert.IsNull(state["Microsoft.VSTS.Common.ClosedDate"]);
         Assert.IsNull(state["Microsoft.VSTS.Scheduling.Effort"]);
+        Assert.IsNull(state["Microsoft.VSTS.Common.BusinessValue"]);
         Assert.IsNull(state["System.Tags"]);
         Assert.IsNull(state["Microsoft.VSTS.Common.Severity"]);
     }
@@ -148,6 +151,7 @@ public class RevisionCacheValidationTests
             TfsChangedDate = new DateTimeOffset(2025, 1, 15, 12, 0, 0, TimeSpan.Zero),
             ClosedDate = null,
             Effort = 3,
+            BusinessValue = 11,
             Tags = "Tag1; Tag2",
             Severity = "2 - High"
         };
@@ -161,6 +165,7 @@ public class RevisionCacheValidationTests
         Assert.AreEqual(@"Project\Sprint 1", state["System.IterationPath"]);
         Assert.AreEqual(@"Project\Team A", state["System.AreaPath"]);
         Assert.AreEqual("3", state["Microsoft.VSTS.Scheduling.Effort"]);
+        Assert.AreEqual("11", state["Microsoft.VSTS.Common.BusinessValue"]);
         Assert.AreEqual("Tag1; Tag2", state["System.Tags"]);
         Assert.AreEqual("2 - High", state["Microsoft.VSTS.Common.Severity"]);
     }
@@ -401,14 +406,15 @@ public class RevisionCacheValidationTests
         Assert.IsTrue(RevisionFieldWhitelist.Fields.Contains("System.State"));
         Assert.IsTrue(RevisionFieldWhitelist.Fields.Contains("System.Title"));
         Assert.IsTrue(RevisionFieldWhitelist.Fields.Contains("Microsoft.VSTS.Scheduling.Effort"));
+        Assert.IsTrue(RevisionFieldWhitelist.Fields.Contains("Microsoft.VSTS.Common.BusinessValue"));
         Assert.IsTrue(RevisionFieldWhitelist.Fields.Contains("System.Tags"));
     }
 
     [TestMethod]
-    [Description("Whitelist has exactly 14 fields")]
-    public void RevisionFieldWhitelist_Has14Fields()
+    [Description("Whitelist has exactly 15 fields")]
+    public void RevisionFieldWhitelist_Has15Fields()
     {
-        Assert.HasCount(14, RevisionFieldWhitelist.Fields);
+        Assert.HasCount(15, RevisionFieldWhitelist.Fields);
     }
 
     #endregion
@@ -429,6 +435,7 @@ public class RevisionCacheValidationTests
             ["System.ChangedDate"] = "2025-01-01T00:00:00+00:00",
             ["Microsoft.VSTS.Common.ClosedDate"] = null,
             ["Microsoft.VSTS.Scheduling.Effort"] = null,
+            ["Microsoft.VSTS.Common.BusinessValue"] = null,
             ["System.Tags"] = null,
             ["Microsoft.VSTS.Common.Severity"] = null
         };

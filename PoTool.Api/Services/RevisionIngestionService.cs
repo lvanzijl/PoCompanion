@@ -1889,6 +1889,7 @@ public class RevisionIngestionService
                     revision.ChangedDate,
                     revision.ClosedDate,
                     revision.Effort,
+                    revision.BusinessValue,
                     revision.Tags,
                     revision.Severity,
                     revision.ChangedBy
@@ -1976,6 +1977,7 @@ public class RevisionIngestionService
                     ChangedDate = revision.ChangedDate,
                     ClosedDate = revision.ClosedDate,
                     Effort = revision.Effort,
+                    BusinessValue = revision.BusinessValue,
                     Tags = revision.Tags,
                     Severity = revision.Severity,
                     ChangedBy = revision.ChangedBy,
@@ -2066,13 +2068,9 @@ public class RevisionIngestionService
 
     private static bool HasRequiredRevisionFields(WorkItemRevision revision)
     {
+        // Only WorkItemId is business-required; WorkItemId+ChangedDate+(Revision if needed) are infra-required.
         return revision.WorkItemId > 0
             && revision.RevisionNumber > 0
-            && !string.IsNullOrWhiteSpace(revision.WorkItemType)
-            && !string.IsNullOrWhiteSpace(revision.Title)
-            && !string.IsNullOrWhiteSpace(revision.State)
-            && !string.IsNullOrWhiteSpace(revision.IterationPath)
-            && !string.IsNullOrWhiteSpace(revision.AreaPath)
             && revision.ChangedDate != default;
     }
 

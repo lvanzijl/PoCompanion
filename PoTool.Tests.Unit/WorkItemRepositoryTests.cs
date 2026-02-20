@@ -288,4 +288,31 @@ public sealed class WorkItemRepositoryTests
         Assert.AreEqual("Feature description", result.Description);
         Assert.AreEqual(10, result.Effort);
     }
+
+    [TestMethod]
+    public async Task UpsertManyAsync_PersistsBusinessValue()
+    {
+        using var context = CreateInMemoryContext();
+        var repository = new WorkItemRepository(context);
+
+        var workItem = new WorkItemDto(
+            TfsId: 300,
+            Type: "Feature",
+            Title: "Feature with business value",
+            ParentTfsId: null,
+            AreaPath: "Project\\Team",
+            IterationPath: "Sprint 3",
+            State: "Active",
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: 5,
+            Description: "Feature description",
+            BusinessValue: 13
+        );
+
+        await repository.UpsertManyAsync(new[] { workItem });
+        var result = await repository.GetByTfsIdAsync(300);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(13, result.BusinessValue);
+    }
 }

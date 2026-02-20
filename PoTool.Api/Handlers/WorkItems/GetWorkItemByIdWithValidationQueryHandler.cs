@@ -72,7 +72,8 @@ public sealed class GetWorkItemByIdWithValidationQueryHandler
             workItem.ClosedDate,
             workItem.Severity,
             workItem.Tags,
-            workItem.IsBlocked
+            workItem.IsBlocked,
+            workItem.BusinessValue
         );
     }
 }

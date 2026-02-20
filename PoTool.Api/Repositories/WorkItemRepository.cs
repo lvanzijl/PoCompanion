@@ -139,6 +139,7 @@ public class WorkItemRepository : IWorkItemRepository
                     existing.State = dto.State;
                     existing.RetrievedAt = dto.RetrievedAt;
                     existing.Effort = dto.Effort;
+                    existing.BusinessValue = dto.BusinessValue;
                     existing.Description = dto.Description;
                     existing.CreatedDate = dto.CreatedDate;
                     existing.ClosedDate = dto.ClosedDate;
@@ -184,6 +185,7 @@ public class WorkItemRepository : IWorkItemRepository
                     entity.State = dto.State;
                     entity.RetrievedAt = dto.RetrievedAt;
                     entity.Effort = dto.Effort;
+                    entity.BusinessValue = dto.BusinessValue;
                     entity.Description = dto.Description;
                     entity.CreatedDate = dto.CreatedDate;
                     entity.ClosedDate = dto.ClosedDate;
@@ -243,7 +245,8 @@ public class WorkItemRepository : IWorkItemRepository
                 Tags: entity.Tags,
                 IsBlocked: entity.IsBlocked,
                 Relations: relations,
-                ChangedDate: entity.TfsChangedDate
+                ChangedDate: entity.TfsChangedDate,
+                BusinessValue: entity.BusinessValue
             );
     }
 
@@ -260,6 +263,7 @@ public class WorkItemRepository : IWorkItemRepository
             State = dto.State,
             RetrievedAt = dto.RetrievedAt,
             Effort = dto.Effort,
+            BusinessValue = dto.BusinessValue,
             Description = dto.Description,
             CreatedDate = dto.CreatedDate,
             ClosedDate = dto.ClosedDate,

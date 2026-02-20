@@ -8922,6 +8922,11 @@
             "format": "int32",
             "nullable": true
           },
+          "businessValue": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
           "description": {
             "type": "string",
             "nullable": true
@@ -8982,6 +8987,11 @@
             "format": "date-time"
           },
           "effort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "businessValue": {
             "type": "integer",
             "format": "int32",
             "nullable": true

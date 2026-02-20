@@ -681,6 +681,71 @@ public sealed class RevisionIngestionServiceTests
         }
     }
 
+    [TestMethod]
+    public async Task IngestRevisionsAsync_PersistsRowsWhenBusinessOptionalFieldsAreMissing()
+    {
+        var revision = new WorkItemRevision
+        {
+            WorkItemId = 10,
+            RevisionNumber = 1,
+            WorkItemType = string.Empty,
+            Title = string.Empty,
+            State = string.Empty,
+            IterationPath = string.Empty,
+            AreaPath = string.Empty,
+            ChangedDate = DateTimeOffset.UtcNow
+        };
+
+        var stubClient = new StubRevisionSource(
+        [
+            new ReportingRevisionsResult([revision], null)
+        ]);
+
+        using var provider = BuildServiceProvider(stubClient);
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        Assert.AreEqual(1, await context.RevisionHeaders.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_DropsRowsWhenInfraRequiredChangedDateMissing()
+    {
+        var revision = CreateRevision(10, 1, changedDate: new DateTimeOffset());
+        var stubClient = new StubRevisionSource(
+        [
+            new ReportingRevisionsResult([revision], null)
+        ]);
+
+        using var provider = BuildServiceProvider(stubClient);
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        Assert.AreEqual(0, await context.RevisionHeaders.CountAsync());
+    }
+
     private sealed class StaticOptionsMonitor<T> : IOptionsMonitor<T>
     {
         private sealed class NullDisposable : IDisposable
