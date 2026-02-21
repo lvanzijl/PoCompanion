@@ -403,8 +403,8 @@ public class CacheManagementService
                 return result;
             }
 
-            // Build replayed state from last revision header
-            var replayedState = BuildReplayedState(lastRevision);
+            // Build replayed state by applying revisions in order (starting from empty state)
+            var replayedState = BuildReplayedStateFromRevisions(revisions);
 
             // Build REST/cached state from work item entity
             var cachedState = BuildCachedWorkItemState(workItem);
@@ -433,24 +433,43 @@ public class CacheManagementService
     /// </summary>
     internal static Dictionary<string, string?> BuildReplayedState(RevisionHeaderEntity revision)
     {
-        return new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        var state = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        ApplyRevisionSnapshot(state, revision);
+        return state;
+    }
+
+    /// <summary>
+    /// Replays all revisions in order, starting from an empty work item state.
+    /// Internal for testability via InternalsVisibleTo.
+    /// </summary>
+    internal static Dictionary<string, string?> BuildReplayedStateFromRevisions(IReadOnlyList<RevisionHeaderEntity> revisions)
+    {
+        var state = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var revision in revisions)
         {
-            ["System.Id"] = revision.WorkItemId.ToString(),
-            ["System.WorkItemType"] = revision.WorkItemType,
-            ["System.Title"] = revision.Title,
-            ["System.State"] = revision.State,
-            ["System.Reason"] = revision.Reason,
-            ["System.IterationPath"] = revision.IterationPath,
-            ["System.AreaPath"] = revision.AreaPath,
-            ["System.CreatedDate"] = revision.CreatedDate?.ToString("o"),
-            ["System.ChangedDate"] = revision.ChangedDate.ToString("o"),
-            ["System.ChangedBy"] = revision.ChangedBy,
-            ["Microsoft.VSTS.Common.ClosedDate"] = revision.ClosedDate?.ToString("o"),
-            ["Microsoft.VSTS.Scheduling.Effort"] = revision.Effort?.ToString(),
-            ["Microsoft.VSTS.Common.BusinessValue"] = revision.BusinessValue?.ToString(),
-            ["System.Tags"] = revision.Tags,
-            ["Microsoft.VSTS.Common.Severity"] = revision.Severity
-        };
+            ApplyRevisionSnapshot(state, revision);
+        }
+
+        return state;
+    }
+
+    private static void ApplyRevisionSnapshot(Dictionary<string, string?> state, RevisionHeaderEntity revision)
+    {
+        state["System.Id"] = revision.WorkItemId.ToString();
+        state["System.WorkItemType"] = revision.WorkItemType;
+        state["System.Title"] = revision.Title;
+        state["System.State"] = revision.State;
+        state["System.Reason"] = revision.Reason;
+        state["System.IterationPath"] = revision.IterationPath;
+        state["System.AreaPath"] = revision.AreaPath;
+        state["System.CreatedDate"] = revision.CreatedDate?.ToString("o");
+        state["System.ChangedDate"] = revision.ChangedDate.ToString("o");
+        state["System.ChangedBy"] = revision.ChangedBy;
+        state["Microsoft.VSTS.Common.ClosedDate"] = revision.ClosedDate?.ToString("o");
+        state["Microsoft.VSTS.Scheduling.Effort"] = revision.Effort?.ToString();
+        state["Microsoft.VSTS.Common.BusinessValue"] = revision.BusinessValue?.ToString();
+        state["System.Tags"] = revision.Tags;
+        state["Microsoft.VSTS.Common.Severity"] = revision.Severity;
     }
 
     /// <summary>
