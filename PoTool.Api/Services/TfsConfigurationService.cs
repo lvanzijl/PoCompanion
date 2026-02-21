@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
 using PoTool.Core.Contracts;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Services;
 
@@ -14,7 +15,7 @@ public sealed class TfsConfig
     public int TimeoutSeconds { get; set; } = 30;
     public string ApiVersion { get; set; } = "7.0";
     public string AnalyticsODataBaseUrl { get; set; } = string.Empty;
-    public string AnalyticsODataEntitySetPath { get; set; } = "WorkItemRevisions";
+    public string AnalyticsODataEntitySetPath { get; set; } = AnalyticsODataDefaults.EntitySetPath;
     public DateTimeOffset? LastValidated { get; set; }
 }
 
@@ -27,9 +28,6 @@ public sealed class TfsConfig
 /// </summary>
 public class TfsConfigurationService : ITfsConfigurationService
 {
-    private const string DefaultAnalyticsEntitySetPath = "WorkItemRevisions";
-    private const string DefaultAnalyticsODataVersionPath = "_odata/v3.0-preview";
-
     private readonly PoToolDbContext _db;
     private readonly ILogger<TfsConfigurationService> _logger;
     private readonly IEfConcurrencyGate _efGate;
@@ -142,19 +140,12 @@ public class TfsConfigurationService : ITfsConfigurationService
             return analyticsODataBaseUrl.Trim();
         }
 
-        var trimmedUrl = (url ?? string.Empty).Trim().TrimEnd('/');
-        var trimmedProject = (project ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(trimmedUrl) || string.IsNullOrWhiteSpace(trimmedProject))
-        {
-            return string.Empty;
-        }
-
-        return $"{trimmedUrl}/{Uri.EscapeDataString(trimmedProject)}/{DefaultAnalyticsODataVersionPath}";
+        return AnalyticsODataDefaults.BuildBaseUrl(url, project);
     }
 
     private static string ResolveAnalyticsODataEntitySetPath(string? analyticsODataEntitySetPath)
         => string.IsNullOrWhiteSpace(analyticsODataEntitySetPath)
-            ? DefaultAnalyticsEntitySetPath
+            ? AnalyticsODataDefaults.EntitySetPath
             : analyticsODataEntitySetPath.Trim();
 
     public async Task<TfsConfigEntity?> GetConfigEntityAsync(CancellationToken cancellationToken = default)

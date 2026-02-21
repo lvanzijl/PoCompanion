@@ -108,7 +108,7 @@
                                 <MudText Typo="Typo.caption" Color="Color.Secondary"><strong>Effective configuration summary</strong></MudText>
                                 <MudText Typo="Typo.body2">Revision source: Analytics OData revisions</MudText>
                                 <MudText Typo="Typo.body2">Analytics OData base URL: @GetConfigSummaryValue(GetDerivedAnalyticsODataBaseUrl())</MudText>
-                                <MudText Typo="Typo.body2">Analytics entity set: WorkItemRevisions</MudText>
+                                <MudText Typo="Typo.body2">Analytics entity set: @AnalyticsODataDefaults.EntitySetPath</MudText>
                             </MudPaper>
 
                             <MudStack Row="true" Spacing="2" Class="mt-2">
@@ -903,7 +903,7 @@
                 timeoutSeconds = 30,
                 apiVersion = "7.0",
                 analyticsODataBaseUrl = GetDerivedAnalyticsODataBaseUrl(),
-                analyticsODataEntitySetPath = "WorkItemRevisions"
+                analyticsODataEntitySetPath = AnalyticsODataDefaults.EntitySetPath
             };
 
             var request = new HttpRequestMessage(HttpMethod.Post, "/api/tfsconfig/save-and-verify")
@@ -985,14 +985,7 @@
 
     private string GetDerivedAnalyticsODataBaseUrl()
     {
-        var trimmedUrl = _url.Trim().TrimEnd('/');
-        var trimmedProject = _project.Trim();
-        if (string.IsNullOrWhiteSpace(trimmedUrl) || string.IsNullOrWhiteSpace(trimmedProject))
-        {
-            return string.Empty;
-        }
-
-        return $"{trimmedUrl}/{Uri.EscapeDataString(trimmedProject)}/_odata/v3.0-preview";
+        return AnalyticsODataDefaults.BuildBaseUrl(_url, _project);
     }
 
     private List<TfsConfigProgressUpdate> GetFilteredProgressUpdates()

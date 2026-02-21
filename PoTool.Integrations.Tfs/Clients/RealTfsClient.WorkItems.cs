@@ -212,14 +212,7 @@ public partial class RealTfsClient
             return config.AnalyticsODataBaseUrl.Trim();
         }
 
-        var trimmedUrl = config.Url.Trim().TrimEnd('/');
-        var trimmedProject = config.Project.Trim();
-        if (string.IsNullOrWhiteSpace(trimmedUrl) || string.IsNullOrWhiteSpace(trimmedProject))
-        {
-            return string.Empty;
-        }
-
-        return $"{trimmedUrl}/{Uri.EscapeDataString(trimmedProject)}/_odata/v3.0-preview";
+        return AnalyticsODataDefaults.BuildBaseUrl(config.Url, config.Project);
     }
 
     public async Task<WorkItemDto?> GetWorkItemByIdAsync(int workItemId, CancellationToken cancellationToken = default)

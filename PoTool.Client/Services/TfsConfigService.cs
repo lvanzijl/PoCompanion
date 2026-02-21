@@ -1,4 +1,5 @@
 using PoTool.Client.ApiClient;
+using PoTool.Shared.Settings;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -195,6 +196,6 @@ public class TfsConfigDto
     public int TimeoutSeconds { get; set; } = 30;
     public string ApiVersion { get; set; } = "7.0";
     public string AnalyticsODataBaseUrl { get; set; } = string.Empty;
-    public string AnalyticsODataEntitySetPath { get; set; } = "WorkItemRevisions";
+    public string AnalyticsODataEntitySetPath { get; set; } = AnalyticsODataDefaults.EntitySetPath;
     public DateTimeOffset? LastValidated { get; set; }
 }

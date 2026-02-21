@@ -41,7 +41,7 @@ public class TfsConfigEntity
     /// Analytics OData entity-set path (for example: WorkItemRevisions).
     /// </summary>
     [MaxLength(256)]
-    public string AnalyticsODataEntitySetPath { get; set; } = "WorkItemRevisions";
+    public string AnalyticsODataEntitySetPath { get; set; } = AnalyticsODataDefaults.EntitySetPath;
 
     /// <summary>
     /// Default Area Path for work item queries.
