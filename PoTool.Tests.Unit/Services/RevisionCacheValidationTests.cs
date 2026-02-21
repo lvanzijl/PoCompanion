@@ -131,6 +131,46 @@ public class RevisionCacheValidationTests
         Assert.IsNull(state["Microsoft.VSTS.Common.Severity"]);
     }
 
+    [TestMethod]
+    [Description("BuildReplayedStateFromRevisions starts from empty and applies revisions in order")]
+    public void BuildReplayedStateFromRevisions_AppliesRevisionsInOrder()
+    {
+        var revisions = new List<RevisionHeaderEntity>
+        {
+            new()
+            {
+                WorkItemId = 42,
+                RevisionNumber = 1,
+                WorkItemType = "Bug",
+                Title = "Initial title",
+                State = "New",
+                IterationPath = @"Project\Sprint 1",
+                AreaPath = @"Project\Team A",
+                ChangedDate = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                Effort = 3
+            },
+            new()
+            {
+                WorkItemId = 42,
+                RevisionNumber = 2,
+                WorkItemType = "Bug",
+                Title = "Updated title",
+                State = "Active",
+                IterationPath = @"Project\Sprint 2",
+                AreaPath = @"Project\Team A",
+                ChangedDate = new DateTimeOffset(2025, 1, 2, 0, 0, 0, TimeSpan.Zero),
+                Effort = null
+            }
+        };
+
+        var state = CacheManagementService.BuildReplayedStateFromRevisions(revisions);
+
+        Assert.AreEqual("Updated title", state["System.Title"]);
+        Assert.AreEqual("Active", state["System.State"]);
+        Assert.AreEqual(@"Project\Sprint 2", state["System.IterationPath"]);
+        Assert.IsNull(state["Microsoft.VSTS.Scheduling.Effort"]);
+    }
+
     #endregion
 
     #region BuildCachedWorkItemState Tests
