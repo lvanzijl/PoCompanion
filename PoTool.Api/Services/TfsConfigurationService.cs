@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
-using PoTool.Shared.Settings;
 using PoTool.Core.Contracts;
 
 namespace PoTool.Api.Services;
@@ -14,7 +13,6 @@ public sealed class TfsConfig
     public bool UseDefaultCredentials { get; set; } = true;
     public int TimeoutSeconds { get; set; } = 30;
     public string ApiVersion { get; set; } = "7.0";
-    public RevisionSource RevisionSource { get; set; } = RevisionSource.RestReportingRevisions;
     public string AnalyticsODataBaseUrl { get; set; } = string.Empty;
     public string AnalyticsODataEntitySetPath { get; set; } = "WorkItemRevisions";
     public DateTimeOffset? LastValidated { get; set; }
@@ -61,7 +59,6 @@ public class TfsConfigurationService : ITfsConfigurationService
                 UseDefaultCredentials = entity.UseDefaultCredentials,
                 TimeoutSeconds = entity.TimeoutSeconds,
                 ApiVersion = entity.ApiVersion,
-                RevisionSource = entity.RevisionSource,
                 AnalyticsODataBaseUrl = entity.AnalyticsODataBaseUrl,
                 AnalyticsODataEntitySetPath = entity.AnalyticsODataEntitySetPath,
                 LastValidated = entity.LastValidated
@@ -81,7 +78,6 @@ public class TfsConfigurationService : ITfsConfigurationService
         bool useDefaultCredentials = true,
         int timeoutSeconds = 30,
         string apiVersion = "7.0",
-        RevisionSource? revisionSource = null,
         string? analyticsODataBaseUrl = null,
         string? analyticsODataEntitySetPath = null,
         CancellationToken cancellationToken = default)
@@ -105,7 +101,6 @@ public class TfsConfigurationService : ITfsConfigurationService
                     UseDefaultCredentials = useDefaultCredentials,
                     TimeoutSeconds = timeoutSeconds,
                     ApiVersion = apiVersion ?? "7.0",
-                    RevisionSource = revisionSource ?? RevisionSource.RestReportingRevisions,
                     AnalyticsODataBaseUrl = (analyticsODataBaseUrl ?? string.Empty).Trim(),
                     AnalyticsODataEntitySetPath = string.IsNullOrWhiteSpace(analyticsODataEntitySetPath)
                         ? "WorkItemRevisions"
@@ -124,7 +119,6 @@ public class TfsConfigurationService : ITfsConfigurationService
                 existing.UseDefaultCredentials = useDefaultCredentials;
                 existing.TimeoutSeconds = timeoutSeconds;
                 existing.ApiVersion = apiVersion ?? "7.0";
-                existing.RevisionSource = revisionSource ?? existing.RevisionSource;
                 if (analyticsODataBaseUrl != null)
                 {
                     existing.AnalyticsODataBaseUrl = analyticsODataBaseUrl.Trim();

@@ -44,8 +44,6 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         _logger = logger;
     }
 
-    public RevisionSource SourceType => RevisionSource.AnalyticsODataRevisions;
-
     public Task<IReadOnlyList<WorkItemRevision>> GetWorkItemRevisionsAsync(
         int workItemId,
         CancellationToken cancellationToken = default)

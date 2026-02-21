@@ -115,8 +115,7 @@ public class RevisionIngestionService
         {
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
-            var revisionSourceSelector = scope.ServiceProvider.GetRequiredService<IWorkItemRevisionSourceSelector>();
-            var revisionSource = await revisionSourceSelector.GetSourceAsync(productOwnerId, cts.Token);
+            var revisionSource = scope.ServiceProvider.GetRequiredService<IWorkItemRevisionSource>();
             var tfsClient = scope.ServiceProvider.GetRequiredService<ITfsClient>();
             var allowedWorkItemIds = await ResolveAllowedWorkItemIdsForProductOwnerAsync(
                 context,
