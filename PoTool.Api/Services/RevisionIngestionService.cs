@@ -1919,6 +1919,12 @@ public class RevisionIngestionService
                 $"ProductOwner {productOwnerId} has no work items under configured backlog roots.");
         }
 
+        _logger.LogInformation(
+            "Resolved revision ingestion scope for ProductOwner {ProductOwnerId} across {RootCount} roots with {WorkItemCount} unique work items (concatenated scope).",
+            productOwnerId,
+            rootWorkItemIds.Length,
+            allowedWorkItemIds.Count);
+
         return allowedWorkItemIds;
     }
 
