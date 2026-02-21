@@ -20,6 +20,7 @@ internal sealed class ODataRevisionQueryBuilder
         IReadOnlyCollection<int>? scopedWorkItemIds,
         RevisionIngestionPaginationOptions options,
         int top,
+        WorkItemIdRangeSegment? scopeSegment = null,
         bool? quoteDateStrings = null)
     {
         return BuildPageUrl(
@@ -29,6 +30,7 @@ internal sealed class ODataRevisionQueryBuilder
             options,
             top,
             seekCursor: null,
+            scopeSegment,
             quoteDateStrings);
     }
 
@@ -41,6 +43,7 @@ internal sealed class ODataRevisionQueryBuilder
         DateTimeOffset seekChangedDate,
         int seekWorkItemId,
         int seekRevision,
+        WorkItemIdRangeSegment? scopeSegment = null,
         bool? quoteDateStrings = null)
     {
         return BuildPageUrl(
@@ -50,6 +53,7 @@ internal sealed class ODataRevisionQueryBuilder
             options,
             top,
             (seekChangedDate, seekWorkItemId, seekRevision),
+            scopeSegment,
             quoteDateStrings);
     }
 
@@ -60,6 +64,7 @@ internal sealed class ODataRevisionQueryBuilder
         RevisionIngestionPaginationOptions options,
         int top,
         (DateTimeOffset ChangedDate, int WorkItemId, int Revision)? seekCursor,
+        WorkItemIdRangeSegment? scopeSegment,
         bool? quoteDateStrings)
     {
         var baseUrl = config.AnalyticsODataBaseUrl.TrimEnd('/');
@@ -72,7 +77,7 @@ internal sealed class ODataRevisionQueryBuilder
             filters.Add($"{ChangedDateField} ge {FormatDateLiteral(startDateTime.Value, options, quoteDateStrings)}");
         }
 
-        var scopeFilter = BuildScopeFilter(scopedWorkItemIds, options);
+        var scopeFilter = BuildScopeFilter(scopedWorkItemIds, options, scopeSegment);
         if (!string.IsNullOrWhiteSpace(scopeFilter))
         {
             filters.Add(scopeFilter);
@@ -113,8 +118,17 @@ internal sealed class ODataRevisionQueryBuilder
 
     private static string? BuildScopeFilter(
         IReadOnlyCollection<int>? scopedWorkItemIds,
-        RevisionIngestionPaginationOptions options)
+        RevisionIngestionPaginationOptions options,
+        WorkItemIdRangeSegment? scopeSegment)
     {
+        if (scopeSegment is not null)
+        {
+            var segment = scopeSegment.Value;
+            return segment.Start == segment.End
+                ? $"{WorkItemIdField} eq {segment.Start.ToString(CultureInfo.InvariantCulture)}"
+                : $"{WorkItemIdField} ge {segment.Start.ToString(CultureInfo.InvariantCulture)} and {WorkItemIdField} le {segment.End.ToString(CultureInfo.InvariantCulture)}";
+        }
+
         if (options.ODataScopeMode == ODataRevisionScopeMode.None ||
             scopedWorkItemIds == null ||
             scopedWorkItemIds.Count == 0)

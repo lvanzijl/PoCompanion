@@ -101,6 +101,12 @@ try
         .ToList();
 
     var allowedWorkItemIds = workItems.Select(item => item.TfsId).ToHashSet();
+    var scopeSegments = WorkItemIdRangeSegmentBuilder.Build(allowedWorkItemIds);
+    var segmentCount = scopeSegments.Count;
+    var totalSegmentSpan = scopeSegments.Sum(segment => segment.Span);
+    var maxSegmentSpan = scopeSegments.Count == 0 ? 0 : scopeSegments.Max(segment => segment.Span);
+    var segmentsWithZeroScopedRevisions = new HashSet<int>();
+    var pagesWithoutScopedBySegment = new Dictionary<int, int>();
     var revisionStartDateTime = workItems
         .Select(item => item.CreatedDate ?? item.ChangedDate)
         .Min();
@@ -123,6 +129,7 @@ try
 
     do
     {
+        var activeSegmentIndex = ResolveSegmentIndexFromContinuationToken(continuationToken, scopeSegments.Count);
         var page = await revisionSource.GetRevisionsAsync(
             startDateTime: inferredStartDateTime,
             continuationToken: continuationToken,
@@ -138,6 +145,12 @@ try
         if (scopedRevisions.Count == 0)
         {
             pagesWithoutScopedRevisions++;
+            if (activeSegmentIndex >= 0)
+            {
+                segmentsWithZeroScopedRevisions.Add(activeSegmentIndex);
+                pagesWithoutScopedBySegment.TryGetValue(activeSegmentIndex, out var currentSegmentEmptyPages);
+                pagesWithoutScopedBySegment[activeSegmentIndex] = currentSegmentEmptyPages + 1;
+            }
         }
 
         revisions.AddRange(scopedRevisions);
@@ -171,7 +184,11 @@ try
         revisions.Count,
         hierarchyRelations.Count);
     logger.LogInformation(
-        "Revision pagination summary: pages={PageCount}, rawRevisions={RawRevisions}, scopedRevisions={ScopedRevisions}, pagesWithoutScopedRevisions={PagesWithoutScopedRevisions}",
+        "Revision pagination summary: segmentCount={SegmentCount}, totalSpan={TotalSegmentSpan}, maxSegmentSpan={MaxSegmentSpan}, segmentsWithZeroScopedRevisions={SegmentsWithZeroScopedRevisions}, pages={PageCount}, rawRevisions={RawRevisions}, scopedRevisions={ScopedRevisions}, pagesWithoutScopedRevisions={PagesWithoutScopedRevisions}",
+        segmentCount,
+        totalSegmentSpan,
+        maxSegmentSpan,
+        segmentsWithZeroScopedRevisions.Count,
         pageNumber,
         totalRawRevisions,
         revisions.Count,
@@ -182,6 +199,13 @@ try
         logger.LogWarning(
             "Detected {PagesWithoutScopedRevisions} pages without scoped revisions. This can indicate poor root filtering coverage or sparse historical data.",
             pagesWithoutScopedRevisions);
+        foreach (var kvp in pagesWithoutScopedBySegment.OrderBy(entry => entry.Key))
+        {
+            logger.LogDebug(
+                "Segment {SegmentIndex} pagesWithoutScopedRevisions={PagesWithoutScopedRevisions}",
+                kvp.Key,
+                kvp.Value);
+        }
     }
 
     snapshot = new RawModelSnapshot(
@@ -271,6 +295,39 @@ static List<HierarchyRelationSnapshot> ReconstructHierarchy(IEnumerable<WorkItem
     return hierarchy
         .Distinct()
         .ToList();
+}
+
+static int ResolveSegmentIndexFromContinuationToken(string? continuationToken, int segmentCount)
+{
+    if (segmentCount <= 0)
+    {
+        return -1;
+    }
+
+    if (string.IsNullOrWhiteSpace(continuationToken) || !continuationToken.StartsWith("seg:", StringComparison.Ordinal))
+    {
+        return 0;
+    }
+
+    var payload = continuationToken["seg:".Length..];
+    var separator = payload.IndexOf('|');
+    if (separator <= 0)
+    {
+        return 0;
+    }
+
+    var indexSlice = payload[..separator];
+    if (!int.TryParse(indexSlice, NumberStyles.Integer, CultureInfo.InvariantCulture, out var segmentIndex))
+    {
+        return 0;
+    }
+
+    if (segmentIndex < 0 || segmentIndex >= segmentCount)
+    {
+        return 0;
+    }
+
+    return segmentIndex;
 }
 
 internal sealed record ValidatorOptions
