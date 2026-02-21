@@ -631,7 +631,7 @@ public sealed class RevisionIngestionServiceTests
         Assert.IsTrue(result.Success);
         Assert.AreEqual(1, stubClient.ReportingCalls);
         Assert.HasCount(1, stubClient.ScopedWorkItemIdSnapshots);
-        CollectionAssert.IsSubsetOf(new[] { 1, 10, 2, 200 }, stubClient.ScopedWorkItemIdSnapshots[0].ToArray());
+        CollectionAssert.AreEquivalent(new[] { 1, 10, 2, 200 }, stubClient.ScopedWorkItemIdSnapshots[0].ToArray());
     }
 
     private sealed class StubRevisionSource : IWorkItemRevisionSource
