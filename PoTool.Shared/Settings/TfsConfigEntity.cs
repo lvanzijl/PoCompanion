@@ -32,12 +32,7 @@ public class TfsConfigEntity
     public string ApiVersion { get; set; } = "7.0";
 
     /// <summary>
-    /// Configured revision ingestion source.
-    /// </summary>
-    public RevisionSource RevisionSource { get; set; } = RevisionSource.RestReportingRevisions;
-
-    /// <summary>
-    /// Analytics OData base URL (optional; required when RevisionSource is AnalyticsODataRevisions).
+    /// Analytics OData base URL for revision ingestion.
     /// </summary>
     [MaxLength(1024)]
     public string AnalyticsODataBaseUrl { get; set; } = string.Empty;

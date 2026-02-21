@@ -1,5 +1,4 @@
 using PoTool.Client.Services;
-using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -29,7 +28,7 @@ public class OnboardingWizardStateTests
     public void MarkTfsVerified_SetsVerifiedTrue()
     {
         // Act
-        _state.MarkTfsVerified("https://dev.azure.com/org", "Project", RevisionSource.RestReportingRevisions, null);
+        _state.MarkTfsVerified("https://dev.azure.com/org", "Project", null);
 
         // Assert
         Assert.IsTrue(_state.TfsVerified);
@@ -40,7 +39,7 @@ public class OnboardingWizardStateTests
     public void MarkTfsUnverified_SetsVerifiedFalse()
     {
         // Arrange
-        _state.MarkTfsVerified("https://dev.azure.com/org", "Project", RevisionSource.RestReportingRevisions, null);
+        _state.MarkTfsVerified("https://dev.azure.com/org", "Project", null);
 
         // Act
         _state.MarkTfsUnverified();
@@ -56,10 +55,10 @@ public class OnboardingWizardStateTests
         // Arrange
         var url = "https://dev.azure.com/org";
         var project = "Project";
-        _state.MarkTfsVerified(url, project, RevisionSource.RestReportingRevisions, null);
+        _state.MarkTfsVerified(url, project, null);
 
         // Act
-        var unchanged = _state.CheckTfsFieldsUnchanged(url, project, RevisionSource.RestReportingRevisions, null);
+        var unchanged = _state.CheckTfsFieldsUnchanged(url, project, null);
 
         // Assert
         Assert.IsTrue(unchanged);
@@ -70,10 +69,10 @@ public class OnboardingWizardStateTests
     public void CheckTfsFieldsUnchanged_DifferentUrl_ReturnsFalseAndMarksDirty()
     {
         // Arrange
-        _state.MarkTfsVerified("https://dev.azure.com/org", "Project", RevisionSource.RestReportingRevisions, null);
+        _state.MarkTfsVerified("https://dev.azure.com/org", "Project", null);
 
         // Act
-        var unchanged = _state.CheckTfsFieldsUnchanged("https://dev.azure.com/other", "Project", RevisionSource.RestReportingRevisions, null);
+        var unchanged = _state.CheckTfsFieldsUnchanged("https://dev.azure.com/other", "Project", null);
 
         // Assert
         Assert.IsFalse(unchanged);
@@ -84,10 +83,10 @@ public class OnboardingWizardStateTests
     public void CheckTfsFieldsUnchanged_DifferentProject_ReturnsFalseAndMarksDirty()
     {
         // Arrange
-        _state.MarkTfsVerified("https://dev.azure.com/org", "Project", RevisionSource.RestReportingRevisions, null);
+        _state.MarkTfsVerified("https://dev.azure.com/org", "Project", null);
 
         // Act
-        var unchanged = _state.CheckTfsFieldsUnchanged("https://dev.azure.com/org", "OtherProject", RevisionSource.RestReportingRevisions, null);
+        var unchanged = _state.CheckTfsFieldsUnchanged("https://dev.azure.com/org", "OtherProject", null);
 
         // Assert
         Assert.IsFalse(unchanged);
@@ -98,7 +97,7 @@ public class OnboardingWizardStateTests
     public void CheckTfsFieldsUnchanged_NotVerified_ReturnsFalse()
     {
         // Act
-        var unchanged = _state.CheckTfsFieldsUnchanged("https://dev.azure.com/org", "Project", RevisionSource.RestReportingRevisions, null);
+        var unchanged = _state.CheckTfsFieldsUnchanged("https://dev.azure.com/org", "Project", null);
 
         // Assert
         Assert.IsFalse(unchanged);
@@ -108,13 +107,12 @@ public class OnboardingWizardStateTests
     public void CheckTfsFieldsUnchanged_WhitespaceHandling_IgnoresWhitespace()
     {
         // Arrange
-        _state.MarkTfsVerified("https://dev.azure.com/org", "Project", RevisionSource.RestReportingRevisions, null);
+        _state.MarkTfsVerified("https://dev.azure.com/org", "Project", null);
 
         // Act - add trailing/leading whitespace
         var unchanged = _state.CheckTfsFieldsUnchanged(
             " https://dev.azure.com/org ",
             " Project ",
-            RevisionSource.RestReportingRevisions,
             null);
 
         // Assert - should treat as same after trimming
@@ -126,8 +124,8 @@ public class OnboardingWizardStateTests
     public void Reset_ClearsAllState()
     {
         // Arrange
-        _state.MarkTfsVerified("https://dev.azure.com/org", "Project", RevisionSource.RestReportingRevisions, null);
-        _state.CheckTfsFieldsUnchanged("https://dev.azure.com/other", "Project", RevisionSource.RestReportingRevisions, null); // Makes it dirty
+        _state.MarkTfsVerified("https://dev.azure.com/org", "Project", null);
+        _state.CheckTfsFieldsUnchanged("https://dev.azure.com/other", "Project", null); // Makes it dirty
 
         // Act
         _state.Reset();
@@ -145,7 +143,6 @@ public class OnboardingWizardStateTests
         var canProceed = _state.TfsVerified && _state.CheckTfsFieldsUnchanged(
             "https://dev.azure.com/org",
             "TestProject",
-            RevisionSource.RestReportingRevisions,
             null);
         Assert.IsFalse(canProceed);
     }
@@ -158,10 +155,10 @@ public class OnboardingWizardStateTests
         var project = "Project";
 
         // Act - simulate successful save+verify
-        _state.MarkTfsVerified(url, project, RevisionSource.RestReportingRevisions, null);
+        _state.MarkTfsVerified(url, project, null);
 
         // Assert - Next should be enabled
-        var canProceed = _state.TfsVerified && _state.CheckTfsFieldsUnchanged(url, project, RevisionSource.RestReportingRevisions, null);
+        var canProceed = _state.TfsVerified && _state.CheckTfsFieldsUnchanged(url, project, null);
         Assert.IsTrue(canProceed);
     }
 
@@ -171,14 +168,14 @@ public class OnboardingWizardStateTests
         // Arrange
         var url = "https://dev.azure.com/org";
         var project = "Project";
-        _state.MarkTfsVerified(url, project, RevisionSource.RestReportingRevisions, null);
+        _state.MarkTfsVerified(url, project, null);
 
         // Act - simulate user editing URL field
         _state.MarkTfsUnverified();
         var newUrl = "https://dev.azure.com/other";
 
         // Assert - Next should be disabled
-        var canProceed = _state.TfsVerified && _state.CheckTfsFieldsUnchanged(newUrl, project, RevisionSource.RestReportingRevisions, null);
+        var canProceed = _state.TfsVerified && _state.CheckTfsFieldsUnchanged(newUrl, project, null);
         Assert.IsFalse(canProceed);
     }
 
@@ -193,7 +190,7 @@ public class OnboardingWizardStateTests
         _state.MarkTfsUnverified();
 
         // Assert - Next should be disabled
-        var canProceed = _state.TfsVerified && _state.CheckTfsFieldsUnchanged(url, project, RevisionSource.RestReportingRevisions, null);
+        var canProceed = _state.TfsVerified && _state.CheckTfsFieldsUnchanged(url, project, null);
         Assert.IsFalse(canProceed);
     }
 }

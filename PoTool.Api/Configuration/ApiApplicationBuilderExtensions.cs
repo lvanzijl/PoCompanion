@@ -224,7 +224,6 @@ public static class ApiApplicationBuilderExtensions
                 req.UseDefaultCredentials,
                 req.TimeoutSeconds,
                 req.ApiVersion ?? "7.0",
-                req.RevisionSource,
                 req.AnalyticsODataBaseUrl,
                 req.AnalyticsODataEntitySetPath);
             return Results.Ok();
@@ -336,7 +335,6 @@ public static class ApiApplicationBuilderExtensions
                     req.UseDefaultCredentials,
                     req.TimeoutSeconds,
                     req.ApiVersion ?? "7.0",
-                    req.RevisionSource,
                     req.AnalyticsODataBaseUrl,
                     req.AnalyticsODataEntitySetPath,
                     ct);
@@ -464,7 +462,6 @@ public record TfsConfigRequest(
     bool UseDefaultCredentials = true,
     int TimeoutSeconds = 30,
     string? ApiVersion = "7.0",
-    RevisionSource? RevisionSource = null,
     string? AnalyticsODataBaseUrl = null,
     string? AnalyticsODataEntitySetPath = null);
 

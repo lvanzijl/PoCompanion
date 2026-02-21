@@ -1,5 +1,3 @@
-using PoTool.Shared.Settings;
-
 namespace PoTool.Core.Contracts;
 
 /// <summary>
@@ -7,11 +5,6 @@ namespace PoTool.Core.Contracts;
 /// </summary>
 public interface IWorkItemRevisionSource
 {
-    /// <summary>
-    /// Identifies the configured source type.
-    /// </summary>
-    RevisionSource SourceType { get; }
-
     /// <summary>
     /// Retrieves a page of revisions using a source-specific continuation token.
     /// </summary>
@@ -37,18 +30,5 @@ public interface IWorkItemRevisionSource
     /// </summary>
     Task<IReadOnlyList<WorkItemRevision>> GetWorkItemRevisionsAsync(
         int workItemId,
-        CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Resolves the effective revision source according to persisted configuration.
-/// </summary>
-public interface IWorkItemRevisionSourceSelector
-{
-    /// <summary>
-    /// Returns the active revision source for the current configuration context.
-    /// </summary>
-    Task<IWorkItemRevisionSource> GetSourceAsync(
-        int? productOwnerId = null,
         CancellationToken cancellationToken = default);
 }

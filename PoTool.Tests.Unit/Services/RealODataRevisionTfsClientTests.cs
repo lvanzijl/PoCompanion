@@ -614,7 +614,6 @@ public class RealODataRevisionTfsClientTests
             {
                 Url = "https://dev.azure.com/test",
                 TimeoutSeconds = 30,
-                RevisionSource = RevisionSource.AnalyticsODataRevisions,
                 AnalyticsODataBaseUrl = "https://analytics",
                 AnalyticsODataEntitySetPath = "WorkItemRevisions"
             });

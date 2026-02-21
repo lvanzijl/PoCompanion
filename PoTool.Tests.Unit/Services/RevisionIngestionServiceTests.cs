@@ -603,8 +603,6 @@ public sealed class RevisionIngestionServiceTests
             _perItemRevisions = perItemRevisions ?? new Dictionary<int, IReadOnlyList<WorkItemRevision>>();
         }
 
-        public RevisionSource SourceType => RevisionSource.RestReportingRevisions;
-
         public int ReportingCalls { get; private set; }
         public int PerItemCalls { get; private set; }
         public List<DateTimeOffset?> StartDates { get; } = new();
@@ -644,23 +642,6 @@ public sealed class RevisionIngestionServiceTests
             return Task.FromResult((IReadOnlyList<WorkItemRevision>)Array.Empty<WorkItemRevision>());
         }
 
-    }
-
-    private sealed class StubRevisionSourceSelector : IWorkItemRevisionSourceSelector
-    {
-        private readonly IWorkItemRevisionSource _source;
-
-        public StubRevisionSourceSelector(IWorkItemRevisionSource source)
-        {
-            _source = source;
-        }
-
-        public Task<IWorkItemRevisionSource> GetSourceAsync(
-            int? productOwnerId = null,
-            CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(_source);
-        }
     }
 
     private sealed class StubRelationRevisionHydrator : IRelationRevisionHydrator
@@ -797,7 +778,6 @@ public sealed class RevisionIngestionServiceTests
         services.AddSingleton<ITfsClient>(
             CreateTfsClient(backlogRootId, descendantWorkItemIds ?? DefaultDescendantWorkItemIds));
         services.AddSingleton<IWorkItemRevisionSource>(revisionClient);
-        services.AddSingleton<IWorkItemRevisionSourceSelector>(new StubRevisionSourceSelector(revisionClient));
         services.AddSingleton<IRelationRevisionHydrator>(relationHydrator ?? new StubRelationRevisionHydrator());
         services.AddSingleton<RevisionIngestionDiagnostics>();
         services.AddSingleton<TfsRequestThrottler>();

@@ -24,7 +24,6 @@ public interface IOnboardingWizardState
     void MarkTfsVerified(
         string url,
         string project,
-        RevisionSource revisionSource,
         string? analyticsODataBaseUrl);
 
     /// <summary>
@@ -42,7 +41,6 @@ public interface IOnboardingWizardState
     bool CheckTfsFieldsUnchanged(
         string url,
         string project,
-        RevisionSource revisionSource,
         string? analyticsODataBaseUrl);
 
     /// <summary>

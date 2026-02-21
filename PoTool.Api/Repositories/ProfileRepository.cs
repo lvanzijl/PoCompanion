@@ -12,12 +12,10 @@ namespace PoTool.Api.Repositories;
 public class ProfileRepository : IProfileRepository
 {
     private readonly PoToolDbContext _context;
-    private readonly ITfsConfigurationService _tfsConfigurationService;
 
-    public ProfileRepository(PoToolDbContext context, ITfsConfigurationService tfsConfigurationService)
+    public ProfileRepository(PoToolDbContext context)
     {
         _context = context;
-        _tfsConfigurationService = tfsConfigurationService;
     }
 
     /// <inheritdoc />
@@ -48,7 +46,6 @@ public class ProfileRepository : IProfileRepository
         string? customPicturePath = null,
         CancellationToken cancellationToken = default)
     {
-        var config = await _tfsConfigurationService.GetConfigEntityAsync(cancellationToken);
         var entity = new ProfileEntity
         {
             Name = name,
@@ -56,7 +53,6 @@ public class ProfileRepository : IProfileRepository
             PictureType = (int)pictureType,
             DefaultPictureId = defaultPictureId,
             CustomPicturePath = customPicturePath,
-            RevisionSourceOverride = config?.RevisionSource,
             CreatedAt = DateTimeOffset.UtcNow,
             LastModified = DateTimeOffset.UtcNow
         };
