@@ -76,7 +76,26 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var top = Math.Max(1, options.ODataTop);
         var seekTop = Math.Max(1, options.ODataSeekPageSize);
         var quoteDateStrings = options.ODataQuoteDateStrings;
-        var requestContext = ResolveRequestContext(config, startDateTime, continuationToken, scopedWorkItemIds, options, top, quoteDateStrings);
+        var useSegmentedScope = ShouldUseSegmentedScope(scopedWorkItemIds, options);
+        var segments = useSegmentedScope
+            ? WorkItemIdRangeSegmentBuilder.Build(scopedWorkItemIds)
+            : [];
+        if (useSegmentedScope && segments.Count == 0)
+        {
+            _logger.LogInformation("OData segmented scope produced no valid WorkItemId ranges. Returning empty revision page.");
+            return new ReportingRevisionsResult([], continuationToken: null);
+        }
+
+        var segmentState = ResolveSegmentState(continuationToken, segments);
+        var requestContext = ResolveRequestContext(
+            config,
+            startDateTime,
+            segmentState.InnerContinuationToken,
+            scopedWorkItemIds,
+            segmentState.Segment,
+            options,
+            top,
+            quoteDateStrings);
         var pageIndex = requestContext.SeekState?.PageIndex ?? 1;
         var mode = requestContext.Mode;
         var url = requestContext.Url;
@@ -84,8 +103,11 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var scopeCount = scopedWorkItemIds?.Count ?? 0;
         var scopeMin = scopedWorkItemIds is { Count: > 0 } ? scopedWorkItemIds.Min() : (int?)null;
         var scopeMax = scopedWorkItemIds is { Count: > 0 } ? scopedWorkItemIds.Max() : (int?)null;
+        var segmentCount = segments.Count;
+        var totalSegmentSpan = segments.Sum(segment => segment.Span);
+        var maxSegmentSpan = segments.Count == 0 ? 0 : segments.Max(segment => segment.Span);
         _logger.LogInformation(
-            "Requesting OData revisions page. Mode={Mode} PageIndex={PageIndex} Top={Top} SeekTop={SeekTop} QuotedDateStrings={QuotedDateStrings} ScopeCount={ScopeCount} ScopeMin={ScopeMin} ScopeMax={ScopeMax} Filter={Filter}",
+            "Requesting OData revisions page. Mode={Mode} PageIndex={PageIndex} Top={Top} SeekTop={SeekTop} QuotedDateStrings={QuotedDateStrings} ScopeCount={ScopeCount} ScopeMin={ScopeMin} ScopeMax={ScopeMax} SegmentCount={SegmentCount} SegmentIndex={SegmentIndex} SegmentRange={SegmentRange} TotalSegmentSpan={TotalSegmentSpan} MaxSegmentSpan={MaxSegmentSpan} Filter={Filter}",
             mode,
             pageIndex,
             requestContext.Top,
@@ -94,6 +116,11 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             scopeCount,
             scopeMin,
             scopeMax,
+            segmentCount,
+            segmentState.SegmentIndex,
+            segmentState.Segment is null ? "<none>" : $"{segmentState.Segment.Value.Start}-{segmentState.Segment.Value.End}",
+            totalSegmentSpan,
+            maxSegmentSpan,
             TryGetFilterFromUrl(url) ?? "<none>");
         var httpClient = _httpClientFactory.CreateClient("TfsClient.NTLM");
 
@@ -106,7 +133,15 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             {
                 fallbackTriggered = true;
                 quoteDateStrings = !quoteDateStrings;
-                requestContext = ResolveRequestContext(config, startDateTime, continuationToken, scopedWorkItemIds, options, top, quoteDateStrings);
+                requestContext = ResolveRequestContext(
+                    config,
+                    startDateTime,
+                    segmentState.InnerContinuationToken,
+                    scopedWorkItemIds,
+                    segmentState.Segment,
+                    options,
+                    top,
+                    quoteDateStrings);
                 url = requestContext.Url;
                 _logger.LogWarning(
                     "Retrying OData request with alternate date literal format");
@@ -189,6 +224,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
                 maxTuple.Value.ChangedDate,
                 maxTuple.Value.WorkItemId,
                 maxTuple.Value.Revision,
+                segmentState.Segment,
                 quoteDateStrings);
             continuation = EncodeSeekState(new SeekContinuationState(
                 seekPageUrl,
@@ -214,7 +250,9 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             quoteDateStrings,
             fallbackTriggered);
 
-        return new ReportingRevisionsResult(revisions, continuation);
+        return new ReportingRevisionsResult(
+            revisions,
+            BuildSegmentContinuationToken(segments, segmentState.SegmentIndex, continuation));
         }
     }
 
@@ -296,17 +334,18 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
     private RequestContext ResolveRequestContext(
         TfsConfigEntity config,
         DateTimeOffset? startDateTime,
-        string? continuationToken,
+        string? pageContinuationToken,
         IReadOnlyCollection<int>? scopedWorkItemIds,
+        WorkItemIdRangeSegment? scopeSegment,
         RevisionIngestionPaginationOptions options,
         int top,
         bool quoteDateStrings)
     {
-        var normalizedToken = NormalizeToken(continuationToken);
+        var normalizedToken = NormalizeToken(pageContinuationToken);
         if (normalizedToken is null)
         {
             return new RequestContext(
-                _queryBuilder.BuildInitialPageUrl(config, startDateTime, scopedWorkItemIds, options, top, quoteDateStrings),
+                _queryBuilder.BuildInitialPageUrl(config, startDateTime, scopedWorkItemIds, options, top, scopeSegment, quoteDateStrings),
                 RequestMode.Seek,
                 top,
                 null);
@@ -318,6 +357,60 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         }
 
         return new RequestContext(normalizedToken, RequestMode.NextLink, ExtractTopOrFallback(normalizedToken, top), null);
+    }
+
+    private static bool ShouldUseSegmentedScope(
+        IReadOnlyCollection<int>? scopedWorkItemIds,
+        RevisionIngestionPaginationOptions options)
+    {
+        return options.ODataScopeMode == ODataRevisionScopeMode.Range &&
+               scopedWorkItemIds is { Count: > 0 };
+    }
+
+    private static SegmentContinuationState ResolveSegmentState(
+        string? continuationToken,
+        IReadOnlyList<WorkItemIdRangeSegment> segments)
+    {
+        var normalizedToken = NormalizeToken(continuationToken);
+        if (segments.Count == 0)
+        {
+            return new SegmentContinuationState(normalizedToken, null, -1);
+        }
+
+        if (TryDecodeSegmentState(normalizedToken, out var state) &&
+            state is not null &&
+            state.SegmentIndex >= 0 &&
+            state.SegmentIndex < segments.Count)
+        {
+            return new SegmentContinuationState(state.InnerContinuationToken, segments[state.SegmentIndex], state.SegmentIndex);
+        }
+
+        return new SegmentContinuationState(normalizedToken, segments[0], 0);
+    }
+
+    private static string? BuildSegmentContinuationToken(
+        IReadOnlyList<WorkItemIdRangeSegment> segments,
+        int segmentIndex,
+        string? pageContinuationToken)
+    {
+        if (segments.Count <= 1 || segmentIndex < 0)
+        {
+            return NormalizeToken(pageContinuationToken);
+        }
+
+        var normalizedPageToken = NormalizeToken(pageContinuationToken);
+        if (normalizedPageToken is not null)
+        {
+            return EncodeSegmentState(new SegmentContinuationStateToken(segmentIndex, normalizedPageToken));
+        }
+
+        var nextSegmentIndex = segmentIndex + 1;
+        if (nextSegmentIndex < segments.Count)
+        {
+            return EncodeSegmentState(new SegmentContinuationStateToken(nextSegmentIndex, null));
+        }
+
+        return null;
     }
 
     private static bool ShouldRetryWithAlternateDateFormat(string responseBody)
@@ -423,6 +516,13 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             $"seek:{encodedUrl}|{state.PageIndex}|{state.LastCursor.ChangedDate.UtcTicks}|{state.LastCursor.WorkItemId}|{state.LastCursor.Revision}|{state.NoProgressPages}");
     }
 
+    private static string EncodeSegmentState(SegmentContinuationStateToken state)
+    {
+        var encodedInnerToken = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes(state.InnerContinuationToken ?? string.Empty));
+        return string.Create(CultureInfo.InvariantCulture, $"seg:{state.SegmentIndex}|{encodedInnerToken}");
+    }
+
     private static bool TryDecodeSeekState(string token, out SeekContinuationState? state)
     {
         state = null;
@@ -456,6 +556,34 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
                 pageIndex,
                 new RevisionCursorTuple(new DateTimeOffset(changedTicks, TimeSpan.Zero), workItemId, revision),
                 noProgressPages);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool TryDecodeSegmentState(string? token, out SegmentContinuationStateToken? state)
+    {
+        state = null;
+        if (string.IsNullOrWhiteSpace(token) || !token.StartsWith("seg:", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        try
+        {
+            var payload = token["seg:".Length..];
+            var parts = payload.Split('|');
+            if (parts.Length != 2 ||
+                !int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var segmentIndex))
+            {
+                return false;
+            }
+
+            var decodedInnerToken = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(parts[1]));
+            state = new SegmentContinuationStateToken(segmentIndex, NormalizeToken(decodedInnerToken));
             return true;
         }
         catch
@@ -887,6 +1015,8 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
     }
 
     private sealed record RequestContext(string Url, RequestMode Mode, int Top, SeekContinuationState? SeekState);
+    private sealed record SegmentContinuationState(string? InnerContinuationToken, WorkItemIdRangeSegment? Segment, int SegmentIndex);
+    private sealed record SegmentContinuationStateToken(int SegmentIndex, string? InnerContinuationToken);
 
     private readonly record struct RevisionCursorTuple(DateTimeOffset ChangedDate, int WorkItemId, int Revision)
     {

@@ -76,6 +76,98 @@ public class RealODataRevisionTfsClientTests
     }
 
     [TestMethod]
+    public async Task GetRevisionsAsync_WhenScopeHasDisjointRanges_RequestsOneSegmentPerRange()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                { "WorkItemId": 1, "Revision": 1, "ChangedDate": "2026-01-01T00:00:00Z", "Title": "A", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+              ]
+            }
+            """,
+            """
+            {
+              "value": [
+                { "WorkItemId": 10, "Revision": 1, "ChangedDate": "2026-01-02T00:00:00Z", "Title": "B", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+              ]
+            }
+            """
+        ]);
+
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataTop = 200
+        });
+
+        var first = await client.GetRevisionsAsync(scopedWorkItemIds: [1, 2, 3, 10, 11]);
+        var second = await client.GetRevisionsAsync(
+            continuationToken: first.ContinuationToken,
+            scopedWorkItemIds: [1, 2, 3, 10, 11]);
+
+        Assert.IsNotNull(first.ContinuationToken);
+        Assert.IsNull(second.ContinuationToken);
+        Assert.HasCount(2, handler.RequestUris);
+
+        var firstRequest = Uri.UnescapeDataString(handler.RequestUris[0]);
+        var secondRequest = Uri.UnescapeDataString(handler.RequestUris[1]);
+        StringAssert.Contains(firstRequest, "WorkItemId ge 1 and WorkItemId le 3");
+        StringAssert.Contains(secondRequest, "WorkItemId ge 10 and WorkItemId le 11");
+        Assert.IsFalse(firstRequest.Contains("WorkItemId ge 1 and WorkItemId le 11", StringComparison.Ordinal));
+        Assert.IsFalse(secondRequest.Contains("WorkItemId ge 1 and WorkItemId le 11", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenIteratingSegments_ProducesDeterministicNonDuplicatedCombinedStream()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                { "WorkItemId": 1, "Revision": 1, "ChangedDate": "2026-01-01T00:00:00Z", "Title": "A", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+              ]
+            }
+            """,
+            """
+            {
+              "value": [
+                { "WorkItemId": 10, "Revision": 1, "ChangedDate": "2026-01-02T00:00:00Z", "Title": "B", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+              ]
+            }
+            """
+        ]);
+
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range
+        });
+
+        var allRevisions = new List<WorkItemRevision>();
+        string? token = null;
+        do
+        {
+            var page = await client.GetRevisionsAsync(
+                continuationToken: token,
+                scopedWorkItemIds: [1, 2, 3, 10, 11]);
+            allRevisions.AddRange(page.Revisions);
+            token = page.ContinuationToken;
+        }
+        while (token is not null);
+
+        Assert.HasCount(2, allRevisions);
+        CollectionAssert.AreEqual(new[] { 1, 10 }, allRevisions.Select(revision => revision.WorkItemId).ToArray());
+        Assert.AreEqual(
+            2,
+            allRevisions
+                .Select(revision => (revision.WorkItemId, revision.RevisionNumber))
+                .Distinct()
+                .Count());
+    }
+
+    [TestMethod]
     public async Task GetRevisionsAsync_ParsesDotStyleFieldAliases()
     {
         var handler = new QueueMessageHandler(
