@@ -2575,6 +2575,7 @@ public class RevisionIngestionService
             var endUtc = DateTimeOffset.UtcNow;
             var duration = _stopwatch.Elapsed;
             var durationSeconds = Math.Max(duration.TotalSeconds, 0.001d);
+            var safeDurationSeconds = Math.Max(durationSeconds, 0.001d);
             var pagesTotal = PagesTotal;
             var rawTotal = RawRevisionsTotal;
             var scopedTotal = ScopedRevisionsTotal;
@@ -2633,9 +2634,9 @@ public class RevisionIngestionService
                 requestCount,
                 non200Count,
                 totalHttpDurationMs,
-                rawTotal / durationSeconds,
-                scopedTotal / durationSeconds,
-                pagesTotal / durationSeconds,
+                rawTotal / safeDurationSeconds,
+                scopedTotal / safeDurationSeconds,
+                pagesTotal / safeDurationSeconds,
                 StartUtc,
                 endUtc);
         }
@@ -2685,6 +2686,7 @@ public class RevisionIngestionService
             }
 
             var deltaSeconds = Math.Max((nowElapsed - _lastLoggedElapsed).TotalSeconds, 0.001d);
+            var safeDeltaSeconds = Math.Max(deltaSeconds, 0.001d);
             var deltaPages = pages - _lastLoggedPages;
             var deltaRaw = raw - _lastLoggedRaw;
             var segmentLabel = diagnostics.SegmentCount > 0
@@ -2700,8 +2702,8 @@ public class RevisionIngestionService
                 diagnostics.ScopedRevisionsTotal,
                 diagnostics.PagesWithoutScopedRevisionsTotal,
                 nowElapsed,
-                deltaRaw / deltaSeconds,
-                deltaPages / deltaSeconds);
+                deltaRaw / safeDeltaSeconds,
+                deltaPages / safeDeltaSeconds);
 
             _lastLoggedElapsed = nowElapsed;
             _lastLoggedPages = pages;
