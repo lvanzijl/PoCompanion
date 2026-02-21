@@ -590,6 +590,50 @@ public sealed class RevisionIngestionServiceTests
         // and the ingestion completes successfully
     }
 
+    [TestMethod]
+    public async Task IngestRevisionsAsync_WithMultipleProducts_UsesConcatenatedScopeAcrossRoots()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1), CreateRevision(200, 1) }, null)
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        var multiRootWorkItems = CreateHierarchyWorkItems(1, new[] { 10 })
+            .Concat(CreateHierarchyWorkItems(2, new[] { 200 }))
+            .ToList();
+        using var provider = BuildServiceProvider(stubClient, tfsWorkItems: multiRootWorkItems);
+        using (var setupScope = provider.CreateScope())
+        {
+            var context = setupScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+            context.Products.Add(new ProductEntity
+            {
+                ProductOwnerId = 1,
+                Name = "Test Product 2",
+                BacklogRootWorkItemId = 2,
+                CreatedAt = DateTimeOffset.UtcNow,
+                LastModified = DateTimeOffset.UtcNow
+            });
+            await context.SaveChangesAsync();
+        }
+
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual(1, stubClient.ReportingCalls);
+        Assert.HasCount(1, stubClient.ScopedWorkItemIdSnapshots);
+        CollectionAssert.AreEquivalent(new[] { 1, 10, 2, 200 }, stubClient.ScopedWorkItemIdSnapshots[0].ToArray());
+    }
+
     private sealed class StubRevisionSource : IWorkItemRevisionSource
     {
         private readonly Queue<ReportingRevisionsResult> _results;
@@ -606,6 +650,7 @@ public sealed class RevisionIngestionServiceTests
         public int ReportingCalls { get; private set; }
         public int PerItemCalls { get; private set; }
         public List<DateTimeOffset?> StartDates { get; } = new();
+        public List<IReadOnlyCollection<int>> ScopedWorkItemIdSnapshots { get; } = new();
 
         public Task<ReportingRevisionsResult> GetRevisionsAsync(
             DateTimeOffset? startDateTime = null,
@@ -616,6 +661,10 @@ public sealed class RevisionIngestionServiceTests
         {
             ReportingCalls++;
             StartDates.Add(startDateTime);
+            if (scopedWorkItemIds != null)
+            {
+                ScopedWorkItemIdSnapshots.Add(scopedWorkItemIds.ToArray());
+            }
             return Task.FromResult(_results.Dequeue());
         }
 
@@ -761,7 +810,8 @@ public sealed class RevisionIngestionServiceTests
         RevisionIngestionPaginationOptions? paginationOptions = null,
         int backlogRootId = 1,
         IReadOnlyCollection<int>? descendantWorkItemIds = null,
-        StubRelationRevisionHydrator? relationHydrator = null)
+        StubRelationRevisionHydrator? relationHydrator = null,
+        IReadOnlyList<WorkItemDto>? tfsWorkItems = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -776,7 +826,7 @@ public sealed class RevisionIngestionServiceTests
         services.AddSingleton(connection);
         services.AddDbContext<PoToolDbContext>(options => options.UseSqlite(connection));
         services.AddSingleton<ITfsClient>(
-            CreateTfsClient(backlogRootId, descendantWorkItemIds ?? DefaultDescendantWorkItemIds));
+            CreateTfsClient(backlogRootId, descendantWorkItemIds ?? DefaultDescendantWorkItemIds, tfsWorkItems));
         services.AddSingleton<IWorkItemRevisionSource>(revisionClient);
         services.AddSingleton<IRelationRevisionHydrator>(relationHydrator ?? new StubRelationRevisionHydrator());
         services.AddSingleton<RevisionIngestionDiagnostics>();
@@ -818,9 +868,12 @@ public sealed class RevisionIngestionServiceTests
         return provider;
     }
 
-    private static ITfsClient CreateTfsClient(int backlogRootId, IReadOnlyCollection<int> descendantWorkItemIds)
+    private static ITfsClient CreateTfsClient(
+        int backlogRootId,
+        IReadOnlyCollection<int> descendantWorkItemIds,
+        IReadOnlyList<WorkItemDto>? tfsWorkItems = null)
     {
-        var workItems = CreateHierarchyWorkItems(backlogRootId, descendantWorkItemIds);
+        var workItems = tfsWorkItems ?? CreateHierarchyWorkItems(backlogRootId, descendantWorkItemIds);
         var client = new Mock<ITfsClient>();
         client.Setup(tfs => tfs.GetWorkItemsByRootIdsAsync(
                 It.IsAny<int[]>(),
