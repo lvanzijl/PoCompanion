@@ -1,4 +1,5 @@
 using PoTool.Client.ApiClient;
+using PoTool.Shared.Settings;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -56,22 +57,26 @@ public class TfsConfigService
     /// DefaultAreaPath is derived from Project name on the backend.
     /// </summary>
     public virtual async Task SaveConfigAsync(string url, string project, string defaultAreaPath,
-        bool useDefaultCredentials = true, int timeoutSeconds = 30, string apiVersion = "7.0", CancellationToken cancellationToken = default)
+        bool useDefaultCredentials = true, int timeoutSeconds = 30, string apiVersion = "7.0",
+        string? analyticsODataBaseUrl = null, string? analyticsODataEntitySetPath = null,
+        CancellationToken cancellationToken = default)
     {
         // Send config to API
         // Note: defaultAreaPath parameter is kept for backward compatibility but is ignored by backend
         // Backend derives DefaultAreaPath from Project name
-        var request = new TfsConfigRequest
+        var request = new
         {
-            Url = url,
-            Project = project,
-            DefaultAreaPath = project, // Always pass project as default area path (will be derived on backend)
-            UseDefaultCredentials = useDefaultCredentials,
-            TimeoutSeconds = timeoutSeconds,
-            ApiVersion = apiVersion
+            url,
+            project,
+            defaultAreaPath = project, // Always pass project as default area path (will be derived on backend)
+            useDefaultCredentials,
+            timeoutSeconds,
+            apiVersion,
+            analyticsODataBaseUrl,
+            analyticsODataEntitySetPath
         };
-
-        await _apiClient.PostApiTfsconfigAsync(request, cancellationToken);
+        var response = await _httpClient.PostAsJsonAsync("/api/tfsconfig", request, cancellationToken);
+        response.EnsureSuccessStatusCode();
     }
 
     /// <summary>
@@ -191,6 +196,6 @@ public class TfsConfigDto
     public int TimeoutSeconds { get; set; } = 30;
     public string ApiVersion { get; set; } = "7.0";
     public string AnalyticsODataBaseUrl { get; set; } = string.Empty;
-    public string AnalyticsODataEntitySetPath { get; set; } = "WorkItemRevisions";
+    public string AnalyticsODataEntitySetPath { get; set; } = AnalyticsODataDefaults.EntitySetPath;
     public DateTimeOffset? LastValidated { get; set; }
 }

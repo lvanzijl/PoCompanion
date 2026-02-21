@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
 using PoTool.Core.Contracts;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Services;
 
@@ -14,7 +15,7 @@ public sealed class TfsConfig
     public int TimeoutSeconds { get; set; } = 30;
     public string ApiVersion { get; set; } = "7.0";
     public string AnalyticsODataBaseUrl { get; set; } = string.Empty;
-    public string AnalyticsODataEntitySetPath { get; set; } = "WorkItemRevisions";
+    public string AnalyticsODataEntitySetPath { get; set; } = AnalyticsODataDefaults.EntitySetPath;
     public DateTimeOffset? LastValidated { get; set; }
 }
 
@@ -90,6 +91,8 @@ public class TfsConfigurationService : ITfsConfigurationService
 
             // Derive DefaultAreaPath from Project name (canonical root area path)
             var derivedDefaultAreaPath = project ?? string.Empty;
+            var resolvedAnalyticsODataBaseUrl = ResolveAnalyticsODataBaseUrl(url, project, analyticsODataBaseUrl);
+            var resolvedAnalyticsODataEntitySetPath = ResolveAnalyticsODataEntitySetPath(analyticsODataEntitySetPath);
 
             if (existing == null)
             {
@@ -101,10 +104,8 @@ public class TfsConfigurationService : ITfsConfigurationService
                     UseDefaultCredentials = useDefaultCredentials,
                     TimeoutSeconds = timeoutSeconds,
                     ApiVersion = apiVersion ?? "7.0",
-                    AnalyticsODataBaseUrl = (analyticsODataBaseUrl ?? string.Empty).Trim(),
-                    AnalyticsODataEntitySetPath = string.IsNullOrWhiteSpace(analyticsODataEntitySetPath)
-                        ? "WorkItemRevisions"
-                        : analyticsODataEntitySetPath.Trim(),
+                    AnalyticsODataBaseUrl = resolvedAnalyticsODataBaseUrl,
+                    AnalyticsODataEntitySetPath = resolvedAnalyticsODataEntitySetPath,
                     CreatedAt = DateTimeOffset.UtcNow,
                     UpdatedAt = DateTimeOffset.UtcNow
                 };
@@ -119,17 +120,8 @@ public class TfsConfigurationService : ITfsConfigurationService
                 existing.UseDefaultCredentials = useDefaultCredentials;
                 existing.TimeoutSeconds = timeoutSeconds;
                 existing.ApiVersion = apiVersion ?? "7.0";
-                if (analyticsODataBaseUrl != null)
-                {
-                    existing.AnalyticsODataBaseUrl = analyticsODataBaseUrl.Trim();
-                }
-
-                if (analyticsODataEntitySetPath != null)
-                {
-                    existing.AnalyticsODataEntitySetPath = string.IsNullOrWhiteSpace(analyticsODataEntitySetPath)
-                        ? "WorkItemRevisions"
-                        : analyticsODataEntitySetPath.Trim();
-                }
+                existing.AnalyticsODataBaseUrl = resolvedAnalyticsODataBaseUrl;
+                existing.AnalyticsODataEntitySetPath = resolvedAnalyticsODataEntitySetPath;
 
                 existing.UpdatedAt = DateTimeOffset.UtcNow;
                 _db.TfsConfigs.Update(existing);
@@ -140,6 +132,21 @@ public class TfsConfigurationService : ITfsConfigurationService
                 url, project, derivedDefaultAreaPath);
         }, cancellationToken);
     }
+
+    private static string ResolveAnalyticsODataBaseUrl(string? url, string? project, string? analyticsODataBaseUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(analyticsODataBaseUrl))
+        {
+            return analyticsODataBaseUrl.Trim();
+        }
+
+        return AnalyticsODataDefaults.BuildBaseUrl(url, project);
+    }
+
+    private static string ResolveAnalyticsODataEntitySetPath(string? analyticsODataEntitySetPath)
+        => string.IsNullOrWhiteSpace(analyticsODataEntitySetPath)
+            ? AnalyticsODataDefaults.EntitySetPath
+            : analyticsODataEntitySetPath.Trim();
 
     public async Task<TfsConfigEntity?> GetConfigEntityAsync(CancellationToken cancellationToken = default)
     {

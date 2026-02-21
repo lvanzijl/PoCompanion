@@ -1,4 +1,5 @@
 @using PoTool.Client.Services
+@using PoTool.Shared.Settings
 @inject TfsConfigService TfsConfigService
 @inject ISnackbar Snackbar
 
@@ -35,6 +36,20 @@
                           Label="Default Area Path"
                           Placeholder="e.g., ProjectName\Team A"
                           HelperText="The area path used for work item queries"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+
+            <MudTextField @bind-Value="_model.AnalyticsODataBaseUrl"
+                          Label="Analytics OData Base URL"
+                          Placeholder="https://server/tfs/Collection/Project/_odata/v3.0-preview"
+                          HelperText="Leave empty to auto-derive from URL + project."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+
+            <MudTextField @bind-Value="_model.AnalyticsODataEntitySetPath"
+                          Label="Analytics entity-set path"
+                          Placeholder="WorkItemRevisions"
+                          HelperText="Default is WorkItemRevisions."
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense" />
 
@@ -88,6 +103,8 @@
                 _model.Url = config.Url ?? string.Empty;
                 _model.Project = config.Project ?? string.Empty;
                 _model.DefaultAreaPath = config.DefaultAreaPath ?? string.Empty;
+                _model.AnalyticsODataBaseUrl = config.AnalyticsODataBaseUrl ?? string.Empty;
+                _model.AnalyticsODataEntitySetPath = config.AnalyticsODataEntitySetPath ?? AnalyticsODataDefaults.EntitySetPath;
             }
         }
         catch (Exception ex)
@@ -103,7 +120,12 @@
         _statusClass = "status-info";
         try
         {
-            await TfsConfigService.SaveConfigAsync(_model.Url, _model.Project, _model.DefaultAreaPath);
+            await TfsConfigService.SaveConfigAsync(
+                _model.Url,
+                _model.Project,
+                _model.DefaultAreaPath,
+                analyticsODataBaseUrl: _model.AnalyticsODataBaseUrl,
+                analyticsODataEntitySetPath: _model.AnalyticsODataEntitySetPath);
             _statusMessage = "Saved successfully";
             _statusClass = "status-success";
             Snackbar.Add("Configuration saved successfully", Severity.Success);
@@ -160,5 +182,7 @@
         public string Url { get; set; } = string.Empty;
         public string Project { get; set; } = string.Empty;
         public string DefaultAreaPath { get; set; } = string.Empty;
+        public string? AnalyticsODataBaseUrl { get; set; }
+        public string? AnalyticsODataEntitySetPath { get; set; } = AnalyticsODataDefaults.EntitySetPath;
     }
 }
