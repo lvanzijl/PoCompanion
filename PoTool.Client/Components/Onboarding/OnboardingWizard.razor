@@ -104,26 +104,11 @@
                                 <strong>Authentication:</strong> Uses Windows credentials (NTLM) of the current user. No additional configuration required.
                             </MudAlert>
 
-                            <CompactTextField Value="@_analyticsODataBaseUrl"
-                                         ValueChanged="@(async (string value) => await OnAnalyticsODataBaseUrlChanged(value))"
-                                         Label="Analytics OData Base URL"
-                                         Placeholder="https://server/tfs/Collection/Project/_odata/v3.0-preview"
-                                         Required="true"
-                                         Immediate="true"
-                                         HelperText="Required." />
-
-                            <CompactTextField Value="@_analyticsODataEntitySetPath"
-                                         ValueChanged="@((string value) => OnAnalyticsODataEntitySetPathChanged(value))"
-                                         Label="Analytics entity-set path"
-                                         Placeholder="WorkItemRevisions"
-                                         Immediate="true"
-                                         HelperText="Optional. Default is WorkItemRevisions." />
-
                             <MudPaper Elevation="0" Class="pa-2">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary"><strong>Effective configuration summary</strong></MudText>
                                 <MudText Typo="Typo.body2">Revision source: Analytics OData revisions</MudText>
-                                <MudText Typo="Typo.body2">Analytics OData base URL: @GetConfigSummaryValue(_analyticsODataBaseUrl)</MudText>
-                                <MudText Typo="Typo.body2">Analytics entity set: @GetConfigSummaryValue(_analyticsODataEntitySetPath)</MudText>
+                                <MudText Typo="Typo.body2">Analytics OData base URL: @GetConfigSummaryValue(GetDerivedAnalyticsODataBaseUrl())</MudText>
+                                <MudText Typo="Typo.body2">Analytics entity set: WorkItemRevisions</MudText>
                             </MudPaper>
 
                             <MudStack Row="true" Spacing="2" Class="mt-2">
@@ -608,8 +593,6 @@
     private bool _isSaving;
     private string _url = string.Empty;
     private string _project = string.Empty;
-    private string _analyticsODataBaseUrl = string.Empty;
-    private string _analyticsODataEntitySetPath = "WorkItemRevisions";
     private bool _isLoadingProjects;
     private List<TfsProjectDto>? _tfsProjects;
     private TfsProjectDto? _selectedProject;
@@ -724,10 +707,6 @@
             {
                 _url = config.Url ?? string.Empty;
                 _project = config.Project ?? string.Empty;
-                _analyticsODataBaseUrl = config.AnalyticsODataBaseUrl ?? string.Empty;
-                _analyticsODataEntitySetPath = string.IsNullOrWhiteSpace(config.AnalyticsODataEntitySetPath)
-                    ? "WorkItemRevisions"
-                    : config.AnalyticsODataEntitySetPath;
                 // DefaultAreaPath is now derived from Project, no need to load it
             }
         }
@@ -766,7 +745,7 @@
         // For step 0 (TFS Configuration), require verification and no changes
         if (_currentStep == 0)
         {
-            return !WizardState.TfsVerified || !WizardState.CheckTfsFieldsUnchanged(_url, _project, _analyticsODataBaseUrl);
+            return !WizardState.TfsVerified || !WizardState.CheckTfsFieldsUnchanged(_url, _project, GetDerivedAnalyticsODataBaseUrl());
         }
         return false;
     }
@@ -819,34 +798,9 @@
         StateHasChanged();
     }
 
-    private async Task OnAnalyticsODataBaseUrlChanged(string value)
-    {
-        _analyticsODataBaseUrl = value;
-        WizardState.MarkTfsUnverified();
-
-        if (_configForm != null)
-        {
-            await _configForm.Validate();
-        }
-
-        StateHasChanged();
-    }
-
-    private void OnAnalyticsODataEntitySetPathChanged(string value)
-    {
-        _analyticsODataEntitySetPath = value;
-        WizardState.MarkTfsUnverified();
-        StateHasChanged();
-    }
-
     private bool CanSaveConfiguration()
     {
-        if (!_configFormValid)
-        {
-            return false;
-        }
-
-        return !string.IsNullOrWhiteSpace(_analyticsODataBaseUrl);
+        return _configFormValid;
     }
 
     private async Task LoadTfsProjects(string organizationUrl)
@@ -929,11 +883,6 @@
     {
         if (!CanSaveConfiguration())
         {
-            if (string.IsNullOrWhiteSpace(_analyticsODataBaseUrl))
-            {
-                Snackbar.Add("Analytics OData base URL is required.", Severity.Error);
-            }
-
             return;
         }
 
@@ -953,10 +902,8 @@
                 useDefaultCredentials = true,
                 timeoutSeconds = 30,
                 apiVersion = "7.0",
-                analyticsODataBaseUrl = _analyticsODataBaseUrl,
-                analyticsODataEntitySetPath = string.IsNullOrWhiteSpace(_analyticsODataEntitySetPath)
-                    ? "WorkItemRevisions"
-                    : _analyticsODataEntitySetPath
+                analyticsODataBaseUrl = GetDerivedAnalyticsODataBaseUrl(),
+                analyticsODataEntitySetPath = "WorkItemRevisions"
             };
 
             var request = new HttpRequestMessage(HttpMethod.Post, "/api/tfsconfig/save-and-verify")
@@ -998,7 +945,7 @@
             
             if (_configCompleted == true)
             {
-                WizardState.MarkTfsVerified(_url, _project, _analyticsODataBaseUrl);
+                WizardState.MarkTfsVerified(_url, _project, GetDerivedAnalyticsODataBaseUrl());
                 Snackbar.Add("Configuration saved and verified successfully", Severity.Success);
             }
             else
@@ -1034,6 +981,18 @@
     private static string GetConfigSummaryValue(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? "(not set)" : value;
+    }
+
+    private string GetDerivedAnalyticsODataBaseUrl()
+    {
+        var trimmedUrl = _url.Trim().TrimEnd('/');
+        var trimmedProject = _project.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedUrl) || string.IsNullOrWhiteSpace(trimmedProject))
+        {
+            return string.Empty;
+        }
+
+        return $"{trimmedUrl}/{Uri.EscapeDataString(trimmedProject)}/_odata/v3.0-preview";
     }
 
     private List<TfsConfigProgressUpdate> GetFilteredProgressUpdates()

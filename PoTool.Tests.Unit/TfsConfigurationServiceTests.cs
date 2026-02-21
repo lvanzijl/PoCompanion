@@ -157,6 +157,37 @@ public class TfsConfigurationServiceTests
     }
 
     [TestMethod]
+    public async Task SaveConfigAsync_WithoutAnalyticsSettings_DerivesAnalyticsDefaults()
+    {
+        // Act
+        await _service.SaveConfigAsync("https://dev.azure.com/myorg", "My Project", "TestProject\\Team");
+
+        // Assert
+        var entity = await _service.GetConfigEntityAsync();
+        Assert.IsNotNull(entity);
+        Assert.AreEqual("https://dev.azure.com/myorg/My%20Project/_odata/v3.0-preview", entity.AnalyticsODataBaseUrl);
+        Assert.AreEqual("WorkItemRevisions", entity.AnalyticsODataEntitySetPath);
+    }
+
+    [TestMethod]
+    public async Task SaveConfigAsync_WithExplicitAnalyticsBaseUrl_PreservesOverride()
+    {
+        // Act
+        await _service.SaveConfigAsync(
+            "https://dev.azure.com/myorg",
+            "MyProject",
+            "TestProject\\Team",
+            analyticsODataBaseUrl: "https://custom/odata",
+            analyticsODataEntitySetPath: "CustomEntitySet");
+
+        // Assert
+        var entity = await _service.GetConfigEntityAsync();
+        Assert.IsNotNull(entity);
+        Assert.AreEqual("https://custom/odata", entity.AnalyticsODataBaseUrl);
+        Assert.AreEqual("CustomEntitySet", entity.AnalyticsODataEntitySetPath);
+    }
+
+    [TestMethod]
     public async Task GetConfigEntityAsync_ReturnsLatestConfig_WhenMultipleExist()
     {
         // Arrange

@@ -38,6 +38,20 @@
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense" />
 
+            <MudTextField @bind-Value="_model.AnalyticsODataBaseUrl"
+                          Label="Analytics OData Base URL"
+                          Placeholder="https://server/tfs/Collection/Project/_odata/v3.0-preview"
+                          HelperText="Leave empty to auto-derive from URL + project."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+
+            <MudTextField @bind-Value="_model.AnalyticsODataEntitySetPath"
+                          Label="Analytics entity-set path"
+                          Placeholder="WorkItemRevisions"
+                          HelperText="Default is WorkItemRevisions."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+
             <MudAlert Severity="Severity.Info" Dense="true">
                 <strong>Authentication:</strong> Uses Windows credentials (NTLM) of the current user.
             </MudAlert>
@@ -88,6 +102,8 @@
                 _model.Url = config.Url ?? string.Empty;
                 _model.Project = config.Project ?? string.Empty;
                 _model.DefaultAreaPath = config.DefaultAreaPath ?? string.Empty;
+                _model.AnalyticsODataBaseUrl = config.AnalyticsODataBaseUrl ?? string.Empty;
+                _model.AnalyticsODataEntitySetPath = config.AnalyticsODataEntitySetPath ?? "WorkItemRevisions";
             }
         }
         catch (Exception ex)
@@ -103,7 +119,12 @@
         _statusClass = "status-info";
         try
         {
-            await TfsConfigService.SaveConfigAsync(_model.Url, _model.Project, _model.DefaultAreaPath);
+            await TfsConfigService.SaveConfigAsync(
+                _model.Url,
+                _model.Project,
+                _model.DefaultAreaPath,
+                analyticsODataBaseUrl: _model.AnalyticsODataBaseUrl,
+                analyticsODataEntitySetPath: _model.AnalyticsODataEntitySetPath);
             _statusMessage = "Saved successfully";
             _statusClass = "status-success";
             Snackbar.Add("Configuration saved successfully", Severity.Success);
@@ -160,5 +181,7 @@
         public string Url { get; set; } = string.Empty;
         public string Project { get; set; } = string.Empty;
         public string DefaultAreaPath { get; set; } = string.Empty;
+        public string? AnalyticsODataBaseUrl { get; set; }
+        public string? AnalyticsODataEntitySetPath { get; set; } = "WorkItemRevisions";
     }
 }

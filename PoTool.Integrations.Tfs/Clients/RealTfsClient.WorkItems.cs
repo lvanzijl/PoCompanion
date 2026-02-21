@@ -73,6 +73,28 @@ public partial class RealTfsClient
             var confirmedProjectName = doc.RootElement.GetProperty("name").GetString();
             _logger.LogInformation("Project validated: {ProjectName}", confirmedProjectName);
 
+            // Step 3: Validate Analytics OData availability via metadata endpoint
+            var analyticsODataBaseUrl = ResolveAnalyticsODataBaseUrl(entity);
+            if (string.IsNullOrWhiteSpace(analyticsODataBaseUrl))
+            {
+                _logger.LogError("Analytics OData base URL could not be derived from the current TFS configuration");
+                return false;
+            }
+
+            var analyticsMetadataUrl = $"{analyticsODataBaseUrl.TrimEnd('/')}/$metadata";
+            _logger.LogInformation("Validating Analytics OData metadata endpoint: GET {Url}", analyticsMetadataUrl);
+            var analyticsResponse = await SendGetAsync(httpClient, entity, analyticsMetadataUrl, cancellationToken, handleErrors: false);
+
+            if (!analyticsResponse.IsSuccessStatusCode)
+            {
+                var analyticsErrorBody = await analyticsResponse.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError(
+                    "Analytics OData metadata validation failed: HTTP {StatusCode}, Response: {ErrorBody}",
+                    analyticsResponse.StatusCode,
+                    analyticsErrorBody);
+                return false;
+            }
+
             // Update last validated timestamp
             entity.LastValidated = DateTimeOffset.UtcNow;
             await _configService.SaveConfigEntityAsync(entity, cancellationToken);
@@ -181,6 +203,23 @@ public partial class RealTfsClient
                 }
             }
         }
+    }
+
+    private static string ResolveAnalyticsODataBaseUrl(TfsConfigEntity config)
+    {
+        if (!string.IsNullOrWhiteSpace(config.AnalyticsODataBaseUrl))
+        {
+            return config.AnalyticsODataBaseUrl.Trim();
+        }
+
+        var trimmedUrl = config.Url.Trim().TrimEnd('/');
+        var trimmedProject = config.Project.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedUrl) || string.IsNullOrWhiteSpace(trimmedProject))
+        {
+            return string.Empty;
+        }
+
+        return $"{trimmedUrl}/{Uri.EscapeDataString(trimmedProject)}/_odata/v3.0-preview";
     }
 
     public async Task<WorkItemDto?> GetWorkItemByIdAsync(int workItemId, CancellationToken cancellationToken = default)
