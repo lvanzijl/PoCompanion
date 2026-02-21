@@ -106,7 +106,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var segmentCount = segments.Count;
         var totalSegmentSpan = segments.Sum(segment => segment.Span);
         var maxSegmentSpan = segments.Count == 0 ? 0 : segments.Max(segment => segment.Span);
-        _logger.LogInformation(
+        _logger.LogDebug(
             "Requesting OData revisions page. Mode={Mode} PageIndex={PageIndex} Top={Top} SeekTop={SeekTop} QuotedDateStrings={QuotedDateStrings} ScopeCount={ScopeCount} ScopeMin={ScopeMin} ScopeMax={ScopeMax} SegmentCount={SegmentCount} SegmentIndex={SegmentIndex} SegmentRange={SegmentRange} TotalSegmentSpan={TotalSegmentSpan} MaxSegmentSpan={MaxSegmentSpan} Filter={Filter}",
             mode,
             pageIndex,
@@ -185,7 +185,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var maxChangedDate = revisions.Count > 0 ? revisions.Max(revision => revision.ChangedDate) : (DateTimeOffset?)null;
         RevisionCursorTuple? maxTuple = TryGetMaxTuple(revisions, out var tuple) ? tuple : null;
 
-        _logger.LogInformation(
+        _logger.LogDebug(
             "OData revisions page loaded. Mode={Mode} PageIndex={PageIndex} RequestedUrl={RequestedUrl} Count={Count} MinChangedDate={MinChangedDate} MaxChangedDate={MaxChangedDate} MaxTuple={MaxTuple} HasNextLink={HasNextLink}",
             mode,
             pageIndex,
@@ -242,7 +242,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             stopReason = "ShortPage";
         }
 
-        _logger.LogInformation(
+        _logger.LogDebug(
             "OData revisions request summary. TotalPages=1 TotalRows={TotalRows} StopReason={StopReason} Filter={Filter} QuotedDateStrings={QuotedDateStrings} FallbackTriggered={FallbackTriggered}",
             revisions.Count,
             stopReason,
@@ -612,7 +612,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             else if (warningCount < MaxWarningLogs)
             {
                 warningCount++;
-                _logger.LogWarning("Skipping malformed OData revision row.");
+                _logger.LogDebug("Skipping malformed OData revision row.");
             }
         }
 

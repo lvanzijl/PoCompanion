@@ -44,6 +44,9 @@ public class RevisionIngestionService
     private static readonly TimeSpan MaximumWindowDuration = TimeSpan.FromDays(120);
     private static readonly TimeSpan PreferredMinimumWindowDuration = TimeSpan.FromDays(1);
     private static readonly TimeSpan MinimumWindowDuration = TimeSpan.FromHours(6);
+    private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(60);
+    private const int HeartbeatPageInterval = 100;
+    private const int CappedWarningLimit = 10;
 
     private sealed record WorkItemDateSnapshot(
         int TfsId,
@@ -103,6 +106,10 @@ public class RevisionIngestionService
 
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _activeIngestions[productOwnerId] = cts;
+        RevisionIngestionRunDiagnostics? runDiagnostics = null;
+        var runSucceeded = false;
+        string? failureStage = null;
+        string? failureCause = null;
 
         try
         {
@@ -116,6 +123,16 @@ public class RevisionIngestionService
                 tfsClient,
                 productOwnerId,
                 cts.Token);
+            runDiagnostics = RevisionIngestionRunDiagnostics.Create(
+                productOwnerId,
+                allowedWorkItemIds,
+                _paginationOptions.CurrentValue,
+                CappedWarningLimit);
+            var heartbeat = new IngestionHeartbeat(
+                _logger,
+                runDiagnostics.RunId,
+                HeartbeatInterval,
+                HeartbeatPageInterval);
             var diagnosticState = new RevisionIngestionDiagnosticState();
             var dbSnapshotStart = await CaptureRevisionDatabaseSnapshotAsync(context, cts.Token);
             LogDatabaseSnapshot("Start", dbSnapshotStart);
@@ -204,6 +221,8 @@ public class RevisionIngestionService
                 backfillEndUtc,
                 paginationOptions,
                 runContext,
+                runDiagnostics,
+                heartbeat,
                 diagnosticState,
                 progressCallback,
                 cts.Token);
@@ -296,6 +315,8 @@ public class RevisionIngestionService
                         DateTimeOffset.UtcNow,
                         paginationOptions,
                         runContext,
+                        runDiagnostics,
+                        heartbeat,
                         diagnosticState,
                         progressCallback,
                         cts.Token);
@@ -492,6 +513,12 @@ public class RevisionIngestionService
                     : termination != null
                         ? $"Ingestion terminated early after {totalRevisions} revisions: {termination.Message}"
                         : errorMessage ?? $"Ingestion ended with outcome {runOutcome} after {totalRevisions} revisions";
+            runSucceeded = success;
+            if (!success)
+            {
+                failureStage = "RunOutcome";
+                failureCause = errorMessage ?? finalMessage;
+            }
 
             return new RevisionIngestionResult
             {
@@ -515,6 +542,8 @@ public class RevisionIngestionService
         }
         catch (OperationCanceledException)
         {
+            failureStage = "Cancelled";
+            failureCause = "Operation cancelled.";
             _logger.LogInformation("Revision ingestion cancelled for ProductOwner {ProductOwnerId}", productOwnerId);
             return new RevisionIngestionResult
             {
@@ -526,6 +555,8 @@ public class RevisionIngestionService
         }
         catch (Exception ex)
         {
+            failureStage = "UnhandledException";
+            failureCause = ex.Message;
             _logger.LogError(ex, "Revision ingestion failed for ProductOwner {ProductOwnerId}", productOwnerId);
 
             // Record error in watermark
@@ -558,6 +589,7 @@ public class RevisionIngestionService
         }
         finally
         {
+            runDiagnostics?.LogRunEnd(_logger, runSucceeded, failureStage, failureCause);
             _activeIngestions.TryRemove(productOwnerId, out _);
             semaphore.Release();
         }
@@ -929,6 +961,8 @@ public class RevisionIngestionService
         DateTimeOffset backfillEndUtc,
         RevisionIngestionPaginationOptions paginationOptions,
         RevisionIngestionRunContext runContext,
+        RevisionIngestionRunDiagnostics runDiagnostics,
+        IngestionHeartbeat heartbeat,
         RevisionIngestionDiagnosticState diagnosticState,
         Action<RevisionIngestionProgress>? progressCallback,
         CancellationToken cancellationToken)
@@ -983,6 +1017,8 @@ public class RevisionIngestionService
                 allowedWorkItemIds,
                 paginationOptions,
                 runContext,
+                runDiagnostics,
+                heartbeat,
                 diagnosticState,
                 progressCallback,
                 totalPersisted,
@@ -1041,6 +1077,7 @@ public class RevisionIngestionService
             }
 
             LogWindowOutcome(window, windowResult);
+            heartbeat.LogProgress(runDiagnostics, forced: true, cancellationToken: cancellationToken);
 
             if (windowQueue.Count == 0)
             {
@@ -1112,6 +1149,8 @@ public class RevisionIngestionService
         HashSet<int> allowedWorkItemIds,
         RevisionIngestionPaginationOptions paginationOptions,
         RevisionIngestionRunContext runContext,
+        RevisionIngestionRunDiagnostics runDiagnostics,
+        IngestionHeartbeat heartbeat,
         RevisionIngestionDiagnosticState diagnosticState,
         Action<RevisionIngestionProgress>? progressCallback,
         int totalPersistedBeforeWindow,
@@ -1135,11 +1174,11 @@ public class RevisionIngestionService
         DateTimeOffset? maxChangedDate = null;
         string? lastTokenHash = null;
         var retryAttempt = 0;
-        if (_logger.IsEnabled(LogLevel.Information))
+        if (_logger.IsEnabled(LogLevel.Debug))
         {
             var minScopeId = allowedWorkItemIds.Count > 0 ? allowedWorkItemIds.Min() : 0;
             var maxScopeId = allowedWorkItemIds.Count > 0 ? allowedWorkItemIds.Max() : 0;
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Revision ingestion OData scope prepared. ScopeSize={ScopeSize} MinWorkItemId={MinWorkItemId} MaxWorkItemId={MaxWorkItemId}",
                 allowedWorkItemIds.Count,
                 minScopeId,
@@ -1177,6 +1216,7 @@ public class RevisionIngestionService
             var pageWorkItemIds = logPerPageSummary ? new HashSet<int>() : null;
 
             var pageRequestStartTimestamp = Stopwatch.GetTimestamp();
+            var pageSegmentIndex = runDiagnostics.ResolveSegmentIndex(continuationToken);
             ReportingRevisionsResult result;
             try
             {
@@ -1192,6 +1232,7 @@ public class RevisionIngestionService
                 termination = new ReportingRevisionsTermination(
                     ReportingRevisionsTerminationReason.ProgressWithoutData,
                     $"Pagination fetch failed on page {pageIndex}: {ex.Message}");
+                runDiagnostics.RecordAnomaly("fetchFailed", ex.Message);
                 LogEarlyTermination(
                     "FetchFailed",
                     pageIndex,
@@ -1218,6 +1259,12 @@ public class RevisionIngestionService
             var scopedRevisionsPersistedCount = 0;
             var pageContinuationToken = result.ContinuationToken;
             var pageRequestDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(pageRequestStartTimestamp);
+            runDiagnostics.RecordPage(
+                pageSegmentIndex,
+                rawRevisionCount,
+                scopedRevisionCount,
+                pageRequestDurationMs,
+                result.HttpStatusCode);
             var tokenAdvanced = pageTracker.IsTokenAdvanced(pageContinuationToken);
             var tokenTracking = pageTracker.TrackToken(pageContinuationToken);
             var hasMoreResults = result.HasMoreResults;
@@ -1230,7 +1277,7 @@ public class RevisionIngestionService
             {
                 var distinctRawWorkItemIds = result.Revisions.Select(revision => revision.WorkItemId).Distinct().Count();
                 var rawScopedCount = result.Revisions.Count(revision => allowedWorkItemIds.Contains(revision.WorkItemId));
-                _logger.LogInformation(
+                _logger.LogDebug(
                     "Reporting revisions page 1 raw snapshot. RawRevisionCount={RawRevisionCount} DistinctWorkItemCount={DistinctWorkItemCount} MinChangedDateRaw={MinChangedDateRaw} MaxChangedDateRaw={MaxChangedDateRaw} RawScopedWorkItems={RawScopedWorkItems}",
                     rawRevisionCount,
                     distinctRawWorkItemIds,
@@ -1243,10 +1290,13 @@ public class RevisionIngestionService
             if (result.Termination != null)
             {
                 termination = result.Termination;
-                _logger.LogWarning(
-                    "Reporting revisions pagination terminated early. Reason={Reason} Message={Message}",
-                    termination.Reason,
-                    termination.Message);
+                runDiagnostics.LogCappedWarning(
+                    "paginationTermination",
+                    () => _logger.LogWarning(
+                        "Reporting revisions pagination terminated early. Reason={Reason} Message={Message}",
+                        termination.Reason,
+                        termination.Message),
+                    $"{termination.Reason}:{termination.Message}");
             }
 
             if (!scopedFieldDumpLogged && scopedRevisionCount > 0)
@@ -1272,10 +1322,10 @@ public class RevisionIngestionService
             }
 
             var persistDurationMs = logPerPageSummary ? persistMetrics.PersistDurationMs : 0;
-            if (logPerPageSummary && _logger.IsEnabled(LogLevel.Information))
+            if (logPerPageSummary && _logger.IsEnabled(LogLevel.Debug))
             {
                 var memoryMb = GC.GetTotalMemory(false) / (1024d * 1024d);
-                _logger.LogInformation(
+                _logger.LogDebug(
                     "Reporting revisions page summary. WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PageIndex={PageIndex} RawRevisionCount={RawRevisionCount} ScopedRevisionCount={ScopedRevisionCount} DistinctWorkItemCount={DistinctWorkItemCount} PersistedCount={PersistedCount} HasMoreResults={HasMoreResults} ContinuationTokenHash={ContinuationTokenHash} TokenAdvanced={TokenAdvanced} SeenTokenRepeated={SeenTokenRepeated} DurationMs={DurationMs} TotalPersistedWindow={TotalPersistedWindow} TotalPersistedRun={TotalPersistedRun} MinChangedDateRaw={MinChangedDateRaw} MaxChangedDateRaw={MaxChangedDateRaw} MemoryMb={MemoryMb}",
                     window.StartUtc,
                     window.EndUtc,
@@ -1301,14 +1351,14 @@ public class RevisionIngestionService
                 pageWorkItemIds?.Add(revision.WorkItemId);
             }
 
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Persisted {Count} revisions (page {Page}) for window {WindowStart} - {WindowEnd}",
                 scopedRevisionsPersistedCount,
                 pageIndex,
                 window.StartUtc,
                 window.EndUtc);
 
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Revision ingestion page persist. TransactionUsed={TransactionUsed} PersistDurationMs={PersistDurationMs} SaveChangesDurationMs={SaveChangesDurationMs} CommitDurationMs={CommitDurationMs} RevisionHeaderCount={RevisionHeaderCount} FieldDeltaCount={FieldDeltaCount} RelationDeltaCount={RelationDeltaCount}",
                 persistMetrics.TransactionUsed,
                 persistMetrics.PersistDurationMs,
@@ -1324,7 +1374,7 @@ public class RevisionIngestionService
             var otherDrops = Math.Max(0, candidatePersistCount - (scopedRevisionsPersistedCount + duplicatesDropped + missingRequiredDropped + dbConstraintDrops));
             var boundedOutsideWindowCount = Math.Max(0, outsideWindowCount);
 
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Revision ingestion drop accounting. WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PageIndex={PageIndex} RawRevisionCount={RawRevisionCount} ScopedRevisionCount={ScopedRevisionCount} CandidatePersistCount={CandidatePersistCount} PersistedCount={PersistedCount} DropsAlreadyExists={DropsAlreadyExists} DropsOutsideWindow={DropsOutsideWindow} DropsMissingRequiredField={DropsMissingRequiredField} DropsDbConstraint={DropsDbConstraint} DropsOther={DropsOther}",
                 window.StartUtc,
                 window.EndUtc,
@@ -1339,7 +1389,7 @@ public class RevisionIngestionService
                 dbConstraintDrops,
                 otherDrops);
 
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Revision deduplication key WorkItemId+RevisionNumber. RevisionNumberUsed=True ChangedDateUsed=False DuplicatesSkipped={DuplicatesSkipped}",
                 duplicatesDropped);
 
@@ -1416,6 +1466,7 @@ public class RevisionIngestionService
                     dbSlow,
                     memoryBytes);
             }
+            heartbeat.LogProgress(runDiagnostics, forced: false, cancellationToken: cancellationToken);
 
             var paginationAnomaly = termination != null;
             var retryable = termination == null;
@@ -1474,13 +1525,21 @@ public class RevisionIngestionService
                 {
                     var backoff = GetRetryDelay(paginationOptions, retryAttempt);
                     retryAttempt++;
-                    _logger.LogWarning(
-                        "Pagination anomaly detected; retrying page. PageIndex={PageIndex} Attempt={Attempt}/{MaxAttempts} StallReason={StallReason} BackoffMs={BackoffMs}",
-                        pageIndex,
+                    runDiagnostics.RecordRetry(
+                        "Pagination",
                         retryAttempt,
-                        paginationOptions.MaxPageRetries,
-                        stallReason,
-                        backoff.TotalMilliseconds);
+                        backoff.TotalMilliseconds,
+                        pageRequestDurationMs);
+                    runDiagnostics.LogCappedWarning(
+                        "paginationRetry",
+                        () => _logger.LogWarning(
+                            "Pagination anomaly detected; retrying page. PageIndex={PageIndex} Attempt={Attempt}/{MaxAttempts} StallReason={StallReason} BackoffMs={BackoffMs}",
+                            pageIndex,
+                            retryAttempt,
+                            paginationOptions.MaxPageRetries,
+                            stallReason,
+                            backoff.TotalMilliseconds),
+                        $"Page={pageIndex};Stall={stallReason}");
                     pageTracker.RewindPageIndex();
                     pageTracker.RollbackToken(tokenTracking);
                     await Task.Delay(backoff, cancellationToken);
@@ -2283,6 +2342,400 @@ public class RevisionIngestionService
             return (withCreation, withoutCreation);
         }
     }
+
+    private sealed class RevisionIngestionRunDiagnostics
+    {
+        private readonly object _sync = new();
+        private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
+        private readonly Dictionary<string, RetryAggregate> _retryByStage = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, AnomalyAggregate> _anomalyByCategory = new(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<int> _segmentsWithScopedRevisions = new();
+        private long _pagesTotal;
+        private long _rawRevisionsTotal;
+        private long _scopedRevisionsTotal;
+        private long _pagesWithoutScopedRevisionsTotal;
+        private long _httpRequestCount;
+        private long _httpNon200Count;
+        private long _totalHttpDurationMs;
+        private int _lastKnownSegmentIndex = -1;
+
+        private RevisionIngestionRunDiagnostics(
+            Guid runId,
+            DateTimeOffset startUtc,
+            int scopeCount,
+            int? scopeMin,
+            int? scopeMax,
+            int segmentCount,
+            int totalSegmentSpan,
+            int maxSegmentSpan,
+            CappedWarningLogger cappedWarnings)
+        {
+            RunId = runId;
+            StartUtc = startUtc;
+            ScopeCount = scopeCount;
+            ScopeMin = scopeMin;
+            ScopeMax = scopeMax;
+            SegmentCount = segmentCount;
+            TotalSegmentSpan = totalSegmentSpan;
+            MaxSegmentSpan = maxSegmentSpan;
+            CappedWarnings = cappedWarnings;
+        }
+
+        public Guid RunId { get; }
+        public DateTimeOffset StartUtc { get; }
+        public int ScopeCount { get; }
+        public int? ScopeMin { get; }
+        public int? ScopeMax { get; }
+        public int SegmentCount { get; }
+        public int TotalSegmentSpan { get; }
+        public int MaxSegmentSpan { get; }
+        public CappedWarningLogger CappedWarnings { get; }
+        public int PagesTotal => (int)Interlocked.Read(ref _pagesTotal);
+        public int RawRevisionsTotal => (int)Interlocked.Read(ref _rawRevisionsTotal);
+        public int ScopedRevisionsTotal => (int)Interlocked.Read(ref _scopedRevisionsTotal);
+        public int PagesWithoutScopedRevisionsTotal => (int)Interlocked.Read(ref _pagesWithoutScopedRevisionsTotal);
+        public int LastKnownSegmentIndex => Volatile.Read(ref _lastKnownSegmentIndex);
+
+        public static RevisionIngestionRunDiagnostics Create(
+            int productOwnerId,
+            IReadOnlyCollection<int> scopedWorkItemIds,
+            RevisionIngestionPaginationOptions options,
+            int warningLimit)
+        {
+            _ = productOwnerId;
+            var now = DateTimeOffset.UtcNow;
+            var scopeCount = scopedWorkItemIds.Count;
+            var scopeMin = scopeCount > 0 ? scopedWorkItemIds.Min() : (int?)null;
+            var scopeMax = scopeCount > 0 ? scopedWorkItemIds.Max() : (int?)null;
+            var segmentSpans = options.ODataScopeMode == ODataRevisionScopeMode.Range && scopeCount > 0
+                ? BuildSegmentSpans(scopedWorkItemIds)
+                : Array.Empty<int>();
+            var segmentCount = segmentSpans.Length;
+            var totalSegmentSpan = segmentSpans.Sum();
+            var maxSegmentSpan = segmentCount == 0 ? 0 : segmentSpans.Max();
+            return new RevisionIngestionRunDiagnostics(
+                Guid.NewGuid(),
+                now,
+                scopeCount,
+                scopeMin,
+                scopeMax,
+                segmentCount,
+                totalSegmentSpan,
+                maxSegmentSpan,
+                new CappedWarningLogger(Math.Max(1, warningLimit)));
+        }
+
+        private static int[] BuildSegmentSpans(IEnumerable<int> scopedWorkItemIds)
+        {
+            var ordered = scopedWorkItemIds
+                .Distinct()
+                .OrderBy(id => id)
+                .ToArray();
+            if (ordered.Length == 0)
+            {
+                return Array.Empty<int>();
+            }
+
+            var spans = new List<int>();
+            var segmentStart = ordered[0];
+            var previous = ordered[0];
+            for (var index = 1; index < ordered.Length; index++)
+            {
+                var current = ordered[index];
+                if (current == previous + 1)
+                {
+                    previous = current;
+                    continue;
+                }
+
+                spans.Add(previous - segmentStart + 1);
+                segmentStart = current;
+                previous = current;
+            }
+
+            spans.Add(previous - segmentStart + 1);
+            return spans.ToArray();
+        }
+
+        public int? ResolveSegmentIndex(string? continuationToken)
+        {
+            if (SegmentCount == 0)
+            {
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(continuationToken))
+            {
+                return 1;
+            }
+
+            if (!continuationToken.StartsWith("seg:", StringComparison.Ordinal))
+            {
+                return LastKnownSegmentIndex > 0 ? LastKnownSegmentIndex : 1;
+            }
+
+            var separatorIndex = continuationToken.IndexOf('|');
+            if (separatorIndex <= "seg:".Length)
+            {
+                return LastKnownSegmentIndex > 0 ? LastKnownSegmentIndex : 1;
+            }
+
+            var payload = continuationToken["seg:".Length..separatorIndex];
+            if (int.TryParse(payload, out var zeroBased))
+            {
+                return Math.Clamp(zeroBased + 1, 1, Math.Max(1, SegmentCount));
+            }
+
+            return LastKnownSegmentIndex > 0 ? LastKnownSegmentIndex : 1;
+        }
+
+        public void RecordPage(
+            int? segmentIndex,
+            int rawRevisionCount,
+            int scopedRevisionCount,
+            long httpDurationMs,
+            int? httpStatusCode)
+        {
+            if (segmentIndex.HasValue && segmentIndex.Value > 0)
+            {
+                Volatile.Write(ref _lastKnownSegmentIndex, segmentIndex.Value);
+            }
+
+            Interlocked.Increment(ref _pagesTotal);
+            Interlocked.Add(ref _rawRevisionsTotal, rawRevisionCount);
+            Interlocked.Add(ref _scopedRevisionsTotal, scopedRevisionCount);
+            if (scopedRevisionCount == 0)
+            {
+                Interlocked.Increment(ref _pagesWithoutScopedRevisionsTotal);
+            }
+
+            Interlocked.Increment(ref _httpRequestCount);
+            if (httpStatusCode.HasValue && httpStatusCode.Value != 200)
+            {
+                Interlocked.Increment(ref _httpNon200Count);
+            }
+
+            Interlocked.Add(ref _totalHttpDurationMs, Math.Max(0, httpDurationMs));
+
+            if (segmentIndex.HasValue && segmentIndex.Value > 0 && scopedRevisionCount > 0)
+            {
+                lock (_sync)
+                {
+                    _segmentsWithScopedRevisions.Add(segmentIndex.Value);
+                }
+            }
+        }
+
+        public void RecordRetry(string stage, int attempt, double backoffMs, long retryDurationMs)
+        {
+            lock (_sync)
+            {
+                if (!_retryByStage.TryGetValue(stage, out var current))
+                {
+                    current = new RetryAggregate(0, 0, 0, 0);
+                }
+
+                _retryByStage[stage] = new RetryAggregate(
+                    current.Count + 1,
+                    Math.Max(current.MaxAttemptSeen, attempt),
+                    current.TotalBackoffMs + Math.Max(0, (long)Math.Round(backoffMs)),
+                    current.TotalRetryDurationMs + Math.Max(0, retryDurationMs));
+            }
+        }
+
+        public void RecordAnomaly(string category, object? sampleContext = null)
+        {
+            lock (_sync)
+            {
+                if (!_anomalyByCategory.TryGetValue(category, out var current))
+                {
+                    current = new AnomalyAggregate(0, 0);
+                }
+
+                _anomalyByCategory[category] = new AnomalyAggregate(
+                    current.Count + 1,
+                    current.SampledCount + (sampleContext == null ? 0 : 1));
+            }
+        }
+
+        public void LogCappedWarning(string category, Action logAction, object? sampleContext = null)
+        {
+            if (CappedWarnings.ShouldLog(category))
+            {
+                logAction();
+                RecordAnomaly(category, sampleContext ?? "<sample>");
+                return;
+            }
+
+            RecordAnomaly(category);
+        }
+
+        public void LogRunEnd(ILogger logger, bool succeeded, string? failureStage, string? failureCause)
+        {
+            var endUtc = DateTimeOffset.UtcNow;
+            var duration = _stopwatch.Elapsed;
+            var durationSeconds = Math.Max(duration.TotalSeconds, 0.001d);
+            var safeDurationSeconds = Math.Max(durationSeconds, 0.001d);
+            var pagesTotal = PagesTotal;
+            var rawTotal = RawRevisionsTotal;
+            var scopedTotal = ScopedRevisionsTotal;
+            var emptyPagesTotal = PagesWithoutScopedRevisionsTotal;
+            var requestCount = (int)Interlocked.Read(ref _httpRequestCount);
+            var non200Count = (int)Interlocked.Read(ref _httpNon200Count);
+            var totalHttpDurationMs = Interlocked.Read(ref _totalHttpDurationMs);
+
+            string retriesSummary;
+            string anomaliesSummary;
+            int segmentsWithZeroScopedRevisions;
+            lock (_sync)
+            {
+                var totalRetries = _retryByStage.Values.Sum(entry => entry.Count);
+                var byStage = _retryByStage.Count == 0
+                    ? "none"
+                    : string.Join(" ", _retryByStage
+                        .OrderBy(entry => entry.Key, StringComparer.Ordinal)
+                        .Select(entry => $"{entry.Key}:{entry.Value.Count}"));
+                retriesSummary = $"total={totalRetries} byStage={byStage}";
+
+                anomaliesSummary = _anomalyByCategory.Count == 0
+                    ? "none"
+                    : string.Join(" ", _anomalyByCategory
+                        .OrderBy(entry => entry.Key, StringComparer.Ordinal)
+                        .Select(entry => $"{entry.Key}={entry.Value.Count} (sampled={entry.Value.SampledCount})"));
+
+                segmentsWithZeroScopedRevisions = SegmentCount == 0
+                    ? 0
+                    : Math.Max(0, SegmentCount - _segmentsWithScopedRevisions.Count);
+            }
+
+            var failureSuffix = succeeded
+                ? string.Empty
+                : $" failureStage={failureStage ?? "unknown"} failureCause={failureCause ?? "unknown"}";
+
+            logger.LogInformation(
+                "REV_INGEST_RUN_END runId={RunId} succeeded={Succeeded} duration={Duration}{FailureSuffix}\n  scope: count={ScopeCount} min={ScopeMin} max={ScopeMax} segments={SegmentCount} totalSpan={TotalSegmentSpan} maxSegmentSpan={MaxSegmentSpan} segmentsWithZeroScopedRevisions={SegmentsWithZeroScopedRevisions}\n  odata: pages={PagesTotal} rawRevisions={RawRevisions} scopedRevisions={ScopedRevisions} pagesWithoutScoped={PagesWithoutScoped}\n  retries: {RetriesSummary}\n  anomalies: {AnomaliesSummary}\n  http: requestCount={RequestCount} non200={Non200} totalHttpDurationMs={TotalHttpDurationMs}\n  perf: rawRevPerSec={RawRate:F2} scopedRevPerSec={ScopedRate:F2} pagesPerSec={PagesRate:F2} startUtc={StartUtc} endUtc={EndUtc}",
+                RunId,
+                succeeded,
+                duration,
+                failureSuffix,
+                ScopeCount,
+                ScopeMin,
+                ScopeMax,
+                SegmentCount,
+                TotalSegmentSpan,
+                MaxSegmentSpan,
+                segmentsWithZeroScopedRevisions,
+                pagesTotal,
+                rawTotal,
+                scopedTotal,
+                emptyPagesTotal,
+                retriesSummary,
+                anomaliesSummary,
+                requestCount,
+                non200Count,
+                totalHttpDurationMs,
+                rawTotal / safeDurationSeconds,
+                scopedTotal / safeDurationSeconds,
+                pagesTotal / safeDurationSeconds,
+                StartUtc,
+                endUtc);
+        }
+    }
+
+    private sealed class IngestionHeartbeat
+    {
+        private readonly ILogger _logger;
+        private readonly Guid _runId;
+        private readonly TimeSpan _interval;
+        private readonly int _pageInterval;
+        private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
+        private TimeSpan _lastLoggedElapsed = TimeSpan.Zero;
+        private int _lastLoggedPages;
+        private int _lastLoggedRaw;
+
+        public IngestionHeartbeat(
+            ILogger logger,
+            Guid runId,
+            TimeSpan interval,
+            int pageInterval)
+        {
+            _logger = logger;
+            _runId = runId;
+            _interval = interval;
+            _pageInterval = Math.Max(1, pageInterval);
+        }
+
+        public void LogProgress(
+            RevisionIngestionRunDiagnostics diagnostics,
+            bool forced,
+            CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            var nowElapsed = _stopwatch.Elapsed;
+            var pages = diagnostics.PagesTotal;
+            var raw = diagnostics.RawRevisionsTotal;
+            if (!forced &&
+                nowElapsed - _lastLoggedElapsed < _interval &&
+                pages - _lastLoggedPages < _pageInterval)
+            {
+                return;
+            }
+
+            var deltaSeconds = Math.Max((nowElapsed - _lastLoggedElapsed).TotalSeconds, 0.001d);
+            var safeDeltaSeconds = Math.Max(deltaSeconds, 0.001d);
+            var deltaPages = pages - _lastLoggedPages;
+            var deltaRaw = raw - _lastLoggedRaw;
+            var segmentLabel = diagnostics.SegmentCount > 0
+                ? $"{Math.Max(1, diagnostics.LastKnownSegmentIndex)}/{diagnostics.SegmentCount}"
+                : "n/a";
+
+            _logger.LogInformation(
+                "REV_INGEST_PROGRESS runId={RunId} seg={Segment} pages={Pages} raw={Raw} scoped={Scoped} emptyPages={EmptyPages} elapsed={Elapsed} rateRaw={RateRaw:F1} rev/s ratePages={RatePages:F2} p/s",
+                _runId,
+                segmentLabel,
+                pages,
+                raw,
+                diagnostics.ScopedRevisionsTotal,
+                diagnostics.PagesWithoutScopedRevisionsTotal,
+                nowElapsed,
+                deltaRaw / safeDeltaSeconds,
+                deltaPages / safeDeltaSeconds);
+
+            _lastLoggedElapsed = nowElapsed;
+            _lastLoggedPages = pages;
+            _lastLoggedRaw = raw;
+        }
+    }
+
+    private sealed class CappedWarningLogger
+    {
+        private readonly int _maxSamplesPerCategory;
+        private readonly Dictionary<string, int> _categoryCounts = new(StringComparer.OrdinalIgnoreCase);
+        private readonly object _sync = new();
+
+        public CappedWarningLogger(int maxSamplesPerCategory)
+        {
+            _maxSamplesPerCategory = Math.Max(1, maxSamplesPerCategory);
+        }
+
+        public bool ShouldLog(string category)
+        {
+            lock (_sync)
+            {
+                _categoryCounts.TryGetValue(category, out var current);
+                current++;
+                _categoryCounts[category] = current;
+                return current <= _maxSamplesPerCategory;
+            }
+        }
+    }
+
+    private readonly record struct RetryAggregate(int Count, int MaxAttemptSeen, long TotalBackoffMs, long TotalRetryDurationMs);
+    private readonly record struct AnomalyAggregate(int Count, int SampledCount);
 
     private sealed record CreationObservation(
         bool CreationObserved,
