@@ -328,6 +328,10 @@ public static class ApiServiceCollectionExtensions
         services.AddOptions<RevisionIngestionV2Options>()
             .Bind(configuration.GetSection("RevisionIngestionV2"));
 
+        // Register V2 dependencies
+        services.AddSingleton<IBackfillStartProvider, WorkItemBackfillStartProvider>();
+        services.AddSingleton<TimeProvider>(TimeProvider.System);
+
         // Register Revision Ingestion Service (for Sprint Trend feature)
         services.AddSingleton<RevisionIngestionService>();
         services.AddSingleton<RevisionIngestionServiceV2>();
