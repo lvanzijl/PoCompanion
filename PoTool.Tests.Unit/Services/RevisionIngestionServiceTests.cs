@@ -825,6 +825,140 @@ public sealed class RevisionIngestionServiceTests
         Assert.AreEqual(0, await context.RevisionHeaders.CountAsync());
     }
 
+    [TestMethod]
+    public async Task IngestRevisionsAsync_PersistsRetrievedScopedRevisions()
+    {
+        var now = DateTimeOffset.UtcNow.AddMinutes(-30);
+        var revisions = Enumerable.Range(1, 18)
+            .Select(revisionNumber => CreateRevision(10, revisionNumber, changedDate: now.AddMinutes(revisionNumber)))
+            .ToArray();
+        var stubClient = new StubRevisionSource(
+        [
+            new ReportingRevisionsResult(revisions, null)
+        ]);
+
+        using var provider = BuildServiceProvider(stubClient);
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        Assert.AreEqual(18, await context.RevisionHeaders.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_DuplicateKeyCollisionDoesNotInsertSecondRow()
+    {
+        var revision = CreateRevision(10, 1);
+        var stubClient = new StubRevisionSource(
+        [
+            new ReportingRevisionsResult([revision], null)
+        ]);
+
+        using var provider = BuildServiceProvider(stubClient);
+        using (var setupScope = provider.CreateScope())
+        {
+            var setupContext = setupScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+            setupContext.RevisionHeaders.Add(new RevisionHeaderEntity
+            {
+                WorkItemId = revision.WorkItemId,
+                RevisionNumber = revision.RevisionNumber,
+                WorkItemType = revision.WorkItemType,
+                Title = revision.Title,
+                State = revision.State,
+                IterationPath = revision.IterationPath,
+                AreaPath = revision.AreaPath,
+                ChangedDate = revision.ChangedDate,
+                IngestedAt = DateTimeOffset.UtcNow
+            });
+            await setupContext.SaveChangesAsync();
+        }
+
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        Assert.AreEqual(1, await context.RevisionHeaders.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_AttemptsDeterministicReseekOnRawZeroWithHasMore()
+    {
+        var options = new RevisionIngestionPaginationOptions
+        {
+            MaxProgressWithoutDataPages = 1
+        };
+        var stubClient = new StubRevisionSource(
+        [
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t1"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t2"),
+            new ReportingRevisionsResult([CreateRevision(10, 1)], null),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
+        ]);
+
+        using var provider = BuildServiceProvider(stubClient, options);
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual(4, stubClient.ReportingCalls);
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        Assert.AreEqual(1, await context.RevisionHeaders.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_WhenSaveChangesThrowsDbUpdateException_ReturnsFailure()
+    {
+        var duplicateRevision = CreateRevision(10, 1);
+        var stubClient = new StubRevisionSource(
+        [
+            new ReportingRevisionsResult([duplicateRevision, duplicateRevision], null)
+        ]);
+
+        using var provider = BuildServiceProvider(stubClient);
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsFalse(result.Success);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(result.ErrorMessage));
+    }
+
     private sealed class StaticOptionsMonitor<T> : IOptionsMonitor<T>
     {
         private sealed class NullDisposable : IDisposable

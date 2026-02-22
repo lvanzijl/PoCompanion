@@ -210,6 +210,12 @@ public class RevisionIngestionService
             {
                 backfillEndUtc = backfillStartUtc.AddMinutes(1);
             }
+            _logger.LogInformation(
+                "Revision ingestion scope aggregation. AggregatedScopeCount={AggregatedScopeCount} SegmentCount={SegmentCount} WindowStart={WindowStart} WindowEnd={WindowEnd}",
+                runDiagnostics.ScopeCount,
+                runDiagnostics.SegmentCount,
+                backfillStartUtc,
+                backfillEndUtc);
 
             var windowRunResult = await ProcessWindowsAsync(
                 context,
@@ -1056,7 +1062,7 @@ public class RevisionIngestionService
                 {
                     break;
                 }
-                windowResult = windowResult with { Outcome = WindowProcessingOutcome.MarkedUnretrievableAtMinimumChunk };
+                windowResult = windowResult with { Outcome = WindowProcessingOutcome.CompletedPartial };
                 lastStallReason ??= windowResult.StallReason;
             }
 
@@ -1068,6 +1074,11 @@ public class RevisionIngestionService
             else if (windowResult.Outcome is WindowProcessingOutcome.CompletedNormally or WindowProcessingOutcome.CompletedRawEmpty)
             {
                 currentWindowDuration = GrowWindowDuration(currentWindowDuration);
+            }
+            else if (windowResult.Outcome == WindowProcessingOutcome.CompletedPartial)
+            {
+                lastTermination ??= CreateTerminationFromStall(WindowStallReason.RawZeroWithHasMore);
+                currentWindowDuration = ShrinkWindowDuration(currentWindowDuration);
             }
             else
             {
@@ -1170,6 +1181,10 @@ public class RevisionIngestionService
         DateTimeOffset? windowRawMinChangedDate = null;
         DateTimeOffset? windowRawMaxChangedDate = null;
         var windowRawInWindow = false;
+        var rejectSummary = new WindowPersistRejectSummary();
+        var invariantCandidates = new List<WorkItemRevision>(3);
+        RevisionCursorTuple? lastSeenCursor = null;
+        var failedSegments = 0;
         var persistedWorkItemIds = new HashSet<int>();
         DateTimeOffset? minChangedDate = null;
         DateTimeOffset? maxChangedDate = null;
@@ -1258,6 +1273,27 @@ public class RevisionIngestionService
             var scopedRevisionCount = scopedRevisions.Count;
             var candidatePersistCount = scopedInWindow.Count;
             var outsideWindowCount = scopedRevisionCount - candidatePersistCount;
+            rejectSummary.TotalRaw += rawRevisionCount;
+            rejectSummary.TotalScoped += scopedRevisionCount;
+            rejectSummary.RejectOutOfScope += Math.Max(0, rawRevisionCount - scopedRevisionCount);
+            rejectSummary.RejectOutOfWindow += Math.Max(0, outsideWindowCount);
+            if (invariantCandidates.Count < 3 && scopedInWindow.Count > 0)
+            {
+                foreach (var candidate in scopedInWindow)
+                {
+                    invariantCandidates.Add(candidate);
+                    if (invariantCandidates.Count == 3)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            var pageCursorCandidate = SelectMaxCursor(scopedRevisions);
+            if (pageCursorCandidate != null)
+            {
+                lastSeenCursor = MaxCursor(lastSeenCursor, pageCursorCandidate);
+            }
             var scopedRevisionsPersistedCount = 0;
             var pageContinuationToken = result.ContinuationToken;
             var pageRequestDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(pageRequestStartTimestamp);
@@ -1311,6 +1347,21 @@ public class RevisionIngestionService
             var persistedCount = await PersistRevisionsAsync(context, scopedInWindow, persistMetrics, cancellationToken);
             scopedRevisionsPersistedCount = persistedCount;
             windowPersisted += persistedCount;
+            rejectSummary.AttemptedPersist += candidatePersistCount;
+            rejectSummary.Persisted += persistedCount;
+            rejectSummary.RejectDuplicateKey += persistMetrics.DuplicateCount;
+            rejectSummary.RejectAlreadyExists += persistMetrics.AlreadyExistsCount;
+            rejectSummary.RejectInvalidChangedDate += persistMetrics.InvalidChangedDateCount;
+            rejectSummary.RejectInvalidWorkItemId += persistMetrics.InvalidWorkItemIdCount;
+            rejectSummary.RejectMissingRequiredFields += persistMetrics.MissingRequiredCount;
+            rejectSummary.RejectDbConstraintViolation += persistMetrics.DbConstraintCount;
+            rejectSummary.SaveChangesInvoked |= persistMetrics.SaveChangesInvoked;
+            rejectSummary.SaveChangesRowsAffected += persistMetrics.SaveChangesRowsAffected;
+            if (!string.IsNullOrWhiteSpace(persistMetrics.SaveChangesExceptionType))
+            {
+                rejectSummary.SaveChangesExceptionType = persistMetrics.SaveChangesExceptionType;
+                rejectSummary.SaveChangesExceptionMessage = persistMetrics.SaveChangesExceptionMessage;
+            }
             var totalPersistedAfterPage = totalPersistedBeforeWindow + windowPersisted;
             if (persistedCount > 0)
             {
@@ -1374,6 +1425,7 @@ public class RevisionIngestionService
             var missingRequiredDropped = persistMetrics.MissingRequiredCount;
             var dbConstraintDrops = persistMetrics.DbConstraintCount;
             var otherDrops = Math.Max(0, candidatePersistCount - (scopedRevisionsPersistedCount + duplicatesDropped + missingRequiredDropped + dbConstraintDrops));
+            rejectSummary.RejectOther += otherDrops;
             var boundedOutsideWindowCount = Math.Max(0, outsideWindowCount);
 
             _logger.LogDebug(
@@ -1503,6 +1555,76 @@ public class RevisionIngestionService
                     progressWithoutDataPages++;
                     if (progressWithoutDataPages > maxProgressWithoutDataPages)
                     {
+                        _logger.LogWarning(
+                            "RawZeroWithHasMore anomaly detected. PageIndex={PageIndex} LastCursor={LastCursor} ContinuationTokenHash={ContinuationTokenHash} Filter={Filter} OrderBy={OrderBy}",
+                            pageIndex,
+                            lastSeenCursor is null
+                                ? "<none>"
+                                : $"{lastSeenCursor.Value.ChangedDate:O}/{lastSeenCursor.Value.WorkItemId}/{lastSeenCursor.Value.RevisionNumber}",
+                            tokenTracking.TokenHash,
+                            "WorkItemId in scope AND ChangedDate in [windowStart,windowEnd)",
+                            "ChangedDate asc, WorkItemId asc, Revision asc");
+
+                        var recovery = await TryRecoverFromRawZeroWithHasMoreAsync(
+                            revisionSource,
+                            allowedWorkItemIds,
+                            window,
+                            pageIndex,
+                            runDiagnostics,
+                            pageSegmentIndex,
+                            lastSeenCursor,
+                            cancellationToken);
+                        if (recovery.Recovered && recovery.RecoveryPage != null)
+                        {
+                            var recoveredScopedInWindow = recovery.RecoveryPage.Revisions
+                                .Where(revision => allowedWorkItemIds.Contains(revision.WorkItemId))
+                                .Where(revision => revision.ChangedDate >= window.StartUtc && revision.ChangedDate < window.EndUtc)
+                                .ToList();
+                            var recoveryPersistMetrics = new PersistMetrics();
+                            var recoveryPersisted = await PersistRevisionsAsync(context, recoveredScopedInWindow, recoveryPersistMetrics, cancellationToken);
+                            windowPersisted += recoveryPersisted;
+                            rejectSummary.TotalRaw += recovery.RecoveryPage.Revisions.Count;
+                            rejectSummary.TotalScoped += recoveredScopedInWindow.Count;
+                            rejectSummary.AttemptedPersist += recoveredScopedInWindow.Count;
+                            rejectSummary.Persisted += recoveryPersisted;
+                            rejectSummary.RejectDuplicateKey += recoveryPersistMetrics.DuplicateCount;
+                            rejectSummary.RejectAlreadyExists += recoveryPersistMetrics.AlreadyExistsCount;
+                            rejectSummary.RejectInvalidChangedDate += recoveryPersistMetrics.InvalidChangedDateCount;
+                            rejectSummary.RejectInvalidWorkItemId += recoveryPersistMetrics.InvalidWorkItemIdCount;
+                            rejectSummary.RejectMissingRequiredFields += recoveryPersistMetrics.MissingRequiredCount;
+                            rejectSummary.RejectDbConstraintViolation += recoveryPersistMetrics.DbConstraintCount;
+                            rejectSummary.SaveChangesInvoked |= recoveryPersistMetrics.SaveChangesInvoked;
+                            rejectSummary.SaveChangesRowsAffected += recoveryPersistMetrics.SaveChangesRowsAffected;
+                            var recoveredCursor = SelectMaxCursor(recoveredScopedInWindow);
+                            if (recoveredCursor != null)
+                            {
+                                lastSeenCursor = MaxCursor(lastSeenCursor, recoveredCursor);
+                            }
+
+                            progressWithoutDataPages = 0;
+                            continuationToken = recovery.NextContinuationToken;
+                            pageTracker.CommitToken(continuationToken);
+                            _logger.LogWarning(
+                                "RawZeroWithHasMore recovery succeeded. PageIndex={PageIndex} RecoveryPersisted={RecoveryPersisted} NextContinuationTokenHash={NextContinuationTokenHash}",
+                                pageIndex,
+                                recoveryPersisted,
+                                HashTokenForLogs(continuationToken));
+                            continue;
+                        }
+
+                        if (recovery.SegmentFailed && !string.IsNullOrWhiteSpace(recovery.NextContinuationToken))
+                        {
+                            failedSegments++;
+                            progressWithoutDataPages = 0;
+                            continuationToken = recovery.NextContinuationToken;
+                            pageTracker.CommitToken(continuationToken);
+                            _logger.LogWarning(
+                                "RawZeroWithHasMore persisted after re-seek. Segment marked failed and skipped. FailedSegments={FailedSegments} NextContinuationTokenHash={NextContinuationTokenHash}",
+                                failedSegments,
+                                HashTokenForLogs(continuationToken));
+                            continue;
+                        }
+
                         termination = new ReportingRevisionsTermination(
                             ReportingRevisionsTerminationReason.ProgressWithoutData,
                             $"Reporting revisions returned no data on page {pageIndex} while indicating more results.");
@@ -1597,6 +1719,43 @@ public class RevisionIngestionService
         }
 
         LogWindowRawRange(window, windowRawMinChangedDate, windowRawMaxChangedDate, windowRawInWindow);
+        _logger.LogInformation(
+            "PersistRejectSummary: totalRaw={TotalRaw} totalScoped={TotalScoped} attemptedPersist={AttemptedPersist} persisted={Persisted} reject_outOfWindow={RejectOutOfWindow} reject_outOfScope={RejectOutOfScope} reject_duplicateKey={RejectDuplicateKey} reject_alreadyExists={RejectAlreadyExists} reject_invalidChangedDate={RejectInvalidChangedDate} reject_invalidWorkItemId={RejectInvalidWorkItemId} reject_missingFields={RejectMissingFields} reject_dbConstraintViolation={RejectDbConstraintViolation} reject_other={RejectOther}",
+            rejectSummary.TotalRaw,
+            rejectSummary.TotalScoped,
+            rejectSummary.AttemptedPersist,
+            rejectSummary.Persisted,
+            rejectSummary.RejectOutOfWindow,
+            rejectSummary.RejectOutOfScope,
+            rejectSummary.RejectDuplicateKey,
+            rejectSummary.RejectAlreadyExists,
+            rejectSummary.RejectInvalidChangedDate,
+            rejectSummary.RejectInvalidWorkItemId,
+            rejectSummary.RejectMissingRequiredFields,
+            rejectSummary.RejectDbConstraintViolation,
+            rejectSummary.RejectOther);
+
+        if (rejectSummary.TotalScoped > 0 && windowPersisted == 0)
+        {
+            _logger.LogCritical(
+                "PersistInvariantViolation scopedRevisions>0 and persisted=0. FirstCandidates={FirstCandidates} DbUniqueKey={DbUniqueKey} SaveChangesInvoked={SaveChangesInvoked} SaveChangesRowsAffected={SaveChangesRowsAffected} SaveChangesExceptionType={SaveChangesExceptionType} SaveChangesExceptionMessage={SaveChangesExceptionMessage}",
+                invariantCandidates.Select(candidate => new
+                {
+                    candidate.WorkItemId,
+                    candidate.RevisionNumber,
+                    candidate.ChangedDate
+                }).ToArray(),
+                "RevisionHeaderEntity unique index: WorkItemId+RevisionNumber",
+                rejectSummary.SaveChangesInvoked,
+                rejectSummary.SaveChangesRowsAffected,
+                rejectSummary.SaveChangesExceptionType ?? "<none>",
+                rejectSummary.SaveChangesExceptionMessage ?? "<none>");
+        }
+
+        if (failedSegments > 0 && outcome == WindowProcessingOutcome.CompletedRawEmpty)
+        {
+            outcome = WindowProcessingOutcome.CompletedPartial;
+        }
 
         return new WindowProcessingResult(
             outcome,
@@ -2033,9 +2192,24 @@ public class RevisionIngestionService
 
             foreach (var revision in revisions)
             {
+                if (revision.WorkItemId <= 0)
+                {
+                    metrics?.IncrementInvalidWorkItemId();
+                    metrics?.IncrementMissingRequired();
+                    continue;
+                }
+
+                if (revision.ChangedDate == default)
+                {
+                    metrics?.IncrementInvalidChangedDate();
+                    metrics?.IncrementMissingRequired();
+                    continue;
+                }
+
                 if (existingKeys.Contains((revision.WorkItemId, revision.RevisionNumber)))
                 {
                     metrics?.IncrementDuplicate();
+                    metrics?.IncrementAlreadyExists();
                     continue;
                 }
 
@@ -2082,12 +2256,37 @@ public class RevisionIngestionService
                 context.ChangeTracker.DetectChanges();
             }
 
+            var persistAttemptCount = headers?.Count ?? 0;
+            _logger.LogInformation("PersistAttempt count={PersistAttemptCount}", persistAttemptCount);
             var saveStart = Stopwatch.GetTimestamp();
-            await context.SaveChangesAsync(cancellationToken);
+            metrics?.MarkSaveChangesInvoked();
+            int rowsAffected;
+            try
+            {
+                rowsAffected = await context.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException dbUpdateException)
+            {
+                metrics?.CaptureDbUpdateException(dbUpdateException);
+                _logger.LogError(
+                    dbUpdateException,
+                    "PersistCommit failed with DbUpdateException. PersistAttemptCount={PersistAttemptCount}",
+                    persistAttemptCount);
+                throw;
+            }
 
             if (metrics != null)
             {
                 metrics.SaveChangesDurationMs = RevisionIngestionDiagnostics.GetElapsedMilliseconds(saveStart);
+                metrics.SaveChangesRowsAffected = rowsAffected;
+            }
+            _logger.LogInformation("PersistCommit rowsAffected={RowsAffected}", rowsAffected);
+
+            if (rowsAffected == 0 && persistAttemptCount > 0)
+            {
+                _logger.LogWarning(
+                    "PersistCommit anomaly rowsAffected=0 with attemptedPersist={PersistAttemptCount}",
+                    persistAttemptCount);
             }
 
             if (transaction != null)
@@ -2235,6 +2434,133 @@ public class RevisionIngestionService
             pageIndex,
             continuationTokenHash,
             totalPersistedSoFar);
+    }
+
+    private async Task<RawZeroRecoveryResult> TryRecoverFromRawZeroWithHasMoreAsync(
+        IWorkItemRevisionSource revisionSource,
+        IReadOnlyCollection<int> allowedWorkItemIds,
+        RevisionIngestionWindow window,
+        int pageIndex,
+        RevisionIngestionRunDiagnostics runDiagnostics,
+        int? pageSegmentIndex,
+        RevisionCursorTuple? lastSeenCursor,
+        CancellationToken cancellationToken)
+    {
+        var segmentZeroBased = ResolveSegmentZeroBasedIndex(pageSegmentIndex);
+        var reseekContinuationToken = segmentZeroBased.HasValue
+            ? BuildSegmentContinuationToken(segmentZeroBased.Value)
+            : null;
+        var reseekStart = lastSeenCursor?.ChangedDate ?? window.StartUtc;
+        var reseek = await revisionSource.GetRevisionsForScopeAsync(
+            allowedWorkItemIds,
+            reseekStart,
+            reseekContinuationToken,
+            expandMode: ReportingExpandMode.None,
+            endDateTime: window.EndUtc,
+            cancellationToken);
+        var reseekRawCount = reseek.Revisions.Count;
+        var reseekScopedCount = reseek.Revisions.Count(revision => allowedWorkItemIds.Contains(revision.WorkItemId));
+        runDiagnostics.RecordPage(
+            pageSegmentIndex,
+            reseekRawCount,
+            reseekScopedCount,
+            reseek.HttpDurationMs ?? 0,
+            reseek.HttpStatusCode);
+        _logger.LogWarning(
+            "RawZeroWithHasMore deterministic re-seek attempt completed. PageIndex={PageIndex} SegmentIndex={SegmentIndex} ReseekStart={ReseekStart} ReseekRawCount={ReseekRawCount} ReseekScopedCount={ReseekScopedCount}",
+            pageIndex,
+            pageSegmentIndex,
+            reseekStart,
+            reseekRawCount,
+            reseekScopedCount);
+
+        if (reseekRawCount > 0)
+        {
+            return new RawZeroRecoveryResult(true, reseek.ContinuationToken, false, reseek);
+        }
+
+        if (segmentZeroBased.HasValue && runDiagnostics.SegmentCount > segmentZeroBased.Value + 1)
+        {
+            return new RawZeroRecoveryResult(false, BuildSegmentContinuationToken(segmentZeroBased.Value + 1), true, null);
+        }
+
+        return new RawZeroRecoveryResult(false, null, false, null);
+    }
+
+    private static int? ResolveSegmentZeroBasedIndex(int? pageSegmentIndex)
+    {
+        if (!pageSegmentIndex.HasValue || pageSegmentIndex.Value <= 0)
+        {
+            return null;
+        }
+
+        return pageSegmentIndex.Value - 1;
+    }
+
+    private static string BuildSegmentContinuationToken(int zeroBasedSegmentIndex)
+    {
+        var encodedInnerToken = Convert.ToBase64String(Encoding.UTF8.GetBytes(string.Empty));
+        return $"seg:{zeroBasedSegmentIndex}|{encodedInnerToken}";
+    }
+
+    private static RevisionCursorTuple? SelectMaxCursor(IReadOnlyList<WorkItemRevision> revisions)
+    {
+        RevisionCursorTuple? current = null;
+        foreach (var revision in revisions)
+        {
+            var candidate = new RevisionCursorTuple(
+                revision.ChangedDate.ToUniversalTime(),
+                revision.WorkItemId,
+                revision.RevisionNumber);
+            current = MaxCursor(current, candidate);
+        }
+
+        return current;
+    }
+
+    private static RevisionCursorTuple MaxCursor(RevisionCursorTuple? left, RevisionCursorTuple? right)
+    {
+        if (left == null)
+        {
+            if (right == null)
+            {
+                return default;
+            }
+
+            return right.Value;
+        }
+
+        if (right == null)
+        {
+            return left.Value;
+        }
+
+        var dateCompare = left.Value.ChangedDate.CompareTo(right.Value.ChangedDate);
+        if (dateCompare != 0)
+        {
+            return dateCompare > 0 ? left.Value : right.Value;
+        }
+
+        var workItemCompare = left.Value.WorkItemId.CompareTo(right.Value.WorkItemId);
+        if (workItemCompare != 0)
+        {
+            return workItemCompare > 0 ? left.Value : right.Value;
+        }
+
+        return left.Value.RevisionNumber >= right.Value.RevisionNumber ? left.Value : right.Value;
+    }
+
+    private static string? HashTokenForLogs(string? continuationToken)
+    {
+        if (string.IsNullOrWhiteSpace(continuationToken))
+        {
+            return null;
+        }
+
+        using var sha = SHA256.Create();
+        var hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(continuationToken));
+        var hashHex = Convert.ToHexString(hashBytes);
+        return hashHex[..ContinuationTokenHashLength];
     }
 
     private sealed class ReportingRevisionsPageTracker
@@ -2635,6 +2961,14 @@ public class RevisionIngestionService
                 ? string.Empty
                 : $" failureStage={failureStage ?? "unknown"} failureCause={failureCause ?? "unknown"}";
 
+            if (ScopeCount > 0 && SegmentCount > 0 && segmentsWithZeroScopedRevisions == SegmentCount)
+            {
+                logger.LogWarning(
+                    "Potential scope mismatch detected. AggregatedScopeCount={AggregatedScopeCount} SegmentCount={SegmentCount} but all segments yielded zero scoped revisions.",
+                    ScopeCount,
+                    SegmentCount);
+            }
+
             logger.LogInformation(
                 "REV_INGEST_RUN_END runId={RunId} succeeded={Succeeded} duration={Duration}{FailureSuffix}\n  scope: count={ScopeCount} min={ScopeMin} max={ScopeMax} segments={SegmentCount} totalSpan={TotalSegmentSpan} maxSegmentSpan={MaxSegmentSpan} segmentsWithZeroScopedRevisions={SegmentsWithZeroScopedRevisions}\n  odata: pages={PagesTotal} rawRevisions={RawRevisions} scopedRevisions={ScopedRevisions} pagesWithoutScoped={PagesWithoutScoped}\n  retries: {RetriesSummary}\n  anomalies: {AnomaliesSummary}\n  http: requestCount={RequestCount} non200={Non200} totalHttpDurationMs={TotalHttpDurationMs}\n  perf: rawRevPerSec={RawRate:F2} scopedRevPerSec={ScopedRate:F2} pagesPerSec={PagesRate:F2} startUtc={StartUtc} endUtc={EndUtc}",
                 RunId,
@@ -2759,10 +3093,37 @@ public class RevisionIngestionService
 
     private readonly record struct RetryAggregate(int Count, int MaxAttemptSeen, long TotalBackoffMs, long TotalRetryDurationMs);
     private readonly record struct AnomalyAggregate(int Count, int SampledCount);
+    private readonly record struct RevisionCursorTuple(DateTimeOffset ChangedDate, int WorkItemId, int RevisionNumber);
+    private readonly record struct RawZeroRecoveryResult(
+        bool Recovered,
+        string? NextContinuationToken,
+        bool SegmentFailed,
+        ReportingRevisionsResult? RecoveryPage);
 
     private sealed record CreationObservation(
         bool CreationObserved,
         DateTimeOffset EarliestChangedDateUtc);
+
+    private sealed class WindowPersistRejectSummary
+    {
+        public int TotalRaw { get; set; }
+        public int TotalScoped { get; set; }
+        public int AttemptedPersist { get; set; }
+        public int Persisted { get; set; }
+        public int RejectOutOfWindow { get; set; }
+        public int RejectOutOfScope { get; set; }
+        public int RejectDuplicateKey { get; set; }
+        public int RejectAlreadyExists { get; set; }
+        public int RejectInvalidChangedDate { get; set; }
+        public int RejectInvalidWorkItemId { get; set; }
+        public int RejectMissingRequiredFields { get; set; }
+        public int RejectDbConstraintViolation { get; set; }
+        public int RejectOther { get; set; }
+        public bool SaveChangesInvoked { get; set; }
+        public int SaveChangesRowsAffected { get; set; }
+        public string? SaveChangesExceptionType { get; set; }
+        public string? SaveChangesExceptionMessage { get; set; }
+    }
 
     private sealed class PersistMetrics
     {
@@ -2770,8 +3131,15 @@ public class RevisionIngestionService
         public int FieldDeltaCount { get; private set; }
         public int RelationDeltaCount { get; private set; }
         public int DuplicateCount { get; private set; }
+        public int AlreadyExistsCount { get; private set; }
         public int MissingRequiredCount { get; private set; }
+        public int InvalidChangedDateCount { get; private set; }
+        public int InvalidWorkItemIdCount { get; private set; }
         public int DbConstraintCount { get; set; }
+        public bool SaveChangesInvoked { get; private set; }
+        public int SaveChangesRowsAffected { get; set; }
+        public string? SaveChangesExceptionType { get; private set; }
+        public string? SaveChangesExceptionMessage { get; private set; }
         public long SaveChangesDurationMs { get; set; }
         public long? CommitDurationMs { get; set; }
         public long PersistDurationMs { get; set; }
@@ -2781,7 +3149,18 @@ public class RevisionIngestionService
         public void IncrementFieldDelta() => FieldDeltaCount++;
         public void IncrementRelationDelta() => RelationDeltaCount++;
         public void IncrementDuplicate() => DuplicateCount++;
+        public void IncrementAlreadyExists() => AlreadyExistsCount++;
         public void IncrementMissingRequired() => MissingRequiredCount++;
+        public void IncrementInvalidChangedDate() => InvalidChangedDateCount++;
+        public void IncrementInvalidWorkItemId() => InvalidWorkItemIdCount++;
+        public void MarkSaveChangesInvoked() => SaveChangesInvoked = true;
+
+        public void CaptureDbUpdateException(DbUpdateException exception)
+        {
+            DbConstraintCount += 1;
+            SaveChangesExceptionType = exception.GetType().FullName;
+            SaveChangesExceptionMessage = exception.Message;
+        }
     }
 
     private sealed record RevisionIngestionWindow(
@@ -2838,7 +3217,8 @@ public class RevisionIngestionService
         CompletedRawEmpty = 1,
         Stalled = 2,
         SplitScheduled = 3,
-        MarkedUnretrievableAtMinimumChunk = 4
+        MarkedUnretrievableAtMinimumChunk = 4,
+        CompletedPartial = 5
     }
 
     private enum WindowStallReason
