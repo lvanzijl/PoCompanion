@@ -13,6 +13,7 @@ public interface IWorkItemRevisionSource
         string? continuationToken = null,
         IReadOnlyCollection<int>? scopedWorkItemIds = null,
         ReportingExpandMode expandMode = ReportingExpandMode.None,
+        DateTimeOffset? endDateTime = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -23,6 +24,7 @@ public interface IWorkItemRevisionSource
         DateTimeOffset? startDateTime = null,
         string? continuationToken = null,
         ReportingExpandMode expandMode = ReportingExpandMode.None,
+        DateTimeOffset? endDateTime = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -56,9 +56,10 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         DateTimeOffset? startDateTime = null,
         string? continuationToken = null,
         ReportingExpandMode expandMode = ReportingExpandMode.None,
+        DateTimeOffset? endDateTime = null,
         CancellationToken cancellationToken = default)
     {
-        return GetRevisionsAsync(startDateTime, continuationToken, scopedWorkItemIds, expandMode, cancellationToken);
+        return GetRevisionsAsync(startDateTime, continuationToken, scopedWorkItemIds, expandMode, endDateTime, cancellationToken);
     }
 
     public async Task<ReportingRevisionsResult> GetRevisionsAsync(
@@ -66,6 +67,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         string? continuationToken = null,
         IReadOnlyCollection<int>? scopedWorkItemIds = null,
         ReportingExpandMode expandMode = ReportingExpandMode.None,
+        DateTimeOffset? endDateTime = null,
         CancellationToken cancellationToken = default)
     {
         _ = expandMode;
@@ -88,6 +90,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var requestContext = ResolveRequestContext(
             config,
             startDateTime,
+            endDateTime,
             segmentState.InnerContinuationToken,
             scopedWorkItemIds,
             segmentState.Segment,
@@ -134,6 +137,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
                 requestContext = ResolveRequestContext(
                     config,
                     startDateTime,
+                    endDateTime,
                     segmentState.InnerContinuationToken,
                     scopedWorkItemIds,
                     segmentState.Segment,
@@ -216,6 +220,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             var seekPageUrl = _queryBuilder.BuildSeekPageUrl(
                 config,
                 startDateTime,
+                endDateTime,
                 scopedWorkItemIds,
                 options,
                 seekTop,
@@ -332,6 +337,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
     private RequestContext ResolveRequestContext(
         TfsConfigEntity config,
         DateTimeOffset? startDateTime,
+        DateTimeOffset? endDateTime,
         string? pageContinuationToken,
         IReadOnlyCollection<int>? scopedWorkItemIds,
         WorkItemIdRangeSegment? scopeSegment,
@@ -343,7 +349,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         if (normalizedToken is null)
         {
             return new RequestContext(
-                _queryBuilder.BuildInitialPageUrl(config, startDateTime, scopedWorkItemIds, options, top, scopeSegment, quoteDateStrings),
+                _queryBuilder.BuildInitialPageUrl(config, startDateTime, endDateTime, scopedWorkItemIds, options, top, scopeSegment, quoteDateStrings),
                 RequestMode.Seek,
                 top,
                 null);
