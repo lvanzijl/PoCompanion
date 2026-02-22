@@ -1177,7 +1177,6 @@ public class RevisionIngestionService
         var hasSeenWindowOverlap = false;
         var maxTotalPages = Math.Max(1, paginationOptions.MaxTotalPages);
         var maxProgressWithoutDataPages = Math.Max(1, paginationOptions.MaxProgressWithoutDataPages);
-        var progressWithoutDataPages = 0;
         DateTimeOffset? windowRawMinChangedDate = null;
         DateTimeOffset? windowRawMaxChangedDate = null;
         var windowRawInWindow = false;
@@ -1185,6 +1184,8 @@ public class RevisionIngestionService
         var invariantCandidates = new List<WorkItemRevision>(3);
         RevisionCursorTuple? lastSeenCursor = null;
         var failedSegments = 0;
+        var rawZeroReseekAttempted = false;
+        var noForwardProgressIterations = 0;
         var persistedWorkItemIds = new HashSet<int>();
         DateTimeOffset? minChangedDate = null;
         DateTimeOffset? maxChangedDate = null;
@@ -1232,7 +1233,9 @@ public class RevisionIngestionService
             var pageWorkItemIds = logPerPageSummary ? new HashSet<int>() : null;
 
             var pageRequestStartTimestamp = Stopwatch.GetTimestamp();
-            var pageSegmentIndex = runDiagnostics.ResolveSegmentIndex(continuationToken);
+            var pageSegmentIndex = runDiagnostics.ResolveSegmentIndex(null);
+            var requestContinuationToken = continuationToken;
+            var previousCursor = lastSeenCursor;
             ReportingRevisionsResult result;
             try
             {
@@ -1306,6 +1309,7 @@ public class RevisionIngestionService
             var tokenAdvanced = pageTracker.IsTokenAdvanced(pageContinuationToken);
             var tokenTracking = pageTracker.TrackToken(pageContinuationToken);
             var hasMoreResults = result.HasMoreResults;
+            var cursorAdvanced = IsCursorAdvanced(previousCursor, lastSeenCursor);
             var pagePosition = ClassifyPage(rawMinChangedDate, rawMaxChangedDate, window);
             windowRawMinChangedDate = GetWindowRawMin(windowRawMinChangedDate, rawMinChangedDate);
             windowRawMaxChangedDate = GetWindowRawMax(windowRawMaxChangedDate, rawMaxChangedDate);
@@ -1410,6 +1414,18 @@ public class RevisionIngestionService
                 pageIndex,
                 window.StartUtc,
                 window.EndUtc);
+            _logger.LogInformation(
+                "PageFetch: Segment={Segment} WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PageIndex={PageIndex} RawCount={RawCount} ScopedCount={ScopedCount} TokenHash={TokenHash} NextTokenHash={NextTokenHash} CursorMinChangedDate={CursorMinChangedDate} CursorMaxChangedDate={CursorMaxChangedDate}",
+                pageSegmentIndex,
+                window.StartUtc,
+                window.EndUtc,
+                pageIndex,
+                rawRevisionCount,
+                scopedRevisionCount,
+                HashTokenForLogs(requestContinuationToken),
+                HashTokenForLogs(pageContinuationToken),
+                rawMinChangedDate,
+                rawMaxChangedDate);
 
             _logger.LogDebug(
                 "Revision ingestion page persist. TransactionUsed={TransactionUsed} PersistDurationMs={PersistDurationMs} SaveChangesDurationMs={SaveChangesDurationMs} CommitDurationMs={CommitDurationMs} RevisionHeaderCount={RevisionHeaderCount} FieldDeltaCount={FieldDeltaCount} RelationDeltaCount={RelationDeltaCount}",
@@ -1527,135 +1543,177 @@ public class RevisionIngestionService
             var stalled = false;
             if (rawRevisionCount > 0)
             {
-                progressWithoutDataPages = 0;
             }
             if (paginationAnomaly)
             {
                 stalled = true;
                 stallReason = WindowStallReason.ClientTermination;
             }
-            else if (tokenTracking.SeenTokenRepeated)
+            else if (rawRevisionCount == 0 && (hasMoreResults || pageContinuationToken is not null))
             {
-                termination = new ReportingRevisionsTermination(
-                    ReportingRevisionsTerminationReason.RepeatedContinuationToken,
-                    $"Continuation token repeated on page {pageIndex}.");
-                LogEarlyTermination(
-                    "TokenRepeated",
+                _logger.LogWarning(
+                    "RawZeroWithHasMore detected. Segment={Segment} WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PageIndex={PageIndex} LastCursor={LastCursor} TokenHash={TokenHash} NextTokenHash={NextTokenHash}",
+                    pageSegmentIndex,
+                    window.StartUtc,
+                    window.EndUtc,
                     pageIndex,
-                    tokenTracking.TokenHash,
-                    totalPersistedAfterPage);
-                paginationAnomaly = true;
-                stallReason = WindowStallReason.TokenRepeated;
-                stalled = true;
-            }
-            else if (rawRevisionCount == 0 && (hasMoreResults || !tokenAdvanced))
-            {
-                if (hasMoreResults && tokenAdvanced)
+                    lastSeenCursor is null
+                        ? "<none>"
+                        : $"{lastSeenCursor.Value.ChangedDate:O}/{lastSeenCursor.Value.WorkItemId}/{lastSeenCursor.Value.RevisionNumber}",
+                    HashTokenForLogs(requestContinuationToken),
+                    HashTokenForLogs(pageContinuationToken));
+                if (lastSeenCursor is null &&
+                    (string.IsNullOrEmpty(requestContinuationToken) ||
+                     string.Equals(requestContinuationToken, pageContinuationToken, StringComparison.Ordinal)))
                 {
-                    progressWithoutDataPages++;
-                    if (progressWithoutDataPages > maxProgressWithoutDataPages)
+                    termination = new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.ProgressWithoutData,
+                        $"SegmentAbortedReason=RawZeroWithHasMore+NoCursor Page={pageIndex}");
+                    LogEarlyTermination(
+                        "RawZeroWithHasMoreNoCursor",
+                        pageIndex,
+                        tokenTracking.TokenHash,
+                        totalPersistedAfterPage);
+                    _logger.LogWarning(
+                        "SegmentAbortedReason=RawZeroWithHasMore+NoCursor Segment={Segment} WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PageIndex={PageIndex}",
+                        pageSegmentIndex,
+                        window.StartUtc,
+                        window.EndUtc,
+                        pageIndex);
+                    paginationAnomaly = true;
+                    stallReason = WindowStallReason.RawZeroWithHasMore;
+                    stalled = true;
+                }
+                else if (lastSeenCursor is not null && !rawZeroReseekAttempted)
+                {
+                    rawZeroReseekAttempted = true;
+                    var recovery = await TryRecoverFromRawZeroWithHasMoreAsync(
+                        revisionSource,
+                        allowedWorkItemIds,
+                        window,
+                        pageIndex,
+                        runDiagnostics,
+                        pageSegmentIndex,
+                        lastSeenCursor,
+                        cancellationToken);
+                    if (recovery.Recovered && recovery.RecoveryPage != null)
                     {
+                        var recoveredScopedInWindow = recovery.RecoveryPage.Revisions
+                            .Where(revision => allowedWorkItemIds.Contains(revision.WorkItemId))
+                            .Where(revision => revision.ChangedDate >= window.StartUtc && revision.ChangedDate < window.EndUtc)
+                            .ToList();
+                        var recoveryPersistMetrics = new PersistMetrics();
+                        var recoveryPersisted = await PersistRevisionsAsync(context, recoveredScopedInWindow, recoveryPersistMetrics, cancellationToken);
+                        windowPersisted += recoveryPersisted;
+                        rejectSummary.TotalRaw += recovery.RecoveryPage.Revisions.Count;
+                        rejectSummary.TotalScoped += recoveredScopedInWindow.Count;
+                        rejectSummary.AttemptedPersist += recoveredScopedInWindow.Count;
+                        rejectSummary.Persisted += recoveryPersisted;
+                        rejectSummary.RejectDuplicateKey += recoveryPersistMetrics.DuplicateCount;
+                        rejectSummary.RejectAlreadyExists += recoveryPersistMetrics.AlreadyExistsCount;
+                        rejectSummary.RejectInvalidChangedDate += recoveryPersistMetrics.InvalidChangedDateCount;
+                        rejectSummary.RejectInvalidWorkItemId += recoveryPersistMetrics.InvalidWorkItemIdCount;
+                        rejectSummary.RejectMissingRequiredFields += recoveryPersistMetrics.MissingRequiredCount;
+                        rejectSummary.RejectDbConstraintViolation += recoveryPersistMetrics.DbConstraintCount;
+                        rejectSummary.SaveChangesInvoked |= recoveryPersistMetrics.SaveChangesInvoked;
+                        rejectSummary.SaveChangesRowsAffected += recoveryPersistMetrics.SaveChangesRowsAffected;
+                        var recoveredCursor = SelectMaxCursor(recoveredScopedInWindow);
+                        if (recoveredCursor != null)
+                        {
+                            lastSeenCursor = MaxCursor(lastSeenCursor, recoveredCursor);
+                        }
+
+                        continuationToken = recovery.RecoveryPage.ContinuationToken;
+                        pageTracker.CommitToken(continuationToken);
                         _logger.LogWarning(
-                            "RawZeroWithHasMore anomaly detected. PageIndex={PageIndex} LastCursor={LastCursor} ContinuationTokenHash={ContinuationTokenHash} Filter={Filter} OrderBy={OrderBy}",
+                            "RawZeroWithHasMore recovery succeeded. PageIndex={PageIndex} RecoveryPersisted={RecoveryPersisted} NextContinuationTokenHash={NextContinuationTokenHash}",
                             pageIndex,
-                            lastSeenCursor is null
-                                ? "<none>"
-                                : $"{lastSeenCursor.Value.ChangedDate:O}/{lastSeenCursor.Value.WorkItemId}/{lastSeenCursor.Value.RevisionNumber}",
-                            tokenTracking.TokenHash,
-                            "WorkItemId in scope AND ChangedDate in [windowStart,windowEnd)",
-                            "ChangedDate asc, WorkItemId asc, Revision asc");
-
-                        var recovery = await TryRecoverFromRawZeroWithHasMoreAsync(
-                            revisionSource,
-                            allowedWorkItemIds,
-                            window,
-                            pageIndex,
-                            runDiagnostics,
-                            pageSegmentIndex,
-                            lastSeenCursor,
-                            cancellationToken);
-                        if (recovery.Recovered && recovery.RecoveryPage != null)
-                        {
-                            var recoveredScopedInWindow = recovery.RecoveryPage.Revisions
-                                .Where(revision => allowedWorkItemIds.Contains(revision.WorkItemId))
-                                .Where(revision => revision.ChangedDate >= window.StartUtc && revision.ChangedDate < window.EndUtc)
-                                .ToList();
-                            var recoveryPersistMetrics = new PersistMetrics();
-                            var recoveryPersisted = await PersistRevisionsAsync(context, recoveredScopedInWindow, recoveryPersistMetrics, cancellationToken);
-                            windowPersisted += recoveryPersisted;
-                            rejectSummary.TotalRaw += recovery.RecoveryPage.Revisions.Count;
-                            rejectSummary.TotalScoped += recoveredScopedInWindow.Count;
-                            rejectSummary.AttemptedPersist += recoveredScopedInWindow.Count;
-                            rejectSummary.Persisted += recoveryPersisted;
-                            rejectSummary.RejectDuplicateKey += recoveryPersistMetrics.DuplicateCount;
-                            rejectSummary.RejectAlreadyExists += recoveryPersistMetrics.AlreadyExistsCount;
-                            rejectSummary.RejectInvalidChangedDate += recoveryPersistMetrics.InvalidChangedDateCount;
-                            rejectSummary.RejectInvalidWorkItemId += recoveryPersistMetrics.InvalidWorkItemIdCount;
-                            rejectSummary.RejectMissingRequiredFields += recoveryPersistMetrics.MissingRequiredCount;
-                            rejectSummary.RejectDbConstraintViolation += recoveryPersistMetrics.DbConstraintCount;
-                            rejectSummary.SaveChangesInvoked |= recoveryPersistMetrics.SaveChangesInvoked;
-                            rejectSummary.SaveChangesRowsAffected += recoveryPersistMetrics.SaveChangesRowsAffected;
-                            var recoveredCursor = SelectMaxCursor(recoveredScopedInWindow);
-                            if (recoveredCursor != null)
-                            {
-                                lastSeenCursor = MaxCursor(lastSeenCursor, recoveredCursor);
-                            }
-
-                            progressWithoutDataPages = 0;
-                            continuationToken = recovery.NextContinuationToken;
-                            pageTracker.CommitToken(continuationToken);
-                            _logger.LogWarning(
-                                "RawZeroWithHasMore recovery succeeded. PageIndex={PageIndex} RecoveryPersisted={RecoveryPersisted} NextContinuationTokenHash={NextContinuationTokenHash}",
-                                pageIndex,
-                                recoveryPersisted,
-                                HashTokenForLogs(continuationToken));
-                            continue;
-                        }
-
-                        if (recovery.SegmentFailed && !string.IsNullOrWhiteSpace(recovery.NextContinuationToken))
-                        {
-                            failedSegments++;
-                            progressWithoutDataPages = 0;
-                            continuationToken = recovery.NextContinuationToken;
-                            pageTracker.CommitToken(continuationToken);
-                            _logger.LogWarning(
-                                "RawZeroWithHasMore persisted after re-seek. Segment marked failed and skipped. FailedSegments={FailedSegments} NextContinuationTokenHash={NextContinuationTokenHash}",
-                                failedSegments,
-                                HashTokenForLogs(continuationToken));
-                            continue;
-                        }
-
-                        termination = new ReportingRevisionsTermination(
-                            ReportingRevisionsTerminationReason.ProgressWithoutData,
-                            $"Reporting revisions returned no data on page {pageIndex} while indicating more results.");
-                        LogEarlyTermination(
-                            "DeadPageNoData",
-                            pageIndex,
-                            tokenTracking.TokenHash,
-                            totalPersistedAfterPage);
-                        paginationAnomaly = true;
-                        stallReason = WindowStallReason.RawZeroWithHasMore;
-                        stalled = true;
+                            recoveryPersisted,
+                            HashTokenForLogs(continuationToken));
+                        continue;
                     }
+
+                    failedSegments++;
+                    termination = new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.ProgressWithoutData,
+                        $"SegmentAbortedReason=RawZeroWithHasMore+ReseekFailed Page={pageIndex}");
+                    LogEarlyTermination(
+                        "RawZeroWithHasMoreReseekFailed",
+                        pageIndex,
+                        tokenTracking.TokenHash,
+                        totalPersistedAfterPage);
+                    _logger.LogWarning(
+                        "SegmentAbortedReason=RawZeroWithHasMore+ReseekFailed Segment={Segment} WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PageIndex={PageIndex} FailedSegments={FailedSegments}",
+                        pageSegmentIndex,
+                        window.StartUtc,
+                        window.EndUtc,
+                        pageIndex,
+                        failedSegments);
+                    paginationAnomaly = true;
+                    stallReason = WindowStallReason.RawZeroWithHasMore;
+                    stalled = true;
                 }
                 else
                 {
-                    progressWithoutDataPages = 0;
+                    termination = new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.ProgressWithoutData,
+                        $"SegmentAbortedReason=RawZeroWithHasMore+ReseekExhausted Page={pageIndex}");
+                    LogEarlyTermination(
+                        "RawZeroWithHasMoreReseekExhausted",
+                        pageIndex,
+                        tokenTracking.TokenHash,
+                        totalPersistedAfterPage);
+                    _logger.LogWarning(
+                        "SegmentAbortedReason=RawZeroWithHasMore+ReseekExhausted Segment={Segment} WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PageIndex={PageIndex}",
+                        pageSegmentIndex,
+                        window.StartUtc,
+                        window.EndUtc,
+                        pageIndex);
+                    paginationAnomaly = true;
+                    stallReason = WindowStallReason.RawZeroWithHasMore;
+                    stalled = true;
                 }
             }
-            else if (!tokenAdvanced && hasMoreResults)
+
+            if (!stalled)
             {
-                termination = new ReportingRevisionsTermination(
-                    ReportingRevisionsTerminationReason.RepeatedContinuationToken,
-                    $"Continuation token did not advance on page {pageIndex}.");
-                LogEarlyTermination(
-                    "TokenNotAdvanced",
-                    pageIndex,
-                    tokenTracking.TokenHash,
-                    totalPersistedAfterPage);
-                paginationAnomaly = true;
-                stallReason = WindowStallReason.TokenNotAdvancing;
-                stalled = true;
+                if (!tokenAdvanced && !cursorAdvanced)
+                {
+                    noForwardProgressIterations++;
+                }
+                else
+                {
+                    noForwardProgressIterations = 0;
+                }
+
+                if (noForwardProgressIterations >= 2)
+                {
+                    termination = new ReportingRevisionsTermination(
+                        ReportingRevisionsTerminationReason.ProgressWithoutData,
+                        $"NO_FORWARD_PROGRESS on page {pageIndex}.");
+                    _logger.LogWarning(
+                        "NO_FORWARD_PROGRESS Segment={Segment} WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PageIndex={PageIndex} PrevTokenHash={PrevTokenHash} CurrentTokenHash={CurrentTokenHash} PrevCursor={PrevCursor} CurrentCursor={CurrentCursor}",
+                        pageSegmentIndex,
+                        window.StartUtc,
+                        window.EndUtc,
+                        pageIndex,
+                        HashTokenForLogs(requestContinuationToken),
+                        HashTokenForLogs(pageContinuationToken),
+                        previousCursor is null
+                            ? "<none>"
+                            : $"{previousCursor.Value.ChangedDate:O}/{previousCursor.Value.WorkItemId}/{previousCursor.Value.RevisionNumber}",
+                        lastSeenCursor is null
+                            ? "<none>"
+                            : $"{lastSeenCursor.Value.ChangedDate:O}/{lastSeenCursor.Value.WorkItemId}/{lastSeenCursor.Value.RevisionNumber}");
+                    LogEarlyTermination(
+                        "NO_FORWARD_PROGRESS",
+                        pageIndex,
+                        tokenTracking.TokenHash,
+                        totalPersistedAfterPage);
+                    paginationAnomaly = true;
+                    stallReason = WindowStallReason.TokenNotAdvancing;
+                    stalled = true;
+                }
             }
 
             if (stalled)
@@ -1707,6 +1765,7 @@ public class RevisionIngestionService
                 windowComplete = true;
             }
 
+            rawZeroReseekAttempted = false;
             continuationToken = pageContinuationToken;
             pageTracker.CommitToken(pageContinuationToken);
             lastTokenHash = tokenTracking.TokenHash ?? lastTokenHash;
@@ -2446,15 +2505,11 @@ public class RevisionIngestionService
         RevisionCursorTuple? lastSeenCursor,
         CancellationToken cancellationToken)
     {
-        var segmentZeroBased = ResolveSegmentZeroBasedIndex(pageSegmentIndex);
-        var reseekContinuationToken = segmentZeroBased.HasValue
-            ? BuildSegmentContinuationToken(segmentZeroBased.Value)
-            : null;
         var reseekStart = lastSeenCursor?.ChangedDate ?? window.StartUtc;
         var reseek = await revisionSource.GetRevisionsForScopeAsync(
             allowedWorkItemIds,
             reseekStart,
-            reseekContinuationToken,
+            continuationToken: null,
             expandMode: ReportingExpandMode.None,
             endDateTime: window.EndUtc,
             cancellationToken);
@@ -2476,31 +2531,10 @@ public class RevisionIngestionService
 
         if (reseekRawCount > 0)
         {
-            return new RawZeroRecoveryResult(true, reseek.ContinuationToken, false, reseek);
+            return new RawZeroRecoveryResult(true, reseek);
         }
 
-        if (segmentZeroBased.HasValue && runDiagnostics.SegmentCount > segmentZeroBased.Value + 1)
-        {
-            return new RawZeroRecoveryResult(false, BuildSegmentContinuationToken(segmentZeroBased.Value + 1), true, null);
-        }
-
-        return new RawZeroRecoveryResult(false, null, false, null);
-    }
-
-    private static int? ResolveSegmentZeroBasedIndex(int? pageSegmentIndex)
-    {
-        if (!pageSegmentIndex.HasValue || pageSegmentIndex.Value <= 0)
-        {
-            return null;
-        }
-
-        return pageSegmentIndex.Value - 1;
-    }
-
-    private static string BuildSegmentContinuationToken(int zeroBasedSegmentIndex)
-    {
-        var encodedInnerToken = Convert.ToBase64String(Encoding.UTF8.GetBytes(string.Empty));
-        return $"seg:{zeroBasedSegmentIndex}|{encodedInnerToken}";
+        return new RawZeroRecoveryResult(false, null);
     }
 
     private static RevisionCursorTuple? SelectMaxCursor(IReadOnlyList<WorkItemRevision> revisions)
@@ -2548,6 +2582,16 @@ public class RevisionIngestionService
         }
 
         return left.Value.RevisionNumber >= right.Value.RevisionNumber ? left.Value : right.Value;
+    }
+
+    private static bool IsCursorAdvanced(RevisionCursorTuple? previous, RevisionCursorTuple? current)
+    {
+        if (previous is null || current is null)
+        {
+            return false;
+        }
+
+        return !Equals(MaxCursor(previous, current), previous.Value);
     }
 
     private static string? HashTokenForLogs(string? continuationToken)
@@ -2808,31 +2852,10 @@ public class RevisionIngestionService
 
         public int? ResolveSegmentIndex(string? continuationToken)
         {
+            _ = continuationToken;
             if (SegmentCount == 0)
             {
                 return null;
-            }
-
-            if (string.IsNullOrWhiteSpace(continuationToken))
-            {
-                return 1;
-            }
-
-            if (!continuationToken.StartsWith("seg:", StringComparison.Ordinal))
-            {
-                return LastKnownSegmentIndex > 0 ? LastKnownSegmentIndex : 1;
-            }
-
-            var separatorIndex = continuationToken.IndexOf('|');
-            if (separatorIndex <= "seg:".Length)
-            {
-                return LastKnownSegmentIndex > 0 ? LastKnownSegmentIndex : 1;
-            }
-
-            var payload = continuationToken["seg:".Length..separatorIndex];
-            if (int.TryParse(payload, out var zeroBased))
-            {
-                return Math.Clamp(zeroBased + 1, 1, Math.Max(1, SegmentCount));
             }
 
             return LastKnownSegmentIndex > 0 ? LastKnownSegmentIndex : 1;
@@ -3096,8 +3119,6 @@ public class RevisionIngestionService
     private readonly record struct RevisionCursorTuple(DateTimeOffset ChangedDate, int WorkItemId, int RevisionNumber);
     private readonly record struct RawZeroRecoveryResult(
         bool Recovered,
-        string? NextContinuationToken,
-        bool SegmentFailed,
         ReportingRevisionsResult? RecoveryPage);
 
     private sealed record CreationObservation(
