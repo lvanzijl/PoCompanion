@@ -392,16 +392,13 @@ public sealed class RevisionIngestionServiceV2
                         true, rawCount);
                 }
 
-                if (nextToken != null &&
-                    !string.Equals(nextToken, continuationToken, StringComparison.Ordinal))
-                {
-                    await SaveCheckpointOnTokenAdvanceAsync(
-                        productOwnerId,
-                        window,
-                        nextToken,
-                        pageIndex,
-                        cancellationToken);
-                }
+                await SaveCheckpointIfTokenAdvancedAsync(
+                    productOwnerId,
+                    window,
+                    continuationToken,
+                    nextToken,
+                    pageIndex,
+                    cancellationToken);
 
                 continuationToken = nextToken;
                 pageIndex++;
@@ -444,16 +441,13 @@ public sealed class RevisionIngestionServiceV2
 
             }
 
-            if (nextToken != null &&
-                !string.Equals(nextToken, continuationToken, StringComparison.Ordinal))
-            {
-                await SaveCheckpointOnTokenAdvanceAsync(
-                    productOwnerId,
-                    window,
-                    nextToken,
-                    pageIndex,
-                    cancellationToken);
-            }
+            await SaveCheckpointIfTokenAdvancedAsync(
+                productOwnerId,
+                window,
+                continuationToken,
+                nextToken,
+                pageIndex,
+                cancellationToken);
 
             totalPersisted += persisted;
 
@@ -692,6 +686,28 @@ public sealed class RevisionIngestionServiceV2
             productOwnerId,
             window,
             continuationToken,
+            pageIndex,
+            cancellationToken);
+    }
+
+    private async Task SaveCheckpointIfTokenAdvancedAsync(
+        int productOwnerId,
+        IngestionWindow window,
+        string? previousToken,
+        string? nextToken,
+        int pageIndex,
+        CancellationToken cancellationToken)
+    {
+        if (nextToken == null ||
+            string.Equals(nextToken, previousToken, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await SaveCheckpointOnTokenAdvanceAsync(
+            productOwnerId,
+            window,
+            nextToken,
             pageIndex,
             cancellationToken);
     }
