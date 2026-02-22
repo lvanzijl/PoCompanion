@@ -58,7 +58,7 @@ public sealed class RevisionIngestionServiceV2Tests
         {
             RevisionIngestionMode = "V2",
             V2EnableWindowing = false,
-            V2MaxEmptyPageRetries = 2
+            V2MaxConsecutiveEmptyPages = 2
         };
 
         var stubClient = new StubRevisionSource(results);
@@ -240,12 +240,14 @@ public sealed class RevisionIngestionServiceV2Tests
         };
 
         var stubClient = new StubRevisionSource(results);
+        var backfillProvider = new StubBackfillStartProvider(windowStart);
         using var provider = BuildServiceProvider(stubClient,
             v2Options: new RevisionIngestionV2Options
             {
                 RevisionIngestionMode = "V2",
                 V2EnableWindowing = false
-            });
+            },
+            backfillStartProvider: backfillProvider);
 
         // Pre-seed a watermark with an in-progress checkpoint
         using (var scope = provider.CreateScope())
@@ -357,6 +359,7 @@ public sealed class RevisionIngestionServiceV2Tests
 
         public int ReportingCalls { get; private set; }
         public List<string?> RequestedContinuationTokens { get; } = new();
+        public List<DateTimeOffset?> RequestedStartDateTimes { get; } = new();
 
         public Task<ReportingRevisionsResult> GetRevisionsAsync(
             DateTimeOffset? startDateTime = null,
@@ -368,6 +371,7 @@ public sealed class RevisionIngestionServiceV2Tests
         {
             ReportingCalls++;
             RequestedContinuationTokens.Add(continuationToken);
+            RequestedStartDateTimes.Add(startDateTime);
             return Task.FromResult(_results.Dequeue());
         }
 
@@ -395,7 +399,9 @@ public sealed class RevisionIngestionServiceV2Tests
         RevisionIngestionV2Options? v2Options = null,
         int backlogRootId = 1,
         IReadOnlyCollection<int>? descendantWorkItemIds = null,
-        bool registerDispatcher = false)
+        bool registerDispatcher = false,
+        IBackfillStartProvider? backfillStartProvider = null,
+        TimeProvider? timeProvider = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -415,6 +421,12 @@ public sealed class RevisionIngestionServiceV2Tests
         services.AddSingleton<ITfsClient>(
             CreateTfsClient(backlogRootId, descendantWorkItemIds ?? DefaultDescendantWorkItemIds));
         services.AddSingleton<IWorkItemRevisionSource>(revisionClient);
+        services.AddSingleton<IBackfillStartProvider>(
+            backfillStartProvider ?? new StubBackfillStartProvider(null));
+        if (timeProvider != null)
+        {
+            services.AddSingleton(timeProvider);
+        }
         services.AddSingleton<RevisionIngestionServiceV2>();
 
         if (registerDispatcher)
@@ -536,5 +548,160 @@ public sealed class RevisionIngestionServiceV2Tests
                 RevisionsHydrated = 0
             });
         }
+    }
+
+    private sealed class StubBackfillStartProvider : IBackfillStartProvider
+    {
+        private readonly DateTimeOffset? _earliestDate;
+
+        public StubBackfillStartProvider(DateTimeOffset? earliestDate)
+        {
+            _earliestDate = earliestDate;
+        }
+
+        public Task<DateTimeOffset?> GetEarliestChangedDateUtcAsync(
+            IReadOnlyCollection<int> workItemIds,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_earliestDate);
+        }
+    }
+
+    // ─── Tests for empty-token chains (A–D) ────────────────────────
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_EmptyTokenChain_EventuallyTerminatesCleanly()
+    {
+        // Test 1: Empty-token chain eventually terminates cleanly
+        // call1: raw=0, nextToken=T1
+        // call2: raw=0, nextToken=T2
+        // call3: raw=5, nextToken=T3
+        // call4: raw=0, nextToken=null
+        var results = new[]
+        {
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T1"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T2"),
+            new ReportingRevisionsResult(new[]
+            {
+                CreateRevision(10, 1), CreateRevision(11, 1),
+                CreateRevision(42, 1), CreateRevision(99, 1),
+                CreateRevision(10, 2)
+            }, "T3"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
+        };
+
+        var options = new RevisionIngestionV2Options
+        {
+            RevisionIngestionMode = "V2",
+            V2EnableWindowing = false,
+            V2MaxConsecutiveEmptyPages = 5
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        using var provider = BuildServiceProvider(stubClient, v2Options: options);
+        var service = provider.GetRequiredService<RevisionIngestionServiceV2>();
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success, $"Expected success but got: {result.Message}");
+        Assert.AreEqual(4, stubClient.ReportingCalls, "Expected 4 page calls");
+        Assert.IsGreaterThan(0, result.RevisionsIngested, "Expected persisted > 0");
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_EmptyTokenChainExceedsThreshold_Fails()
+    {
+        // Test 2: Empty-token chain exceeds threshold -> fails
+        // raw=0 nextToken=T1, raw=0 nextToken=T2, raw=0 nextToken=T3
+        // V2MaxConsecutiveEmptyPages=2, so 3 empty pages > 2 → fail
+        var results = new[]
+        {
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T1"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T2"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T3")
+        };
+
+        var options = new RevisionIngestionV2Options
+        {
+            RevisionIngestionMode = "V2",
+            V2EnableWindowing = false,
+            V2MaxConsecutiveEmptyPages = 2
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        using var provider = BuildServiceProvider(stubClient, v2Options: options);
+        var service = provider.GetRequiredService<RevisionIngestionServiceV2>();
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsFalse(result.Success, "Expected failure due to EmptyPageWithToken stall");
+        StringAssert.Contains(result.ErrorMessage, "EmptyPageWithToken");
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_TokenCycleDetection_Fails()
+    {
+        // Test 3: Token cycle detection -> fails
+        // raw=0 nextToken=T1, raw=0 nextToken=T2, raw=0 nextToken=T1 (cycle)
+        var results = new[]
+        {
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T1"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T2"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T1")
+        };
+
+        var options = new RevisionIngestionV2Options
+        {
+            RevisionIngestionMode = "V2",
+            V2EnableWindowing = false,
+            V2MaxConsecutiveEmptyPages = 100 // high enough so empty threshold doesn't trigger
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        using var provider = BuildServiceProvider(stubClient, v2Options: options);
+        var service = provider.GetRequiredService<RevisionIngestionServiceV2>();
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsFalse(result.Success, "Expected failure due to RepeatedTokenCycle");
+        StringAssert.Contains(result.ErrorMessage, "RepeatedTokenCycle");
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_BackfillStartDerivation_UsesDerivedValue()
+    {
+        // Test 4: Backfill start derivation uses derived value when available
+        var derivedDate = new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+        var results = new[]
+        {
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1, derivedDate.AddDays(1)) }, null)
+        };
+
+        var options = new RevisionIngestionV2Options
+        {
+            RevisionIngestionMode = "V2",
+            V2EnableWindowing = false
+        };
+
+        var backfillProvider = new StubBackfillStartProvider(derivedDate);
+        var stubClient = new StubRevisionSource(results);
+        using var provider = BuildServiceProvider(stubClient, v2Options: options,
+            backfillStartProvider: backfillProvider);
+        var service = provider.GetRequiredService<RevisionIngestionServiceV2>();
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success, $"Expected success but got: {result.Message}");
+
+        // Verify the startDateTime passed to the revision source is at or after the derived date
+        // (not 2000-01-01)
+        Assert.AreEqual(1, stubClient.ReportingCalls);
+        var requestedStart = stubClient.RequestedStartDateTimes[0];
+        Assert.IsNotNull(requestedStart, "startDateTime should not be null");
+        Assert.IsGreaterThanOrEqualTo(derivedDate, requestedStart!.Value,
+            "startDateTime should be >= derived date");
+        Assert.IsGreaterThanOrEqualTo(2021, requestedStart.Value.Year,
+            "startDateTime year should be >= 2021 (derived)");
     }
 }

@@ -24,20 +24,25 @@ public sealed class RevisionIngestionServiceV2
     private readonly ILogger<RevisionIngestionServiceV2> _logger;
     private readonly IOptionsMonitor<RevisionIngestionV2Options> _options;
     private readonly IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions> _persistenceOptions;
+    private readonly IBackfillStartProvider _backfillStartProvider;
+    private readonly TimeProvider _timeProvider;
 
-    private static readonly DateTimeOffset BackfillStartMinimumUtc =
-        new(new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+    private const int DefaultFallbackDays = 180;
 
     public RevisionIngestionServiceV2(
         IServiceScopeFactory scopeFactory,
         ILogger<RevisionIngestionServiceV2> logger,
         IOptionsMonitor<RevisionIngestionV2Options> options,
-        IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions> persistenceOptions)
+        IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions> persistenceOptions,
+        IBackfillStartProvider backfillStartProvider,
+        TimeProvider? timeProvider = null)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
         _options = options;
         _persistenceOptions = persistenceOptions;
+        _backfillStartProvider = backfillStartProvider;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -70,8 +75,11 @@ public sealed class RevisionIngestionServiceV2
                 "REV_INGEST_V2_SCOPE products={ProductCount} workItems={WorkItemCount}",
                 productCount, allowedWorkItemIds.Count);
 
-            // Phase 2: Determine windows
-            var windows = BuildWindows(config);
+            // Phase 2: Derive backfill start and determine windows
+            var now = _timeProvider.GetUtcNow();
+            var backfillStart = await DeriveBackfillStartAsync(
+                allowedWorkItemIds, config, now, cancellationToken);
+            var windows = BuildWindows(config, backfillStart, now);
 
             // Phase 2b: Load checkpoint and skip completed windows
             string? resumeToken = null;
@@ -144,8 +152,12 @@ public sealed class RevisionIngestionServiceV2
                 if (!windowResult.Success)
                 {
                     _logger.LogWarning(
-                        "REV_INGEST_V2_WINDOW_FAIL reason={Reason} tokenHash={TokenHash} retries={Retries}",
-                        windowResult.StallReason, windowResult.LastTokenHash, windowResult.RetryCount);
+                        "REV_INGEST_V2_WINDOW_FAIL reason={Reason} tokenHash={TokenHash} " +
+                        "consecutiveEmptyPages={ConsecutiveEmpty} " +
+                        "windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc}",
+                        windowResult.StallReason, windowResult.LastTokenHash,
+                        windowResult.ConsecutiveEmptyPages,
+                        window.Start, window.End);
 
                     return new RevisionIngestionResult
                     {
@@ -216,26 +228,42 @@ public sealed class RevisionIngestionServiceV2
     {
         var windowStart = Stopwatch.GetTimestamp();
         string? continuationToken = initialContinuationToken;
-        string? previousToken = null;
         int pageIndex = 0;
         int totalPersisted = 0;
         int consecutiveEmptyPages = 0;
+        var seenTokenHashes = new HashSet<string>();
+        int emptyWithTokenLogCount = 0;
 
         do
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Defensive: detect repeated token
-            if (continuationToken != null && continuationToken == previousToken)
+            // Defensive: detect token cycles (any repeated token, not just immediate repeat)
+            var continuationTokenHash = HashToken(continuationToken);
+            if (continuationTokenHash != null)
             {
-                return new WindowResult(
-                    Success: false,
-                    Persisted: totalPersisted,
-                    Pages: pageIndex,
-                    StallReason: "RepeatedToken",
-                    LastTokenHash: HashToken(continuationToken),
-                    RetryCount: 0,
-                    DurationMs: GetElapsedMs(windowStart));
+                if (!seenTokenHashes.Add(continuationTokenHash))
+                {
+                    _logger.LogWarning(
+                        "REV_INGEST_V2_WINDOW_FAIL reason=RepeatedTokenCycle tokenHash={TokenHash} " +
+                        "pageIndex={PageIndex} seenCount={SeenCount} " +
+                        "windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc} " +
+                        "allowedWorkItemIds={AllowedCount} pageSize={PageSize} " +
+                        "hasContinuationToken={HasToken}",
+                        continuationTokenHash, pageIndex, seenTokenHashes.Count,
+                        window.Start, window.End,
+                        allowedWorkItemIds.Count, config.V2PageSize,
+                        continuationToken != null);
+
+                    return new WindowResult(
+                        Success: false,
+                        Persisted: totalPersisted,
+                        Pages: pageIndex,
+                        StallReason: "RepeatedTokenCycle",
+                        LastTokenHash: continuationTokenHash,
+                        ConsecutiveEmptyPages: consecutiveEmptyPages,
+                        DurationMs: GetElapsedMs(windowStart));
+                }
             }
 
             ReportingRevisionsResult page;
@@ -253,32 +281,55 @@ public sealed class RevisionIngestionServiceV2
 
             var rawCount = page.Revisions.Count;
             var nextToken = page.ContinuationToken;
+            var nextTokenHash = HashToken(nextToken);
 
-            // Empty page with token: bounded retry
+            // Empty page with non-null token: advance the server token
             if (rawCount == 0 && nextToken != null)
             {
                 consecutiveEmptyPages++;
 
-                if (consecutiveEmptyPages > config.V2MaxEmptyPageRetries)
+                // Rate-limited logging: first 3, then every 50
+                emptyWithTokenLogCount++;
+                if (emptyWithTokenLogCount <= 3 || emptyWithTokenLogCount % 50 == 0)
                 {
+                    _logger.LogInformation(
+                        "REV_INGEST_V2_EMPTY_WITH_TOKEN page={PageIndex} consecutiveEmpty={ConsecutiveEmpty} " +
+                        "tokenHash={TokenHash} nextTokenHash={NextTokenHash} " +
+                        "windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc} " +
+                        "allowedWorkItemIds={AllowedCount} pageSize={PageSize} " +
+                        "hasContinuationToken={HasToken} rawCount={RawCount} scopedCount=0 inWindowCount=0",
+                        pageIndex, consecutiveEmptyPages,
+                        continuationTokenHash, nextTokenHash,
+                        window.Start, window.End,
+                        allowedWorkItemIds.Count, config.V2PageSize,
+                        true, rawCount);
+                }
+
+                if (consecutiveEmptyPages > config.V2MaxConsecutiveEmptyPages)
+                {
+                    _logger.LogWarning(
+                        "REV_INGEST_V2_WINDOW_FAIL reason=EmptyPageWithToken " +
+                        "pageIndex={PageIndex} consecutiveEmptyPages={ConsecutiveEmpty} " +
+                        "maxAllowedEmpty={MaxAllowedEmpty} " +
+                        "tokenHash={TokenHash} nextTokenHash={NextTokenHash} " +
+                        "windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc} " +
+                        "allowedWorkItemIds={AllowedCount} pageSize={PageSize}",
+                        pageIndex, consecutiveEmptyPages,
+                        config.V2MaxConsecutiveEmptyPages,
+                        continuationTokenHash, nextTokenHash,
+                        window.Start, window.End,
+                        allowedWorkItemIds.Count, config.V2PageSize);
+
                     return new WindowResult(
                         Success: false,
                         Persisted: totalPersisted,
                         Pages: pageIndex + 1,
                         StallReason: "EmptyPageWithToken",
-                        LastTokenHash: HashToken(nextToken),
-                        RetryCount: consecutiveEmptyPages,
+                        LastTokenHash: nextTokenHash,
+                        ConsecutiveEmptyPages: consecutiveEmptyPages,
                         DurationMs: GetElapsedMs(windowStart));
                 }
 
-                // Small backoff before retry
-                await Task.Delay(500 * consecutiveEmptyPages, cancellationToken);
-
-                _logger.LogWarning(
-                    "REV_INGEST_V2_EMPTY_PAGE_RETRY page={PageIndex} retryCount={RetryCount} tokenHash={TokenHash}",
-                    pageIndex, consecutiveEmptyPages, HashToken(nextToken));
-
-                previousToken = continuationToken;
                 continuationToken = nextToken;
                 pageIndex++;
                 continue;
@@ -325,7 +376,7 @@ public sealed class RevisionIngestionServiceV2
                 pageIndex, rawCount, scoped.Count, inWindow.Count,
                 inWindow.Count, persisted,
                 rejectsDuplicate, rejectsMissing, rejectsOther,
-                HashToken(continuationToken), HashToken(nextToken));
+                continuationTokenHash, nextTokenHash);
 
             if (scoped.Count > 0 && inWindow.Count == 0)
             {
@@ -335,7 +386,6 @@ public sealed class RevisionIngestionServiceV2
                     scoped.Count, window.Start, window.End);
             }
 
-            previousToken = continuationToken;
             continuationToken = nextToken;
             pageIndex++;
 
@@ -347,7 +397,7 @@ public sealed class RevisionIngestionServiceV2
             Pages: pageIndex,
             StallReason: null,
             LastTokenHash: null,
-            RetryCount: 0,
+            ConsecutiveEmptyPages: 0,
             DurationMs: GetElapsedMs(windowStart));
     }
 
@@ -583,18 +633,62 @@ public sealed class RevisionIngestionServiceV2
         return (allowedIds, productOwner.Products.Count);
     }
 
-    private static List<IngestionWindow> BuildWindows(RevisionIngestionV2Options config)
+    private async Task<DateTimeOffset> DeriveBackfillStartAsync(
+        IReadOnlyCollection<int> allowedWorkItemIds,
+        RevisionIngestionV2Options config,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
-        var now = DateTimeOffset.UtcNow;
+        DateTimeOffset? derivedStart = null;
+        bool fallbackUsed = false;
+        string reason;
+
+        try
+        {
+            derivedStart = await _backfillStartProvider.GetEarliestChangedDateUtcAsync(
+                allowedWorkItemIds, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "REV_INGEST_V2_BACKFILL_PROVIDER_ERROR");
+        }
+
+        DateTimeOffset backfillStart;
+
+        if (derivedStart != null && derivedStart.Value <= now)
+        {
+            backfillStart = derivedStart.Value;
+            reason = "DerivedFromWorkItems";
+        }
+        else
+        {
+            var fallbackDays = Math.Max(config.V2WindowDays * 2, DefaultFallbackDays);
+            backfillStart = now.AddDays(-fallbackDays);
+            fallbackUsed = true;
+            reason = derivedStart == null ? "ProviderReturnedNull" : "DerivedDateInFuture";
+        }
+
+        _logger.LogInformation(
+            "REV_INGEST_V2_BACKFILL_START derivedStart={DerivedStart} fallbackUsed={FallbackUsed} reason={Reason}",
+            backfillStart, fallbackUsed, reason);
+
+        return backfillStart;
+    }
+
+    private static List<IngestionWindow> BuildWindows(
+        RevisionIngestionV2Options config,
+        DateTimeOffset backfillStart,
+        DateTimeOffset now)
+    {
         var windows = new List<IngestionWindow>();
 
         if (!config.V2EnableWindowing)
         {
-            windows.Add(new IngestionWindow(BackfillStartMinimumUtc, now));
+            windows.Add(new IngestionWindow(backfillStart, now));
             return windows;
         }
 
-        var cursor = BackfillStartMinimumUtc;
+        var cursor = backfillStart;
         var windowSpan = TimeSpan.FromDays(config.V2WindowDays);
 
         while (cursor < now)
@@ -636,7 +730,7 @@ public sealed class RevisionIngestionServiceV2
         int Pages,
         string? StallReason,
         string? LastTokenHash,
-        int RetryCount,
+        int ConsecutiveEmptyPages,
         long DurationMs);
 
     private sealed record PersistResult(
