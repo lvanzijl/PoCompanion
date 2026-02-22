@@ -182,3 +182,10 @@ Done when:
 3. `RawZeroWithHasMore`/dead-page scenarios have deterministic recovery or explicit bounded failure.
 4. Retrieved scoped revisions persist as expected (or are explicitly and correctly attributed to drop reasons).
 5. Unit and fixture-based tests cover all required scenarios without live TFS dependencies.
+
+---
+
+## Implemented (2026-02-22)
+- Enforced canonical continuation query rebuild in `RealODataRevisionTfsClient` + `ODataRevisionQueryBuilder` so continuation pages always re-apply window bounds (`ChangedDate ge start` + `ChangedDate lt end`), stable ordering, and top while extracting only continuation tokens from nextLink.
+- Added guardrail failure for out-of-window payloads with high-signal diagnostics (window bounds, page index, min/max changed date, nextLink-follow-up flag, filter/orderby).
+- Added deterministic empty-page-with-has-more recovery by re-seeking from the last seen `(ChangedDate, WorkItemId, Revision)` cursor (defaulted by existing seek fallback option), with mocked unit tests covering nextLink constraint preservation, conflicting nextLink filters, invariant enforcement, and re-seek progress.
