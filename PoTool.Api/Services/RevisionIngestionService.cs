@@ -2209,6 +2209,7 @@ public class RevisionIngestionService
                 if (existingKeys.Contains((revision.WorkItemId, revision.RevisionNumber)))
                 {
                     metrics?.IncrementDuplicate();
+                    metrics?.IncrementAlreadyExists();
                     continue;
                 }
 
@@ -2266,7 +2267,7 @@ public class RevisionIngestionService
             }
             catch (DbUpdateException dbUpdateException)
             {
-                metrics?.CaptureDbUpdateException(dbUpdateException, persistAttemptCount);
+                metrics?.CaptureDbUpdateException(dbUpdateException);
                 _logger.LogError(
                     dbUpdateException,
                     "PersistCommit failed with DbUpdateException. PersistAttemptCount={PersistAttemptCount}",
@@ -2521,7 +2522,12 @@ public class RevisionIngestionService
     {
         if (left == null)
         {
-            return right!.Value;
+            if (right == null)
+            {
+                return default;
+            }
+
+            return right.Value;
         }
 
         if (right == null)
@@ -3142,19 +3148,16 @@ public class RevisionIngestionService
         public void IncrementRevisionHeader() => RevisionHeaderCount++;
         public void IncrementFieldDelta() => FieldDeltaCount++;
         public void IncrementRelationDelta() => RelationDeltaCount++;
-        public void IncrementDuplicate()
-        {
-            DuplicateCount++;
-            AlreadyExistsCount++;
-        }
+        public void IncrementDuplicate() => DuplicateCount++;
+        public void IncrementAlreadyExists() => AlreadyExistsCount++;
         public void IncrementMissingRequired() => MissingRequiredCount++;
         public void IncrementInvalidChangedDate() => InvalidChangedDateCount++;
         public void IncrementInvalidWorkItemId() => InvalidWorkItemIdCount++;
         public void MarkSaveChangesInvoked() => SaveChangesInvoked = true;
 
-        public void CaptureDbUpdateException(DbUpdateException exception, int attemptedPersistCount)
+        public void CaptureDbUpdateException(DbUpdateException exception)
         {
-            DbConstraintCount += Math.Max(0, attemptedPersistCount);
+            DbConstraintCount += 1;
             SaveChangesExceptionType = exception.GetType().FullName;
             SaveChangesExceptionMessage = exception.Message;
         }
