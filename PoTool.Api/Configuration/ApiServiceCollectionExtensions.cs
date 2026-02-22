@@ -324,8 +324,13 @@ public static class ApiServiceCollectionExtensions
             services.AddScoped<IWorkItemRevisionSource, RealODataRevisionTfsClient>();
         }
 
+        // Register Revision Ingestion V2 options
+        services.AddOptions<RevisionIngestionV2Options>()
+            .Bind(configuration.GetSection("RevisionIngestionV2"));
+
         // Register Revision Ingestion Service (for Sprint Trend feature)
         services.AddSingleton<RevisionIngestionService>();
+        services.AddSingleton<RevisionIngestionServiceV2>();
 
         // Register Relations Revision Hydrator (for ingesting relation changes)
         services.AddScoped<IRelationRevisionHydrator, RelationRevisionHydrator>();
