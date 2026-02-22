@@ -17,6 +17,7 @@ internal sealed class ODataRevisionQueryBuilder
     public string BuildInitialPageUrl(
         TfsConfigEntity config,
         DateTimeOffset? startDateTime,
+        DateTimeOffset? endDateTime,
         IReadOnlyCollection<int>? scopedWorkItemIds,
         RevisionIngestionPaginationOptions options,
         int top,
@@ -26,6 +27,7 @@ internal sealed class ODataRevisionQueryBuilder
         return BuildPageUrl(
             config,
             startDateTime,
+            endDateTime,
             scopedWorkItemIds,
             options,
             top,
@@ -37,6 +39,7 @@ internal sealed class ODataRevisionQueryBuilder
     public string BuildSeekPageUrl(
         TfsConfigEntity config,
         DateTimeOffset? startDateTime,
+        DateTimeOffset? endDateTime,
         IReadOnlyCollection<int>? scopedWorkItemIds,
         RevisionIngestionPaginationOptions options,
         int top,
@@ -49,6 +52,7 @@ internal sealed class ODataRevisionQueryBuilder
         return BuildPageUrl(
             config,
             startDateTime,
+            endDateTime,
             scopedWorkItemIds,
             options,
             top,
@@ -60,6 +64,7 @@ internal sealed class ODataRevisionQueryBuilder
     private string BuildPageUrl(
         TfsConfigEntity config,
         DateTimeOffset? startDateTime,
+        DateTimeOffset? endDateTime,
         IReadOnlyCollection<int>? scopedWorkItemIds,
         RevisionIngestionPaginationOptions options,
         int top,
@@ -75,6 +80,10 @@ internal sealed class ODataRevisionQueryBuilder
         if (startDateTime.HasValue)
         {
             filters.Add($"{ChangedDateField} ge {FormatDateLiteral(startDateTime.Value, options, quoteDateStrings)}");
+        }
+        if (endDateTime.HasValue)
+        {
+            filters.Add($"{ChangedDateField} lt {FormatDateLiteral(endDateTime.Value, options, quoteDateStrings)}");
         }
 
         var scopeFilter = BuildScopeFilter(scopedWorkItemIds, options, scopeSegment);

@@ -47,6 +47,29 @@ public class RealODataRevisionTfsClientTests
     }
 
     [TestMethod]
+    public async Task GetRevisionsAsync_WithEndDateTime_AddsUpperBoundFilter()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": []
+            }
+            """
+        ]);
+
+        var client = CreateClient(handler);
+        _ = await client.GetRevisionsAsync(
+            startDateTime: DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
+            scopedWorkItemIds: [10, 11],
+            endDateTime: DateTimeOffset.Parse("2026-02-01T00:00:00Z"));
+
+        var request = Uri.UnescapeDataString(handler.RequestUris[0]);
+        StringAssert.Contains(request, "ChangedDate ge 2026-01-01T00:00:00.0000000Z");
+        StringAssert.Contains(request, "ChangedDate lt 2026-02-01T00:00:00.0000000Z");
+    }
+
+    [TestMethod]
     public async Task GetWorkItemRevisionsAsync_FollowsPagedNextLink()
     {
         var handler = new QueueMessageHandler(

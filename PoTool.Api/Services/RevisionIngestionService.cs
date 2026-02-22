@@ -1226,6 +1226,7 @@ public class RevisionIngestionService
                     window.StartUtc,
                     continuationToken,
                     expandMode: ReportingExpandMode.None,
+                    endDateTime: window.EndUtc,
                     cancellationToken);
             }
             catch (Exception ex) when (ex is InvalidOperationException)

@@ -675,6 +675,8 @@ public sealed class RevisionIngestionServiceTests
         Assert.AreEqual(1, stubClient.ReportingCalls);
         Assert.HasCount(1, stubClient.ScopedWorkItemIdSnapshots);
         CollectionAssert.AreEquivalent(new[] { 1, 10, 2, 200 }, stubClient.ScopedWorkItemIdSnapshots[0].ToArray());
+        Assert.IsNotNull(stubClient.EndDates[0]);
+        Assert.IsTrue(stubClient.EndDates[0] > stubClient.StartDates[0]);
     }
 
     private sealed class StubRevisionSource : IWorkItemRevisionSource
@@ -693,6 +695,7 @@ public sealed class RevisionIngestionServiceTests
         public int ReportingCalls { get; private set; }
         public int PerItemCalls { get; private set; }
         public List<DateTimeOffset?> StartDates { get; } = new();
+        public List<DateTimeOffset?> EndDates { get; } = new();
         public List<IReadOnlyCollection<int>> ScopedWorkItemIdSnapshots { get; } = new();
 
         public Task<ReportingRevisionsResult> GetRevisionsAsync(
@@ -700,10 +703,12 @@ public sealed class RevisionIngestionServiceTests
             string? continuationToken = null,
             IReadOnlyCollection<int>? scopedWorkItemIds = null,
             ReportingExpandMode expandMode = ReportingExpandMode.None,
+            DateTimeOffset? endDateTime = null,
             CancellationToken cancellationToken = default)
         {
             ReportingCalls++;
             StartDates.Add(startDateTime);
+            EndDates.Add(endDateTime);
             if (scopedWorkItemIds != null)
             {
                 ScopedWorkItemIdSnapshots.Add(scopedWorkItemIds.ToArray());
@@ -716,9 +721,10 @@ public sealed class RevisionIngestionServiceTests
             DateTimeOffset? startDateTime = null,
             string? continuationToken = null,
             ReportingExpandMode expandMode = ReportingExpandMode.None,
+            DateTimeOffset? endDateTime = null,
             CancellationToken cancellationToken = default)
         {
-            return GetRevisionsAsync(startDateTime, continuationToken, scopedWorkItemIds, expandMode, cancellationToken);
+            return GetRevisionsAsync(startDateTime, continuationToken, scopedWorkItemIds, expandMode, endDateTime, cancellationToken);
         }
 
         public Task<IReadOnlyList<WorkItemRevision>> GetWorkItemRevisionsAsync(
