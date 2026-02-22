@@ -1233,7 +1233,7 @@ public class RevisionIngestionService
             var pageWorkItemIds = logPerPageSummary ? new HashSet<int>() : null;
 
             var pageRequestStartTimestamp = Stopwatch.GetTimestamp();
-            var pageSegmentIndex = runDiagnostics.ResolveSegmentIndex(null);
+            var pageSegmentIndex = runDiagnostics.ResolveSegmentIndex();
             var requestContinuationToken = continuationToken;
             var previousCursor = lastSeenCursor;
             ReportingRevisionsResult result;
@@ -2591,6 +2591,11 @@ public class RevisionIngestionService
             return false;
         }
 
+        if (previous.Value.Equals(current.Value))
+        {
+            return false;
+        }
+
         return !Equals(MaxCursor(previous, current), previous.Value);
     }
 
@@ -2850,9 +2855,8 @@ public class RevisionIngestionService
             return spans.ToArray();
         }
 
-        public int? ResolveSegmentIndex(string? continuationToken)
+        public int? ResolveSegmentIndex()
         {
-            _ = continuationToken;
             if (SegmentCount == 0)
             {
                 return null;
