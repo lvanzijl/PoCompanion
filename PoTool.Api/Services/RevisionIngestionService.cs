@@ -1165,6 +1165,8 @@ public class RevisionIngestionService
         var termination = (ReportingRevisionsTermination?)null;
         var hasSeenWindowOverlap = false;
         var maxTotalPages = Math.Max(1, paginationOptions.MaxTotalPages);
+        var maxProgressWithoutDataPages = Math.Max(1, paginationOptions.MaxProgressWithoutDataPages);
+        var progressWithoutDataPages = 0;
         DateTimeOffset? windowRawMinChangedDate = null;
         DateTimeOffset? windowRawMaxChangedDate = null;
         var windowRawInWindow = false;
@@ -1491,17 +1493,24 @@ public class RevisionIngestionService
             }
             else if (rawRevisionCount == 0 && (hasMoreResults || !tokenAdvanced))
             {
-                termination = new ReportingRevisionsTermination(
-                    ReportingRevisionsTerminationReason.ProgressWithoutData,
-                    $"Reporting revisions returned no data on page {pageIndex} while indicating more results.");
-                LogEarlyTermination(
-                    "DeadPageNoData",
-                    pageIndex,
-                    tokenTracking.TokenHash,
-                    totalPersistedAfterPage);
-                paginationAnomaly = true;
-                stallReason = WindowStallReason.RawZeroWithHasMore;
-                stalled = true;
+                if (hasMoreResults && tokenAdvanced)
+                {
+                    progressWithoutDataPages++;
+                    if (progressWithoutDataPages > maxProgressWithoutDataPages)
+                    {
+                        termination = new ReportingRevisionsTermination(
+                            ReportingRevisionsTerminationReason.ProgressWithoutData,
+                            $"Reporting revisions returned no data on page {pageIndex} while indicating more results.");
+                        LogEarlyTermination(
+                            "DeadPageNoData",
+                            pageIndex,
+                            tokenTracking.TokenHash,
+                            totalPersistedAfterPage);
+                        paginationAnomaly = true;
+                        stallReason = WindowStallReason.RawZeroWithHasMore;
+                        stalled = true;
+                    }
+                }
             }
             else if (!tokenAdvanced && hasMoreResults)
             {
@@ -1516,6 +1525,10 @@ public class RevisionIngestionService
                 paginationAnomaly = true;
                 stallReason = WindowStallReason.TokenNotAdvancing;
                 stalled = true;
+            }
+            else
+            {
+                progressWithoutDataPages = 0;
             }
 
             if (stalled)

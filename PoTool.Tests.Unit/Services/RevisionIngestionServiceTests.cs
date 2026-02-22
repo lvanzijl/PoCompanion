@@ -182,16 +182,57 @@ public sealed class RevisionIngestionServiceTests
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_StopsOnDeadPageWithoutData()
+    public async Task IngestRevisionsAsync_ToleratesTransientDeadPageWithDataProgress()
     {
         var results = new[]
         {
             new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t1"),
-            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, "t2")
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, "t2"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
         };
 
         var stubClient = new StubRevisionSource(results);
         using var provider = BuildServiceProvider(stubClient);
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.IsFalse(result.WasTerminatedEarly);
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedNormally, result.RunOutcome);
+        Assert.AreEqual(3, stubClient.ReportingCalls);
+
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var watermark = await context.RevisionIngestionWatermarks.SingleAsync();
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedNormally.ToString(), watermark.LastRunOutcome);
+        Assert.AreEqual(1, await context.RevisionHeaders.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_StopsAfterMaxProgressWithoutDataPages()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t1"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t2"),
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, null)
+        };
+
+        var options = new RevisionIngestionPaginationOptions
+        {
+            MaxProgressWithoutDataPages = 1
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        using var provider = BuildServiceProvider(stubClient, options);
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
             provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
@@ -209,11 +250,6 @@ public sealed class RevisionIngestionServiceTests
         Assert.AreEqual(ReportingRevisionsTerminationReason.ProgressWithoutData, result.TerminationReason);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
         Assert.AreEqual(2, stubClient.ReportingCalls);
-
-        using var scope = provider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
-        var watermark = await context.RevisionIngestionWatermarks.SingleAsync();
-        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly.ToString(), watermark.LastRunOutcome);
     }
 
     [TestMethod]
