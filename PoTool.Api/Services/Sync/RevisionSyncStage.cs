@@ -9,14 +9,14 @@ namespace PoTool.Api.Services.Sync;
 /// </summary>
 public class RevisionSyncStage : ISyncStage
 {
-    private readonly RevisionIngestionService _revisionIngestionService;
+    private readonly IRevisionIngestionService _revisionIngestionService;
     private readonly ILogger<RevisionSyncStage> _logger;
 
     public string StageName => "SyncRevisions";
     public int StageNumber => 3;
 
     public RevisionSyncStage(
-        RevisionIngestionService revisionIngestionService,
+        IRevisionIngestionService revisionIngestionService,
         ILogger<RevisionSyncStage> logger)
     {
         _revisionIngestionService = revisionIngestionService;
