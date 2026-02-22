@@ -81,6 +81,35 @@ public sealed class RevisionIngestionServiceTests
     }
 
     [TestMethod]
+    public async Task IngestRevisionsAsync_PassesContinuationTokenThroughWithoutSynthesis()
+    {
+        var now = DateTimeOffset.UtcNow.AddMinutes(-10);
+        var results = new[]
+        {
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1, changedDate: now) }, "A"),
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 2, changedDate: now.AddMinutes(1)) }, "B"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        using var provider = BuildServiceProvider(stubClient);
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual(3, stubClient.ReportingCalls);
+        CollectionAssert.AreEqual(new string?[] { null, "A", "B" }, stubClient.RequestedContinuationTokens);
+    }
+
+    [TestMethod]
     public async Task IngestRevisionsAsync_RecordsTerminationReasonFromClient()
     {
         var termination = new ReportingRevisionsTermination(
@@ -293,11 +322,10 @@ public sealed class RevisionIngestionServiceTests
     [TestMethod]
     public async Task IngestRevisionsAsync_TerminatesOnRepeatedContinuationToken()
     {
-        var results = new[]
-        {
-            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, "t1"),
-            new ReportingRevisionsResult(new[] { CreateRevision(11, 1) }, "t1")
-        };
+        var stableChangedDate = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var results = Enumerable.Range(0, 10)
+            .Select(_ => new ReportingRevisionsResult(new[] { CreateRevision(10, 1, changedDate: stableChangedDate) }, "t1"))
+            .ToArray();
 
         var stubClient = new StubRevisionSource(results);
         using var provider = BuildServiceProvider(stubClient);
@@ -315,8 +343,9 @@ public sealed class RevisionIngestionServiceTests
         Assert.IsTrue(result.Success);
         Assert.IsTrue(result.HasWarnings);
         Assert.IsNotNull(result.TerminationReason);
+        StringAssert.Contains(result.TerminationMessage ?? string.Empty, "NO_FORWARD_PROGRESS");
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
-        Assert.IsGreaterThanOrEqualTo(2, stubClient.ReportingCalls);
+        Assert.IsGreaterThanOrEqualTo(3, stubClient.ReportingCalls);
 
         using var scope = provider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
@@ -696,6 +725,7 @@ public sealed class RevisionIngestionServiceTests
         public int PerItemCalls { get; private set; }
         public List<DateTimeOffset?> StartDates { get; } = new();
         public List<DateTimeOffset?> EndDates { get; } = new();
+        public List<string?> RequestedContinuationTokens { get; } = new();
         public List<IReadOnlyCollection<int>> ScopedWorkItemIdSnapshots { get; } = new();
 
         public Task<ReportingRevisionsResult> GetRevisionsAsync(
@@ -709,6 +739,7 @@ public sealed class RevisionIngestionServiceTests
             ReportingCalls++;
             StartDates.Add(startDateTime);
             EndDates.Add(endDateTime);
+            RequestedContinuationTokens.Add(continuationToken);
             if (scopedWorkItemIds != null)
             {
                 ScopedWorkItemIdSnapshots.Add(scopedWorkItemIds.ToArray());
@@ -901,21 +932,44 @@ public sealed class RevisionIngestionServiceTests
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_AttemptsDeterministicReseekOnRawZeroWithHasMore()
+    public async Task IngestRevisionsAsync_RawZeroWithHasMoreAndNoCursor_AbortsImmediately()
     {
-        var options = new RevisionIngestionPaginationOptions
-        {
-            MaxProgressWithoutDataPages = 1
-        };
         var stubClient = new StubRevisionSource(
         [
-            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t1"),
-            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t2"),
-            new ReportingRevisionsResult([CreateRevision(10, 1)], null),
-            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "A"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "A")
         ]);
 
-        using var provider = BuildServiceProvider(stubClient, options);
+        using var provider = BuildServiceProvider(stubClient);
+        var service = new RevisionIngestionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
+            provider.GetRequiredService<RevisionIngestionDiagnostics>(),
+            provider.GetRequiredService<TfsRequestThrottler>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPersistenceOptimizationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<RevisionIngestionPaginationOptions>>(),
+            provider.GetRequiredService<IDataProtectionProvider>());
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsFalse(result.Success);
+        Assert.IsTrue(result.WasTerminatedEarly);
+        StringAssert.Contains(result.TerminationMessage ?? string.Empty, "RawZeroWithHasMore+NoCursor");
+        Assert.IsLessThanOrEqualTo(2, stubClient.ReportingCalls);
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_DoesNotUseSyntheticSegmentTokenDuringRecovery()
+    {
+        var stableChangedDate = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var stubClient = new StubRevisionSource(
+        [
+            new ReportingRevisionsResult([CreateRevision(10, 1, changedDate: stableChangedDate)], "A"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "A"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "A")
+        ]);
+
+        using var provider = BuildServiceProvider(stubClient);
         var service = new RevisionIngestionService(
             provider.GetRequiredService<IServiceScopeFactory>(),
             provider.GetRequiredService<ILogger<RevisionIngestionService>>(),
@@ -928,10 +982,8 @@ public sealed class RevisionIngestionServiceTests
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
         Assert.IsTrue(result.Success);
-        Assert.AreEqual(4, stubClient.ReportingCalls);
-        using var scope = provider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
-        Assert.AreEqual(1, await context.RevisionHeaders.CountAsync());
+        Assert.IsTrue(result.WasTerminatedEarly);
+        Assert.IsTrue(stubClient.RequestedContinuationTokens.All(token => token is null || !token.StartsWith("seg:", StringComparison.Ordinal)));
     }
 
     [TestMethod]
