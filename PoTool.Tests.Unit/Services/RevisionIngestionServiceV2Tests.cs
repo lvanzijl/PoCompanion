@@ -44,14 +44,15 @@ public sealed class RevisionIngestionServiceV2Tests
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_EmptyPageWithToken_FailsAfterBoundedRetries()
+    public async Task IngestRevisionsAsync_EmptyPageWithToken_DoesNotFailAndAdvancesCheckpoint()
     {
         var results = new[]
         {
             new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, "A"),
             new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "B"),
             new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "C"),
-            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "D")
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "D"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
         };
 
         var options = new RevisionIngestionV2Options
@@ -67,8 +68,10 @@ public sealed class RevisionIngestionServiceV2Tests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsFalse(result.Success, "Expected failure due to EmptyPageWithToken stall");
-        StringAssert.Contains(result.ErrorMessage, "EmptyPageWithToken");
+        Assert.IsTrue(result.Success, $"Expected success but got: {result.Message}");
+        CollectionAssert.AreEqual(
+            new string?[] { null, "A", "B", "C", "D" },
+            stubClient.RequestedContinuationTokens);
     }
 
     [TestMethod]
@@ -295,15 +298,13 @@ public sealed class RevisionIngestionServiceV2Tests
 
         await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        // Verify checkpoint is cleared (outcome = V2_Completed, token = null)
+        // No continuation token means no checkpoint should have been created.
         using var scope = provider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
         var watermark = await context.RevisionIngestionWatermarks
             .FirstOrDefaultAsync(w => w.ProductOwnerId == 1);
 
-        Assert.IsNotNull(watermark);
-        Assert.IsNull(watermark.ContinuationToken, "Token should be cleared after window completes");
-        Assert.AreEqual("V2_Completed", watermark.LastRunOutcome);
+        Assert.IsNull(watermark);
     }
 
     [TestMethod]
@@ -330,6 +331,91 @@ public sealed class RevisionIngestionServiceV2Tests
         // V2 was called (stub was consumed by V2)
         Assert.AreEqual(1, stubClient.ReportingCalls,
             "Expected V2 to have called the revision source");
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_EmptyPagesWithAdvancingToken_PersistsCheckpointProgress()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "A"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "B"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        using var provider = BuildServiceProvider(stubClient);
+        var service = provider.GetRequiredService<RevisionIngestionServiceV2>();
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var watermark = await context.RevisionIngestionWatermarks.FirstOrDefaultAsync(w => w.ProductOwnerId == 1);
+        Assert.IsNotNull(watermark);
+        Assert.AreEqual(RevisionIngestionServiceV2.HashToken("B"), watermark.LastStableContinuationTokenHash);
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_ClientTermination_CompletesWithPaginationAnomaly()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult(
+                new[] { CreateRevision(10, 1) },
+                null,
+                new ReportingRevisionsTermination(ReportingRevisionsTerminationReason.ProgressWithoutData, "Terminated by client"))
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        using var provider = BuildServiceProvider(stubClient);
+        var service = provider.GetRequiredService<RevisionIngestionServiceV2>();
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.HasWarnings);
+        Assert.IsTrue(result.WasTerminatedEarly);
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
+        Assert.AreEqual(ReportingRevisionsTerminationReason.ProgressWithoutData, result.TerminationReason);
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_SegmentedContinuation_ProcessesSequentiallyAndResumesFromMidSegment()
+    {
+        var windowStart = new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var results = new[]
+        {
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "seg:0|BBB"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "seg:1|CCC"),
+            new ReportingRevisionsResult(new[] { CreateRevision(42, 1) }, null)
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        var backfillProvider = new StubBackfillStartProvider(windowStart);
+        using var provider = BuildServiceProvider(stubClient, backfillStartProvider: backfillProvider);
+        using (var scope = provider.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+            context.RevisionIngestionWatermarks.Add(new RevisionIngestionWatermarkEntity
+            {
+                ProductOwnerId = 1,
+                ContinuationToken = "seg:0|AAA",
+                LastSyncStartDateTime = windowStart,
+                LastRunOutcome = "V2_InProgress",
+                IsInitialBackfillComplete = false
+            });
+            await context.SaveChangesAsync();
+        }
+
+        var service = provider.GetRequiredService<RevisionIngestionServiceV2>();
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        CollectionAssert.AreEqual(
+            new string?[] { "seg:0|AAA", "seg:0|BBB", "seg:1|CCC" },
+            stubClient.RequestedContinuationTokens);
     }
 
     // ─── Helpers ────────────────────────────────────────────────────
@@ -609,16 +695,17 @@ public sealed class RevisionIngestionServiceV2Tests
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_EmptyTokenChainExceedsThreshold_Fails()
+    public async Task IngestRevisionsAsync_EmptyTokenChainExceedsThreshold_DoesNotFail()
     {
-        // Test 2: Empty-token chain exceeds threshold -> fails
+        // Test 2: Empty-token chain may exceed configured threshold but should still complete.
         // raw=0 nextToken=T1, raw=0 nextToken=T2, raw=0 nextToken=T3
-        // V2MaxConsecutiveEmptyPages=2, so 3 empty pages > 2 → fail
+        // V2MaxConsecutiveEmptyPages=2 should no longer force failure.
         var results = new[]
         {
             new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T1"),
             new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T2"),
-            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T3")
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T3"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
         };
 
         var options = new RevisionIngestionV2Options
@@ -634,8 +721,8 @@ public sealed class RevisionIngestionServiceV2Tests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsFalse(result.Success, "Expected failure due to EmptyPageWithToken stall");
-        StringAssert.Contains(result.ErrorMessage, "EmptyPageWithToken");
+        Assert.IsTrue(result.Success, $"Expected success but got: {result.Message}");
+        Assert.AreEqual(4, stubClient.ReportingCalls);
     }
 
     [TestMethod]

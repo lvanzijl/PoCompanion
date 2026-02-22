@@ -57,6 +57,13 @@ public sealed class RevisionIngestionServiceV2
         var overallStart = Stopwatch.GetTimestamp();
         int totalPersisted = 0;
         int totalPages = 0;
+        int totalRawRevisions = 0;
+        int totalPagesWithoutScopedRevisions = 0;
+        int totalEmptyRawPagesWithToken = 0;
+        var runSegmentsProcessed = new HashSet<int>();
+        var runSegmentsWithZeroScoped = new HashSet<int>();
+        string? runTerminationReason = null;
+        string? runTerminationMessage = null;
 
         try
         {
@@ -148,6 +155,11 @@ public sealed class RevisionIngestionServiceV2
 
                 totalPersisted += windowResult.Persisted;
                 totalPages += windowResult.Pages;
+                totalRawRevisions += windowResult.TotalRawRevisions;
+                totalPagesWithoutScopedRevisions += windowResult.PagesWithoutScopedRevisions;
+                totalEmptyRawPagesWithToken += windowResult.EmptyRawPagesWithToken;
+                runSegmentsProcessed.UnionWith(windowResult.SegmentsProcessed);
+                runSegmentsWithZeroScoped.UnionWith(windowResult.SegmentsWithZeroScoped);
 
                 if (!windowResult.Success)
                 {
@@ -171,24 +183,70 @@ public sealed class RevisionIngestionServiceV2
                 }
 
                 _logger.LogInformation(
-                    "REV_INGEST_V2_WINDOW_END persistedTotal={Persisted} pages={Pages} duration={DurationMs}ms",
-                    windowResult.Persisted, windowResult.Pages, windowResult.DurationMs);
+                    "REV_INGEST_V2_WINDOW_SUMMARY windowStart={WindowStart} windowEnd={WindowEnd} pagesFetched={PagesFetched} totalRawRevisions={TotalRawRevisions} totalPersistedRevisions={TotalPersistedRevisions} pagesWithoutScopedRevisions={PagesWithoutScopedRevisions} emptyRawPagesWithToken={EmptyRawPagesWithToken} segmentsProcessed={SegmentsProcessed} segmentsWithZeroScoped={SegmentsWithZeroScoped} terminationReason={TerminationReason} terminationMessage={TerminationMessage} durationMs={DurationMs}",
+                    window.Start,
+                    window.End,
+                    windowResult.Pages,
+                    windowResult.TotalRawRevisions,
+                    windowResult.Persisted,
+                    windowResult.PagesWithoutScopedRevisions,
+                    windowResult.EmptyRawPagesWithToken,
+                    windowResult.SegmentsProcessed.Count,
+                    windowResult.SegmentsWithZeroScoped.Count,
+                    windowResult.TerminationReason,
+                    windowResult.TerminationMessage,
+                    windowResult.DurationMs);
 
                 // Mark window as completed in checkpoint so resume skips it
                 using (var scope = _scopeFactory.CreateScope())
                 {
                     var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
-                    await ClearCheckpointAsync(context, productOwnerId, cancellationToken);
+                    await ClearCheckpointAsync(
+                        context,
+                        productOwnerId,
+                        windowResult.WasTerminatedEarly ? "V2_CompletedWithAnomaly" : "V2_Completed",
+                        cancellationToken);
+                }
+
+                if (windowResult.WasTerminatedEarly)
+                {
+                    runTerminationReason = windowResult.TerminationReason;
+                    runTerminationMessage = windowResult.TerminationMessage;
+                    break;
                 }
             }
+
+            var runOutcome = runTerminationReason is null
+                ? RevisionIngestionRunOutcome.CompletedNormally
+                : RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly;
+            _logger.LogInformation(
+                "REV_INGEST_V2_RUN_SUMMARY pagesFetched={PagesFetched} totalRawRevisions={TotalRawRevisions} totalPersistedRevisions={TotalPersistedRevisions} pagesWithoutScopedRevisions={PagesWithoutScopedRevisions} emptyRawPagesWithToken={EmptyRawPagesWithToken} segmentsProcessed={SegmentsProcessed} segmentsWithZeroScoped={SegmentsWithZeroScoped} terminationReason={TerminationReason} terminationMessage={TerminationMessage} durationMs={DurationMs}",
+                totalPages,
+                totalRawRevisions,
+                totalPersisted,
+                totalPagesWithoutScopedRevisions,
+                totalEmptyRawPagesWithToken,
+                runSegmentsProcessed.Count,
+                runSegmentsWithZeroScoped.Count,
+                runTerminationReason,
+                runTerminationMessage,
+                GetElapsedMs(overallStart));
 
             return new RevisionIngestionResult
             {
                 Success = true,
-                RunOutcome = RevisionIngestionRunOutcome.CompletedNormally,
+                HasWarnings = runOutcome == RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly,
+                WasTerminatedEarly = runTerminationReason is not null,
+                RunOutcome = runOutcome,
                 RevisionsIngested = totalPersisted,
                 PagesProcessed = totalPages,
-                Message = $"V2 ingestion completed. Persisted={totalPersisted} Pages={totalPages}"
+                TerminationReason = Enum.TryParse<ReportingRevisionsTerminationReason>(runTerminationReason, out var parsedReason)
+                    ? parsedReason
+                    : null,
+                TerminationMessage = runTerminationMessage,
+                Message = runOutcome == RevisionIngestionRunOutcome.CompletedNormally
+                    ? $"V2 ingestion completed. Persisted={totalPersisted} Pages={totalPages}"
+                    : $"V2 ingestion completed with pagination anomaly. Persisted={totalPersisted} Pages={totalPages} Reason={runTerminationReason}"
             };
         }
         catch (OperationCanceledException)
@@ -230,9 +288,16 @@ public sealed class RevisionIngestionServiceV2
         string? continuationToken = initialContinuationToken;
         int pageIndex = 0;
         int totalPersisted = 0;
+        int totalRawRevisions = 0;
+        int pagesWithoutScopedRevisions = 0;
+        int emptyRawPagesWithToken = 0;
         int consecutiveEmptyPages = 0;
         var seenTokenHashes = new HashSet<string>();
+        var segmentsProcessed = new HashSet<int>();
+        var segmentsWithZeroScoped = new HashSet<int>();
         int emptyWithTokenLogCount = 0;
+        string? terminationReason = null;
+        string? terminationMessage = null;
 
         do
         {
@@ -262,6 +327,14 @@ public sealed class RevisionIngestionServiceV2
                         StallReason: "RepeatedTokenCycle",
                         LastTokenHash: continuationTokenHash,
                         ConsecutiveEmptyPages: consecutiveEmptyPages,
+                        TotalRawRevisions: totalRawRevisions,
+                        PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
+                        EmptyRawPagesWithToken: emptyRawPagesWithToken,
+                        SegmentsProcessed: segmentsProcessed,
+                        SegmentsWithZeroScoped: segmentsWithZeroScoped,
+                        WasTerminatedEarly: false,
+                        TerminationReason: null,
+                        TerminationMessage: null,
                         DurationMs: GetElapsedMs(windowStart));
                 }
             }
@@ -282,17 +355,31 @@ public sealed class RevisionIngestionServiceV2
             var rawCount = page.Revisions.Count;
             var nextToken = page.ContinuationToken;
             var nextTokenHash = HashToken(nextToken);
+            totalRawRevisions += rawCount;
+            var activeSegmentIndex =
+                ResolveSegmentIndexFromContinuationToken(continuationToken) ??
+                ResolveSegmentIndexFromContinuationToken(nextToken);
+            if (activeSegmentIndex.HasValue)
+            {
+                segmentsProcessed.Add(activeSegmentIndex.Value);
+            }
 
             // Empty page with non-null token: advance the server token
             if (rawCount == 0 && nextToken != null)
             {
                 consecutiveEmptyPages++;
+                pagesWithoutScopedRevisions++;
+                emptyRawPagesWithToken++;
+                if (activeSegmentIndex.HasValue)
+                {
+                    segmentsWithZeroScoped.Add(activeSegmentIndex.Value);
+                }
 
                 // Rate-limited logging: first 3, then every 50
                 emptyWithTokenLogCount++;
                 if (emptyWithTokenLogCount <= 3 || emptyWithTokenLogCount % 50 == 0)
                 {
-                    _logger.LogInformation(
+                    _logger.LogWarning(
                         "REV_INGEST_V2_EMPTY_WITH_TOKEN page={PageIndex} consecutiveEmpty={ConsecutiveEmpty} " +
                         "tokenHash={TokenHash} nextTokenHash={NextTokenHash} " +
                         "windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc} " +
@@ -305,29 +392,15 @@ public sealed class RevisionIngestionServiceV2
                         true, rawCount);
                 }
 
-                if (consecutiveEmptyPages > config.V2MaxConsecutiveEmptyPages)
+                if (nextToken != null &&
+                    !string.Equals(nextToken, continuationToken, StringComparison.Ordinal))
                 {
-                    _logger.LogWarning(
-                        "REV_INGEST_V2_WINDOW_FAIL reason=EmptyPageWithToken " +
-                        "pageIndex={PageIndex} consecutiveEmptyPages={ConsecutiveEmpty} " +
-                        "maxAllowedEmpty={MaxAllowedEmpty} " +
-                        "tokenHash={TokenHash} nextTokenHash={NextTokenHash} " +
-                        "windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc} " +
-                        "allowedWorkItemIds={AllowedCount} pageSize={PageSize}",
-                        pageIndex, consecutiveEmptyPages,
-                        config.V2MaxConsecutiveEmptyPages,
-                        continuationTokenHash, nextTokenHash,
-                        window.Start, window.End,
-                        allowedWorkItemIds.Count, config.V2PageSize);
-
-                    return new WindowResult(
-                        Success: false,
-                        Persisted: totalPersisted,
-                        Pages: pageIndex + 1,
-                        StallReason: "EmptyPageWithToken",
-                        LastTokenHash: nextTokenHash,
-                        ConsecutiveEmptyPages: consecutiveEmptyPages,
-                        DurationMs: GetElapsedMs(windowStart));
+                    await SaveCheckpointOnTokenAdvanceAsync(
+                        productOwnerId,
+                        window,
+                        nextToken,
+                        pageIndex,
+                        cancellationToken);
                 }
 
                 continuationToken = nextToken;
@@ -345,6 +418,14 @@ public sealed class RevisionIngestionServiceV2
             var inWindow = scoped
                 .Where(r => r.ChangedDate >= window.Start && r.ChangedDate < window.End)
                 .ToList();
+            if (scoped.Count == 0)
+            {
+                pagesWithoutScopedRevisions++;
+                if (activeSegmentIndex.HasValue)
+                {
+                    segmentsWithZeroScoped.Add(activeSegmentIndex.Value);
+                }
+            }
 
             int persisted = 0;
             var rejectsDuplicate = 0;
@@ -361,9 +442,17 @@ public sealed class RevisionIngestionServiceV2
                 rejectsMissing = persistResult.MissingRequired;
                 rejectsOther = persistResult.Other;
 
-                // Checkpoint after successful persistence
-                await SaveCheckpointAsync(
-                    context, productOwnerId, window, nextToken, pageIndex, cancellationToken);
+            }
+
+            if (nextToken != null &&
+                !string.Equals(nextToken, continuationToken, StringComparison.Ordinal))
+            {
+                await SaveCheckpointOnTokenAdvanceAsync(
+                    productOwnerId,
+                    window,
+                    nextToken,
+                    pageIndex,
+                    cancellationToken);
             }
 
             totalPersisted += persisted;
@@ -388,6 +477,19 @@ public sealed class RevisionIngestionServiceV2
 
             continuationToken = nextToken;
             pageIndex++;
+            if (page.WasTerminatedEarly)
+            {
+                terminationReason = page.Termination?.Reason.ToString();
+                terminationMessage = page.Termination?.Message;
+                _logger.LogWarning(
+                    "REV_INGEST_V2_WINDOW_TERMINATED_EARLY windowStart={WindowStart} windowEnd={WindowEnd} pageIndex={PageIndex} reason={TerminationReason} message={TerminationMessage}",
+                    window.Start,
+                    window.End,
+                    pageIndex,
+                    terminationReason,
+                    terminationMessage);
+                break;
+            }
 
         } while (continuationToken != null);
 
@@ -397,7 +499,15 @@ public sealed class RevisionIngestionServiceV2
             Pages: pageIndex,
             StallReason: null,
             LastTokenHash: null,
-            ConsecutiveEmptyPages: 0,
+            ConsecutiveEmptyPages: consecutiveEmptyPages,
+            TotalRawRevisions: totalRawRevisions,
+            PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
+            EmptyRawPagesWithToken: emptyRawPagesWithToken,
+            SegmentsProcessed: segmentsProcessed,
+            SegmentsWithZeroScoped: segmentsWithZeroScoped,
+            WasTerminatedEarly: terminationReason is not null,
+            TerminationReason: terminationReason,
+            TerminationMessage: terminationMessage,
             DurationMs: GetElapsedMs(windowStart));
     }
 
@@ -568,9 +678,28 @@ public sealed class RevisionIngestionServiceV2
         await context.SaveChangesAsync(cancellationToken);
     }
 
+    private async Task SaveCheckpointOnTokenAdvanceAsync(
+        int productOwnerId,
+        IngestionWindow window,
+        string continuationToken,
+        int pageIndex,
+        CancellationToken cancellationToken)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        await SaveCheckpointAsync(
+            context,
+            productOwnerId,
+            window,
+            continuationToken,
+            pageIndex,
+            cancellationToken);
+    }
+
     private async Task ClearCheckpointAsync(
         PoToolDbContext context,
         int productOwnerId,
+        string completedOutcome,
         CancellationToken cancellationToken)
     {
         var watermark = await context.RevisionIngestionWatermarks
@@ -579,7 +708,7 @@ public sealed class RevisionIngestionServiceV2
         if (watermark != null)
         {
             watermark.ContinuationToken = null;
-            watermark.LastRunOutcome = "V2_Completed";
+            watermark.LastRunOutcome = completedOutcome;
             watermark.LastIngestionCompletedAt = DateTimeOffset.UtcNow;
             await context.SaveChangesAsync(cancellationToken);
         }
@@ -722,6 +851,27 @@ public sealed class RevisionIngestionServiceV2
         return (long)Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
     }
 
+    private static int? ResolveSegmentIndexFromContinuationToken(string? continuationToken)
+    {
+        if (string.IsNullOrWhiteSpace(continuationToken) ||
+            !continuationToken.StartsWith("seg:", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var payload = continuationToken["seg:".Length..];
+        var separator = payload.IndexOf('|');
+        if (separator <= 0)
+        {
+            return null;
+        }
+
+        var indexSlice = payload[..separator];
+        return int.TryParse(indexSlice, out var segmentIndex) && segmentIndex >= 0
+            ? segmentIndex
+            : null;
+    }
+
     private sealed record IngestionWindow(DateTimeOffset Start, DateTimeOffset End);
 
     private sealed record WindowResult(
@@ -731,6 +881,14 @@ public sealed class RevisionIngestionServiceV2
         string? StallReason,
         string? LastTokenHash,
         int ConsecutiveEmptyPages,
+        int TotalRawRevisions,
+        int PagesWithoutScopedRevisions,
+        int EmptyRawPagesWithToken,
+        HashSet<int> SegmentsProcessed,
+        HashSet<int> SegmentsWithZeroScoped,
+        bool WasTerminatedEarly,
+        string? TerminationReason,
+        string? TerminationMessage,
         long DurationMs);
 
     private sealed record PersistResult(
