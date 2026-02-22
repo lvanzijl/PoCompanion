@@ -206,6 +206,7 @@ public sealed class RevisionIngestionServiceTests
 
         Assert.IsTrue(result.Success);
         Assert.IsFalse(result.WasTerminatedEarly);
+        Assert.IsNull(result.TerminationReason);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedNormally, result.RunOutcome);
         Assert.AreEqual(3, stubClient.ReportingCalls);
 
@@ -217,13 +218,16 @@ public sealed class RevisionIngestionServiceTests
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_StopsAfterMaxProgressWithoutDataPages()
+    public async Task IngestRevisionsAsync_ResetsProgressWithoutDataCounterAfterDataPage()
     {
+        // With MaxProgressWithoutDataPages=1, the first empty page increments the counter,
+        // the data page resets it, and the next empty page is tolerated (boundary condition).
         var results = new[]
         {
             new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t1"),
-            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t2"),
-            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, null)
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, "t2"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "t3"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
         };
 
         var options = new RevisionIngestionPaginationOptions
@@ -245,11 +249,9 @@ public sealed class RevisionIngestionServiceTests
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
         Assert.IsTrue(result.Success);
-        Assert.IsTrue(result.HasWarnings);
-        Assert.IsTrue(result.WasTerminatedEarly);
-        Assert.AreEqual(ReportingRevisionsTerminationReason.ProgressWithoutData, result.TerminationReason);
-        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
-        Assert.AreEqual(2, stubClient.ReportingCalls);
+        Assert.IsFalse(result.WasTerminatedEarly);
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedNormally, result.RunOutcome);
+        Assert.AreEqual(4, stubClient.ReportingCalls);
     }
 
     [TestMethod]
@@ -315,6 +317,11 @@ public sealed class RevisionIngestionServiceTests
         Assert.IsNotNull(result.TerminationReason);
         Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly, result.RunOutcome);
         Assert.IsGreaterThanOrEqualTo(2, stubClient.ReportingCalls);
+
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var watermark = await context.RevisionIngestionWatermarks.SingleAsync();
+        Assert.AreEqual(RevisionIngestionRunOutcome.CompletedWithPaginationAnomaly.ToString(), watermark.LastRunOutcome);
     }
 
     [TestMethod]

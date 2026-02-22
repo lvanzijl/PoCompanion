@@ -1472,6 +1472,10 @@ public class RevisionIngestionService
             var paginationAnomaly = termination != null;
             var retryable = termination == null;
             var stalled = false;
+            if (rawRevisionCount > 0)
+            {
+                progressWithoutDataPages = 0;
+            }
             if (paginationAnomaly)
             {
                 stalled = true;
@@ -1511,6 +1515,10 @@ public class RevisionIngestionService
                         stalled = true;
                     }
                 }
+                else
+                {
+                    progressWithoutDataPages = 0;
+                }
             }
             else if (!tokenAdvanced && hasMoreResults)
             {
@@ -1525,10 +1533,6 @@ public class RevisionIngestionService
                 paginationAnomaly = true;
                 stallReason = WindowStallReason.TokenNotAdvancing;
                 stalled = true;
-            }
-            else
-            {
-                progressWithoutDataPages = 0;
             }
 
             if (stalled)
