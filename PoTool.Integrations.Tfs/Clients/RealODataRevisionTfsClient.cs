@@ -108,8 +108,9 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var totalSegmentSpan = segments.Sum(segment => segment.Span);
         var maxSegmentSpan = segments.Count == 0 ? 0 : segments.Max(segment => segment.Span);
         _logger.LogDebug(
-            "Requesting OData revisions page. Mode={Mode} PageIndex={PageIndex} Top={Top} SeekTop={SeekTop} QuotedDateStrings={QuotedDateStrings} ScopeCount={ScopeCount} ScopeMin={ScopeMin} ScopeMax={ScopeMax} SegmentCount={SegmentCount} SegmentIndex={SegmentIndex} SegmentRange={SegmentRange} TotalSegmentSpan={TotalSegmentSpan} MaxSegmentSpan={MaxSegmentSpan} Filter={Filter}",
+            "Requesting OData revisions page. Mode={Mode} IsNextLinkFollowUp={IsNextLinkFollowUp} PageIndex={PageIndex} Top={Top} SeekTop={SeekTop} QuotedDateStrings={QuotedDateStrings} ScopeCount={ScopeCount} ScopeMin={ScopeMin} ScopeMax={ScopeMax} SegmentCount={SegmentCount} SegmentIndex={SegmentIndex} SegmentRange={SegmentRange} TotalSegmentSpan={TotalSegmentSpan} MaxSegmentSpan={MaxSegmentSpan} Filter={Filter} OrderBy={OrderBy} QueryTop={QueryTop}",
             mode,
+            mode == RequestMode.NextLink,
             pageIndex,
             requestContext.Top,
             seekTop,
@@ -122,7 +123,9 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             segmentState.Segment is null ? "<none>" : $"{segmentState.Segment.Value.Start}-{segmentState.Segment.Value.End}",
             totalSegmentSpan,
             maxSegmentSpan,
-            TryGetFilterFromUrl(url) ?? "<none>");
+            TryGetFilterFromUrl(url) ?? "<none>",
+            TryGetOrderByFromUrl(url) ?? "<none>",
+            TryGetTopFromUrl(url)?.ToString(CultureInfo.InvariantCulture) ?? "<none>");
         var httpClient = _httpClientFactory.CreateClient("TfsClient.NTLM");
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -186,6 +189,38 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var minChangedDate = revisions.Count > 0 ? revisions.Min(revision => revision.ChangedDate) : (DateTimeOffset?)null;
         var maxChangedDate = revisions.Count > 0 ? revisions.Max(revision => revision.ChangedDate) : (DateTimeOffset?)null;
         RevisionCursorTuple? maxTuple = TryGetMaxTuple(revisions, out var tuple) ? tuple : null;
+        var minChangedDateUtc = minChangedDate?.ToUniversalTime();
+        var maxChangedDateUtc = maxChangedDate?.ToUniversalTime();
+
+        if (startDateTime.HasValue || endDateTime.HasValue)
+        {
+            var lowerBoundUtc = startDateTime?.ToUniversalTime();
+            var upperBoundUtc = endDateTime?.ToUniversalTime();
+            var outsideWindow = revisions.Any(revision =>
+            {
+                var changedUtc = revision.ChangedDate.ToUniversalTime();
+                return (lowerBoundUtc.HasValue && changedUtc < lowerBoundUtc.Value) ||
+                       (upperBoundUtc.HasValue && changedUtc >= upperBoundUtc.Value);
+            });
+
+            if (outsideWindow)
+            {
+                var filter = TryGetFilterFromUrl(url) ?? "<none>";
+                var orderBy = TryGetOrderByFromUrl(url) ?? "<none>";
+                _logger.LogError(
+                    "OData page violated requested window bounds. WindowStartUtc={WindowStartUtc} WindowEndUtc={WindowEndUtc} PageIndex={PageIndex} MinChangedDate={MinChangedDate} MaxChangedDate={MaxChangedDate} IsNextLinkFollowUp={IsNextLinkFollowUp} Filter={Filter} OrderBy={OrderBy}",
+                    lowerBoundUtc,
+                    upperBoundUtc,
+                    pageIndex,
+                    minChangedDateUtc,
+                    maxChangedDateUtc,
+                    mode == RequestMode.NextLink,
+                    filter,
+                    orderBy);
+                throw new InvalidOperationException(
+                    $"OData page contains revisions outside requested window. Start={lowerBoundUtc}, End={upperBoundUtc}, PageIndex={pageIndex}, MinChangedDate={minChangedDateUtc}, MaxChangedDate={maxChangedDateUtc}, Mode={mode}, Filter={filter}, OrderBy={orderBy}.");
+            }
+        }
 
         _logger.LogDebug(
             "OData revisions page loaded. Mode={Mode} PageIndex={PageIndex} RequestedUrl={RequestedUrl} Count={Count} MinChangedDate={MinChangedDate} MaxChangedDate={MaxChangedDate} MaxTuple={MaxTuple} HasNextLink={HasNextLink}",
@@ -193,14 +228,14 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             pageIndex,
             RedactCredentials(url),
             revisions.Count,
-            minChangedDate,
-            maxChangedDate,
+            minChangedDateUtc,
+            maxChangedDateUtc,
             maxTuple,
             !string.IsNullOrWhiteSpace(nextLink));
 
-        var continuation = NormalizeToken(nextLink);
+        var continuation = (string?)null;
         var stopReason = "NoMoreResults";
-        if (continuation == null &&
+        if (string.IsNullOrWhiteSpace(nextLink) &&
             options.ODataEnableSeekPagingFallback &&
             revisions.Count >= requestContext.Top &&
             maxTuple is not null)
@@ -238,7 +273,51 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         }
         else if (!string.IsNullOrWhiteSpace(nextLink))
         {
-            stopReason = "NextLink";
+            var cursor = maxTuple ?? requestContext.LastCursor;
+            if (revisions.Count == 0 &&
+                options.ODataEnableSeekPagingFallback &&
+                cursor is not null)
+            {
+                var noProgressPages = requestContext.NoProgressPages + 1;
+                if (noProgressPages >= Math.Max(1, options.MaxNoProgressPages))
+                {
+                    throw new InvalidOperationException(
+                        $"OData nextLink page returned no rows repeatedly. Page={pageIndex}, Filter={TryGetFilterFromUrl(url) ?? "<none>"}, OrderBy={TryGetOrderByFromUrl(url) ?? "<none>"}, LastCursor={cursor}");
+                }
+
+                var seekPageUrl = _queryBuilder.BuildSeekPageUrl(
+                    config,
+                    startDateTime,
+                    endDateTime,
+                    scopedWorkItemIds,
+                    options,
+                    seekTop,
+                    cursor.Value.ChangedDate,
+                    cursor.Value.WorkItemId,
+                    cursor.Value.Revision,
+                    segmentState.Segment,
+                    quoteDateStrings);
+                continuation = EncodeSeekState(new SeekContinuationState(
+                    seekPageUrl,
+                    pageIndex + 1,
+                    cursor.Value,
+                    noProgressPages));
+                stopReason = "SeekReseekAfterEmptyNextLink";
+            }
+            else
+            {
+                var noProgressPages = cursor is not null &&
+                                      requestContext.LastCursor is not null &&
+                                      requestContext.LastCursor.Value.Equals(cursor.Value)
+                    ? requestContext.NoProgressPages + 1
+                    : 0;
+                continuation = EncodeNextLinkState(new NextLinkContinuationState(
+                    nextLink,
+                    pageIndex + 1,
+                    cursor,
+                    noProgressPages));
+                stopReason = "NextLink";
+            }
         }
         else if (revisions.Count < requestContext.Top)
         {
@@ -352,15 +431,65 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
                 _queryBuilder.BuildInitialPageUrl(config, startDateTime, endDateTime, scopedWorkItemIds, options, top, scopeSegment, quoteDateStrings),
                 RequestMode.Seek,
                 top,
-                null);
+                null,
+                null,
+                0);
         }
 
         if (TryDecodeSeekState(normalizedToken, out var seekState) && seekState is not null)
         {
-            return new RequestContext(seekState.Url, RequestMode.Seek, ExtractTopOrFallback(seekState.Url, top), seekState);
+            return new RequestContext(
+                seekState.Url,
+                RequestMode.Seek,
+                ExtractTopOrFallback(seekState.Url, top),
+                seekState,
+                seekState.LastCursor,
+                seekState.NoProgressPages);
         }
 
-        return new RequestContext(normalizedToken, RequestMode.NextLink, ExtractTopOrFallback(normalizedToken, top), null);
+        if (TryDecodeNextLinkState(normalizedToken, out var nextLinkState) && nextLinkState is not null)
+        {
+            var continuationUrl = _queryBuilder.BuildContinuationPageUrl(
+                config,
+                startDateTime,
+                endDateTime,
+                scopedWorkItemIds,
+                options,
+                top,
+                nextLinkState.Url,
+                scopeSegment,
+                quoteDateStrings);
+            return new RequestContext(
+                continuationUrl,
+                RequestMode.NextLink,
+                ExtractTopOrFallback(continuationUrl, top),
+                null,
+                nextLinkState.LastCursor,
+                nextLinkState.NoProgressPages);
+        }
+
+        if (Uri.IsWellFormedUriString(normalizedToken, UriKind.Absolute))
+        {
+            var continuationUrl = _queryBuilder.BuildContinuationPageUrl(
+                config,
+                startDateTime,
+                endDateTime,
+                scopedWorkItemIds,
+                options,
+                top,
+                normalizedToken,
+                scopeSegment,
+                quoteDateStrings);
+            return new RequestContext(
+                continuationUrl,
+                RequestMode.NextLink,
+                ExtractTopOrFallback(continuationUrl, top),
+                null,
+                null,
+                0);
+        }
+
+        return new RequestContext(normalizedToken, RequestMode.NextLink, ExtractTopOrFallback(normalizedToken, top), null, null, 0);
     }
 
     private static bool ShouldUseSegmentedScope(
@@ -464,6 +593,64 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         return null;
     }
 
+    private static string? TryGetOrderByFromUrl(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return null;
+        }
+
+        foreach (var segment in uri.Query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var trimmed = segment.TrimStart('?');
+            if (trimmed.StartsWith("$orderby=", StringComparison.OrdinalIgnoreCase))
+            {
+                return Uri.UnescapeDataString(trimmed["$orderby=".Length..]);
+            }
+        }
+
+        return null;
+    }
+
+    private static int? TryGetTopFromUrl(string url)
+    {
+        var rawTop = TryGetQueryParameterValue(url, "$top");
+        if (int.TryParse(rawTop, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) && parsed > 0)
+        {
+            return parsed;
+        }
+
+        return null;
+    }
+
+    private static string? TryGetQueryParameterValue(string url, string name)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return null;
+        }
+
+        foreach (var segment in uri.Query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var trimmed = segment.TrimStart('?');
+            var separator = trimmed.IndexOf('=');
+            if (separator < 0)
+            {
+                continue;
+            }
+
+            var key = trimmed[..separator];
+            if (!string.Equals(key, name, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return Uri.UnescapeDataString(trimmed[(separator + 1)..]);
+        }
+
+        return null;
+    }
+
     private static bool TryGetMaxTuple(IReadOnlyList<WorkItemRevision> revisions, out RevisionCursorTuple tuple)
     {
         tuple = default;
@@ -527,6 +714,18 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         return string.Create(CultureInfo.InvariantCulture, $"seg:{state.SegmentIndex}|{encodedInnerToken}");
     }
 
+    private static string EncodeNextLinkState(NextLinkContinuationState state)
+    {
+        var encodedUrl = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(state.Url));
+        var changedTicks = state.LastCursor?.ChangedDate.UtcTicks ?? 0;
+        var workItemId = state.LastCursor?.WorkItemId ?? 0;
+        var revision = state.LastCursor?.Revision ?? 0;
+        var hasCursor = state.LastCursor is not null ? 1 : 0;
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"next:{encodedUrl}|{state.PageIndex}|{hasCursor}|{changedTicks}|{workItemId}|{revision}|{state.NoProgressPages}");
+    }
+
     private static bool TryDecodeSeekState(string token, out SeekContinuationState? state)
     {
         state = null;
@@ -560,6 +759,50 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
                 pageIndex,
                 new RevisionCursorTuple(new DateTimeOffset(changedTicks, TimeSpan.Zero), workItemId, revision),
                 noProgressPages);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool TryDecodeNextLinkState(string token, out NextLinkContinuationState? state)
+    {
+        state = null;
+        if (!token.StartsWith("next:", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        try
+        {
+            var payload = token["next:".Length..];
+            var parts = payload.Split('|');
+            if (parts.Length != 7 ||
+                !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var pageIndex) ||
+                !int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var hasCursorFlag) ||
+                !long.TryParse(parts[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out var changedTicks) ||
+                !int.TryParse(parts[4], NumberStyles.Integer, CultureInfo.InvariantCulture, out var workItemId) ||
+                !int.TryParse(parts[5], NumberStyles.Integer, CultureInfo.InvariantCulture, out var revision) ||
+                !int.TryParse(parts[6], NumberStyles.Integer, CultureInfo.InvariantCulture, out var noProgressPages))
+            {
+                return false;
+            }
+
+            var url = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(parts[0]));
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return false;
+            }
+
+            RevisionCursorTuple? cursor = null;
+            if (hasCursorFlag == 1)
+            {
+                cursor = new RevisionCursorTuple(new DateTimeOffset(changedTicks, TimeSpan.Zero), workItemId, revision);
+            }
+
+            state = new NextLinkContinuationState(url, pageIndex, cursor, noProgressPages);
             return true;
         }
         catch
@@ -1018,9 +1261,16 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         Seek
     }
 
-    private sealed record RequestContext(string Url, RequestMode Mode, int Top, SeekContinuationState? SeekState);
+    private sealed record RequestContext(
+        string Url,
+        RequestMode Mode,
+        int Top,
+        SeekContinuationState? SeekState,
+        RevisionCursorTuple? LastCursor,
+        int NoProgressPages);
     private sealed record SegmentContinuationState(string? InnerContinuationToken, WorkItemIdRangeSegment? Segment, int SegmentIndex);
     private sealed record SegmentContinuationStateToken(int SegmentIndex, string? InnerContinuationToken);
+    private sealed record NextLinkContinuationState(string Url, int PageIndex, RevisionCursorTuple? LastCursor, int NoProgressPages);
 
     private readonly record struct RevisionCursorTuple(DateTimeOffset ChangedDate, int WorkItemId, int Revision)
     {

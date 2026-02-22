@@ -34,7 +34,8 @@ public class RealODataRevisionTfsClientTests
             scopedWorkItemIds: [10, 11]);
 
         Assert.HasCount(2, page.Revisions);
-        Assert.AreEqual("https://analytics/page2", page.ContinuationToken);
+        Assert.IsNotNull(page.ContinuationToken);
+        StringAssert.StartsWith(page.ContinuationToken, "next:");
         var firstRequest = Uri.UnescapeDataString(handler.RequestUris[0]);
         StringAssert.Contains(firstRequest, "$orderby=ChangedDate asc,WorkItemId asc,Revision asc");
         StringAssert.Contains(firstRequest, "ChangedDate ge 2026-01-01T00:00:00.0000000Z");
@@ -95,7 +96,9 @@ public class RealODataRevisionTfsClientTests
         var revisions = await client.GetWorkItemRevisionsAsync(42);
 
         Assert.HasCount(2, revisions);
-        Assert.AreEqual("https://analytics/page2", handler.RequestUris[1]);
+        var secondRequest = Uri.UnescapeDataString(handler.RequestUris[1]);
+        StringAssert.Contains(secondRequest, "WorkItemId eq 42");
+        StringAssert.Contains(secondRequest, "$orderby=ChangedDate asc,WorkItemId asc,Revision asc");
     }
 
     [TestMethod]
@@ -535,6 +538,160 @@ public class RealODataRevisionTfsClientTests
         StringAssert.Contains(secondRequest, "ChangedDate gt 2026-01-02T00:00:00.0000000Z");
         StringAssert.Contains(secondRequest, "WorkItemId eq 42 and Revision gt 2");
         Assert.IsFalse(secondRequest.Contains("datetimeoffset", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenNextLinkOmitsWindowFilter_ReappliesCanonicalBounds()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                { "WorkItemId": 42, "Revision": 1, "ChangedDate": "2026-01-10T00:00:00Z", "Title": "A", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+              ],
+              "@odata.nextLink": "https://analytics/WorkItemRevisions?$skiptoken=abc"
+            }
+            """,
+            """{ "value": [] }"""
+        ]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataTop = 50
+        });
+
+        var first = await client.GetRevisionsAsync(
+            startDateTime: DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
+            scopedWorkItemIds: [42],
+            endDateTime: DateTimeOffset.Parse("2026-02-01T00:00:00Z"));
+        _ = await client.GetRevisionsAsync(
+            startDateTime: DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
+            continuationToken: first.ContinuationToken,
+            scopedWorkItemIds: [42],
+            endDateTime: DateTimeOffset.Parse("2026-02-01T00:00:00Z"));
+
+        var secondRequest = Uri.UnescapeDataString(handler.RequestUris[1]);
+        StringAssert.Contains(secondRequest, "ChangedDate ge 2026-01-01T00:00:00.0000000Z");
+        StringAssert.Contains(secondRequest, "ChangedDate lt 2026-02-01T00:00:00.0000000Z");
+        StringAssert.Contains(secondRequest, "$orderby=ChangedDate asc,WorkItemId asc,Revision asc");
+        StringAssert.Contains(secondRequest, "$top=50");
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenNextLinkContainsConflictingFilter_IgnoresItAndUsesCanonicalFilter()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                { "WorkItemId": 42, "Revision": 1, "ChangedDate": "2026-01-10T00:00:00Z", "Title": "A", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+              ],
+              "@odata.nextLink": "https://analytics/WorkItemRevisions?$filter=ChangedDate ge 2029-01-01T00:00:00Z&$orderby=ChangedDate desc&$skiptoken=xyz"
+            }
+            """,
+            """{ "value": [] }"""
+        ]);
+        var client = CreateClient(handler);
+
+        var first = await client.GetRevisionsAsync(
+            startDateTime: DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
+            scopedWorkItemIds: [42],
+            endDateTime: DateTimeOffset.Parse("2026-02-01T00:00:00Z"));
+        _ = await client.GetRevisionsAsync(
+            startDateTime: DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
+            continuationToken: first.ContinuationToken,
+            scopedWorkItemIds: [42],
+            endDateTime: DateTimeOffset.Parse("2026-02-01T00:00:00Z"));
+
+        var secondRequest = Uri.UnescapeDataString(handler.RequestUris[1]);
+        StringAssert.Contains(secondRequest, "ChangedDate ge 2026-01-01T00:00:00.0000000Z");
+        StringAssert.Contains(secondRequest, "ChangedDate lt 2026-02-01T00:00:00.0000000Z");
+        StringAssert.Contains(secondRequest, "$orderby=ChangedDate asc,WorkItemId asc,Revision asc");
+        Assert.IsFalse(secondRequest.Contains("ChangedDate desc", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(secondRequest.Contains("2029-01-01", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenPageContainsOutOfWindowRevision_Throws()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                { "WorkItemId": 42, "Revision": 1, "ChangedDate": "2026-03-01T00:00:00Z", "Title": "Out", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+              ]
+            }
+            """
+        ]);
+        var client = CreateClient(handler);
+
+        var exception = await AssertThrowsAsync<InvalidOperationException>(() =>
+            client.GetRevisionsAsync(
+                startDateTime: DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
+                scopedWorkItemIds: [42],
+                endDateTime: DateTimeOffset.Parse("2026-02-01T00:00:00Z")));
+
+        StringAssert.Contains(exception.Message, "outside requested window");
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenEmptyNextLinkPage_ReSeeksFromLastCursor()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                { "WorkItemId": 42, "Revision": 1, "ChangedDate": "2026-01-01T00:00:00Z", "Title": "A", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+              ],
+              "@odata.nextLink": "https://analytics/WorkItemRevisions?$skiptoken=page2"
+            }
+            """,
+            """
+            {
+              "value": [],
+              "@odata.nextLink": "https://analytics/WorkItemRevisions?$skiptoken=page3"
+            }
+            """,
+            """
+            {
+              "value": [
+                { "WorkItemId": 42, "Revision": 2, "ChangedDate": "2026-01-02T00:00:00Z", "Title": "B", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+              ]
+            }
+            """
+        ]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataEnableSeekPagingFallback = true,
+            ODataTop = 2,
+            ODataSeekPageSize = 2
+        });
+
+        var first = await client.GetRevisionsAsync(
+            startDateTime: DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
+            scopedWorkItemIds: [42],
+            endDateTime: DateTimeOffset.Parse("2026-02-01T00:00:00Z"));
+        var second = await client.GetRevisionsAsync(
+            startDateTime: DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
+            continuationToken: first.ContinuationToken,
+            scopedWorkItemIds: [42],
+            endDateTime: DateTimeOffset.Parse("2026-02-01T00:00:00Z"));
+        var third = await client.GetRevisionsAsync(
+            startDateTime: DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
+            continuationToken: second.ContinuationToken,
+            scopedWorkItemIds: [42],
+            endDateTime: DateTimeOffset.Parse("2026-02-01T00:00:00Z"));
+
+        Assert.IsNotNull(second.ContinuationToken);
+        StringAssert.StartsWith(second.ContinuationToken, "seek:");
+        Assert.IsNull(third.ContinuationToken);
+        Assert.HasCount(1, third.Revisions);
+        var thirdRequest = Uri.UnescapeDataString(handler.RequestUris[2]);
+        StringAssert.Contains(thirdRequest, "ChangedDate gt 2026-01-01T00:00:00.0000000Z");
+        StringAssert.Contains(thirdRequest, "ChangedDate lt 2026-02-01T00:00:00.0000000Z");
     }
 
     [TestMethod]

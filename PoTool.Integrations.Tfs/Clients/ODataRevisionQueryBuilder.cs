@@ -13,6 +13,13 @@ internal sealed class ODataRevisionQueryBuilder
     private const string RevisionField = "Revision";
     private static readonly RevisionFieldWhitelist.ODataRevisionSelectionSpec ODataSelectionSpec =
         RevisionFieldWhitelist.BuildODataRevisionSelectionSpec(includeRevision: true);
+    private static readonly HashSet<string> ContinuationParameterNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "$skiptoken",
+        "$skip",
+        "$deltatoken",
+        "continuationToken"
+    };
 
     public string BuildInitialPageUrl(
         TfsConfigEntity config,
@@ -59,6 +66,52 @@ internal sealed class ODataRevisionQueryBuilder
             (seekChangedDate, seekWorkItemId, seekRevision),
             scopeSegment,
             quoteDateStrings);
+    }
+
+    public string BuildContinuationPageUrl(
+        TfsConfigEntity config,
+        DateTimeOffset? startDateTime,
+        DateTimeOffset? endDateTime,
+        IReadOnlyCollection<int>? scopedWorkItemIds,
+        RevisionIngestionPaginationOptions options,
+        int top,
+        string nextLinkUrl,
+        WorkItemIdRangeSegment? scopeSegment = null,
+        bool? quoteDateStrings = null)
+    {
+        var canonicalUrl = BuildInitialPageUrl(
+            config,
+            startDateTime,
+            endDateTime,
+            scopedWorkItemIds,
+            options,
+            top,
+            scopeSegment,
+            quoteDateStrings);
+
+        if (!Uri.TryCreate(nextLinkUrl, UriKind.Absolute, out var nextLinkUri))
+        {
+            return canonicalUrl;
+        }
+
+        var continuationSegments = nextLinkUri.Query
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(segment => segment.TrimStart('?'))
+            .Where(segment =>
+            {
+                var separator = segment.IndexOf('=');
+                var key = separator >= 0 ? segment[..separator] : segment;
+                return ContinuationParameterNames.Contains(key);
+            })
+            .ToArray();
+
+        if (continuationSegments.Length == 0)
+        {
+            return canonicalUrl;
+        }
+
+        var separator = canonicalUrl.Contains('?', StringComparison.Ordinal) ? "&" : "?";
+        return $"{canonicalUrl}{separator}{string.Join("&", continuationSegments)}";
     }
 
     private string BuildPageUrl(
