@@ -270,6 +270,8 @@ public sealed class RevisionIngestionServiceV2Tests
         // Verify V2 resumed from token "A" (first call should use token "A", not null)
         Assert.AreEqual("A", stubClient.RequestedContinuationTokens[0],
             "First call should use the checkpoint resume token 'A'");
+        Assert.AreEqual("B", stubClient.RequestedContinuationTokens[1],
+            "Second call should use the server-provided token 'B'");
     }
 
     [TestMethod]

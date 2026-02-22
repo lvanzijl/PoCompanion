@@ -61,7 +61,23 @@ Add or modify the `RevisionIngestionV2` section in `appsettings.json`:
 
 ### DI Registration
 
-Both V1 and V2 are registered in the DI container. The mode toggle determines which service handles ingestion at runtime. V1 remains the default and is untouched.
+Both V1 and V2 are registered in the DI container. A `RevisionIngestionDispatcher` (implementing `IRevisionIngestionService`) routes calls to V1 or V2 based on the `RevisionIngestionMode` setting at runtime. The `RevisionSyncStage` (sync pipeline stage 3) injects `IRevisionIngestionService`, so switching modes requires only a config change — no code changes needed.
+
+## Checkpoint Resume
+
+V2 supports resuming ingestion across process restarts. After each successful page persistence, V2 saves a checkpoint containing:
+
+- The current continuation token
+- The window start timestamp
+- Outcome marker `V2_InProgress`
+
+On the next run, V2 checks for an existing `V2_InProgress` checkpoint. If found, it:
+
+1. Skips windows that completed before the checkpoint window
+2. Resumes the checkpoint window from the stored continuation token
+3. Clears the checkpoint (sets outcome to `V2_Completed`, nulls the token) after the window completes
+
+This ensures no data is lost or duplicated across restarts.
 
 ## How to Interpret Logs
 
@@ -72,12 +88,14 @@ All V2 log entries use the `REV_INGEST_V2_` prefix for easy filtering.
 | Log Event | Level | Description |
 |-----------|-------|-------------|
 | `REV_INGEST_V2_SCOPE` | Info | Emitted once per run with product count and work item count |
+| `REV_INGEST_V2_CHECKPOINT_RESUME` | Info | Resuming from a stored checkpoint token |
 | `REV_INGEST_V2_WINDOW_START` | Info | Emitted at the start of each window with start/end timestamps |
 | `REV_INGEST_V2_PAGE` | Info | Per-page summary with raw, scoped, in-window, persisted counts and token hashes |
 | `REV_INGEST_V2_PERSIST_GATE_ZERO` | Warning | Scoped revisions exist but none fell within the window |
 | `REV_INGEST_V2_EMPTY_PAGE_RETRY` | Warning | Empty page with token, retrying with backoff |
 | `REV_INGEST_V2_WINDOW_FAIL` | Warning | Window failed with stall reason and token hash |
 | `REV_INGEST_V2_WINDOW_END` | Info | Window completed with total persisted, pages, and duration |
+| `REV_INGEST_DISPATCH` | Info | Dispatcher routing decision (mode=V1 or mode=V2) |
 
 ### Example Log Sequence
 

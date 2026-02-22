@@ -121,11 +121,18 @@ public sealed class RevisionIngestionServiceV2
                     resumeToken = null; // consume: only use once
                 }
 
-                _logger.LogInformation(
-                    "REV_INGEST_V2_WINDOW_START start={WindowStart} end={WindowEnd}" +
-                    (initialToken != null ? " resumeTokenHash={ResumeTokenHash}" : ""),
-                    window.Start, window.End,
-                    initialToken != null ? HashToken(initialToken) : null);
+                if (initialToken != null)
+                {
+                    _logger.LogInformation(
+                        "REV_INGEST_V2_WINDOW_START start={WindowStart} end={WindowEnd} resumeTokenHash={ResumeTokenHash}",
+                        window.Start, window.End, HashToken(initialToken));
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "REV_INGEST_V2_WINDOW_START start={WindowStart} end={WindowEnd}",
+                        window.Start, window.End);
+                }
 
                 var windowResult = await ProcessWindowAsync(
                     productOwnerId, allowedWorkItemIds, window, config,
