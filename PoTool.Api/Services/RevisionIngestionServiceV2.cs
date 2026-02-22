@@ -73,17 +73,63 @@ public sealed class RevisionIngestionServiceV2
             // Phase 2: Determine windows
             var windows = BuildWindows(config);
 
+            // Phase 2b: Load checkpoint and skip completed windows
+            string? resumeToken = null;
+            DateTimeOffset? checkpointWindowStart = null;
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+                var watermark = await context.RevisionIngestionWatermarks
+                    .FirstOrDefaultAsync(w => w.ProductOwnerId == productOwnerId, cancellationToken);
+
+                if (watermark?.ContinuationToken != null
+                    && watermark.LastSyncStartDateTime != null
+                    && string.Equals(watermark.LastRunOutcome, "V2_InProgress", StringComparison.Ordinal))
+                {
+                    resumeToken = watermark.ContinuationToken;
+                    checkpointWindowStart = watermark.LastSyncStartDateTime;
+
+                    _logger.LogInformation(
+                        "REV_INGEST_V2_CHECKPOINT_RESUME productOwnerId={ProductOwnerId} " +
+                        "windowStart={WindowStart} tokenHash={TokenHash}",
+                        productOwnerId, checkpointWindowStart,
+                        HashToken(resumeToken));
+                }
+            }
+
+            // Skip windows that completed before the checkpoint
+            if (checkpointWindowStart != null)
+            {
+                var skipCount = windows.FindIndex(w => w.Start >= checkpointWindowStart.Value);
+                if (skipCount > 0)
+                {
+                    windows = windows.GetRange(skipCount, windows.Count - skipCount);
+                }
+            }
+
             // Phase 3: Process each window
             foreach (var window in windows)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
+                // Use resume token only for the window that matches the checkpoint
+                string? initialToken = null;
+                if (resumeToken != null && checkpointWindowStart != null
+                    && window.Start == checkpointWindowStart.Value)
+                {
+                    initialToken = resumeToken;
+                    resumeToken = null; // consume: only use once
+                }
+
                 _logger.LogInformation(
-                    "REV_INGEST_V2_WINDOW_START start={WindowStart} end={WindowEnd}",
-                    window.Start, window.End);
+                    "REV_INGEST_V2_WINDOW_START start={WindowStart} end={WindowEnd}" +
+                    (initialToken != null ? " resumeTokenHash={ResumeTokenHash}" : ""),
+                    window.Start, window.End,
+                    initialToken != null ? HashToken(initialToken) : null);
 
                 var windowResult = await ProcessWindowAsync(
-                    productOwnerId, allowedWorkItemIds, window, config, cancellationToken);
+                    productOwnerId, allowedWorkItemIds, window, config,
+                    initialToken, cancellationToken);
 
                 totalPersisted += windowResult.Persisted;
                 totalPages += windowResult.Pages;
@@ -108,6 +154,13 @@ public sealed class RevisionIngestionServiceV2
                 _logger.LogInformation(
                     "REV_INGEST_V2_WINDOW_END persistedTotal={Persisted} pages={Pages} duration={DurationMs}ms",
                     windowResult.Persisted, windowResult.Pages, windowResult.DurationMs);
+
+                // Mark window as completed in checkpoint so resume skips it
+                using (var scope = _scopeFactory.CreateScope())
+                {
+                    var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+                    await ClearCheckpointAsync(context, productOwnerId, cancellationToken);
+                }
             }
 
             return new RevisionIngestionResult
@@ -151,10 +204,11 @@ public sealed class RevisionIngestionServiceV2
         HashSet<int> allowedWorkItemIds,
         IngestionWindow window,
         RevisionIngestionV2Options config,
+        string? initialContinuationToken,
         CancellationToken cancellationToken)
     {
         var windowStart = Stopwatch.GetTimestamp();
-        string? continuationToken = null;
+        string? continuationToken = initialContinuationToken;
         string? previousToken = null;
         int pageIndex = 0;
         int totalPersisted = 0;
@@ -455,6 +509,23 @@ public sealed class RevisionIngestionServiceV2
         watermark.LastStableContinuationTokenHash = HashToken(continuationToken);
 
         await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task ClearCheckpointAsync(
+        PoToolDbContext context,
+        int productOwnerId,
+        CancellationToken cancellationToken)
+    {
+        var watermark = await context.RevisionIngestionWatermarks
+            .FirstOrDefaultAsync(w => w.ProductOwnerId == productOwnerId, cancellationToken);
+
+        if (watermark != null)
+        {
+            watermark.ContinuationToken = null;
+            watermark.LastRunOutcome = "V2_Completed";
+            watermark.LastIngestionCompletedAt = DateTimeOffset.UtcNow;
+            await context.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private async Task<(HashSet<int> AllowedIds, int ProductCount)> ResolveAllowedWorkItemIdsAsync(

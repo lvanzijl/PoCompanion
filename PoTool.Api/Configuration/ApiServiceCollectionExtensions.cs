@@ -331,6 +331,7 @@ public static class ApiServiceCollectionExtensions
         // Register Revision Ingestion Service (for Sprint Trend feature)
         services.AddSingleton<RevisionIngestionService>();
         services.AddSingleton<RevisionIngestionServiceV2>();
+        services.AddSingleton<IRevisionIngestionService, RevisionIngestionDispatcher>();
 
         // Register Relations Revision Hydrator (for ingesting relation changes)
         services.AddScoped<IRelationRevisionHydrator, RelationRevisionHydrator>();

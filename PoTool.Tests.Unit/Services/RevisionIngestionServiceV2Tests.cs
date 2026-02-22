@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +11,8 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
+using PoTool.Integrations.Tfs.Clients;
+using PoTool.Integrations.Tfs.Diagnostics;
 using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit;
@@ -223,6 +226,108 @@ public sealed class RevisionIngestionServiceV2Tests
         Assert.AreEqual(12, hash1.Length);
     }
 
+    [TestMethod]
+    public async Task IngestRevisionsAsync_ResumesFromCheckpointToken()
+    {
+        // Simulate a previous run that saved checkpoint with token "A" at window start
+        var windowStart = new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+        // Second run: page fetched with resume token "A" returns data + token "B", then terminal page
+        var results = new[]
+        {
+            new ReportingRevisionsResult(new[] { CreateRevision(42, 1) }, "B"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        using var provider = BuildServiceProvider(stubClient,
+            v2Options: new RevisionIngestionV2Options
+            {
+                RevisionIngestionMode = "V2",
+                V2EnableWindowing = false
+            });
+
+        // Pre-seed a watermark with an in-progress checkpoint
+        using (var scope = provider.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+            context.RevisionIngestionWatermarks.Add(new RevisionIngestionWatermarkEntity
+            {
+                ProductOwnerId = 1,
+                ContinuationToken = "A",
+                LastSyncStartDateTime = windowStart,
+                LastRunOutcome = "V2_InProgress",
+                IsInitialBackfillComplete = false
+            });
+            await context.SaveChangesAsync();
+        }
+
+        var service = provider.GetRequiredService<RevisionIngestionServiceV2>();
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success, $"Expected success but got: {result.Message}");
+
+        // Verify V2 resumed from token "A" (first call should use token "A", not null)
+        Assert.AreEqual("A", stubClient.RequestedContinuationTokens[0],
+            "First call should use the checkpoint resume token 'A'");
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_ClearsCheckpointAfterWindowCompletes()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, null)
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        using var provider = BuildServiceProvider(stubClient,
+            v2Options: new RevisionIngestionV2Options
+            {
+                RevisionIngestionMode = "V2",
+                V2EnableWindowing = false
+            });
+        var service = provider.GetRequiredService<RevisionIngestionServiceV2>();
+
+        await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        // Verify checkpoint is cleared (outcome = V2_Completed, token = null)
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var watermark = await context.RevisionIngestionWatermarks
+            .FirstOrDefaultAsync(w => w.ProductOwnerId == 1);
+
+        Assert.IsNotNull(watermark);
+        Assert.IsNull(watermark.ContinuationToken, "Token should be cleared after window completes");
+        Assert.AreEqual("V2_Completed", watermark.LastRunOutcome);
+    }
+
+    [TestMethod]
+    public async Task Dispatcher_RoutesToV2_WhenModeIsV2()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult(new[] { CreateRevision(10, 1) }, null)
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        using var provider = BuildServiceProvider(stubClient,
+            v2Options: new RevisionIngestionV2Options
+            {
+                RevisionIngestionMode = "V2",
+                V2EnableWindowing = false
+            },
+            registerDispatcher: true);
+
+        var dispatcher = provider.GetRequiredService<IRevisionIngestionService>();
+        var result = await dispatcher.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success, $"Expected success but got: {result.Message}");
+        // V2 was called (stub was consumed by V2)
+        Assert.AreEqual(1, stubClient.ReportingCalls,
+            "Expected V2 to have called the revision source");
+    }
+
     // ─── Helpers ────────────────────────────────────────────────────
 
     private sealed class StaticOptionsMonitor<T> : IOptionsMonitor<T>
@@ -287,7 +392,8 @@ public sealed class RevisionIngestionServiceV2Tests
         IWorkItemRevisionSource revisionClient,
         RevisionIngestionV2Options? v2Options = null,
         int backlogRootId = 1,
-        IReadOnlyCollection<int>? descendantWorkItemIds = null)
+        IReadOnlyCollection<int>? descendantWorkItemIds = null,
+        bool registerDispatcher = false)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -308,6 +414,21 @@ public sealed class RevisionIngestionServiceV2Tests
             CreateTfsClient(backlogRootId, descendantWorkItemIds ?? DefaultDescendantWorkItemIds));
         services.AddSingleton<IWorkItemRevisionSource>(revisionClient);
         services.AddSingleton<RevisionIngestionServiceV2>();
+
+        if (registerDispatcher)
+        {
+            // V1 dependencies for dispatcher test
+            services.AddOptions<RevisionIngestionDiagnosticsOptions>();
+            services.AddSingleton<IOptionsMonitor<RevisionIngestionPaginationOptions>>(
+                new StaticOptionsMonitor<RevisionIngestionPaginationOptions>(
+                    new RevisionIngestionPaginationOptions()));
+            services.AddDataProtection();
+            services.AddSingleton<RevisionIngestionDiagnostics>();
+            services.AddSingleton<TfsRequestThrottler>();
+            services.AddSingleton<IRelationRevisionHydrator>(new StubRelationRevisionHydrator());
+            services.AddSingleton<RevisionIngestionService>();
+            services.AddSingleton<IRevisionIngestionService, RevisionIngestionDispatcher>();
+        }
 
         var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
@@ -398,5 +519,20 @@ public sealed class RevisionIngestionServiceV2Tests
             AreaPath = "Area 1",
             ChangedDate = changedDate ?? DateTimeOffset.UtcNow
         };
+    }
+
+    private sealed class StubRelationRevisionHydrator : IRelationRevisionHydrator
+    {
+        public Task<RelationHydrationResult> HydrateAsync(
+            IEnumerable<int> workItemIds,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new RelationHydrationResult
+            {
+                Success = true,
+                WorkItemsProcessed = 0,
+                RevisionsHydrated = 0
+            });
+        }
     }
 }
