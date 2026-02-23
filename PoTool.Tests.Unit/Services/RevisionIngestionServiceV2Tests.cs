@@ -95,7 +95,7 @@ public sealed class RevisionIngestionServiceV2Tests
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
         Assert.IsFalse(result.Success, "Expected failure due to RepeatedToken");
-        StringAssert.Contains(result.ErrorMessage, "RepeatedToken");
+        StringAssert.Contains(result.ErrorMessage, "RepeatToken");
     }
 
     [TestMethod]
@@ -234,7 +234,7 @@ public sealed class RevisionIngestionServiceV2Tests
     {
         var index = RevisionIngestionServiceV2.ResolveSegmentIndexFromContinuationToken(
             "seg:1|AAA",
-            [1, 2, 10, 11],
+            [1, 2, 6000, 6001],
             out var tokenFormat,
             out var exactMatchFound,
             out var orderedFallbackIndex);
@@ -249,8 +249,8 @@ public sealed class RevisionIngestionServiceV2Tests
     public void ResolveSegmentIndexFromContinuationToken_BoundaryExactMatch_ReturnsCorrectIndex()
     {
         var index = RevisionIngestionServiceV2.ResolveSegmentIndexFromContinuationToken(
-            "seg:10:11|AAA",
-            [1, 2, 10, 11],
+            "seg:6000:6001|AAA",
+            [1, 2, 6000, 6001],
             out var tokenFormat,
             out var exactMatchFound,
             out var orderedFallbackIndex);
@@ -265,8 +265,8 @@ public sealed class RevisionIngestionServiceV2Tests
     public void ResolveSegmentIndexFromContinuationToken_BoundaryFallback_ReturnsOrderedFallbackIndex()
     {
         var index = RevisionIngestionServiceV2.ResolveSegmentIndexFromContinuationToken(
-            "seg:5:6|AAA",
-            [1, 2, 10, 11],
+            "seg:3000:3001|AAA",
+            [1, 2, 6000, 6001],
             out var tokenFormat,
             out var exactMatchFound,
             out var orderedFallbackIndex);
@@ -282,7 +282,7 @@ public sealed class RevisionIngestionServiceV2Tests
     {
         var index = RevisionIngestionServiceV2.ResolveSegmentIndexFromContinuationToken(
             "seg:99|AAA",
-            [1, 2, 10, 11],
+            [1, 2, 6000, 6001],
             out var tokenFormat,
             out var exactMatchFound,
             out var orderedFallbackIndex);
@@ -768,11 +768,11 @@ public sealed class RevisionIngestionServiceV2Tests
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_EmptyTokenChainExceedsThreshold_FailsWithStallReason()
+    public async Task IngestRevisionsAsync_EmptyTokenChainExceedsNoProgressThreshold_FailsWithStallReason()
     {
         // Test 2: Empty-token chain exceeding threshold should terminate deterministically.
         // raw=0 nextToken=T1, raw=0 nextToken=T2, raw=0 nextToken=T3
-        // V2MaxConsecutiveEmptyPages=2 should now force stall termination.
+        // V2MaxConsecutiveNoProgressPages=2 should force deterministic no-progress termination.
         var results = new[]
         {
             new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T1"),
@@ -785,7 +785,8 @@ public sealed class RevisionIngestionServiceV2Tests
         {
             RevisionIngestionMode = "V2",
             V2EnableWindowing = false,
-            V2MaxConsecutiveEmptyPages = 2
+            V2MaxConsecutiveEmptyPages = 200,
+            V2MaxConsecutiveNoProgressPages = 2
         };
 
         var stubClient = new StubRevisionSource(results);
@@ -794,12 +795,10 @@ public sealed class RevisionIngestionServiceV2Tests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsFalse(result.Success, "Expected deterministic failure due to EmptyWithTokenStall");
-        StringAssert.Contains(result.ErrorMessage, "EmptyWithTokenStall");
+        Assert.IsFalse(result.Success, "Expected deterministic failure due to no progress");
+        StringAssert.Contains(result.ErrorMessage, "RepeatEffectiveRequest");
         StringAssert.Contains(result.ErrorMessage, "consecutiveEmptyPages=2");
-        StringAssert.Contains(result.ErrorMessage, "lastTokenLength=2");
-        StringAssert.Contains(result.ErrorMessage, "lastUrlSource=");
-        // Threshold is now inclusive (>=), so run stops on the second empty page.
+        StringAssert.Contains(result.ErrorMessage, "consecutiveNoProgressPages=2");
         Assert.AreEqual(2, stubClient.ReportingCalls);
     }
 
@@ -818,7 +817,8 @@ public sealed class RevisionIngestionServiceV2Tests
         {
             RevisionIngestionMode = "V2",
             V2EnableWindowing = false,
-            V2MaxConsecutiveEmptyPages = 2
+            V2MaxConsecutiveEmptyPages = 200,
+            V2MaxConsecutiveNoProgressPages = 2
         };
 
         var stubClient = new StubRevisionSource(results);
@@ -854,7 +854,8 @@ public sealed class RevisionIngestionServiceV2Tests
         {
             RevisionIngestionMode = "V2",
             V2EnableWindowing = false,
-            V2MaxConsecutiveEmptyPages = 2
+            V2MaxConsecutiveEmptyPages = 200,
+            V2MaxConsecutiveNoProgressPages = 2
         };
 
         var stubClient = new StubRevisionSource(results);
@@ -896,8 +897,8 @@ public sealed class RevisionIngestionServiceV2Tests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsFalse(result.Success, "Expected failure due to RepeatedTokenCycle");
-        StringAssert.Contains(result.ErrorMessage, "RepeatedTokenCycle");
+        Assert.IsFalse(result.Success, "Expected failure due to RepeatToken");
+        StringAssert.Contains(result.ErrorMessage, "RepeatToken");
     }
 
     [TestMethod]

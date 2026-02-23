@@ -31,7 +31,7 @@ public class WorkItemIdRangeSegmentBuilderTests
             minIdsPerSegment: 3,
             maxSegmentsPerWindow: 200);
 
-        Assert.AreEqual(2, segments.Count);
+        Assert.HasCount(2, segments);
         Assert.AreEqual(new WorkItemIdRangeSegment(1, 202), segments[0]);
         Assert.AreEqual(new WorkItemIdRangeSegment(2000, 2003), segments[1]);
     }

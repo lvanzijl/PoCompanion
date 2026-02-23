@@ -574,7 +574,7 @@ public sealed class RevisionIngestionServiceV2
                         consecutiveEmptyPages,
                         consecutiveNoProgressPages,
                         maxConsecutiveNoProgressPages,
-                        pageIndex,
+                        pageIndex + 1,
                         previousRequestKey,
                         continuationTokenHash,
                         Len(continuationToken),
