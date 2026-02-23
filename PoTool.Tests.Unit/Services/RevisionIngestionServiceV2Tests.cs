@@ -59,7 +59,7 @@ public sealed class RevisionIngestionServiceV2Tests
         {
             RevisionIngestionMode = "V2",
             V2EnableWindowing = false,
-            V2MaxConsecutiveEmptyPages = 2
+            V2MaxConsecutiveEmptyPages = 10
         };
 
         var stubClient = new StubRevisionSource(results);
@@ -704,11 +704,11 @@ public sealed class RevisionIngestionServiceV2Tests
     }
 
     [TestMethod]
-    public async Task IngestRevisionsAsync_EmptyTokenChainExceedsThreshold_DoesNotFail()
+    public async Task IngestRevisionsAsync_EmptyTokenChainExceedsThreshold_FailsWithStallReason()
     {
-        // Test 2: Empty-token chain may exceed configured threshold but should still complete.
+        // Test 2: Empty-token chain exceeding threshold should terminate deterministically.
         // raw=0 nextToken=T1, raw=0 nextToken=T2, raw=0 nextToken=T3
-        // V2MaxConsecutiveEmptyPages=2 should no longer force failure.
+        // V2MaxConsecutiveEmptyPages=2 should now force stall termination.
         var results = new[]
         {
             new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "T1"),
@@ -730,8 +730,9 @@ public sealed class RevisionIngestionServiceV2Tests
 
         var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
 
-        Assert.IsTrue(result.Success, $"Expected success but got: {result.Message}");
-        Assert.AreEqual(4, stubClient.ReportingCalls);
+        Assert.IsFalse(result.Success, "Expected deterministic failure due to EmptyWithTokenStall");
+        StringAssert.Contains(result.ErrorMessage, "EmptyWithTokenStall");
+        Assert.AreEqual(3, stubClient.ReportingCalls);
     }
 
     [TestMethod]

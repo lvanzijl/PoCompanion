@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -87,6 +89,14 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         }
 
         var segmentState = ResolveSegmentState(continuationToken, segments);
+        if (segmentState.HasSegmentToken && !segmentState.SegmentTokenMatched)
+        {
+            _logger.LogWarning(
+                "REV_INGEST_ODATA_SEGMENT_TOKEN_MISMATCH segmentCount={SegmentCount} tokenHash={TokenHash} action={Action}",
+                segments.Count,
+                HashToken(continuationToken),
+                "RestartAtFirstSegment");
+        }
         var requestContext = ResolveRequestContext(
             config,
             startDateTime,
@@ -99,6 +109,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             quoteDateStrings);
         var pageIndex = requestContext.SeekState?.PageIndex ?? 1;
         var mode = requestContext.Mode;
+        var urlSource = requestContext.UrlSource;
         var url = requestContext.Url;
         var fallbackTriggered = false;
         var segmentRange = segmentState.Segment is null
@@ -132,12 +143,20 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
 
         void LogRequestDiagnostics(string requestUrl)
         {
+            var effectiveUri = Uri.TryCreate(requestUrl, UriKind.Absolute, out var parsedUri) ? parsedUri : null;
             _logger.LogInformation(
-                "REV_INGEST_ODATA_REQUEST mode={Mode} pageIndex={PageIndex} segmentIndex={SegmentIndex} segmentRange={SegmentRange} effectiveFilter={EffectiveFilter} effectiveOrderBy={EffectiveOrderBy}",
+                "REV_INGEST_ODATA_REQUEST mode={Mode} urlSource={UrlSource} pageIndex={PageIndex} segmentIndex={SegmentIndex} segmentRange={SegmentRange} effectiveHost={EffectiveHost} effectivePath={EffectivePath} hasFilter={HasFilter} hasOrderBy={HasOrderBy} hasSelect={HasSelect} hasExpand={HasExpand} effectiveFilter={EffectiveFilter} effectiveOrderBy={EffectiveOrderBy}",
                 mode,
+                urlSource,
                 pageIndex,
                 segmentState.SegmentIndex,
                 segmentRange,
+                effectiveUri?.Host ?? "<invalid>",
+                effectiveUri?.AbsolutePath ?? "<invalid>",
+                TryGetFilterFromUrl(requestUrl) is not null,
+                TryGetOrderByFromUrl(requestUrl) is not null,
+                TryGetQueryParameterValue(requestUrl, "$select") is not null,
+                TryGetQueryParameterValue(requestUrl, "$expand") is not null,
                 TryGetFilterFromUrl(requestUrl) ?? "<none>",
                 TryGetOrderByFromUrl(requestUrl) ?? "<none>");
         }
@@ -448,6 +467,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             return new RequestContext(
                 _queryBuilder.BuildInitialPageUrl(config, startDateTime, endDateTime, scopedWorkItemIds, options, top, scopeSegment, quoteDateStrings),
                 RequestMode.Seek,
+                RequestUrlSource.InitialCanonical,
                 top,
                 null,
                 null,
@@ -459,6 +479,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             return new RequestContext(
                 seekState.Url,
                 RequestMode.Seek,
+                RequestUrlSource.SeekVerbatim,
                 ExtractTopOrFallback(seekState.Url, top),
                 seekState,
                 seekState.LastCursor,
@@ -467,20 +488,11 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
 
         if (TryDecodeNextLinkState(normalizedToken, out var nextLinkState) && nextLinkState is not null)
         {
-            var continuationUrl = _queryBuilder.BuildContinuationPageUrl(
-                config,
-                startDateTime,
-                endDateTime,
-                scopedWorkItemIds,
-                options,
-                top,
-                nextLinkState.Url,
-                scopeSegment,
-                quoteDateStrings);
             return new RequestContext(
-                continuationUrl,
+                nextLinkState.Url,
                 RequestMode.NextLink,
-                ExtractTopOrFallback(continuationUrl, top),
+                RequestUrlSource.NextLinkVerbatim,
+                ExtractTopOrFallback(nextLinkState.Url, top),
                 null,
                 nextLinkState.LastCursor,
                 nextLinkState.NoProgressPages);
@@ -488,26 +500,17 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
 
         if (Uri.IsWellFormedUriString(normalizedToken, UriKind.Absolute))
         {
-            var continuationUrl = _queryBuilder.BuildContinuationPageUrl(
-                config,
-                startDateTime,
-                endDateTime,
-                scopedWorkItemIds,
-                options,
-                top,
-                normalizedToken,
-                scopeSegment,
-                quoteDateStrings);
             return new RequestContext(
-                continuationUrl,
+                normalizedToken,
                 RequestMode.NextLink,
-                ExtractTopOrFallback(continuationUrl, top),
+                RequestUrlSource.NextLinkVerbatim,
+                ExtractTopOrFallback(normalizedToken, top),
                 null,
                 null,
                 0);
         }
 
-        return new RequestContext(normalizedToken, RequestMode.NextLink, ExtractTopOrFallback(normalizedToken, top), null, null, 0);
+        return new RequestContext(normalizedToken, RequestMode.NextLink, RequestUrlSource.NextLinkVerbatim, ExtractTopOrFallback(normalizedToken, top), null, null, 0);
     }
 
     private static bool ShouldUseSegmentedScope(
@@ -525,18 +528,27 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var normalizedToken = NormalizeToken(continuationToken);
         if (segments.Count == 0)
         {
-            return new SegmentContinuationState(normalizedToken, null, -1);
+            return new SegmentContinuationState(normalizedToken, null, -1, HasSegmentToken: false, SegmentTokenMatched: false);
         }
 
         if (TryDecodeSegmentState(normalizedToken, out var state) &&
-            state is not null &&
-            state.SegmentIndex >= 0 &&
-            state.SegmentIndex < segments.Count)
+            state is not null)
         {
-            return new SegmentContinuationState(state.InnerContinuationToken, segments[state.SegmentIndex], state.SegmentIndex);
+            var matchedSegmentIndex = segments
+                .Select((segment, index) => new { segment, index })
+                .Where(candidate => candidate.segment.Start == state.SegmentStart &&
+                                    candidate.segment.End == state.SegmentEnd)
+                .Select(candidate => (int?)candidate.index)
+                .FirstOrDefault();
+            if (matchedSegmentIndex.HasValue)
+            {
+                return new SegmentContinuationState(state.InnerContinuationToken, segments[matchedSegmentIndex.Value], matchedSegmentIndex.Value, HasSegmentToken: true, SegmentTokenMatched: true);
+            }
+
+            return new SegmentContinuationState(null, segments[0], 0, HasSegmentToken: true, SegmentTokenMatched: false);
         }
 
-        return new SegmentContinuationState(normalizedToken, segments[0], 0);
+        return new SegmentContinuationState(normalizedToken, segments[0], 0, HasSegmentToken: false, SegmentTokenMatched: false);
     }
 
     private static string? BuildSegmentContinuationToken(
@@ -552,13 +564,15 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var normalizedPageToken = NormalizeToken(pageContinuationToken);
         if (normalizedPageToken is not null)
         {
-            return EncodeSegmentState(new SegmentContinuationStateToken(segmentIndex, normalizedPageToken));
+            var segment = segments[segmentIndex];
+            return EncodeSegmentState(new SegmentContinuationStateToken(segment.Start, segment.End, normalizedPageToken));
         }
 
         var nextSegmentIndex = segmentIndex + 1;
         if (nextSegmentIndex < segments.Count)
         {
-            return EncodeSegmentState(new SegmentContinuationStateToken(nextSegmentIndex, null));
+            var nextSegment = segments[nextSegmentIndex];
+            return EncodeSegmentState(new SegmentContinuationStateToken(nextSegment.Start, nextSegment.End, null));
         }
 
         return null;
@@ -729,7 +743,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
     {
         var encodedInnerToken = Convert.ToBase64String(
             System.Text.Encoding.UTF8.GetBytes(state.InnerContinuationToken ?? string.Empty));
-        return string.Create(CultureInfo.InvariantCulture, $"seg:{state.SegmentIndex}|{encodedInnerToken}");
+        return string.Create(CultureInfo.InvariantCulture, $"seg:{state.SegmentStart}:{state.SegmentEnd}|{encodedInnerToken}");
     }
 
     private static string EncodeNextLinkState(NextLinkContinuationState state)
@@ -841,14 +855,21 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         {
             var payload = token["seg:".Length..];
             var parts = payload.Split('|');
-            if (parts.Length != 2 ||
-                !int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var segmentIndex))
+            if (parts.Length != 2)
+            {
+                return false;
+            }
+
+            var segmentIdentity = parts[0].Split(':');
+            if (segmentIdentity.Length != 2 ||
+                !int.TryParse(segmentIdentity[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var segmentStart) ||
+                !int.TryParse(segmentIdentity[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var segmentEnd))
             {
                 return false;
             }
 
             var decodedInnerToken = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(parts[1]));
-            state = new SegmentContinuationStateToken(segmentIndex, NormalizeToken(decodedInnerToken));
+            state = new SegmentContinuationStateToken(segmentStart, segmentEnd, NormalizeToken(decodedInnerToken));
             return true;
         }
         catch
@@ -1219,6 +1240,17 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         return string.IsNullOrWhiteSpace(token) ? null : token.Trim();
     }
 
+    private static string? HashToken(string? token)
+    {
+        if (token is null)
+        {
+            return null;
+        }
+
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+        return Convert.ToHexStringLower(bytes)[..12];
+    }
+
     private sealed class RevisionRowParseStats
     {
         private readonly Dictionary<string, int> _missingScalarCount = new(StringComparer.Ordinal);
@@ -1279,15 +1311,23 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         Seek
     }
 
+    private enum RequestUrlSource
+    {
+        InitialCanonical,
+        NextLinkVerbatim,
+        SeekVerbatim
+    }
+
     private sealed record RequestContext(
         string Url,
         RequestMode Mode,
+        RequestUrlSource UrlSource,
         int Top,
         SeekContinuationState? SeekState,
         RevisionCursorTuple? LastCursor,
         int NoProgressPages);
-    private sealed record SegmentContinuationState(string? InnerContinuationToken, WorkItemIdRangeSegment? Segment, int SegmentIndex);
-    private sealed record SegmentContinuationStateToken(int SegmentIndex, string? InnerContinuationToken);
+    private sealed record SegmentContinuationState(string? InnerContinuationToken, WorkItemIdRangeSegment? Segment, int SegmentIndex, bool HasSegmentToken, bool SegmentTokenMatched);
+    private sealed record SegmentContinuationStateToken(int SegmentStart, int SegmentEnd, string? InnerContinuationToken);
     private sealed record NextLinkContinuationState(string Url, int PageIndex, RevisionCursorTuple? LastCursor, int NoProgressPages);
 
     private readonly record struct RevisionCursorTuple(DateTimeOffset ChangedDate, int WorkItemId, int Revision)

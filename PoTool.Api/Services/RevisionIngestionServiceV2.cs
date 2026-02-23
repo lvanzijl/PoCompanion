@@ -399,6 +399,7 @@ public sealed class RevisionIngestionServiceV2
 
                 var emptyWithTokenDumpThreshold = Math.Max(1, config.V2EmptyWithTokenDumpThreshold);
                 var emptyWithTokenDumpRepeatInterval = Math.Max(1, config.V2EmptyWithTokenDumpRepeatInterval);
+                var maxConsecutiveEmptyWithTokenPages = Math.Max(1, config.V2MaxConsecutiveEmptyPages);
                 if (consecutiveEmptyPages >= emptyWithTokenDumpThreshold &&
                     (consecutiveEmptyPages == emptyWithTokenDumpThreshold ||
                      (consecutiveEmptyPages - emptyWithTokenDumpThreshold) % emptyWithTokenDumpRepeatInterval == 0))
@@ -420,6 +421,41 @@ public sealed class RevisionIngestionServiceV2
                         Len(nextToken),
                         Prefix(nextToken),
                         allowedWorkItemIds.Count);
+                }
+
+                if (consecutiveEmptyPages > maxConsecutiveEmptyWithTokenPages)
+                {
+                    _logger.LogWarning(
+                        "REV_INGEST_V2_WINDOW_FAIL reason=EmptyWithTokenStall pageIndex={PageIndex} segmentIndex={SegmentIndex} consecutiveEmpty={ConsecutiveEmpty} maxConsecutiveEmpty={MaxConsecutiveEmpty} tokenHash={TokenHash} tokenLen={TokenLen} tokenPrefix={TokenPrefix} nextTokenHash={NextTokenHash} nextTokenLen={NextTokenLen} nextTokenPrefix={NextTokenPrefix} windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc}",
+                        pageIndex,
+                        activeSegmentIndex,
+                        consecutiveEmptyPages,
+                        maxConsecutiveEmptyWithTokenPages,
+                        continuationTokenHash,
+                        Len(continuationToken),
+                        Prefix(continuationToken),
+                        nextTokenHash,
+                        Len(nextToken),
+                        Prefix(nextToken),
+                        window.Start,
+                        window.End);
+
+                    return new WindowResult(
+                        Success: false,
+                        Persisted: totalPersisted,
+                        Pages: pageIndex,
+                        StallReason: "EmptyWithTokenStall",
+                        LastTokenHash: continuationTokenHash,
+                        ConsecutiveEmptyPages: consecutiveEmptyPages,
+                        TotalRawRevisions: totalRawRevisions,
+                        PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
+                        EmptyRawPagesWithToken: emptyRawPagesWithToken,
+                        SegmentsProcessed: segmentsProcessed,
+                        SegmentsWithZeroScoped: segmentsWithZeroScoped,
+                        WasTerminatedEarly: false,
+                        TerminationReason: null,
+                        TerminationMessage: null,
+                        DurationMs: GetElapsedMs(windowStart));
                 }
 
                 await SaveCheckpointIfTokenAdvancedAsync(

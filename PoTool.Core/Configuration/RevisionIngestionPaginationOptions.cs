@@ -18,7 +18,7 @@ public sealed class RevisionIngestionPaginationOptions
     /// <summary>
     /// OData field projection mode.
     /// </summary>
-    public ODataRevisionSelectMode ODataSelectMode { get; init; } = ODataRevisionSelectMode.Minimal;
+    public ODataRevisionSelectMode ODataSelectMode { get; init; } = ODataRevisionSelectMode.Full;
 
     /// <summary>
     /// Enables deterministic order by on ChangedDate, WorkItemId, Revision.

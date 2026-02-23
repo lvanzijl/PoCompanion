@@ -14,6 +14,16 @@ namespace PoTool.Tests.Unit.Services;
 public class RealODataRevisionTfsClientTests
 {
     [TestMethod]
+    public void RevisionIngestionPaginationOptions_Defaults_UseLowerRiskQueryShape()
+    {
+        var options = new RevisionIngestionPaginationOptions();
+
+        Assert.AreEqual(ODataRevisionSelectMode.Full, options.ODataSelectMode);
+        Assert.IsTrue(options.ODataOrderByEnabled);
+        Assert.AreEqual(ODataRevisionScopeMode.Range, options.ODataScopeMode);
+    }
+
+    [TestMethod]
     public async Task GetRevisionsAsync_ParsesNextLinkAndRows()
     {
         var handler = new QueueMessageHandler(
@@ -29,7 +39,10 @@ public class RealODataRevisionTfsClientTests
             """
         ]);
 
-        var client = CreateClient(handler);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataSelectMode = ODataRevisionSelectMode.Minimal
+        });
         var page = await client.GetRevisionsAsync(
             DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
             scopedWorkItemIds: [10, 11]);
@@ -85,6 +98,9 @@ public class RealODataRevisionTfsClientTests
         var requestLog = logger.Messages
             .FirstOrDefault(message => message.Contains("REV_INGEST_ODATA_REQUEST", StringComparison.Ordinal));
         Assert.IsNotNull(requestLog);
+        StringAssert.Contains(requestLog, "urlSource=InitialCanonical");
+        StringAssert.Contains(requestLog, "hasFilter=True");
+        StringAssert.Contains(requestLog, "hasOrderBy=True");
         StringAssert.Contains(requestLog, "effectiveFilter=ChangedDate ge 2026-01-01T00:00:00.0000000Z and WorkItemId ge 10 and WorkItemId le 11");
         StringAssert.Contains(requestLog, "effectiveOrderBy=ChangedDate asc,WorkItemId asc,Revision asc");
     }
@@ -115,9 +131,8 @@ public class RealODataRevisionTfsClientTests
         var revisions = await client.GetWorkItemRevisionsAsync(42);
 
         Assert.HasCount(2, revisions);
-        var secondRequest = Uri.UnescapeDataString(handler.RequestUris[1]);
-        StringAssert.Contains(secondRequest, "WorkItemId eq 42");
-        StringAssert.Contains(secondRequest, "$orderby=ChangedDate asc,WorkItemId asc,Revision asc");
+        var secondRequest = handler.RequestUris[1];
+        Assert.AreEqual("https://analytics/page2", secondRequest);
     }
 
     [TestMethod]
@@ -560,7 +575,7 @@ public class RealODataRevisionTfsClientTests
     }
 
     [TestMethod]
-    public async Task GetRevisionsAsync_WhenNextLinkOmitsWindowFilter_ReappliesCanonicalBounds()
+    public async Task GetRevisionsAsync_WhenNextLinkOmitsWindowFilter_UsesNextLinkVerbatim()
     {
         var handler = new QueueMessageHandler(
         [
@@ -589,15 +604,12 @@ public class RealODataRevisionTfsClientTests
             scopedWorkItemIds: [42],
             endDateTime: DateTimeOffset.Parse("2026-02-01T00:00:00Z"));
 
-        var secondRequest = Uri.UnescapeDataString(handler.RequestUris[1]);
-        StringAssert.Contains(secondRequest, "ChangedDate ge 2026-01-01T00:00:00.0000000Z");
-        StringAssert.Contains(secondRequest, "ChangedDate lt 2026-02-01T00:00:00.0000000Z");
-        StringAssert.Contains(secondRequest, "$orderby=ChangedDate asc,WorkItemId asc,Revision asc");
-        StringAssert.Contains(secondRequest, "$top=50");
+        var secondRequest = handler.RequestUris[1];
+        Assert.AreEqual("https://analytics/WorkItemRevisions?$skiptoken=abc", secondRequest);
     }
 
     [TestMethod]
-    public async Task GetRevisionsAsync_WhenNextLinkContainsConflictingFilter_IgnoresItAndUsesCanonicalFilter()
+    public async Task GetRevisionsAsync_WhenNextLinkContainsConflictingFilter_UsesNextLinkVerbatim()
     {
         var handler = new QueueMessageHandler(
         [
@@ -624,11 +636,27 @@ public class RealODataRevisionTfsClientTests
             endDateTime: DateTimeOffset.Parse("2026-02-01T00:00:00Z"));
 
         var secondRequest = Uri.UnescapeDataString(handler.RequestUris[1]);
-        StringAssert.Contains(secondRequest, "ChangedDate ge 2026-01-01T00:00:00.0000000Z");
-        StringAssert.Contains(secondRequest, "ChangedDate lt 2026-02-01T00:00:00.0000000Z");
-        StringAssert.Contains(secondRequest, "$orderby=ChangedDate asc,WorkItemId asc,Revision asc");
-        Assert.IsFalse(secondRequest.Contains("ChangedDate desc", StringComparison.OrdinalIgnoreCase));
-        Assert.IsFalse(secondRequest.Contains("2029-01-01", StringComparison.Ordinal));
+        StringAssert.Contains(secondRequest, "ChangedDate ge 2029-01-01T00:00:00Z");
+        StringAssert.Contains(secondRequest, "$orderby=ChangedDate desc");
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenNextLinkTokenHasOuterWhitespace_UsesDecodedUrlVerbatim()
+    {
+        var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
+        var logger = new CapturingLogger<RealODataRevisionTfsClient>();
+        var client = CreateClient(handler, logger: logger);
+        const string expectedUrl = "https://analytics/WorkItemRevisions?$skiptoken=whitespace";
+        var encodedUrl = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(expectedUrl));
+        var continuationToken = $"  next:{encodedUrl}|2|0|0|0|0|0  ";
+
+        _ = await client.GetRevisionsAsync(continuationToken: continuationToken, scopedWorkItemIds: [42]);
+
+        Assert.AreEqual(expectedUrl, handler.RequestUris[0]);
+        var requestLog = logger.Messages
+            .FirstOrDefault(message => message.Contains("REV_INGEST_ODATA_REQUEST", StringComparison.Ordinal));
+        Assert.IsNotNull(requestLog);
+        StringAssert.Contains(requestLog, "urlSource=NextLinkVerbatim");
     }
 
     [TestMethod]
@@ -760,6 +788,49 @@ public class RealODataRevisionTfsClientTests
             client.GetRevisionsAsync(continuationToken: first.ContinuationToken, scopedWorkItemIds: [42]));
 
         StringAssert.Contains(exception.Message, "no progress");
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenSegmentedContinuationHasInnerToken_EncodesSegmentBounds()
+    {
+        var handler = new QueueMessageHandler(
+        [
+            """
+            {
+              "value": [
+                { "WorkItemId": 1, "Revision": 1, "ChangedDate": "2026-01-01T00:00:00Z", "Title": "A", "WorkItemType": "Bug", "State": "Active", "IterationPath": "I", "AreaPath": "A" }
+              ],
+              "@odata.nextLink": "https://analytics/WorkItemRevisions?$skiptoken=seg1next"
+            }
+            """
+        ]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range
+        });
+
+        var page = await client.GetRevisionsAsync(scopedWorkItemIds: [1, 2, 10, 11]);
+
+        Assert.IsNotNull(page.ContinuationToken);
+        StringAssert.StartsWith(page.ContinuationToken, "seg:1:2|");
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenSegmentTokenBoundsMismatch_RestartsAtFirstSegmentWithoutInnerToken()
+    {
+        var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range
+        });
+        var encodedInner = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("next:invalid"));
+        var mismatchedToken = $"seg:999:1000|{encodedInner}";
+
+        _ = await client.GetRevisionsAsync(continuationToken: mismatchedToken, scopedWorkItemIds: [1, 2, 10, 11]);
+
+        var request = Uri.UnescapeDataString(handler.RequestUris[0]);
+        StringAssert.Contains(request, "WorkItemId ge 1 and WorkItemId le 2");
+        Assert.IsFalse(request.Contains("invalid", StringComparison.Ordinal));
     }
 
     [TestMethod]
