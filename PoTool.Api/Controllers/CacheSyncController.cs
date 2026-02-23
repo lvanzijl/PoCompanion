@@ -193,19 +193,6 @@ public class CacheSyncController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>
-    /// Validates revision cache integrity for a Product Owner.
-    /// </summary>
-    [HttpPost("{productOwnerId}/validate")]
-    [ProducesResponseType(typeof(RevisionValidationReport), StatusCodes.Status200OK)]
-    public async Task<ActionResult<RevisionValidationReport>> ValidateRevisions(
-        int productOwnerId,
-        [FromBody] RevisionValidationRequest request,
-        CancellationToken cancellationToken)
-    {
-        var report = await _cacheManagement.ValidateRevisionsAsync(productOwnerId, request, cancellationToken);
-        return Ok(report);
-    }
 }
 public record SyncTriggerResponse
 {
