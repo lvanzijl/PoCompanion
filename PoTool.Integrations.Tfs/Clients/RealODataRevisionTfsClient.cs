@@ -79,9 +79,15 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var seekTop = Math.Max(1, options.ODataSeekPageSize);
         var quoteDateStrings = options.ODataQuoteDateStrings;
         var useSegmentedScope = ShouldUseSegmentedScope(scopedWorkItemIds, options);
-        var segments = useSegmentedScope
-            ? WorkItemIdRangeSegmentBuilder.Build(scopedWorkItemIds)
-            : [];
+        var segmentBuildResult = useSegmentedScope
+            ? WorkItemIdRangeSegmentBuilder.BuildWithMetadata(
+                scopedWorkItemIds,
+                options.ODataSegmentMaxGap,
+                options.ODataSegmentMaxSpan,
+                options.ODataSegmentMinIds,
+                options.ODataSegmentMaxSegmentsPerWindow)
+            : new SegmentBuildResult([], false);
+        var segments = segmentBuildResult.Segments;
         if (useSegmentedScope && segments.Count == 0)
         {
             _logger.LogInformation("OData segmented scope produced no valid WorkItemId ranges. Returning empty revision page.");
@@ -94,6 +100,41 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
                     EffectivePath: null,
                     SegmentStart: null,
                     SegmentEnd: null));
+        }
+        if (useSegmentedScope)
+        {
+            var segmentSpans = segments.Select(segment => segment.Span).ToArray();
+            var avgSpan = segmentSpans.Length > 0 ? segmentSpans.Average() : 0d;
+            var maxSpanObserved = segmentSpans.Length > 0 ? segmentSpans.Max() : 0;
+            var scopedIdCount = scopedWorkItemIds?.Count ?? 0;
+            var avgIdsPerSegment = segments.Count > 0
+                ? scopedIdCount / (double)segments.Count
+                : 0d;
+            var orderedScopedIds = (scopedWorkItemIds ?? [])
+                .Where(id => id > 0)
+                .Distinct()
+                .OrderBy(id => id)
+                .ToArray();
+            var minIdsPerSegmentObserved = segments.Count > 0
+                ? segments.Min(segment => orderedScopedIds.Count(id => id >= segment.Start && id <= segment.End))
+                : 0;
+            _logger.LogInformation(
+                "REV_INGEST_ODATA_SEGMENT_STATS scopedIdCount={ScopedIdCount} segmentCount={SegmentCount} minId={MinId} maxId={MaxId} avgSpan={AvgSpan} maxSpan={MaxSpan} avgIdsPerSegment={AvgIdsPerSegment} minIdsPerSegmentObserved={MinIdsPerSegmentObserved}",
+                scopedIdCount,
+                segments.Count,
+                scopedWorkItemIds?.Count > 0 ? scopedWorkItemIds.Min() : (int?)null,
+                scopedWorkItemIds?.Count > 0 ? scopedWorkItemIds.Max() : (int?)null,
+                avgSpan,
+                maxSpanObserved,
+                avgIdsPerSegment,
+                minIdsPerSegmentObserved);
+            if (segmentBuildResult.WasCondensedToSingleSegment)
+            {
+                _logger.LogWarning(
+                    "REV_INGEST_ODATA_SEGMENT_CONDENSED reason=MaxSegmentsExceeded maxSegmentsPerWindow={MaxSegmentsPerWindow} scopedIdCount={ScopedIdCount}",
+                    options.ODataSegmentMaxSegmentsPerWindow,
+                    scopedIdCount);
+            }
         }
 
         SegmentContinuationState segmentState;

@@ -168,15 +168,17 @@ public sealed class RevisionIngestionServiceV2
                 {
                     _logger.LogWarning(
                         "REV_INGEST_V2_WINDOW_FAIL reason={Reason} tokenHash={TokenHash} " +
-                        "tokenLen={TokenLen} lastUrlSource={LastUrlSource} lastHost={LastHost} lastPath={LastPath} " +
-                        "consecutiveEmptyPages={ConsecutiveEmpty} " +
+                        "tokenLen={TokenLen} lastUrlSource={LastUrlSource} lastHost={LastHost} lastPath={LastPath} lastRequestKey={LastRequestKey} " +
+                        "consecutiveEmptyPages={ConsecutiveEmpty} consecutiveNoProgressPages={ConsecutiveNoProgressPages} " +
                         "windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc}",
                         windowResult.StallReason, windowResult.LastTokenHash,
                         windowResult.LastTokenLength,
                         windowResult.LastUrlSource,
                         windowResult.LastHost,
                         windowResult.LastPath,
+                        windowResult.LastRequestKey,
                         windowResult.ConsecutiveEmptyPages,
+                        windowResult.ConsecutiveNoProgressPages,
                         window.Start, window.End);
 
                     return new RevisionIngestionResult
@@ -185,7 +187,7 @@ public sealed class RevisionIngestionServiceV2
                         RunOutcome = RevisionIngestionRunOutcome.Failed,
                         RevisionsIngested = totalPersisted,
                         PagesProcessed = totalPages,
-                        ErrorMessage = $"Window failed: reasonCode={windowResult.StallReason} consecutiveEmptyPages={windowResult.ConsecutiveEmptyPages} lastTokenHash={windowResult.LastTokenHash} lastTokenLength={windowResult.LastTokenLength} lastUrlSource={windowResult.LastUrlSource} lastHost={windowResult.LastHost} lastPath={windowResult.LastPath}",
+                        ErrorMessage = $"Window failed: reasonCode={windowResult.StallReason} consecutiveEmptyPages={windowResult.ConsecutiveEmptyPages} consecutiveNoProgressPages={windowResult.ConsecutiveNoProgressPages} pagesProcessed={windowResult.Pages} lastRequestKey={windowResult.LastRequestKey} lastTokenHash={windowResult.LastTokenHash} lastTokenLength={windowResult.LastTokenLength} lastUrlSource={windowResult.LastUrlSource} lastHost={windowResult.LastHost} lastPath={windowResult.LastPath}",
                         Message = $"V2 ingestion failed at window [{window.Start} - {window.End}): {windowResult.StallReason}"
                     };
                 }
@@ -305,14 +307,49 @@ public sealed class RevisionIngestionServiceV2
         var segmentsProcessed = new HashSet<int>();
         var segmentsWithZeroScoped = new HashSet<int>();
         int emptyWithTokenLogCount = 0;
-        string? lastEmptyProgressMarker = null;
+        string? lastEffectiveRequestKey = null;
         ReportingRequestDiagnostics? lastRequestDiagnostics = null;
+        var maxConsecutiveNoProgressPages = Math.Max(1, config.V2MaxConsecutiveNoProgressPages);
+        var maxPagesPerWindow = Math.Max(1, config.V2MaxPagesPerWindow);
+        int lastObservedSegmentIndex = -1;
+        int segmentPages = 0;
+        int segmentEmptyPages = 0;
+        int segmentRawRevisions = 0;
+        int segmentScopedRevisions = 0;
+        int segmentsCompleted = 0;
+        int scopedRevisionsTotal = 0;
+        var segmentStartTimestamp = Stopwatch.GetTimestamp();
         string? terminationReason = null;
         string? terminationMessage = null;
 
         do
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (pageIndex >= maxPagesPerWindow)
+            {
+                return new WindowResult(
+                    Success: false,
+                    Persisted: totalPersisted,
+                    Pages: pageIndex,
+                    StallReason: "ExceededMaxPagesPerWindow",
+                    LastTokenHash: HashToken(continuationToken),
+                    LastTokenLength: Len(continuationToken),
+                    LastUrlSource: lastRequestDiagnostics?.UrlSource,
+                    LastHost: lastRequestDiagnostics?.EffectiveHost,
+                    LastPath: lastRequestDiagnostics?.EffectivePath,
+                    LastRequestKey: lastEffectiveRequestKey,
+                    ConsecutiveEmptyPages: consecutiveEmptyPages,
+                    ConsecutiveNoProgressPages: consecutiveNoProgressPages,
+                    TotalRawRevisions: totalRawRevisions,
+                    PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
+                    EmptyRawPagesWithToken: emptyRawPagesWithToken,
+                    SegmentsProcessed: segmentsProcessed,
+                    SegmentsWithZeroScoped: segmentsWithZeroScoped,
+                    WasTerminatedEarly: false,
+                    TerminationReason: null,
+                    TerminationMessage: null,
+                    DurationMs: GetElapsedMs(windowStart));
+            }
 
             // Defensive: detect token cycles (any repeated token, not just immediate repeat)
             var continuationTokenHash = HashToken(continuationToken);
@@ -335,13 +372,15 @@ public sealed class RevisionIngestionServiceV2
                         Success: false,
                         Persisted: totalPersisted,
                         Pages: pageIndex,
-                        StallReason: "RepeatedTokenCycle",
+                        StallReason: "RepeatToken",
                         LastTokenHash: continuationTokenHash,
                         LastTokenLength: Len(continuationToken),
                         LastUrlSource: lastRequestDiagnostics?.UrlSource,
                         LastHost: lastRequestDiagnostics?.EffectiveHost,
                         LastPath: lastRequestDiagnostics?.EffectivePath,
+                        LastRequestKey: lastEffectiveRequestKey,
                         ConsecutiveEmptyPages: consecutiveEmptyPages,
+                        ConsecutiveNoProgressPages: consecutiveNoProgressPages,
                         TotalRawRevisions: totalRawRevisions,
                         PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
                         EmptyRawPagesWithToken: emptyRawPagesWithToken,
@@ -417,11 +456,38 @@ public sealed class RevisionIngestionServiceV2
             {
                 segmentsProcessed.Add(activeSegmentIndex.Value);
             }
+            if (activeSegmentIndex.HasValue)
+            {
+                if (lastObservedSegmentIndex >= 0 &&
+                    activeSegmentIndex.Value != lastObservedSegmentIndex)
+                {
+                    _logger.LogInformation(
+                        "REV_INGEST_V2_SEGMENT_COMPLETED segmentStart={SegmentStart} segmentEnd={SegmentEnd} pages={Pages} emptyPages={EmptyPages} revisionsRaw={RevisionsRaw} revisionsScoped={RevisionsScoped} elapsedMs={ElapsedMs}",
+                        lastRequestDiagnostics?.SegmentStart,
+                        lastRequestDiagnostics?.SegmentEnd,
+                        segmentPages,
+                        segmentEmptyPages,
+                        segmentRawRevisions,
+                        segmentScopedRevisions,
+                        GetElapsedMs(segmentStartTimestamp));
+                    segmentsCompleted++;
+                    segmentPages = 0;
+                    segmentEmptyPages = 0;
+                    segmentRawRevisions = 0;
+                    segmentScopedRevisions = 0;
+                    segmentStartTimestamp = Stopwatch.GetTimestamp();
+                }
+
+                lastObservedSegmentIndex = activeSegmentIndex.Value;
+            }
+            segmentPages++;
+            segmentRawRevisions += rawCount;
 
             // Empty page with non-null token: advance the server token
             if (rawCount == 0 && nextToken != null)
             {
                 consecutiveEmptyPages++;
+                segmentEmptyPages++;
                 pagesWithoutScopedRevisions++;
                 emptyRawPagesWithToken++;
                 if (activeSegmentIndex.HasValue)
@@ -430,11 +496,12 @@ public sealed class RevisionIngestionServiceV2
                 }
 
                 var progressMarker = BuildProgressMarker(currentRequestDiagnostics);
+                var previousRequestKey = lastEffectiveRequestKey;
                 var segmentAdvanced = continuationSegmentIndex.HasValue &&
-                                      nextSegmentIndex.HasValue &&
-                                      continuationSegmentIndex.Value != nextSegmentIndex.Value;
+                                       nextSegmentIndex.HasValue &&
+                                       continuationSegmentIndex.Value != nextSegmentIndex.Value;
                 var markerAdvanced = !string.IsNullOrEmpty(progressMarker) &&
-                                     !string.Equals(progressMarker, lastEmptyProgressMarker, StringComparison.Ordinal);
+                                     !string.Equals(progressMarker, previousRequestKey, StringComparison.Ordinal);
                 var searchSpaceAdvanced = segmentAdvanced || markerAdvanced;
                 if (searchSpaceAdvanced)
                 {
@@ -444,7 +511,7 @@ public sealed class RevisionIngestionServiceV2
                 {
                     consecutiveNoProgressPages++;
                 }
-                lastEmptyProgressMarker = progressMarker;
+                lastEffectiveRequestKey = progressMarker ?? previousRequestKey;
 
                 // Rate-limited logging: first 3, then every 50
                 emptyWithTokenLogCount++;
@@ -471,7 +538,6 @@ public sealed class RevisionIngestionServiceV2
 
                 var emptyWithTokenDumpThreshold = Math.Max(1, config.V2EmptyWithTokenDumpThreshold);
                 var emptyWithTokenDumpRepeatInterval = Math.Max(1, config.V2EmptyWithTokenDumpRepeatInterval);
-                var maxConsecutiveEmptyWithTokenPages = Math.Max(1, config.V2MaxConsecutiveEmptyPages);
                 if (consecutiveEmptyPages >= emptyWithTokenDumpThreshold &&
                     (consecutiveEmptyPages == emptyWithTokenDumpThreshold ||
                      (consecutiveEmptyPages - emptyWithTokenDumpThreshold) % emptyWithTokenDumpRepeatInterval == 0))
@@ -495,15 +561,21 @@ public sealed class RevisionIngestionServiceV2
                         allowedWorkItemIds.Count);
                 }
 
-                if (consecutiveNoProgressPages >= maxConsecutiveEmptyWithTokenPages)
+                if (consecutiveNoProgressPages >= maxConsecutiveNoProgressPages)
                 {
+                    var stallReason = !markerAdvanced && !segmentAdvanced
+                        ? "RepeatEffectiveRequest"
+                        : "EmptyWithTokenStall_NoProgress";
                     _logger.LogWarning(
-                        "REV_INGEST_V2_WINDOW_FAIL reason=EmptyWithTokenStall pageIndex={PageIndex} segmentIndex={SegmentIndex} consecutiveEmpty={ConsecutiveEmpty} consecutiveNoProgress={ConsecutiveNoProgress} maxConsecutiveNoProgress={MaxConsecutiveNoProgress} tokenHash={TokenHash} tokenLen={TokenLen} tokenPrefix={TokenPrefix} nextTokenHash={NextTokenHash} nextTokenLen={NextTokenLen} nextTokenPrefix={NextTokenPrefix} lastUrlSource={LastUrlSource} lastHost={LastHost} lastPath={LastPath} windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc}",
+                        "REV_INGEST_V2_WINDOW_FAIL reason={Reason} pageIndex={PageIndex} segmentIndex={SegmentIndex} consecutiveEmpty={ConsecutiveEmpty} consecutiveNoProgress={ConsecutiveNoProgress} maxConsecutiveNoProgress={MaxConsecutiveNoProgress} pagesProcessed={PagesProcessed} lastRequestKey={LastRequestKey} tokenHash={TokenHash} tokenLen={TokenLen} tokenPrefix={TokenPrefix} nextTokenHash={NextTokenHash} nextTokenLen={NextTokenLen} nextTokenPrefix={NextTokenPrefix} lastUrlSource={LastUrlSource} lastHost={LastHost} lastPath={LastPath} windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc}",
+                        stallReason,
                         pageIndex,
                         activeSegmentIndex,
                         consecutiveEmptyPages,
                         consecutiveNoProgressPages,
-                        maxConsecutiveEmptyWithTokenPages,
+                        maxConsecutiveNoProgressPages,
+                        pageIndex,
+                        previousRequestKey,
                         continuationTokenHash,
                         Len(continuationToken),
                         Prefix(continuationToken),
@@ -520,13 +592,15 @@ public sealed class RevisionIngestionServiceV2
                         Success: false,
                         Persisted: totalPersisted,
                         Pages: pageIndex,
-                        StallReason: "EmptyWithTokenStall",
+                        StallReason: stallReason,
                         LastTokenHash: nextTokenHash ?? continuationTokenHash,
                         LastTokenLength: Len(nextToken),
                         LastUrlSource: currentRequestDiagnostics?.UrlSource,
                         LastHost: currentRequestDiagnostics?.EffectiveHost,
                         LastPath: currentRequestDiagnostics?.EffectivePath,
+                        LastRequestKey: previousRequestKey,
                         ConsecutiveEmptyPages: consecutiveEmptyPages,
+                        ConsecutiveNoProgressPages: consecutiveNoProgressPages,
                         TotalRawRevisions: totalRawRevisions,
                         PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
                         EmptyRawPagesWithToken: emptyRawPagesWithToken,
@@ -553,7 +627,7 @@ public sealed class RevisionIngestionServiceV2
 
             consecutiveEmptyPages = 0;
             consecutiveNoProgressPages = 0;
-            lastEmptyProgressMarker = null;
+            lastEffectiveRequestKey = BuildProgressMarker(currentRequestDiagnostics);
 
             // Filter and persist
             var scoped = page.Revisions
@@ -563,6 +637,8 @@ public sealed class RevisionIngestionServiceV2
             var inWindow = scoped
                 .Where(r => r.ChangedDate >= window.Start && r.ChangedDate < window.End)
                 .ToList();
+            segmentScopedRevisions += scoped.Count;
+            scopedRevisionsTotal += scoped.Count;
             if (scoped.Count == 0)
             {
                 pagesWithoutScopedRevisions++;
@@ -635,6 +711,31 @@ public sealed class RevisionIngestionServiceV2
 
         } while (continuationToken != null);
 
+        if (lastObservedSegmentIndex >= 0)
+        {
+            _logger.LogInformation(
+                "REV_INGEST_V2_SEGMENT_COMPLETED segmentStart={SegmentStart} segmentEnd={SegmentEnd} pages={Pages} emptyPages={EmptyPages} revisionsRaw={RevisionsRaw} revisionsScoped={RevisionsScoped} elapsedMs={ElapsedMs}",
+                lastRequestDiagnostics?.SegmentStart,
+                lastRequestDiagnostics?.SegmentEnd,
+                segmentPages,
+                segmentEmptyPages,
+                segmentRawRevisions,
+                segmentScopedRevisions,
+                GetElapsedMs(segmentStartTimestamp));
+            segmentsCompleted++;
+        }
+        _logger.LogInformation(
+            "REV_INGEST_V2_WINDOW_END_SUMMARY windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc} segmentsTotal={SegmentsTotal} segmentsCompleted={SegmentsCompleted} pagesTotal={PagesTotal} emptyPagesTotal={EmptyPagesTotal} revisionsRawTotal={RevisionsRawTotal} revisionsScopedTotal={RevisionsScopedTotal} elapsedMs={ElapsedMs}",
+            window.Start,
+            window.End,
+            segmentsProcessed.Count,
+            segmentsCompleted,
+            pageIndex,
+            emptyRawPagesWithToken,
+            totalRawRevisions,
+            scopedRevisionsTotal,
+            GetElapsedMs(windowStart));
+
         return new WindowResult(
             Success: true,
             Persisted: totalPersisted,
@@ -645,7 +746,9 @@ public sealed class RevisionIngestionServiceV2
             LastUrlSource: null,
             LastHost: null,
             LastPath: null,
+            LastRequestKey: null,
             ConsecutiveEmptyPages: consecutiveEmptyPages,
+            ConsecutiveNoProgressPages: consecutiveNoProgressPages,
             TotalRawRevisions: totalRawRevisions,
             PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
             EmptyRawPagesWithToken: emptyRawPagesWithToken,
@@ -1130,7 +1233,9 @@ public sealed class RevisionIngestionServiceV2
         string? LastUrlSource,
         string? LastHost,
         string? LastPath,
+        string? LastRequestKey,
         int ConsecutiveEmptyPages,
+        int ConsecutiveNoProgressPages,
         int TotalRawRevisions,
         int PagesWithoutScopedRevisions,
         int EmptyRawPagesWithToken,

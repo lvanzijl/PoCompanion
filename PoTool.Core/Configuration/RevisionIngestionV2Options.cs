@@ -34,9 +34,21 @@ public sealed class RevisionIngestionV2Options
     public int V2MaxEmptyPageRetries { get; set; } = 2;
 
     /// <summary>
-    /// Maximum number of consecutive empty pages before the window is considered stalled.
+    /// Warning threshold for consecutive empty pages with continuation token.
+    /// Empty pages can be normal when pagination/segmentation is making forward progress.
     /// </summary>
-    public int V2MaxConsecutiveEmptyPages { get; set; } = 10;
+    public int V2MaxConsecutiveEmptyPages { get; set; } = 200;
+
+    /// <summary>
+    /// Maximum consecutive no-progress pages before failing the window.
+    /// No-progress means repeated empty requests without meaningful search-space advancement.
+    /// </summary>
+    public int V2MaxConsecutiveNoProgressPages { get; set; } = 10;
+
+    /// <summary>
+    /// Hard safety cap for total pages processed in a single window.
+    /// </summary>
+    public int V2MaxPagesPerWindow { get; set; } = 20000;
 
     /// <summary>
     /// Number of consecutive empty pages with continuation token before emitting a stall dump warning.

@@ -7,8 +7,9 @@ public sealed class RevisionIngestionPaginationOptions
 {
     /// <summary>
     /// OData page size for revision ingestion (minimum 1).
+    /// Default 5000 balances throughput and payload size for production ingestion runs.
     /// </summary>
-    public int ODataTop { get; init; } = 200;
+    public int ODataTop { get; init; } = 5000;
 
     /// <summary>
     /// OData seek page size when nextLink is missing (minimum 1).
@@ -129,9 +130,29 @@ public sealed class RevisionIngestionPaginationOptions
     public PaginationAnomalyPolicy AnomalyPolicy { get; init; } = PaginationAnomalyPolicy.FailFast;
 
     /// <summary>
-    /// Batch size for fallback per-work-item retrieval.
-    /// </summary>
+     /// Batch size for fallback per-work-item retrieval.
+     /// </summary>
     public int FallbackBatchSize { get; init; } = 25;
+
+    /// <summary>
+    /// Maximum allowed gap between adjacent IDs to keep them in the same segment.
+    /// </summary>
+    public int ODataSegmentMaxGap { get; init; } = 200;
+
+    /// <summary>
+    /// Maximum inclusive WorkItemId span per segment.
+    /// </summary>
+    public int ODataSegmentMaxSpan { get; init; } = 5000;
+
+    /// <summary>
+    /// Preferred minimum IDs per segment before splitting to avoid tiny segments.
+    /// </summary>
+    public int ODataSegmentMinIds { get; init; } = 25;
+
+    /// <summary>
+    /// Hard cap on segments per window. If exceeded, segmentation is condensed to a single segment.
+    /// </summary>
+    public int ODataSegmentMaxSegmentsPerWindow { get; init; } = 200;
 }
 
 public enum ODataRevisionScopeMode

@@ -6,62 +6,71 @@ namespace PoTool.Tests.Unit.Services;
 public class WorkItemIdRangeSegmentBuilderTests
 {
     [TestMethod]
-    public void Build_WithMultipleContiguousRuns_ReturnsSeparatedSegments()
+    public void Build_WithDenseIds_ProducesFewLargeSegments()
     {
-        var segments = WorkItemIdRangeSegmentBuilder.Build([1, 2, 3, 10, 11]);
-
-        Assert.HasCount(2, segments);
-        Assert.AreEqual(new WorkItemIdRangeSegment(1, 3), segments[0]);
-        Assert.AreEqual(new WorkItemIdRangeSegment(10, 11), segments[1]);
-    }
-
-    [TestMethod]
-    public void Build_WithSingleId_ReturnsSinglePointSegment()
-    {
-        var segments = WorkItemIdRangeSegmentBuilder.Build([5]);
+        var ids = Enumerable.Range(1, 100).ToArray();
+        var segments = WorkItemIdRangeSegmentBuilder.Build(
+            ids,
+            maxGap: 200,
+            maxSpan: 5000,
+            minIdsPerSegment: 25,
+            maxSegmentsPerWindow: 200);
 
         Assert.HasCount(1, segments);
-        Assert.AreEqual(new WorkItemIdRangeSegment(5, 5), segments[0]);
+        Assert.AreEqual(new WorkItemIdRangeSegment(1, 100), segments[0]);
     }
 
     [TestMethod]
-    public void Build_WithUnsortedInput_SortsBeforeSegmenting()
+    public void Build_WithSparseIds_RespectsGapSpanAndMinIds()
     {
-        var segments = WorkItemIdRangeSegmentBuilder.Build([11, 2, 10, 1, 3]);
+        var ids = new[] { 1, 2, 200, 201, 202, 2000, 2001, 2002, 2003 };
+        var segments = WorkItemIdRangeSegmentBuilder.Build(
+            ids,
+            maxGap: 10,
+            maxSpan: 1000,
+            minIdsPerSegment: 3,
+            maxSegmentsPerWindow: 200);
 
-        Assert.HasCount(2, segments);
-        Assert.AreEqual(new WorkItemIdRangeSegment(1, 3), segments[0]);
-        Assert.AreEqual(new WorkItemIdRangeSegment(10, 11), segments[1]);
+        Assert.AreEqual(2, segments.Count);
+        Assert.AreEqual(new WorkItemIdRangeSegment(1, 202), segments[0]);
+        Assert.AreEqual(new WorkItemIdRangeSegment(2000, 2003), segments[1]);
     }
 
     [TestMethod]
-    public void Build_WithDuplicateIds_DeduplicatesBeforeSegmenting()
+    public void Build_IsDeterministic_ForSameInput()
     {
-        var segments = WorkItemIdRangeSegmentBuilder.Build([1, 1, 2, 2, 3, 3]);
+        var ids = new[] { 11, 2, 10, 1, 3, 500, 501, 900 };
+        var first = WorkItemIdRangeSegmentBuilder.Build(
+            ids,
+            maxGap: 50,
+            maxSpan: 5000,
+            minIdsPerSegment: 4,
+            maxSegmentsPerWindow: 200);
+        var second = WorkItemIdRangeSegmentBuilder.Build(
+            ids,
+            maxGap: 50,
+            maxSpan: 5000,
+            minIdsPerSegment: 4,
+            maxSegmentsPerWindow: 200);
 
-        Assert.HasCount(1, segments);
-        Assert.AreEqual(new WorkItemIdRangeSegment(1, 3), segments[0]);
+        CollectionAssert.AreEqual(first.ToArray(), second.ToArray());
     }
 
     [TestMethod]
-    public void Build_WithMaxRangeSize_SplitsLargeContiguousRanges()
+    public void Build_WhenSegmentCountExceedsSafetyCap_CondensesToSingleSegment()
     {
-        var ids = Enumerable.Range(1, 1200).ToArray();
-        var segments = WorkItemIdRangeSegmentBuilder.Build(ids, maxRangeSize: 500);
+        var ids = Enumerable.Range(1, 1000)
+            .Select(i => i * 100)
+            .ToArray();
+        var result = WorkItemIdRangeSegmentBuilder.BuildWithMetadata(
+            ids,
+            maxGap: 0,
+            maxSpan: 1,
+            minIdsPerSegment: 1,
+            maxSegmentsPerWindow: 3);
 
-        Assert.HasCount(3, segments);
-        Assert.AreEqual(new WorkItemIdRangeSegment(1, 500), segments[0]);
-        Assert.AreEqual(new WorkItemIdRangeSegment(501, 1000), segments[1]);
-        Assert.AreEqual(new WorkItemIdRangeSegment(1001, 1200), segments[2]);
-    }
-
-    [TestMethod]
-    public void Build_WithGapTolerance_MergesRangesWithinTolerance()
-    {
-        var segments = WorkItemIdRangeSegmentBuilder.Build([1, 2, 4, 10], gapTolerance: 1);
-
-        Assert.HasCount(2, segments);
-        Assert.AreEqual(new WorkItemIdRangeSegment(1, 4), segments[0]);
-        Assert.AreEqual(new WorkItemIdRangeSegment(10, 10), segments[1]);
+        Assert.IsTrue(result.WasCondensedToSingleSegment);
+        Assert.HasCount(1, result.Segments);
+        Assert.AreEqual(new WorkItemIdRangeSegment(100, 100000), result.Segments[0]);
     }
 }

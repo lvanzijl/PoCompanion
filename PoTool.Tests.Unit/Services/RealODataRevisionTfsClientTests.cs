@@ -164,6 +164,8 @@ public class RealODataRevisionTfsClientTests
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
             ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMaxGap = 0,
+            ODataSegmentMinIds = 1,
             ODataTop = 200
         });
 
@@ -207,7 +209,9 @@ public class RealODataRevisionTfsClientTests
 
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
-            ODataScopeMode = ODataRevisionScopeMode.Range
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMaxGap = 0,
+            ODataSegmentMinIds = 1
         });
 
         var allRevisions = new List<WorkItemRevision>();
@@ -811,7 +815,9 @@ public class RealODataRevisionTfsClientTests
         ]);
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
-            ODataScopeMode = ODataRevisionScopeMode.Range
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMaxGap = 0,
+            ODataSegmentMinIds = 1
         });
 
         var page = await client.GetRevisionsAsync(scopedWorkItemIds: [1, 2, 10, 11]);
@@ -826,7 +832,9 @@ public class RealODataRevisionTfsClientTests
         var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
-            ODataScopeMode = ODataRevisionScopeMode.Range
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMaxGap = 0,
+            ODataSegmentMinIds = 1
         });
         var boundaryToken = $"seg:999:1000|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Empty))}";
 
@@ -843,7 +851,9 @@ public class RealODataRevisionTfsClientTests
         var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
-            ODataScopeMode = ODataRevisionScopeMode.Range
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMaxGap = 0,
+            ODataSegmentMinIds = 1
         });
         var legacyToken = $"seg:1|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Empty))}";
 
@@ -860,7 +870,9 @@ public class RealODataRevisionTfsClientTests
         var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
-            ODataScopeMode = ODataRevisionScopeMode.Range
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMaxGap = 0,
+            ODataSegmentMinIds = 1
         });
         var invalidLegacyToken = $"seg:99|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("next:invalid"))}";
 
@@ -876,7 +888,9 @@ public class RealODataRevisionTfsClientTests
         var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
-            ODataScopeMode = ODataRevisionScopeMode.Range
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMaxGap = 0,
+            ODataSegmentMinIds = 1
         });
 
         var exception = await AssertThrowsAsync<InvalidOperationException>(() =>
@@ -892,7 +906,9 @@ public class RealODataRevisionTfsClientTests
         var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
-            ODataScopeMode = ODataRevisionScopeMode.Range
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMaxGap = 0,
+            ODataSegmentMinIds = 1
         });
         var nextUrl = "https://analytics/WorkItemRevisions?$skiptoken=innerBoundaryToken";
         var nextToken = $"next:{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(nextUrl))}|2|0|0|0|0|0";
@@ -909,7 +925,9 @@ public class RealODataRevisionTfsClientTests
         var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
-            ODataScopeMode = ODataRevisionScopeMode.Range
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMaxGap = 0,
+            ODataSegmentMinIds = 1
         });
         var boundaryToken = $"seg:1:2|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Empty))}";
 
@@ -925,7 +943,9 @@ public class RealODataRevisionTfsClientTests
         var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
-            ODataScopeMode = ODataRevisionScopeMode.Range
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMaxGap = 0,
+            ODataSegmentMinIds = 1
         });
         var boundaryToken = $"seg:5:6|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Empty))}";
 
@@ -941,7 +961,9 @@ public class RealODataRevisionTfsClientTests
         var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
-            ODataScopeMode = ODataRevisionScopeMode.Range
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMaxGap = 0,
+            ODataSegmentMinIds = 1
         });
         var boundaryToken = $"seg:10:11|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Empty))}";
 

@@ -7,16 +7,31 @@ public readonly record struct WorkItemIdRangeSegment(int Start, int End)
 
 public static class WorkItemIdRangeSegmentBuilder
 {
-    private const int DefaultMaxRangeSize = 500;
+    private const int DefaultMaxGap = 200;
+    private const int DefaultMaxSpan = 5000;
+    private const int DefaultMinIdsPerSegment = 25;
+    private const int DefaultMaxSegmentsPerWindow = 200;
 
     public static IReadOnlyList<WorkItemIdRangeSegment> Build(
         IReadOnlyCollection<int>? scopedWorkItemIds,
-        int gapTolerance = 0,
-        int maxRangeSize = DefaultMaxRangeSize)
+        int maxGap = DefaultMaxGap,
+        int maxSpan = DefaultMaxSpan,
+        int minIdsPerSegment = DefaultMinIdsPerSegment,
+        int maxSegmentsPerWindow = DefaultMaxSegmentsPerWindow)
+    {
+        return BuildWithMetadata(scopedWorkItemIds, maxGap, maxSpan, minIdsPerSegment, maxSegmentsPerWindow).Segments;
+    }
+
+    public static SegmentBuildResult BuildWithMetadata(
+        IReadOnlyCollection<int>? scopedWorkItemIds,
+        int maxGap = DefaultMaxGap,
+        int maxSpan = DefaultMaxSpan,
+        int minIdsPerSegment = DefaultMinIdsPerSegment,
+        int maxSegmentsPerWindow = DefaultMaxSegmentsPerWindow)
     {
         if (scopedWorkItemIds == null || scopedWorkItemIds.Count == 0)
         {
-            return [];
+            return new SegmentBuildResult([], false);
         }
 
         var orderedIds = scopedWorkItemIds
@@ -26,42 +41,56 @@ public static class WorkItemIdRangeSegmentBuilder
             .ToArray();
         if (orderedIds.Length == 0)
         {
-            return [];
+            return new SegmentBuildResult([], false);
         }
 
-        var tolerance = Math.Max(0, gapTolerance);
-        var maxSpan = Math.Max(1, maxRangeSize);
+        var effectiveMaxGap = Math.Max(0, maxGap);
+        var effectiveMaxSpan = Math.Max(1, maxSpan);
+        var effectiveMinIdsPerSegment = Math.Max(1, minIdsPerSegment);
+        var effectiveMaxSegmentsPerWindow = Math.Max(1, maxSegmentsPerWindow);
         var segments = new List<WorkItemIdRangeSegment>();
         var rangeStart = orderedIds[0];
         var rangeEnd = orderedIds[0];
+        var idsInCurrentSegment = 1;
 
         for (var i = 1; i < orderedIds.Length; i++)
         {
             var candidate = orderedIds[i];
             var gap = candidate - rangeEnd - 1;
-            if (gap <= tolerance)
+            var spanIfExtended = candidate - rangeStart;
+            var canExtendByBounds = gap <= effectiveMaxGap && spanIfExtended <= effectiveMaxSpan;
+            var shouldForceExtendToMinIds = idsInCurrentSegment < effectiveMinIdsPerSegment && spanIfExtended <= effectiveMaxSpan;
+            if (canExtendByBounds || shouldForceExtendToMinIds)
             {
                 rangeEnd = candidate;
+                idsInCurrentSegment++;
                 continue;
             }
 
-            AddSplitSegments(segments, rangeStart, rangeEnd, maxSpan);
+            segments.Add(new WorkItemIdRangeSegment(rangeStart, rangeEnd));
+            if (segments.Count > effectiveMaxSegmentsPerWindow)
+            {
+                return new SegmentBuildResult(
+                    [new WorkItemIdRangeSegment(orderedIds[0], orderedIds[^1])],
+                    WasCondensedToSingleSegment: true);
+            }
             rangeStart = candidate;
             rangeEnd = candidate;
+            idsInCurrentSegment = 1;
         }
 
-        AddSplitSegments(segments, rangeStart, rangeEnd, maxSpan);
-        return segments;
-    }
-
-    private static void AddSplitSegments(List<WorkItemIdRangeSegment> segments, int start, int end, int maxSpan)
-    {
-        var current = start;
-        while (current <= end)
+        segments.Add(new WorkItemIdRangeSegment(rangeStart, rangeEnd));
+        if (segments.Count > effectiveMaxSegmentsPerWindow)
         {
-            var segmentEnd = Math.Min(end, current + maxSpan - 1);
-            segments.Add(new WorkItemIdRangeSegment(current, segmentEnd));
-            current = segmentEnd + 1;
+            return new SegmentBuildResult(
+                [new WorkItemIdRangeSegment(orderedIds[0], orderedIds[^1])],
+                WasCondensedToSingleSegment: true);
         }
+
+        return new SegmentBuildResult(segments, WasCondensedToSingleSegment: false);
     }
 }
+
+public readonly record struct SegmentBuildResult(
+    IReadOnlyList<WorkItemIdRangeSegment> Segments,
+    bool WasCondensedToSingleSegment);
